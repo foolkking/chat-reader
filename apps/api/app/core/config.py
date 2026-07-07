@@ -15,6 +15,11 @@ class Settings(BaseSettings):
         default=["http://localhost:3000"],
         alias="CORS_ORIGINS",
     )
+    max_import_file_size_mb: int = Field(default=50, alias="MAX_IMPORT_FILE_SIZE_MB")
+    import_storage_dir: str = Field(
+        default="storage/imports",
+        alias="IMPORT_STORAGE_DIR",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

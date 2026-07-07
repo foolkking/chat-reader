@@ -1,31 +1,19 @@
 {
-  "sourceProfile": "chatgpt_exporter_combo",
-  "detectedTitle": "社交训练",
+  "import_id": "00000000-0000-0000-0000-000000000000",
+  "status": "previewed",
   "files": [
-    { "filename": "ChatGPT-社交训练.json", "sourceType": "exporter_json", "sha256": "..." },
-    { "filename": "ChatGPT-社交训练.md", "sourceType": "exporter_markdown", "sha256": "..." }
+    {
+      "artifact_id": "00000000-0000-0000-0000-000000000001",
+      "filename": "sample.json",
+      "source_profile": "chatgpt_exporter_json",
+      "confidence": 0.95,
+      "sha256": "...",
+      "byte_size": 12345,
+      "mime_guess": "application/json",
+      "file_extension": ".json",
+      "raw_storage_uri": "storage/imports/00000000-0000-0000-0000-000000000000/sample.json",
+      "warnings": []
+    }
   ],
-  "messageCount": 42,
-  "promptCount": 21,
-  "responseCount": 21,
-  "systemCount": 0,
-  "toolCount": 0,
-  "createdAt": "2026-06-07T01:19:35+08:00",
-  "updatedAt": "2026-07-07T09:58:30+08:00",
-  "exportedAt": "2026-07-07T09:58:30+08:00",
-  "hasMarkdownPair": true,
-  "hasOfficialMapping": false,
-  "hasBranches": false,
-  "branchCount": 0,
-  "hasAttachments": false,
-  "hasToolCalls": false,
-  "cleanedThinkingSummaryCount": 3,
-  "emptyMessageCount": 1,
-  "suggestedProject": "未归类",
-  "possiblyDuplicate": false,
-  "alignmentStatus": "partial_match",
-  "warnings": [
-    "JSON 与 Markdown 导出时间不同，已使用 partial alignment。",
-    "已从 3 条 Response 开头删除导出思考摘要。"
-  ]
+  "warnings": []
 }

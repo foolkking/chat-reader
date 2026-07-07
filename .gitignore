@@ -6,6 +6,7 @@ coverage/
 
 .venv/
 __pycache__/
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -18,3 +19,5 @@ __pycache__/
 .DS_Store
 
 apps/api/alembic/versions/*.pyc
+
+storage/imports/

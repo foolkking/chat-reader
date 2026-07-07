@@ -135,6 +135,85 @@ make check
 
 Stage 01: Source Detection / Raw Artifacts
 
+## Stage 01 Source Detection / Raw Artifacts
+
+Stage 01 完成来源识别、原始文件保存、`imports` / `source_artifacts` 基础表和 Import Preview API。本阶段不解析为 Canonical Conversation，不生成 RenderBlock，不建立搜索索引。
+
+### 当前完成内容
+
+- Source profiles: `chatgpt_exporter_json`, `chatgpt_exporter_markdown`, `official_conversations_json`, `official_conversation_json`, `third_party_splitter_json`, `plain_text`, `csv`, `unknown`。
+- 文件基础识别：sha256、size、mime guess、extension、warnings。
+- Raw artifact 本地保存：`storage/imports/{import_id}/{safe_filename}`。
+- API:
+  - `POST /api/imports/preview`
+  - `GET /api/imports/{import_id}/source-artifacts`
+  - `GET /api/imports/{import_id}/warnings`
+- Alembic migration: `imports` 和 `source_artifacts`。
+
+### Import Preview API
+
+```bash
+curl -F "files=@sample.json" http://localhost:8000/api/imports/preview
+```
+
+响应示例：
+
+```json
+{
+  "import_id": "00000000-0000-0000-0000-000000000000",
+  "status": "previewed",
+  "files": [
+    {
+      "artifact_id": "00000000-0000-0000-0000-000000000001",
+      "filename": "sample.json",
+      "source_profile": "chatgpt_exporter_json",
+      "confidence": 0.95,
+      "sha256": "...",
+      "byte_size": 12345,
+      "mime_guess": "application/json",
+      "file_extension": ".json",
+      "raw_storage_uri": "storage/imports/00000000-0000-0000-0000-000000000000/sample.json",
+      "warnings": []
+    }
+  ],
+  "warnings": []
+}
+```
+
+查询 artifact：
+
+```bash
+curl http://localhost:8000/api/imports/{import_id}/source-artifacts
+```
+
+查询 warnings：
+
+```bash
+curl http://localhost:8000/api/imports/{import_id}/warnings
+```
+
+### Storage
+
+上传文件保存到本地 `storage/imports/`。文件名会 sanitize，同名文件不会覆盖，API 只返回内部相对 URI，不返回本机绝对路径。
+
+### Migration
+
+```bash
+cd apps/api
+alembic upgrade head
+cd ../..
+```
+
+### 测试
+
+```bash
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+cd apps/api && pytest
+cd ../..
+git diff --check
+```
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：
