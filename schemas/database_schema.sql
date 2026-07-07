@@ -230,14 +230,24 @@ CREATE TABLE recent_items (
 
 CREATE TABLE shares (
   id UUID PRIMARY KEY,
-  token TEXT NOT NULL UNIQUE,
-  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  token_prefix TEXT NOT NULL,
   title TEXT,
-  scope JSONB NOT NULL DEFAULT '{}',
+  description TEXT,
+  scope TEXT NOT NULL DEFAULT 'conversation',
+  selected_message_ids JSONB NOT NULL DEFAULT '[]',
+  include_toc BOOLEAN NOT NULL DEFAULT true,
+  include_metadata BOOLEAN NOT NULL DEFAULT true,
+  allow_export BOOLEAN NOT NULL DEFAULT false,
   expires_at TIMESTAMPTZ,
   revoked_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  access_count INTEGER NOT NULL DEFAULT 0,
+  last_accessed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by TEXT NOT NULL DEFAULT 'local',
+  metadata JSONB NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE jobs (
@@ -269,3 +279,8 @@ CREATE INDEX idx_project_conversations_project ON project_conversations(project_
 CREATE INDEX idx_source_message_refs_source_node ON source_message_refs(source_conversation_id, source_node_id);
 CREATE INDEX idx_reading_positions_conversation ON reading_positions(conversation_id);
 CREATE INDEX idx_recent_items_last_opened ON recent_items(last_opened_at DESC);
+CREATE INDEX idx_shares_conversation_id ON shares(conversation_id);
+CREATE INDEX idx_shares_token_hash ON shares(token_hash);
+CREATE INDEX idx_shares_token_prefix ON shares(token_prefix);
+CREATE INDEX idx_shares_expires_at ON shares(expires_at);
+CREATE INDEX idx_shares_revoked_at ON shares(revoked_at);

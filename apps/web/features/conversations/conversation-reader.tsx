@@ -11,6 +11,10 @@ import { PinButton } from "../reading/pin-button";
 import { ReadingPositionClient } from "../reading/reading-position-client";
 import { ConversationToc } from "../toc/conversation-toc";
 import { MessageItem } from "./message-item";
+import { ShareButton } from "../sharing/share-button";
+import { SharePanel } from "../sharing/share-panel";
+import { ExportButton } from "../exporting/export-button";
+import { ExportPanel } from "../exporting/export-panel";
 
 const PAGE_SIZE = 50;
 
@@ -20,6 +24,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const targetMessageId = searchParams.get("messageId");
   const [offset, setOffset] = useState(0);
   const [messages, setMessages] = useState<MessageListItem[]>([]);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
+  const [showShare, setShowShare] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -39,6 +46,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   useEffect(() => {
     setOffset(0);
     setMessages([]);
+    setSelectedMessageIds(new Set());
   }, [conversationId]);
 
   useEffect(() => {
@@ -72,6 +80,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const total = windowQuery.data?.total ?? messages.length;
   const conversation = conversationQuery.data;
   const loadedLabel = useMemo(() => `${messages.length} / ${total} loaded`, [messages.length, total]);
+  const selectedIds = useMemo(() => Array.from(selectedMessageIds), [selectedMessageIds]);
 
   async function refreshReader() {
     setMessages([]);
@@ -127,8 +136,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <AddToProjectControl conversationId={conversation.id} />
-            <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
+            <div className="flex flex-wrap gap-2">
+              <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
+              <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
+              <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
+            </div>
           </div>
+          {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+          {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
         </div>
       </header>
 
@@ -150,7 +165,23 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             <div className="space-y-5">
               <ReadingPositionClient conversationId={conversationId} messages={messages} />
               {messages.map((message) => (
-                <MessageItem key={message.id} message={message} onChanged={refreshReader} />
+                <MessageItem
+                  key={message.id}
+                  message={message}
+                  onChanged={refreshReader}
+                  selected={selectedMessageIds.has(message.id)}
+                  onSelectedChange={(selected) => {
+                    setSelectedMessageIds((current) => {
+                      const next = new Set(current);
+                      if (selected) {
+                        next.add(message.id);
+                      } else {
+                        next.delete(message.id);
+                      }
+                      return next;
+                    });
+                  }}
+                />
               ))}
               {hasMore ? (
                 <button

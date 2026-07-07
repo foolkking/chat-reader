@@ -17,9 +17,15 @@ const roleStyles: Record<string, string> = {
 export function MessageItem({
   message,
   onChanged,
+  readOnly = false,
+  selected = false,
+  onSelectedChange,
 }: {
   message: MessageListItem;
   onChanged?: () => Promise<void> | void;
+  readOnly?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (selected: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
@@ -42,18 +48,34 @@ export function MessageItem({
         <span className="font-mono text-xs text-slate-500">{message.order_key}</span>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setIsEditing((current) => !current)}
-          className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-        >
-          {isEditing ? "Close edit" : "Edit"}
-        </button>
-        <VersionHistoryButton isOpen={showVersions} onToggle={() => setShowVersions((current) => !current)} />
-      </div>
+      {!readOnly || onSelectedChange ? (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {onSelectedChange ? (
+            <label className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={(event) => onSelectedChange(event.target.checked)}
+              />
+              Select
+            </label>
+          ) : null}
+          {!readOnly ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsEditing((current) => !current)}
+                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {isEditing ? "Close edit" : "Edit"}
+              </button>
+              <VersionHistoryButton isOpen={showVersions} onToggle={() => setShowVersions((current) => !current)} />
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
-      {isEditing ? (
+      {isEditing && !readOnly ? (
         <EditMessageForm
           initialText={currentText}
           onCancel={() => setIsEditing(false)}
@@ -97,7 +119,7 @@ export function MessageItem({
         <p className="text-sm text-slate-500">No displayable content.</p>
       )}
 
-      {showVersions ? (
+      {showVersions && !readOnly ? (
         <VersionHistoryPanel
           messageId={message.id}
           onChanged={async () => {

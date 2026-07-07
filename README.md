@@ -743,6 +743,85 @@ Expected head remains:
 - Message diff viewer
 - Delete / split / merge / bulk edit
 
+## Stage 09 Share / Export / Packaging
+
+Stage 09 adds local read-only share links, Markdown export, Canonical JSON export, selected message export, and Windows local check/start scripts.
+
+### Current capabilities
+
+- `shares` table stores `token_hash` and `token_prefix`; raw share tokens are not stored.
+- Share creation returns the raw token and `share_url` only once.
+- Share list responses do not include raw tokens.
+- Shares can be revoked, and revoked or expired share tokens return `410 Gone`.
+- `GET /api/shared/{token}` returns a read-only canonical conversation response using current message versions and render blocks.
+- Shared responses exclude raw artifact paths, `raw_storage_uri`, token hashes, and local filesystem paths.
+- `GET /api/conversations/{conversation_id}/export?format=markdown` downloads Markdown.
+- `GET /api/conversations/{conversation_id}/export?format=canonical_json` downloads Canonical JSON.
+- Exports support selected message ids, metadata, TOC, and optional version history.
+- Reader UI includes Share and Export panels.
+- `/share/{token}` renders a read-only shared conversation page.
+- `scripts/start-local.ps1` and `scripts/check-local.ps1` document and verify local Windows startup.
+
+### Share token security
+
+Raw tokens are generated with secure randomness and hashed with SHA-256 before storage. The database stores only `token_hash` and `token_prefix`; the raw token is returned only from the create-share response.
+
+### API examples
+
+```bash
+curl -X POST http://localhost:8000/api/conversations/{conversation_id}/shares \
+  -H "Content-Type: application/json" \
+  -d "{\"scope\":\"conversation\",\"include_toc\":true,\"include_metadata\":true}"
+
+curl http://localhost:8000/api/shared/{token}
+
+curl -X POST http://localhost:8000/api/shares/{share_id}/revoke
+
+curl "http://localhost:8000/api/conversations/{conversation_id}/export?format=markdown"
+
+curl "http://localhost:8000/api/conversations/{conversation_id}/export?format=canonical_json"
+
+curl "http://localhost:8000/api/conversations/{conversation_id}/export?format=markdown&message_ids={message_id}"
+```
+
+### Local scripts
+
+```powershell
+.\scripts\start-local.ps1
+.\scripts\check-local.ps1
+```
+
+`start-local.ps1` checks PostgreSQL tooling and prints API/Web startup commands. `check-local.ps1` runs PostgreSQL checks, Alembic current, backend tests, frontend typecheck, and frontend lint.
+
+### Migration and checks
+
+```bash
+cd apps/api
+alembic upgrade head
+alembic current
+pytest
+cd ../..
+
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+git diff --check
+```
+
+Expected head:
+
+```text
+20260707_0005
+```
+
+### Not included in Stage 09
+
+- Auth / login / multi-user permissions
+- Collaboration / cloud sync
+- Semantic search / embeddings
+- PDF / DOCX / image export
+- Password-protected shares
+- Share analytics dashboard
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：

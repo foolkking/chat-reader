@@ -302,3 +302,45 @@ export type ConversationEventListResponse = {
   offset: number;
   total: number;
 };
+
+export type ShareRead = {
+  id: string;
+  conversation_id: string;
+  token_prefix: string;
+  title?: string | null;
+  description?: string | null;
+  scope: string;
+  selected_message_ids?: string[];
+  include_toc: boolean;
+  include_metadata: boolean;
+  allow_export: boolean;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+  access_count: number;
+  last_accessed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ShareCreateInput = {
+  title?: string | null;
+  description?: string | null;
+  scope?: "conversation" | "selected_messages";
+  selected_message_ids?: string[];
+  include_toc?: boolean;
+  include_metadata?: boolean;
+  allow_export?: boolean;
+  expires_at?: string | null;
+};
+
+export type ShareCreateResponse = ShareRead & {
+  token: string;
+  share_url: string;
+};
+
+export type SharedConversationResponse = {
+  share: ShareRead;
+  conversation: ConversationListItem;
+  toc?: TocItem[];
+  messages: MessageListItem[];
+};

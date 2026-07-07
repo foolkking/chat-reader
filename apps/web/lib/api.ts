@@ -20,6 +20,10 @@ import type {
   RenderBlockRead,
   SearchReindexResponse,
   SearchResponse,
+  ShareCreateInput,
+  ShareCreateResponse,
+  ShareRead,
+  SharedConversationResponse,
   TocResponse,
 } from "./types";
 
@@ -242,6 +246,50 @@ export async function reindexSearch(input: { conversationId?: string } = {}): Pr
 
 export async function getConversationToc(conversationId: string): Promise<TocResponse> {
   return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc`);
+}
+
+export async function createShare(
+  conversationId: string,
+  input: ShareCreateInput,
+): Promise<ShareCreateResponse> {
+  return fetchJson<ShareCreateResponse>(
+    `/api/conversations/${conversationId}/shares`,
+    jsonRequest("POST", input),
+  );
+}
+
+export async function getConversationShares(conversationId: string): Promise<ShareRead[]> {
+  return fetchJson<ShareRead[]>(`/api/conversations/${conversationId}/shares`);
+}
+
+export async function revokeShare(shareId: string): Promise<ShareRead> {
+  return fetchJson<ShareRead>(`/api/shares/${shareId}/revoke`, { method: "POST" });
+}
+
+export async function getSharedConversation(token: string): Promise<SharedConversationResponse> {
+  return fetchJson<SharedConversationResponse>(`/api/shared/${encodeURIComponent(token)}`);
+}
+
+export function getConversationExportUrl(
+  conversationId: string,
+  options: {
+    format: "markdown" | "canonical_json";
+    includeMetadata?: boolean;
+    includeToc?: boolean;
+    includeVersions?: boolean;
+    messageIds?: string[];
+  },
+): string {
+  const params = new URLSearchParams({
+    format: options.format,
+    include_metadata: String(options.includeMetadata ?? true),
+    include_toc: String(options.includeToc ?? true),
+    include_versions: String(options.includeVersions ?? false),
+  });
+  if (options.messageIds?.length) {
+    params.set("message_ids", options.messageIds.join(","));
+  }
+  return `${API_BASE_URL}/api/conversations/${conversationId}/export?${params.toString()}`;
 }
 
 export async function getConversationEvents(

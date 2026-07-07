@@ -130,6 +130,80 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Conversation events }
+  /api/conversations/{conversation_id}/shares:
+    post:
+      summary: Create a local read-only share for a conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Share created; raw token returned only here }
+        '400': { description: Invalid share scope or selected messages }
+        '404': { description: Conversation not found }
+    get:
+      summary: List shares for a conversation without raw tokens
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: include_revoked
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200': { description: Share list }
+  /api/conversations/{conversation_id}/export:
+    get:
+      summary: Export a canonical conversation as Markdown or Canonical JSON
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: format
+          in: query
+          schema: { type: string, enum: [markdown, canonical_json], default: markdown }
+        - name: include_metadata
+          in: query
+          schema: { type: boolean, default: true }
+        - name: include_toc
+          in: query
+          schema: { type: boolean, default: true }
+        - name: include_versions
+          in: query
+          schema: { type: boolean, default: false }
+        - name: message_ids
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Export file response }
+        '400': { description: Invalid format or message selection }
+        '404': { description: Conversation not found }
+  /api/shares/{share_id}/revoke:
+    post:
+      summary: Revoke a share
+      parameters:
+        - name: share_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Share revoked }
+        '404': { description: Share not found }
+  /api/shared/{token}:
+    get:
+      summary: Read a shared conversation by raw token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Read-only shared conversation }
+        '404': { description: Share not found }
+        '410': { description: Share expired or revoked }
   /api/messages/{message_id}:
     get:
       summary: Get message detail

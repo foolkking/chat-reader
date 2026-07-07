@@ -10,6 +10,7 @@ from app.models.reading_position import ReadingPosition
 from app.models.recent_item import RecentItem
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
+from app.models.share import Share
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 
@@ -26,6 +27,7 @@ __all__ = [
     "RecentItem",
     "RenderBlock",
     "SearchDocument",
+    "Share",
     "SourceArtifact",
     "SourceMessageRef",
 ]

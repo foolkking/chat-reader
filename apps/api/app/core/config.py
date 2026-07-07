@@ -20,6 +20,7 @@ class Settings(BaseSettings):
         default="storage/imports",
         alias="IMPORT_STORAGE_DIR",
     )
+    public_web_base_url: str = Field(default="http://localhost:3000", alias="PUBLIC_WEB_BASE_URL")
 
     model_config = SettingsConfigDict(
         env_file=".env",
