@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/conversations", tags=["exports"])
 @router.get("/{conversation_id}/export")
 def export_conversation(
     conversation_id: uuid.UUID,
-    format: str = Query(default="markdown", pattern="^(markdown|canonical_json)$"),
+    format: str = Query(default="markdown"),
     include_metadata: bool = True,
     include_toc: bool = True,
     include_versions: bool = False,
@@ -26,6 +26,8 @@ def export_conversation(
     db: Session = Depends(get_db),
 ) -> Response:
     try:
+        if format not in {"markdown", "canonical_json"}:
+            raise ExportError("Unsupported export format.")
         options = ExportOptions(
             format=format,
             message_ids=_parse_message_ids(message_ids),

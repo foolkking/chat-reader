@@ -822,6 +822,42 @@ Expected head:
 - Password-protected shares
 - Share analytics dashboard
 
+## Stage 10 Hardening / Release / QA
+
+Release status:
+
+```text
+version: 0.10.0-rc1
+stage: 10
+release status: local-first release candidate
+```
+
+Stage 10 focuses on hardening rather than new features:
+
+- Security leak checks for raw paths, DB URLs, token hashes, and raw artifact fields.
+- Error handling contract checks for `400`, `404`, `409`, and `410` paths.
+- Full-flow regression coverage for import, commit, reader, search, edit, share, and export.
+- Large fixture/performance guard tests for message-window, heavy messages, block limits, and reindex.
+- Migration integrity checks for current Alembic head.
+- Local QA and release scripts.
+- Final release documentation.
+
+Release docs:
+
+- [Release checklist](docs/release_checklist.md)
+- [Final acceptance report](docs/final_acceptance_report.md)
+- [Local installation guide](docs/local_installation_guide.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Release notes v0.10.0-rc1](docs/release_notes_v0.10.0-rc1.md)
+
+Final local checks:
+
+```powershell
+.\scripts\check-local.ps1
+.\scripts\qa-local.ps1
+.\scripts\release-check.ps1
+```
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：
