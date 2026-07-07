@@ -53,6 +53,16 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Conversation detail }
+  /api/conversations/{conversation_id}/pin:
+    patch:
+      summary: Set or clear global conversation pin
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Updated conversation pin state }
   /api/conversations/{conversation_id}/messages:
     get:
       summary: Get paginated messages
@@ -98,3 +108,92 @@ paths:
           schema: { type: integer, default: 50 }
       responses:
         '200': { description: Render blocks }
+  /api/projects:
+    get:
+      summary: List projects and ensure default Inbox
+      responses:
+        '200': { description: Project list }
+    post:
+      summary: Create project
+      responses:
+        '201': { description: Project created }
+  /api/projects/{project_id}:
+    patch:
+      summary: Update project metadata or archive state
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Project updated }
+  /api/projects/{project_id}/conversations:
+    get:
+      summary: List conversations in a project
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Project conversation list }
+  /api/projects/{project_id}/conversations/{conversation_id}:
+    post:
+      summary: Add conversation to project
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Project conversation relation }
+    delete:
+      summary: Remove conversation from project
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Removed }
+  /api/projects/{project_id}/conversations/{conversation_id}/pin:
+    patch:
+      summary: Set or clear project-local conversation pin
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Project conversation pin state }
+  /api/conversations/{conversation_id}/reading-position:
+    get:
+      summary: Get reading position for a conversation
+      responses:
+        '200': { description: Reading position or null position }
+    put:
+      summary: Upsert reading position for a conversation
+      responses:
+        '200': { description: Reading position saved }
+  /api/conversations/{conversation_id}/recent:
+    post:
+      summary: Record recent conversation open
+      responses:
+        '200': { description: Recent item }
+  /api/recent-items:
+    get:
+      summary: List recent conversations
+      responses:
+        '200': { description: Recent items }

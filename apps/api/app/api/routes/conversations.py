@@ -10,6 +10,8 @@ from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.schemas.conversation import ConversationDetail, ConversationListItem
 from app.schemas.message import MessageListItem, MessageVersionRead, RenderBlockRead
+from app.schemas.project import ConversationPinUpdate
+from app.models.import_record import utc_now
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -27,7 +29,17 @@ def list_conversations(
         query = query.filter(Conversation.source_type == source_type)
     if source_profile:
         query = query.filter(Conversation.source_profile == source_profile)
-    conversations = query.order_by(Conversation.imported_at.desc()).offset(offset).limit(limit).all()
+    conversations = (
+        query.order_by(
+            Conversation.is_global_pinned.desc(),
+            Conversation.global_pinned_at.desc(),
+            Conversation.sort_time.desc(),
+            Conversation.imported_at.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return [_conversation_item(conversation) for conversation in conversations]
 
 
@@ -36,6 +48,28 @@ def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) 
     conversation = db.get(Conversation, conversation_id)
     if conversation is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    return ConversationDetail(
+        **_conversation_item(conversation).model_dump(),
+        external_source_id=conversation.external_source_id,
+        parser_version=conversation.parser_version,
+        render_version=conversation.render_version,
+        content_hash=conversation.content_hash,
+        sort_time=conversation.sort_time,
+    )
+
+
+@router.patch("/{conversation_id}/pin", response_model=ConversationDetail)
+def set_conversation_pin(
+    conversation_id: uuid.UUID,
+    payload: ConversationPinUpdate,
+    db: Session = Depends(get_db),
+) -> ConversationDetail:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    conversation.is_global_pinned = payload.is_pinned
+    conversation.global_pinned_at = utc_now() if payload.is_pinned else None
+    db.commit()
     return ConversationDetail(
         **_conversation_item(conversation).model_dump(),
         external_source_id=conversation.external_source_id,
@@ -81,6 +115,8 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         imported_at=conversation.imported_at,
         first_user_message=conversation.first_user_message,
         status=conversation.status,
+        is_global_pinned=conversation.is_global_pinned,
+        global_pinned_at=conversation.global_pinned_at,
     )
 
 

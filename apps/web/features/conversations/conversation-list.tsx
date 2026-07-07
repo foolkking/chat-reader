@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getConversations } from "../../lib/api";
+import { AddToProjectControl } from "../projects/add-to-project-control";
+import { PinButton } from "../reading/pin-button";
 
 export function ConversationList() {
   const conversationsQuery = useQuery({
@@ -45,16 +47,18 @@ export function ConversationList() {
       </div>
       <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
         {conversations.map((conversation) => (
-          <Link
+          <article
             key={conversation.id}
-            href={`/conversations/${conversation.id}`}
-            className="block px-4 py-4 transition hover:bg-slate-50"
+            className="flex flex-col gap-3 px-4 py-4 transition hover:bg-slate-50"
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h3 className="truncate text-base font-semibold text-slate-950">
-                  {conversation.display_title || conversation.title}
-                </h3>
+                <Link href={`/conversations/${conversation.id}`}>
+                  <h3 className="truncate text-base font-semibold text-slate-950">
+                    {conversation.is_global_pinned ? "Pinned / " : ""}
+                    {conversation.display_title || conversation.title}
+                  </h3>
+                </Link>
                 <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
                   {conversation.first_user_message ?? "No first user message."}
                 </p>
@@ -64,7 +68,11 @@ export function ConversationList() {
                 <p className="mt-1 text-sm text-slate-700">{conversation.message_count} messages</p>
               </div>
             </div>
-          </Link>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <AddToProjectControl conversationId={conversation.id} />
+              <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
+            </div>
+          </article>
         ))}
       </div>
     </section>

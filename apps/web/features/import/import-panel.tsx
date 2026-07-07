@@ -37,6 +37,8 @@ export function ImportPanel() {
     onSuccess: (result) => {
       setCommitResult(result);
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-conversations"] });
     },
   });
 

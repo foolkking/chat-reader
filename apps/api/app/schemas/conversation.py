@@ -17,6 +17,8 @@ class ConversationListItem(BaseModel):
     imported_at: datetime
     first_user_message: str | None
     status: str
+    is_global_pinned: bool
+    global_pinned_at: datetime | None
 
 
 class ConversationDetail(ConversationListItem):

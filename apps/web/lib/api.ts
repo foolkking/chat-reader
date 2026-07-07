@@ -5,6 +5,14 @@ import type {
   HealthResponse,
   ImportPreviewResponse,
   MessageListItem,
+  ProjectConversationRead,
+  ProjectCreate,
+  ProjectRead,
+  ProjectUpdate,
+  ReadingPositionInput,
+  ReadingPositionResponse,
+  RecentItemInput,
+  RecentItemRead,
   RenderBlockRead,
 } from "./types";
 
@@ -68,6 +76,97 @@ export async function commitImport(importId: string): Promise<CommitImportRespon
   });
 }
 
+export async function getProjects(): Promise<ProjectRead[]> {
+  return fetchJson<ProjectRead[]>("/api/projects");
+}
+
+export async function createProject(input: ProjectCreate): Promise<ProjectRead> {
+  return fetchJson<ProjectRead>("/api/projects", jsonRequest("POST", input));
+}
+
+export async function updateProject(projectId: string, input: ProjectUpdate): Promise<ProjectRead> {
+  return fetchJson<ProjectRead>(`/api/projects/${projectId}`, jsonRequest("PATCH", input));
+}
+
+export async function getProjectConversations(projectId: string): Promise<ProjectConversationRead[]> {
+  return fetchJson<ProjectConversationRead[]>(`/api/projects/${projectId}/conversations`);
+}
+
+export async function addConversationToProject(
+  projectId: string,
+  conversationId: string,
+): Promise<ProjectConversationRead> {
+  return fetchJson<ProjectConversationRead>(
+    `/api/projects/${projectId}/conversations/${conversationId}`,
+    { method: "POST" },
+  );
+}
+
+export async function removeConversationFromProject(projectId: string, conversationId: string): Promise<void> {
+  await fetchJson<void>(`/api/projects/${projectId}/conversations/${conversationId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function setProjectConversationPin(
+  projectId: string,
+  conversationId: string,
+  isPinned: boolean,
+): Promise<ProjectConversationRead> {
+  return fetchJson<ProjectConversationRead>(
+    `/api/projects/${projectId}/conversations/${conversationId}/pin`,
+    jsonRequest("PATCH", { is_pinned: isPinned }),
+  );
+}
+
+export async function setConversationGlobalPin(
+  conversationId: string,
+  isPinned: boolean,
+): Promise<ConversationDetail> {
+  return fetchJson<ConversationDetail>(
+    `/api/conversations/${conversationId}/pin`,
+    jsonRequest("PATCH", { is_pinned: isPinned }),
+  );
+}
+
+export async function getReadingPosition(conversationId: string): Promise<ReadingPositionResponse> {
+  return fetchJson<ReadingPositionResponse>(`/api/conversations/${conversationId}/reading-position`);
+}
+
+export async function saveReadingPosition(
+  conversationId: string,
+  input: ReadingPositionInput,
+): Promise<ReadingPositionResponse["position"]> {
+  return fetchJson<ReadingPositionResponse["position"]>(
+    `/api/conversations/${conversationId}/reading-position`,
+    jsonRequest("PUT", input),
+  );
+}
+
+export async function recordRecentConversation(
+  conversationId: string,
+  input: RecentItemInput = {},
+): Promise<RecentItemRead> {
+  return fetchJson<RecentItemRead>(
+    `/api/conversations/${conversationId}/recent`,
+    jsonRequest("POST", input),
+  );
+}
+
+export async function getRecentItems(): Promise<RecentItemRead[]> {
+  return fetchJson<RecentItemRead[]>("/api/recent-items");
+}
+
+function jsonRequest(method: string, body: unknown): RequestInit {
+  return {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  };
+}
+
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -79,6 +178,9 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, path));
+  }
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;

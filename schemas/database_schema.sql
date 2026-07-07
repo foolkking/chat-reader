@@ -6,15 +6,13 @@ CREATE TABLE projects (
   description TEXT,
   color TEXT,
   icon TEXT,
-  system_key TEXT UNIQUE,
-  status TEXT NOT NULL DEFAULT 'active',
-  is_pinned BOOLEAN NOT NULL DEFAULT false,
-  pinned_at TIMESTAMPTZ,
-  sort_order TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  is_archived BOOLEAN NOT NULL DEFAULT false,
+  archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  archived_at TIMESTAMPTZ,
-  deleted_at TIMESTAMPTZ
+  UNIQUE(name)
 );
 
 CREATE TABLE conversations (
@@ -43,15 +41,15 @@ CREATE TABLE conversations (
 );
 
 CREATE TABLE project_conversations (
+  id UUID PRIMARY KEY,
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'member',
+  sort_order INTEGER NOT NULL DEFAULT 0,
   is_pinned BOOLEAN NOT NULL DEFAULT false,
   pinned_at TIMESTAMPTZ,
-  sort_order TEXT,
   added_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  added_by TEXT NOT NULL DEFAULT 'user',
-  PRIMARY KEY (project_id, conversation_id)
+  added_by TEXT NOT NULL DEFAULT 'system',
+  UNIQUE(project_id, conversation_id)
 );
 
 CREATE TABLE messages (
@@ -201,15 +199,22 @@ CREATE TABLE reading_positions (
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   message_id UUID REFERENCES messages(id) ON DELETE SET NULL,
   block_index INTEGER,
-  scroll_offset INTEGER,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  scroll_offset INTEGER NOT NULL DEFAULT 0,
+  anchor_data JSONB NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(conversation_id)
 );
 
 CREATE TABLE recent_items (
   id UUID PRIMARY KEY,
-  item_type TEXT NOT NULL,
-  item_id UUID NOT NULL,
-  opened_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  last_message_id UUID REFERENCES messages(id) ON DELETE SET NULL,
+  last_opened_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  open_count INTEGER NOT NULL DEFAULT 1,
+  context JSONB NOT NULL DEFAULT '{}',
+  UNIQUE(conversation_id)
 );
 
 CREATE TABLE shares (
@@ -251,3 +256,5 @@ CREATE INDEX idx_headings_conversation_order ON headings(conversation_id, order_
 CREATE INDEX idx_search_documents_vector ON search_documents USING GIN(search_vector);
 CREATE INDEX idx_project_conversations_project ON project_conversations(project_id, is_pinned, sort_order);
 CREATE INDEX idx_source_message_refs_source_node ON source_message_refs(source_conversation_id, source_node_id);
+CREATE INDEX idx_reading_positions_conversation ON reading_positions(conversation_id);
+CREATE INDEX idx_recent_items_last_opened ON recent_items(last_opened_at DESC);

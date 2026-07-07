@@ -17,6 +17,8 @@ export type ConversationListItem = {
   imported_at: string | null;
   first_user_message: string | null;
   status: string;
+  is_global_pinned: boolean;
+  global_pinned_at: string | null;
 };
 
 export type ConversationDetail = ConversationListItem & {
@@ -121,4 +123,81 @@ export type CommitImportResponse = {
   conversation_count: number;
   message_count: number;
   warnings: string[];
+};
+
+export type ProjectRead = {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  icon: string | null;
+  sort_order: number;
+  is_default: boolean;
+  is_archived: boolean;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+  conversation_count: number;
+  pinned_count: number;
+};
+
+export type ProjectCreate = {
+  name: string;
+  description?: string | null;
+  color?: string | null;
+  icon?: string | null;
+};
+
+export type ProjectUpdate = Partial<ProjectCreate> & {
+  sort_order?: number;
+  is_archived?: boolean;
+};
+
+export type ProjectConversationRead = ConversationListItem & {
+  project_relation: {
+    is_pinned: boolean;
+    pinned_at: string | null;
+    added_at: string;
+    sort_order: number;
+  };
+};
+
+export type ReadingPositionRead = {
+  id: string;
+  conversation_id: string;
+  message_id: string | null;
+  block_index: number | null;
+  scroll_offset: number;
+  anchor_data: Record<string, unknown>;
+  updated_at: string;
+  created_at: string;
+};
+
+export type ReadingPositionResponse = {
+  conversation_id: string;
+  position: ReadingPositionRead | null;
+};
+
+export type ReadingPositionInput = {
+  message_id?: string | null;
+  block_index?: number | null;
+  scroll_offset: number;
+  anchor_data?: Record<string, unknown>;
+};
+
+export type RecentItemRead = {
+  id: string;
+  conversation_id: string;
+  project_id: string | null;
+  last_message_id: string | null;
+  last_opened_at: string;
+  open_count: number;
+  context: Record<string, unknown>;
+  conversation: ConversationListItem;
+};
+
+export type RecentItemInput = {
+  project_id?: string | null;
+  last_message_id?: string | null;
+  context?: Record<string, unknown>;
 };

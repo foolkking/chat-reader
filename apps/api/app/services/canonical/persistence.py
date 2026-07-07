@@ -29,6 +29,7 @@ from app.services.import_pipeline.exporter_markdown_parser import parse_exporter
 from app.services.import_pipeline.official_json_parser import OfficialConversationResult, parse_official_json
 from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
 from app.services.import_pipeline.official_primary_path import resolve_primary_path
+from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
 
 
 class CommitImportError(ValueError):
@@ -112,9 +113,11 @@ def commit_import_preview(import_id: uuid.UUID, db: Session) -> CommitImportResu
     conversation_ids: list[uuid.UUID] = []
     total_messages = 0
     all_warnings: list[str] = []
+    default_project = ensure_default_project(db)
 
     for conversation_draft in persistable:
         conversation = _persist_conversation(import_record, artifacts, conversation_draft, db)
+        add_conversation_to_project(db, default_project.id, conversation.id, added_by="system")
         conversation_ids.append(conversation.id)
         total_messages += conversation.message_count
         all_warnings.extend(conversation_draft.warnings)

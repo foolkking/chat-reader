@@ -35,6 +35,14 @@ class Conversation(Base):
 
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     events = relationship("ConversationEvent", back_populates="conversation", cascade="all, delete-orphan")
+    project_links = relationship("ProjectConversation", back_populates="conversation", cascade="all, delete-orphan")
+    reading_position = relationship(
+        "ReadingPosition",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    recent_item = relationship("RecentItem", back_populates="conversation", cascade="all, delete-orphan", uselist=False)
 
 
 Index("idx_conversations_source_type", Conversation.source_type)

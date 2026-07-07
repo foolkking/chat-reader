@@ -3,6 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getConversation, getConversationMessages } from "../../lib/api";
+import { AddToProjectControl } from "../projects/add-to-project-control";
+import { PinButton } from "../reading/pin-button";
+import { ReadingPositionClient } from "../reading/reading-position-client";
 import { MessageItem } from "./message-item";
 
 export function ConversationReader({ conversationId }: { conversationId: string }) {
@@ -53,6 +56,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               <span>{conversation.source_profile}</span>
             </div>
           </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <AddToProjectControl conversationId={conversation.id} />
+            <PinButton
+              scope="global"
+              conversationId={conversation.id}
+              isPinned={conversation.is_global_pinned}
+            />
+          </div>
         </div>
       </header>
 
@@ -83,6 +94,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
 
         {messagesQuery.isSuccess && messagesQuery.data.length > 0 ? (
           <div className="space-y-5">
+            <ReadingPositionClient conversationId={conversationId} messages={messagesQuery.data} />
             {messagesQuery.data.map((message) => (
               <MessageItem key={message.id} message={message} />
             ))}

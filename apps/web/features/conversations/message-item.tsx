@@ -12,7 +12,12 @@ export function MessageItem({ message }: { message: MessageListItem }) {
   const blocks = normalizedBlocks(message);
 
   return (
-    <article className={`rounded-lg border p-4 shadow-sm ${roleStyles[message.role] ?? roleStyles.assistant}`}>
+    <article
+      id={`message-${message.id}`}
+      data-message-id={message.id}
+      data-order-key={message.order_key}
+      className={`rounded-lg border p-4 shadow-sm ${roleStyles[message.role] ?? roleStyles.assistant}`}
+    >
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="rounded-full bg-slate-950 px-2.5 py-1 text-xs font-medium capitalize text-white">
           {message.role}

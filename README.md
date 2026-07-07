@@ -550,6 +550,76 @@ git diff --check
 - Virtual scroll
 - Edit / share / export
 
+## Stage 06 Project / Pin / Reading Position
+
+Stage 06 adds the basic organization and reading-state layer.
+
+### Current capabilities
+
+- `projects`, `project_conversations`, `reading_positions`, and `recent_items` tables.
+- Default `Inbox` project is created automatically when projects are listed or imports are committed.
+- Committed conversations are added to `Inbox` idempotently.
+- Conversations can be added to or removed from projects.
+- Conversations can be globally pinned in the all-conversations list.
+- Conversations can be pinned inside a specific project without changing global pin state.
+- Reader records recent opens and saves/restores reading position by message anchor and scroll offset.
+- Frontend shows a project sidebar, recent conversations, project conversation pages, and basic pin controls.
+
+### API examples
+
+```bash
+curl http://localhost:8000/api/projects
+
+curl -X POST http://localhost:8000/api/projects \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Research\"}"
+
+curl -X POST http://localhost:8000/api/projects/{project_id}/conversations/{conversation_id}
+
+curl -X PATCH http://localhost:8000/api/conversations/{conversation_id}/pin \
+  -H "Content-Type: application/json" \
+  -d "{\"is_pinned\":true}"
+
+curl -X PATCH http://localhost:8000/api/projects/{project_id}/conversations/{conversation_id}/pin \
+  -H "Content-Type: application/json" \
+  -d "{\"is_pinned\":true}"
+
+curl -X PUT http://localhost:8000/api/conversations/{conversation_id}/reading-position \
+  -H "Content-Type: application/json" \
+  -d "{\"message_id\":\"...\",\"block_index\":0,\"scroll_offset\":1200,\"anchor_data\":{\"order_key\":\"000010\"}}"
+
+curl -X POST http://localhost:8000/api/conversations/{conversation_id}/recent
+
+curl http://localhost:8000/api/recent-items
+```
+
+### Migration and checks
+
+```bash
+cd apps/api
+alembic upgrade head
+alembic current
+pytest
+cd ../..
+
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+git diff --check
+```
+
+Expected head:
+
+```text
+20260707_0003
+```
+
+### Not included in Stage 06
+
+- Search / TOC
+- Virtual scroll
+- Edit / share / export
+- Auth / tags / bookmarks
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：
