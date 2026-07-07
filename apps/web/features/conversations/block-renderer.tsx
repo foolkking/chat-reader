@@ -6,7 +6,7 @@ export function BlockRenderer({ block }: { block: RenderBlockRead }) {
   if (block.block_type === "heading") {
     const level = normalizeHeadingLevel(block.data.level);
     const title = readString(block.data.title) ?? text;
-    const className = "whitespace-pre-wrap font-semibold text-slate-950";
+    const className = "whitespace-pre-wrap font-semibold tracking-normal text-[#111827]";
 
     if (level === 1) {
       return <h1 className={`${className} text-2xl`}>{title}</h1>;
@@ -24,7 +24,7 @@ export function BlockRenderer({ block }: { block: RenderBlockRead }) {
     const code = readString(block.data.code) ?? text;
     const language = readString(block.data.language);
     return (
-      <figure className="overflow-hidden rounded-md border border-slate-800 bg-slate-950">
+      <figure className="overflow-hidden rounded-xl border border-[#111827] bg-[#0f172a] shadow-sm">
         {language ? (
           <figcaption className="border-b border-white/10 px-3 py-2 text-xs text-slate-400">
             {language}
@@ -37,7 +37,7 @@ export function BlockRenderer({ block }: { block: RenderBlockRead }) {
     );
   }
 
-  return <p className="whitespace-pre-wrap text-sm leading-7 text-slate-800">{text}</p>;
+  return <p className="whitespace-pre-wrap text-[15px] leading-7 text-[#1f2937]">{text}</p>;
 }
 
 function normalizeHeadingLevel(value: unknown): 1 | 2 | 3 | 4 {

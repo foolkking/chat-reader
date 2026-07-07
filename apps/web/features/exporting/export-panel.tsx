@@ -24,15 +24,15 @@ export function ExportPanel({
   });
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-slate-950">Export</h2>
-      <div className="mt-3 grid gap-3 text-sm text-slate-700">
+    <section className="rounded-2xl border border-[#e5e5e5] bg-white p-4 shadow-sm">
+      <h2 className="text-sm font-semibold text-[#111827]">Export</h2>
+      <div className="mt-3 grid gap-3 text-sm text-[#374151]">
         <label>
           Format
           <select
             value={format}
             onChange={(event) => setFormat(event.target.value as "markdown" | "canonical_json")}
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
           >
             <option value="markdown">Markdown</option>
             <option value="canonical_json">Canonical JSON</option>
@@ -69,7 +69,7 @@ export function ExportPanel({
         </label>
         <a
           href={href}
-          className="rounded-md bg-slate-950 px-3 py-2 text-center text-sm font-medium text-white"
+          className="rounded-xl bg-[#111827] px-3 py-2 text-center text-sm font-medium text-white hover:bg-black"
         >
           Download
         </a>

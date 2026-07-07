@@ -18,14 +18,17 @@ export function SearchPage() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <ProjectSidebar />
-        <section className="space-y-5">
-          <header>
-            <p className="text-sm font-medium uppercase tracking-normal text-slate-500">Search</p>
-            <h1 className="mt-1 text-3xl font-semibold">Keyword search</h1>
-          </header>
+    <main className="flex min-h-screen bg-[#f7f7f8] text-[#111827]">
+      <ProjectSidebar />
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex h-14 items-center border-b border-[#e5e5e5] bg-white/95 px-6 backdrop-blur">
+          <div>
+            <h1 className="text-base font-semibold">Search</h1>
+            <p className="text-xs text-[#6b7280]">Find canonical conversations and messages</p>
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-4xl space-y-5 px-6 py-8">
 
           <SearchBox
             initialQuery={query}
@@ -40,12 +43,13 @@ export function SearchPage() {
           {searchQuery.isLoading ? <StateBlock label="Searching" /> : null}
           {searchQuery.isError ? <StateBlock label={searchQuery.error.message} /> : null}
           {searchQuery.isSuccess ? <SearchResults items={searchQuery.data.items} /> : null}
-        </section>
-      </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
 
 function StateBlock({ label }: { label: string }) {
-  return <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-600">{label}</div>;
+  return <div className="rounded-2xl border border-[#e5e5e5] bg-white p-5 text-sm text-[#6b7280] shadow-sm">{label}</div>;
 }

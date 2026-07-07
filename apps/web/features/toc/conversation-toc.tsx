@@ -22,15 +22,15 @@ export function ConversationToc({ conversationId }: { conversationId: string }) 
   }
 
   return (
-    <aside className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-slate-900">Contents</h2>
+    <aside className="rounded-2xl border border-[#e5e5e5] bg-white p-4 shadow-sm">
+      <h2 className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">TOC</h2>
       <nav className="mt-3 space-y-1">
         {items.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => scrollToTocTarget(item.message_id, item.block_index)}
-            className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100"
+            className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-[#374151] hover:bg-[#f7f7f8]"
             style={{ paddingLeft: `${Math.max(0, item.level - 1) * 10 + 8}px` }}
           >
             {item.text}
@@ -43,7 +43,7 @@ export function ConversationToc({ conversationId }: { conversationId: string }) 
 
 function TocShell({ label }: { label: string }) {
   return (
-    <aside className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
+    <aside className="rounded-2xl border border-[#e5e5e5] bg-white p-4 text-sm text-[#6b7280] shadow-sm">
       {label}
     </aside>
   );

@@ -45,18 +45,18 @@ export function ImportPanel() {
   const canCommit = Boolean(preview?.can_commit ?? preview?.conversation_preview ?? preview?.conversation_previews?.length);
 
   return (
-    <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="space-y-4">
       <div>
-        <p className="text-xs font-medium uppercase tracking-normal text-slate-500">Import</p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">Preview and commit files</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <p className="text-xs font-semibold uppercase tracking-normal text-[#10a37f]">Import</p>
+        <h2 className="mt-1 text-lg font-semibold text-[#111827]">Preview and commit files</h2>
+        <p className="mt-2 text-sm leading-6 text-[#6b7280]">
           Upload supported exports, preview the detected canonical conversation, then commit it to the reader.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50">
-          Choose files
+      <div className="rounded-2xl border border-dashed border-[#d1d5db] bg-[#f7f7f8] p-5 text-center">
+        <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-medium text-[#111827] shadow-sm ring-1 ring-[#e5e5e5] hover:bg-[#f9fafb]">
+          Select files
           <input
             type="file"
             multiple
@@ -69,7 +69,8 @@ export function ImportPanel() {
             }}
           />
         </label>
-        <span className="text-sm text-slate-600">{selectedLabel}</span>
+        <p className="mt-3 text-sm text-[#6b7280]">{selectedLabel}</p>
+        <p className="mt-1 text-xs text-[#9ca3af]">Supported: JSON, Markdown, TXT, CSV</p>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -77,7 +78,7 @@ export function ImportPanel() {
           type="button"
           disabled={files.length === 0 || previewMutation.isPending}
           onClick={() => previewMutation.mutate(files)}
-          className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#d1d5db]"
         >
           {previewMutation.isPending ? "Previewing" : "Preview Import"}
         </button>
@@ -89,7 +90,7 @@ export function ImportPanel() {
               commitMutation.mutate(preview.import_id);
             }
           }}
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 disabled:cursor-not-allowed disabled:text-slate-400"
+          className="rounded-lg border border-[#d1d5db] bg-white px-4 py-2 text-sm font-medium text-[#111827] disabled:cursor-not-allowed disabled:text-[#9ca3af]"
         >
           {commitMutation.isPending ? "Committing" : "Commit Import"}
         </button>
@@ -101,7 +102,7 @@ export function ImportPanel() {
       {preview ? <ImportPreviewCard preview={preview} /> : null}
 
       {commitResult ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
           <p className="font-medium">
             Imported {commitResult.conversation_count} conversation
             {commitResult.conversation_count === 1 ? "" : "s"} with {commitResult.message_count} messages.
@@ -122,7 +123,7 @@ export function ImportPanel() {
 
 function ErrorLine({ message }: { message: string }) {
   return (
-    <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
       {message}
     </div>
   );

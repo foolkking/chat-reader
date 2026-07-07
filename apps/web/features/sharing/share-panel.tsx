@@ -54,31 +54,31 @@ export function SharePanel({
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-slate-950">Share</h2>
+    <section className="rounded-2xl border border-[#e5e5e5] bg-white p-4 shadow-sm">
+      <h2 className="text-sm font-semibold text-[#111827]">Share</h2>
       <div className="mt-3 grid gap-3">
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Share title"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
         />
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Description"
-          className="min-h-20 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="min-h-20 rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
         />
-        <label className="text-sm text-slate-700">
+        <label className="text-sm text-[#374151]">
           Expires at
           <input
             type="datetime-local"
             value={expiresAt}
             onChange={(event) => setExpiresAt(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 block w-full rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
           />
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-[#374151]">
           <input
             type="checkbox"
             checked={useSelection}
@@ -92,17 +92,17 @@ export function SharePanel({
           type="button"
           onClick={submit}
           disabled={isCreating || (useSelection && selectedMessageIds.length === 0)}
-          className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-xl bg-[#111827] px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#d1d5db]"
         >
           {isCreating ? "Creating" : "Create share"}
         </button>
         {createdUrl ? (
-          <div className="rounded-md bg-slate-50 p-3">
-            <p className="break-all text-sm text-slate-700">{createdUrl}</p>
+          <div className="rounded-xl bg-[#f7f7f8] p-3">
+            <p className="break-all text-sm text-[#374151]">{createdUrl}</p>
             <button
               type="button"
               onClick={copyUrl}
-              className="mt-2 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
+              className="mt-2 rounded-lg border border-[#d1d5db] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
             >
               Copy URL
             </button>
@@ -111,16 +111,16 @@ export function SharePanel({
       </div>
 
       <div className="mt-5 space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-normal text-slate-500">Existing shares</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Existing shares</h3>
         {sharesQuery.isLoading ? <p className="text-sm text-slate-500">Loading shares.</p> : null}
         {sharesQuery.isError ? <p className="text-sm text-red-700">{sharesQuery.error.message}</p> : null}
         {(sharesQuery.data ?? []).map((share) => (
-          <div key={share.id} className="rounded-md border border-slate-200 p-3 text-sm">
+          <div key={share.id} className="rounded-xl border border-[#e5e5e5] p-3 text-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="font-medium text-slate-800">{share.title || share.token_prefix}</p>
-                <p className="text-xs text-slate-500">
-                  {share.scope} · {share.access_count} opens
+                <p className="font-medium text-[#111827]">{share.title || share.token_prefix}</p>
+                <p className="text-xs text-[#6b7280]">
+                  {share.scope} / {share.access_count} opens
                 </p>
               </div>
               <button
@@ -130,7 +130,7 @@ export function SharePanel({
                   await sharesQuery.refetch();
                 }}
                 disabled={Boolean(share.revoked_at)}
-                className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 disabled:text-slate-400"
+                className="rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:text-[#9ca3af]"
               >
                 {share.revoked_at ? "Revoked" : "Revoke"}
               </button>

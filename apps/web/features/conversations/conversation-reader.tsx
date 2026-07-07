@@ -15,6 +15,7 @@ import { ShareButton } from "../sharing/share-button";
 import { SharePanel } from "../sharing/share-panel";
 import { ExportButton } from "../exporting/export-button";
 import { ExportPanel } from "../exporting/export-panel";
+import { ProjectSidebar } from "../projects/project-sidebar";
 
 const PAGE_SIZE = 50;
 
@@ -117,38 +118,43 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:px-6">
-          <BackLink />
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <main className="flex min-h-screen bg-[#f7f7f8] text-[#111827]">
+      <ProjectSidebar />
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
+          <div className="flex h-14 items-center justify-between gap-4 px-6">
             <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-normal text-slate-500">Reader</p>
-              <h1 className="mt-1 truncate text-2xl font-semibold text-slate-950">
+              <h1 className="truncate text-base font-semibold text-[#111827]">
                 {conversation.display_title || conversation.title}
               </h1>
+              <div className="mt-0.5 flex items-center gap-2 text-xs text-[#6b7280]">
+                <span>{loadedLabel}</span>
+                <span className="rounded-full bg-[#f7f7f8] px-2 py-0.5">{conversation.source_profile}</span>
+              </div>
             </div>
-            <div className="text-sm text-slate-600">
-              <span>{loadedLabel}</span>
-              <span className="mx-2 text-slate-300">/</span>
-              <span>{conversation.source_profile}</span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <AddToProjectControl conversationId={conversation.id} />
             <div className="flex flex-wrap gap-2">
               <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
               <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
               <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
             </div>
           </div>
-          {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-          {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-        </div>
-      </header>
+          {(showShare || showExport) ? (
+            <div className="border-t border-[#f0f0f0] px-6 py-4">
+              <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
+                {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+                {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+              </div>
+            </div>
+          ) : null}
+        </header>
 
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="min-w-0">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="grid min-h-full grid-cols-1 gap-6 px-6 py-8 xl:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="mx-auto w-full max-w-[820px] min-w-0">
+              <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 shadow-sm">
+                <AddToProjectControl conversationId={conversation.id} />
+                <BackLink />
+              </div>
           {windowQuery.isLoading && messages.length === 0 ? (
             <ReaderState title="Loading messages" detail="Fetching the first message window." />
           ) : null}
@@ -162,7 +168,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           ) : null}
 
           {messages.length > 0 ? (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <ReadingPositionClient conversationId={conversationId} messages={messages} />
               {messages.map((message) => (
                 <MessageItem
@@ -187,15 +193,21 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 <button
                   type="button"
                   onClick={() => setOffset(messages.length)}
-                  className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                  className="mx-auto block rounded-full border border-[#d1d5db] bg-white px-5 py-2 text-sm font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8]"
                 >
                   {windowQuery.isFetching ? "Loading" : "Load more"}
                 </button>
               ) : null}
             </div>
           ) : null}
+            </div>
+            <div className="hidden xl:block">
+              <div className="sticky top-20">
+                <ConversationToc conversationId={conversationId} />
+              </div>
+            </div>
+          </div>
         </div>
-        <ConversationToc conversationId={conversationId} />
       </section>
     </main>
   );

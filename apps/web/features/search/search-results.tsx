@@ -4,31 +4,39 @@ import type { SearchResultItem } from "../../lib/types";
 export function SearchResults({ items }: { items: SearchResultItem[] }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-600">
+      <div className="rounded-2xl border border-[#e5e5e5] bg-white p-6 text-sm text-[#6b7280] shadow-sm">
         No results.
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+    <div className="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
       {items.map((item) => (
         <Link
           key={item.document_id}
           href={`/conversations/${item.conversation_id}${item.message_id ? `?messageId=${item.message_id}` : ""}`}
-          className="block px-4 py-4 hover:bg-slate-50"
+          className="block border-b border-[#f0f0f0] px-5 py-4 last:border-b-0 hover:bg-[#f7f7f8] focus:outline-none focus:ring-2 focus:ring-[#111827]"
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold text-slate-950">
+              <h2 className="truncate text-base font-semibold text-[#111827]">
                 {item.conversation_title}
               </h2>
-              <p className="mt-1 text-sm leading-6 text-slate-700">{item.snippet}</p>
+              <p className="mt-1 text-sm leading-6 text-[#374151]">{item.snippet}</p>
             </div>
-            <div className="shrink-0 text-left text-xs text-slate-500 sm:text-right">
-              <p>{item.document_type}</p>
-              {item.role ? <p className="mt-1">{item.role}</p> : null}
-              {item.order_key ? <p className="mt-1 font-mono">{item.order_key}</p> : null}
+            <div className="flex shrink-0 flex-wrap gap-2 text-xs text-[#6b7280] sm:justify-end">
+              <span className="rounded-full border border-[#e5e5e5] bg-[#f7f7f8] px-2 py-1">
+                {item.document_type}
+              </span>
+              {item.role ? (
+                <span className="rounded-full border border-[#e5e5e5] bg-white px-2 py-1">{item.role}</span>
+              ) : null}
+              {item.order_key ? (
+                <span className="rounded-full border border-[#e5e5e5] bg-white px-2 py-1 font-mono">
+                  {item.order_key}
+                </span>
+              ) : null}
             </div>
           </div>
         </Link>

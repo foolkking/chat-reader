@@ -31,41 +31,43 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const project = projectsQuery.data?.find((item) => item.id === projectId);
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+    <main className="flex min-h-screen bg-[#f7f7f8] text-[#111827]">
         <ProjectSidebar currentProjectId={projectId} />
-        <section className="min-w-0 space-y-5">
-          <header>
-            <p className="text-sm font-medium uppercase tracking-normal text-slate-500">Project</p>
-            <h1 className="mt-1 text-3xl font-semibold">{project?.name ?? "Project"}</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              {project?.conversation_count ?? 0} conversations / {project?.pinned_count ?? 0} pinned
-            </p>
+        <section className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-10 flex h-14 items-center border-b border-[#e5e5e5] bg-white/95 px-6 backdrop-blur">
+            <div>
+              <h1 className="text-base font-semibold">{project?.name ?? "Project"}</h1>
+              <p className="text-xs text-[#6b7280]">
+                {project?.conversation_count ?? 0} conversations / {project?.pinned_count ?? 0} pinned
+              </p>
+            </div>
           </header>
 
-          {conversationsQuery.isLoading ? <StateBlock label="Loading project conversations" /> : null}
-          {conversationsQuery.isError ? <StateBlock label={conversationsQuery.error.message} /> : null}
-          {conversationsQuery.isSuccess && conversationsQuery.data.length === 0 ? (
-            <StateBlock label="No conversations in this project" />
-          ) : null}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-5xl space-y-5 px-6 py-8">
+              {conversationsQuery.isLoading ? <StateBlock label="Loading project conversations" /> : null}
+              {conversationsQuery.isError ? <StateBlock label={conversationsQuery.error.message} /> : null}
+              {conversationsQuery.isSuccess && conversationsQuery.data.length === 0 ? (
+                <StateBlock label="No conversations in this project" />
+              ) : null}
 
           {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
-            <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
               {conversationsQuery.data.map((conversation) => (
-                <article key={conversation.id} className="space-y-3 px-4 py-4">
+                <article key={conversation.id} className="space-y-3 border-b border-[#f0f0f0] px-5 py-4 last:border-b-0 hover:bg-[#f7f7f8]">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <Link href={`/conversations/${conversation.id}`}>
-                        <h2 className="truncate text-base font-semibold text-slate-950">
+                        <h2 className="truncate text-base font-semibold text-[#111827]">
                           {conversation.project_relation.is_pinned ? "Pinned / " : ""}
                           {conversation.display_title || conversation.title}
                         </h2>
                       </Link>
-                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
+                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#6b7280]">
                         {conversation.first_user_message ?? "No first user message."}
                       </p>
                     </div>
-                    <p className="text-sm text-slate-600">{conversation.message_count} messages</p>
+                    <p className="text-sm text-[#6b7280]">{conversation.message_count} messages</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <PinButton
@@ -77,7 +79,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                     <button
                       type="button"
                       onClick={() => removeMutation.mutate(conversation.id)}
-                      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      className="rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
                     >
                       Remove
                     </button>
@@ -86,12 +88,13 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               ))}
             </div>
           ) : null}
+            </div>
+          </div>
         </section>
-      </div>
     </main>
   );
 }
 
 function StateBlock({ label }: { label: string }) {
-  return <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-600">{label}</div>;
+  return <div className="rounded-2xl border border-[#e5e5e5] bg-white p-5 text-sm text-[#6b7280] shadow-sm">{label}</div>;
 }
