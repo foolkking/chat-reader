@@ -1,10 +1,13 @@
 import type {
   CommitImportResponse,
+  ConversationEventListResponse,
   ConversationDetail,
   ConversationListItem,
   HealthResponse,
   ImportPreviewResponse,
+  MessageEditResponse,
   MessageListItem,
+  MessageVersionHistoryResponse,
   MessageWindowResponse,
   ProjectConversationRead,
   ProjectCreate,
@@ -75,6 +78,35 @@ export async function getMessageBlocks(
   });
 
   return fetchJson<RenderBlockRead[]>(`/api/messages/${messageId}/blocks?${params.toString()}`);
+}
+
+export async function editMessage(
+  messageId: string,
+  input: { displayText: string; editReason?: string; baseVersionId?: string },
+): Promise<MessageEditResponse> {
+  return fetchJson<MessageEditResponse>(
+    `/api/messages/${messageId}`,
+    jsonRequest("PATCH", {
+      display_text: input.displayText,
+      edit_reason: input.editReason,
+      base_version_id: input.baseVersionId,
+    }),
+  );
+}
+
+export async function getMessageVersions(messageId: string): Promise<MessageVersionHistoryResponse> {
+  return fetchJson<MessageVersionHistoryResponse>(`/api/messages/${messageId}/versions`);
+}
+
+export async function restoreMessageVersion(
+  messageId: string,
+  versionId: string,
+  input: { editReason?: string } = {},
+): Promise<MessageEditResponse> {
+  return fetchJson<MessageEditResponse>(
+    `/api/messages/${messageId}/versions/${versionId}/restore`,
+    jsonRequest("POST", { edit_reason: input.editReason }),
+  );
 }
 
 export async function previewImport(files: File[]): Promise<ImportPreviewResponse> {
@@ -210,6 +242,22 @@ export async function reindexSearch(input: { conversationId?: string } = {}): Pr
 
 export async function getConversationToc(conversationId: string): Promise<TocResponse> {
   return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc`);
+}
+
+export async function getConversationEvents(
+  conversationId: string,
+  options: { limit?: number; offset?: number; eventType?: string } = {},
+): Promise<ConversationEventListResponse> {
+  const params = new URLSearchParams({
+    limit: String(options.limit ?? 50),
+    offset: String(options.offset ?? 0),
+  });
+  if (options.eventType) {
+    params.set("event_type", options.eventType);
+  }
+  return fetchJson<ConversationEventListResponse>(
+    `/api/conversations/${conversationId}/events?${params.toString()}`,
+  );
 }
 
 function jsonRequest(method: string, body: unknown): RequestInit {

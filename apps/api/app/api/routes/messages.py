@@ -7,7 +7,20 @@ from app.core.database import get_db
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
+from app.schemas.editing import (
+    MessageEditRequest,
+    MessageEditResponse,
+    MessageVersionHistoryItem,
+    MessageVersionHistoryResponse,
+    MessageVersionRestoreRequest,
+)
 from app.schemas.message import MessageDetail, MessageVersionRead, RenderBlockRead
+from app.services.editing.message_edit_service import (
+    MessageEditError,
+    edit_message,
+    list_message_versions,
+    restore_message_version,
+)
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 
@@ -47,6 +60,100 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
     )
 
 
+@router.patch("/{message_id}", response_model=MessageEditResponse)
+def update_message(
+    message_id: uuid.UUID,
+    payload: MessageEditRequest,
+    db: Session = Depends(get_db),
+) -> MessageEditResponse:
+    try:
+        result = edit_message(
+            db=db,
+            message_id=message_id,
+            new_text=payload.display_text,
+            edit_reason=payload.edit_reason,
+            base_version_id=payload.base_version_id,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    message = db.get(Message, result.message.id)
+    if message is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
+    return _edit_response(
+        message=message,
+        previous_version_id=result.previous_version_id,
+        current_version_id=result.current_version.id,
+        version_number=result.current_version.version_number,
+        warnings=result.warnings,
+        db=db,
+    )
+
+
+@router.get("/{message_id}/versions", response_model=MessageVersionHistoryResponse)
+def get_message_versions(
+    message_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> MessageVersionHistoryResponse:
+    try:
+        message = db.get(Message, message_id)
+        versions = list_message_versions(db, message_id)
+    except MessageEditError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return MessageVersionHistoryResponse(
+        message_id=message_id,
+        current_version_id=message.current_version_id if message else None,
+        items=[
+            MessageVersionHistoryItem(
+                id=version.id,
+                version_number=version.version_number,
+                plain_text=version.plain_text,
+                display_text=version.display_text,
+                edit_type=version.edit_type,
+                edit_reason=version.edit_reason,
+                created_at=version.created_at,
+                created_by=version.created_by,
+                based_on_version_id=version.based_on_version_id,
+                content_hash=version.content_hash,
+                is_current=message is not None and version.id == message.current_version_id,
+            )
+            for version in versions
+        ],
+    )
+
+
+@router.post("/{message_id}/versions/{version_id}/restore", response_model=MessageEditResponse)
+def restore_message_version_endpoint(
+    message_id: uuid.UUID,
+    version_id: uuid.UUID,
+    payload: MessageVersionRestoreRequest | None = None,
+    db: Session = Depends(get_db),
+) -> MessageEditResponse:
+    try:
+        result = restore_message_version(
+            db=db,
+            message_id=message_id,
+            version_id=version_id,
+            edit_reason=payload.edit_reason if payload else None,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    message = db.get(Message, result.message.id)
+    if message is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
+    return _edit_response(
+        message=message,
+        previous_version_id=result.previous_version_id,
+        current_version_id=result.current_version.id,
+        version_number=result.current_version.version_number,
+        warnings=result.warnings,
+        db=db,
+    )
+
+
 @router.get("/{message_id}/blocks", response_model=list[RenderBlockRead])
 def get_message_blocks(
     message_id: uuid.UUID,
@@ -66,6 +173,25 @@ def get_message_blocks(
         .all()
     )
     return [_block_read(block) for block in blocks]
+
+
+def _edit_response(
+    message: Message,
+    previous_version_id: uuid.UUID | None,
+    current_version_id: uuid.UUID,
+    version_number: int,
+    warnings: list[str],
+    db: Session,
+) -> MessageEditResponse:
+    return MessageEditResponse(
+        message_id=message.id,
+        conversation_id=message.conversation_id,
+        previous_version_id=previous_version_id,
+        current_version_id=current_version_id,
+        version_number=version_number,
+        message=get_message(message.id, db),
+        warnings=warnings,
+    )
 
 
 def _version_read(version: MessageVersion) -> MessageVersionRead:

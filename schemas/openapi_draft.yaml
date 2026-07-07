@@ -111,6 +111,25 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Conversation TOC }
+  /api/conversations/{conversation_id}/events:
+    get:
+      summary: List conversation events
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: event_type
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Conversation events }
   /api/messages/{message_id}:
     get:
       summary: Get message detail
@@ -121,6 +140,64 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Message detail }
+    patch:
+      summary: Edit a message by creating a new current message version
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [display_text]
+              properties:
+                display_text: { type: string }
+                edit_reason: { type: string }
+                base_version_id: { type: string }
+      responses:
+        '200': { description: Message edited }
+        '400': { description: Invalid edit payload }
+        '404': { description: Message not found }
+        '409': { description: Base version conflict }
+  /api/messages/{message_id}/versions:
+    get:
+      summary: Get message version history
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Message version history }
+        '404': { description: Message not found }
+  /api/messages/{message_id}/versions/{version_id}/restore:
+    post:
+      summary: Restore a previous message version by creating a new restore version
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: version_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                edit_reason: { type: string }
+      responses:
+        '200': { description: Message version restored }
+        '400': { description: Version already current or invalid operation }
+        '404': { description: Message or version not found }
   /api/messages/{message_id}/blocks:
     get:
       summary: Get render blocks for a message

@@ -5,10 +5,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.conversation import Conversation
+from app.models.conversation_event import ConversationEvent
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.schemas.conversation import ConversationDetail, ConversationListItem
+from app.schemas.editing import ConversationEventListResponse, ConversationEventRead
 from app.schemas.message import MessageListItem, MessageVersionRead, RenderBlockRead
 from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
@@ -56,6 +58,45 @@ def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) 
         render_version=conversation.render_version,
         content_hash=conversation.content_hash,
         sort_time=conversation.sort_time,
+    )
+
+
+@router.get("/{conversation_id}/events", response_model=ConversationEventListResponse)
+def list_conversation_events(
+    conversation_id: uuid.UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    event_type: str | None = None,
+    db: Session = Depends(get_db),
+) -> ConversationEventListResponse:
+    if db.get(Conversation, conversation_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    query = db.query(ConversationEvent).filter(ConversationEvent.conversation_id == conversation_id)
+    if event_type:
+        query = query.filter(ConversationEvent.event_type == event_type)
+    total = query.count()
+    events = (
+        query.order_by(ConversationEvent.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return ConversationEventListResponse(
+        items=[
+            ConversationEventRead(
+                id=event.id,
+                event_type=event.event_type,
+                target_message_id=event.target_message_id,
+                target_version_id=event.target_version_id,
+                payload=event.payload,
+                created_at=event.created_at,
+                created_by=event.created_by,
+            )
+            for event in events
+        ],
+        limit=limit,
+        offset=offset,
+        total=total,
     )
 
 

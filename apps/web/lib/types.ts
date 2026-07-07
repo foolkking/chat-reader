@@ -255,3 +255,50 @@ export type MessageWindowResponse = {
   total: number;
   has_more: boolean;
 };
+
+export type MessageEditResponse = {
+  message_id: string;
+  conversation_id: string;
+  previous_version_id?: string | null;
+  current_version_id: string;
+  version_number: number;
+  message: MessageListItem;
+  warnings?: string[];
+};
+
+export type MessageVersionHistoryItem = {
+  id: string;
+  version_number: number;
+  plain_text?: string;
+  display_text?: string;
+  edit_type: string;
+  edit_reason?: string | null;
+  created_at: string;
+  created_by: string;
+  based_on_version_id?: string | null;
+  content_hash: string;
+  is_current: boolean;
+};
+
+export type MessageVersionHistoryResponse = {
+  message_id: string;
+  current_version_id: string | null;
+  items: MessageVersionHistoryItem[];
+};
+
+export type ConversationEventRead = {
+  id: string;
+  event_type: string;
+  target_message_id: string | null;
+  target_version_id: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+  created_by: string;
+};
+
+export type ConversationEventListResponse = {
+  items: ConversationEventRead[];
+  limit: number;
+  offset: number;
+  total: number;
+};

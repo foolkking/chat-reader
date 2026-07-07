@@ -682,6 +682,67 @@ Expected head:
 - Edit / share / export
 - Auth / tags / bookmarks
 
+## Stage 08 Message Editing / Version History
+
+Stage 08 adds message editing, version history, and restore on top of the canonical version model from Stage 04. This stage does not add a migration because `message_versions`, `render_blocks`, `conversation_events`, and `messages.current_version_id` already contain the required fields.
+
+### Current capabilities
+
+- `PATCH /api/messages/{message_id}` creates a new `message_versions` row for a manual edit.
+- Existing `message_versions` rows are immutable; imported text is not overwritten.
+- `messages.current_version_id`, `content_hash`, `block_count`, `char_count`, and `is_heavy` are updated after edit.
+- New current-version `render_blocks` are generated from edited display text.
+- `headings` and `search_documents` are rebuilt after edit or restore.
+- `GET /api/messages/{message_id}/versions` returns version history in descending version order.
+- `POST /api/messages/{message_id}/versions/{version_id}/restore` creates a new `restore` version rather than pointing back to the old row.
+- `GET /api/conversations/{conversation_id}/events` returns edit and restore events.
+- Reader message cards include basic `Edit` and `Versions` controls using a textarea and plain text version preview.
+
+### API examples
+
+```bash
+curl -X PATCH http://localhost:8000/api/messages/{message_id} \
+  -H "Content-Type: application/json" \
+  -d "{\"display_text\":\"Edited message\",\"edit_reason\":\"Fix typo\"}"
+
+curl http://localhost:8000/api/messages/{message_id}/versions
+
+curl -X POST http://localhost:8000/api/messages/{message_id}/versions/{version_id}/restore \
+  -H "Content-Type: application/json" \
+  -d "{\"edit_reason\":\"Restore previous version\"}"
+
+curl "http://localhost:8000/api/conversations/{conversation_id}/events?event_type=message_edited"
+```
+
+### Migration and checks
+
+```bash
+cd apps/api
+alembic upgrade head
+alembic current
+pytest
+cd ../..
+
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+git diff --check
+```
+
+Expected head remains:
+
+```text
+20260707_0004
+```
+
+### Not included in Stage 08
+
+- Share / export
+- Auth / collaboration
+- Semantic search / embeddings
+- Rich text editor / WYSIWYG editor
+- Message diff viewer
+- Delete / split / merge / bulk edit
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：

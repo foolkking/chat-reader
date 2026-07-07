@@ -1,6 +1,11 @@
 import { BlockRenderer } from "./block-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { editMessage } from "../../lib/api";
+import { EditMessageForm } from "../editing/edit-message-form";
+import { VersionHistoryButton } from "../editing/version-history-button";
+import { VersionHistoryPanel } from "../editing/version-history-panel";
 
 const roleStyles: Record<string, string> = {
   user: "border-cyan-200 bg-cyan-50",
@@ -9,9 +14,19 @@ const roleStyles: Record<string, string> = {
   tool: "border-violet-200 bg-violet-50",
 };
 
-export function MessageItem({ message }: { message: MessageListItem }) {
+export function MessageItem({
+  message,
+  onChanged,
+}: {
+  message: MessageListItem;
+  onChanged?: () => Promise<void> | void;
+}) {
+  const queryClient = useQueryClient();
   const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
   const blocks = normalizedBlocks(message);
+  const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
 
   return (
     <article
@@ -27,7 +42,33 @@ export function MessageItem({ message }: { message: MessageListItem }) {
         <span className="font-mono text-xs text-slate-500">{message.order_key}</span>
       </div>
 
-      {message.is_heavy && !showHeavyBlocks ? (
+      <div className="mb-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setIsEditing((current) => !current)}
+          className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+        >
+          {isEditing ? "Close edit" : "Edit"}
+        </button>
+        <VersionHistoryButton isOpen={showVersions} onToggle={() => setShowVersions((current) => !current)} />
+      </div>
+
+      {isEditing ? (
+        <EditMessageForm
+          initialText={currentText}
+          onCancel={() => setIsEditing(false)}
+          onSave={async (text, reason) => {
+            await editMessage(message.id, {
+              displayText: text,
+              editReason: reason,
+              baseVersionId: message.current_version?.id,
+            });
+            await queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] });
+            setIsEditing(false);
+            await onChanged?.();
+          }}
+        />
+      ) : message.is_heavy && !showHeavyBlocks ? (
         <div className="rounded-md border border-slate-200 bg-white/70 p-3">
           <p className="text-sm text-slate-600">
             Heavy message: {message.char_count} characters / {message.block_count} blocks.
@@ -55,6 +96,16 @@ export function MessageItem({ message }: { message: MessageListItem }) {
       ) : (
         <p className="text-sm text-slate-500">No displayable content.</p>
       )}
+
+      {showVersions ? (
+        <VersionHistoryPanel
+          messageId={message.id}
+          onChanged={async () => {
+            await queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] });
+            await onChanged?.();
+          }}
+        />
+      ) : null}
     </article>
   );
 }

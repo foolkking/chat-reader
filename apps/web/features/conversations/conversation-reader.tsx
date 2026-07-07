@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -16,6 +16,7 @@ const PAGE_SIZE = 50;
 
 export function ConversationReader({ conversationId }: { conversationId: string }) {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const targetMessageId = searchParams.get("messageId");
   const [offset, setOffset] = useState(0);
   const [messages, setMessages] = useState<MessageListItem[]>([]);
@@ -71,6 +72,16 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const total = windowQuery.data?.total ?? messages.length;
   const conversation = conversationQuery.data;
   const loadedLabel = useMemo(() => `${messages.length} / ${total} loaded`, [messages.length, total]);
+
+  async function refreshReader() {
+    setMessages([]);
+    setOffset(0);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["message-window", conversationId] }),
+      queryClient.invalidateQueries({ queryKey: ["toc", conversationId] }),
+      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] }),
+    ]);
+  }
 
   if (conversationQuery.isLoading) {
     return <ReaderState title="Loading conversation" detail="Fetching conversation metadata." />;
@@ -139,7 +150,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             <div className="space-y-5">
               <ReadingPositionClient conversationId={conversationId} messages={messages} />
               {messages.map((message) => (
-                <MessageItem key={message.id} message={message} />
+                <MessageItem key={message.id} message={message} onChanged={refreshReader} />
               ))}
               {hasMore ? (
                 <button
