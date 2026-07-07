@@ -15,5 +15,38 @@
       "warnings": []
     }
   ],
-  "warnings": []
+  "warnings": [],
+  "conversation_preview": {
+    "title": "社交训练",
+    "source_type": "chatgpt_exporter_combo",
+    "source_profile": "chatgpt_exporter_combo",
+    "alignment_status": "exact_match",
+    "message_count": 2,
+    "prompt_count": 1,
+    "response_count": 1,
+    "empty_message_count": 0,
+    "cleaned_thinking_summary_count": 1,
+    "first_user_message": "你可以教我提高社交能力吗？",
+    "warnings": [],
+    "messages": [
+      {
+        "role": "user",
+        "order_key": "000001",
+        "plain_text_preview": "你可以教我提高社交能力吗？",
+        "display_text_preview": "你可以教我提高社交能力吗？",
+        "source_json_index": 0,
+        "source_markdown_index": 0,
+        "warnings": []
+      },
+      {
+        "role": "assistant",
+        "order_key": "000002",
+        "plain_text_preview": "当然可以。",
+        "display_text_preview": "当然可以。",
+        "source_json_index": 1,
+        "source_markdown_index": 1,
+        "warnings": ["Removed leading exported thinking summary."]
+      }
+    ]
+  }
 }

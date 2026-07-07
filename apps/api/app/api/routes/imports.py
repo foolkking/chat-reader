@@ -9,17 +9,29 @@ from app.core.database import get_db
 from app.models.import_record import ImportRecord
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import (
+    ConversationPreview,
     ImportPreviewFile,
     ImportPreviewResponse,
     ImportWarningsResponse,
+    MessagePreview,
+    SourceDetectionResult,
     SourceArtifactRead,
+    SourceProfile,
 )
+from app.services.import_pipeline.canonical_draft import preview_text
+from app.services.import_pipeline.exporter_aligner import align_exporter_sources
+from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
+from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
 from app.services.import_pipeline.source_detector import detect_source_profile
 from app.services.storage.local_storage import save_import_file
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 
 ALLOWED_EXTENSIONS = {".json", ".md", ".markdown", ".txt", ".csv"}
+PREVIEW_MESSAGE_LIMIT = 20
+
+
+UploadedPreviewFile = tuple[str, bytes, SourceDetectionResult]
 
 
 @router.post("/preview", response_model=ImportPreviewResponse)
@@ -37,6 +49,8 @@ async def preview_import(
     import_warnings: list[str] = []
     total_bytes = 0
     source_profiles: list[str] = []
+    uploaded_files: list[UploadedPreviewFile] = []
+    conversation_preview: ConversationPreview | None = None
 
     try:
         for upload in files:
@@ -58,6 +72,7 @@ async def preview_import(
                 )
 
             detection = detect_source_profile(filename, content)
+            uploaded_files.append((filename, content, detection))
             stored_file = save_import_file(import_id, filename, content)
             artifact = SourceArtifact(
                 id=uuid.uuid4(),
@@ -93,12 +108,17 @@ async def preview_import(
             total_bytes += detection.size_bytes
             source_profiles.append(detection.source_profile.value)
 
+        conversation_preview = _build_conversation_preview(uploaded_files)
+        if conversation_preview is not None:
+            import_warnings.extend(conversation_preview.warnings)
+            source_profiles = [conversation_preview.source_profile]
+
         import_record = ImportRecord(
             id=import_id,
             source_profile=_combined_source_profile(source_profiles),
             source_fingerprint=_combined_source_fingerprint(preview_files),
             status="previewed",
-            alignment_status="not_applicable",
+            alignment_status=conversation_preview.alignment_status if conversation_preview else "not_applicable",
             warnings=import_warnings,
             file_count=len(preview_files),
             total_bytes=total_bytes,
@@ -125,6 +145,7 @@ async def preview_import(
         status="previewed",
         files=preview_files,
         warnings=import_warnings,
+        conversation_preview=conversation_preview,
     )
 
 
@@ -180,6 +201,8 @@ def _combined_source_profile(source_profiles: list[str]) -> str:
     unique_profiles = set(source_profiles)
     if len(unique_profiles) == 1:
         return source_profiles[0]
+    if unique_profiles == {"chatgpt_exporter_json", "chatgpt_exporter_markdown"}:
+        return "chatgpt_exporter_combo"
     return "mixed"
 
 
@@ -192,3 +215,66 @@ def _first_filename_for_extension(files: list[ImportPreviewFile], extension: str
         if file.file_extension == extension:
             return file.filename
     return None
+
+
+def _build_conversation_preview(files: list[UploadedPreviewFile]) -> ConversationPreview | None:
+    exporter_json = next(
+        ((filename, content) for filename, content, detection in files if detection.source_profile == SourceProfile.chatgpt_exporter_json),
+        None,
+    )
+    exporter_markdown = next(
+        (
+            (filename, content)
+            for filename, content, detection in files
+            if detection.source_profile == SourceProfile.chatgpt_exporter_markdown
+        ),
+        None,
+    )
+
+    if exporter_json is None and exporter_markdown is None:
+        return None
+
+    warnings: list[str] = []
+    json_result = None
+    markdown_result = None
+
+    if exporter_json is not None:
+        try:
+            json_result = parse_exporter_json(exporter_json[1])
+        except ExporterJsonParseError as exc:
+            warnings.append(f"{exporter_json[0]} could not be parsed as ChatGPT Exporter JSON: {exc}")
+
+    if exporter_markdown is not None:
+        markdown_result = parse_exporter_markdown(exporter_markdown[1])
+
+    alignment = align_exporter_sources(json_result, markdown_result)
+    if alignment.conversation is None:
+        return None
+
+    conversation = alignment.conversation
+    combined_warnings = warnings + conversation.warnings
+    return ConversationPreview(
+        title=conversation.title,
+        source_type=conversation.source_type,
+        source_profile=conversation.source_profile,
+        alignment_status=conversation.alignment_status,
+        message_count=conversation.message_count,
+        prompt_count=conversation.prompt_count,
+        response_count=conversation.response_count,
+        empty_message_count=conversation.empty_message_count,
+        cleaned_thinking_summary_count=conversation.cleaned_thinking_summary_count,
+        first_user_message=preview_text(conversation.first_user_message or ""),
+        warnings=combined_warnings,
+        messages=[
+            MessagePreview(
+                role=message.role,
+                order_key=message.order_key,
+                plain_text_preview=preview_text(message.plain_text),
+                display_text_preview=preview_text(message.display_text),
+                source_json_index=message.source_json_index,
+                source_markdown_index=message.source_markdown_index,
+                warnings=message.warnings,
+            )
+            for message in conversation.messages[:PREVIEW_MESSAGE_LIMIT]
+        ],
+    )

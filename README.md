@@ -214,6 +214,62 @@ cd ../..
 git diff --check
 ```
 
+## Stage 02 ChatGPT Exporter JSON + Markdown Preview Import
+
+Stage 02 支持 ChatGPT Exporter JSON、ChatGPT Exporter Markdown，以及 JSON + Markdown combo 的 preview import。当前阶段只生成 conversation preview / canonical draft，不写入正式 `conversations`、`messages`、`message_versions` 或 `render_blocks` 表。
+
+### 当前完成内容
+
+- ChatGPT Exporter JSON parser：解析 metadata、link、dates、messages、role、time、empty message。
+- ChatGPT Exporter Markdown parser：按 `## Prompt:` / `## Response:` 做 section-level parse，保留 markdown_text。
+- Thinking cleaner：只清理 assistant response 开头明显的导出思考摘要。
+- Exporter aligner：支持 `json_only`、`markdown_only`、`exact_match`、`partial_match`、`conflict_detected`。
+- Import Preview API 扩展：Exporter JSON/Markdown/combo 上传时返回 `conversation_preview`。
+
+### 不支持内容
+
+- 官方 `conversations.json` 仍只做 source detection，不做正式 parser。
+- 不生成 RenderBlock、Heading、SearchDocument。
+- 不提供正式导入提交 API。
+- 不实现阅读器 UI、搜索、编辑、分享或导出。
+
+### curl 示例
+
+```bash
+curl -F "files=@ChatGPT-社交训练.json" -F "files=@ChatGPT-社交训练.md" http://localhost:8000/api/imports/preview
+```
+
+响应会包含：
+
+```json
+{
+  "conversation_preview": {
+    "title": "社交训练",
+    "source_type": "chatgpt_exporter_combo",
+    "source_profile": "chatgpt_exporter_combo",
+    "alignment_status": "exact_match",
+    "message_count": 2,
+    "prompt_count": 1,
+    "response_count": 1,
+    "empty_message_count": 0,
+    "cleaned_thinking_summary_count": 1,
+    "messages": []
+  }
+}
+```
+
+Preview messages 默认最多返回前 20 条。
+
+### 测试
+
+```bash
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+cd apps/api && pytest
+cd ../..
+git diff --check
+```
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：

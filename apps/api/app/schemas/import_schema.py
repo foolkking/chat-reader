@@ -40,11 +40,37 @@ class ImportPreviewFile(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class MessagePreview(BaseModel):
+    role: str
+    order_key: str
+    plain_text_preview: str
+    display_text_preview: str
+    source_json_index: int | None
+    source_markdown_index: int | None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ConversationPreview(BaseModel):
+    title: str
+    source_type: str
+    source_profile: str
+    alignment_status: str
+    message_count: int
+    prompt_count: int
+    response_count: int
+    empty_message_count: int
+    cleaned_thinking_summary_count: int
+    first_user_message: str | None
+    warnings: list[str] = Field(default_factory=list)
+    messages: list[MessagePreview] = Field(default_factory=list)
+
+
 class ImportPreviewResponse(BaseModel):
     import_id: UUID
     status: str
     files: list[ImportPreviewFile]
     warnings: list[str] = Field(default_factory=list)
+    conversation_preview: ConversationPreview | None = None
 
 
 class SourceArtifactRead(BaseModel):
