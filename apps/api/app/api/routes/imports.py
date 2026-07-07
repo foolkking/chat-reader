@@ -18,6 +18,8 @@ from app.schemas.import_schema import (
     SourceArtifactRead,
     SourceProfile,
 )
+from app.schemas.canonical import CommitImportResponse
+from app.services.canonical.persistence import CommitImportError, commit_import_preview
 from app.services.import_pipeline.canonical_draft import preview_text
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
@@ -188,6 +190,30 @@ def list_source_artifacts(import_id: uuid.UUID, db: Session = Depends(get_db)) -
 def get_import_warnings(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportWarningsResponse:
     import_record = _get_import_or_404(import_id, db)
     return ImportWarningsResponse(import_id=import_record.id, warnings=import_record.warnings)
+
+
+@router.post("/{import_id}/commit", response_model=CommitImportResponse)
+def commit_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -> CommitImportResponse:
+    try:
+        result = commit_import_preview(import_id, db)
+    except CommitImportError as exc:
+        message = str(exc)
+        status_code = status.HTTP_404_NOT_FOUND if "not found" in message.lower() else status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=status_code, detail=message) from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Import commit could not be saved.",
+        ) from exc
+    return CommitImportResponse(
+        import_id=result.import_id,
+        status=result.status,
+        conversation_ids=result.conversation_ids,
+        conversation_count=result.conversation_count,
+        message_count=result.message_count,
+        warnings=result.warnings,
+    )
 
 
 def _get_import_or_404(import_id: uuid.UUID, db: Session) -> ImportRecord:

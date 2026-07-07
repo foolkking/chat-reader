@@ -409,6 +409,87 @@ psql -h localhost -U chat_reader -d chat_reader -c "\dt"
 psql -h localhost -U chat_reader -d chat_reader -c "SELECT version_num FROM alembic_version;"
 ```
 
+## Stage 04 Canonical Persistence / Core Conversation Storage
+
+Stage 04 将 import preview 基于 raw artifacts 重新解析并持久化为内部 Canonical core storage。Preview response 不作为可信持久源。
+
+### 当前完成内容
+
+- Core tables:
+  - `conversations`
+  - `messages`
+  - `message_versions`
+  - `render_blocks`
+  - `source_message_refs`
+  - `conversation_events`
+- `imports` 增加：
+  - `conversation_id`
+  - `committed_at`
+- Canonical persistence service:
+  - ChatGPT Exporter JSON
+  - ChatGPT Exporter Markdown
+  - ChatGPT Exporter JSON + Markdown combo
+  - Official single conversation JSON
+  - Official `conversations.json` list
+- Basic render block builder:
+  - `paragraph`
+  - `heading`
+  - `code`
+- Read APIs:
+  - `GET /api/conversations`
+  - `GET /api/conversations/{conversation_id}`
+  - `GET /api/conversations/{conversation_id}/messages`
+  - `GET /api/messages/{message_id}`
+  - `GET /api/messages/{message_id}/blocks`
+
+### Import preview -> commit
+
+```bash
+curl -F "files=@ChatGPT-社交训练.json" http://localhost:8000/api/imports/preview
+curl -X POST http://localhost:8000/api/imports/{import_id}/commit
+curl http://localhost:8000/api/conversations
+curl http://localhost:8000/api/conversations/{conversation_id}/messages
+curl http://localhost:8000/api/messages/{message_id}/blocks
+```
+
+Commit response:
+
+```json
+{
+  "import_id": "00000000-0000-0000-0000-000000000000",
+  "status": "committed",
+  "conversation_ids": ["00000000-0000-0000-0000-000000000001"],
+  "conversation_count": 1,
+  "message_count": 12,
+  "warnings": []
+}
+```
+
+### PostgreSQL migration 验证
+
+```bash
+cd apps/api
+alembic upgrade head
+alembic current
+cd ../..
+psql -h localhost -U chat_reader -d chat_reader -c "\dt"
+psql -h localhost -U chat_reader -d chat_reader -c "SELECT version_num FROM alembic_version;"
+```
+
+Expected head:
+
+```text
+20260707_0002
+```
+
+### 本阶段不包含
+
+- Project CRUD
+- Search index
+- Reader UI / virtual scroll
+- Editing
+- Share / export
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：

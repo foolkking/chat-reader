@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
 from app.api.routes.imports import router as imports_router
+from app.api.routes.conversations import router as conversations_router
+from app.api.routes.messages import router as messages_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -23,3 +25,5 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(imports_router)
+app.include_router(conversations_router)
+app.include_router(messages_router)
