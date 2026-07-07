@@ -22,6 +22,8 @@ from app.services.import_pipeline.canonical_draft import preview_text
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
 from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
+from app.services.import_pipeline.official_json_parser import OfficialJsonParseError, parse_official_json
+from app.services.import_pipeline.official_normalizer import build_official_conversation_preview
 from app.services.import_pipeline.source_detector import detect_source_profile
 from app.services.storage.local_storage import save_import_file
 
@@ -29,6 +31,7 @@ router = APIRouter(prefix="/api/imports", tags=["imports"])
 
 ALLOWED_EXTENSIONS = {".json", ".md", ".markdown", ".txt", ".csv"}
 PREVIEW_MESSAGE_LIMIT = 20
+PREVIEW_CONVERSATION_LIMIT = 20
 
 
 UploadedPreviewFile = tuple[str, bytes, SourceDetectionResult]
@@ -51,6 +54,7 @@ async def preview_import(
     source_profiles: list[str] = []
     uploaded_files: list[UploadedPreviewFile] = []
     conversation_preview: ConversationPreview | None = None
+    conversation_previews: list[ConversationPreview] = []
 
     try:
         for upload in files:
@@ -108,7 +112,10 @@ async def preview_import(
             total_bytes += detection.size_bytes
             source_profiles.append(detection.source_profile.value)
 
-        conversation_preview = _build_conversation_preview(uploaded_files)
+        conversation_preview = _build_exporter_conversation_preview(uploaded_files)
+        if conversation_preview is None:
+            conversation_previews = _build_official_conversation_previews(uploaded_files, import_warnings)
+            conversation_preview = conversation_previews[0] if conversation_previews else None
         if conversation_preview is not None:
             import_warnings.extend(conversation_preview.warnings)
             source_profiles = [conversation_preview.source_profile]
@@ -146,6 +153,7 @@ async def preview_import(
         files=preview_files,
         warnings=import_warnings,
         conversation_preview=conversation_preview,
+        conversation_previews=conversation_previews,
     )
 
 
@@ -217,7 +225,7 @@ def _first_filename_for_extension(files: list[ImportPreviewFile], extension: str
     return None
 
 
-def _build_conversation_preview(files: list[UploadedPreviewFile]) -> ConversationPreview | None:
+def _build_exporter_conversation_preview(files: list[UploadedPreviewFile]) -> ConversationPreview | None:
     exporter_json = next(
         ((filename, content) for filename, content, detection in files if detection.source_profile == SourceProfile.chatgpt_exporter_json),
         None,
@@ -278,3 +286,36 @@ def _build_conversation_preview(files: list[UploadedPreviewFile]) -> Conversatio
             for message in conversation.messages[:PREVIEW_MESSAGE_LIMIT]
         ],
     )
+
+
+def _build_official_conversation_previews(
+    files: list[UploadedPreviewFile],
+    import_warnings: list[str],
+) -> list[ConversationPreview]:
+    official_file = next(
+        (
+            (filename, content, detection)
+            for filename, content, detection in files
+            if detection.source_profile in {SourceProfile.official_conversations_json, SourceProfile.official_conversation_json}
+        ),
+        None,
+    )
+    if official_file is None:
+        return []
+
+    filename, content, detection = official_file
+    try:
+        parse_result = parse_official_json(content)
+    except OfficialJsonParseError as exc:
+        import_warnings.append(f"{filename} could not be parsed as official conversations JSON: {exc}")
+        return []
+
+    source_profile = detection.source_profile.value
+    previews = [
+        build_official_conversation_preview(conversation, source_profile)
+        for conversation in parse_result.conversations[:PREVIEW_CONVERSATION_LIMIT]
+    ]
+    import_warnings.extend(parse_result.warnings)
+    if parse_result.conversation_count > PREVIEW_CONVERSATION_LIMIT:
+        import_warnings.append(f"Conversation previews capped at {PREVIEW_CONVERSATION_LIMIT}.")
+    return previews

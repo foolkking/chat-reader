@@ -47,6 +47,13 @@ class MessagePreview(BaseModel):
     display_text_preview: str
     source_json_index: int | None
     source_markdown_index: int | None
+    created_at: str | None = None
+    source_node_id: str | None = None
+    source_message_id: str | None = None
+    source_parent_node_id: str | None = None
+    source_child_node_ids: list[str] = Field(default_factory=list)
+    is_primary_path: bool | None = None
+    metadata_preview: dict = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -61,6 +68,12 @@ class ConversationPreview(BaseModel):
     empty_message_count: int
     cleaned_thinking_summary_count: int
     first_user_message: str | None
+    node_count: int | None = None
+    message_node_count: int | None = None
+    primary_path_length: int | None = None
+    branch_count: int = 0
+    branch_node_count: int = 0
+    has_branches: bool = False
     warnings: list[str] = Field(default_factory=list)
     messages: list[MessagePreview] = Field(default_factory=list)
 
@@ -71,6 +84,7 @@ class ImportPreviewResponse(BaseModel):
     files: list[ImportPreviewFile]
     warnings: list[str] = Field(default_factory=list)
     conversation_preview: ConversationPreview | None = None
+    conversation_previews: list[ConversationPreview] = Field(default_factory=list)
 
 
 class SourceArtifactRead(BaseModel):

@@ -27,6 +27,12 @@
     "empty_message_count": 0,
     "cleaned_thinking_summary_count": 1,
     "first_user_message": "你可以教我提高社交能力吗？",
+    "node_count": null,
+    "message_node_count": null,
+    "primary_path_length": null,
+    "branch_count": 0,
+    "branch_node_count": 0,
+    "has_branches": false,
     "warnings": [],
     "messages": [
       {
@@ -36,6 +42,13 @@
         "display_text_preview": "你可以教我提高社交能力吗？",
         "source_json_index": 0,
         "source_markdown_index": 0,
+        "created_at": null,
+        "source_node_id": null,
+        "source_message_id": null,
+        "source_parent_node_id": null,
+        "source_child_node_ids": [],
+        "is_primary_path": null,
+        "metadata_preview": {},
         "warnings": []
       },
       {
@@ -45,8 +58,16 @@
         "display_text_preview": "当然可以。",
         "source_json_index": 1,
         "source_markdown_index": 1,
+        "created_at": null,
+        "source_node_id": null,
+        "source_message_id": null,
+        "source_parent_node_id": null,
+        "source_child_node_ids": [],
+        "is_primary_path": null,
+        "metadata_preview": {},
         "warnings": ["Removed leading exported thinking summary."]
       }
     ]
-  }
+  },
+  "conversation_previews": []
 }

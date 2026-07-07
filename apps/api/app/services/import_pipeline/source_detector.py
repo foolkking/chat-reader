@@ -15,6 +15,21 @@ def detect_source_profile(filename: str, content: bytes) -> SourceDetectionResul
     sha256 = hashlib.sha256(content).hexdigest()
     warnings: list[str] = []
 
+    if extension == ".json" or _looks_like_json(content):
+        parsed = _parse_json(content, warnings)
+        if parsed is None:
+            return SourceDetectionResult(
+                source_profile=SourceProfile.unknown,
+                confidence=0.0,
+                reason="JSON content could not be decoded.",
+                file_extension=extension,
+                mime_guess=mime_guess or "application/json",
+                size_bytes=size_bytes,
+                sha256=sha256,
+                warnings=warnings,
+            )
+        return _detect_json_profile(parsed, extension, mime_guess, size_bytes, sha256, warnings)
+
     if extension == ".csv" or _looks_like_csv(content):
         return SourceDetectionResult(
             source_profile=SourceProfile.csv,
@@ -52,21 +67,6 @@ def detect_source_profile(filename: str, content: bytes) -> SourceDetectionResul
                 sha256=sha256,
                 warnings=warnings,
             )
-
-    if extension == ".json" or _looks_like_json(content):
-        parsed = _parse_json(content, warnings)
-        if parsed is None:
-            return SourceDetectionResult(
-                source_profile=SourceProfile.unknown,
-                confidence=0.0,
-                reason="JSON content could not be decoded.",
-                file_extension=extension,
-                mime_guess=mime_guess or "application/json",
-                size_bytes=size_bytes,
-                sha256=sha256,
-                warnings=warnings,
-            )
-        return _detect_json_profile(parsed, extension, mime_guess, size_bytes, sha256, warnings)
 
     return SourceDetectionResult(
         source_profile=SourceProfile.unknown,

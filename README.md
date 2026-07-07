@@ -270,6 +270,99 @@ cd ../..
 git diff --check
 ```
 
+## Stage 03 Official conversations.json Preview Import
+
+Stage 03 支持官方 ChatGPT 导出的 `conversations.json` 和单个 official conversation JSON 的 preview import。同时继续要求真实 PostgreSQL migration 验证：`imports` / `source_artifacts` 必须能通过 Alembic 在 PostgreSQL 中创建。
+
+### 当前完成内容
+
+- Official JSON parser：支持顶层 list 和单 conversation object。
+- Primary path resolver：从 `current_node` 沿 `parent` 回溯到 root，再反转为默认主线。
+- Branch metadata preview：`children` 数量大于 1 的节点计为 branch point；非主线 message node 只进入 branch metadata，不进入默认 messages。
+- Official normalizer：把 primary path 上的 official nodes 转成 preview messages。
+- Import Preview API：支持 `official_conversation_json` 和 `official_conversations_json`，并返回 `conversation_preview` / `conversation_previews`。
+
+### 不支持内容
+
+- 不把 official `mapping` 当内部长期格式。
+- 不创建正式 `conversations`、`messages`、`message_versions`、`render_blocks` 表。
+- 不实现完整分支 UI、阅读器、搜索、编辑、分享或导出。
+
+### curl 示例
+
+```bash
+curl -F "files=@conversations.json" http://localhost:8000/api/imports/preview
+```
+
+响应会包含：
+
+```json
+{
+  "conversation_preview": {
+    "title": "Official Sample",
+    "source_type": "official_chatgpt_export",
+    "source_profile": "official_conversations_json",
+    "alignment_status": "official_primary_path",
+    "message_count": 2,
+    "node_count": 4,
+    "message_node_count": 3,
+    "primary_path_length": 3,
+    "branch_count": 1,
+    "branch_node_count": 1,
+    "has_branches": true
+  },
+  "conversation_previews": []
+}
+```
+
+### PostgreSQL migration 验证
+
+Docker Compose 方式：
+
+```bash
+docker compose up -d chat-reader-postgres
+cd apps/api
+alembic upgrade head
+alembic current
+cd ../..
+docker compose exec chat-reader-postgres psql -U chat_reader -d chat_reader -c "\dt"
+docker compose exec chat-reader-postgres psql -U chat_reader -d chat_reader -c "SELECT version_num FROM alembic_version;"
+```
+
+非 Docker PostgreSQL 方式：
+
+1. 创建数据库 `chat_reader`。
+2. 创建用户 `chat_reader`，密码 `chat_reader`。
+3. 确认 `DATABASE_URL=postgresql+psycopg://chat_reader:chat_reader@localhost:5432/chat_reader`。
+4. 执行：
+
+```bash
+cd apps/api
+alembic upgrade head
+alembic current
+psql -U chat_reader -d chat_reader -c "\dt"
+psql -U chat_reader -d chat_reader -c "SELECT version_num FROM alembic_version;"
+cd ../..
+```
+
+如果当前环境没有 Docker 和 PostgreSQL CLI，只能执行 offline SQL 检查：
+
+```bash
+cd apps/api
+alembic upgrade head --sql
+cd ../..
+```
+
+### 测试
+
+```bash
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+cd apps/api && pytest
+cd ../..
+git diff --check
+```
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：
