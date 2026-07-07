@@ -85,6 +85,8 @@ class ImportPreviewResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     conversation_preview: ConversationPreview | None = None
     conversation_previews: list[ConversationPreview] = Field(default_factory=list)
+    can_commit: bool = False
+    commit_endpoint: str | None = None
 
 
 class SourceArtifactRead(BaseModel):

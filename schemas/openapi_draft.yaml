@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Chat Archive Reader API
+  title: chat-reader API
   version: 0.1.0
 paths:
   /api/imports/preview:
@@ -8,35 +8,51 @@ paths:
       summary: Preview uploaded source files before import
       responses:
         '200': { description: Import preview }
-  /api/imports:
+  /api/imports/{import_id}/commit:
     post:
-      summary: Start import job
-      responses:
-        '202': { description: Import job created }
-  /api/imports/{job_id}:
-    get:
-      summary: Get import job status
+      summary: Commit a previewed import into canonical conversation storage
       parameters:
-        - name: job_id
+        - name: import_id
           in: path
           required: true
           schema: { type: string }
       responses:
-        '200': { description: Job status }
-  /api/projects:
+        '200': { description: Import committed }
+  /api/imports/{import_id}/source-artifacts:
     get:
-      summary: List projects
+      summary: List raw source artifacts for an import
+      parameters:
+        - name: import_id
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        '200': { description: Project list }
-    post:
-      summary: Create project
+        '200': { description: Source artifact list }
+  /api/imports/{import_id}/warnings:
+    get:
+      summary: List import warnings
+      parameters:
+        - name: import_id
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        '201': { description: Created project }
+        '200': { description: Import warnings }
   /api/conversations:
     get:
       summary: List conversations
       responses:
         '200': { description: Conversation list }
+  /api/conversations/{conversation_id}:
+    get:
+      summary: Get conversation detail
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Conversation detail }
   /api/conversations/{conversation_id}/messages:
     get:
       summary: Get paginated messages
@@ -51,32 +67,34 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, default: 30 }
+        - name: include_blocks
+          in: query
+          schema: { type: boolean, default: false }
       responses:
         '200': { description: Message page }
-  /api/messages/blocks/batch:
-    post:
-      summary: Batch load message blocks
-      responses:
-        '200': { description: Blocks by message }
-  /api/search:
+  /api/messages/{message_id}:
     get:
-      summary: Search conversations and messages
+      summary: Get message detail
       parameters:
-        - name: q
-          in: query
+        - name: message_id
+          in: path
           required: true
           schema: { type: string }
-        - name: projectId
-          in: query
-          schema: { type: string }
-        - name: conversationId
-          in: query
-          schema: { type: string }
-        - name: role
-          in: query
-          schema: { type: string }
-        - name: blockType
-          in: query
-          schema: { type: string }
       responses:
-        '200': { description: Search results }
+        '200': { description: Message detail }
+  /api/messages/{message_id}/blocks:
+    get:
+      summary: Get render blocks for a message
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: start
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        '200': { description: Render blocks }

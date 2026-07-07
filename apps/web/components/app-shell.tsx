@@ -1,74 +1,23 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { getHealth, type HealthResponse } from "../lib/api";
-
-type HealthState =
-  | { label: "not checked"; detail: "ready placeholder" }
-  | { label: "ok"; detail: string }
-  | { label: "unavailable"; detail: string };
+import { ConversationList } from "../features/conversations/conversation-list";
+import { ImportPanel } from "../features/import/import-panel";
 
 export function AppShell() {
-  const [health, setHealth] = useState<HealthState>({
-    label: "not checked",
-    detail: "ready placeholder",
-  });
-
-  useEffect(() => {
-    let active = true;
-
-    getHealth()
-      .then((result: HealthResponse) => {
-        if (!active) {
-          return;
-        }
-
-        setHealth({
-          label: result.status,
-          detail: `${result.service} / ${result.stage}`,
-        });
-      })
-      .catch((error: unknown) => {
-        if (!active) {
-          return;
-        }
-
-        setHealth({
-          label: "unavailable",
-          detail: error instanceof Error ? error.message : "health check failed",
-        });
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   return (
-    <main className="min-h-screen px-6 py-10 sm:px-10">
-      <section className="mx-auto flex max-w-3xl flex-col gap-8">
-        <div className="space-y-3">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
+        <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-normal text-slate-500">
-            Stage 00: Foundation
+            Stage 05: Basic Reader
           </p>
-          <h1 className="text-4xl font-semibold tracking-normal text-slate-950">
-            chat-reader
-          </h1>
-          <p className="max-w-2xl text-lg leading-8 text-slate-700">
-            ChatGPT export archive reader foundation
+          <h1 className="text-3xl font-semibold tracking-normal text-slate-950">chat-reader</h1>
+          <p className="max-w-2xl text-base leading-7 text-slate-700">
+            Import ChatGPT export files, commit canonical conversations, and open a basic reader view.
           </p>
-        </div>
+        </header>
 
-        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">API health</p>
-              <p className="text-xl font-semibold text-slate-950">{health.label}</p>
-            </div>
-            <p className="text-sm text-slate-600">{health.detail}</p>
-          </div>
-        </div>
-      </section>
+        <ImportPanel />
+        <ConversationList />
+      </div>
     </main>
   );
 }

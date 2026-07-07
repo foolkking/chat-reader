@@ -490,6 +490,66 @@ Expected head:
 - Editing
 - Share / export
 
+## Stage 05 Basic Reader API/UI Skeleton
+
+Stage 05 adds the first usable reader loop on top of the canonical APIs from Stage 04.
+
+### Current capabilities
+
+- Home page `/` shows the `chat-reader` title, import panel, and conversation list.
+- Import panel supports selecting one or more `.json`, `.md`, `.markdown`, `.txt`, or `.csv` files.
+- Import panel can call `POST /api/imports/preview` and display a preview summary.
+- Commit button calls `POST /api/imports/{import_id}/commit`.
+- After commit, the conversation list refreshes and links to the first committed conversation.
+- Reader page `/conversations/{conversation_id}` loads conversation detail and messages with render blocks.
+- Basic block renderer supports `paragraph`, `heading`, `code`, and plain-text fallback.
+- Imported content is rendered through canonical `message_versions` / `render_blocks`; raw artifact files are not read by the frontend.
+
+### Start API and Web
+
+```bash
+cd apps/api
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+```bash
+corepack pnpm --filter web dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+### Manual reader flow
+
+```bash
+curl -F "files=@ChatGPT-sample.json" http://localhost:8000/api/imports/preview
+curl -X POST http://localhost:8000/api/imports/{import_id}/commit
+curl http://localhost:8000/api/conversations
+curl "http://localhost:8000/api/conversations/{conversation_id}/messages?include_blocks=true"
+```
+
+### Checks
+
+```bash
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+cd apps/api
+alembic current
+pytest
+cd ../..
+git diff --check
+```
+
+### Not included in Stage 05
+
+- Project / pin / reading position
+- Search / TOC
+- Virtual scroll
+- Edit / share / export
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：

@@ -156,6 +156,10 @@ async def preview_import(
         warnings=import_warnings,
         conversation_preview=conversation_preview,
         conversation_previews=conversation_previews,
+        can_commit=conversation_preview is not None or bool(conversation_previews),
+        commit_endpoint=f"/api/imports/{import_id}/commit"
+        if conversation_preview is not None or conversation_previews
+        else None,
     )
 
 
