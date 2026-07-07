@@ -11,6 +11,7 @@ from app.models.render_block import RenderBlock
 from app.schemas.conversation import ConversationDetail, ConversationListItem
 from app.schemas.message import MessageListItem, MessageVersionRead, RenderBlockRead
 from app.schemas.project import ConversationPinUpdate
+from app.schemas.search import MessageWindowResponse
 from app.models.import_record import utc_now
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
@@ -101,6 +102,34 @@ def list_conversation_messages(
     return [_message_item(message, include_blocks, db) for message in messages]
 
 
+@router.get("/{conversation_id}/message-window", response_model=MessageWindowResponse)
+def get_message_window(
+    conversation_id: uuid.UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    include_blocks: bool = False,
+    after_order_key: str | None = None,
+    before_order_key: str | None = None,
+    db: Session = Depends(get_db),
+) -> MessageWindowResponse:
+    if db.get(Conversation, conversation_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    query = db.query(Message).filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
+    if after_order_key:
+        query = query.filter(Message.order_key > after_order_key)
+    if before_order_key:
+        query = query.filter(Message.order_key < before_order_key)
+    total = query.count()
+    messages = query.order_by(Message.order_key.asc()).offset(offset).limit(limit).all()
+    return MessageWindowResponse(
+        items=[_message_item(message, include_blocks, db) for message in messages],
+        limit=limit,
+        offset=offset,
+        total=total,
+        has_more=offset + len(messages) < total,
+    )
+
+
 def _conversation_item(conversation: Conversation) -> ConversationListItem:
     return ConversationListItem(
         id=conversation.id,
@@ -132,6 +161,9 @@ def _message_item(message: Message, include_blocks: bool, db: Session) -> Messag
         created_at=message.created_at,
         current_version=_version_read(version) if version else None,
         render_blocks=blocks,
+        block_count=message.block_count,
+        char_count=message.char_count,
+        is_heavy=message.is_heavy,
     )
 
 

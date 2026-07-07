@@ -5,6 +5,7 @@ import type {
   HealthResponse,
   ImportPreviewResponse,
   MessageListItem,
+  MessageWindowResponse,
   ProjectConversationRead,
   ProjectCreate,
   ProjectRead,
@@ -14,6 +15,9 @@ import type {
   RecentItemInput,
   RecentItemRead,
   RenderBlockRead,
+  SearchReindexResponse,
+  SearchResponse,
+  TocResponse,
 } from "./types";
 
 export const API_BASE_URL =
@@ -43,6 +47,21 @@ export async function getConversationMessages(
 
   return fetchJson<MessageListItem[]>(
     `/api/conversations/${conversationId}/messages?${params.toString()}`,
+  );
+}
+
+export async function getConversationMessageWindow(
+  conversationId: string,
+  options: { includeBlocks?: boolean; limit?: number; offset?: number } = {},
+): Promise<MessageWindowResponse> {
+  const params = new URLSearchParams({
+    include_blocks: String(options.includeBlocks ?? true),
+    limit: String(options.limit ?? 50),
+    offset: String(options.offset ?? 0),
+  });
+
+  return fetchJson<MessageWindowResponse>(
+    `/api/conversations/${conversationId}/message-window?${params.toString()}`,
   );
 }
 
@@ -155,6 +174,42 @@ export async function recordRecentConversation(
 
 export async function getRecentItems(): Promise<RecentItemRead[]> {
   return fetchJson<RecentItemRead[]>("/api/recent-items");
+}
+
+export async function searchConversations(input: {
+  q: string;
+  limit?: number;
+  offset?: number;
+  conversationId?: string;
+  projectId?: string;
+  documentType?: string;
+}): Promise<SearchResponse> {
+  const params = new URLSearchParams({
+    q: input.q,
+    limit: String(input.limit ?? 20),
+    offset: String(input.offset ?? 0),
+  });
+  if (input.conversationId) {
+    params.set("conversation_id", input.conversationId);
+  }
+  if (input.projectId) {
+    params.set("project_id", input.projectId);
+  }
+  if (input.documentType) {
+    params.set("document_type", input.documentType);
+  }
+  return fetchJson<SearchResponse>(`/api/search?${params.toString()}`);
+}
+
+export async function reindexSearch(input: { conversationId?: string } = {}): Promise<SearchReindexResponse> {
+  return fetchJson<SearchReindexResponse>(
+    "/api/search/reindex",
+    jsonRequest("POST", input.conversationId ? { conversation_id: input.conversationId } : {}),
+  );
+}
+
+export async function getConversationToc(conversationId: string): Promise<TocResponse> {
+  return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc`);
 }
 
 function jsonRequest(method: string, body: unknown): RequestInit {

@@ -118,11 +118,16 @@ CREATE TABLE headings (
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   message_version_id UUID NOT NULL REFERENCES message_versions(id) ON DELETE CASCADE,
+  render_block_id UUID REFERENCES render_blocks(id) ON DELETE SET NULL,
   block_index INTEGER NOT NULL,
+  heading_index INTEGER NOT NULL,
   level INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  anchor TEXT NOT NULL,
-  order_key TEXT NOT NULL
+  text TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  order_key TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  metadata JSONB NOT NULL DEFAULT '{}',
+  UNIQUE(conversation_id, heading_index)
 );
 
 CREATE TABLE search_documents (
@@ -130,13 +135,19 @@ CREATE TABLE search_documents (
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
   message_version_id UUID REFERENCES message_versions(id) ON DELETE CASCADE,
-  block_index INTEGER,
-  role TEXT,
   document_type TEXT NOT NULL,
+  role TEXT,
   title TEXT,
-  body TEXT NOT NULL,
-  search_vector tsvector,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  plain_text TEXT NOT NULL,
+  search_text TEXT NOT NULL,
+  source_type TEXT,
+  source_profile TEXT,
+  order_key TEXT,
+  turn_index INTEGER,
+  created_at TIMESTAMPTZ,
+  indexed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  metadata JSONB NOT NULL DEFAULT '{}',
+  search_tsv tsvector
 );
 
 CREATE TABLE imports (
@@ -253,7 +264,7 @@ CREATE INDEX idx_conversations_sort_time ON conversations(sort_time DESC);
 CREATE INDEX idx_messages_conversation_order ON messages(conversation_id, order_key);
 CREATE INDEX idx_render_blocks_version_index ON render_blocks(message_version_id, block_index);
 CREATE INDEX idx_headings_conversation_order ON headings(conversation_id, order_key);
-CREATE INDEX idx_search_documents_vector ON search_documents USING GIN(search_vector);
+CREATE INDEX idx_search_documents_vector ON search_documents USING GIN(search_tsv);
 CREATE INDEX idx_project_conversations_project ON project_conversations(project_id, is_pinned, sort_order);
 CREATE INDEX idx_source_message_refs_source_node ON source_message_refs(source_conversation_id, source_node_id);
 CREATE INDEX idx_reading_positions_conversation ON reading_positions(conversation_id);

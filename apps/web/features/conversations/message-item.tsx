@@ -1,5 +1,6 @@
 import { BlockRenderer } from "./block-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
+import { useState } from "react";
 
 const roleStyles: Record<string, string> = {
   user: "border-cyan-200 bg-cyan-50",
@@ -9,6 +10,7 @@ const roleStyles: Record<string, string> = {
 };
 
 export function MessageItem({ message }: { message: MessageListItem }) {
+  const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
   const blocks = normalizedBlocks(message);
 
   return (
@@ -25,10 +27,29 @@ export function MessageItem({ message }: { message: MessageListItem }) {
         <span className="font-mono text-xs text-slate-500">{message.order_key}</span>
       </div>
 
-      {blocks.length > 0 ? (
+      {message.is_heavy && !showHeavyBlocks ? (
+        <div className="rounded-md border border-slate-200 bg-white/70 p-3">
+          <p className="text-sm text-slate-600">
+            Heavy message: {message.char_count} characters / {message.block_count} blocks.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowHeavyBlocks(true)}
+            className="mt-3 rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white"
+          >
+            Load blocks
+          </button>
+        </div>
+      ) : blocks.length > 0 ? (
         <div className="space-y-3">
           {blocks.map((block, index) => (
-            <BlockRenderer key={block.id ?? `${message.id}-${index}`} block={block} />
+            <div
+              key={block.id ?? `${message.id}-${index}`}
+              id={`block-${message.id}-${block.block_index}`}
+              data-block-index={block.block_index}
+            >
+              <BlockRenderer block={block} />
+            </div>
           ))}
         </div>
       ) : (

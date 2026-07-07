@@ -36,6 +36,9 @@ class MessageListItem(BaseModel):
     created_at: datetime | None
     current_version: MessageVersionRead | None
     render_blocks: list[RenderBlockRead] = Field(default_factory=list)
+    block_count: int = 0
+    char_count: int = 0
+    is_heavy: bool = False
 
 
 class MessageDetail(MessageListItem):

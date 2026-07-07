@@ -620,6 +620,68 @@ Expected head:
 - Edit / share / export
 - Auth / tags / bookmarks
 
+## Stage 07 Search / TOC / Reader Performance
+
+Stage 07 adds keyword search, generated conversation TOC, and basic reader performance protection.
+
+### Current capabilities
+
+- `search_documents` table stores canonical search documents.
+- `headings` table stores generated TOC items from heading render blocks.
+- Import commit rebuilds headings and search documents in the same transaction.
+- `POST /api/search/reindex` rebuilds one conversation or all conversations.
+- `GET /api/search` supports keyword search, pagination, conversation filter, project filter, and document type filter.
+- Search snippets are plain text; no HTML highlighting is emitted.
+- `GET /api/conversations/{conversation_id}/toc` returns generated headings.
+- `GET /api/conversations/{conversation_id}/message-window` returns paginated reader messages.
+- Reader page loads messages in windows with a `Load more` button.
+- Heavy messages are collapsed until `Load blocks` is clicked.
+
+### API examples
+
+```bash
+curl "http://localhost:8000/api/search?q=keyword"
+
+curl -X POST http://localhost:8000/api/search/reindex \
+  -H "Content-Type: application/json" \
+  -d "{}"
+
+curl -X POST http://localhost:8000/api/search/reindex \
+  -H "Content-Type: application/json" \
+  -d "{\"conversation_id\":\"...\"}"
+
+curl http://localhost:8000/api/conversations/{conversation_id}/toc
+
+curl "http://localhost:8000/api/conversations/{conversation_id}/message-window?limit=50&offset=0&include_blocks=true"
+```
+
+### Migration and checks
+
+```bash
+cd apps/api
+alembic upgrade head
+alembic current
+pytest
+cd ../..
+
+corepack pnpm --filter web typecheck
+corepack pnpm --filter web lint
+git diff --check
+```
+
+Expected head:
+
+```text
+20260707_0004
+```
+
+### Not included in Stage 07
+
+- Semantic search / embeddings / vector database
+- Full virtual scroll engine
+- Edit / share / export
+- Auth / tags / bookmarks
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：

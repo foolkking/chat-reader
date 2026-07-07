@@ -61,6 +61,9 @@ export type MessageListItem = {
   created_at?: string | null;
   current_version?: MessageVersionRead | null;
   render_blocks?: RenderBlockRead[];
+  block_count: number;
+  char_count: number;
+  is_heavy: boolean;
 };
 
 export type ImportPreviewFile = {
@@ -200,4 +203,55 @@ export type RecentItemInput = {
   project_id?: string | null;
   last_message_id?: string | null;
   context?: Record<string, unknown>;
+};
+
+export type SearchResultItem = {
+  document_id: string;
+  document_type: string;
+  conversation_id: string;
+  conversation_title: string;
+  message_id: string | null;
+  role: string | null;
+  order_key: string | null;
+  snippet: string;
+  rank: number;
+  source_profile: string | null;
+};
+
+export type SearchResponse = {
+  query: string;
+  items: SearchResultItem[];
+  limit: number;
+  offset: number;
+  total: number;
+};
+
+export type SearchReindexResponse = {
+  conversation_count: number;
+  indexed_count: number;
+  heading_count: number;
+};
+
+export type TocItem = {
+  id: string;
+  heading_index: number;
+  level: number;
+  text: string;
+  slug: string;
+  message_id: string;
+  message_order_key: string;
+  block_index: number;
+};
+
+export type TocResponse = {
+  conversation_id: string;
+  items: TocItem[];
+};
+
+export type MessageWindowResponse = {
+  items: MessageListItem[];
+  limit: number;
+  offset: number;
+  total: number;
+  has_more: boolean;
 };

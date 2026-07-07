@@ -27,6 +27,9 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
         created_at=message.created_at,
         current_version=_version_read(version) if version else None,
         render_blocks=[],
+        block_count=message.block_count,
+        char_count=message.char_count,
+        is_heavy=message.is_heavy,
         source_refs=[
             {
                 "source_type": ref.source_type,

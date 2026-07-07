@@ -29,6 +29,7 @@ export function ProjectSidebar({ currentProjectId }: { currentProjectId?: string
         <nav className="mt-3 space-y-1">
           <NavLink href="/" label="All Conversations" active={!currentProjectId} />
           <NavLink href="/recent" label="Recent" active={false} />
+          <NavLink href="/search" label="Search" active={false} />
         </nav>
       </div>
 

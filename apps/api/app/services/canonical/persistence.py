@@ -30,6 +30,7 @@ from app.services.import_pipeline.official_json_parser import OfficialConversati
 from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
 from app.services.import_pipeline.official_primary_path import resolve_primary_path
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
+from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
 
 
 class CommitImportError(ValueError):
@@ -118,6 +119,7 @@ def commit_import_preview(import_id: uuid.UUID, db: Session) -> CommitImportResu
     for conversation_draft in persistable:
         conversation = _persist_conversation(import_record, artifacts, conversation_draft, db)
         add_conversation_to_project(db, default_project.id, conversation.id, added_by="system")
+        rebuild_search_and_toc_for_conversation(db, conversation.id)
         conversation_ids.append(conversation.id)
         total_messages += conversation.message_count
         all_warnings.extend(conversation_draft.warnings)

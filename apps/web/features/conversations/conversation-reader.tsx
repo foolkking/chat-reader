@@ -2,22 +2,75 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { getConversation, getConversationMessages } from "../../lib/api";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { getConversation, getConversationMessageWindow } from "../../lib/api";
+import type { MessageListItem } from "../../lib/types";
 import { AddToProjectControl } from "../projects/add-to-project-control";
 import { PinButton } from "../reading/pin-button";
 import { ReadingPositionClient } from "../reading/reading-position-client";
+import { ConversationToc } from "../toc/conversation-toc";
 import { MessageItem } from "./message-item";
 
+const PAGE_SIZE = 50;
+
 export function ConversationReader({ conversationId }: { conversationId: string }) {
+  const searchParams = useSearchParams();
+  const targetMessageId = searchParams.get("messageId");
+  const [offset, setOffset] = useState(0);
+  const [messages, setMessages] = useState<MessageListItem[]>([]);
+
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
     queryFn: () => getConversation(conversationId),
   });
 
-  const messagesQuery = useQuery({
-    queryKey: ["conversation-messages", conversationId, { includeBlocks: true }],
-    queryFn: () => getConversationMessages(conversationId, { includeBlocks: true, limit: 200 }),
+  const windowQuery = useQuery({
+    queryKey: ["message-window", conversationId, offset],
+    queryFn: () =>
+      getConversationMessageWindow(conversationId, {
+        includeBlocks: true,
+        limit: PAGE_SIZE,
+        offset,
+      }),
   });
+
+  useEffect(() => {
+    setOffset(0);
+    setMessages([]);
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!windowQuery.isSuccess) {
+      return;
+    }
+    setMessages((current) => {
+      const next = offset === 0 ? [] : [...current];
+      for (const message of windowQuery.data.items) {
+        if (!next.some((item) => item.id === message.id)) {
+          next.push(message);
+        }
+      }
+      return next;
+    });
+  }, [offset, windowQuery.data, windowQuery.isSuccess]);
+
+  useEffect(() => {
+    if (!targetMessageId || messages.length === 0) {
+      return;
+    }
+    const target = document.getElementById(`message-${targetMessageId}`);
+    if (target) {
+      target.scrollIntoView({ block: "start" });
+    } else if (windowQuery.data?.has_more && offset < 1000 && !windowQuery.isFetching) {
+      setOffset((current) => current + PAGE_SIZE);
+    }
+  }, [messages.length, offset, targetMessageId, windowQuery.data?.has_more, windowQuery.isFetching]);
+
+  const hasMore = Boolean(windowQuery.data?.has_more);
+  const total = windowQuery.data?.total ?? messages.length;
+  const conversation = conversationQuery.data;
+  const loadedLabel = useMemo(() => `${messages.length} / ${total} loaded`, [messages.length, total]);
 
   if (conversationQuery.isLoading) {
     return <ReaderState title="Loading conversation" detail="Fetching conversation metadata." />;
@@ -33,15 +86,20 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     );
   }
 
-  const conversation = conversationQuery.data;
   if (!conversation) {
-    return <ReaderState title="Conversation unavailable" detail="The API returned no conversation payload." action={<BackLink />} />;
+    return (
+      <ReaderState
+        title="Conversation unavailable"
+        detail="The API returned no conversation payload."
+        action={<BackLink />}
+      />
+    );
   }
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-5 sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:px-6">
           <BackLink />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
@@ -51,55 +109,51 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               </h1>
             </div>
             <div className="text-sm text-slate-600">
-              <span>{conversation.message_count} messages</span>
+              <span>{loadedLabel}</span>
               <span className="mx-2 text-slate-300">/</span>
               <span>{conversation.source_profile}</span>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <AddToProjectControl conversationId={conversation.id} />
-            <PinButton
-              scope="global"
-              conversationId={conversation.id}
-              isPinned={conversation.is_global_pinned}
-            />
+            <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
           </div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-        {messagesQuery.isLoading ? (
-          <ReaderState title="Loading messages" detail="Fetching current versions and render blocks." />
-        ) : null}
+      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="min-w-0">
+          {windowQuery.isLoading && messages.length === 0 ? (
+            <ReaderState title="Loading messages" detail="Fetching the first message window." />
+          ) : null}
 
-        {messagesQuery.isError ? (
-          <ReaderState
-            title="Messages unavailable"
-            detail={messagesQuery.error.message}
-            action={
-              <button
-                type="button"
-                onClick={() => void messagesQuery.refetch()}
-                className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white"
-              >
-                Retry
-              </button>
-            }
-          />
-        ) : null}
+          {windowQuery.isError ? (
+            <ReaderState title="Messages unavailable" detail={windowQuery.error.message} />
+          ) : null}
 
-        {messagesQuery.isSuccess && messagesQuery.data.length === 0 ? (
-          <ReaderState title="No messages" detail="This conversation has no persisted canonical messages." />
-        ) : null}
+          {windowQuery.isSuccess && messages.length === 0 ? (
+            <ReaderState title="No messages" detail="This conversation has no persisted canonical messages." />
+          ) : null}
 
-        {messagesQuery.isSuccess && messagesQuery.data.length > 0 ? (
-          <div className="space-y-5">
-            <ReadingPositionClient conversationId={conversationId} messages={messagesQuery.data} />
-            {messagesQuery.data.map((message) => (
-              <MessageItem key={message.id} message={message} />
-            ))}
-          </div>
-        ) : null}
+          {messages.length > 0 ? (
+            <div className="space-y-5">
+              <ReadingPositionClient conversationId={conversationId} messages={messages} />
+              {messages.map((message) => (
+                <MessageItem key={message.id} message={message} />
+              ))}
+              {hasMore ? (
+                <button
+                  type="button"
+                  onClick={() => setOffset(messages.length)}
+                  className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                >
+                  {windowQuery.isFetching ? "Loading" : "Load more"}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        <ConversationToc conversationId={conversationId} />
       </section>
     </main>
   );

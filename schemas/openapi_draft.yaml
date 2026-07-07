@@ -82,6 +82,35 @@ paths:
           schema: { type: boolean, default: false }
       responses:
         '200': { description: Message page }
+  /api/conversations/{conversation_id}/message-window:
+    get:
+      summary: Get a windowed page of messages
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: include_blocks
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200': { description: Message window }
+  /api/conversations/{conversation_id}/toc:
+    get:
+      summary: Get generated table of contents for a conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Conversation TOC }
   /api/messages/{message_id}:
     get:
       summary: Get message detail
@@ -197,3 +226,33 @@ paths:
       summary: List recent conversations
       responses:
         '200': { description: Recent items }
+  /api/search:
+    get:
+      summary: Keyword search over indexed conversations and messages
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: conversation_id
+          in: query
+          schema: { type: string }
+        - name: project_id
+          in: query
+          schema: { type: string }
+        - name: document_type
+          in: query
+          schema: { type: string, enum: [conversation, message, heading] }
+      responses:
+        '200': { description: Search results }
+  /api/search/reindex:
+    post:
+      summary: Rebuild search documents and headings
+      responses:
+        '200': { description: Reindex result }
