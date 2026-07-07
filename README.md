@@ -363,6 +363,52 @@ cd ../..
 git diff --check
 ```
 
+## Stage 03B Windows Local PostgreSQL
+
+本机 Windows 开发环境可以不使用 Docker，直接安装 PostgreSQL 到 E 盘。
+
+推荐路径：
+
+```text
+Install: E:\PostgreSQL\17
+Data:    E:\PostgreSQL\data
+PATH:    E:\PostgreSQL\17\bin
+```
+
+本地开发账号：
+
+```text
+superuser: postgres / postgres
+database:  chat_reader
+user:      chat_reader / chat_reader
+```
+
+初始化项目数据库后，`apps/api/.env` 应包含：
+
+```env
+DATABASE_URL=postgresql+psycopg://chat_reader:chat_reader@localhost:5432/chat_reader
+```
+
+验证命令：
+
+```bash
+psql --version
+where psql
+pg_isready -h localhost -p 5432
+psql -h localhost -U chat_reader -d chat_reader -c "SELECT current_database(), current_user;"
+cd apps/api
+alembic upgrade head
+alembic current
+pytest
+```
+
+表验证：
+
+```bash
+psql -h localhost -U chat_reader -d chat_reader -c "\dt"
+psql -h localhost -U chat_reader -d chat_reader -c "SELECT version_num FROM alembic_version;"
+```
+
 ## 如何使用
 
 建议按以下顺序阅读和执行：
