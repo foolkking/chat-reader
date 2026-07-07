@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Canonical Conversation Format",
+  "type": "object",
+  "required": [
+    "conversation",
+    "messages"
+  ],
+  "properties": {
+    "conversation": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "displayTitle",
+        "sourceType",
+        "sourceProfile",
+        "importedAt",
+        "messageCount",
+        "turnCount",
+        "status",
+        "parserVersion",
+        "renderVersion"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "displayTitle": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "sourceProfile": {
+          "type": "string"
+        },
+        "externalSourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "primaryProjectId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "updatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "importedAt": {
+          "type": "string"
+        },
+        "messageCount": {
+          "type": "integer"
+        },
+        "turnCount": {
+          "type": "integer"
+        },
+        "firstUserMessage": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "enum": [
+            "active",
+            "archived",
+            "deleted"
+          ]
+        },
+        "parserVersion": {
+          "type": "string"
+        },
+        "renderVersion": {
+          "type": "integer"
+        },
+        "contentHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sortTime": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isGlobalPinned": {
+          "type": "boolean"
+        },
+        "globalPinnedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "conversationId",
+          "role",
+          "orderKey",
+          "currentVersion"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant",
+              "system",
+              "tool",
+              "note",
+              "divider",
+              "summary"
+            ]
+          },
+          "authorLabel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "orderKey": {
+            "type": "string"
+          },
+          "turnIndex": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currentVersion": {
+            "$ref": "#/$defs/messageVersion"
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/sourceMessageRef"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "messageVersion": {
+      "type": "object",
+      "required": [
+        "id",
+        "versionNumber",
+        "plainText",
+        "displayText",
+        "blocks",
+        "contentHash",
+        "editType",
+        "createdAt",
+        "createdBy"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "versionNumber": {
+          "type": "integer"
+        },
+        "plainText": {
+          "type": "string"
+        },
+        "displayText": {
+          "type": "string"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/renderBlock"
+          }
+        },
+        "contentHash": {
+          "type": "string"
+        },
+        "editType": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        }
+      }
+    },
+    "renderBlock": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer"
+        },
+        "anchor": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rows": {
+          "type": "array"
+        },
+        "src": {
+          "type": "string"
+        },
+        "alt": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "meta": {
+          "type": "object"
+        }
+      }
+    },
+    "sourceMessageRef": {
+      "type": "object",
+      "properties": {
+        "sourceType": {
+          "type": "string"
+        },
+        "sourceConversationId": {
+          "type": "string"
+        },
+        "sourceNodeId": {
+          "type": "string"
+        },
+        "sourceMessageId": {
+          "type": "string"
+        },
+        "parentNodeId": {
+          "type": "string"
+        },
+        "childNodeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isPrimaryPath": {
+          "type": "boolean"
+        },
+        "branchIndex": {
+          "type": "integer"
+        },
+        "rawMetadata": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

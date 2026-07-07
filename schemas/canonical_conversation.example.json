@@ -1,0 +1,49 @@
+{
+  "conversation": {
+    "id": "conv_001",
+    "title": "社交训练",
+    "displayTitle": "社交训练",
+    "sourceType": "chatgpt_exporter_combo",
+    "sourceProfile": "chatgpt_exporter_combo",
+    "externalSourceId": "6a245686-dd50-83a7-bf75-d5141145c1c9",
+    "primaryProjectId": null,
+    "createdAt": "2026-06-07T01:19:35+08:00",
+    "updatedAt": "2026-07-07T09:58:30+08:00",
+    "importedAt": "2026-07-07T12:00:00+08:00",
+    "messageCount": 2,
+    "turnCount": 1,
+    "firstUserMessage": "你可以教我提高社交能力吗？",
+    "summary": null,
+    "status": "active",
+    "parserVersion": "importer-v1",
+    "renderVersion": 1,
+    "contentHash": "sha256:example",
+    "sortTime": "2026-07-07T09:58:30+08:00",
+    "isGlobalPinned": false,
+    "globalPinnedAt": null
+  },
+  "messages": [
+    {
+      "id": "msg_001",
+      "conversationId": "conv_001",
+      "role": "user",
+      "orderKey": "000001",
+      "turnIndex": 1,
+      "createdAt": "2026-06-07T01:19:35+08:00",
+      "currentVersion": {
+        "id": "ver_001",
+        "versionNumber": 1,
+        "plainText": "你可以教我提高社交能力吗？",
+        "displayText": "你可以教我提高社交能力吗？",
+        "blocks": [
+          { "type": "paragraph", "text": "你可以教我提高社交能力吗？" }
+        ],
+        "contentHash": "sha256:message-example",
+        "editType": "imported",
+        "createdAt": "2026-07-07T12:00:00+08:00",
+        "createdBy": "import"
+      },
+      "sourceRefs": []
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: Chat Archive Reader API
+  version: 0.1.0
+paths:
+  /api/imports/preview:
+    post:
+      summary: Preview uploaded source files before import
+      responses:
+        '200': { description: Import preview }
+  /api/imports:
+    post:
+      summary: Start import job
+      responses:
+        '202': { description: Import job created }
+  /api/imports/{job_id}:
+    get:
+      summary: Get import job status
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Job status }
+  /api/projects:
+    get:
+      summary: List projects
+      responses:
+        '200': { description: Project list }
+    post:
+      summary: Create project
+      responses:
+        '201': { description: Created project }
+  /api/conversations:
+    get:
+      summary: List conversations
+      responses:
+        '200': { description: Conversation list }
+  /api/conversations/{conversation_id}/messages:
+    get:
+      summary: Get paginated messages
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200': { description: Message page }
+  /api/messages/blocks/batch:
+    post:
+      summary: Batch load message blocks
+      responses:
+        '200': { description: Blocks by message }
+  /api/search:
+    get:
+      summary: Search conversations and messages
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: projectId
+          in: query
+          schema: { type: string }
+        - name: conversationId
+          in: query
+          schema: { type: string }
+        - name: role
+          in: query
+          schema: { type: string }
+        - name: blockType
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Search results }

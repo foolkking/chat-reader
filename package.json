@@ -1,0 +1,14 @@
+{
+  "name": "chat-reader",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "cd apps/api && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "lint": "pnpm --filter web lint",
+    "typecheck": "pnpm --filter web typecheck",
+    "test:api": "cd apps/api && pytest",
+    "check": "pnpm typecheck && pnpm test:api"
+  }
+}

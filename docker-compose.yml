@@ -1,0 +1,52 @@
+services:
+  chat-reader-postgres:
+    image: postgres:16-alpine
+    container_name: chat-reader-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chat_reader}
+      POSTGRES_USER: ${POSTGRES_USER:-chat_reader}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chat_reader}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - chat-reader-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chat_reader} -d ${POSTGRES_DB:-chat_reader}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  chat-reader-api:
+    image: python:3.11-slim
+    container_name: chat-reader-api
+    working_dir: /workspace/apps/api
+    command: sh -c "pip install -e . && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      APP_NAME: ${APP_NAME:-chat-reader}
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - .:/workspace
+    depends_on:
+      chat-reader-postgres:
+        condition: service_healthy
+
+  chat-reader-web:
+    image: node:20-alpine
+    container_name: chat-reader-web
+    working_dir: /workspace
+    command: sh -c "corepack enable && pnpm install && pnpm --filter web exec next dev --hostname 0.0.0.0"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - .:/workspace
+    depends_on:
+      - chat-reader-api
+
+volumes:
+  chat-reader-postgres-data:
