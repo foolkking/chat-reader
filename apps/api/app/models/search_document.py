@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, Text, Uuid
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -40,7 +41,10 @@ class SearchDocument(Base):
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     indexed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     metadata_: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
-    search_tsv: Mapped[str | None] = mapped_column(Text, nullable=True)
+    search_tsv: Mapped[str | None] = mapped_column(
+        postgresql.TSVECTOR().with_variant(Text(), "sqlite"),
+        nullable=True,
+    )
 
     conversation = relationship("Conversation")
     message = relationship("Message")

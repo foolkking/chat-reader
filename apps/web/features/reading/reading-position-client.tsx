@@ -30,6 +30,11 @@ export function ReadingPositionClient({
         anchor_data: payload.order_key ? { order_key: payload.order_key } : {},
       }),
   });
+  const saveMutationRef = useRef(saveMutation);
+
+  useEffect(() => {
+    saveMutationRef.current = saveMutation;
+  }, [saveMutation]);
 
   useEffect(() => {
     void recordRecentConversation(conversationId);
@@ -58,7 +63,7 @@ export function ReadingPositionClient({
       }
       lastSaveRef.current = now;
       const current = currentMessageElement();
-      saveMutation.mutate({
+      saveMutationRef.current.mutate({
         message_id: current?.getAttribute("data-message-id") ?? null,
         order_key: current?.getAttribute("data-order-key") ?? undefined,
         scroll_offset: Math.max(0, Math.round(window.scrollY)),
@@ -80,7 +85,7 @@ export function ReadingPositionClient({
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
-  }, [saveMutation]);
+  }, [conversationId]);
 
   return null;
 }

@@ -118,11 +118,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }
 
   return (
-    <main className="flex min-h-screen bg-[#f7f7f8] text-[#111827]">
+    <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]">
       <ProjectSidebar />
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
-          <div className="flex h-14 items-center justify-between gap-4 px-6">
+          <div className="flex h-14 items-center justify-between gap-3 px-4 pl-16 md:px-6 md:pl-6">
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold text-[#111827]">
                 {conversation.display_title || conversation.title}
@@ -148,8 +148,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           ) : null}
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="grid min-h-full grid-cols-1 gap-6 px-6 py-8 xl:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="grid min-h-full grid-cols-1 gap-6 px-4 py-8 md:px-6 xl:grid-cols-[minmax(0,1fr)_220px]">
             <div className="mx-auto w-full max-w-[820px] min-w-0">
               <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 shadow-sm">
                 <AddToProjectControl conversationId={conversation.id} />

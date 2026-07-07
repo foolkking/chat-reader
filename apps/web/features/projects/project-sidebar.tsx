@@ -36,7 +36,64 @@ export function ProjectSidebar({
   const conversations = (conversationsQuery.data ?? []).slice(0, 10);
 
   return (
-    <aside className="flex h-screen w-[284px] shrink-0 flex-col border-r border-[#e5e5e5] bg-[#f3f3f1] text-[#111827]">
+    <>
+      <details className="fixed left-3 top-3 z-50 md:hidden">
+        <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-[#d9d9d7] bg-white text-sm font-semibold shadow-sm marker:hidden">
+          cr
+        </summary>
+        <div className="mt-2 max-h-[calc(100vh-4rem)] w-[280px] overflow-y-auto rounded-2xl border border-[#e5e5e5] bg-[#f3f3f1] p-3 shadow-xl">
+          <div className="mb-3 flex items-center gap-2 px-1">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#10a37f] text-sm font-semibold text-white">
+              cr
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">chat-reader</p>
+              <p className="text-xs text-[#6b7280]">local archive reader</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onImportClick}
+            className="mb-3 flex w-full items-center justify-center rounded-lg border border-[#d9d9d7] bg-white px-3 py-2.5 text-sm font-medium text-[#111827] shadow-sm transition hover:bg-[#f7f7f8] focus:outline-none focus:ring-2 focus:ring-[#10a37f]/30"
+          >
+            + Import
+          </button>
+          <nav className="space-y-1">
+            <NavLink href="/" label="All Conversations" active={pathname === "/"} />
+            <NavLink href="/search" label="Search" active={pathname.startsWith("/search")} />
+            <NavLink href="/recent" label="Recent" active={pathname.startsWith("/recent")} />
+          </nav>
+          <div className="mt-5">
+            <h2 className="px-2 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Projects</h2>
+            <nav className="mt-2 space-y-1">
+              {projects.map((project) => (
+                <NavLink
+                  key={project.id}
+                  href={`/projects/${project.id}`}
+                  label={project.is_default ? "Inbox" : project.name}
+                  active={currentProjectId === project.id}
+                />
+              ))}
+            </nav>
+          </div>
+          <div className="mt-5">
+            <h2 className="px-2 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Pinned / history</h2>
+            <nav className="mt-2 space-y-1">
+              {conversations.map((conversation) => (
+                <NavLink
+                  key={conversation.id}
+                  href={`/conversations/${conversation.id}`}
+                  label={`${conversation.is_global_pinned ? "Pinned / " : ""}${conversation.display_title || conversation.title}`}
+                  active={pathname === `/conversations/${conversation.id}`}
+                />
+              ))}
+              {conversations.length === 0 ? <p className="px-2 py-2 text-xs text-[#6b7280]">No conversations yet</p> : null}
+            </nav>
+          </div>
+        </div>
+      </details>
+
+      <aside className="hidden h-screen w-[284px] shrink-0 flex-col border-r border-[#e5e5e5] bg-[#f3f3f1] text-[#111827] md:flex">
       <div className="flex h-14 items-center gap-2 border-b border-[#e5e5e5] px-5">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#10a37f] text-sm font-semibold text-white">
           cr
@@ -131,7 +188,8 @@ export function ProjectSidebar({
         </div>
         {createMutation.isError ? <p className="mt-2 text-xs text-red-700">{createMutation.error.message}</p> : null}
       </form>
-    </aside>
+      </aside>
+    </>
   );
 }
 
