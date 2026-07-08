@@ -11,7 +11,7 @@ export function VersionHistoryButton({
     <button
       type="button"
       onClick={onToggle}
-      className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+      className="min-h-10 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
     >
       {isOpen ? "Hide versions" : "Versions"}
     </button>

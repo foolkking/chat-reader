@@ -3,8 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getConversations } from "../../lib/api";
-import { AddToProjectControl } from "../projects/add-to-project-control";
-import { PinButton } from "../reading/pin-button";
 
 export function ConversationList({ onImportClick }: { onImportClick?: () => void }) {
   const conversationsQuery = useQuery({
@@ -59,11 +57,11 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
         <h2 className="text-lg font-semibold text-[#111827]">Conversation history</h2>
         <span className="text-sm text-[#6b7280]">{conversations.length} shown</span>
       </div>
-      <div className="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl bg-white/70">
         {conversations.map((conversation) => (
           <article
             key={conversation.id}
-            className="group flex flex-col gap-3 border-b border-[#f0f0f0] px-5 py-4 transition last:border-b-0 hover:bg-[#f7f7f8]"
+            className="group flex flex-col gap-3 border-b border-[#ececec] px-4 py-3 transition last:border-b-0 hover:bg-white"
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
@@ -83,10 +81,6 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
                 </p>
                 <p className="mt-1 text-sm text-[#6b7280]">{conversation.message_count} messages</p>
               </div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <AddToProjectControl conversationId={conversation.id} />
-              <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
             </div>
           </article>
         ))}

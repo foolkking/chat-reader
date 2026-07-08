@@ -90,6 +90,7 @@ export function SharePanel({
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         <button
           type="button"
+          data-testid="create-share-button"
           onClick={submit}
           disabled={isCreating || (useSelection && selectedMessageIds.length === 0)}
           className="rounded-xl bg-[#111827] px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#d1d5db]"
@@ -98,7 +99,9 @@ export function SharePanel({
         </button>
         {createdUrl ? (
           <div className="rounded-xl bg-[#f7f7f8] p-3">
-            <p className="break-all text-sm text-[#374151]">{createdUrl}</p>
+            <p data-testid="created-share-url" className="break-all text-sm text-[#374151]">
+              {createdUrl}
+            </p>
             <button
               type="button"
               onClick={copyUrl}

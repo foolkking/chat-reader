@@ -59,6 +59,7 @@ export function ImportPanel() {
           Select files
           <input
             type="file"
+            data-testid="import-file-input"
             multiple
             className="sr-only"
             accept=".json,.md,.markdown,.txt,.csv"
@@ -77,6 +78,7 @@ export function ImportPanel() {
         <button
           type="button"
           disabled={files.length === 0 || previewMutation.isPending}
+          data-testid="preview-import-button"
           onClick={() => previewMutation.mutate(files)}
           className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#d1d5db]"
         >
@@ -85,6 +87,7 @@ export function ImportPanel() {
         <button
           type="button"
           disabled={!preview || !canCommit || commitMutation.isPending}
+          data-testid="commit-import-button"
           onClick={() => {
             if (preview) {
               commitMutation.mutate(preview.import_id);
@@ -110,6 +113,7 @@ export function ImportPanel() {
           {commitResult.conversation_ids[0] ? (
             <Link
               href={`/conversations/${commitResult.conversation_ids[0]}`}
+              data-testid="open-imported-conversation-link"
               className="mt-2 inline-block font-medium underline"
             >
               Open first conversation

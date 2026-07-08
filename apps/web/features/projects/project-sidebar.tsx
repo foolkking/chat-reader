@@ -16,6 +16,8 @@ export function ProjectSidebar({
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const [name, setName] = useState("");
+  const [showMobileDrawer, setShowMobileDrawer] = useState(false);
+  const [showProjectForm, setShowProjectForm] = useState(false);
   const projectsQuery = useQuery({
     queryKey: ["projects"],
     queryFn: getProjects,
@@ -28,74 +30,112 @@ export function ProjectSidebar({
     mutationFn: createProject,
     onSuccess: () => {
       setName("");
+      setShowProjectForm(false);
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
   });
 
   const projects = projectsQuery.data ?? [];
-  const conversations = (conversationsQuery.data ?? []).slice(0, 10);
+  const conversations = (conversationsQuery.data ?? []).slice(0, 14);
+
+  const content = (
+    <SidebarContent
+      pathname={pathname}
+      currentProjectId={currentProjectId}
+      projects={projects}
+      projectsLoading={projectsQuery.isLoading}
+      projectsError={projectsQuery.isError ? projectsQuery.error.message : null}
+      conversations={conversations}
+      onImportClick={() => {
+        setShowMobileDrawer(false);
+        onImportClick?.();
+      }}
+      showProjectForm={showProjectForm}
+      setShowProjectForm={setShowProjectForm}
+      name={name}
+      setName={setName}
+      createPending={createMutation.isPending}
+      createError={createMutation.isError ? createMutation.error.message : null}
+      onCreateProject={() => {
+        const trimmed = name.trim();
+        if (trimmed) {
+          createMutation.mutate({ name: trimmed, icon: "folder" });
+        }
+      }}
+      closeMobile={() => setShowMobileDrawer(false)}
+    />
+  );
 
   return (
     <>
-      <details className="fixed left-3 top-3 z-50 md:hidden">
-        <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-[#d9d9d7] bg-white text-sm font-semibold shadow-sm marker:hidden">
-          cr
-        </summary>
-        <div className="mt-2 max-h-[calc(100vh-4rem)] w-[280px] overflow-y-auto rounded-2xl border border-[#e5e5e5] bg-[#f3f3f1] p-3 shadow-xl">
-          <div className="mb-3 flex items-center gap-2 px-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#10a37f] text-sm font-semibold text-white">
-              cr
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">chat-reader</p>
-              <p className="text-xs text-[#6b7280]">local archive reader</p>
-            </div>
-          </div>
+      <button
+        type="button"
+        aria-label="Open sidebar"
+        data-testid="mobile-sidebar-button"
+        onClick={() => setShowMobileDrawer(true)}
+        className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-[#d9d9d7] bg-white text-sm font-semibold text-[#111827] shadow-sm md:hidden"
+      >
+        cr
+      </button>
+
+      {showMobileDrawer ? (
+        <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
-            onClick={onImportClick}
-            className="mb-3 flex w-full items-center justify-center rounded-lg border border-[#d9d9d7] bg-white px-3 py-2.5 text-sm font-medium text-[#111827] shadow-sm transition hover:bg-[#f7f7f8] focus:outline-none focus:ring-2 focus:ring-[#10a37f]/30"
-          >
-            + Import
-          </button>
-          <nav className="space-y-1">
-            <NavLink href="/" label="All Conversations" active={pathname === "/"} />
-            <NavLink href="/search" label="Search" active={pathname.startsWith("/search")} />
-            <NavLink href="/recent" label="Recent" active={pathname.startsWith("/recent")} />
-          </nav>
-          <div className="mt-5">
-            <h2 className="px-2 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Projects</h2>
-            <nav className="mt-2 space-y-1">
-              {projects.map((project) => (
-                <NavLink
-                  key={project.id}
-                  href={`/projects/${project.id}`}
-                  label={project.is_default ? "Inbox" : project.name}
-                  active={currentProjectId === project.id}
-                />
-              ))}
-            </nav>
-          </div>
-          <div className="mt-5">
-            <h2 className="px-2 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Pinned / history</h2>
-            <nav className="mt-2 space-y-1">
-              {conversations.map((conversation) => (
-                <NavLink
-                  key={conversation.id}
-                  href={`/conversations/${conversation.id}`}
-                  label={`${conversation.is_global_pinned ? "Pinned / " : ""}${conversation.display_title || conversation.title}`}
-                  active={pathname === `/conversations/${conversation.id}`}
-                />
-              ))}
-              {conversations.length === 0 ? <p className="px-2 py-2 text-xs text-[#6b7280]">No conversations yet</p> : null}
-            </nav>
-          </div>
+            aria-label="Close sidebar"
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowMobileDrawer(false)}
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col overflow-hidden border-r border-[#e5e5e5] bg-[#f9f9f9] text-[#111827] shadow-2xl">
+            {content}
+          </aside>
         </div>
-      </details>
+      ) : null}
 
-      <aside className="hidden h-screen w-[284px] shrink-0 flex-col border-r border-[#e5e5e5] bg-[#f3f3f1] text-[#111827] md:flex">
-      <div className="flex h-14 items-center gap-2 border-b border-[#e5e5e5] px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#10a37f] text-sm font-semibold text-white">
+      <aside className="hidden h-screen w-[268px] shrink-0 flex-col overflow-hidden border-r border-[#e5e5e5] bg-[#f9f9f9] text-[#111827] md:flex">
+        {content}
+      </aside>
+    </>
+  );
+}
+
+function SidebarContent({
+  pathname,
+  currentProjectId,
+  projects,
+  projectsLoading,
+  projectsError,
+  conversations,
+  onImportClick,
+  showProjectForm,
+  setShowProjectForm,
+  name,
+  setName,
+  createPending,
+  createError,
+  onCreateProject,
+  closeMobile,
+}: {
+  pathname: string;
+  currentProjectId?: string;
+  projects: Array<{ id: string; name: string; is_default: boolean }>;
+  projectsLoading: boolean;
+  projectsError: string | null;
+  conversations: Array<{ id: string; title: string; display_title?: string | null; is_global_pinned?: boolean }>;
+  onImportClick: () => void;
+  showProjectForm: boolean;
+  setShowProjectForm: (value: boolean) => void;
+  name: string;
+  setName: (value: string) => void;
+  createPending: boolean;
+  createError: string | null;
+  onCreateProject: () => void;
+  closeMobile: () => void;
+}) {
+  return (
+    <>
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-[#e5e5e5] px-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f] text-sm font-semibold text-white">
           cr
         </div>
         <div className="min-w-0">
@@ -104,26 +144,57 @@ export function ProjectSidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <button
           type="button"
+          data-testid="sidebar-import-button"
           onClick={onImportClick}
-          className="mb-3 flex w-full items-center justify-center rounded-lg border border-[#d9d9d7] bg-white px-3 py-2.5 text-sm font-medium text-[#111827] shadow-sm transition hover:bg-[#f7f7f8] focus:outline-none focus:ring-2 focus:ring-[#10a37f]/30"
+          className="mb-3 flex min-h-11 w-full items-center justify-center rounded-xl border border-[#d9d9d7] bg-white px-3 text-sm font-medium text-[#111827] shadow-sm transition hover:bg-[#f4f4f4] focus:outline-none focus:ring-2 focus:ring-[#10a37f]/30"
         >
           + Import
         </button>
 
         <nav className="space-y-1">
-          <NavLink href="/" label="All Conversations" active={pathname === "/"} />
-          <NavLink href="/search" label="Search" active={pathname.startsWith("/search")} />
-          <NavLink href="/recent" label="Recent" active={pathname.startsWith("/recent")} />
+          <NavLink href="/" label="All Conversations" active={pathname === "/"} onClick={closeMobile} />
+          <NavLink href="/search" label="Search" active={pathname.startsWith("/search")} onClick={closeMobile} />
+          <NavLink href="/recent" label="Recent" active={pathname.startsWith("/recent")} onClick={closeMobile} />
         </nav>
 
         <div className="mt-5">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Projects</h2>
-            {projectsQuery.isLoading ? <span className="text-xs text-[#6b7280]">Loading</span> : null}
+            <button
+              type="button"
+              onClick={() => setShowProjectForm(!showProjectForm)}
+              className="rounded-md px-2 py-1 text-xs font-medium text-[#374151] hover:bg-white"
+            >
+              {showProjectForm ? "Close" : "+ New"}
+            </button>
           </div>
+          {showProjectForm ? (
+            <form
+              className="mt-2 rounded-xl border border-[#e5e5e5] bg-white p-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                onCreateProject();
+              }}
+            >
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="min-h-10 w-full rounded-lg border border-[#d9d9d7] px-3 text-sm outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/20"
+                placeholder="Project name"
+              />
+              <button
+                type="submit"
+                disabled={!name.trim() || createPending}
+                className="mt-2 min-h-10 w-full rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add project
+              </button>
+              {createError ? <p className="mt-2 text-xs text-red-700">{createError}</p> : null}
+            </form>
+          ) : null}
           <nav className="mt-2 space-y-1">
             {projects.map((project) => (
               <NavLink
@@ -131,18 +202,16 @@ export function ProjectSidebar({
                 href={`/projects/${project.id}`}
                 label={project.is_default ? "Inbox" : project.name}
                 active={currentProjectId === project.id}
+                onClick={closeMobile}
               />
             ))}
           </nav>
-          {projectsQuery.isError ? (
-            <p className="mt-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-700">
-              {projectsQuery.error.message}
-            </p>
-          ) : null}
+          {projectsLoading ? <p className="px-2 py-2 text-xs text-[#6b7280]">Loading projects</p> : null}
+          {projectsError ? <p className="mt-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-700">{projectsError}</p> : null}
         </div>
 
         <div className="mt-5">
-          <h2 className="px-2 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Pinned / history</h2>
+          <h2 className="px-2 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Conversation history</h2>
           <nav className="mt-2 space-y-1">
             {conversations.map((conversation) => (
               <NavLink
@@ -150,6 +219,7 @@ export function ProjectSidebar({
                 href={`/conversations/${conversation.id}`}
                 label={`${conversation.is_global_pinned ? "Pinned / " : ""}${conversation.display_title || conversation.title}`}
                 active={pathname === `/conversations/${conversation.id}`}
+                onClick={closeMobile}
               />
             ))}
             {conversations.length === 0 ? <p className="px-2 py-2 text-xs text-[#6b7280]">No conversations yet</p> : null}
@@ -157,48 +227,30 @@ export function ProjectSidebar({
         </div>
       </div>
 
-      <form
-        className="border-t border-[#e5e5e5] p-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const trimmed = name.trim();
-          if (trimmed) {
-            createMutation.mutate({ name: trimmed, icon: "folder" });
-          }
-        }}
-      >
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-normal text-[#6b7280]" htmlFor="project-name">
-          New project
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="project-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-[#d9d9d7] bg-white px-3 py-2 text-sm text-[#111827] outline-none placeholder:text-[#9ca3af] focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/20"
-            placeholder="Research"
-          />
-          <button
-            type="submit"
-            disabled={!name.trim() || createMutation.isPending}
-            className="rounded-md bg-[#111827] px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Add
-          </button>
-        </div>
-        {createMutation.isError ? <p className="mt-2 text-xs text-red-700">{createMutation.error.message}</p> : null}
-      </form>
-      </aside>
+      <div className="shrink-0 border-t border-[#e5e5e5] px-4 py-3 text-xs leading-5 text-[#6b7280]">
+        Local mode / PostgreSQL
+      </div>
     </>
   );
 }
 
-function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+function NavLink({
+  href,
+  label,
+  active,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  onClick?: () => void;
+}) {
   return (
     <Link
       href={href}
-      className={`block truncate rounded-md px-3 py-2 text-sm transition ${
-        active ? "bg-[#111827]/10 text-[#111827]" : "text-[#374151] hover:bg-white hover:text-[#111827]"
+      onClick={onClick}
+      className={`block min-h-9 truncate rounded-lg px-3 py-2 text-sm transition ${
+        active ? "bg-[#e9e9e7] text-[#111827]" : "text-[#374151] hover:bg-white hover:text-[#111827]"
       }`}
     >
       {label}

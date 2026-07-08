@@ -3,7 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { getConversationToc } from "../../lib/api";
 
-export function ConversationToc({ conversationId }: { conversationId: string }) {
+export function ConversationToc({
+  conversationId,
+  onNavigate,
+}: {
+  conversationId: string;
+  onNavigate?: () => void;
+}) {
   const tocQuery = useQuery({
     queryKey: ["toc", conversationId],
     queryFn: () => getConversationToc(conversationId),
@@ -29,7 +35,10 @@ export function ConversationToc({ conversationId }: { conversationId: string }) 
           <button
             key={item.id}
             type="button"
-            onClick={() => scrollToTocTarget(item.message_id, item.block_index)}
+            onClick={() => {
+              scrollToTocTarget(item.message_id, item.block_index);
+              onNavigate?.();
+            }}
             className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-[#374151] hover:bg-[#f7f7f8]"
             style={{ paddingLeft: `${Math.max(0, item.level - 1) * 10 + 8}px` }}
           >

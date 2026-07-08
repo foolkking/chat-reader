@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getConversation, getConversationMessageWindow } from "../../lib/api";
@@ -28,6 +27,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(false);
+  const [showMobileToc, setShowMobileToc] = useState(false);
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -102,7 +103,6 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       <ReaderState
         title="Conversation unavailable"
         detail={conversationQuery.error.message}
-        action={<BackLink />}
       />
     );
   }
@@ -112,7 +112,6 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       <ReaderState
         title="Conversation unavailable"
         detail="The API returned no conversation payload."
-        action={<BackLink />}
       />
     );
   }
@@ -122,22 +121,53 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       <ProjectSidebar />
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
-          <div className="flex h-14 items-center justify-between gap-3 px-4 pl-16 md:px-6 md:pl-6">
+          <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 pl-16 md:px-6 md:pl-6">
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold text-[#111827]">
                 {conversation.display_title || conversation.title}
               </h1>
-              <div className="mt-0.5 flex items-center gap-2 text-xs text-[#6b7280]">
+              <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-[#6b7280]">
                 <span>{loadedLabel}</span>
-                <span className="rounded-full bg-[#f7f7f8] px-2 py-0.5">{conversation.source_profile}</span>
+                <span className="hidden max-w-[220px] truncate rounded-full bg-[#f7f7f8] px-2 py-0.5 sm:inline-flex">
+                  {conversation.source_profile}
+                </span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="hidden flex-wrap items-center gap-2 md:flex">
+              <AddToProjectControl conversationId={conversation.id} />
               <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
               <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
               <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
             </div>
+            <div className="flex shrink-0 gap-2 md:hidden">
+              <button
+                type="button"
+                onClick={() => setShowMobileToc(true)}
+                className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
+              >
+                TOC
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMobileActions((current) => !current)}
+                className="min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white"
+              >
+                Actions
+              </button>
+            </div>
           </div>
+          {showMobileActions ? (
+            <div className="border-t border-[#f0f0f0] px-4 py-3 md:hidden">
+              <div className="grid gap-2">
+                <AddToProjectControl conversationId={conversation.id} />
+                <div className="flex flex-wrap gap-2">
+                  <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
+                  <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
+                  <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
+                </div>
+              </div>
+            </div>
+          ) : null}
           {(showShare || showExport) ? (
             <div className="border-t border-[#f0f0f0] px-6 py-4">
               <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
@@ -151,10 +181,6 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="grid min-h-full grid-cols-1 gap-6 px-4 py-8 md:px-6 xl:grid-cols-[minmax(0,1fr)_220px]">
             <div className="mx-auto w-full max-w-[820px] min-w-0">
-              <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 shadow-sm">
-                <AddToProjectControl conversationId={conversation.id} />
-                <BackLink />
-              </div>
           {windowQuery.isLoading && messages.length === 0 ? (
             <ReaderState title="Loading messages" detail="Fetching the first message window." />
           ) : null}
@@ -209,6 +235,29 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           </div>
         </div>
       </section>
+      {showMobileToc ? (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            aria-label="Close contents"
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowMobileToc(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#111827]">Contents</h2>
+              <button
+                type="button"
+                onClick={() => setShowMobileToc(false)}
+                className="min-h-10 rounded-lg px-3 text-sm text-[#6b7280] hover:bg-[#f7f7f8]"
+              >
+                Close
+              </button>
+            </div>
+            <ConversationToc conversationId={conversationId} onNavigate={() => setShowMobileToc(false)} />
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -228,13 +277,5 @@ function ReaderState({
       <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
-  );
-}
-
-function BackLink() {
-  return (
-    <Link href="/" className="text-sm font-medium text-slate-600 underline underline-offset-4">
-      Back to conversations
-    </Link>
   );
 }
