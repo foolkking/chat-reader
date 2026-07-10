@@ -1,65 +1,182 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { getConversationToc } from "../../lib/api";
+import type { TocItem } from "../../lib/types";
 
 export function ConversationToc({
   conversationId,
+  activeMessageId,
+  activeItems = [],
+  observerKey,
+  items,
+  mode = "panel",
   onNavigate,
 }: {
   conversationId: string;
+  activeMessageId?: string | null;
+  activeItems?: TocItem[];
+  observerKey?: string;
+  items?: TocItem[];
+  mode?: "panel" | "sheet";
   onNavigate?: () => void;
 }) {
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  const activeRowRef = useRef<HTMLButtonElement | null>(null);
   const tocQuery = useQuery({
     queryKey: ["toc", conversationId],
     queryFn: () => getConversationToc(conversationId),
+    enabled: items === undefined,
   });
 
-  if (tocQuery.isLoading) {
-    return <TocShell label="Loading TOC" />;
+  const allItems = items ?? tocQuery.data?.items ?? [];
+  const visibleItems = useMemo(() => {
+    if (!activeMessageId) {
+      return allItems;
+    }
+    const apiActiveItems = allItems.filter((item) => item.message_id === activeMessageId);
+    if (apiActiveItems.length > 0) {
+      return apiActiveItems;
+    }
+    const derivedActiveItems = activeItems.filter((item) => item.message_id === activeMessageId);
+    return derivedActiveItems.length > 0 ? derivedActiveItems : allItems;
+  }, [activeItems, activeMessageId, allItems]);
+
+  useEffect(() => {
+    if (visibleItems.length === 0) {
+      setActiveHeadingId(null);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
+        const first = visible[0];
+        if (first?.target.id) {
+          setActiveHeadingId(first.target.id);
+        }
+      },
+      { rootMargin: "-96px 0px -60% 0px", threshold: [0, 0.2, 0.8] },
+    );
+
+    for (const item of visibleItems) {
+      const target = document.getElementById(blockDomId(item));
+      if (target) {
+        observer.observe(target);
+      }
+    }
+    return () => observer.disconnect();
+  }, [observerKey, visibleItems]);
+
+  useEffect(() => {
+    activeRowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [activeHeadingId, visibleItems]);
+
+  if (items === undefined && tocQuery.isLoading) {
+    return <TocShell mode={mode} label="正在加载章节目录" />;
   }
-  if (tocQuery.isError) {
-    return <TocShell label={tocQuery.error.message} />;
+  if (items === undefined && tocQuery.isError) {
+    return <TocShell mode={mode} label={tocQuery.error.message} />;
+  }
+  if (allItems.length === 0 && activeItems.length === 0) {
+    return <TocShell mode={mode} label="暂无章节标题" />;
   }
 
-  const items = tocQuery.data?.items ?? [];
-  if (items.length === 0) {
-    return <TocShell label="No headings" />;
+  if (mode === "sheet") {
+    return (
+      <section aria-label="章节目录" className="max-h-[60vh] overflow-y-auto">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">章节目录</h2>
+        <TocButtonList
+          items={visibleItems}
+          activeHeadingId={activeHeadingId}
+          activeRowRef={activeRowRef}
+          onNavigate={onNavigate}
+        />
+      </section>
+    );
   }
 
   return (
-    <aside className="rounded-2xl border border-[#e5e5e5] bg-white p-4 shadow-sm">
-      <h2 className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">TOC</h2>
-      <nav className="mt-3 space-y-1">
-        {items.map((item) => (
+    <aside aria-label="章节目录" className="w-64 rounded-2xl border border-[#e5e7eb] bg-white p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">章节目录</h2>
+        <span className="text-[11px] text-[#9ca3af]">{visibleItems.length}</span>
+      </div>
+      <div className="max-h-[calc(100vh-8rem)] overflow-y-auto pr-1">
+        <TocButtonList
+          items={visibleItems}
+          activeHeadingId={activeHeadingId}
+          activeRowRef={activeRowRef}
+          onNavigate={onNavigate}
+        />
+      </div>
+    </aside>
+  );
+}
+
+function TocButtonList({
+  items,
+  activeHeadingId,
+  activeRowRef,
+  onNavigate,
+}: {
+  items: TocItem[];
+  activeHeadingId: string | null;
+  activeRowRef: MutableRefObject<HTMLButtonElement | null>;
+  onNavigate?: () => void;
+}) {
+  return (
+    <nav className="space-y-1 border-l border-[#e5e7eb] pl-2">
+      {items.map((item) => {
+        const isActive = blockDomId(item) === activeHeadingId;
+        return (
           <button
             key={item.id}
+            ref={isActive ? activeRowRef : undefined}
             type="button"
             onClick={() => {
-              scrollToTocTarget(item.message_id, item.block_index);
+              scrollToTocTarget(item);
               onNavigate?.();
             }}
-            className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm text-[#374151] hover:bg-[#f7f7f8]"
-            style={{ paddingLeft: `${Math.max(0, item.level - 1) * 10 + 8}px` }}
+            className="flex min-h-7 w-full min-w-0 items-center gap-2 rounded-lg px-1 text-left text-sm text-[#374151] hover:bg-[#f7f7f8] hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#10a37f]"
+            style={{ paddingLeft: `${Math.max(0, item.level - 1) * 10 + 4}px` }}
           >
-            {item.text}
+            <span
+              className={`h-5 w-0.5 shrink-0 rounded-full ${
+                isActive ? "bg-[#f59e0b]" : item.level <= 2 ? "bg-[#4f46e5]" : "bg-[#c7d2fe]"
+              }`}
+            />
+            <span
+              className={`min-w-0 truncate text-xs leading-6 ${
+                isActive ? "font-semibold text-[#b45309]" : item.level <= 2 ? "font-medium text-[#374151]" : "text-[#6b7280]"
+              }`}
+            >
+              {item.text}
+            </span>
+            <span className="ml-auto shrink-0 text-[10px] text-[#9ca3af]">H{item.level}</span>
           </button>
-        ))}
-      </nav>
-    </aside>
+        );
+      })}
+    </nav>
   );
 }
 
-function TocShell({ label }: { label: string }) {
-  return (
-    <aside className="rounded-2xl border border-[#e5e5e5] bg-white p-4 text-sm text-[#6b7280] shadow-sm">
-      {label}
-    </aside>
-  );
+function TocShell({ label, mode }: { label: string; mode: "panel" | "sheet" }) {
+  const className =
+    mode === "sheet"
+      ? "text-sm text-[#6b7280]"
+      : "w-64 rounded-2xl border border-[#e5e7eb] bg-white p-3 text-sm text-[#6b7280] shadow-sm";
+  return <aside className={className} aria-label="章节目录">{label}</aside>;
 }
 
-function scrollToTocTarget(messageId: string, blockIndex: number) {
-  const block = document.getElementById(`block-${messageId}-${blockIndex}`);
-  const message = document.getElementById(`message-${messageId}`);
+function scrollToTocTarget(item: TocItem) {
+  const block = document.getElementById(blockDomId(item));
+  const message = document.getElementById(`message-${item.message_id}`);
   (block ?? message)?.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+function blockDomId(item: TocItem): string {
+  return `block-${item.message_id}-${item.block_index}`;
 }

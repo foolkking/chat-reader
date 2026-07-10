@@ -1,16 +1,49 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getSharedConversation } from "../../lib/api";
 import { MessageItem } from "../conversations/message-item";
+import { ConversationIndex } from "../toc/conversation-index";
+import { ConversationToc } from "../toc/conversation-toc";
 
 export function ShareReadonlyReader({ token }: { token: string }) {
+  const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const shareQuery = useQuery({
     queryKey: ["shared-conversation", token],
     queryFn: () => getSharedConversation(token),
   });
+  const payload = shareQuery.data;
+  const messages = payload?.messages ?? [];
+  const toc = payload?.toc ?? [];
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      setActiveMessageId(null);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
+        const first = visible[0]?.target;
+        if (first instanceof HTMLElement) {
+          setActiveMessageId(first.dataset.messageId ?? null);
+        }
+      },
+      { rootMargin: "-96px 0px -55% 0px", threshold: [0, 0.25, 0.75] },
+    );
+    for (const message of messages) {
+      const target = document.getElementById(`message-${message.id}`);
+      if (target) {
+        observer.observe(target);
+      }
+    }
+    return () => observer.disconnect();
+  }, [messages]);
 
   if (shareQuery.isLoading) {
     return <ShareState title="Loading share" detail="Fetching read-only conversation." />;
@@ -20,12 +53,9 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     return <ShareState title="Share unavailable" detail={shareQuery.error.message} />;
   }
 
-  const payload = shareQuery.data;
   if (!payload) {
     return <ShareState title="Share unavailable" detail="The API returned no shared conversation." />;
   }
-
-  const toc = payload.toc ?? [];
 
   return (
     <main className="flex min-h-screen flex-col bg-[#f7f7f8] text-[#111827]">
@@ -36,15 +66,24 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             <h1 className="truncate text-lg font-semibold text-[#111827]">
               {payload.share.title || payload.conversation.display_title || payload.conversation.title}
             </h1>
-            {toc.length > 0 ? (
+            <div className="flex shrink-0 gap-2">
               <button
                 type="button"
-                onClick={() => setShowMobileToc(true)}
+                onClick={() => setShowMobileIndex(true)}
                 className="min-h-10 shrink-0 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] xl:hidden"
               >
-                Contents
+                索引
               </button>
-            ) : null}
+              {toc.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowMobileToc(true)}
+                  className="min-h-10 shrink-0 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] xl:hidden"
+                >
+                  目录
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>
@@ -55,33 +94,51 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               {payload.share.description}
             </div>
           ) : null}
-          {payload.messages.map((message) => (
+          <div className="hidden md:block">
+            <ConversationIndex conversationId={payload.conversation.id} messages={messages} />
+          </div>
+          {messages.map((message) => (
             <MessageItem key={message.id} message={message} readOnly />
           ))}
         </div>
         {toc.length > 0 ? (
-          <aside className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-[#e5e5e5] bg-white p-4 shadow-sm xl:block">
-            <h2 className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Contents</h2>
-            <nav className="mt-3 space-y-1">
-              {toc.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    const block = document.getElementById(`block-${item.message_id}-${item.block_index}`);
-                    const message = document.getElementById(`message-${item.message_id}`);
-                    (block ?? message)?.scrollIntoView({ block: "start", behavior: "smooth" });
-                  }}
-                  className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-sm text-[#374151] hover:bg-[#f7f7f8] focus:outline-none focus:ring-2 focus:ring-[#111827]"
-                  style={{ paddingLeft: `${Math.max(0, item.level - 1) * 10 + 8}px` }}
-                >
-                  {item.text}
-                </button>
-              ))}
-            </nav>
-          </aside>
+          <div className="sticky top-20 hidden xl:block">
+            <ConversationToc
+              conversationId={payload.conversation.id}
+              activeMessageId={activeMessageId}
+              items={toc}
+            />
+          </div>
         ) : null}
       </section>
+      {showMobileIndex ? (
+        <div className="fixed inset-0 z-50 xl:hidden">
+          <button
+            type="button"
+            aria-label="Close dialogue index"
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowMobileIndex(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[76vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#111827]">对话索引</h2>
+              <button
+                type="button"
+                onClick={() => setShowMobileIndex(false)}
+                className="min-h-10 rounded-lg px-3 text-sm text-[#6b7280] hover:bg-[#f7f7f8]"
+              >
+                关闭
+              </button>
+            </div>
+            <ConversationIndex
+              conversationId={payload.conversation.id}
+              messages={messages}
+              mode="sheet"
+              onNavigate={() => setShowMobileIndex(false)}
+            />
+          </div>
+        </div>
+      ) : null}
       {showMobileToc ? (
         <div className="fixed inset-0 z-50 xl:hidden">
           <button
@@ -92,33 +149,22 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[#111827]">Contents</h2>
+              <h2 className="text-sm font-semibold text-[#111827]">章节目录</h2>
               <button
                 type="button"
                 onClick={() => setShowMobileToc(false)}
                 className="min-h-10 rounded-lg px-3 text-sm text-[#6b7280] hover:bg-[#f7f7f8]"
               >
-                Close
+                关闭
               </button>
             </div>
-            <nav className="space-y-1">
-              {toc.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    const block = document.getElementById(`block-${item.message_id}-${item.block_index}`);
-                    const message = document.getElementById(`message-${item.message_id}`);
-                    (block ?? message)?.scrollIntoView({ block: "start", behavior: "smooth" });
-                    setShowMobileToc(false);
-                  }}
-                  className="block min-h-10 w-full truncate rounded-lg px-2 text-left text-sm text-[#374151] hover:bg-[#f7f7f8]"
-                  style={{ paddingLeft: `${Math.max(0, item.level - 1) * 10 + 8}px` }}
-                >
-                  {item.text}
-                </button>
-              ))}
-            </nav>
+            <ConversationToc
+              conversationId={payload.conversation.id}
+              activeMessageId={activeMessageId}
+              items={toc}
+              mode="sheet"
+              onNavigate={() => setShowMobileToc(false)}
+            />
           </div>
         </div>
       ) : null}

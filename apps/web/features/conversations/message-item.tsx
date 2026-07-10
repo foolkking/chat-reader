@@ -1,6 +1,6 @@
 import { BlockRenderer } from "./block-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { editMessage } from "../../lib/api";
 import { EditMessageForm } from "../editing/edit-message-form";
@@ -13,23 +13,36 @@ export function MessageItem({
   readOnly = false,
   selected = false,
   onSelectedChange,
+  expandHeavyBlocks = false,
+  cachedBlocks,
+  onLoadBlocks,
 }: {
   message: MessageListItem;
   onChanged?: () => Promise<void> | void;
   readOnly?: boolean;
   selected?: boolean;
   onSelectedChange?: (selected: boolean) => void;
+  expandHeavyBlocks?: boolean;
+  cachedBlocks?: RenderBlockRead[];
+  onLoadBlocks?: (messageId: string) => Promise<RenderBlockRead[]>;
 }) {
   const queryClient = useQueryClient();
   const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
+  const [isLoadingHeavyBlocks, setIsLoadingHeavyBlocks] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
-  const blocks = normalizedBlocks(message);
+  const blocks = normalizedBlocks(message, cachedBlocks);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const hasActions = !readOnly || Boolean(onSelectedChange);
+
+  useEffect(() => {
+    if (expandHeavyBlocks && message.is_heavy) {
+      setShowHeavyBlocks(true);
+    }
+  }, [expandHeavyBlocks, message.is_heavy]);
   const actionControls = (
     <>
       {onSelectedChange ? (
@@ -121,10 +134,20 @@ export function MessageItem({
               </p>
               <button
                 type="button"
-                onClick={() => setShowHeavyBlocks(true)}
-                className="mt-3 min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white"
+                onClick={async () => {
+                  setIsLoadingHeavyBlocks(true);
+                  try {
+                    await onLoadBlocks?.(message.id);
+                    setShowHeavyBlocks(true);
+                  } finally {
+                    setIsLoadingHeavyBlocks(false);
+                  }
+                }}
+                disabled={isLoadingHeavyBlocks}
+                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
               >
-                Load blocks
+                {isLoadingHeavyBlocks ? <Spinner /> : null}
+                {isLoadingHeavyBlocks ? "Loading blocks" : "Load blocks"}
               </button>
             </div>
           ) : blocks.length > 0 ? (
@@ -161,10 +184,21 @@ export function MessageItem({
   );
 }
 
-function normalizedBlocks(message: MessageListItem): RenderBlockRead[] {
+function Spinner() {
+  return <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />;
+}
+
+function normalizedBlocks(message: MessageListItem, cachedBlocks?: RenderBlockRead[]): RenderBlockRead[] {
+  if (cachedBlocks && cachedBlocks.length > 0) {
+    return cachedBlocks;
+  }
   const renderBlocks = message.render_blocks ?? [];
   if (renderBlocks.length > 0) {
     return renderBlocks;
+  }
+  const versionBlocks = message.current_version?.blocks ?? [];
+  if (versionBlocks.length > 0) {
+    return versionBlocks.map((block, index) => normalizeVersionBlock(block, index));
   }
 
   const displayText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
@@ -180,4 +214,30 @@ function normalizedBlocks(message: MessageListItem): RenderBlockRead[] {
       data: { text: displayText },
     },
   ];
+}
+
+function normalizeVersionBlock(block: RenderBlockRead | Record<string, unknown>, fallbackIndex: number): RenderBlockRead {
+  const data = readRecord(block.data) ?? {};
+  const blockIndex = typeof block.block_index === "number" ? block.block_index : fallbackIndex;
+  const blockType = typeof block.block_type === "string" ? block.block_type : "paragraph";
+  const plainText = typeof block.plain_text === "string" ? block.plain_text : readTextFromData(data);
+  return {
+    id: typeof block.id === "string" ? block.id : undefined,
+    block_index: blockIndex,
+    block_type: blockType,
+    plain_text: plainText,
+    data,
+    char_count: typeof block.char_count === "number" ? block.char_count : plainText.length,
+    collapsed_by_default: Boolean(block.collapsed_by_default),
+    render_priority: typeof block.render_priority === "number" ? block.render_priority : 0,
+  };
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function readTextFromData(data: Record<string, unknown>): string {
+  const value = data.text ?? data.title ?? data.code;
+  return typeof value === "string" ? value : "";
 }

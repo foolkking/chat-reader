@@ -1,12 +1,20 @@
 import type { RenderBlockRead } from "../../lib/types";
-import type { ReactNode } from "react";
+import { MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./markdown-renderer";
 
 export function BlockRenderer({ block }: { block: RenderBlockRead }) {
-  const text = block.plain_text ?? readText(block);
+  const text = stripLeadingTimestamp(block.plain_text ?? readText(block));
+
+  if (!text.trim()) {
+    return null;
+  }
+
+  if (block.collapsed_by_default && block.block_type !== "heading" && block.block_type !== "code") {
+    return <ThinkingDisclosure label="思考过程" text={text} />;
+  }
 
   if (block.block_type === "heading") {
     const level = normalizeHeadingLevel(block.data.level);
-    const title = readString(block.data.title) ?? text;
+    const title = stripLeadingTimestamp(readString(block.data.title) ?? text);
     const className = "whitespace-pre-wrap break-words font-semibold tracking-normal text-[#111827]";
 
     if (level === 1) {
@@ -38,7 +46,7 @@ export function BlockRenderer({ block }: { block: RenderBlockRead }) {
     );
   }
 
-  return <MarkdownLiteText text={text} />;
+  return <MarkdownRenderer text={text} />;
 }
 
 function normalizeHeadingLevel(value: unknown): 1 | 2 | 3 | 4 {
@@ -55,53 +63,4 @@ function readText(block: RenderBlockRead): string {
 
 function readString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
-}
-
-function MarkdownLiteText({ text }: { text: string }) {
-  const lines = text.split("\n");
-  if (lines.length === 1) {
-    return <p className="break-words text-[15px] leading-7 text-[#1f2937]">{renderInlineMarkdown(text)}</p>;
-  }
-
-  return (
-    <div className="space-y-2 text-[15px] leading-7 text-[#1f2937]">
-      {lines.map((line, index) => {
-        if (!line.trim()) {
-          return <div key={index} className="h-1" />;
-        }
-
-        const quoteMatch = line.match(/^\s*>\s?(.*)$/);
-        if (quoteMatch) {
-          const quoteText = quoteMatch[1] ?? "";
-          if (!quoteText.trim()) {
-            return <div key={index} className="h-1" />;
-          }
-          return (
-            <blockquote
-              key={index}
-              className="border-l-2 border-[#d1d5db] pl-3 text-[#4b5563]"
-            >
-              {renderInlineMarkdown(quoteText)}
-            </blockquote>
-          );
-        }
-
-        return (
-          <p key={index} className="break-words">
-            {renderInlineMarkdown(line)}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
-function renderInlineMarkdown(text: string): ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index}>{part.slice(2, -2)}</strong>;
-    }
-    return <span key={index}>{part}</span>;
-  });
 }

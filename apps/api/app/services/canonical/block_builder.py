@@ -14,6 +14,11 @@ class RenderBlockDraft:
 
 FENCE_RE = re.compile(r"^```(?P<language>[A-Za-z0-9_-]*)\s*$")
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
+THINKING_RE = re.compile(
+    r"^\s*(?:>\s*)?(?:已?思考|思考了)\s*(?:\d+\s*(?:m|min|分钟|分)?\s*)?\d+\s*(?:s|sec|秒)\s*$|"
+    r"^\s*(?:>\s*)?(?:思考|思考过程|Thinking|Reasoning)\s*[:：]\s*$",
+    re.IGNORECASE,
+)
 
 
 def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
@@ -38,6 +43,7 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
                     plain_text=text,
                     data={"text": text},
                     char_count=len(text),
+                    collapsed_by_default=_looks_like_thinking_block(text),
                 )
             )
 
@@ -102,3 +108,8 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
 
     flush_paragraph()
     return blocks
+
+
+def _looks_like_thinking_block(text: str) -> bool:
+    first_line = next((line for line in text.splitlines() if line.strip()), "")
+    return bool(THINKING_RE.match(first_line.strip()))

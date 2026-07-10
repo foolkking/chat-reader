@@ -28,3 +28,25 @@ def test_fenced_code_builds_code_block() -> None:
 
 def test_empty_text_returns_no_blocks() -> None:
     assert build_basic_render_blocks("   ") == []
+
+
+def test_thinking_summary_paragraph_is_collapsed_by_default() -> None:
+    blocks = build_basic_render_blocks("> 已思考 9s\n> checking approach")
+
+    assert len(blocks) == 1
+    assert blocks[0].block_type == "paragraph"
+    assert blocks[0].collapsed_by_default is True
+
+
+def test_english_thinking_marker_is_collapsed_by_default() -> None:
+    blocks = build_basic_render_blocks("Reasoning:\nchecking approach")
+
+    assert len(blocks) == 1
+    assert blocks[0].collapsed_by_default is True
+
+
+def test_plain_paragraph_is_not_collapsed_by_default() -> None:
+    blocks = build_basic_render_blocks("This answer discusses thinking as a topic.")
+
+    assert len(blocks) == 1
+    assert blocks[0].collapsed_by_default is False

@@ -1,7 +1,8 @@
+import re
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import func, literal
+from sqlalchemy import case, func, literal, or_
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -56,6 +57,8 @@ def search(
         raise SearchServiceError("Project not found.")
 
     rank_expr = literal(1.0)
+    lowered_query = normalized_query.lower()
+    like_query = f"%{lowered_query}%"
     base_query = (
         db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
         .join(Conversation, Conversation.id == SearchDocument.conversation_id)
@@ -72,12 +75,35 @@ def search(
         base_query = base_query.filter(SearchDocument.document_type == document_type)
 
     if db.bind is not None and db.bind.dialect.name == "postgresql":
-        tsquery = func.websearch_to_tsquery("simple", normalized_query)
-        rank_expr = func.ts_rank_cd(SearchDocument.search_tsv, tsquery)
+        use_text_query = not _needs_substring_first(normalized_query)
+        tsquery = (
+            func.plainto_tsquery("simple", normalized_query)
+            if use_text_query
+            else func.plainto_tsquery("simple", _safe_tsquery_text(normalized_query))
+        )
+        ts_rank_expr = func.ts_rank_cd(SearchDocument.search_tsv, tsquery)
+        title_match = func.lower(SearchDocument.title).like(like_query)
+        text_match = func.lower(SearchDocument.search_text).like(like_query)
+        exact_title_match = func.lower(SearchDocument.title) == lowered_query
+        heading_match = (SearchDocument.document_type == "heading") & text_match
+        rank_expr = (
+            ts_rank_expr
+            + case((exact_title_match, 8.0), else_=0.0)
+            + case((title_match, 6.0), else_=0.0)
+            + case((text_match & (SearchDocument.document_type == "message"), 4.0), else_=0.0)
+            + case((heading_match, 3.0), else_=0.0)
+            + case((text_match, 2.0), else_=0.0)
+        )
+        filters = [title_match, text_match]
+        if use_text_query:
+            filters.append(SearchDocument.search_tsv.op("@@")(tsquery))
         base_query = (
             db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-            .filter(Conversation.deleted_at.is_(None), SearchDocument.search_tsv.op("@@")(tsquery))
+            .filter(
+                Conversation.deleted_at.is_(None),
+                or_(*filters),
+            )
         )
         if conversation_id is not None:
             base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
@@ -90,9 +116,30 @@ def search(
             base_query = base_query.filter(SearchDocument.document_type == document_type)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
     else:
-        lowered = f"%{normalized_query.lower()}%"
-        base_query = base_query.filter(func.lower(SearchDocument.search_text).like(lowered))
-        ordered_query = base_query.order_by(SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
+        title_match = func.lower(SearchDocument.title).like(like_query)
+        text_match = func.lower(SearchDocument.search_text).like(like_query)
+        rank_expr = (
+            case((func.lower(SearchDocument.title) == lowered_query, 8.0), else_=0.0)
+            + case((title_match, 6.0), else_=0.0)
+            + case((text_match & (SearchDocument.document_type == "message"), 4.0), else_=0.0)
+            + case((text_match & (SearchDocument.document_type == "heading"), 3.0), else_=0.0)
+            + case((text_match, 2.0), else_=0.0)
+        )
+        base_query = (
+            db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
+            .join(Conversation, Conversation.id == SearchDocument.conversation_id)
+            .filter(Conversation.deleted_at.is_(None), or_(text_match, title_match))
+        )
+        if conversation_id is not None:
+            base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
+        if project_id is not None:
+            base_query = base_query.join(
+                ProjectConversation,
+                ProjectConversation.conversation_id == SearchDocument.conversation_id,
+            ).filter(ProjectConversation.project_id == project_id)
+        if document_type is not None:
+            base_query = base_query.filter(SearchDocument.document_type == document_type)
+        ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
 
     total = ordered_query.count()
     rows = ordered_query.offset(offset).limit(limit).all()
@@ -116,11 +163,37 @@ def search(
 
 def _snippet(text: str, query: str) -> str:
     normalized_text = " ".join(text.split())
-    index = normalized_text.lower().find(query.lower())
+    query_lower = query.lower()
+    text_lower = normalized_text.lower()
+    index = text_lower.find(query_lower)
+    snippet_length = len(query)
+    if index < 0:
+        for token in _query_tokens(query_lower):
+            index = text_lower.find(token)
+            if index >= 0:
+                snippet_length = len(token)
+                break
     if index < 0:
         return normalized_text[:160]
     start = max(0, index - 80)
-    end = min(len(normalized_text), index + len(query) + 80)
+    end = min(len(normalized_text), index + snippet_length + 80)
     prefix = "..." if start > 0 else ""
     suffix = "..." if end < len(normalized_text) else ""
     return f"{prefix}{normalized_text[start:end]}{suffix}"
+
+
+def _query_tokens(query: str) -> list[str]:
+    return [part for part in re.split(r"\s+", query.replace('"', " ").strip()) if part]
+
+
+def _needs_substring_first(query: str) -> bool:
+    if re.search(r"[\u3400-\u9fff]", query):
+        return True
+    if len(query.strip()) <= 2:
+        return True
+    return bool(re.search(r"[./:#?&=_`'\"()[\]{}<>@\\-]", query))
+
+
+def _safe_tsquery_text(query: str) -> str:
+    parts = re.findall(r"[\w\u3400-\u9fff]+", query, flags=re.UNICODE)
+    return " ".join(parts) or query

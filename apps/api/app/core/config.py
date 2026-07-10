@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     cors_origins: list[str] = Field(
-        default=["http://localhost:3000"],
+        default=["http://localhost:3000", "http://localhost:3001"],
         alias="CORS_ORIGINS",
     )
     max_import_file_size_mb: int = Field(default=50, alias="MAX_IMPORT_FILE_SIZE_MB")

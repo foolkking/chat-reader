@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { QueryProvider } from "../components/query-provider";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
