@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, SharedConversationResponse
+from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUpdate, SharedConversationResponse
 from app.services.sharing.share_service import (
     ShareError,
     create_share,
@@ -13,6 +13,7 @@ from app.services.sharing.share_service import (
     revoke_share,
     share_create_response,
     share_read,
+    update_share,
 )
 
 router = APIRouter(tags=["shares"])
@@ -54,6 +55,21 @@ def revoke_conversation_share(
         share = revoke_share(db, share_id)
         db.commit()
         return ShareRevokeResponse(**share_read(share).model_dump())
+    except ShareError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.patch("/api/shares/{share_id}", response_model=ShareRead)
+def update_conversation_share(
+    share_id: uuid.UUID,
+    payload: ShareUpdate,
+    db: Session = Depends(get_db),
+) -> ShareRead:
+    try:
+        share = update_share(db, share_id, payload)
+        db.commit()
+        return share_read(share)
     except ShareError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

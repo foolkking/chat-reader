@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { createProject, getConversations, getProjects } from "../../lib/api";
+import type { ConversationListItem } from "../../lib/types";
+import { ConversationActionMenu } from "../conversations/conversation-action-menu";
 
 export function ProjectSidebar({
   currentProjectId,
@@ -24,7 +26,7 @@ export function ProjectSidebar({
   });
   const conversationsQuery = useQuery({
     queryKey: ["sidebar-conversations"],
-    queryFn: getConversations,
+    queryFn: () => getConversations(),
   });
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -37,6 +39,14 @@ export function ProjectSidebar({
 
   const projects = projectsQuery.data ?? [];
   const conversations = (conversationsQuery.data ?? []).slice(0, 14);
+
+  async function refreshSidebar() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["sidebar-conversations"] }),
+      queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+      queryClient.invalidateQueries({ queryKey: ["projects"] }),
+    ]);
+  }
 
   const content = (
     <SidebarContent
@@ -62,6 +72,7 @@ export function ProjectSidebar({
           createMutation.mutate({ name: trimmed, icon: "folder" });
         }
       }}
+      onConversationChanged={refreshSidebar}
       closeMobile={() => setShowMobileDrawer(false)}
     />
   );
@@ -114,6 +125,7 @@ function SidebarContent({
   createPending,
   createError,
   onCreateProject,
+  onConversationChanged,
   closeMobile,
 }: {
   pathname: string;
@@ -121,7 +133,7 @@ function SidebarContent({
   projects: Array<{ id: string; name: string; is_default: boolean }>;
   projectsLoading: boolean;
   projectsError: string | null;
-  conversations: Array<{ id: string; title: string; display_title?: string | null; is_global_pinned?: boolean }>;
+  conversations: ConversationListItem[];
   onImportClick: () => void;
   showProjectForm: boolean;
   setShowProjectForm: (value: boolean) => void;
@@ -130,6 +142,7 @@ function SidebarContent({
   createPending: boolean;
   createError: string | null;
   onCreateProject: () => void;
+  onConversationChanged: () => Promise<void>;
   closeMobile: () => void;
 }) {
   return (
@@ -156,6 +169,7 @@ function SidebarContent({
 
         <nav className="space-y-1">
           <NavLink href="/" label="All Conversations" active={pathname === "/"} onClick={closeMobile} />
+          <NavLink href="/archived" label="Archived Conversations" active={pathname === "/archived"} onClick={closeMobile} />
           <NavLink href="/search" label="Search" active={pathname.startsWith("/search")} onClick={closeMobile} />
           <NavLink href="/recent" label="Recent" active={pathname.startsWith("/recent")} onClick={closeMobile} />
         </nav>
@@ -214,12 +228,12 @@ function SidebarContent({
           <h2 className="px-2 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Conversation history</h2>
           <nav className="mt-2 space-y-1">
             {conversations.map((conversation) => (
-              <NavLink
+              <ConversationHistoryRow
                 key={conversation.id}
-                href={`/conversations/${conversation.id}`}
-                label={`${conversation.is_global_pinned ? "Pinned / " : ""}${conversation.display_title || conversation.title}`}
+                conversation={conversation}
                 active={pathname === `/conversations/${conversation.id}`}
                 onClick={closeMobile}
+                onChanged={onConversationChanged}
               />
             ))}
             {conversations.length === 0 ? <p className="px-2 py-2 text-xs text-[#6b7280]">No conversations yet</p> : null}
@@ -231,6 +245,38 @@ function SidebarContent({
         Local mode / PostgreSQL
       </div>
     </>
+  );
+}
+
+function ConversationHistoryRow({
+  conversation,
+  active,
+  onClick,
+  onChanged,
+}: {
+  conversation: ConversationListItem;
+  active: boolean;
+  onClick?: () => void;
+  onChanged: () => Promise<void>;
+}) {
+  return (
+    <div
+      className={`group flex min-h-9 items-center gap-1 rounded-lg pl-3 pr-1 transition ${
+        active ? "bg-[#e9e9e7] text-[#111827]" : "text-[#374151] hover:bg-white hover:text-[#111827]"
+      }`}
+    >
+      <Link
+        href={`/conversations/${conversation.id}`}
+        onClick={onClick}
+        className="min-w-0 flex-1 truncate py-2 text-sm"
+      >
+        {conversation.is_global_pinned ? "Pinned / " : ""}
+        {conversation.display_title || conversation.title}
+      </Link>
+      <div className={`shrink-0 ${active ? "opacity-100" : "opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"}`}>
+        <ConversationActionMenu compact conversation={conversation} onChanged={onChanged} />
+      </div>
+    </div>
   );
 }
 

@@ -133,6 +133,26 @@ def test_conversation_merge_and_split_create_new_conversations_without_modifying
     assert _window(client, second_id, limit=10)["total"] == 2
 
     merged_messages = _window(client, merged_id, limit=10)["items"]
+    assert [message["current_version"]["display_text"] for message in merged_messages] == [
+        "first q",
+        "first a",
+        "second q",
+        "second a",
+    ]
+
+    reverse_merge = client.post(
+        "/api/conversations/merge",
+        json={"conversation_ids": [second_id, first_id], "title": "Reverse Merged Sources"},
+    )
+    assert reverse_merge.status_code == 200
+    reverse_messages = _window(client, reverse_merge.json()["conversation_id"], limit=10)["items"]
+    assert [message["current_version"]["display_text"] for message in reverse_messages] == [
+        "second q",
+        "second a",
+        "first q",
+        "first a",
+    ]
+
     split = client.post(
         f"/api/conversations/{merged_id}/split",
         json={

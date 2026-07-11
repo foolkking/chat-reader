@@ -52,13 +52,33 @@ corepack pnpm --filter web dev -- --port 3001
 
 ## CORS Issue
 
-Ensure API configuration includes the Web origin:
+The browser normally calls the Next.js origin through `/api/*`; Next.js proxies those requests to FastAPI using `API_INTERNAL_URL`. Do not set a browser-visible API URL to `localhost:8000`.
+
+Local development uses:
+
+```env
+API_INTERNAL_URL=http://127.0.0.1:8000
+```
+
+With Docker Compose, the web container uses `http://chat-reader-api:8000` automatically.
+
+Direct browser-to-FastAPI calls are not part of the normal Web flow. If such a separate integration is added, ensure API configuration includes its exact Web origin:
 
 ```env
 CORS_ORIGINS=http://localhost:3000
 ```
 
 Restart the API after changing environment values.
+
+## LAN Web Loads But API Requests Fail
+
+In browser Network tools, business requests should target the same Web origin, for example:
+
+```text
+http://192.168.1.20:3000/api/conversations
+```
+
+They must not target `http://localhost:8000`, `http://127.0.0.1:8000`, or `http://0.0.0.0:8000`. Restart the Next.js development server after changing `next.config.mjs` or `API_INTERNAL_URL`.
 
 ## Import Unsupported Format
 

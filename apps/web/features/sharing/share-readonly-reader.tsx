@@ -87,29 +87,34 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           </div>
         </div>
       </header>
-      <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 xl:grid-cols-[minmax(0,1fr)_260px]">
+      <section className="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-6 px-4 py-6 sm:px-6 xl:grid-cols-[300px_minmax(0,820px)_260px] xl:items-start xl:justify-center">
+        <aside className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
+          <div className="rounded-2xl border border-[#e5e7eb] bg-white p-3 shadow-sm">
+            <ConversationIndex
+              conversationId={payload.conversation.id}
+              messages={messages}
+              activeMessageId={activeMessageId}
+              mode="sheet"
+            />
+          </div>
+        </aside>
         <div className="mx-auto w-full max-w-[820px] space-y-5">
           {payload.share.description ? (
             <div className="rounded-2xl border border-[#e5e5e5] bg-white p-4 text-sm leading-6 text-[#374151] shadow-sm">
               {payload.share.description}
             </div>
           ) : null}
-          <div className="hidden md:block">
-            <ConversationIndex conversationId={payload.conversation.id} messages={messages} />
-          </div>
           {messages.map((message) => (
             <MessageItem key={message.id} message={message} readOnly />
           ))}
         </div>
-        {toc.length > 0 ? (
-          <div className="sticky top-20 hidden xl:block">
-            <ConversationToc
-              conversationId={payload.conversation.id}
-              activeMessageId={activeMessageId}
-              items={toc}
-            />
-          </div>
-        ) : null}
+        <div className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
+          <ConversationToc
+            conversationId={payload.conversation.id}
+            activeMessageId={activeMessageId}
+            items={toc}
+          />
+        </div>
       </section>
       {showMobileIndex ? (
         <div className="fixed inset-0 z-50 xl:hidden">

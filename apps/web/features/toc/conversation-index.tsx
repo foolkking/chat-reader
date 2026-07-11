@@ -33,7 +33,7 @@ export function ConversationIndex({
   onNavigate?: (item: ConversationIndexItem) => void;
 }) {
   const [showFilter, setShowFilter] = useState(false);
-  const [rangeMode, setRangeMode] = useState<"all" | "around" | "custom">("all");
+  const [rangeMode, setRangeMode] = useState<"all" | "around" | "custom">("around");
   const [hideBefore, setHideBefore] = useState("");
   const [hideAfter, setHideAfter] = useState("");
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
@@ -71,11 +71,11 @@ export function ConversationIndex({
   const shellClass =
     mode === "sheet"
       ? "max-h-[65vh] overflow-y-auto"
-      : "group w-8 overflow-visible rounded-2xl transition-all duration-200 hover:w-80 focus-within:w-80";
+      : "group relative z-[100] w-8 overflow-visible rounded-2xl transition-all duration-200 hover:w-80 focus-within:w-80";
   const listClass =
     mode === "sheet"
       ? "max-h-[54vh] overflow-y-auto pr-1"
-      : "max-h-[calc(100vh-8rem)] overflow-y-auto overflow-x-hidden rounded-2xl border border-transparent py-2 transition-all duration-200 group-hover:border-[#e5e7eb] group-hover:bg-white group-hover:px-3 group-hover:shadow-sm group-focus-within:border-[#e5e7eb] group-focus-within:bg-white group-focus-within:px-3 group-focus-within:shadow-sm";
+      : "relative z-[100] max-h-[calc(100vh-8rem)] overflow-y-auto overflow-x-hidden rounded-2xl border border-transparent py-2 transition-all duration-200 group-hover:border-[#e5e7eb] group-hover:bg-white group-hover:px-3 group-hover:shadow-sm group-focus-within:border-[#e5e7eb] group-focus-within:bg-white group-focus-within:px-3 group-focus-within:shadow-sm";
 
   return (
     <section className={shellClass} aria-label="对话索引">
@@ -85,6 +85,7 @@ export function ConversationIndex({
           onClick={() => setShowFilter((current) => !current)}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#d1d5db] bg-white text-xs font-semibold text-[#374151] shadow-sm hover:bg-[#f7f7f8] focus:outline-none focus:ring-2 focus:ring-[#10a37f]"
           aria-label="筛选对话索引"
+          title="筛选对话索引"
         >
           #
         </button>
@@ -110,6 +111,7 @@ export function ConversationIndex({
         <div className="space-y-2">
           {visibleItems.map((item) => {
             const isActive = item.messageId === activeMessageId;
+            const label = `${item.roleNumber} · ${item.preview || item.orderKey}`;
             return (
               <button
                 key={item.messageId}
@@ -124,6 +126,8 @@ export function ConversationIndex({
                       ?.scrollIntoView({ block: "start", behavior: "smooth" });
                   }
                 }}
+                aria-label={`跳转到 ${label}`}
+                title={label}
                 className="flex min-h-6 w-full min-w-0 items-center gap-2 rounded-lg text-left text-sm text-[#374151] hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#10a37f]"
               >
                 <span
@@ -280,7 +284,7 @@ function IndexFilterPopover({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute left-0 top-9 z-30 w-64 rounded-2xl border border-[#e5e7eb] bg-white p-3 text-sm shadow-xl">
+    <div className="absolute left-0 top-9 z-[120] w-64 rounded-2xl border border-[#e5e7eb] bg-white p-3 text-sm shadow-xl">
       <div className="mb-2 flex items-center justify-between">
         <span className="font-medium text-[#111827]">索引范围</span>
         <button type="button" onClick={onClose} className="rounded-md px-2 py-1 text-xs text-[#6b7280] hover:bg-[#f7f7f8]">

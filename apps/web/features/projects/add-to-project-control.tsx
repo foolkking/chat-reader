@@ -22,13 +22,13 @@ export function AddToProjectControl({ conversationId }: { conversationId: string
   const projects = projectsQuery.data ?? [];
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="inline-flex min-h-9 items-center overflow-hidden rounded-xl border border-[#d1d5db] bg-white shadow-sm">
       <select
         value={projectId}
         onChange={(event) => setProjectId(event.target.value)}
-        className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700"
+        className="h-9 min-w-[124px] border-0 bg-transparent px-2 text-xs text-[#374151] outline-none"
       >
-        <option value="">Add to project</option>
+        <option value="">Project</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>
             {project.name}
@@ -39,12 +39,12 @@ export function AddToProjectControl({ conversationId }: { conversationId: string
         type="button"
         disabled={!projectId || addMutation.isPending}
         onClick={() => addMutation.mutate()}
-        className="rounded-md bg-slate-950 px-2.5 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+        className="h-9 border-l border-[#e5e5e5] bg-[#111827] px-2.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:bg-[#d1d5db]"
       >
-        Add
+        +
       </button>
-      {addMutation.isSuccess ? <span className="text-xs text-emerald-700">Added</span> : null}
-      {addMutation.isError ? <span className="text-xs text-red-700">{addMutation.error.message}</span> : null}
+      {addMutation.isSuccess ? <span className="sr-only">Added</span> : null}
+      {addMutation.isError ? <span className="sr-only">{addMutation.error.message}</span> : null}
     </div>
   );
 }

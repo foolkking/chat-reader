@@ -28,19 +28,26 @@ import type {
   ShareCreateInput,
   ShareCreateResponse,
   ShareRead,
+  ShareUpdateInput,
   SharedConversationResponse,
   TocResponse,
 } from "./types";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+// Browser requests stay on the current Next.js origin. next.config.mjs proxies
+// /api/* to FastAPI over the server-side API_INTERNAL_URL.
+export const API_BASE_URL = "";
 
 export async function getHealth(): Promise<HealthResponse> {
   return fetchJson<HealthResponse>("/api/health");
 }
 
-export async function getConversations(): Promise<ConversationListItem[]> {
-  return fetchJson<ConversationListItem[]>("/api/conversations");
+export async function getConversations(input: { includeArchived?: boolean } = {}): Promise<ConversationListItem[]> {
+  const params = new URLSearchParams();
+  if (input.includeArchived) {
+    params.set("include_archived", "true");
+  }
+  const query = params.toString();
+  return fetchJson<ConversationListItem[]>(`/api/conversations${query ? `?${query}` : ""}`);
 }
 
 export async function getConversation(conversationId: string): Promise<ConversationDetail> {
@@ -368,22 +375,29 @@ export async function createShare(
   conversationId: string,
   input: ShareCreateInput,
 ): Promise<ShareCreateResponse> {
-  return fetchJson<ShareCreateResponse>(
+  const share = await fetchJson<ShareCreateResponse>(
     `/api/conversations/${conversationId}/shares`,
     jsonRequest("POST", input),
   );
+  return normalizeShareUrl(share);
 }
 
 export async function getConversationShares(conversationId: string): Promise<ShareRead[]> {
-  return fetchJson<ShareRead[]>(`/api/conversations/${conversationId}/shares`);
+  const shares = await fetchJson<ShareRead[]>(`/api/conversations/${conversationId}/shares`);
+  return shares.map(normalizeShareUrl);
 }
 
 export async function revokeShare(shareId: string): Promise<ShareRead> {
-  return fetchJson<ShareRead>(`/api/shares/${shareId}/revoke`, { method: "POST" });
+  return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}/revoke`, { method: "POST" }));
+}
+
+export async function updateShare(shareId: string, input: ShareUpdateInput): Promise<ShareRead> {
+  return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}`, jsonRequest("PATCH", input)));
 }
 
 export async function getSharedConversation(token: string): Promise<SharedConversationResponse> {
-  return fetchJson<SharedConversationResponse>(`/api/shared/${encodeURIComponent(token)}`);
+  const response = await fetchJson<SharedConversationResponse>(`/api/shared/${encodeURIComponent(token)}`);
+  return { ...response, share: normalizeShareUrl(response.share) };
 }
 
 export function getConversationExportUrl(
@@ -467,4 +481,19 @@ async function getErrorMessage(response: Response, path: string): Promise<string
   }
 
   return `${path} returned ${response.status}`;
+}
+
+function normalizeShareUrl<T extends ShareRead>(share: T): T {
+  if (!share.share_url || typeof window === "undefined") {
+    return share;
+  }
+  try {
+    const url = new URL(share.share_url);
+    if (["localhost", "127.0.0.1", "0.0.0.0"].includes(url.hostname)) {
+      return { ...share, share_url: `${window.location.origin}${url.pathname}${url.search}${url.hash}` };
+    }
+  } catch {
+    // Preserve malformed legacy values so the management UI can report them.
+  }
+  return share;
 }

@@ -290,6 +290,7 @@ def merge_conversations(
             event_type="conversation_merged",
             payload={
                 "source_conversation_ids": [str(conversation.id) for conversation in conversations],
+                "order_policy": "request_order",
                 "message_count": copied_count,
             },
             created_by="user",

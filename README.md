@@ -106,6 +106,8 @@ Web 默认地址：
 http://localhost:3000
 ```
 
+浏览器业务请求统一使用同源 `/api/*`。Next.js 通过服务端 `API_INTERNAL_URL` 转发到 FastAPI；本地默认值为 `http://127.0.0.1:8000`。不要把 `NEXT_PUBLIC_*` API 地址设置为 `http://localhost:8000`，否则局域网设备会请求它自身的 localhost。
+
 ### Docker Compose 启动
 
 ```bash

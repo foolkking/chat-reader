@@ -68,6 +68,8 @@ export type CanonicalMessagePart =
 const THINKING_LABEL = "思考过程";
 const LEADING_TIMESTAMP_RE =
   /^\s*(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[ T]\d{1,2}:\d{2}(?::\d{2})?)\s*$/;
+const LEADING_TIMESTAMP_PREFIX_RE =
+  /^\s*(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[ T]\d{1,2}:\d{2}(?::\d{2})?)\s+/;
 const THINKING_DURATION_RE =
   /^(?:(?:已\s*)?思考(?:了)?|thinking|reasoning)\s*[:：]?\s*((?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒))$/i;
 const THINKING_LABEL_RE = /^(?:思考|思考过程|thinking|reasoning)\s*[:：]?\s*$/i;
@@ -262,8 +264,17 @@ export function stripLeadingTimestamp(text: string): string {
   while (cursor < lines.length && !lines[cursor]?.trim()) {
     cursor += 1;
   }
-  if (cursor < lines.length && LEADING_TIMESTAMP_RE.test(stripQuote(lines[cursor] ?? "").trim())) {
-    lines.splice(cursor, 1);
+  if (cursor < lines.length) {
+    const line = lines[cursor] ?? "";
+    const strippedLine = stripQuote(line).trim();
+    if (LEADING_TIMESTAMP_RE.test(strippedLine)) {
+      lines.splice(cursor, 1);
+    } else {
+      const nextLine = strippedLine.replace(LEADING_TIMESTAMP_PREFIX_RE, "").trimStart();
+      if (nextLine !== strippedLine) {
+        lines[cursor] = nextLine;
+      }
+    }
   }
   return lines.join("\n").replace(/^\n+/, "");
 }

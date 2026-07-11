@@ -17,7 +17,7 @@ from app.models.render_block import RenderBlock
 from app.models.share import Share
 from app.schemas.conversation import ConversationListItem
 from app.schemas.message import MessageListItem, MessageVersionRead, RenderBlockRead
-from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, SharedConversationResponse
+from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareUpdate, SharedConversationResponse
 from app.schemas.toc import TocItem
 
 
@@ -38,6 +38,7 @@ def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) 
     conversation = _get_conversation(db, conversation_id)
     _validate_share_payload(db, conversation, payload)
     token = secrets.token_urlsafe(32)
+    share_url = f"{get_settings().public_web_base_url.rstrip('/')}/share/{token}"
     now = _utc_now()
     share = Share(
         id=uuid.uuid4(),
@@ -55,7 +56,7 @@ def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) 
         created_at=now,
         updated_at=now,
         created_by="local",
-        metadata_={},
+        metadata_={"share_url": share_url},
     )
     db.add(share)
     db.flush()
@@ -72,7 +73,7 @@ def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) 
     return ShareCreateResult(
         share=share,
         token=token,
-        share_url=f"{get_settings().public_web_base_url.rstrip('/')}/share/{token}",
+        share_url=share_url,
     )
 
 
@@ -131,7 +132,35 @@ def revoke_share(db: Session, share_id: uuid.UUID) -> Share:
     return share
 
 
+def update_share(db: Session, share_id: uuid.UUID, payload: ShareUpdate) -> Share:
+    share = db.get(Share, share_id)
+    if share is None:
+        raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    provided_fields = payload.model_fields_set
+    if "expires_at" in provided_fields and payload.expires_at is not None and _as_utc(payload.expires_at) <= _utc_now():
+        raise ShareError("Share expiry must be in the future.")
+    if "title" in provided_fields:
+        share.title = payload.title.strip() or None
+    if "description" in provided_fields:
+        share.description = payload.description.strip() or None
+    if "expires_at" in provided_fields:
+        share.expires_at = payload.expires_at
+    share.updated_at = _utc_now()
+    _write_event(
+        db,
+        share.conversation_id,
+        "share_updated",
+        {
+            "share_id": str(share.id),
+            "expires_at": share.expires_at.isoformat() if share.expires_at else None,
+        },
+    )
+    db.flush()
+    return share
+
+
 def share_read(share: Share) -> ShareRead:
+    metadata = share.metadata_ or {}
     return ShareRead(
         id=share.id,
         conversation_id=share.conversation_id,
@@ -149,12 +178,14 @@ def share_read(share: Share) -> ShareRead:
         last_accessed_at=share.last_accessed_at,
         created_at=share.created_at,
         updated_at=share.updated_at,
+        share_url=metadata.get("share_url") if isinstance(metadata.get("share_url"), str) else None,
     )
 
 
 def share_create_response(result: ShareCreateResult) -> ShareCreateResponse:
     base = share_read(result.share).model_dump()
-    return ShareCreateResponse(**base, token=result.token, share_url=result.share_url)
+    base["share_url"] = result.share_url
+    return ShareCreateResponse(**base, token=result.token)
 
 
 def hash_token(token: str) -> str:

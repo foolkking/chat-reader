@@ -36,7 +36,7 @@ export function PinButton(props: PinButtonProps) {
       type="button"
       disabled={mutation.isPending}
       onClick={() => mutation.mutate()}
-      className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+      className="inline-flex h-9 items-center rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8] disabled:cursor-not-allowed disabled:text-[#9ca3af]"
     >
       {props.isPinned ? "Unpin" : "Pin"}
     </button>

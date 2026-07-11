@@ -5,9 +5,13 @@ export function ExportButton({ isOpen, onToggle }: { isOpen: boolean; onToggle: 
     <button
       type="button"
       onClick={onToggle}
-      className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+      className={`inline-flex h-9 items-center rounded-xl border px-3 text-xs font-medium shadow-sm ${
+        isOpen
+          ? "border-[#111827] bg-[#111827] text-white"
+          : "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f7f7f8]"
+      }`}
     >
-      {isOpen ? "Close export" : "Export"}
+      {isOpen ? "Exporting" : "Export"}
     </button>
   );
 }

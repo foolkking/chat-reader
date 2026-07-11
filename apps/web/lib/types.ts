@@ -364,6 +364,7 @@ export type ShareRead = {
   last_accessed_at?: string | null;
   created_at: string;
   updated_at: string;
+  share_url?: string | null;
 };
 
 export type ShareCreateInput = {
@@ -380,6 +381,12 @@ export type ShareCreateInput = {
 export type ShareCreateResponse = ShareRead & {
   token: string;
   share_url: string;
+};
+
+export type ShareUpdateInput = {
+  title?: string | null;
+  description?: string | null;
+  expires_at?: string | null;
 };
 
 export type SharedConversationResponse = {

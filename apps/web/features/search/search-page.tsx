@@ -37,12 +37,16 @@ export function SearchPage() {
   });
   const total = searchQuery.data?.total ?? items.length;
   const hasMore = items.length < total;
+  const isInitialSearchLoading = query.trim().length > 0 && searchQuery.isFetching && items.length === 0;
   const loadedLabel = useMemo(() => {
     if (!query.trim()) {
       return "";
     }
+    if (isInitialSearchLoading) {
+      return "Searching...";
+    }
     return `${items.length} / ${total} results`;
-  }, [items.length, query, total]);
+  }, [isInitialSearchLoading, items.length, query, total]);
 
   useEffect(() => {
     setOffset(0);
@@ -115,9 +119,9 @@ export function SearchPage() {
           </div>
 
           {!query ? <StateBlock label="Enter a keyword to search conversations and messages." /> : null}
-          {searchQuery.isLoading ? <StateBlock label="Searching" /> : null}
+          {isInitialSearchLoading ? <StateBlock label="Searching..." /> : null}
           {searchQuery.isError ? <StateBlock label={searchQuery.error.message} /> : null}
-          {query && (searchQuery.isSuccess || items.length > 0) ? <SearchResults items={items} /> : null}
+          {query && !isInitialSearchLoading && (searchQuery.isSuccess || items.length > 0) ? <SearchResults items={items} /> : null}
           {hasMore ? (
             <button
               type="button"

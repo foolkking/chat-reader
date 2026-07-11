@@ -23,7 +23,7 @@ export function SearchResults({ items }: { items: SearchResultItem[] }) {
               <h2 className="truncate text-base font-semibold text-[#111827]">
                 {item.conversation_title}
               </h2>
-              <p className="mt-1 text-sm leading-6 text-[#374151]">{item.snippet}</p>
+              <p className="mt-1 text-sm leading-6 text-[#374151]">{cleanSearchSnippet(item.snippet)}</p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2 text-xs text-[#6b7280] sm:justify-end">
               <span className="rounded-full border border-[#e5e5e5] bg-[#f7f7f8] px-2 py-1">
@@ -43,4 +43,16 @@ export function SearchResults({ items }: { items: SearchResultItem[] }) {
       ))}
     </div>
   );
+}
+
+function cleanSearchSnippet(snippet: string): string {
+  return snippet
+    .replace(/^\s*(?:user|assistant|prompt|response)\s+\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s*/i, "")
+    .replace(/^\s*\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s*/i, "")
+    .replace(/^\s*\.\.\.\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s*/i, "...")
+    .replace(/(?:^|\s)>\s*(?:已\s*)?思考(?:了)?\s*[:：]?\s*\d+\s*(?:s|sec|秒|m|min|分钟|分)\s*/gi, " ")
+    .replace(/(?:^|\s)>\s*\*\*(?:查找|搜索|浏览|分析|整理|思考)[^*]{0,80}\*\*\s*>*/g, " ")
+    .replace(/(^|\s)>\s*/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }

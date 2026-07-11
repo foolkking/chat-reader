@@ -1,4 +1,5 @@
 import type { ImportPreviewResponse } from "../../lib/types";
+import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
 
 export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse }) {
   const conversation = preview.conversation_preview ?? preview.conversation_previews?.[0] ?? null;
@@ -25,7 +26,7 @@ export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse 
 
       {conversation ? (
         <p className="mt-4 text-sm leading-6 text-slate-600">
-          {conversation.first_user_message ?? "Conversation preview is ready to commit."}
+          {previewConversationText(conversation.first_user_message)}
         </p>
       ) : (
         <p className="mt-4 text-sm leading-6 text-slate-600">
@@ -51,4 +52,9 @@ function PreviewStat({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 truncate font-medium text-slate-900">{value}</dd>
     </div>
   );
+}
+
+function previewConversationText(text?: string | null): string {
+  const cleaned = stripLeadingTimestamp(text ?? "").replace(/\s+/g, " ").trim();
+  return cleaned || "Conversation preview is ready to commit.";
 }

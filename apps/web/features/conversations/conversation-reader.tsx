@@ -13,7 +13,6 @@ import {
 import type { MessageListItem, NavigateTarget, RenderBlockRead, TocItem } from "../../lib/types";
 import { ExportButton } from "../exporting/export-button";
 import { ExportPanel } from "../exporting/export-panel";
-import { AddToProjectControl } from "../projects/add-to-project-control";
 import { ProjectSidebar } from "../projects/project-sidebar";
 import { PinButton } from "../reading/pin-button";
 import { ReadingPositionClient } from "../reading/reading-position-client";
@@ -21,7 +20,6 @@ import { ShareButton } from "../sharing/share-button";
 import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
-import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
 import { MessageItem } from "./message-item";
 
 const PAGE_SIZE = 50;
@@ -36,7 +34,6 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
-  const [undo, setUndo] = useState<UndoAction | null>(null);
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
@@ -348,20 +345,18 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 </span>
               </div>
             </div>
-            <div className="hidden flex-wrap items-center gap-2 md:flex">
+            <div className="hidden items-center gap-1 rounded-2xl bg-[#f7f7f8] p-1 md:flex">
               <button
                 type="button"
                 onClick={() => void expandLoadedHeavyMessages()}
                 disabled={expandProgress.active}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
               >
                 {expandProgress.active ? <Spinner /> : null}
                 {expandProgress.active
-                  ? `展开中 ${expandProgress.current} / ${expandProgress.total}`
-                  : "展开 blocks"}
+                  ? `${expandProgress.current} / ${expandProgress.total}`
+                  : "Blocks"}
               </button>
-              <AddToProjectControl conversationId={conversation.id} />
-              <ConversationActionMenu conversation={conversation} onUndo={setUndo} onChanged={refreshReader} />
               <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
               <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
               <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
@@ -376,7 +371,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                     setSelectedMessageIds(new Set());
                     await refreshReader();
                   }}
-                  className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8]"
+                  className="inline-flex h-9 items-center rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8]"
                 >
                   合并所选
                 </button>
@@ -385,7 +380,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 <button
                   type="button"
                   onClick={() => void splitSelectedConversationRange()}
-                  className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8]"
+                  className="inline-flex h-9 items-center rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8]"
                 >
                   拆分为新会话
                 </button>
@@ -418,14 +413,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           {showMobileActions ? (
             <div className="border-t border-[#f0f0f0] px-4 py-3 md:hidden">
               <div className="grid gap-2">
-                <AddToProjectControl conversationId={conversation.id} />
                 <div className="flex flex-wrap gap-2">
-                  <ConversationActionMenu conversation={conversation} onUndo={setUndo} onChanged={refreshReader} />
                   <button
                     type="button"
                     onClick={() => void expandLoadedHeavyMessages()}
                     disabled={expandProgress.active}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-70"
+                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] disabled:cursor-wait disabled:opacity-70"
                   >
                     {expandProgress.active ? <Spinner /> : null}
                     {expandProgress.active
@@ -464,37 +457,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               </div>
             </div>
           ) : null}
-          {showShare || showExport ? (
-            <div className="border-t border-[#f0f0f0] px-6 py-4">
-              <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
-                {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-                {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-              </div>
-            </div>
-          ) : null}
-          {undo ? (
-            <div className="border-t border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-950">
-              <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-                <span>{undo.label}</span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const current = undo;
-                    setUndo(null);
-                    await current.action();
-                  }}
-                  className="min-h-9 rounded-lg bg-amber-900 px-3 text-sm font-medium text-white"
-                >
-                  撤销
-                </button>
-              </div>
-            </div>
-          ) : null}
         </header>
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="grid min-h-full grid-cols-1 gap-5 px-4 py-8 md:px-6 xl:grid-cols-[48px_minmax(0,1fr)_256px]">
-            <div className="hidden xl:block">
+            <div className="relative z-[120] hidden xl:block">
               <div className="sticky top-20">
                 <ConversationIndex
                   conversationId={conversationId}
@@ -646,6 +613,18 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 setShowMobileToc(false);
               }}
             />
+          </div>
+        </div>
+      ) : null}
+      {showShare || showExport ? (
+        <div className="pointer-events-none fixed inset-x-4 top-20 z-40 flex justify-end md:inset-x-6">
+          <div
+            className={`pointer-events-auto grid max-h-[calc(100vh-6rem)] w-full gap-4 overflow-y-auto rounded-3xl border border-[#e5e5e5] bg-white/95 p-4 shadow-2xl backdrop-blur ${
+              showShare && showExport ? "max-w-[960px] lg:grid-cols-2" : "max-w-[520px]"
+            }`}
+          >
+            {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+            {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
           </div>
         </div>
       ) : null}

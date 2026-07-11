@@ -40,7 +40,7 @@ services:
     working_dir: /workspace
     command: sh -c "corepack enable && pnpm install && pnpm --filter web exec next dev --hostname 0.0.0.0"
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://chat-reader-api:8000}
     ports:
       - "${WEB_PORT:-3000}:3000"
     volumes:

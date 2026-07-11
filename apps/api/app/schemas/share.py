@@ -36,11 +36,18 @@ class ShareRead(BaseModel):
     last_accessed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    share_url: str | None = None
 
 
 class ShareCreateResponse(ShareRead):
     token: str
     share_url: str
+
+
+class ShareUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    expires_at: datetime | None = None
 
 
 class ShareRevokeResponse(ShareRead):

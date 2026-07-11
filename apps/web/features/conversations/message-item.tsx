@@ -33,9 +33,13 @@ export function MessageItem({
   const [isLoadingHeavyBlocks, setIsLoadingHeavyBlocks] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSplitting, setIsSplitting] = useState(false);
+  const [showSplitPanel, setShowSplitPanel] = useState(false);
+  const [splitOffsetValue, setSplitOffsetValue] = useState("");
+  const [splitReason, setSplitReason] = useState("");
   const [showVersions, setShowVersions] = useState(false);
   const blocks = normalizedBlocks(message, cachedBlocks);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
+  const defaultSplitOffset = Math.max(1, Math.floor(currentText.length / 2));
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
@@ -46,6 +50,35 @@ export function MessageItem({
       setShowHeavyBlocks(true);
     }
   }, [expandHeavyBlocks, message.is_heavy]);
+
+  useEffect(() => {
+    setSplitOffsetValue(String(defaultSplitOffset));
+    setSplitReason("");
+    setShowSplitPanel(false);
+    setIsEditing(false);
+    setShowVersions(false);
+  }, [defaultSplitOffset, message.id]);
+
+  async function submitSplit() {
+    const splitOffset = Number.parseInt(splitOffsetValue, 10);
+    if (!Number.isFinite(splitOffset) || splitOffset <= 0 || splitOffset >= currentText.length) {
+      window.alert(`Split offset must be between 1 and ${Math.max(currentText.length - 1, 1)}.`);
+      return;
+    }
+    setIsSplitting(true);
+    try {
+      await splitMessage(message.id, {
+        splitOffset,
+        editReason: splitReason.trim() || "manual split",
+      });
+      setShowSplitPanel(false);
+      setSplitReason("");
+      await onChanged?.();
+    } finally {
+      setIsSplitting(false);
+    }
+  }
+
   const actionControls = (
     <>
       {onSelectedChange ? (
@@ -70,30 +103,19 @@ export function MessageItem({
           <button
             type="button"
             disabled={isSplitting}
-            onClick={async () => {
-              const raw = window.prompt(
-                `Split offset, 1-${Math.max(currentText.length - 1, 1)}`,
-                String(Math.max(1, Math.floor(currentText.length / 2))),
-              );
-              if (!raw) {
-                return;
-              }
-              const splitOffset = Number.parseInt(raw, 10);
-              if (!Number.isFinite(splitOffset) || splitOffset <= 0 || splitOffset >= currentText.length) {
-                window.alert("Invalid split offset.");
-                return;
-              }
-              setIsSplitting(true);
-              try {
-                await splitMessage(message.id, { splitOffset, editReason: "manual split" });
-                await onChanged?.();
-              } finally {
-                setIsSplitting(false);
-              }
+            onClick={() => {
+              setIsEditing(false);
+              setShowSplitPanel((current) => {
+                const next = !current;
+                if (next && !splitOffsetValue) {
+                  setSplitOffsetValue(String(defaultSplitOffset));
+                }
+                return next;
+              });
             }}
             className="min-h-10 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-60"
           >
-            {isSplitting ? "Splitting" : "Split"}
+            {showSplitPanel ? "Close split" : isSplitting ? "Splitting" : "Split"}
           </button>
           <VersionHistoryButton isOpen={showVersions} onToggle={() => setShowVersions((current) => !current)} />
         </>
@@ -160,7 +182,25 @@ export function MessageItem({
                 await onChanged?.();
               }}
             />
-          ) : message.is_heavy && !showHeavyBlocks ? (
+          ) : (
+            <>
+              {showSplitPanel && !readOnly ? (
+                <SplitMessageForm
+                  textLength={currentText.length}
+                  offsetValue={splitOffsetValue}
+                  reason={splitReason}
+                  busy={isSplitting}
+                  onOffsetChange={setSplitOffsetValue}
+                  onReasonChange={setSplitReason}
+                  onCancel={() => {
+                    setShowSplitPanel(false);
+                    setSplitOffsetValue(String(defaultSplitOffset));
+                    setSplitReason("");
+                  }}
+                  onSubmit={() => void submitSplit()}
+                />
+              ) : null}
+              {message.is_heavy && !showHeavyBlocks ? (
             <div className="rounded-xl border border-[#e5e5e5] bg-white/70 p-3">
               <p className="text-sm text-[#6b7280]">
                 Heavy message: {message.char_count} characters / {message.block_count} blocks.
@@ -183,8 +223,10 @@ export function MessageItem({
                 {isLoadingHeavyBlocks ? "Loading blocks" : "Load blocks"}
               </button>
             </div>
-          ) : (
-            <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
+              ) : (
+                <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
+              )}
+            </>
           )}
         </div>
 
@@ -201,6 +243,72 @@ export function MessageItem({
       ) : null}
       </div>
     </article>
+  );
+}
+
+function SplitMessageForm({
+  textLength,
+  offsetValue,
+  reason,
+  busy,
+  onOffsetChange,
+  onReasonChange,
+  onCancel,
+  onSubmit,
+}: {
+  textLength: number;
+  offsetValue: string;
+  reason: string;
+  busy: boolean;
+  onOffsetChange: (value: string) => void;
+  onReasonChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="mb-3 rounded-2xl border border-[#dbeafe] bg-white/90 p-3 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="min-w-0 flex-1 text-xs font-medium text-[#374151]">
+          Split offset
+          <input
+            type="number"
+            min={1}
+            max={Math.max(textLength - 1, 1)}
+            value={offsetValue}
+            onChange={(event) => onOffsetChange(event.target.value)}
+            className="mt-1 min-h-10 w-full rounded-lg border border-[#d1d5db] bg-white px-3 text-sm text-[#111827]"
+          />
+        </label>
+        <label className="min-w-0 flex-[2] text-xs font-medium text-[#374151]">
+          Reason
+          <input
+            value={reason}
+            onChange={(event) => onReasonChange(event.target.value)}
+            placeholder="manual split"
+            className="mt-1 min-h-10 w-full rounded-lg border border-[#d1d5db] bg-white px-3 text-sm text-[#111827]"
+          />
+        </label>
+      </div>
+      <p className="mt-2 text-xs text-[#6b7280]">Message length: {textLength} characters. The offset must be inside the message.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={busy || textLength < 2}
+          onClick={onSubmit}
+          className="min-h-9 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+        >
+          {busy ? "Splitting" : "Split message"}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCancel}
+          className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
 

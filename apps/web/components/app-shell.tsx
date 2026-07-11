@@ -5,8 +5,9 @@ import { ConversationList } from "../features/conversations/conversation-list";
 import { ImportPanel } from "../features/import/import-panel";
 import { ProjectSidebar } from "../features/projects/project-sidebar";
 
-export function AppShell() {
+export function AppShell({ mode = "active" }: { mode?: "active" | "archived" }) {
   const [showImport, setShowImport] = useState(false);
+  const isArchivedMode = mode === "archived";
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]">
@@ -15,22 +16,28 @@ export function AppShell() {
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-[#e5e5e5] bg-white/95 px-4 pl-16 backdrop-blur md:px-6 md:pl-6">
           <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold">All Conversations</h1>
-            <p className="text-xs text-[#6b7280]">Canonical ChatGPT export reader</p>
+            <h1 className="truncate text-base font-semibold">
+              {isArchivedMode ? "Archived Conversations" : "All Conversations"}
+            </h1>
+            <p className="text-xs text-[#6b7280]">
+              {isArchivedMode ? "Restore or delete archived conversations" : "Canonical ChatGPT export reader"}
+            </p>
           </div>
-          <button
-            type="button"
-            data-testid="header-import-button"
-            onClick={() => setShowImport(true)}
-            className="hidden shrink-0 rounded-lg bg-[#111827] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-black focus:outline-none focus:ring-2 focus:ring-[#10a37f]/30 sm:inline-flex"
-          >
-            + Import
-          </button>
+          {!isArchivedMode ? (
+            <button
+              type="button"
+              data-testid="header-import-button"
+              onClick={() => setShowImport(true)}
+              className="hidden shrink-0 rounded-lg bg-[#111827] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-black focus:outline-none focus:ring-2 focus:ring-[#10a37f]/30 sm:inline-flex"
+            >
+              + Import
+            </button>
+          ) : null}
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-8 md:px-6">
-            <ConversationList onImportClick={() => setShowImport(true)} />
+            <ConversationList mode={mode} onImportClick={() => setShowImport(true)} />
           </div>
         </div>
       </section>

@@ -11,22 +11,36 @@ import {
   mergeConversations,
   restoreConversation,
 } from "../../lib/api";
+import type { ConversationListItem } from "../../lib/types";
+import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
 
-export function ConversationList({ onImportClick }: { onImportClick?: () => void }) {
+export function ConversationList({
+  onImportClick,
+  mode = "active",
+}: {
+  onImportClick?: () => void;
+  mode?: "active" | "archived";
+}) {
   const queryClient = useQueryClient();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [isMerging, setIsMerging] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [undo, setUndo] = useState<UndoAction | null>(null);
+  const [menuCloseSignal, setMenuCloseSignal] = useState(0);
+  const [mergeTitle, setMergeTitle] = useState("Merged conversation");
+  const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const conversationsQuery = useQuery({
-    queryKey: ["conversations"],
-    queryFn: getConversations,
+    queryKey: ["conversations", mode],
+    queryFn: () => getConversations({ includeArchived: mode === "archived" }),
   });
+  const isArchivedMode = mode === "archived";
 
   async function refreshLists() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+      queryClient.invalidateQueries({ queryKey: ["conversations", "active"] }),
+      queryClient.invalidateQueries({ queryKey: ["conversations", "archived"] }),
       queryClient.invalidateQueries({ queryKey: ["sidebar-conversations"] }),
       queryClient.invalidateQueries({ queryKey: ["projects"] }),
     ]);
@@ -54,13 +68,19 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
     );
   }
 
-  const conversations = conversationsQuery.data ?? [];
+  const conversations = (conversationsQuery.data ?? []).filter((conversation) =>
+    isArchivedMode ? conversation.status === "archived" : conversation.status !== "archived",
+  );
   if (conversations.length === 0) {
     return (
       <StateBlock
-        title="No conversations yet"
-        detail="Import a ChatGPT export to start building your local reading archive."
-        action={
+        title={isArchivedMode ? "No archived conversations" : "No conversations yet"}
+        detail={
+          isArchivedMode
+            ? "Archived conversations will appear here. Restore one to return it to All Conversations."
+            : "Import a ChatGPT export to start building your local reading archive."
+        }
+        action={!isArchivedMode ? (
           <button
             type="button"
             onClick={onImportClick}
@@ -68,7 +88,7 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
           >
             Import conversations
           </button>
-        }
+        ) : undefined}
       />
     );
   }
@@ -85,23 +105,31 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-[#111827]">Conversation history</h2>
+          <h2 className="text-lg font-semibold text-[#111827]">
+            {isArchivedMode ? "Archived conversations" : "Conversation history"}
+          </h2>
           <p className="text-sm text-[#6b7280]">{conversations.length} shown</p>
         </div>
         {selectedConversationIds.size > 0 ? (
           <BulkActions
-            selectedIds={Array.from(selectedConversationIds)}
+            mode={mode}
+            selectedConversations={mergeOrderIds
+              .map((id) => conversations.find((conversation) => conversation.id === id))
+              .filter((conversation): conversation is ConversationListItem => Boolean(conversation))}
+            title={mergeTitle}
+            onTitleChange={setMergeTitle}
             isMerging={isMerging}
             bulkBusy={bulkBusy}
-            onMerge={async (ids) => {
-              const title = window.prompt("Merged conversation title", "Merged conversation");
-              if (title === null) {
-                return;
-              }
+            onMove={(id, direction) => {
+              setMergeOrderIds((current) => moveId(current, id, direction));
+            }}
+            onMerge={async (ids, title) => {
               setIsMerging(true);
               try {
                 await mergeConversations({ conversationIds: ids, title: title.trim() || "Merged conversation" });
                 setSelectedConversationIds(new Set());
+                setMergeOrderIds([]);
+                setMergeTitle("Merged conversation");
                 await refreshLists();
               } finally {
                 setIsMerging(false);
@@ -119,6 +147,25 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
                   },
                 });
                 setSelectedConversationIds(new Set());
+                setMergeOrderIds([]);
+                await refreshLists();
+              } finally {
+                setBulkBusy(null);
+              }
+            }}
+            onRestore={async (ids) => {
+              setBulkBusy("restore");
+              try {
+                await Promise.all(ids.map((id) => restoreConversation(id)));
+                setUndo({
+                  label: `已恢复 ${ids.length} 个会话`,
+                  action: async () => {
+                    await Promise.all(ids.map((id) => archiveConversation(id)));
+                    await refreshLists();
+                  },
+                });
+                setSelectedConversationIds(new Set());
+                setMergeOrderIds([]);
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
@@ -139,6 +186,7 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
                   },
                 });
                 setSelectedConversationIds(new Set());
+                setMergeOrderIds([]);
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
@@ -146,22 +194,25 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
             }}
           />
         ) : (
-          <span className="text-sm text-[#6b7280]">Select 2+ to merge</span>
+          <span className="text-sm text-[#6b7280]">
+            {isArchivedMode ? "Select conversations to restore or delete" : "Select 2+ to merge"}
+          </span>
         )}
       </div>
-      <div className="overflow-hidden rounded-2xl bg-white/70">
+      <div className="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
         {conversations.map((conversation) => (
           <article
             key={conversation.id}
-            className="group flex flex-col gap-3 border-b border-[#ececec] px-4 py-3 transition last:border-b-0 hover:bg-white"
+            className="group border-b border-[#ececec] px-4 py-3 transition last:border-b-0 hover:bg-[#fbfbfb]"
           >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
               <div className="flex min-w-0 gap-3">
                 <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#d1d5db] bg-white">
                   <input
                     type="checkbox"
                     checked={selectedConversationIds.has(conversation.id)}
                     onChange={(event) => {
+                      setMenuCloseSignal((signal) => signal + 1);
                       setSelectedConversationIds((current) => {
                         const next = new Set(current);
                         if (event.target.checked) {
@@ -170,6 +221,12 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
                           next.delete(conversation.id);
                         }
                         return next;
+                      });
+                      setMergeOrderIds((current) => {
+                        if (event.target.checked) {
+                          return current.includes(conversation.id) ? current : [...current, conversation.id];
+                        }
+                        return current.filter((id) => id !== conversation.id);
                       });
                     }}
                     aria-label={`Select ${conversation.display_title || conversation.title}`}
@@ -183,17 +240,24 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
                     </h3>
                   </Link>
                   <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4b5563]">
-                    {conversation.first_user_message ?? "No first user message."}
+                    {previewConversationText(conversation.first_user_message)}
                   </p>
                 </div>
               </div>
-              <div className="flex shrink-0 items-start gap-2 text-left sm:text-right">
-                <ConversationActionMenu conversation={conversation} onUndo={setUndo} onChanged={refreshLists} />
-                <div>
+              <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
+                <div className="min-w-0 md:order-2">
                   <p className="inline-flex rounded-full bg-[#f7f7f8] px-2 py-1 text-xs font-medium text-[#4b5563]">
                     {conversation.source_profile}
                   </p>
                   <p className="mt-1 text-sm text-[#6b7280]">{conversation.message_count} messages</p>
+                </div>
+                <div className="md:order-1">
+                  <ConversationActionMenu
+                    conversation={conversation}
+                    closeSignal={menuCloseSignal}
+                    onUndo={setUndo}
+                    onChanged={refreshLists}
+                  />
                 </div>
               </div>
             </div>
@@ -204,51 +268,130 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
   );
 }
 
+function previewConversationText(text?: string | null): string {
+  const cleaned = stripLeadingTimestamp(text ?? "").replace(/\s+/g, " ").trim();
+  return cleaned || "No first user message.";
+}
+
 function BulkActions({
-  selectedIds,
+  mode,
+  selectedConversations,
+  title,
+  onTitleChange,
   isMerging,
   bulkBusy,
+  onMove,
   onMerge,
   onArchive,
+  onRestore,
   onDelete,
 }: {
-  selectedIds: string[];
+  mode: "active" | "archived";
+  selectedConversations: ConversationListItem[];
+  title: string;
+  onTitleChange: (title: string) => void;
   isMerging: boolean;
   bulkBusy: string | null;
-  onMerge: (ids: string[]) => Promise<void>;
+  onMove: (id: string, direction: -1 | 1) => void;
+  onMerge: (ids: string[], title: string) => Promise<void>;
   onArchive: (ids: string[]) => Promise<void>;
+  onRestore: (ids: string[]) => Promise<void>;
   onDelete: (ids: string[]) => Promise<void>;
 }) {
+  const selectedIds = selectedConversations.map((conversation) => conversation.id);
+  const isArchivedMode = mode === "archived";
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      {selectedIds.length >= 2 ? (
+    <div className="w-full rounded-2xl border border-[#e5e5e5] bg-white p-3 shadow-sm sm:max-w-xl">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-auto text-sm text-[#6b7280]">{selectedIds.length} selected</span>
+        {isArchivedMode ? (
+          <button
+            type="button"
+            disabled={bulkBusy !== null}
+            onClick={() => void onRestore(selectedIds)}
+            className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
+          >
+            Restore
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={bulkBusy !== null}
+            onClick={() => void onArchive(selectedIds)}
+            className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
+          >
+            Archive
+          </button>
+        )}
         <button
           type="button"
-          disabled={isMerging}
-          onClick={() => void onMerge(selectedIds)}
-          className="min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+          disabled={bulkBusy !== null}
+          onClick={() => void onDelete(selectedIds)}
+          className="min-h-9 rounded-lg border border-red-200 bg-white px-3 text-sm font-medium text-red-700 disabled:cursor-wait disabled:opacity-60"
         >
-          {isMerging ? "Merging" : `Merge ${selectedIds.length}`}
+          Delete
         </button>
+      </div>
+      {!isArchivedMode && selectedIds.length >= 2 ? (
+        <div className="mt-3 rounded-xl bg-[#f7f7f8] p-3">
+          <label className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">
+            Merge title
+            <input
+              value={title}
+              onChange={(event) => onTitleChange(event.target.value)}
+              className="mt-1 block w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-sm font-normal normal-case text-[#111827] outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/10"
+            />
+          </label>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Merge order</p>
+          <div className="mt-2 space-y-1">
+            {selectedConversations.map((conversation, index) => (
+              <div key={conversation.id} className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2 py-1.5">
+                <span className="text-xs font-semibold text-[#6b7280]">{index + 1}</span>
+                <span className="truncate text-sm text-[#111827]">{conversation.display_title || conversation.title}</span>
+                <span className="flex gap-1">
+                  <button
+                    type="button"
+                    disabled={index === 0 || isMerging}
+                    onClick={() => onMove(conversation.id, -1)}
+                    className="h-7 rounded-md border border-[#d1d5db] px-2 text-xs disabled:opacity-40"
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === selectedConversations.length - 1 || isMerging}
+                    onClick={() => onMove(conversation.id, 1)}
+                    className="h-7 rounded-md border border-[#d1d5db] px-2 text-xs disabled:opacity-40"
+                  >
+                    Down
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            disabled={isMerging}
+            onClick={() => void onMerge(selectedIds, title)}
+            className="mt-3 min-h-10 w-full rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+          >
+            {isMerging ? "Merging" : `Merge ${selectedIds.length} in this order`}
+          </button>
+        </div>
       ) : null}
-      <button
-        type="button"
-        disabled={bulkBusy !== null}
-        onClick={() => void onArchive(selectedIds)}
-        className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
-      >
-        Archive
-      </button>
-      <button
-        type="button"
-        disabled={bulkBusy !== null}
-        onClick={() => void onDelete(selectedIds)}
-        className="min-h-10 rounded-lg border border-red-200 bg-white px-3 text-sm font-medium text-red-700 disabled:cursor-wait disabled:opacity-60"
-      >
-        Delete
-      </button>
     </div>
   );
+}
+
+function moveId(ids: string[], id: string, direction: -1 | 1): string[] {
+  const index = ids.indexOf(id);
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= ids.length) {
+    return ids;
+  }
+  const next = [...ids];
+  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+  return next;
 }
 
 function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {

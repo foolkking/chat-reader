@@ -35,13 +35,43 @@ def test_create_share_returns_token_once_and_db_stores_hash(
     listed = shares.json()[0]
     assert "token" not in listed
     assert listed["token_prefix"] == token[:10]
+    assert listed["share_url"].endswith(f"/share/{token}")
 
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     with Session(engine) as session:
         share = session.get(Share, UUID(payload["id"]))
         assert share is not None
-        assert share.token_hash == hash_token(token)
-        assert share.token_hash != token
+    assert share.token_hash == hash_token(token)
+    assert share.token_hash != token
+    assert share.metadata_["share_url"].endswith(f"/share/{token}")
+
+
+def test_update_share_expiry_and_management_url(client: TestClient) -> None:
+    sample = commit_edit_sample(client)
+    conversation_id = sample["conversation_id"]
+    create = client.post(f"/api/conversations/{conversation_id}/shares", json={})
+    assert create.status_code == 200
+    share_id = create.json()["id"]
+    token = create.json()["token"]
+
+    next_expiry = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    update = client.patch(f"/api/shares/{share_id}", json={"expires_at": next_expiry, "title": "Managed share"})
+    assert update.status_code == 200
+    payload = update.json()
+    assert payload["title"] == "Managed share"
+    assert payload["expires_at"] is not None
+    assert payload["share_url"].endswith(f"/share/{token}")
+
+    shares = client.get(f"/api/conversations/{conversation_id}/shares")
+    listed = shares.json()[0]
+    assert listed["title"] == "Managed share"
+    assert listed["share_url"].endswith(f"/share/{token}")
+
+    past = client.patch(
+        f"/api/shares/{share_id}",
+        json={"expires_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()},
+    )
+    assert past.status_code == 400
 
 
 def test_shared_readonly_response_and_access_count(client: TestClient) -> None:
