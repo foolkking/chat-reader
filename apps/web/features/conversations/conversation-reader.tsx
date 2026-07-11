@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getConversation, getConversationMessageWindow, getMessageBlocks } from "../../lib/api";
 import type { MessageListItem, RenderBlockRead, TocItem } from "../../lib/types";
 import { ExportButton } from "../exporting/export-button";
@@ -16,6 +16,7 @@ import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 import { MessageItem } from "./message-item";
+import { mergeMessages, splitConversation } from "../../lib/api";
 
 const PAGE_SIZE = 50;
 
@@ -39,6 +40,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [expandProgress, setExpandProgress] = useState({ current: 0, total: 0, active: false });
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const nextOffsetRef = useRef(0);
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -60,6 +62,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
 
   useEffect(() => {
     setOffset(0);
+    nextOffsetRef.current = 0;
     setMessages([]);
     setSelectedMessageIds(new Set());
     setPendingTargetMessageId(targetMessageId);
@@ -73,6 +76,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     if (!windowQuery.isSuccess) {
       return;
     }
+    nextOffsetRef.current = Math.max(
+      nextOffsetRef.current,
+      windowQuery.data.offset + windowQuery.data.items.length,
+    );
     setMessages((current) => {
       const next = offset === 0 ? [] : [...current];
       for (const message of windowQuery.data.items) {
@@ -84,26 +91,62 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     });
   }, [offset, windowQuery.data, windowQuery.isSuccess]);
 
+  const mergeWindowItems = useCallback((page: { items: MessageListItem[]; offset: number }) => {
+    nextOffsetRef.current = Math.max(nextOffsetRef.current, page.offset + page.items.length);
+    setMessages((current) => {
+      const next = [...current];
+      for (const message of page.items) {
+        if (!next.some((item) => item.id === message.id)) {
+          next.push(message);
+        }
+      }
+      return next.sort((left, right) => left.order_key.localeCompare(right.order_key));
+    });
+  }, []);
+
+  const ensureMessageMounted = useCallback(
+    async (messageId: string, blockIndex?: number) => {
+      const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
+      const currentTarget = blockId
+        ? document.getElementById(blockId)
+        : document.getElementById(`message-${messageId}`);
+      if (currentTarget) {
+        currentTarget.scrollIntoView({ block: "start", behavior: "smooth" });
+        return;
+      }
+
+      const page = await getConversationMessageWindow(conversationId, {
+        includeBlocks: false,
+        limit: PAGE_SIZE,
+        anchorMessageId: messageId,
+      });
+      mergeWindowItems(page);
+      const targetMessage = page.items.find((item) => item.id === messageId);
+      if (blockIndex !== undefined && targetMessage) {
+        const inlineBlocks = targetMessage.render_blocks?.length
+          ? targetMessage.render_blocks
+          : targetMessage.current_version?.blocks;
+        if (!blockCache[messageId] && (!inlineBlocks || inlineBlocks.length === 0)) {
+          const blocks = await getMessageBlocks(messageId, { start: 0, limit: 200 });
+          setBlockCache((current) => ({ ...current, [messageId]: blocks }));
+        }
+        setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
+      }
+      await waitForMountedTarget(messageId, blockIndex);
+      const block = blockId ? document.getElementById(blockId) : null;
+      const message = document.getElementById(`message-${messageId}`);
+      (block ?? message)?.scrollIntoView({ block: "start", behavior: "smooth" });
+    },
+    [blockCache, conversationId, mergeWindowItems],
+  );
+
   useEffect(() => {
     const messageId = pendingTargetMessageId ?? targetMessageId;
-    if (!messageId || messages.length === 0) {
+    if (!messageId) {
       return;
     }
-    const target = document.getElementById(`message-${messageId}`);
-    if (target) {
-      target.scrollIntoView({ block: "start", behavior: "smooth" });
-      setPendingTargetMessageId(null);
-    } else if (windowQuery.data?.has_more && offset < 1000 && !windowQuery.isFetching) {
-      setOffset((current) => current + PAGE_SIZE);
-    }
-  }, [
-    messages.length,
-    offset,
-    pendingTargetMessageId,
-    targetMessageId,
-    windowQuery.data?.has_more,
-    windowQuery.isFetching,
-  ]);
+    void ensureMessageMounted(messageId).finally(() => setPendingTargetMessageId(null));
+  }, [ensureMessageMounted, pendingTargetMessageId, targetMessageId]);
 
   useEffect(() => {
     const sentinel = loadMoreSentinelRef.current;
@@ -114,14 +157,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting) && !windowQuery.isFetching) {
-          setOffset(messages.length);
+          setOffset(nextOffsetRef.current);
         }
       },
       { root, rootMargin: "600px 0px", threshold: 0 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, messages.length, windowQuery.isFetching]);
+  }, [hasMore, windowQuery.isFetching]);
 
   useEffect(() => {
     const root = scrollContainerRef.current;
@@ -156,11 +199,15 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       setActiveMessageId(bestId);
     }
     return () => observer.disconnect();
-  }, [activeMessageId, blockCache, expandAllHeavyBlocks, expandedHeavyMessageIds, messages]);
+  }, [messages]);
 
   const conversation = conversationQuery.data;
   const loadedLabel = useMemo(() => `${messages.length} / ${total} loaded`, [messages.length, total]);
   const selectedIds = useMemo(() => Array.from(selectedMessageIds), [selectedMessageIds]);
+  const selectedOrderedIds = useMemo(
+    () => messages.filter((message) => selectedMessageIds.has(message.id)).map((message) => message.id),
+    [messages, selectedMessageIds],
+  );
   const activeTocItems = useMemo(
     () => deriveActiveTocItems(messages.find((message) => message.id === activeMessageId), blockCache),
     [activeMessageId, blockCache, messages],
@@ -178,6 +225,23 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       queryClient.invalidateQueries({ queryKey: ["toc", conversationId] }),
       queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] }),
     ]);
+  }
+
+  async function splitSelectedConversationRange() {
+    if (selectedOrderedIds.length === 0) {
+      return;
+    }
+    const title = window.prompt("New conversation title", `${conversation?.display_title || conversation?.title || "Conversation"} excerpt`);
+    if (title === null) {
+      return;
+    }
+    await splitConversation(conversationId, {
+      startMessageId: selectedOrderedIds[0],
+      endMessageId: selectedOrderedIds[selectedOrderedIds.length - 1],
+      title,
+    });
+    setSelectedMessageIds(new Set());
+    await queryClient.invalidateQueries({ queryKey: ["conversations"] });
   }
 
   async function expandLoadedHeavyMessages() {
@@ -268,6 +332,31 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
               <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
               <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
+              {selectedIds.length >= 2 ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) {
+                      return;
+                    }
+                    await mergeMessages({ messageIds: selectedIds });
+                    setSelectedMessageIds(new Set());
+                    await refreshReader();
+                  }}
+                  className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8]"
+                >
+                  合并所选
+                </button>
+              ) : null}
+              {selectedOrderedIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void splitSelectedConversationRange()}
+                  className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8]"
+                >
+                  拆分为新会话
+                </button>
+              ) : null}
             </div>
             <div className="flex shrink-0 gap-2 md:hidden">
               <button
@@ -312,6 +401,31 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
                   <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
                   <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
+                  {selectedIds.length >= 2 ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) {
+                          return;
+                        }
+                        await mergeMessages({ messageIds: selectedIds });
+                        setSelectedMessageIds(new Set());
+                        await refreshReader();
+                      }}
+                      className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
+                    >
+                      合并所选
+                    </button>
+                  ) : null}
+                  {selectedOrderedIds.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => void splitSelectedConversationRange()}
+                      className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
+                    >
+                      拆分为新会话
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -334,13 +448,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
                   onNavigate={(item) => {
-                    const target = document.getElementById(`message-${item.messageId}`);
-                    if (target) {
-                      target.scrollIntoView({ block: "start", behavior: "smooth" });
-                      return;
-                    }
-                    setPendingTargetMessageId(item.messageId);
-                    setOffset(Math.floor(item.ordinal / PAGE_SIZE) * PAGE_SIZE);
+                    void ensureMessageMounted(item.messageId);
                   }}
                 />
               </div>
@@ -405,6 +513,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   activeMessageId={activeMessageId}
                   activeItems={activeTocItems}
                   observerKey={tocObserverKey}
+                  onNavigate={(item) => {
+                    void ensureMessageMounted(item.message_id, item.block_index);
+                  }}
                 />
               </div>
             </div>
@@ -435,13 +546,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               activeMessageId={activeMessageId}
               mode="sheet"
               onNavigate={(item) => {
-                const target = document.getElementById(`message-${item.messageId}`);
-                if (target) {
-                  target.scrollIntoView({ block: "start", behavior: "smooth" });
-                } else {
-                  setPendingTargetMessageId(item.messageId);
-                  setOffset(Math.floor(item.ordinal / PAGE_SIZE) * PAGE_SIZE);
-                }
+                void ensureMessageMounted(item.messageId);
                 setShowMobileIndex(false);
               }}
             />
@@ -473,7 +578,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               activeItems={activeTocItems}
               observerKey={tocObserverKey}
               mode="sheet"
-              onNavigate={() => setShowMobileToc(false)}
+              onNavigate={(item) => {
+                void ensureMessageMounted(item.message_id, item.block_index);
+                setShowMobileToc(false);
+              }}
             />
           </div>
         </div>
@@ -520,6 +628,16 @@ function normalizeHeadingLevel(value: unknown): number {
     return Math.max(1, Math.min(6, level));
   }
   return 2;
+}
+
+async function waitForMountedTarget(messageId: string, blockIndex?: number): Promise<void> {
+  const targetId = blockIndex === undefined ? `message-${messageId}` : `block-${messageId}-${blockIndex}`;
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    if (document.getElementById(targetId) || document.getElementById(`message-${messageId}`)) {
+      return;
+    }
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  }
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {

@@ -256,6 +256,29 @@ export type MessageWindowResponse = {
   has_more: boolean;
 };
 
+export type MessageSplitResponse = {
+  conversation_id: string;
+  original_message_id: string;
+  new_message_id: string;
+  original_version_id: string;
+  new_version_id: string;
+};
+
+export type MessageMergeResponse = {
+  conversation_id: string;
+  survivor_message_id: string;
+  merged_message_ids: string[];
+  current_version_id: string;
+  version_number: number;
+};
+
+export type ConversationTransformResponse = {
+  conversation_id: string;
+  title: string;
+  display_title: string;
+  message_count: number;
+};
+
 export type MessageEditResponse = {
   message_id: string;
   conversation_id: string;

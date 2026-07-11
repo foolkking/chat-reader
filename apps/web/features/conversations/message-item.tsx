@@ -2,7 +2,7 @@ import { BlockRenderer } from "./block-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { editMessage } from "../../lib/api";
+import { editMessage, splitMessage } from "../../lib/api";
 import { EditMessageForm } from "../editing/edit-message-form";
 import { VersionHistoryButton } from "../editing/version-history-button";
 import { VersionHistoryPanel } from "../editing/version-history-panel";
@@ -30,6 +30,7 @@ export function MessageItem({
   const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
   const [isLoadingHeavyBlocks, setIsLoadingHeavyBlocks] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSplitting, setIsSplitting] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const blocks = normalizedBlocks(message, cachedBlocks);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
@@ -63,6 +64,34 @@ export function MessageItem({
             className="min-h-10 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
           >
             {isEditing ? "Close edit" : "Edit"}
+          </button>
+          <button
+            type="button"
+            disabled={isSplitting}
+            onClick={async () => {
+              const raw = window.prompt(
+                `Split offset, 1-${Math.max(currentText.length - 1, 1)}`,
+                String(Math.max(1, Math.floor(currentText.length / 2))),
+              );
+              if (!raw) {
+                return;
+              }
+              const splitOffset = Number.parseInt(raw, 10);
+              if (!Number.isFinite(splitOffset) || splitOffset <= 0 || splitOffset >= currentText.length) {
+                window.alert("Invalid split offset.");
+                return;
+              }
+              setIsSplitting(true);
+              try {
+                await splitMessage(message.id, { splitOffset, editReason: "manual split" });
+                await onChanged?.();
+              } finally {
+                setIsSplitting(false);
+              }
+            }}
+            className="min-h-10 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-60"
+          >
+            {isSplitting ? "Splitting" : "Split"}
           </button>
           <VersionHistoryButton isOpen={showVersions} onToggle={() => setShowVersions((current) => !current)} />
         </>

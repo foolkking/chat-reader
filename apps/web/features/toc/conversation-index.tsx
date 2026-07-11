@@ -115,7 +115,15 @@ export function ConversationIndex({
                 key={item.messageId}
                 ref={isActive ? activeRowRef : undefined}
                 type="button"
-                onClick={() => onNavigate?.(item)}
+                onClick={() => {
+                  if (onNavigate) {
+                    onNavigate(item);
+                  } else {
+                    document
+                      .getElementById(`message-${item.messageId}`)
+                      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+                  }
+                }}
                 className="flex min-h-6 w-full min-w-0 items-center gap-2 rounded-lg text-left text-sm text-[#374151] hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#10a37f]"
               >
                 <span

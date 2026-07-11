@@ -1,10 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { getConversations } from "../../lib/api";
+import { useState } from "react";
+import { getConversations, mergeConversations } from "../../lib/api";
 
 export function ConversationList({ onImportClick }: { onImportClick?: () => void }) {
+  const queryClient = useQueryClient();
+  const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
+  const [isMerging, setIsMerging] = useState(false);
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
     queryFn: getConversations,
@@ -54,8 +58,36 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-[#111827]">Conversation history</h2>
-        <span className="text-sm text-[#6b7280]">{conversations.length} shown</span>
+        <div>
+          <h2 className="text-lg font-semibold text-[#111827]">Conversation history</h2>
+          <p className="text-sm text-[#6b7280]">{conversations.length} shown</p>
+        </div>
+        {selectedConversationIds.size >= 2 ? (
+          <button
+            type="button"
+            disabled={isMerging}
+            onClick={async () => {
+              const ids = Array.from(selectedConversationIds);
+              const title = window.prompt("Merged conversation title", "Merged conversation") ?? undefined;
+              if (title === undefined) {
+                return;
+              }
+              setIsMerging(true);
+              try {
+                await mergeConversations({ conversationIds: ids, title });
+                setSelectedConversationIds(new Set());
+                await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+              } finally {
+                setIsMerging(false);
+              }
+            }}
+            className="min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+          >
+            {isMerging ? "Merging" : `Merge ${selectedConversationIds.size}`}
+          </button>
+        ) : (
+          <span className="text-sm text-[#6b7280]">Select 2+ to merge</span>
+        )}
       </div>
       <div className="overflow-hidden rounded-2xl bg-white/70">
         {conversations.map((conversation) => (
@@ -64,7 +96,26 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
             className="group flex flex-col gap-3 border-b border-[#ececec] px-4 py-3 transition last:border-b-0 hover:bg-white"
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
+              <div className="flex min-w-0 gap-3">
+                <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#d1d5db] bg-white">
+                  <input
+                    type="checkbox"
+                    checked={selectedConversationIds.has(conversation.id)}
+                    onChange={(event) => {
+                      setSelectedConversationIds((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) {
+                          next.add(conversation.id);
+                        } else {
+                          next.delete(conversation.id);
+                        }
+                        return next;
+                      });
+                    }}
+                    aria-label={`Select ${conversation.display_title || conversation.title}`}
+                  />
+                </label>
+                <div className="min-w-0">
                 <Link href={`/conversations/${conversation.id}`}>
                   <h3 className="truncate text-base font-semibold text-slate-950">
                     {conversation.is_global_pinned ? "Pinned / " : ""}
@@ -74,6 +125,7 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
                 <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4b5563]">
                   {conversation.first_user_message ?? "No first user message."}
                 </p>
+                </div>
               </div>
               <div className="shrink-0 text-left sm:text-right">
                 <p className="inline-flex rounded-full bg-[#f7f7f8] px-2 py-1 text-xs font-medium text-[#4b5563]">

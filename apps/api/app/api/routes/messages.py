@@ -10,6 +10,10 @@ from app.models.render_block import RenderBlock
 from app.schemas.editing import (
     MessageEditRequest,
     MessageEditResponse,
+    MessageMergeRequest,
+    MessageMergeResponse,
+    MessageSplitRequest,
+    MessageSplitResponse,
     MessageVersionHistoryItem,
     MessageVersionHistoryResponse,
     MessageVersionRestoreRequest,
@@ -19,10 +23,37 @@ from app.services.editing.message_edit_service import (
     MessageEditError,
     edit_message,
     list_message_versions,
+    merge_messages,
     restore_message_version,
+    split_message,
 )
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
+
+
+@router.post("/merge", response_model=MessageMergeResponse)
+def merge_messages_endpoint(
+    payload: MessageMergeRequest,
+    db: Session = Depends(get_db),
+) -> MessageMergeResponse:
+    try:
+        result = merge_messages(
+            db=db,
+            message_ids=payload.message_ids,
+            separator=payload.separator,
+            edit_reason=payload.edit_reason,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return MessageMergeResponse(
+        conversation_id=result.survivor_message.conversation_id,
+        survivor_message_id=result.survivor_message.id,
+        merged_message_ids=result.merged_message_ids,
+        current_version_id=result.current_version.id,
+        version_number=result.current_version.version_number,
+    )
 
 
 @router.get("/{message_id}", response_model=MessageDetail)
@@ -57,6 +88,32 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
             }
             for ref in message.source_refs
         ],
+    )
+
+
+@router.post("/{message_id}/split", response_model=MessageSplitResponse)
+def split_message_endpoint(
+    message_id: uuid.UUID,
+    payload: MessageSplitRequest,
+    db: Session = Depends(get_db),
+) -> MessageSplitResponse:
+    try:
+        result = split_message(
+            db=db,
+            message_id=message_id,
+            split_offset=payload.split_offset,
+            edit_reason=payload.edit_reason,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return MessageSplitResponse(
+        conversation_id=result.original_message.conversation_id,
+        original_message_id=result.original_message.id,
+        new_message_id=result.new_message.id,
+        original_version_id=result.original_version.id,
+        new_version_id=result.new_version.id,
     )
 
 

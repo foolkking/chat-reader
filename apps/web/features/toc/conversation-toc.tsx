@@ -20,7 +20,7 @@ export function ConversationToc({
   observerKey?: string;
   items?: TocItem[];
   mode?: "panel" | "sheet";
-  onNavigate?: () => void;
+  onNavigate?: (item: TocItem) => void;
 }) {
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
@@ -125,7 +125,7 @@ function TocButtonList({
   items: TocItem[];
   activeHeadingId: string | null;
   activeRowRef: MutableRefObject<HTMLButtonElement | null>;
-  onNavigate?: () => void;
+  onNavigate?: (item: TocItem) => void;
 }) {
   return (
     <nav className="space-y-1 border-l border-[#e5e7eb] pl-2">
@@ -137,8 +137,11 @@ function TocButtonList({
             ref={isActive ? activeRowRef : undefined}
             type="button"
             onClick={() => {
-              scrollToTocTarget(item);
-              onNavigate?.();
+              if (onNavigate) {
+                onNavigate(item);
+              } else {
+                scrollToTocTarget(item);
+              }
             }}
             className="flex min-h-7 w-full min-w-0 items-center gap-2 rounded-lg px-1 text-left text-sm text-[#374151] hover:bg-[#f7f7f8] hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#10a37f]"
             style={{ paddingLeft: `${Math.max(0, item.level - 1) * 10 + 4}px` }}
@@ -171,12 +174,12 @@ function TocShell({ label, mode }: { label: string; mode: "panel" | "sheet" }) {
   return <aside className={className} aria-label="章节目录">{label}</aside>;
 }
 
+function blockDomId(item: TocItem): string {
+  return `block-${item.message_id}-${item.block_index}`;
+}
+
 function scrollToTocTarget(item: TocItem) {
   const block = document.getElementById(blockDomId(item));
   const message = document.getElementById(`message-${item.message_id}`);
   (block ?? message)?.scrollIntoView({ block: "start", behavior: "smooth" });
-}
-
-function blockDomId(item: TocItem): string {
-  return `block-${item.message_id}-${item.block_index}`;
 }

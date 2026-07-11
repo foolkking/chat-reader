@@ -15,7 +15,10 @@ class RenderBlockDraft:
 FENCE_RE = re.compile(r"^```(?P<language>[A-Za-z0-9_-]*)\s*$")
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
 THINKING_RE = re.compile(
-    r"^\s*(?:>\s*)?(?:已?思考|思考了)\s*(?:\d+\s*(?:m|min|分钟|分)?\s*)?\d+\s*(?:s|sec|秒)\s*$|"
+    r"^\s*(?:>\s*)?(?:已思考|思考了|思考)\s*"
+    r"(?:(?:\d+\s*(?:h|hr|hour|小时)\s*)?"
+    r"(?:\d+\s*(?:m|min|分钟|分)\s*)?"
+    r"\d+\s*(?:s|sec|秒))\s*$|"
     r"^\s*(?:>\s*)?(?:思考|思考过程|Thinking|Reasoning)\s*[:：]\s*$",
     re.IGNORECASE,
 )

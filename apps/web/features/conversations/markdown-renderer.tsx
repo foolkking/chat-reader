@@ -9,14 +9,29 @@ type MarkdownSegment =
   | { kind: "markdown"; text: string }
   | { kind: "thinking"; label: string; text: string };
 
+const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 const LEADING_TIMESTAMP_RE =
   /^\s*(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[ T]\d{1,2}:\d{2}(?::\d{2})?)\s*$/;
 const THINKING_DURATION_RE =
-  /^(?:已?思考|思考了)\s*((?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒))\s*$/i;
-const THINKING_LABEL_RE = /^(?:思考|思考过程|Thinking|Reasoning)\s*[:：]\s*$/i;
-const ANSWER_START_RE = /^(?:#{1,6}\s+\S+|(?:答案|回答|结论|最终回答|Final answer|Answer)\s*[:：])/i;
+  /^(?:(?:\u5df2\s*)?\u601d\u8003(?:\u4e86)?|thinking|reasoning)\s*[:\uff1a]?\s*((?:\d+\s*(?:h|hr|hour|\u5c0f\u65f6)\s*)?(?:\d+\s*(?:m|min|\u5206\u949f|\u5206)\s*)?\d+\s*(?:s|sec|\u79d2))$/i;
+const THINKING_LABEL_RE = /^(?:\u601d\u8003|\u601d\u8003\u8fc7\u7a0b|thinking|reasoning)\s*[:\uff1a]?\s*$/i;
+const ANSWER_START_RE =
+  /^(?:#{1,6}\s+\S+|(?:\u7b54\u6848|\u56de\u7b54|\u7ed3\u8bba|\u6700\u7ec8\u56de\u7b54|\u6b63\u5f0f\u56de\u7b54|final answer|answer)\s*[:\uff1a])/i;
 const MAX_THINKING_SCAN_LINES = 40;
 const MAX_THINKING_SCAN_CHARS = 4000;
+
+const TRACE_PREFIXES = [
+  "\u8003\u8651",
+  "\u5206\u6790",
+  "\u6574\u7406",
+  "\u641c\u7d22",
+  "\u68c0\u7d22",
+  "\u6d4f\u89c8",
+  "\u67e5\u627e",
+  "\u63d0\u70bc",
+  "\u89c4\u5212",
+  "\u603b\u7ed3",
+];
 
 const markdownComponents: Components = {
   a({ href, children }) {
@@ -40,13 +55,17 @@ const markdownComponents: Components = {
     const callout = parseCallout(rawText);
     if (callout) {
       return (
-        <div className={`rounded-xl border px-4 py-3 ${calloutClassName(callout.type)}`}>
-          <div className="mb-1 text-xs font-semibold uppercase tracking-normal">{callout.label}</div>
+        <div className={`my-4 rounded-xl border px-4 py-3 shadow-sm ${calloutClassName(callout.type)}`}>
+          <div className="mb-2 text-xs font-semibold uppercase tracking-normal">{callout.label}</div>
           <MarkdownBody text={callout.body} />
         </div>
       );
     }
-    return <blockquote className="border-l-4 border-[#d1d5db] pl-4 text-[#4b5563]">{children}</blockquote>;
+    return (
+      <blockquote className="my-4 border-l-4 border-[#cbd5e1] bg-[#f8fafc] py-1 pl-4 text-[#475569]">
+        {children}
+      </blockquote>
+    );
   },
   code({ className, children }) {
     const raw = String(children).replace(/\n$/, "");
@@ -55,11 +74,11 @@ const markdownComponents: Components = {
     const isBlock = Boolean(language) || raw.includes("\n");
 
     if (!isBlock) {
-      return <code className="rounded bg-[#f1f5f9] px-1.5 py-0.5 font-mono text-[0.9em] text-[#0f172a]">{children}</code>;
+      return <code className="rounded bg-[#eef2f7] px-1.5 py-0.5 font-mono text-[0.9em] text-[#0f172a]">{children}</code>;
     }
 
     return (
-      <figure className="my-3 max-w-full overflow-hidden rounded-xl border border-[#111827] bg-[#0f172a] shadow-sm">
+      <figure className="my-4 max-w-full overflow-hidden rounded-xl border border-[#111827] bg-[#0f172a] shadow-sm">
         <figcaption className="border-b border-white/10 px-3 py-2 text-xs text-slate-400">
           {language || "code"}
         </figcaption>
@@ -70,19 +89,19 @@ const markdownComponents: Components = {
     );
   },
   h1({ children }) {
-    return <h1 className="mt-6 text-2xl font-semibold leading-9 text-[#111827] first:mt-0">{children}</h1>;
+    return <h1 className="mt-7 border-l-4 border-[#10a37f] pl-3 text-2xl font-semibold leading-9 text-[#111827] first:mt-0">{children}</h1>;
   },
   h2({ children }) {
-    return <h2 className="mt-5 text-xl font-semibold leading-8 text-[#111827] first:mt-0">{children}</h2>;
+    return <h2 className="mt-6 border-l-4 border-[#a7f3d0] pl-3 text-xl font-semibold leading-8 text-[#111827] first:mt-0">{children}</h2>;
   },
   h3({ children }) {
-    return <h3 className="mt-4 text-lg font-semibold leading-7 text-[#111827] first:mt-0">{children}</h3>;
+    return <h3 className="mt-5 text-lg font-semibold leading-7 text-[#111827] first:mt-0">{children}</h3>;
   },
   h4({ children }) {
     return <h4 className="mt-4 text-base font-semibold leading-7 text-[#111827] first:mt-0">{children}</h4>;
   },
   hr() {
-    return <hr className="my-5 border-[#e5e7eb]" />;
+    return <hr className="my-6 border-[#e5e7eb]" />;
   },
   img({ alt }) {
     return (
@@ -92,10 +111,10 @@ const markdownComponents: Components = {
     );
   },
   li({ children, className }) {
-    return <li className={`my-1 pl-1 ${className ?? ""}`}>{children}</li>;
+    return <li className={`my-1.5 pl-1 marker:text-[#94a3b8] ${className ?? ""}`}>{children}</li>;
   },
   ol({ children }) {
-    return <ol className="my-3 list-decimal space-y-1 pl-6">{children}</ol>;
+    return <ol className="my-4 list-decimal space-y-1 pl-6">{children}</ol>;
   },
   p({ children }) {
     return <p className="my-3 break-words leading-7 first:mt-0 last:mb-0">{children}</p>;
@@ -105,7 +124,7 @@ const markdownComponents: Components = {
   },
   table({ children }) {
     return (
-      <div className="my-4 max-w-full overflow-x-auto rounded-xl border border-[#e5e7eb]">
+      <div className="my-4 max-w-full overflow-x-auto rounded-xl border border-[#d8dee9] bg-white">
         <table className="w-full min-w-max border-collapse text-sm">{children}</table>
       </div>
     );
@@ -117,13 +136,13 @@ const markdownComponents: Components = {
     return <td className="border-r border-[#e5e7eb] px-3 py-2 align-top last:border-r-0">{children}</td>;
   },
   th({ children }) {
-    return <th className="border-r border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-left font-semibold last:border-r-0">{children}</th>;
+    return <th className="border-r border-[#d1d5db] bg-[#f8fafc] px-3 py-2 text-left font-semibold last:border-r-0">{children}</th>;
   },
   thead({ children }) {
     return <thead className="border-b border-[#d1d5db]">{children}</thead>;
   },
   ul({ children }) {
-    return <ul className="my-3 list-disc space-y-1 pl-6">{children}</ul>;
+    return <ul className="my-4 list-disc space-y-1 pl-6">{children}</ul>;
   },
 };
 
@@ -144,8 +163,8 @@ export function MarkdownRenderer({ text, className = "" }: { text: string; class
 
 export function ThinkingDisclosure({ label, text }: { label: string; text: string }) {
   return (
-    <details className="my-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 text-[#4b5563]">
-      <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-[#374151]">
+    <details className="my-3 rounded-xl border border-[#d8dee9] bg-[#f8fafc] px-4 py-3 text-[#475569]">
+      <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-[#334155]">
         {label}
       </summary>
       {text.trim() ? <MarkdownBody text={text} className="mt-3 text-sm" /> : null}
@@ -185,91 +204,83 @@ function MarkdownBody({ text, className = "" }: { text: string; className?: stri
 
 function splitThinkingSegments(text: string): MarkdownSegment[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const early = findAssistantOpeningThinking(lines);
-  if (early) {
-    const thinkingText = lines.slice(0, early.index + 1).join("\n").trim();
-    const answerText = lines.slice(early.index + 1).join("\n").trim();
+  const opening = findOpeningThinking(lines);
+  if (opening) {
+    const thinkingText = lines.slice(0, opening.index + 1).join("\n").trim();
+    const answerText = lines.slice(opening.index + 1).join("\n").trim();
     return [
-      { kind: "thinking", label: thinkingLabel(early.duration), text: thinkingText },
+      { kind: "thinking", label: thinkingLabel(opening.duration), text: thinkingText },
       ...(answerText ? [{ kind: "markdown" as const, text: answerText }] : []),
     ];
   }
-
-  const markerOnly = findMarkerFirstThinking(lines);
-  if (markerOnly) {
-    const before = lines.slice(0, markerOnly.start).join("\n").trim();
-    const thinking = lines.slice(markerOnly.start, markerOnly.end + 1).join("\n").trim();
-    const after = lines.slice(markerOnly.end + 1).join("\n").trim();
-    return [
-      ...(before ? [{ kind: "markdown" as const, text: before }] : []),
-      { kind: "thinking", label: thinkingLabel(markerOnly.duration), text: thinking },
-      ...(after ? [{ kind: "markdown" as const, text: after }] : []),
-    ];
-  }
-
   return text.trim() ? [{ kind: "markdown", text }] : [];
 }
 
-function findAssistantOpeningThinking(lines: string[]): { index: number; duration: string | null } | null {
+function findOpeningThinking(lines: string[]): { index: number; duration: string | null } | null {
   let scannedChars = 0;
-  const scanLimit = Math.min(lines.length, MAX_THINKING_SCAN_LINES);
-  for (let index = 0; index < scanLimit; index += 1) {
-    const stripped = stripQuote(lines[index] ?? "").trim();
-    scannedChars += stripped.length;
+  for (let index = 0; index < Math.min(lines.length, MAX_THINKING_SCAN_LINES); index += 1) {
+    const raw = lines[index] ?? "";
+    const normalized = stripQuote(raw).trim();
+    scannedChars += normalized.length;
     if (scannedChars > MAX_THINKING_SCAN_CHARS) {
       return null;
     }
-    const match = stripped.match(THINKING_DURATION_RE);
-    if (match) {
-      return { index, duration: match[1] ?? null };
+    if (!normalized) {
+      continue;
     }
-    if (index > 0 && ANSWER_START_RE.test(stripped)) {
+    if (ANSWER_START_RE.test(normalized)) {
+      return null;
+    }
+    const duration = normalized.match(THINKING_DURATION_RE);
+    if (duration && prefixLooksLikeThinkingTrace(lines.slice(0, index))) {
+      return { index, duration: duration[1] ?? null };
+    }
+    if (!lineLooksLikeThinkingTrace(raw, normalized)) {
       return null;
     }
   }
   return null;
 }
 
-function findMarkerFirstThinking(lines: string[]): { start: number; end: number; duration: string | null } | null {
-  for (let index = 0; index < Math.min(lines.length, 8); index += 1) {
-    const marker = parseThinkingMarker(lines[index] ?? "");
-    if (!marker) {
-      if (stripQuote(lines[index] ?? "").trim()) {
-        return null;
-      }
-      continue;
-    }
-    let end = index;
-    while (end + 1 < lines.length) {
-      const next = stripQuote(lines[end + 1] ?? "").trim();
-      if (!next || ANSWER_START_RE.test(next)) {
-        break;
-      }
-      end += 1;
-    }
-    return { start: index, end, duration: marker.duration };
+function prefixLooksLikeThinkingTrace(lines: string[]): boolean {
+  const meaningful = lines
+    .map((line) => ({ raw: line.trim(), normalized: stripQuote(line).trim() }))
+    .filter((line) => line.normalized.length > 0);
+  if (meaningful.length === 0) {
+    return true;
   }
-  return null;
+  return meaningful.every((line) => lineLooksLikeThinkingTrace(line.raw, line.normalized));
 }
 
-function parseThinkingMarker(line: string): { duration: string | null } | null {
-  const normalized = stripQuote(line).trim();
-  const duration = normalized.match(THINKING_DURATION_RE);
-  if (duration) {
-    return { duration: duration[1] ?? null };
+function lineLooksLikeThinkingTrace(raw: string, normalized: string): boolean {
+  if (LEADING_TIMESTAMP_RE.test(normalized) || THINKING_LABEL_RE.test(normalized)) {
+    return true;
   }
-  if (THINKING_LABEL_RE.test(normalized)) {
-    return { duration: null };
+  if (raw.trim().startsWith(">") && normalized.length <= 180) {
+    return true;
   }
-  return null;
+  if (TRACE_PREFIXES.some((prefix) => normalized.startsWith(prefix)) && normalized.length <= 120) {
+    return true;
+  }
+  if (normalized.startsWith("[") || normalized.startsWith("- ") || normalized.startsWith("* ") || /^\d+[.)]\s+/.test(normalized)) {
+    return true;
+  }
+  if (normalized.includes("http://") || normalized.includes("https://") || normalized.includes("](")) {
+    return true;
+  }
+  return false;
 }
 
 function thinkingLabel(duration: string | null): string {
-  return duration ? `思考过程 · ${duration.replace(/\s+/g, " ")}` : "思考过程";
+  return duration ? `${THINKING_LABEL} · ${duration.replace(/\s+/g, " ")}` : THINKING_LABEL;
 }
 
 function stripQuote(line: string): string {
-  return line.replace(/^\s*>\s?/, "");
+  let stripped = line.trim();
+  while (stripped.startsWith(">")) {
+    stripped = stripped.slice(1).trim();
+  }
+  return stripped;
 }
 
 function parseCallout(text: string): { type: string; label: string; body: string } | null {

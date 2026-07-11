@@ -10,11 +10,22 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.schemas.conversation import ConversationDetail, ConversationListItem
-from app.schemas.editing import ConversationEventListResponse, ConversationEventRead
+from app.schemas.editing import (
+    ConversationEventListResponse,
+    ConversationEventRead,
+    ConversationMergeRequest,
+    ConversationSplitRequest,
+    ConversationTransformResponse,
+)
 from app.schemas.message import MessageListItem, MessageVersionRead, RenderBlockRead
 from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
 from app.models.import_record import utc_now
+from app.services.editing.message_edit_service import (
+    MessageEditError,
+    merge_conversations,
+    split_conversation,
+)
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -46,6 +57,30 @@ def list_conversations(
     return [_conversation_item(conversation) for conversation in conversations]
 
 
+@router.post("/merge", response_model=ConversationTransformResponse)
+def merge_conversations_endpoint(
+    payload: ConversationMergeRequest,
+    db: Session = Depends(get_db),
+) -> ConversationTransformResponse:
+    try:
+        result = merge_conversations(
+            db=db,
+            conversation_ids=payload.conversation_ids,
+            title=payload.title,
+            project_id=payload.project_id,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ConversationTransformResponse(
+        conversation_id=result.conversation.id,
+        title=result.conversation.title,
+        display_title=result.conversation.display_title,
+        message_count=result.message_count,
+    )
+
+
 @router.get("/{conversation_id}", response_model=ConversationDetail)
 def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ConversationDetail:
     conversation = db.get(Conversation, conversation_id)
@@ -58,6 +93,33 @@ def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) 
         render_version=conversation.render_version,
         content_hash=conversation.content_hash,
         sort_time=conversation.sort_time,
+    )
+
+
+@router.post("/{conversation_id}/split", response_model=ConversationTransformResponse)
+def split_conversation_endpoint(
+    conversation_id: uuid.UUID,
+    payload: ConversationSplitRequest,
+    db: Session = Depends(get_db),
+) -> ConversationTransformResponse:
+    try:
+        result = split_conversation(
+            db=db,
+            conversation_id=conversation_id,
+            start_message_id=payload.start_message_id,
+            end_message_id=payload.end_message_id,
+            title=payload.title,
+            project_id=payload.project_id,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ConversationTransformResponse(
+        conversation_id=result.conversation.id,
+        title=result.conversation.title,
+        display_title=result.conversation.display_title,
+        message_count=result.message_count,
     )
 
 
@@ -151,6 +213,8 @@ def get_message_window(
     include_blocks: bool = False,
     after_order_key: str | None = None,
     before_order_key: str | None = None,
+    anchor_message_id: uuid.UUID | None = None,
+    anchor_order_key: str | None = None,
     db: Session = Depends(get_db),
 ) -> MessageWindowResponse:
     if db.get(Conversation, conversation_id) is None:
@@ -161,6 +225,17 @@ def get_message_window(
     if before_order_key:
         query = query.filter(Message.order_key < before_order_key)
     total = query.count()
+    if anchor_message_id is not None or anchor_order_key is not None:
+        anchor_order = _anchor_order_key(
+            db=db,
+            conversation_id=conversation_id,
+            anchor_message_id=anchor_message_id,
+            anchor_order_key=anchor_order_key,
+            after_order_key=after_order_key,
+            before_order_key=before_order_key,
+        )
+        before_anchor = query.filter(Message.order_key < anchor_order).count()
+        offset = max(0, min(max(total - limit, 0), before_anchor - limit // 2))
     messages = query.order_by(Message.order_key.asc()).offset(offset).limit(limit).all()
     return MessageWindowResponse(
         items=[_message_item(message, include_blocks, db) for message in messages],
@@ -169,6 +244,36 @@ def get_message_window(
         total=total,
         has_more=offset + len(messages) < total,
     )
+
+
+def _anchor_order_key(
+    db: Session,
+    conversation_id: uuid.UUID,
+    anchor_message_id: uuid.UUID | None,
+    anchor_order_key: str | None,
+    after_order_key: str | None,
+    before_order_key: str | None,
+) -> str:
+    base_query = db.query(Message).filter(
+        Message.conversation_id == conversation_id,
+        Message.is_deleted.is_(False),
+    )
+    if after_order_key:
+        base_query = base_query.filter(Message.order_key > after_order_key)
+    if before_order_key:
+        base_query = base_query.filter(Message.order_key < before_order_key)
+
+    if anchor_message_id is not None:
+        message = base_query.filter(Message.id == anchor_message_id).one_or_none()
+        if message is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anchor message not found.")
+        return message.order_key
+
+    assert anchor_order_key is not None
+    exists = base_query.filter(Message.order_key == anchor_order_key).first()
+    if exists is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anchor message not found.")
+    return anchor_order_key
 
 
 def _conversation_item(conversation: Conversation) -> ConversationListItem:

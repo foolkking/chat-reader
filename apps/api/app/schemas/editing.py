@@ -46,6 +46,53 @@ class MessageVersionRestoreRequest(BaseModel):
     edit_reason: str | None = None
 
 
+class MessageSplitRequest(BaseModel):
+    split_offset: int = Field(gt=0)
+    edit_reason: str | None = None
+
+
+class MessageSplitResponse(BaseModel):
+    conversation_id: UUID
+    original_message_id: UUID
+    new_message_id: UUID
+    original_version_id: UUID
+    new_version_id: UUID
+
+
+class MessageMergeRequest(BaseModel):
+    message_ids: list[UUID] = Field(min_length=2)
+    separator: str = "\n\n"
+    edit_reason: str | None = None
+
+
+class MessageMergeResponse(BaseModel):
+    conversation_id: UUID
+    survivor_message_id: UUID
+    merged_message_ids: list[UUID]
+    current_version_id: UUID
+    version_number: int
+
+
+class ConversationMergeRequest(BaseModel):
+    conversation_ids: list[UUID] = Field(min_length=2)
+    title: str | None = None
+    project_id: UUID | None = None
+
+
+class ConversationSplitRequest(BaseModel):
+    start_message_id: UUID
+    end_message_id: UUID | None = None
+    title: str | None = None
+    project_id: UUID | None = None
+
+
+class ConversationTransformResponse(BaseModel):
+    conversation_id: UUID
+    title: str
+    display_title: str
+    message_count: int
+
+
 class ConversationEventRead(BaseModel):
     id: UUID
     event_type: str

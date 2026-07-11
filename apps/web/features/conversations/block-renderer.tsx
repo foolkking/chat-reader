@@ -1,6 +1,8 @@
 import type { RenderBlockRead } from "../../lib/types";
 import { MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./markdown-renderer";
 
+const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
+
 export function BlockRenderer({ block }: { block: RenderBlockRead }) {
   const text = stripLeadingTimestamp(block.plain_text ?? readText(block));
 
@@ -9,24 +11,24 @@ export function BlockRenderer({ block }: { block: RenderBlockRead }) {
   }
 
   if (block.collapsed_by_default && block.block_type !== "heading" && block.block_type !== "code") {
-    return <ThinkingDisclosure label="思考过程" text={text} />;
+    return <ThinkingDisclosure label={THINKING_LABEL} text={text} />;
   }
 
   if (block.block_type === "heading") {
     const level = normalizeHeadingLevel(block.data.level);
     const title = stripLeadingTimestamp(readString(block.data.title) ?? text);
-    const className = "whitespace-pre-wrap break-words font-semibold tracking-normal text-[#111827]";
+    const baseClass = "whitespace-pre-wrap break-words font-semibold tracking-normal text-[#111827]";
 
     if (level === 1) {
-      return <h1 className={`${className} text-2xl`}>{title}</h1>;
+      return <h1 className={`${baseClass} border-l-4 border-[#10a37f] pl-3 text-2xl leading-9`}>{title}</h1>;
     }
     if (level === 2) {
-      return <h2 className={`${className} text-xl`}>{title}</h2>;
+      return <h2 className={`${baseClass} border-l-4 border-[#a7f3d0] pl-3 text-xl leading-8`}>{title}</h2>;
     }
     if (level === 3) {
-      return <h3 className={`${className} text-lg`}>{title}</h3>;
+      return <h3 className={`${baseClass} text-lg leading-7`}>{title}</h3>;
     }
-    return <h4 className={`${className} text-base`}>{title}</h4>;
+    return <h4 className={`${baseClass} text-base leading-7`}>{title}</h4>;
   }
 
   if (block.block_type === "code") {
@@ -34,11 +36,9 @@ export function BlockRenderer({ block }: { block: RenderBlockRead }) {
     const language = readString(block.data.language);
     return (
       <figure className="max-w-full overflow-hidden rounded-xl border border-[#111827] bg-[#0f172a] shadow-sm">
-        {language ? (
-          <figcaption className="border-b border-white/10 px-3 py-2 text-xs text-slate-400">
-            {language}
-          </figcaption>
-        ) : null}
+        <figcaption className="border-b border-white/10 px-3 py-2 text-xs text-slate-400">
+          {language || "code"}
+        </figcaption>
         <pre className="max-w-full overflow-x-auto p-4 text-sm leading-6 text-slate-100">
           <code>{code}</code>
         </pre>

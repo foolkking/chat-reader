@@ -4,19 +4,37 @@ from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 def test_assistant_opening_thinking_summary_removed() -> None:
     result = clean_thinking_summary(
         "assistant",
-        """> 考虑提出的生活建议
-> 思考了 13s
-
-当然可以。""",
+        "\u5206\u6790\u793e\u4ea4\u6280\u5de7\n\u601d\u8003\u4e86 13s\n\n\u6b63\u5f0f\u56de\u7b54\u5185\u5bb9\u3002",
     )
 
     assert result.removed is True
-    assert "思考了 13s" not in result.text
-    assert result.text == "当然可以。"
+    assert result.text == "\u6b63\u5f0f\u56de\u7b54\u5185\u5bb9\u3002"
+    assert "\u5206\u6790\u793e\u4ea4\u6280\u5de7" in (result.removed_text or "")
 
 
-def test_user_text_not_cleaned() -> None:
-    text = "思考了 13s\n这是用户原文"
+def test_assistant_search_trace_before_duration_removed() -> None:
+    result = clean_thinking_summary(
+        "assistant",
+        """2026/6/19 23:22:36
+
+> **\u63d0\u4f9b npm/pnpm \u5305\u7ba1\u7406\u5668\u6587\u6863\u89e3\u91ca**
+>
+> [npm | Home](https://www.npmjs.com/)
+> package.json
+> Dependencies - PNPM
+>
+> \u5df2\u601d\u8003 7s
+
+\u4e0b\u9762\u6b63\u5f0f\u89e3\u91ca package.json\u3002""",
+    )
+
+    assert result.removed is True
+    assert result.text == "\u4e0b\u9762\u6b63\u5f0f\u89e3\u91ca package.json\u3002"
+    assert "npm | Home" in (result.removed_text or "")
+
+
+def test_user_text_is_not_cleaned() -> None:
+    text = "\u601d\u8003\u4e86 13s\n\u7528\u6237\u6b63\u6587\u3002"
     result = clean_thinking_summary("user", text)
 
     assert result.removed is False
@@ -24,7 +42,7 @@ def test_user_text_not_cleaned() -> None:
 
 
 def test_middle_thinking_text_not_removed() -> None:
-    text = "正式回答。\n思考了 13s\n继续回答。"
+    text = "\u6b63\u5f0f\u56de\u7b54\u3002\n\u601d\u8003\u4e86 13s\n\u7ee7\u7eed\u56de\u7b54\u3002"
     result = clean_thinking_summary("assistant", text)
 
     assert result.removed is False
@@ -32,7 +50,7 @@ def test_middle_thinking_text_not_removed() -> None:
 
 
 def test_normal_assistant_answer_not_removed() -> None:
-    text = "考虑到你的目标，我们可以先从练习倾听开始。"
+    text = "\u8fd9\u662f\u6b63\u5f0f\u56de\u7b54\u3002\n\n\u5b83\u63d0\u5230\u5982\u4f55\u601d\u8003\u95ee\u9898\u3002"
     result = clean_thinking_summary("assistant", text)
 
     assert result.removed is False

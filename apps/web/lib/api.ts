@@ -3,10 +3,13 @@ import type {
   ConversationEventListResponse,
   ConversationDetail,
   ConversationListItem,
+  ConversationTransformResponse,
   HealthResponse,
   ImportPreviewResponse,
   MessageEditResponse,
   MessageListItem,
+  MessageMergeResponse,
+  MessageSplitResponse,
   MessageVersionHistoryResponse,
   MessageWindowResponse,
   ProjectConversationRead,
@@ -59,13 +62,25 @@ export async function getConversationMessages(
 
 export async function getConversationMessageWindow(
   conversationId: string,
-  options: { includeBlocks?: boolean; limit?: number; offset?: number } = {},
+  options: {
+    includeBlocks?: boolean;
+    limit?: number;
+    offset?: number;
+    anchorMessageId?: string;
+    anchorOrderKey?: string;
+  } = {},
 ): Promise<MessageWindowResponse> {
   const params = new URLSearchParams({
     include_blocks: String(options.includeBlocks ?? true),
     limit: String(options.limit ?? 50),
     offset: String(options.offset ?? 0),
   });
+  if (options.anchorMessageId) {
+    params.set("anchor_message_id", options.anchorMessageId);
+  }
+  if (options.anchorOrderKey) {
+    params.set("anchor_order_key", options.anchorOrderKey);
+  }
 
   return fetchJson<MessageWindowResponse>(
     `/api/conversations/${conversationId}/message-window?${params.toString()}`,
@@ -82,6 +97,64 @@ export async function getMessageBlocks(
   });
 
   return fetchJson<RenderBlockRead[]>(`/api/messages/${messageId}/blocks?${params.toString()}`);
+}
+
+export async function splitMessage(
+  messageId: string,
+  input: { splitOffset: number; editReason?: string },
+): Promise<MessageSplitResponse> {
+  return fetchJson<MessageSplitResponse>(
+    `/api/messages/${messageId}/split`,
+    jsonRequest("POST", {
+      split_offset: input.splitOffset,
+      edit_reason: input.editReason,
+    }),
+  );
+}
+
+export async function mergeMessages(input: {
+  messageIds: string[];
+  separator?: string;
+  editReason?: string;
+}): Promise<MessageMergeResponse> {
+  return fetchJson<MessageMergeResponse>(
+    "/api/messages/merge",
+    jsonRequest("POST", {
+      message_ids: input.messageIds,
+      separator: input.separator ?? "\n\n",
+      edit_reason: input.editReason,
+    }),
+  );
+}
+
+export async function mergeConversations(input: {
+  conversationIds: string[];
+  title?: string;
+  projectId?: string;
+}): Promise<ConversationTransformResponse> {
+  return fetchJson<ConversationTransformResponse>(
+    "/api/conversations/merge",
+    jsonRequest("POST", {
+      conversation_ids: input.conversationIds,
+      title: input.title,
+      project_id: input.projectId,
+    }),
+  );
+}
+
+export async function splitConversation(
+  conversationId: string,
+  input: { startMessageId: string; endMessageId?: string; title?: string; projectId?: string },
+): Promise<ConversationTransformResponse> {
+  return fetchJson<ConversationTransformResponse>(
+    `/api/conversations/${conversationId}/split`,
+    jsonRequest("POST", {
+      start_message_id: input.startMessageId,
+      end_message_id: input.endMessageId,
+      title: input.title,
+      project_id: input.projectId,
+    }),
+  );
 }
 
 export async function editMessage(
