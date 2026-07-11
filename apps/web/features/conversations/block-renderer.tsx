@@ -3,7 +3,7 @@ import { MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./m
 
 const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 
-export function BlockRenderer({ block }: { block: RenderBlockRead }) {
+export function BlockRenderer({ block, isAssistant = true }: { block: RenderBlockRead; isAssistant?: boolean }) {
   const text = stripLeadingTimestamp(block.plain_text ?? readText(block));
 
   if (!text.trim()) {
@@ -34,19 +34,10 @@ export function BlockRenderer({ block }: { block: RenderBlockRead }) {
   if (block.block_type === "code") {
     const code = readString(block.data.code) ?? text;
     const language = readString(block.data.language);
-    return (
-      <figure className="max-w-full overflow-hidden rounded-xl border border-[#111827] bg-[#0f172a] shadow-sm">
-        <figcaption className="border-b border-white/10 px-3 py-2 text-xs text-slate-400">
-          {language || "code"}
-        </figcaption>
-        <pre className="max-w-full overflow-x-auto p-4 text-sm leading-6 text-slate-100">
-          <code>{code}</code>
-        </pre>
-      </figure>
-    );
+    return <MarkdownRenderer text={`\`\`\`${language ?? ""}\n${code}\n\`\`\``} isAssistant={false} />;
   }
 
-  return <MarkdownRenderer text={text} />;
+  return <MarkdownRenderer text={text} isAssistant={isAssistant} />;
 }
 
 function normalizeHeadingLevel(value: unknown): 1 | 2 | 3 | 4 {

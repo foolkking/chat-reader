@@ -1,4 +1,4 @@
-import { BlockRenderer } from "./block-renderer";
+import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -124,7 +124,7 @@ export function MessageItem({
         <div
           className={
             isUser
-              ? "rounded-[22px] bg-[#f4f4f4] px-4 py-3 text-[15px] leading-7 text-[#111827] shadow-sm"
+              ? "message-user rounded-[22px] bg-[#f4f4f4] px-4 py-3 text-[15px] leading-7 text-[#111827] shadow-sm"
               : isAssistant
                 ? "text-[15px] leading-7 text-[#111827]"
                 : "rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] leading-7 text-[#111827]"
@@ -183,25 +183,8 @@ export function MessageItem({
                 {isLoadingHeavyBlocks ? "Loading blocks" : "Load blocks"}
               </button>
             </div>
-          ) : blocks.length > 0 ? (
-            <div className="space-y-4 break-words">
-              {blocks.map((block, index) => (
-                <div
-                  key={block.id ?? `${message.id}-${index}`}
-                  id={`block-${message.id}-${block.block_index}`}
-                  data-block-index={block.block_index}
-                  className={`max-w-full rounded-xl transition ${
-                    highlightTargetId === `block-${message.id}-${block.block_index}`
-                      ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]"
-                      : ""
-                  }`}
-                >
-                  <BlockRenderer block={block} />
-                </div>
-              ))}
-            </div>
           ) : (
-            <p className="text-sm text-[#6b7280]">No displayable content.</p>
+            <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
           )}
         </div>
 

@@ -11,3 +11,38 @@ body {
   background: #f8fafc;
   color: #111827;
 }
+
+.message-user .aui-chat-markdown h1 {
+  margin-top: 0.75rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.message-user .aui-chat-markdown h2 {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.6rem;
+}
+
+.message-user .aui-chat-markdown h3,
+.message-user .aui-chat-markdown h4 {
+  margin-top: 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.5rem;
+}
+
+.message-user .aui-chat-markdown table,
+.message-user .aui-chat-markdown pre,
+.message-user .aui-chat-markdown code {
+  overflow-wrap: anywhere;
+}
+
+.aui-chat-markdown pre {
+  tab-size: 2;
+}
+
+.aui-chat-markdown pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}

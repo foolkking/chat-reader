@@ -10,8 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.14.26",
+    "@assistant-ui/react-markdown": "^0.14.5",
+    "@assistant-ui/react-streamdown": "^0.3.5",
     "@tanstack/react-query": "^5.59.20",
     "katex": "^0.17.0",
+    "mermaid": "^11.16.0",
     "next": "14.2.23",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -21,6 +25,7 @@
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
+    "shiki": "^4.3.1",
     "zustand": "^5.0.2"
   },
   "devDependencies": {

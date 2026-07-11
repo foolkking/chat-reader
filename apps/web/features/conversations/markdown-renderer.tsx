@@ -1,39 +1,97 @@
-import ReactMarkdown, { type Components } from "react-markdown";
+"use client";
+
+import { TextMessagePartProvider } from "@assistant-ui/react";
+import {
+  MarkdownTextPrimitive,
+  type CodeHeaderProps,
+  type SyntaxHighlighterProps,
+} from "@assistant-ui/react-markdown";
+import { useEffect, useMemo, useState } from "react";
+import type { Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import rehypeSanitize from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import type { BundledLanguage, ThemedToken } from "shiki";
 
 type MarkdownSegment =
   | { kind: "markdown"; text: string }
   | { kind: "thinking"; label: string; text: string };
 
-const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
+type CanonicalTextPart = {
+  type: "text";
+  text: string;
+};
+
+type CanonicalReasoningPart = {
+  type: "reasoning";
+  label: string;
+  text: string;
+};
+
+export type CanonicalSourcePart = {
+  type: "source";
+  title: string;
+  url?: string;
+  snippet?: string;
+};
+
+export type CanonicalToolPart = {
+  type: "tool";
+  name: string;
+  status?: string;
+  result?: unknown;
+};
+
+export type CanonicalFilePart = {
+  type: "file";
+  name: string;
+  url?: string;
+  mimeType?: string;
+};
+
+export type CanonicalImagePart = {
+  type: "image";
+  alt?: string;
+  url?: string;
+};
+
+export type CanonicalMessagePart =
+  | CanonicalTextPart
+  | CanonicalReasoningPart
+  | CanonicalSourcePart
+  | CanonicalToolPart
+  | CanonicalFilePart
+  | CanonicalImagePart;
+
+const THINKING_LABEL = "思考过程";
 const LEADING_TIMESTAMP_RE =
   /^\s*(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[ T]\d{1,2}:\d{2}(?::\d{2})?)\s*$/;
 const THINKING_DURATION_RE =
-  /^(?:(?:\u5df2\s*)?\u601d\u8003(?:\u4e86)?|thinking|reasoning)\s*[:\uff1a]?\s*((?:\d+\s*(?:h|hr|hour|\u5c0f\u65f6)\s*)?(?:\d+\s*(?:m|min|\u5206\u949f|\u5206)\s*)?\d+\s*(?:s|sec|\u79d2))$/i;
-const THINKING_LABEL_RE = /^(?:\u601d\u8003|\u601d\u8003\u8fc7\u7a0b|thinking|reasoning)\s*[:\uff1a]?\s*$/i;
-const ANSWER_START_RE =
-  /^(?:#{1,6}\s+\S+|(?:\u7b54\u6848|\u56de\u7b54|\u7ed3\u8bba|\u6700\u7ec8\u56de\u7b54|\u6b63\u5f0f\u56de\u7b54|final answer|answer)\s*[:\uff1a])/i;
+  /^(?:(?:已\s*)?思考(?:了)?|thinking|reasoning)\s*[:：]?\s*((?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒))$/i;
+const THINKING_LABEL_RE = /^(?:思考|思考过程|thinking|reasoning)\s*[:：]?\s*$/i;
+const ANSWER_START_RE = /^(?:#{1,6}\s+\S+|(?:答案|回答|结论|最终回答|正式回答|final answer|answer)\s*[:：])/i;
 const MAX_THINKING_SCAN_LINES = 40;
 const MAX_THINKING_SCAN_CHARS = 4000;
 
 const TRACE_PREFIXES = [
-  "\u8003\u8651",
-  "\u5206\u6790",
-  "\u6574\u7406",
-  "\u641c\u7d22",
-  "\u68c0\u7d22",
-  "\u6d4f\u89c8",
-  "\u67e5\u627e",
-  "\u63d0\u70bc",
-  "\u89c4\u5212",
-  "\u603b\u7ed3",
+  "考虑",
+  "分析",
+  "整理",
+  "搜索",
+  "检索",
+  "浏览",
+  "查找",
+  "提炼",
+  "规划",
+  "总结",
 ];
 
-const markdownComponents: Components = {
+const markdownComponents: Components & {
+  CodeHeader?: React.ComponentType<CodeHeaderProps>;
+  SyntaxHighlighter?: React.ComponentType<SyntaxHighlighterProps>;
+} = {
   a({ href, children }) {
     const safeHref = typeof href === "string" && isSafeHref(href) ? href : undefined;
     if (!safeHref) {
@@ -42,8 +100,8 @@ const markdownComponents: Components = {
     return (
       <a
         href={safeHref}
-        target="_blank"
-        rel="noreferrer"
+        target={safeHref.startsWith("#") || safeHref.startsWith("/") ? undefined : "_blank"}
+        rel={safeHref.startsWith("#") || safeHref.startsWith("/") ? undefined : "noreferrer"}
         className="font-medium text-[#0f766e] underline decoration-[#99f6e4] underline-offset-2 hover:text-[#0f5f59]"
       >
         {children}
@@ -57,7 +115,7 @@ const markdownComponents: Components = {
       return (
         <div className={`my-4 rounded-xl border px-4 py-3 shadow-sm ${calloutClassName(callout.type)}`}>
           <div className="mb-2 text-xs font-semibold uppercase tracking-normal">{callout.label}</div>
-          <MarkdownBody text={callout.body} />
+          <AssistantMarkdownPart text={callout.body} className="text-sm" />
         </div>
       );
     }
@@ -67,26 +125,10 @@ const markdownComponents: Components = {
       </blockquote>
     );
   },
-  code({ className, children }) {
-    const raw = String(children).replace(/\n$/, "");
-    const languageMatch = /language-([A-Za-z0-9_-]+)/.exec(className ?? "");
-    const language = languageMatch?.[1] ?? "";
-    const isBlock = Boolean(language) || raw.includes("\n");
-
-    if (!isBlock) {
-      return <code className="rounded bg-[#eef2f7] px-1.5 py-0.5 font-mono text-[0.9em] text-[#0f172a]">{children}</code>;
-    }
-
-    return (
-      <figure className="my-4 max-w-full overflow-hidden rounded-xl border border-[#111827] bg-[#0f172a] shadow-sm">
-        <figcaption className="border-b border-white/10 px-3 py-2 text-xs text-slate-400">
-          {language || "code"}
-        </figcaption>
-        <pre className="max-w-full overflow-x-auto p-4 text-sm leading-6 text-slate-100">
-          <code>{raw}</code>
-        </pre>
-      </figure>
-    );
+  CodeHeader: CodeHeader,
+  SyntaxHighlighter: CodeOrMermaidBlock,
+  code({ children }) {
+    return <code className="rounded bg-[#eef2f7] px-1.5 py-0.5 font-mono text-[0.9em] text-[#0f172a]">{children}</code>;
   },
   h1({ children }) {
     return <h1 className="mt-7 border-l-4 border-[#10a37f] pl-3 text-2xl font-semibold leading-9 text-[#111827] first:mt-0">{children}</h1>;
@@ -103,11 +145,31 @@ const markdownComponents: Components = {
   hr() {
     return <hr className="my-6 border-[#e5e7eb]" />;
   },
-  img({ alt }) {
+  img({ alt, src }) {
+    const safeSrc = typeof src === "string" && isSafeHref(src) ? src : undefined;
     return (
-      <span className="inline-flex max-w-full rounded-lg border border-dashed border-[#d1d5db] bg-[#f9fafb] px-2 py-1 text-xs text-[#6b7280]">
-        Image omitted{alt ? `: ${alt}` : ""}
+      <span className="my-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-[#d1d5db] bg-[#f9fafb] px-2 py-1 text-xs text-[#6b7280]">
+        图片附件
+        {alt ? <span className="truncate">{alt}</span> : null}
+        {safeSrc ? (
+          <a href={safeSrc} target="_blank" rel="noreferrer" className="text-[#0f766e] underline">
+            打开
+          </a>
+        ) : null}
       </span>
+    );
+  },
+  input({ checked, type }) {
+    if (type !== "checkbox") {
+      return <input type={type} checked={checked} readOnly />;
+    }
+    return (
+      <input
+        type="checkbox"
+        checked={Boolean(checked)}
+        readOnly
+        className="mr-2 h-4 w-4 rounded border-[#cbd5e1] align-[-2px] accent-[#10a37f]"
+      />
     );
   },
   li({ children, className }) {
@@ -120,7 +182,7 @@ const markdownComponents: Components = {
     return <p className="my-3 break-words leading-7 first:mt-0 last:mb-0">{children}</p>;
   },
   pre({ children }) {
-    return <>{children}</>;
+    return <pre className="max-w-full overflow-x-auto rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm leading-6 text-slate-100">{children}</pre>;
   },
   table({ children }) {
     return (
@@ -146,17 +208,21 @@ const markdownComponents: Components = {
   },
 };
 
-export function MarkdownRenderer({ text, className = "" }: { text: string; className?: string }) {
-  const segments = splitThinkingSegments(stripLeadingTimestamp(text));
+export function MarkdownRenderer({
+  text,
+  className = "",
+  isAssistant = true,
+}: {
+  text: string;
+  className?: string;
+  isAssistant?: boolean;
+}) {
+  const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
   return (
-    <div className={`markdown-body max-w-full break-words text-[15px] leading-7 text-[#1f2937] ${className}`}>
-      {segments.map((segment, index) =>
-        segment.kind === "thinking" ? (
-          <ThinkingDisclosure key={index} label={segment.label} text={segment.text} />
-        ) : (
-          <MarkdownBody key={index} text={segment.text} />
-        ),
-      )}
+    <div className={`aui-chat-markdown max-w-full break-words text-[15px] leading-7 text-[#1f2937] ${className}`}>
+      {parts.map((part, index) => (
+        <CanonicalPartRenderer key={`${part.type}-${index}`} part={part} />
+      ))}
     </div>
   );
 }
@@ -167,8 +233,26 @@ export function ThinkingDisclosure({ label, text }: { label: string; text: strin
       <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-[#334155]">
         {label}
       </summary>
-      {text.trim() ? <MarkdownBody text={text} className="mt-3 text-sm" /> : null}
+      {text.trim() ? <AssistantMarkdownPart text={text} className="mt-3 text-sm" /> : null}
     </details>
+  );
+}
+
+export function AssistantMarkdownPart({ text, className = "" }: { text: string; className?: string }) {
+  if (!text.trim()) {
+    return null;
+  }
+  return (
+    <TextMessagePartProvider text={text}>
+      <MarkdownTextPrimitive
+        className={className}
+        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+        rehypePlugins={[rehypeSanitize, rehypeKatex]}
+        components={markdownComponents}
+        componentsByLanguage={{ mermaid: { SyntaxHighlighter: MermaidDiagram, CodeHeader: MermaidCodeHeader } }}
+        skipHtml
+      />
+    </TextMessagePartProvider>
   );
 }
 
@@ -184,20 +268,227 @@ export function stripLeadingTimestamp(text: string): string {
   return lines.join("\n").replace(/^\n+/, "");
 }
 
-function MarkdownBody({ text, className = "" }: { text: string; className?: string }) {
-  if (!text.trim()) {
-    return null;
+export function canonicalMessagePartsFromText(text: string, isAssistant = true): CanonicalMessagePart[] {
+  const cleanText = stripLeadingTimestamp(text);
+  const segments = isAssistant ? splitThinkingSegments(cleanText) : cleanText.trim() ? [{ kind: "markdown" as const, text: cleanText }] : [];
+  return segments.map((segment) =>
+    segment.kind === "thinking"
+      ? { type: "reasoning", label: segment.label, text: segment.text }
+      : { type: "text", text: segment.text },
+  );
+}
+
+function CanonicalPartRenderer({ part }: { part: CanonicalMessagePart }) {
+  if (part.type === "reasoning") {
+    return <ThinkingDisclosure label={part.label} text={part.text} />;
   }
+  if (part.type === "text") {
+    return <AssistantMarkdownPart text={part.text} />;
+  }
+  if (part.type === "source") {
+    return <CitationPart part={part} />;
+  }
+  if (part.type === "tool") {
+    return <ToolPart part={part} />;
+  }
+  if (part.type === "file") {
+    return <AttachmentPart name={part.name} detail={part.mimeType} url={part.url} />;
+  }
+  return <AttachmentPart name={part.alt ?? "图片附件"} detail="image" url={part.url} />;
+}
+
+function CodeHeader({ language, code }: CodeHeaderProps) {
+  const [copied, setCopied] = useState(false);
   return (
-    <div className={className}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-        rehypePlugins={[rehypeSanitize, rehypeKatex]}
-        components={markdownComponents}
-        skipHtml
+    <div className="mt-4 flex items-center justify-between gap-3 rounded-t-xl border border-[#111827] border-b-white/10 bg-[#0f172a] px-3 py-2 text-xs text-slate-400 first:mt-0">
+      <span className="min-w-0 truncate">{language || "text"}</span>
+      <button
+        type="button"
+        onClick={async () => {
+          await navigator.clipboard.writeText(code);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        }}
+        className="rounded-md border border-white/10 px-2 py-1 text-slate-200 transition hover:bg-white/10"
       >
-        {text}
-      </ReactMarkdown>
+        {copied ? "已复制" : "复制代码"}
+      </button>
+    </div>
+  );
+}
+
+function MermaidCodeHeader({ code }: CodeHeaderProps) {
+  return <CodeHeader language="mermaid" code={code} />;
+}
+
+function CodeOrMermaidBlock(props: SyntaxHighlighterProps) {
+  if (props.language.toLowerCase() === "mermaid") {
+    return <MermaidDiagram {...props} />;
+  }
+  return <ShikiCodeBlock {...props} />;
+}
+
+function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
+  const [tokens, setTokens] = useState<ThemedToken[][] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function highlight() {
+      try {
+        const lang = normalizeLanguage(language);
+        if (!lang) {
+          setTokens(null);
+          setFailed(true);
+          return;
+        }
+        const { codeToTokens } = await import("shiki");
+        const result = await codeToTokens(code, {
+          lang,
+          theme: "github-dark",
+        });
+        if (!cancelled) {
+          setTokens(result.tokens);
+          setFailed(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setTokens(null);
+          setFailed(true);
+        }
+      }
+    }
+    highlight();
+    return () => {
+      cancelled = true;
+    };
+  }, [code, language]);
+
+  if (tokens && !failed) {
+    return (
+      <pre className="max-w-full overflow-x-auto rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm leading-6 text-slate-100">
+        <code>
+          {tokens.map((line, lineIndex) => (
+            <span key={lineIndex} className="block min-h-[1.5rem]">
+              {line.map((token, tokenIndex) => (
+                <span key={`${lineIndex}-${tokenIndex}`} style={{ color: token.color }}>
+                  {token.content}
+                </span>
+              ))}
+            </span>
+          ))}
+        </code>
+      </pre>
+    );
+  }
+
+  return (
+    <pre className="max-w-full overflow-x-auto rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm leading-6 text-slate-100">
+      <code>{code}</code>
+    </pre>
+  );
+}
+
+function MermaidDiagram({ code }: SyntaxHighlighterProps) {
+  const [svgUri, setSvgUri] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function renderMermaid() {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: "base",
+          themeVariables: {
+            primaryColor: "#f8fafc",
+            primaryTextColor: "#111827",
+            primaryBorderColor: "#cbd5e1",
+            lineColor: "#64748b",
+          },
+        });
+        const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+        const { svg } = await mermaid.render(id, code);
+        if (!cancelled) {
+          setSvgUri(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+          setError(null);
+        }
+      } catch (event) {
+        if (!cancelled) {
+          setSvgUri(null);
+          setError(event instanceof Error ? event.message : "Mermaid render failed.");
+        }
+      }
+    }
+    renderMermaid();
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
+
+  if (svgUri) {
+    return (
+      <div className="overflow-x-auto rounded-b-xl border border-t-0 border-[#d8dee9] bg-[#f8fafc] p-4">
+        <img src={svgUri} alt="Mermaid diagram" className="mx-auto max-w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-2 rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4">
+        <p className="text-xs text-amber-300">Mermaid 渲染失败，已回退为源码。</p>
+        <pre className="max-w-full overflow-x-auto text-sm leading-6 text-slate-100">
+          <code>{code}</code>
+        </pre>
+      </div>
+    );
+  }
+
+  return <div className="rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm text-slate-300">正在渲染 Mermaid 图表...</div>;
+}
+
+function CitationPart({ part }: { part: CanonicalSourcePart }) {
+  return (
+    <div className="my-3 rounded-xl border border-[#d8dee9] bg-white px-4 py-3 text-sm shadow-sm">
+      <div className="font-semibold text-[#111827]">{part.title}</div>
+      {part.snippet ? <p className="mt-1 leading-6 text-[#475569]">{part.snippet}</p> : null}
+      {part.url && isSafeHref(part.url) ? (
+        <a href={part.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-medium text-[#0f766e] underline">
+          来源链接
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function ToolPart({ part }: { part: CanonicalToolPart }) {
+  return (
+    <div className="my-3 rounded-xl border border-[#d8dee9] bg-[#f8fafc] px-4 py-3 text-sm text-[#475569]">
+      <div className="font-semibold text-[#111827]">工具结果 · {part.name}</div>
+      {part.status ? <div className="mt-1 text-xs text-[#64748b]">{part.status}</div> : null}
+      {part.result !== undefined ? (
+        <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-white p-3 text-xs">{JSON.stringify(part.result, null, 2)}</pre>
+      ) : null}
+    </div>
+  );
+}
+
+function AttachmentPart({ name, detail, url }: { name: string; detail?: string; url?: string }) {
+  const safeUrl = url && isSafeHref(url) ? url : undefined;
+  return (
+    <div className="my-3 flex max-w-full items-center justify-between gap-3 rounded-xl border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-3 text-sm text-[#475569]">
+      <div className="min-w-0">
+        <div className="truncate font-medium text-[#111827]">{name}</div>
+        {detail ? <div className="text-xs text-[#64748b]">{detail}</div> : null}
+      </div>
+      {safeUrl ? (
+        <a href={safeUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-medium text-[#0f766e] underline">
+          打开
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -339,6 +630,22 @@ function collectNodeText(node: unknown): string {
     return "";
   }
   return children.map((child) => collectNodeText(child)).join("");
+}
+
+function normalizeLanguage(language: string): BundledLanguage | null {
+  const normalized = language.trim().toLowerCase();
+  if (!normalized || normalized === "text" || normalized === "plaintext") {
+    return null;
+  }
+  const aliases: Record<string, BundledLanguage> = {
+    js: "javascript",
+    md: "markdown",
+    py: "python",
+    shell: "bash",
+    ts: "typescript",
+    yml: "yaml",
+  };
+  return aliases[normalized] ?? (normalized as BundledLanguage);
 }
 
 function isSafeHref(href: string): boolean {
