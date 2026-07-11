@@ -3,16 +3,34 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { getConversations, mergeConversations } from "../../lib/api";
+import type { ReactNode } from "react";
+import {
+  archiveConversation,
+  deleteConversation,
+  getConversations,
+  mergeConversations,
+  restoreConversation,
+} from "../../lib/api";
+import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
 
 export function ConversationList({ onImportClick }: { onImportClick?: () => void }) {
   const queryClient = useQueryClient();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [isMerging, setIsMerging] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  const [undo, setUndo] = useState<UndoAction | null>(null);
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
     queryFn: getConversations,
   });
+
+  async function refreshLists() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+      queryClient.invalidateQueries({ queryKey: ["sidebar-conversations"] }),
+      queryClient.invalidateQueries({ queryKey: ["projects"] }),
+    ]);
+  }
 
   if (conversationsQuery.isLoading) {
     return <StateBlock title="Loading conversations" detail="Fetching canonical conversation list." loading />;
@@ -57,34 +75,76 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-4">
+      {undo ? (
+        <UndoToast
+          undo={undo}
+          onDone={() => {
+            setUndo(null);
+          }}
+        />
+      ) : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#111827]">Conversation history</h2>
           <p className="text-sm text-[#6b7280]">{conversations.length} shown</p>
         </div>
-        {selectedConversationIds.size >= 2 ? (
-          <button
-            type="button"
-            disabled={isMerging}
-            onClick={async () => {
-              const ids = Array.from(selectedConversationIds);
-              const title = window.prompt("Merged conversation title", "Merged conversation") ?? undefined;
-              if (title === undefined) {
+        {selectedConversationIds.size > 0 ? (
+          <BulkActions
+            selectedIds={Array.from(selectedConversationIds)}
+            isMerging={isMerging}
+            bulkBusy={bulkBusy}
+            onMerge={async (ids) => {
+              const title = window.prompt("Merged conversation title", "Merged conversation");
+              if (title === null) {
                 return;
               }
               setIsMerging(true);
               try {
-                await mergeConversations({ conversationIds: ids, title });
+                await mergeConversations({ conversationIds: ids, title: title.trim() || "Merged conversation" });
                 setSelectedConversationIds(new Set());
-                await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+                await refreshLists();
               } finally {
                 setIsMerging(false);
               }
             }}
-            className="min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
-          >
-            {isMerging ? "Merging" : `Merge ${selectedConversationIds.size}`}
-          </button>
+            onArchive={async (ids) => {
+              setBulkBusy("archive");
+              try {
+                await Promise.all(ids.map((id) => archiveConversation(id)));
+                setUndo({
+                  label: `已归档 ${ids.length} 个会话`,
+                  action: async () => {
+                    await Promise.all(ids.map((id) => restoreConversation(id)));
+                    await refreshLists();
+                  },
+                });
+                setSelectedConversationIds(new Set());
+                await refreshLists();
+              } finally {
+                setBulkBusy(null);
+              }
+            }}
+            onDelete={async (ids) => {
+              if (!window.confirm(`Delete ${ids.length} selected conversations?`)) {
+                return;
+              }
+              setBulkBusy("delete");
+              try {
+                await Promise.all(ids.map((id) => deleteConversation(id)));
+                setUndo({
+                  label: `已删除 ${ids.length} 个会话`,
+                  action: async () => {
+                    await Promise.all(ids.map((id) => restoreConversation(id)));
+                    await refreshLists();
+                  },
+                });
+                setSelectedConversationIds(new Set());
+                await refreshLists();
+              } finally {
+                setBulkBusy(null);
+              }
+            }}
+          />
         ) : (
           <span className="text-sm text-[#6b7280]">Select 2+ to merge</span>
         )}
@@ -116,28 +176,96 @@ export function ConversationList({ onImportClick }: { onImportClick?: () => void
                   />
                 </label>
                 <div className="min-w-0">
-                <Link href={`/conversations/${conversation.id}`}>
-                  <h3 className="truncate text-base font-semibold text-slate-950">
-                    {conversation.is_global_pinned ? "Pinned / " : ""}
-                    {conversation.display_title || conversation.title}
-                  </h3>
-                </Link>
-                <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4b5563]">
-                  {conversation.first_user_message ?? "No first user message."}
-                </p>
+                  <Link href={`/conversations/${conversation.id}`}>
+                    <h3 className="truncate text-base font-semibold text-slate-950">
+                      {conversation.is_global_pinned ? "Pinned / " : ""}
+                      {conversation.display_title || conversation.title}
+                    </h3>
+                  </Link>
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4b5563]">
+                    {conversation.first_user_message ?? "No first user message."}
+                  </p>
                 </div>
               </div>
-              <div className="shrink-0 text-left sm:text-right">
-                <p className="inline-flex rounded-full bg-[#f7f7f8] px-2 py-1 text-xs font-medium text-[#4b5563]">
-                  {conversation.source_profile}
-                </p>
-                <p className="mt-1 text-sm text-[#6b7280]">{conversation.message_count} messages</p>
+              <div className="flex shrink-0 items-start gap-2 text-left sm:text-right">
+                <ConversationActionMenu conversation={conversation} onUndo={setUndo} onChanged={refreshLists} />
+                <div>
+                  <p className="inline-flex rounded-full bg-[#f7f7f8] px-2 py-1 text-xs font-medium text-[#4b5563]">
+                    {conversation.source_profile}
+                  </p>
+                  <p className="mt-1 text-sm text-[#6b7280]">{conversation.message_count} messages</p>
+                </div>
               </div>
             </div>
           </article>
         ))}
       </div>
     </section>
+  );
+}
+
+function BulkActions({
+  selectedIds,
+  isMerging,
+  bulkBusy,
+  onMerge,
+  onArchive,
+  onDelete,
+}: {
+  selectedIds: string[];
+  isMerging: boolean;
+  bulkBusy: string | null;
+  onMerge: (ids: string[]) => Promise<void>;
+  onArchive: (ids: string[]) => Promise<void>;
+  onDelete: (ids: string[]) => Promise<void>;
+}) {
+  return (
+    <div className="flex flex-wrap justify-end gap-2">
+      {selectedIds.length >= 2 ? (
+        <button
+          type="button"
+          disabled={isMerging}
+          onClick={() => void onMerge(selectedIds)}
+          className="min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+        >
+          {isMerging ? "Merging" : `Merge ${selectedIds.length}`}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        disabled={bulkBusy !== null}
+        onClick={() => void onArchive(selectedIds)}
+        className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
+      >
+        Archive
+      </button>
+      <button
+        type="button"
+        disabled={bulkBusy !== null}
+        onClick={() => void onDelete(selectedIds)}
+        className="min-h-10 rounded-lg border border-red-200 bg-white px-3 text-sm font-medium text-red-700 disabled:cursor-wait disabled:opacity-60"
+      >
+        Delete
+      </button>
+    </div>
+  );
+}
+
+function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+      <span>{undo.label}</span>
+      <button
+        type="button"
+        onClick={async () => {
+          await undo.action();
+          onDone();
+        }}
+        className="min-h-9 rounded-lg bg-amber-900 px-3 text-sm font-medium text-white"
+      >
+        撤销
+      </button>
+    </div>
   );
 }
 
@@ -149,7 +277,7 @@ function StateBlock({
 }: {
   title: string;
   detail: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
   loading?: boolean;
 }) {
   return (
@@ -158,7 +286,7 @@ function StateBlock({
         {loading ? <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-[#ececec]" /> : null}
         <h2 className="text-base font-semibold text-[#111827]">{title}</h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6b7280]">{detail}</p>
-      {action ? <div className="mt-4">{action}</div> : null}
+        {action ? <div className="mt-4">{action}</div> : null}
       </div>
     </section>
   );

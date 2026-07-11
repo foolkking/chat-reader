@@ -29,6 +29,14 @@ export type ConversationDetail = ConversationListItem & {
   sort_time: string | null;
 };
 
+export type ConversationUpdateInput = {
+  title?: string | null;
+  display_title?: string | null;
+  status?: "active" | "archived" | null;
+};
+
+export type ConversationManagementResponse = ConversationDetail;
+
 export type RenderBlockRead = {
   id?: string;
   block_index: number;
@@ -277,6 +285,19 @@ export type ConversationTransformResponse = {
   title: string;
   display_title: string;
   message_count: number;
+};
+
+export type NavigateTarget = {
+  messageId: string;
+  blockIndex?: number;
+  source?: "dialogue-index" | "section-toc" | "search" | "message-action";
+};
+
+export type NavigationState = {
+  token: number;
+  activeMessageId: string | null;
+  activeHeadingId: string | null;
+  pendingTargetMessageId: string | null;
 };
 
 export type MessageEditResponse = {

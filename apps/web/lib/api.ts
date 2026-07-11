@@ -3,6 +3,8 @@ import type {
   ConversationEventListResponse,
   ConversationDetail,
   ConversationListItem,
+  ConversationManagementResponse,
+  ConversationUpdateInput,
   ConversationTransformResponse,
   HealthResponse,
   ImportPreviewResponse,
@@ -43,6 +45,28 @@ export async function getConversations(): Promise<ConversationListItem[]> {
 
 export async function getConversation(conversationId: string): Promise<ConversationDetail> {
   return fetchJson<ConversationDetail>(`/api/conversations/${conversationId}`);
+}
+
+export async function updateConversation(
+  conversationId: string,
+  input: ConversationUpdateInput,
+): Promise<ConversationManagementResponse> {
+  return fetchJson<ConversationManagementResponse>(
+    `/api/conversations/${conversationId}`,
+    jsonRequest("PATCH", input),
+  );
+}
+
+export async function deleteConversation(conversationId: string): Promise<void> {
+  await fetchJson<void>(`/api/conversations/${conversationId}`, { method: "DELETE" });
+}
+
+export async function archiveConversation(conversationId: string): Promise<ConversationManagementResponse> {
+  return updateConversation(conversationId, { status: "archived" });
+}
+
+export async function restoreConversation(conversationId: string): Promise<ConversationManagementResponse> {
+  return updateConversation(conversationId, { status: "active" });
 }
 
 export async function getConversationMessages(
@@ -232,6 +256,25 @@ export async function addConversationToProject(
 
 export async function removeConversationFromProject(projectId: string, conversationId: string): Promise<void> {
   await fetchJson<void>(`/api/projects/${projectId}/conversations/${conversationId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function addConversationToProjectMembership(
+  conversationId: string,
+  projectId: string,
+): Promise<ConversationManagementResponse> {
+  return fetchJson<ConversationManagementResponse>(
+    `/api/conversations/${conversationId}/projects/${projectId}`,
+    { method: "POST" },
+  );
+}
+
+export async function removeConversationFromProjectMembership(
+  conversationId: string,
+  projectId: string,
+): Promise<void> {
+  await fetchJson<void>(`/api/conversations/${conversationId}/projects/${projectId}`, {
     method: "DELETE",
   });
 }

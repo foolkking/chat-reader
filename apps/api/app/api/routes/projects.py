@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.api.routes.conversations import _conversation_item
 from app.core.database import get_db
+from app.models.conversation_event import ConversationEvent
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
+from app.models.import_record import utc_now
 from app.schemas.project import (
     ProjectConversationPinUpdate,
     ProjectConversationRead,
@@ -121,6 +123,19 @@ def pin_project_conversation(
 ) -> ProjectConversationRead:
     try:
         relation = set_project_conversation_pin(db, project_id, conversation_id, payload.is_pinned)
+        db.add(
+            ConversationEvent(
+                conversation_id=conversation_id,
+                event_type="pin_changed",
+                payload={
+                    "scope": "project",
+                    "project_id": str(project_id),
+                    "is_pinned": payload.is_pinned,
+                },
+                created_at=utc_now(),
+                created_by="user",
+            )
+        )
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()

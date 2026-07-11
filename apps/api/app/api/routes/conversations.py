@@ -9,7 +9,7 @@ from app.models.conversation_event import ConversationEvent
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
-from app.schemas.conversation import ConversationDetail, ConversationListItem
+from app.schemas.conversation import ConversationDetail, ConversationListItem, ConversationUpdate
 from app.schemas.editing import (
     ConversationEventListResponse,
     ConversationEventRead,
@@ -26,6 +26,11 @@ from app.services.editing.message_edit_service import (
     merge_conversations,
     split_conversation,
 )
+from app.services.projects.project_service import (
+    ProjectServiceError,
+    add_conversation_to_project,
+    remove_conversation_from_project,
+)
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -36,9 +41,12 @@ def list_conversations(
     offset: int = Query(default=0, ge=0),
     source_type: str | None = None,
     source_profile: str | None = None,
+    include_archived: bool = False,
     db: Session = Depends(get_db),
 ) -> list[ConversationListItem]:
     query = db.query(Conversation).filter(Conversation.deleted_at.is_(None))
+    if not include_archived:
+        query = query.filter(Conversation.status != "archived")
     if source_type:
         query = query.filter(Conversation.source_type == source_type)
     if source_profile:
@@ -96,6 +104,72 @@ def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) 
     )
 
 
+@router.patch("/{conversation_id}", response_model=ConversationDetail)
+def update_conversation(
+    conversation_id: uuid.UUID,
+    payload: ConversationUpdate,
+    db: Session = Depends(get_db),
+) -> ConversationDetail:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    if conversation.deleted_at is not None and payload.status != "active":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+
+    event_payload: dict[str, object] = {}
+    if payload.title is not None or payload.display_title is not None:
+        title = (payload.title if payload.title is not None else payload.display_title or "").strip()
+        display_title = (payload.display_title if payload.display_title is not None else payload.title or "").strip()
+        if not title and not display_title:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Conversation title cannot be empty.")
+        previous_title = conversation.title
+        previous_display_title = conversation.display_title
+        conversation.title = title or display_title
+        conversation.display_title = display_title or title
+        conversation.updated_at = utc_now()
+        event_payload.update(
+            {
+                "previous_title": previous_title,
+                "previous_display_title": previous_display_title,
+                "title": conversation.title,
+                "display_title": conversation.display_title,
+            }
+        )
+
+    if payload.status is not None:
+        if payload.status not in {"active", "archived"}:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid conversation status.")
+        previous_status = conversation.status
+        conversation.status = payload.status
+        if payload.status == "active":
+            conversation.deleted_at = None
+        conversation.updated_at = utc_now()
+        event_type = "conversation_archived" if payload.status == "archived" else "conversation_restored"
+        _add_conversation_event(
+            db,
+            conversation.id,
+            event_type,
+            {"previous_status": previous_status, "status": payload.status},
+        )
+
+    if event_payload:
+        _add_conversation_event(db, conversation.id, "conversation_renamed", event_payload)
+    db.commit()
+    return _conversation_detail(conversation)
+
+
+@router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    conversation.deleted_at = utc_now()
+    conversation.status = "deleted"
+    conversation.updated_at = utc_now()
+    _add_conversation_event(db, conversation.id, "conversation_deleted", {"conversation_id": str(conversation.id)})
+    db.commit()
+
+
 @router.post("/{conversation_id}/split", response_model=ConversationTransformResponse)
 def split_conversation_endpoint(
     conversation_id: uuid.UUID,
@@ -121,6 +195,49 @@ def split_conversation_endpoint(
         display_title=result.conversation.display_title,
         message_count=result.message_count,
     )
+
+
+@router.post("/{conversation_id}/projects/{project_id}", response_model=ConversationDetail)
+def add_conversation_project_membership(
+    conversation_id: uuid.UUID,
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> ConversationDetail:
+    try:
+        add_conversation_to_project(db, project_id, conversation_id, added_by="user")
+        conversation = db.get(Conversation, conversation_id)
+        assert conversation is not None
+        _add_conversation_event(
+            db,
+            conversation_id,
+            "project_changed",
+            {"action": "added", "project_id": str(project_id)},
+        )
+        db.commit()
+    except ProjectServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return _conversation_detail(conversation)
+
+
+@router.delete("/{conversation_id}/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_conversation_project_membership(
+    conversation_id: uuid.UUID,
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> None:
+    try:
+        remove_conversation_from_project(db, project_id, conversation_id)
+        _add_conversation_event(
+            db,
+            conversation_id,
+            "project_changed",
+            {"action": "removed", "project_id": str(project_id)},
+        )
+        db.commit()
+    except ProjectServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.get("/{conversation_id}/events", response_model=ConversationEventListResponse)
@@ -173,15 +290,14 @@ def set_conversation_pin(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     conversation.is_global_pinned = payload.is_pinned
     conversation.global_pinned_at = utc_now() if payload.is_pinned else None
-    db.commit()
-    return ConversationDetail(
-        **_conversation_item(conversation).model_dump(),
-        external_source_id=conversation.external_source_id,
-        parser_version=conversation.parser_version,
-        render_version=conversation.render_version,
-        content_hash=conversation.content_hash,
-        sort_time=conversation.sort_time,
+    _add_conversation_event(
+        db,
+        conversation.id,
+        "pin_changed",
+        {"scope": "global", "is_pinned": payload.is_pinned},
     )
+    db.commit()
+    return _conversation_detail(conversation)
 
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageListItem])
@@ -292,6 +408,34 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         status=conversation.status,
         is_global_pinned=conversation.is_global_pinned,
         global_pinned_at=conversation.global_pinned_at,
+    )
+
+
+def _conversation_detail(conversation: Conversation) -> ConversationDetail:
+    return ConversationDetail(
+        **_conversation_item(conversation).model_dump(),
+        external_source_id=conversation.external_source_id,
+        parser_version=conversation.parser_version,
+        render_version=conversation.render_version,
+        content_hash=conversation.content_hash,
+        sort_time=conversation.sort_time,
+    )
+
+
+def _add_conversation_event(
+    db: Session,
+    conversation_id: uuid.UUID,
+    event_type: str,
+    payload: dict,
+) -> None:
+    db.add(
+        ConversationEvent(
+            id=uuid.uuid4(),
+            conversation_id=conversation_id,
+            event_type=event_type,
+            payload=payload,
+            created_by="user",
+        )
     )
 
 

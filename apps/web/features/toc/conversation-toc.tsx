@@ -10,6 +10,7 @@ export function ConversationToc({
   activeMessageId,
   activeItems = [],
   observerKey,
+  activeBlockId,
   items,
   mode = "panel",
   onNavigate,
@@ -18,11 +19,12 @@ export function ConversationToc({
   activeMessageId?: string | null;
   activeItems?: TocItem[];
   observerKey?: string;
+  activeBlockId?: string | null;
   items?: TocItem[];
   mode?: "panel" | "sheet";
   onNavigate?: (item: TocItem) => void;
 }) {
-  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  const [observedHeadingId, setObservedHeadingId] = useState<string | null>(null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
   const tocQuery = useQuery({
     queryKey: ["toc", conversationId],
@@ -33,19 +35,19 @@ export function ConversationToc({
   const allItems = items ?? tocQuery.data?.items ?? [];
   const visibleItems = useMemo(() => {
     if (!activeMessageId) {
-      return allItems;
+      return [];
     }
     const apiActiveItems = allItems.filter((item) => item.message_id === activeMessageId);
     if (apiActiveItems.length > 0) {
       return apiActiveItems;
     }
-    const derivedActiveItems = activeItems.filter((item) => item.message_id === activeMessageId);
-    return derivedActiveItems.length > 0 ? derivedActiveItems : allItems;
+    return activeItems.filter((item) => item.message_id === activeMessageId);
   }, [activeItems, activeMessageId, allItems]);
+  const activeHeadingId = activeBlockId ?? observedHeadingId;
 
   useEffect(() => {
     if (visibleItems.length === 0) {
-      setActiveHeadingId(null);
+      setObservedHeadingId(null);
       return undefined;
     }
     const observer = new IntersectionObserver(
@@ -55,7 +57,7 @@ export function ConversationToc({
           .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
         const first = visible[0];
         if (first?.target.id) {
-          setActiveHeadingId(first.target.id);
+          setObservedHeadingId(first.target.id);
         }
       },
       { rootMargin: "-96px 0px -60% 0px", threshold: [0, 0.2, 0.8] },
@@ -82,6 +84,9 @@ export function ConversationToc({
   }
   if (allItems.length === 0 && activeItems.length === 0) {
     return <TocShell mode={mode} label="暂无章节标题" />;
+  }
+  if (visibleItems.length === 0) {
+    return <TocShell mode={mode} label="当前对话无章节" />;
   }
 
   if (mode === "sheet") {

@@ -27,3 +27,9 @@ class ConversationDetail(ConversationListItem):
     render_version: int
     content_hash: str | None
     sort_time: datetime | None
+
+
+class ConversationUpdate(BaseModel):
+    title: str | None = None
+    display_title: str | None = None
+    status: str | None = None

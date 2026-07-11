@@ -3,8 +3,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getConversation, getConversationMessageWindow, getMessageBlocks } from "../../lib/api";
-import type { MessageListItem, RenderBlockRead, TocItem } from "../../lib/types";
+import {
+  getConversation,
+  getConversationMessageWindow,
+  getMessageBlocks,
+  mergeMessages,
+  splitConversation,
+} from "../../lib/api";
+import type { MessageListItem, NavigateTarget, RenderBlockRead, TocItem } from "../../lib/types";
 import { ExportButton } from "../exporting/export-button";
 import { ExportPanel } from "../exporting/export-panel";
 import { AddToProjectControl } from "../projects/add-to-project-control";
@@ -15,8 +21,8 @@ import { ShareButton } from "../sharing/share-button";
 import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
+import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
 import { MessageItem } from "./message-item";
-import { mergeMessages, splitConversation } from "../../lib/api";
 
 const PAGE_SIZE = 50;
 
@@ -30,9 +36,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [undo, setUndo] = useState<UndoAction | null>(null);
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
   const [pendingTargetMessageId, setPendingTargetMessageId] = useState<string | null>(targetMessageId);
   const [expandedHeavyMessageIds, setExpandedHeavyMessageIds] = useState<Set<string>>(new Set());
   const [blockCache, setBlockCache] = useState<Record<string, RenderBlockRead[]>>({});
@@ -41,6 +50,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const nextOffsetRef = useRef(0);
+  const navigationTokenRef = useRef(0);
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -104,40 +114,62 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     });
   }, []);
 
-  const ensureMessageMounted = useCallback(
-    async (messageId: string, blockIndex?: number) => {
+  const navigateToTarget = useCallback(
+    async ({ messageId, blockIndex }: NavigateTarget) => {
+      const token = navigationTokenRef.current + 1;
+      navigationTokenRef.current = token;
       const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
-      const currentTarget = blockId
-        ? document.getElementById(blockId)
-        : document.getElementById(`message-${messageId}`);
-      if (currentTarget) {
-        currentTarget.scrollIntoView({ block: "start", behavior: "smooth" });
-        return;
+      const messageIdDom = `message-${messageId}`;
+      setActiveMessageId(messageId);
+      setActiveBlockId(blockId);
+      setTargetHighlightId(blockId ?? messageIdDom);
+
+      if (!getTargetElement(messageId, blockIndex)) {
+        const page = await getConversationMessageWindow(conversationId, {
+          includeBlocks: false,
+          limit: PAGE_SIZE,
+          anchorMessageId: messageId,
+        });
+        if (navigationTokenRef.current !== token) {
+          return;
+        }
+        mergeWindowItems(page);
       }
 
-      const page = await getConversationMessageWindow(conversationId, {
-        includeBlocks: false,
-        limit: PAGE_SIZE,
-        anchorMessageId: messageId,
-      });
-      mergeWindowItems(page);
-      const targetMessage = page.items.find((item) => item.id === messageId);
-      if (blockIndex !== undefined && targetMessage) {
-        const inlineBlocks = targetMessage.render_blocks?.length
-          ? targetMessage.render_blocks
-          : targetMessage.current_version?.blocks;
-        if (!blockCache[messageId] && (!inlineBlocks || inlineBlocks.length === 0)) {
-          const blocks = await getMessageBlocks(messageId, { start: 0, limit: 200 });
+      if (blockIndex !== undefined) {
+        const knownMessage =
+          messages.find((message) => message.id === messageId) ??
+          (await getConversationMessageWindow(conversationId, {
+            includeBlocks: false,
+            limit: 1,
+            anchorMessageId: messageId,
+          })).items.find((message) => message.id === messageId);
+        if (knownMessage && !messageHasInlineBlocks(knownMessage) && !blockCache[messageId]) {
+          const start = Math.max(0, blockIndex - 20);
+          const blocks = await getMessageBlocks(messageId, { start, limit: 200 });
+          if (navigationTokenRef.current !== token) {
+            return;
+          }
           setBlockCache((current) => ({ ...current, [messageId]: blocks }));
         }
         setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
       }
-      await waitForMountedTarget(messageId, blockIndex);
-      const block = blockId ? document.getElementById(blockId) : null;
-      const message = document.getElementById(`message-${messageId}`);
-      (block ?? message)?.scrollIntoView({ block: "start", behavior: "smooth" });
+
+      await waitForMountedTarget(messageId, blockIndex, { exact: blockIndex !== undefined });
+      if (navigationTokenRef.current !== token) {
+        return;
+      }
+      await verifiedScrollToTarget(scrollContainerRef.current, messageId, blockIndex);
+      setActiveMessageId(messageId);
+      setActiveBlockId(blockId);
+      window.setTimeout(() => {
+        if (navigationTokenRef.current === token) {
+          setTargetHighlightId(null);
+          setActiveBlockId(null);
+        }
+      }, 2000);
     },
-    [blockCache, conversationId, mergeWindowItems],
+    [blockCache, conversationId, mergeWindowItems, messages],
   );
 
   useEffect(() => {
@@ -145,8 +177,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     if (!messageId) {
       return;
     }
-    void ensureMessageMounted(messageId).finally(() => setPendingTargetMessageId(null));
-  }, [ensureMessageMounted, pendingTargetMessageId, targetMessageId]);
+    void navigateToTarget({ messageId, source: "search" }).finally(() => setPendingTargetMessageId(null));
+  }, [navigateToTarget, pendingTargetMessageId, targetMessageId]);
 
   useEffect(() => {
     const sentinel = loadMoreSentinelRef.current;
@@ -329,6 +361,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   : "展开 blocks"}
               </button>
               <AddToProjectControl conversationId={conversation.id} />
+              <ConversationActionMenu conversation={conversation} onUndo={setUndo} onChanged={refreshReader} />
               <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
               <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
               <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
@@ -387,6 +420,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               <div className="grid gap-2">
                 <AddToProjectControl conversationId={conversation.id} />
                 <div className="flex flex-wrap gap-2">
+                  <ConversationActionMenu conversation={conversation} onUndo={setUndo} onChanged={refreshReader} />
                   <button
                     type="button"
                     onClick={() => void expandLoadedHeavyMessages()}
@@ -438,6 +472,24 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               </div>
             </div>
           ) : null}
+          {undo ? (
+            <div className="border-t border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-950">
+              <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+                <span>{undo.label}</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const current = undo;
+                    setUndo(null);
+                    await current.action();
+                  }}
+                  className="min-h-9 rounded-lg bg-amber-900 px-3 text-sm font-medium text-white"
+                >
+                  撤销
+                </button>
+              </div>
+            </div>
+          ) : null}
         </header>
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
@@ -448,7 +500,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
                   onNavigate={(item) => {
-                    void ensureMessageMounted(item.messageId);
+                    void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
                   }}
                 />
               </div>
@@ -474,6 +526,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                       key={message.id}
                       message={message}
                       onChanged={refreshReader}
+                      highlightTargetId={targetHighlightId}
                       selected={selectedMessageIds.has(message.id)}
                       onSelectedChange={(selected) => {
                         setSelectedMessageIds((current) => {
@@ -512,9 +565,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
                   activeItems={activeTocItems}
+                  activeBlockId={activeBlockId}
                   observerKey={tocObserverKey}
                   onNavigate={(item) => {
-                    void ensureMessageMounted(item.message_id, item.block_index);
+                    void navigateToTarget({
+                      messageId: item.message_id,
+                      blockIndex: item.block_index,
+                      source: "section-toc",
+                    });
                   }}
                 />
               </div>
@@ -546,7 +604,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               activeMessageId={activeMessageId}
               mode="sheet"
               onNavigate={(item) => {
-                void ensureMessageMounted(item.messageId);
+                void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
                 setShowMobileIndex(false);
               }}
             />
@@ -576,10 +634,15 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               conversationId={conversationId}
               activeMessageId={activeMessageId}
               activeItems={activeTocItems}
+              activeBlockId={activeBlockId}
               observerKey={tocObserverKey}
               mode="sheet"
               onNavigate={(item) => {
-                void ensureMessageMounted(item.message_id, item.block_index);
+                void navigateToTarget({
+                  messageId: item.message_id,
+                  blockIndex: item.block_index,
+                  source: "section-toc",
+                });
                 setShowMobileToc(false);
               }}
             />
@@ -630,14 +693,71 @@ function normalizeHeadingLevel(value: unknown): number {
   return 2;
 }
 
-async function waitForMountedTarget(messageId: string, blockIndex?: number): Promise<void> {
+function messageHasInlineBlocks(message: MessageListItem): boolean {
+  return Boolean(
+    (message.render_blocks && message.render_blocks.length > 0) ||
+      (message.current_version?.blocks && message.current_version.blocks.length > 0),
+  );
+}
+
+function getTargetElement(messageId: string, blockIndex?: number): HTMLElement | null {
+  if (blockIndex !== undefined) {
+    return document.getElementById(`block-${messageId}-${blockIndex}`);
+  }
+  return document.getElementById(`message-${messageId}`);
+}
+
+async function waitForMountedTarget(
+  messageId: string,
+  blockIndex?: number,
+  options: { exact?: boolean } = {},
+): Promise<void> {
   const targetId = blockIndex === undefined ? `message-${messageId}` : `block-${messageId}-${blockIndex}`;
   for (let attempt = 0; attempt < 80; attempt += 1) {
-    if (document.getElementById(targetId) || document.getElementById(`message-${messageId}`)) {
+    if (document.getElementById(targetId)) {
+      return;
+    }
+    if (!options.exact && document.getElementById(`message-${messageId}`)) {
       return;
     }
     await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
   }
+}
+
+async function verifiedScrollToTarget(
+  root: HTMLElement | null,
+  messageId: string,
+  blockIndex?: number,
+): Promise<void> {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const target = getTargetElement(messageId, blockIndex) ?? document.getElementById(`message-${messageId}`);
+    if (!target) {
+      await waitForMountedTarget(messageId, blockIndex, { exact: false });
+      continue;
+    }
+    target.scrollIntoView({ block: "start", behavior: attempt === 0 ? "smooth" : "auto" });
+    await waitForLayoutSettle();
+    if (isTargetVisible(root, target)) {
+      return;
+    }
+  }
+}
+
+async function waitForLayoutSettle(): Promise<void> {
+  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+}
+
+function isTargetVisible(root: HTMLElement | null, target: HTMLElement): boolean {
+  const targetRect = target.getBoundingClientRect();
+  const rootRect = root?.getBoundingClientRect() ?? {
+    top: 0,
+    bottom: window.innerHeight,
+  };
+  const topSlack = 72;
+  const bottomSlack = 96;
+  return targetRect.top >= rootRect.top - topSlack && targetRect.top <= rootRect.bottom - bottomSlack;
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {

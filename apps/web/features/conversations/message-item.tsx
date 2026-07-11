@@ -13,6 +13,7 @@ export function MessageItem({
   readOnly = false,
   selected = false,
   onSelectedChange,
+  highlightTargetId,
   expandHeavyBlocks = false,
   cachedBlocks,
   onLoadBlocks,
@@ -22,6 +23,7 @@ export function MessageItem({
   readOnly?: boolean;
   selected?: boolean;
   onSelectedChange?: (selected: boolean) => void;
+  highlightTargetId?: string | null;
   expandHeavyBlocks?: boolean;
   cachedBlocks?: RenderBlockRead[];
   onLoadBlocks?: (messageId: string) => Promise<RenderBlockRead[]>;
@@ -104,7 +106,9 @@ export function MessageItem({
       id={`message-${message.id}`}
       data-message-id={message.id}
       data-order-key={message.order_key}
-      className={`group relative w-full max-w-full ${isUser ? "flex justify-end" : "flex justify-start"}`}
+      className={`group relative w-full max-w-full rounded-2xl transition ${
+        highlightTargetId === `message-${message.id}` ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]" : ""
+      } ${isUser ? "flex justify-end" : "flex justify-start"}`}
     >
       <div className={`${isUser ? "max-w-[78%] sm:max-w-[72%]" : "max-w-full flex-1"} min-w-0`}>
         {!isUser ? (
@@ -186,7 +190,11 @@ export function MessageItem({
                   key={block.id ?? `${message.id}-${index}`}
                   id={`block-${message.id}-${block.block_index}`}
                   data-block-index={block.block_index}
-                  className="max-w-full"
+                  className={`max-w-full rounded-xl transition ${
+                    highlightTargetId === `block-${message.id}-${block.block_index}`
+                      ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]"
+                      : ""
+                  }`}
                 >
                   <BlockRenderer block={block} />
                 </div>
