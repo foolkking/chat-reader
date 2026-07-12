@@ -13,13 +13,16 @@ if ($status) {
 
 foreach ($file in @(
   "README.md",
+  "PROJECT_STATE.md",
   "schemas/openapi_draft.yaml",
   "schemas/database_schema.sql",
-  "docs/release_checklist.md",
-  "docs/final_acceptance_report.md",
-  "docs/local_installation_guide.md",
-  "docs/troubleshooting.md",
-  "docs/release_notes_v0.10.0-rc1.md"
+  "docs/index.md",
+  "docs/product.md",
+  "docs/architecture.md",
+  "docs/api-reference.md",
+  "docs/development.md",
+  "docs/deployment.md",
+  "docs/troubleshooting.md"
 )) {
   if (-not (Test-Path $file)) {
     throw "Required release file missing: $file"
