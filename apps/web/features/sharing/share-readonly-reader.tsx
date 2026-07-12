@@ -1,9 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getSharedConversation } from "../../lib/api";
+import type { NavigationResult } from "../../lib/types";
 import { MessageItem } from "../conversations/message-item";
+import { navigateMountedTarget } from "../conversations/reader-navigation";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 
@@ -11,6 +13,16 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [navigationTargetMessageId, setNavigationTargetMessageId] = useState<string | null>(null);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
+  const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(new Set());
+  const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
+    pending: false,
+    error: null,
+  });
+  const navigationTokenRef = useRef(0);
+  const navigationLockUntilRef = useRef(0);
   const shareQuery = useQuery({
     queryKey: ["shared-conversation", token],
     queryFn: () => getSharedConversation(token),
@@ -19,6 +31,37 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const messages = payload?.messages ?? [];
   const toc = payload?.toc ?? [];
 
+  const navigateToTarget = useCallback(async (messageId: string, blockIndex?: number): Promise<NavigationResult> => {
+    const token = navigationTokenRef.current + 1;
+    navigationTokenRef.current = token;
+    navigationLockUntilRef.current = Date.now() + 5000;
+    setNavigationTargetMessageId(messageId);
+    const messageDomId = `message-${messageId}`;
+    const blockDomId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
+    if (blockIndex !== undefined) {
+      setExpandedMessageIds((current) => new Set(current).add(messageId));
+    }
+    const result = await navigateMountedTarget({
+      root: null,
+      targetId: blockDomId ?? messageDomId,
+      fallbackId: undefined,
+      tokenIsCurrent: () => navigationTokenRef.current === token,
+      offset: 80,
+    });
+    if (result.ok) {
+      setActiveMessageId(messageId);
+      setActiveBlockId(blockDomId);
+      setTargetHighlightId(result.targetId);
+      window.setTimeout(() => {
+        if (navigationTokenRef.current === token) {
+          setTargetHighlightId(null);
+          setActiveBlockId(null);
+        }
+      }, 2000);
+    }
+    return result;
+  }, []);
+
   useEffect(() => {
     if (messages.length === 0) {
       setActiveMessageId(null);
@@ -26,11 +69,15 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     }
     const observer = new IntersectionObserver(
       (entries) => {
+        if (Date.now() < navigationLockUntilRef.current) {
+          return;
+        }
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
         const first = visible[0]?.target;
         if (first instanceof HTMLElement) {
+          setNavigationTargetMessageId(null);
           setActiveMessageId(first.dataset.messageId ?? null);
         }
       },
@@ -87,14 +134,17 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           </div>
         </div>
       </header>
-      <section className="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-6 px-4 py-6 sm:px-6 xl:grid-cols-[300px_minmax(0,820px)_260px] xl:items-start xl:justify-center">
+      <section className="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-6 px-3 py-5 sm:px-6 sm:py-6 xl:grid-cols-[300px_minmax(0,820px)_260px] xl:items-start xl:justify-center">
         <aside className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
           <div className="rounded-2xl border border-[#e5e7eb] bg-white p-3 shadow-sm">
             <ConversationIndex
               conversationId={payload.conversation.id}
               messages={messages}
-              activeMessageId={activeMessageId}
+              activeMessageId={navigationTargetMessageId ?? activeMessageId}
               mode="sheet"
+              onNavigate={async (item) => {
+                await navigateToTarget(item.messageId);
+              }}
             />
           </div>
         </aside>
@@ -105,14 +155,25 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             </div>
           ) : null}
           {messages.map((message) => (
-            <MessageItem key={message.id} message={message} readOnly />
+            <MessageItem
+              key={message.id}
+              message={message}
+              readOnly
+              highlightTargetId={targetHighlightId}
+              expandHeavyBlocks={expandedMessageIds.has(message.id)}
+            />
           ))}
+          <div aria-hidden="true" className="h-[calc(100vh-6rem)] min-h-72" />
         </div>
         <div className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
           <ConversationToc
             conversationId={payload.conversation.id}
-            activeMessageId={activeMessageId}
+            activeMessageId={navigationTargetMessageId ?? activeMessageId}
+            activeBlockId={activeBlockId}
             items={toc}
+            onNavigate={async (item) => {
+              await navigateToTarget(item.message_id, item.block_index);
+            }}
           />
         </div>
       </section>
@@ -125,8 +186,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             onClick={() => setShowMobileIndex(false)}
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[76vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[#111827]">对话索引</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[#111827]">对话索引</h2>
+                {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
+                {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowMobileIndex(false)}
@@ -138,8 +203,14 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             <ConversationIndex
               conversationId={payload.conversation.id}
               messages={messages}
+              activeMessageId={navigationTargetMessageId ?? activeMessageId}
               mode="sheet"
-              onNavigate={() => setShowMobileIndex(false)}
+              onNavigate={async (item) => {
+                setMobileNavigation({ pending: true, error: null });
+                const result = await navigateToTarget(item.messageId);
+                setMobileNavigation({ pending: false, error: result.ok ? null : "未能定位，请重试。" });
+                if (result.ok) setShowMobileIndex(false);
+              }}
             />
           </div>
         </div>
@@ -153,8 +224,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             onClick={() => setShowMobileToc(false)}
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[#111827]">章节目录</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[#111827]">章节目录</h2>
+                {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
+                {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowMobileToc(false)}
@@ -165,10 +240,16 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             </div>
             <ConversationToc
               conversationId={payload.conversation.id}
-              activeMessageId={activeMessageId}
+              activeMessageId={navigationTargetMessageId ?? activeMessageId}
+              activeBlockId={activeBlockId}
               items={toc}
               mode="sheet"
-              onNavigate={() => setShowMobileToc(false)}
+              onNavigate={async (item) => {
+                setMobileNavigation({ pending: true, error: null });
+                const result = await navigateToTarget(item.message_id, item.block_index);
+                setMobileNavigation({ pending: false, error: result.ok ? null : "未能定位，请重试。" });
+                if (result.ok) setShowMobileToc(false);
+              }}
             />
           </div>
         </div>

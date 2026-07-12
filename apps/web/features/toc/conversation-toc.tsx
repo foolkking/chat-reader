@@ -22,7 +22,7 @@ export function ConversationToc({
   activeBlockId?: string | null;
   items?: TocItem[];
   mode?: "panel" | "sheet";
-  onNavigate?: (item: TocItem) => void;
+  onNavigate?: (item: TocItem) => void | Promise<void>;
 }) {
   const [observedHeadingId, setObservedHeadingId] = useState<string | null>(null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
@@ -130,7 +130,7 @@ function TocButtonList({
   items: TocItem[];
   activeHeadingId: string | null;
   activeRowRef: MutableRefObject<HTMLButtonElement | null>;
-  onNavigate?: (item: TocItem) => void;
+  onNavigate?: (item: TocItem) => void | Promise<void>;
 }) {
   return (
     <nav className="space-y-1 border-l border-[#e5e7eb] pl-2">
@@ -143,7 +143,7 @@ function TocButtonList({
             type="button"
             onClick={() => {
               if (onNavigate) {
-                onNavigate(item);
+                void onNavigate(item);
               } else {
                 scrollToTocTarget(item);
               }

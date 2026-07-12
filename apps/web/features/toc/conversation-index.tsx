@@ -30,7 +30,7 @@ export function ConversationIndex({
   messages?: MessageListItem[];
   activeMessageId?: string | null;
   mode?: "rail" | "sheet";
-  onNavigate?: (item: ConversationIndexItem) => void;
+  onNavigate?: (item: ConversationIndexItem) => void | Promise<void>;
 }) {
   const [showFilter, setShowFilter] = useState(false);
   const [rangeMode, setRangeMode] = useState<"all" | "around" | "custom">("around");
@@ -119,7 +119,7 @@ export function ConversationIndex({
                 type="button"
                 onClick={() => {
                   if (onNavigate) {
-                    onNavigate(item);
+                    void onNavigate(item);
                   } else {
                     document
                       .getElementById(`message-${item.messageId}`)

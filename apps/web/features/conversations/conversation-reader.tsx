@@ -10,7 +10,7 @@ import {
   mergeMessages,
   splitConversation,
 } from "../../lib/api";
-import type { MessageListItem, NavigateTarget, RenderBlockRead, TocItem } from "../../lib/types";
+import type { MessageListItem, NavigateTarget, NavigationResult, RenderBlockRead, TocItem } from "../../lib/types";
 import { ExportButton } from "../exporting/export-button";
 import { ExportPanel } from "../exporting/export-panel";
 import { ProjectSidebar } from "../projects/project-sidebar";
@@ -21,6 +21,7 @@ import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 import { MessageItem } from "./message-item";
+import { navigateMountedTarget } from "./reader-navigation";
 
 const PAGE_SIZE = 50;
 
@@ -36,6 +37,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
+  const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
+    pending: false,
+    error: null,
+  });
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
@@ -48,6 +53,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const nextOffsetRef = useRef(0);
   const navigationTokenRef = useRef(0);
+  const navigationLockUntilRef = useRef(0);
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -112,59 +118,69 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }, []);
 
   const navigateToTarget = useCallback(
-    async ({ messageId, blockIndex }: NavigateTarget) => {
+    async ({ messageId, blockIndex }: NavigateTarget): Promise<NavigationResult> => {
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
+      navigationLockUntilRef.current = Date.now() + 5000;
       const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
       const messageIdDom = `message-${messageId}`;
       setActiveMessageId(messageId);
       setActiveBlockId(blockId);
       setTargetHighlightId(blockId ?? messageIdDom);
 
-      if (!getTargetElement(messageId, blockIndex)) {
-        const page = await getConversationMessageWindow(conversationId, {
-          includeBlocks: false,
-          limit: PAGE_SIZE,
-          anchorMessageId: messageId,
-        });
-        if (navigationTokenRef.current !== token) {
-          return;
-        }
-        mergeWindowItems(page);
-      }
-
-      if (blockIndex !== undefined) {
-        const knownMessage =
-          messages.find((message) => message.id === messageId) ??
-          (await getConversationMessageWindow(conversationId, {
+      try {
+        if (!getTargetElement(messageId, blockIndex)) {
+          const page = await getConversationMessageWindow(conversationId, {
             includeBlocks: false,
-            limit: 1,
+            limit: PAGE_SIZE,
             anchorMessageId: messageId,
-          })).items.find((message) => message.id === messageId);
-        if (knownMessage && !messageHasInlineBlocks(knownMessage) && !blockCache[messageId]) {
-          const start = Math.max(0, blockIndex - 20);
-          const blocks = await getMessageBlocks(messageId, { start, limit: 200 });
+          });
           if (navigationTokenRef.current !== token) {
-            return;
+            return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
           }
-          setBlockCache((current) => ({ ...current, [messageId]: blocks }));
+          mergeWindowItems(page);
         }
-        setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
-      }
 
-      await waitForMountedTarget(messageId, blockIndex, { exact: blockIndex !== undefined });
-      if (navigationTokenRef.current !== token) {
-        return;
-      }
-      await verifiedScrollToTarget(scrollContainerRef.current, messageId, blockIndex);
-      setActiveMessageId(messageId);
-      setActiveBlockId(blockId);
-      window.setTimeout(() => {
-        if (navigationTokenRef.current === token) {
-          setTargetHighlightId(null);
-          setActiveBlockId(null);
+        if (blockIndex !== undefined) {
+          const knownMessage =
+            messages.find((message) => message.id === messageId) ??
+            (await getConversationMessageWindow(conversationId, {
+              includeBlocks: false,
+              limit: 1,
+              anchorMessageId: messageId,
+            })).items.find((message) => message.id === messageId);
+          if (knownMessage && !messageHasInlineBlocks(knownMessage) && !blockCache[messageId]) {
+            const start = Math.max(0, blockIndex - 20);
+            const blocks = await getMessageBlocks(messageId, { start, limit: 200 });
+            if (navigationTokenRef.current !== token) {
+              return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
+            }
+            setBlockCache((current) => ({ ...current, [messageId]: blocks }));
+          }
+          setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
         }
-      }, 2000);
+
+        const result = await navigateMountedTarget({
+          root: scrollContainerRef.current,
+          targetId: blockId ?? messageIdDom,
+          fallbackId: undefined,
+          tokenIsCurrent: () => navigationTokenRef.current === token,
+          offset: 12,
+        });
+        if (result.ok) {
+          setActiveMessageId(messageId);
+          setActiveBlockId(blockId);
+          window.setTimeout(() => {
+            if (navigationTokenRef.current === token) {
+              setTargetHighlightId(null);
+              setActiveBlockId(null);
+            }
+          }, 2000);
+        }
+        return result;
+      } catch {
+        return { ok: false, targetId: blockId ?? messageIdDom, reason: "load-failed" };
+      }
     },
     [blockCache, conversationId, mergeWindowItems, messages],
   );
@@ -205,6 +221,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     let bestId = messages[0]?.id ?? null;
     const observer = new IntersectionObserver(
       (entries) => {
+        if (Date.now() < navigationLockUntilRef.current) {
+          return;
+        }
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
@@ -460,7 +479,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         </header>
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="grid min-h-full grid-cols-1 gap-5 px-4 py-8 md:px-6 xl:grid-cols-[48px_minmax(0,1fr)_256px]">
+          <div className="grid min-h-full grid-cols-1 gap-5 px-3 py-6 sm:px-4 sm:py-8 md:px-6 xl:grid-cols-[48px_minmax(0,1fr)_256px]">
             <div className="relative z-[120] hidden xl:block">
               <div className="sticky top-20">
                 <ConversationIndex
@@ -523,6 +542,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                       </span>
                     ) : null}
                   </div>
+                  <div aria-hidden="true" className="h-[calc(100vh-7rem)] min-h-72" />
                 </div>
               ) : null}
             </div>
@@ -556,8 +576,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             onClick={() => setShowMobileIndex(false)}
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[76vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[#111827]">对话索引</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[#111827]">对话索引</h2>
+                {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
+                {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowMobileIndex(false)}
@@ -570,9 +594,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               conversationId={conversationId}
               activeMessageId={activeMessageId}
               mode="sheet"
-              onNavigate={(item) => {
-                void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
-                setShowMobileIndex(false);
+              onNavigate={async (item) => {
+                setMobileNavigation({ pending: true, error: null });
+                const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
+                setMobileNavigation({ pending: false, error: result.ok ? null : "未能定位，请重试。" });
+                if (result.ok) setShowMobileIndex(false);
               }}
             />
           </div>
@@ -587,8 +613,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             onClick={() => setShowMobileToc(false)}
           />
           <div className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[#111827]">章节目录</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[#111827]">章节目录</h2>
+                {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
+                {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowMobileToc(false)}
@@ -604,13 +634,15 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               activeBlockId={activeBlockId}
               observerKey={tocObserverKey}
               mode="sheet"
-              onNavigate={(item) => {
-                void navigateToTarget({
+              onNavigate={async (item) => {
+                setMobileNavigation({ pending: true, error: null });
+                const result = await navigateToTarget({
                   messageId: item.message_id,
                   blockIndex: item.block_index,
                   source: "section-toc",
                 });
-                setShowMobileToc(false);
+                setMobileNavigation({ pending: false, error: result.ok ? null : "未能定位，请重试。" });
+                if (result.ok) setShowMobileToc(false);
               }}
             />
           </div>
@@ -684,59 +716,6 @@ function getTargetElement(messageId: string, blockIndex?: number): HTMLElement |
     return document.getElementById(`block-${messageId}-${blockIndex}`);
   }
   return document.getElementById(`message-${messageId}`);
-}
-
-async function waitForMountedTarget(
-  messageId: string,
-  blockIndex?: number,
-  options: { exact?: boolean } = {},
-): Promise<void> {
-  const targetId = blockIndex === undefined ? `message-${messageId}` : `block-${messageId}-${blockIndex}`;
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    if (document.getElementById(targetId)) {
-      return;
-    }
-    if (!options.exact && document.getElementById(`message-${messageId}`)) {
-      return;
-    }
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-  }
-}
-
-async function verifiedScrollToTarget(
-  root: HTMLElement | null,
-  messageId: string,
-  blockIndex?: number,
-): Promise<void> {
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const target = getTargetElement(messageId, blockIndex) ?? document.getElementById(`message-${messageId}`);
-    if (!target) {
-      await waitForMountedTarget(messageId, blockIndex, { exact: false });
-      continue;
-    }
-    target.scrollIntoView({ block: "start", behavior: attempt === 0 ? "smooth" : "auto" });
-    await waitForLayoutSettle();
-    if (isTargetVisible(root, target)) {
-      return;
-    }
-  }
-}
-
-async function waitForLayoutSettle(): Promise<void> {
-  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-  await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
-}
-
-function isTargetVisible(root: HTMLElement | null, target: HTMLElement): boolean {
-  const targetRect = target.getBoundingClientRect();
-  const rootRect = root?.getBoundingClientRect() ?? {
-    top: 0,
-    bottom: window.innerHeight,
-  };
-  const topSlack = 72;
-  const bottomSlack = 96;
-  return targetRect.top >= rootRect.top - topSlack && targetRect.top <= rootRect.bottom - bottomSlack;
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {

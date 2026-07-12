@@ -128,11 +128,19 @@ export function MessageItem({
       id={`message-${message.id}`}
       data-message-id={message.id}
       data-order-key={message.order_key}
-      className={`group relative w-full max-w-full rounded-2xl transition ${
+      className={`group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:rounded-2xl ${
         highlightTargetId === `message-${message.id}` ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]" : ""
-      } ${isUser ? "flex justify-end" : "flex justify-start"}`}
+      } ${isUser ? "sm:justify-end" : "sm:justify-start"}`}
     >
-      <div className={`${isUser ? "max-w-[78%] sm:max-w-[72%]" : "max-w-full flex-1"} min-w-0`}>
+      <div className={`${isUser ? "w-full sm:ml-auto sm:max-w-[72%]" : "w-full max-w-full flex-1"} min-w-0`}>
+        {isUser ? (
+          <div className="mb-2 flex items-center gap-2 sm:hidden">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#10a37f] text-[10px] font-semibold text-white">
+              YOU
+            </span>
+            <span className="text-xs font-semibold text-[#6b7280]">You</span>
+          </div>
+        ) : null}
         {!isUser ? (
           <div className="mb-2 flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#111827] text-xs font-semibold uppercase text-white">
@@ -146,7 +154,7 @@ export function MessageItem({
         <div
           className={
             isUser
-              ? "message-user rounded-[22px] bg-[#f4f4f4] px-4 py-3 text-[15px] leading-7 text-[#111827] shadow-sm"
+              ? "message-user w-full min-w-0 rounded-lg border border-[#e5e7eb] bg-[#f4f4f4] px-3 py-3 text-[15px] leading-7 text-[#111827] sm:rounded-[22px] sm:border-0 sm:px-4 sm:shadow-sm"
               : isAssistant
                 ? "text-[15px] leading-7 text-[#111827]"
                 : "rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] leading-7 text-[#111827]"

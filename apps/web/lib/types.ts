@@ -293,6 +293,12 @@ export type NavigateTarget = {
   source?: "dialogue-index" | "section-toc" | "search" | "message-action";
 };
 
+export type NavigationResult = {
+  ok: boolean;
+  targetId: string;
+  reason?: "cancelled" | "target-not-mounted" | "target-not-aligned" | "load-failed";
+};
+
 export type NavigationState = {
   token: number;
   activeMessageId: string | null;

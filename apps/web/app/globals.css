@@ -31,18 +31,28 @@ body {
   line-height: 1.5rem;
 }
 
-.message-user .aui-chat-markdown table,
-.message-user .aui-chat-markdown pre,
-.message-user .aui-chat-markdown code {
+.message-user .aui-chat-markdown :not(pre) > code {
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .aui-chat-markdown pre {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x pan-y;
   tab-size: 2;
 }
 
 .aui-chat-markdown pre code {
   background: transparent;
   color: inherit;
+  overflow-wrap: normal;
   padding: 0;
+  white-space: pre;
+  word-break: normal;
+}
+
+.aui-chat-markdown table {
+  max-width: 100%;
 }
