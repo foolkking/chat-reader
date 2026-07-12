@@ -114,6 +114,15 @@ http://localhost:3000
 docker compose up --build
 ```
 
+生产服务器使用独立的 production compose，不运行 Next.js dev server，也不会把 PostgreSQL 或 FastAPI 端口暴露到公网：
+
+```bash
+cp .env.production.example .env.production
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+```
+
+完整的域名、HTTPS、升级和备份说明见 [Docker server deployment](docs/server_docker_deployment.md)。
+
 ### 运行测试和检查
 
 ```bash
