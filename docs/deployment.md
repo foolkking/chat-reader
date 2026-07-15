@@ -2,7 +2,7 @@
 
 当前生产路径使用 `docker-compose.production.yml`：PostgreSQL、一次性 migration、FastAPI、单并发 task worker 和 Next.js 五个服务。Compose 服务名仍为 `import-worker`，但它同时处理 import 与 conversation merge。只有 Web 端口对宿主机暴露。
 
-生产 healthcheck 使用低频配置，避免小内存主机频繁创建 Docker exec：PostgreSQL 每 30 秒，API/Web 每 60 秒。容器日志启用 10 MiB、3 文件轮转。Web 远程构建固定为单 CPU worker，Node heap 上限为 512 MiB；1 GiB 以下服务器应顺序构建，并在构建 Web 前停止现有 API、worker 和 Web 容器。
+生产 healthcheck 使用低频配置，避免小内存主机频繁创建 Docker exec：PostgreSQL 每 30 秒，API/Web 每 60 秒。容器日志启用 10 MiB、3 文件轮转。Web 远程构建固定为单 CPU worker，Node heap 上限为 640 MiB；1 GiB 以下服务器应顺序构建，并在构建 Web 前停止现有 API、worker、Web 和 PostgreSQL 容器。
 
 ## 服务器准备
 
