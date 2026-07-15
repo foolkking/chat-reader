@@ -18,7 +18,7 @@ def test_alembic_current_head_matches_stage_10_environment() -> None:
         capture_output=True,
         check=True,
     )
-    assert "20260707_0005" in result.stdout
+    assert "20260715_0006" in result.stdout
 
 
 def test_latest_migration_has_upgrade_and_downgrade() -> None:

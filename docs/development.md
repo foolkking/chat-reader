@@ -19,6 +19,8 @@
 | `PUBLIC_WEB_BASE_URL` | 分享链接使用的公开 Web 根地址 |
 | `MAX_IMPORT_FILE_SIZE_MB` | 单个导入文件上限 |
 | `IMPORT_STORAGE_DIR` | raw import artifact 存储目录 |
+| `IMPORT_WORKER_POLL_SECONDS` | worker 无任务时的轮询间隔 |
+| `IMPORT_STALE_AFTER_SECONDS` | heartbeat 超时后重新排队的秒数 |
 
 不要把 `API_INTERNAL_URL` 改成浏览器端 public 变量。浏览器只请求同源 `/api/*`。
 
@@ -52,14 +54,17 @@ Set-Location ../..
 
 ## 启动
 
-在两个终端中分别运行：
+在三个终端中分别运行：
 
 ```powershell
 corepack pnpm run dev:api
 corepack pnpm run dev:web
+corepack pnpm run dev:worker
 ```
 
 Web 监听 `0.0.0.0:3000`，API 监听 `0.0.0.0:8000`。`0.0.0.0` 仅是监听地址，不能作为浏览器请求地址。localhost 和 LAN 浏览器均通过 Web 的 `/api/*` 代理访问业务接口。
+
+没有 worker 时 preview 和排队仍可成功，但任务会停留在 `queued`，不会生成 conversation。
 
 辅助脚本：
 

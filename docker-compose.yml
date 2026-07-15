@@ -34,6 +34,22 @@ services:
       chat-reader-postgres:
         condition: service_healthy
 
+  chat-reader-import-worker:
+    image: python:3.11-slim
+    container_name: chat-reader-import-worker
+    working_dir: /workspace/apps/api
+    command: sh -c "pip install -e . && python -m app.workers.import_worker"
+    environment:
+      APP_NAME: ${APP_NAME:-chat-reader}
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
+      IMPORT_STORAGE_DIR: /workspace/apps/api/storage/imports
+    volumes:
+      - .:/workspace
+    depends_on:
+      chat-reader-postgres:
+        condition: service_healthy
+
   chat-reader-web:
     image: node:20-alpine
     container_name: chat-reader-web

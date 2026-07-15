@@ -1,24 +1,26 @@
 # 项目当前状态
 
-更新日期：2026-07-12。
+更新日期：2026-07-15。
 
 本文是后续开发者和 AI 的当前实现快照。功能事实以代码、Alembic migration 和自动化测试为最终依据。
 
 ## 当前基线
 
 - Web：Next.js 14 App Router，浏览器使用相对 `/api/*`，Next.js 服务端通过 `API_INTERNAL_URL` 转发到 FastAPI。
-- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260707_0005`。
-- 最近完整后端测试基线：116 tests passed；前端 typecheck、lint 和 production build 已通过。
-- 生产部署文件已包含 PostgreSQL、migration、API、Web、Nginx 示例和数据库备份脚本。
+- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260715_0006`。
+- 最近完整后端测试基线：121 tests passed；前端 typecheck、lint 和 production build 已通过。
+- 生产部署文件已包含 PostgreSQL、migration、API、单并发 import worker、Web、Nginx 示例和数据库备份脚本。
 
 ## 已实现
 
 ### 导入与 canonical 数据
 
-- 导入预览、warning、raw source artifact 保存和 commit 流程。
+- 导入预览、warning、raw source artifact 保存、持久化队列、阶段进度、失败重试和自动发布。
 - ChatGPT Exporter JSON、Markdown 及组合导入。
 - 官方 conversations JSON primary path 导入；源节点引用仍被保留，但 UI 不展示分支切换。
 - 消息、不可变 MessageVersion、RenderBlock、Heading 和 SearchDocument 持久化。
+- PostgreSQL COPY 批量写入；import commit 快速返回 `202`，worker 使用 heartbeat 和 stale recovery。
+- exporter 带属性的 fenced code、长 fence 和 tilde fence 可正确生成 code blocks。
 - assistant 开头明显的 exporter thinking summary 在导入时清理；历史内容有前端折叠兜底。
 
 ### 阅读与导航
@@ -46,7 +48,7 @@
 - TanStack Virtual 等真正的消息虚拟滚动；当前是窗口加载和 DOM 增量渲染。
 - HTML/PDF/Project 打包导出。
 - Tag、Bookmark、笔记系统和语义/向量搜索。
-- Job Worker、批量 blocks API 和持久化后台任务队列。
+- 批量 blocks read API 和通用后台 Job 框架；当前只有专用 import worker。
 - 通用 UndoToast；部分操作可通过现有 restore/archive API恢复。
 - 在线聊天、SSE streaming、重新生成、工具调用持久化和回答分支 UI。
 - 私有会话离线缓存；service worker 不缓存 `/api/*` 或会话正文。

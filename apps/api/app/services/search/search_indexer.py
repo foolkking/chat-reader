@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import insert, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -9,6 +9,7 @@ from app.models.heading import Heading
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.search_document import SearchDocument
+from app.services.database.bulk_insert import insert_rows
 from app.services.toc.toc_builder import rebuild_headings_for_all, rebuild_headings_for_conversation
 
 
@@ -60,7 +61,8 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         indexed_count += 1
 
     for message, version in _message_version_rows(db, conversation.id):
-        search_text = " ".join([message.role, version.display_text, version.plain_text]).strip()
+        canonical_body = version.display_text.strip() or version.plain_text.strip()
+        search_text = f"{message.role} {canonical_body}".strip()
         if not search_text:
             continue
         document_rows.append(
@@ -84,7 +86,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         )
         indexed_count += 1
         if len(document_rows) >= 500:
-            db.execute(insert(SearchDocument), document_rows)
+            insert_rows(db, SearchDocument, document_rows)
             document_rows.clear()
 
     for heading in db.query(Heading).filter(Heading.conversation_id == conversation.id).yield_per(500):
@@ -107,11 +109,11 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         )
         indexed_count += 1
         if len(document_rows) >= 500:
-            db.execute(insert(SearchDocument), document_rows)
+            insert_rows(db, SearchDocument, document_rows)
             document_rows.clear()
 
     if document_rows:
-        db.execute(insert(SearchDocument), document_rows)
+        insert_rows(db, SearchDocument, document_rows)
 
     db.flush()
     _refresh_postgres_tsv(db, conversation.id)

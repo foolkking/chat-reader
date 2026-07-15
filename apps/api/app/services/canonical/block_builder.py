@@ -1,4 +1,5 @@
 import re
+import shlex
 from dataclasses import dataclass
 
 
@@ -12,7 +13,7 @@ class RenderBlockDraft:
     render_priority: int = 0
 
 
-FENCE_RE = re.compile(r"^```(?P<language>[A-Za-z0-9_-]*)\s*$")
+FENCE_OPEN_RE = re.compile(r"^(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
 THINKING_RE = re.compile(
     r"^\s*(?:>\s*)?(?:已思考|思考了|思考)\s*"
@@ -33,6 +34,9 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
     code_lines: list[str] = []
     in_code = False
     code_language = ""
+    code_metadata: dict[str, str] = {}
+    fence_character = ""
+    fence_length = 0
 
     def flush_paragraph() -> None:
         if not paragraph_lines:
@@ -51,30 +55,40 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
             )
 
     for line in display_text.splitlines():
-        fence = FENCE_RE.match(line.strip())
-        if fence:
-            if in_code:
+        stripped = line.strip()
+        if in_code:
+            if _is_closing_fence(stripped, fence_character, fence_length):
                 code_text = "\n".join(code_lines)
+                data = {"language": code_language, "code": code_text}
+                if code_metadata:
+                    data["metadata"] = code_metadata
                 blocks.append(
                     RenderBlockDraft(
                         block_type="code",
                         plain_text=code_text,
-                        data={"language": code_language, "code": code_text},
+                        data=data,
                         char_count=len(code_text),
                         render_priority=1,
                     )
                 )
                 code_lines = []
                 code_language = ""
+                code_metadata = {}
+                fence_character = ""
+                fence_length = 0
                 in_code = False
-            else:
-                flush_paragraph()
-                in_code = True
-                code_language = fence.group("language") or ""
+                continue
+            code_lines.append(line)
             continue
 
-        if in_code:
-            code_lines.append(line)
+        fence = FENCE_OPEN_RE.match(stripped)
+        if fence:
+            flush_paragraph()
+            marker = fence.group("marker")
+            code_language, code_metadata = _parse_info_string(fence.group("info"))
+            fence_character = marker[0]
+            fence_length = len(marker)
+            in_code = True
             continue
 
         heading = HEADING_RE.match(line)
@@ -99,11 +113,14 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
 
     if in_code:
         code_text = "\n".join(code_lines)
+        data = {"language": code_language, "code": code_text, "closed": False}
+        if code_metadata:
+            data["metadata"] = code_metadata
         blocks.append(
             RenderBlockDraft(
                 block_type="code",
                 plain_text=code_text,
-                data={"language": code_language, "code": code_text, "closed": False},
+                data=data,
                 char_count=len(code_text),
                 render_priority=1,
             )
@@ -116,3 +133,32 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
 def _looks_like_thinking_block(text: str) -> bool:
     first_line = next((line for line in text.splitlines() if line.strip()), "")
     return bool(THINKING_RE.match(first_line.strip()))
+
+
+def _is_closing_fence(line: str, character: str, minimum_length: int) -> bool:
+    if not line or line[0] != character:
+        return False
+    marker_length = len(line) - len(line.lstrip(character))
+    return marker_length >= minimum_length and not line[marker_length:].strip()
+
+
+def _parse_info_string(info: str) -> tuple[str, dict[str, str]]:
+    raw = info.strip()
+    if not raw:
+        return "", {}
+    try:
+        tokens = shlex.split(raw)
+    except ValueError:
+        tokens = raw.split()
+    if not tokens:
+        return "", {}
+
+    language = tokens[0].strip().lower()
+    metadata: dict[str, str] = {}
+    for token in tokens[1:]:
+        if "=" not in token:
+            continue
+        key, value = token.split("=", 1)
+        if key and value:
+            metadata[key] = value
+    return language, metadata

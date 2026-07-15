@@ -7,6 +7,7 @@ import { useState } from "react";
 import { createProject, getConversations, getProjects } from "../../lib/api";
 import type { ConversationListItem } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
+import { ImportTaskMonitor } from "../import/import-task-monitor";
 
 export function ProjectSidebar({
   currentProjectId,
@@ -89,6 +90,8 @@ export function ProjectSidebar({
         cr
       </button>
 
+      <ImportTaskMonitor placement="mobile" />
+
       {showMobileDrawer ? (
         <div className="fixed inset-0 z-50 md:hidden">
           <button
@@ -166,6 +169,8 @@ function SidebarContent({
         >
           + Import
         </button>
+
+        <ImportTaskMonitor placement="sidebar" />
 
         <nav className="space-y-1">
           <NavLink href="/" label="All Conversations" active={pathname === "/"} onClick={closeMobile} />

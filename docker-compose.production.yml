@@ -67,6 +67,22 @@ services:
     networks:
       - backend
 
+  import-worker:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.import_worker"]
+    environment: *api-environment
+    volumes:
+      - import-storage:/data/imports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - backend
+
   web:
     build:
       context: .

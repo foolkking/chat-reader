@@ -1,4 +1,5 @@
 from enum import StrEnum
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -106,3 +107,22 @@ class SourceArtifactRead(BaseModel):
 class ImportWarningsResponse(BaseModel):
     import_id: UUID
     warnings: list[str]
+
+
+class ImportStatusResponse(BaseModel):
+    import_id: UUID
+    status: str
+    phase: str
+    progress: int = Field(ge=0, le=100)
+    processed_messages: int
+    total_messages: int
+    conversation_ids: list[UUID] = Field(default_factory=list)
+    conversation_count: int = 0
+    message_count: int = 0
+    filename: str | None = None
+    error_message: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    queued_at: datetime | None = None
+    started_at: datetime | None = None
+    heartbeat_at: datetime | None = None
+    completed_at: datetime | None = None

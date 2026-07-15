@@ -72,4 +72,6 @@ def test_duplicate_commit_returns_400(client: TestClient) -> None:
     import_id = preview.json()["import_id"]
 
     assert client.post(f"/api/imports/{import_id}/commit").status_code == 200
-    assert client.post(f"/api/imports/{import_id}/commit").status_code == 400
+    repeated = client.post(f"/api/imports/{import_id}/commit")
+    assert repeated.status_code == 200
+    assert repeated.json()["conversation_ids"]

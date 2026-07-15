@@ -8,6 +8,7 @@ import type {
   ConversationTransformResponse,
   HealthResponse,
   ImportPreviewResponse,
+  ImportStatusResponse,
   MessageEditResponse,
   MessageListItem,
   MessageMergeResponse,
@@ -233,6 +234,14 @@ export async function commitImport(importId: string): Promise<CommitImportRespon
   return fetchJson<CommitImportResponse>(`/api/imports/${importId}/commit`, {
     method: "POST",
   });
+}
+
+export async function getActiveImports(): Promise<ImportStatusResponse[]> {
+  return fetchJson<ImportStatusResponse[]>("/api/imports/active");
+}
+
+export async function getImportStatus(importId: string): Promise<ImportStatusResponse> {
+  return fetchJson<ImportStatusResponse>(`/api/imports/${importId}/status`);
 }
 
 export async function getProjects(): Promise<ProjectRead[]> {

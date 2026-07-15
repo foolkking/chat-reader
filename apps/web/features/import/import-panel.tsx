@@ -36,6 +36,10 @@ export function ImportPanel() {
     mutationFn: commitImport,
     onSuccess: (result) => {
       setCommitResult(result);
+      queryClient.setQueryData<CommitImportResponse[]>(["active-imports"], (current = []) => [
+        result,
+        ...current.filter((task) => task.import_id !== result.import_id),
+      ]);
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       void queryClient.invalidateQueries({ queryKey: ["project-conversations"] });
@@ -107,10 +111,11 @@ export function ImportPanel() {
       {commitResult ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
           <p className="font-medium">
-            Imported {commitResult.conversation_count} conversation
-            {commitResult.conversation_count === 1 ? "" : "s"} with {commitResult.message_count} messages.
+            {commitResult.status === "committed"
+              ? `Imported ${commitResult.conversation_count} conversation${commitResult.conversation_count === 1 ? "" : "s"} with ${commitResult.message_count} messages.`
+              : "Import queued. You can close this dialog and follow progress in the sidebar."}
           </p>
-          {commitResult.conversation_ids[0] ? (
+          {commitResult.status === "committed" && commitResult.conversation_ids[0] ? (
             <Link
               href={`/conversations/${commitResult.conversation_ids[0]}`}
               data-testid="open-imported-conversation-link"

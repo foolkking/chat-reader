@@ -16,7 +16,11 @@
 | POST | `/api/imports/preview` | multipart 上传并返回识别、preview 和 warnings |
 | GET | `/api/imports/{import_id}/source-artifacts` | 查看 source artifact 元数据 |
 | GET | `/api/imports/{import_id}/warnings` | 查看导入 warning |
-| POST | `/api/imports/{import_id}/commit` | 提交 preview 对应的 canonical 导入 |
+| POST | `/api/imports/{import_id}/commit` | 幂等排队；queued/processing 返回 `202`，committed 返回 `200` |
+| GET | `/api/imports/{import_id}/status` | 查询阶段、百分比、消息进度、结果或错误 |
+| GET | `/api/imports/active` | 返回 queued、processing 和待处理 failed 任务 |
+
+Import 状态为 `previewed / queued / processing / committed / failed`。failed 任务可再次调用 commit 重试；worker 超过五分钟没有 heartbeat 时会自动重新排队。
 
 ## Conversations
 

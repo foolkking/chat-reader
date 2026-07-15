@@ -145,7 +145,11 @@ def list_project_conversations(
     return (
         db.query(ProjectConversation)
         .join(ProjectConversation.conversation)
-        .filter(ProjectConversation.project_id == project_id, Conversation.deleted_at.is_(None))
+        .filter(
+            ProjectConversation.project_id == project_id,
+            Conversation.deleted_at.is_(None),
+            Conversation.status.in_(("active", "archived")),
+        )
         .order_by(
             ProjectConversation.is_pinned.desc(),
             ProjectConversation.pinned_at.desc(),

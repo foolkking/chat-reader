@@ -46,6 +46,7 @@ Set-Location ../..
 ```powershell
 corepack pnpm run dev:api
 corepack pnpm run dev:web
+corepack pnpm run dev:worker
 ```
 
 打开 `http://localhost:3000`。局域网访问时仍使用 Web 的 3000 端口，业务请求通过同源 `/api/*` 代理，不需要让浏览器直接访问 8000 端口。
@@ -62,4 +63,4 @@ corepack pnpm run test:api
 
 ## 当前边界
 
-当前没有认证或多用户隔离、真正的虚拟滚动、HTML/PDF 导出、标签/收藏、语义搜索、后台 Job Worker 和离线会话缓存。部署到公网前应通过反向代理增加 HTTPS 和访问控制。
+当前没有认证或多用户隔离、真正的虚拟滚动、HTML/PDF 导出、标签/收藏、语义搜索、通用后台 Job 框架和离线会话缓存。现有后台能力仅包含 PostgreSQL 驱动的专用 import worker。部署到公网前应通过反向代理增加 HTTPS 和访问控制。

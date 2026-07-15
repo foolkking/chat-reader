@@ -134,7 +134,20 @@ export type CommitImportResponse = {
   conversation_count: number;
   message_count: number;
   warnings: string[];
+  phase: string;
+  progress: number;
+  processed_messages: number;
+  total_messages: number;
+  filename?: string | null;
+  error_message?: string | null;
+  queued_at?: string | null;
+  started_at?: string | null;
+  heartbeat_at?: string | null;
+  completed_at?: string | null;
 };
+
+export type ImportStatusResponse = CommitImportResponse;
+export type ActiveImportTask = ImportStatusResponse;
 
 export type ProjectRead = {
   id: string;

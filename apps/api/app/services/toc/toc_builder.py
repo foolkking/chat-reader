@@ -2,7 +2,6 @@ import re
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -10,6 +9,7 @@ from app.models.heading import Heading
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
+from app.services.database.bulk_insert import insert_rows
 
 
 @dataclass(frozen=True)
@@ -57,12 +57,12 @@ def rebuild_headings_for_conversation(db: Session, conversation_id: uuid.UUID) -
             }
         )
         if len(heading_rows) >= 500:
-            db.execute(insert(Heading), heading_rows)
+            insert_rows(db, Heading, heading_rows)
             heading_rows.clear()
         heading_count += 1
 
     if heading_rows:
-        db.execute(insert(Heading), heading_rows)
+        insert_rows(db, Heading, heading_rows)
     db.flush()
     return TocBuildResult(conversation_count=1, heading_count=heading_count)
 

@@ -15,6 +15,24 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { BundledLanguage, ThemedToken } from "shiki";
 
+const SHIKI_LANGUAGES: BundledLanguage[] = [
+  "bash",
+  "css",
+  "html",
+  "javascript",
+  "json",
+  "jsx",
+  "markdown",
+  "powershell",
+  "python",
+  "sql",
+  "tsx",
+  "typescript",
+  "yaml",
+];
+const shikiTokenCache = new Map<string, ThemedToken[][]>();
+let shikiHighlighterPromise: ReturnType<typeof createCachedHighlighter> | null = null;
+
 type MarkdownSegment =
   | { kind: "markdown"; text: string }
   | { kind: "thinking"; label: string; text: string };
@@ -353,13 +371,9 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
           setFailed(true);
           return;
         }
-        const { codeToTokens } = await import("shiki");
-        const result = await codeToTokens(code, {
-          lang,
-          theme: "github-dark",
-        });
+        const result = await getShikiTokens(lang, code);
         if (!cancelled) {
-          setTokens(result.tokens);
+          setTokens(result);
           setFailed(false);
         }
       } catch {
@@ -398,6 +412,39 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
       <code>{code}</code>
     </pre>
   );
+}
+
+async function getShikiTokens(language: BundledLanguage, code: string): Promise<ThemedToken[][]> {
+  const key = `${language}:${hashCode(code)}`;
+  const cached = shikiTokenCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  shikiHighlighterPromise ??= createCachedHighlighter();
+  const highlighter = await shikiHighlighterPromise;
+  const result = highlighter.codeToTokens(code, { lang: language, theme: "github-dark" }).tokens;
+  if (shikiTokenCache.size >= 300) {
+    const oldestKey = shikiTokenCache.keys().next().value;
+    if (oldestKey) {
+      shikiTokenCache.delete(oldestKey);
+    }
+  }
+  shikiTokenCache.set(key, result);
+  return result;
+}
+
+async function createCachedHighlighter() {
+  const { createHighlighter } = await import("shiki");
+  return createHighlighter({ themes: ["github-dark"], langs: SHIKI_LANGUAGES });
+}
+
+function hashCode(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
 }
 
 function MermaidDiagram({ code }: SyntaxHighlighterProps) {

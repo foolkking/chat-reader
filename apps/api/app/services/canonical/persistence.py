@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Callable, TypeVar
 
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from app.models.render_block import RenderBlock
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.services.canonical.block_builder import build_basic_render_blocks
+from app.services.database.bulk_insert import insert_rows
 from app.services.import_pipeline.canonical_draft import (
     PARSER_VERSION,
     CanonicalDraftConversation,
@@ -31,7 +32,8 @@ from app.services.import_pipeline.official_json_parser import OfficialConversati
 from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
 from app.services.import_pipeline.official_primary_path import resolve_primary_path
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
-from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
+from app.services.search.search_indexer import rebuild_search_documents_for_conversation
+from app.services.toc.toc_builder import rebuild_headings_for_conversation
 
 
 class CommitImportError(ValueError):
@@ -95,7 +97,14 @@ class PersistableConversation:
     messages: list[PersistableMessage]
 
 
-def commit_import_preview(import_id: uuid.UUID, db: Session) -> CommitImportResult:
+ProgressCallback = Callable[[str, int, int, int], None]
+
+
+def commit_import_preview(
+    import_id: uuid.UUID,
+    db: Session,
+    progress_callback: ProgressCallback | None = None,
+) -> CommitImportResult:
     import_record = db.get(ImportRecord, import_id)
     if import_record is None:
         raise CommitImportError("Import record not found.")
@@ -111,9 +120,13 @@ def commit_import_preview(import_id: uuid.UUID, db: Session) -> CommitImportResu
     if not artifacts:
         raise CommitImportError("Import has no source artifacts to commit.")
 
+    _report(progress_callback, "parsing", 3, 0, 0)
     persistable = _build_persistable_conversations(import_id, artifacts)
     if not persistable:
         raise CommitImportError("No supported canonical conversation could be built from this import.")
+
+    total_expected_messages = sum(len(draft.messages) for draft in persistable)
+    _report(progress_callback, "persisting", 10, 0, total_expected_messages)
 
     conversation_ids: list[uuid.UUID] = []
     total_messages = 0
@@ -121,16 +134,45 @@ def commit_import_preview(import_id: uuid.UUID, db: Session) -> CommitImportResu
     default_project = ensure_default_project(db)
 
     for conversation_draft in persistable:
-        conversation = _persist_conversation(import_record, artifacts, conversation_draft, db)
+        conversation = _persist_conversation(
+            import_record,
+            artifacts,
+            conversation_draft,
+            db,
+            progress_callback=progress_callback,
+            processed_before=total_messages,
+            total_messages=total_expected_messages,
+        )
         add_conversation_to_project(db, default_project.id, conversation.id, added_by="system")
-        rebuild_search_and_toc_for_conversation(db, conversation.id)
         conversation_ids.append(conversation.id)
         total_messages += conversation.message_count
         all_warnings.extend(conversation_draft.warnings)
 
+    for index, conversation_id in enumerate(conversation_ids, start=1):
+        _report(progress_callback, "headings", 75 + round(10 * (index - 1) / max(len(conversation_ids), 1)), total_messages, total_expected_messages)
+        rebuild_headings_for_conversation(db, conversation_id)
+    _report(progress_callback, "headings", 85, total_messages, total_expected_messages)
+
+    for index, conversation_id in enumerate(conversation_ids, start=1):
+        _report(progress_callback, "search", 85 + round(13 * (index - 1) / max(len(conversation_ids), 1)), total_messages, total_expected_messages)
+        rebuild_search_documents_for_conversation(db, conversation_id)
+    _report(progress_callback, "search", 98, total_messages, total_expected_messages)
+
+    for conversation_id in conversation_ids:
+        conversation = db.get(Conversation, conversation_id)
+        if conversation is not None:
+            conversation.status = "active"
+
     import_record.conversation_id = conversation_ids[0] if conversation_ids else None
     import_record.status = "committed"
+    import_record.phase = "completed"
+    import_record.progress = 100
+    import_record.processed_messages = total_messages
+    import_record.total_messages = total_expected_messages
     import_record.committed_at = datetime.now(timezone.utc)
+    import_record.completed_at = import_record.committed_at
+    import_record.heartbeat_at = import_record.committed_at
+    import_record.error_message = None
     import_record.warnings = list(dict.fromkeys((import_record.warnings or []) + all_warnings))
     db.commit()
 
@@ -290,6 +332,10 @@ def _persist_conversation(
     artifacts: list[SourceArtifact],
     draft: PersistableConversation,
     db: Session,
+    *,
+    progress_callback: ProgressCallback | None = None,
+    processed_before: int = 0,
+    total_messages: int = 0,
 ) -> Conversation:
     conversation = Conversation(
         id=uuid.uuid4(),
@@ -298,7 +344,7 @@ def _persist_conversation(
         source_type=draft.source_type,
         source_profile=draft.source_profile,
         external_source_id=draft.external_source_id,
-        status="active",
+        status="importing",
         created_at=draft.created_at,
         updated_at=draft.updated_at,
         imported_at=draft.imported_at,
@@ -313,7 +359,14 @@ def _persist_conversation(
     db.add(conversation)
     db.flush()
 
-    _persist_messages(conversation, draft.messages, db)
+    _persist_messages(
+        conversation,
+        draft.messages,
+        db,
+        progress_callback=progress_callback,
+        processed_before=processed_before,
+        total_messages=total_messages,
+    )
 
     event_payload = {
         "import_id": str(import_record.id),
@@ -340,44 +393,41 @@ def _persist_messages(
     conversation: Conversation,
     drafts: list[PersistableMessage],
     db: Session,
+    *,
+    progress_callback: ProgressCallback | None = None,
+    processed_before: int = 0,
+    total_messages: int = 0,
 ) -> None:
-    prepared: list[tuple[PersistableMessage, uuid.UUID, uuid.UUID, int, int]] = []
-    message_rows: list[dict] = []
-
-    for draft in drafts:
-        message_id = uuid.uuid4()
-        version_id = uuid.uuid4()
-        char_count = len(draft.display_text)
-        block_count = len(build_basic_render_blocks(draft.display_text))
-        prepared.append((draft, message_id, version_id, char_count, block_count))
-        message_rows.append(
-            {
-                "id": message_id,
-                "conversation_id": conversation.id,
-                "role": draft.role,
-                "order_key": draft.order_key,
-                "turn_index": draft.turn_index,
-                "created_at": draft.created_at,
-                "current_version_id": version_id,
-                "created_by": "import",
-                "source_type": "import",
-                "content_hash": draft.content_hash,
-                "block_count": block_count,
-                "char_count": char_count,
-                "is_heavy": char_count > 12000 or block_count > 80,
-            }
-        )
-
-    if message_rows:
-        db.execute(insert(Message), message_rows)
-
-    for batch in _batches(prepared, 25):
+    completed = 0
+    for batch in _batches(drafts, 25):
+        message_rows: list[dict] = []
         version_rows: list[dict] = []
         block_rows: list[dict] = []
         source_ref_rows: list[dict] = []
 
-        for draft, message_id, version_id, _, _ in batch:
+        for draft in batch:
+            message_id = uuid.uuid4()
+            version_id = uuid.uuid4()
             block_drafts = build_basic_render_blocks(draft.display_text)
+            char_count = len(draft.display_text)
+            block_count = len(block_drafts)
+            message_rows.append(
+                {
+                    "id": message_id,
+                    "conversation_id": conversation.id,
+                    "role": draft.role,
+                    "order_key": draft.order_key,
+                    "turn_index": draft.turn_index,
+                    "created_at": draft.created_at,
+                    "current_version_id": version_id,
+                    "created_by": "import",
+                    "source_type": "import",
+                    "content_hash": draft.content_hash,
+                    "block_count": block_count,
+                    "char_count": char_count,
+                    "is_heavy": char_count > 12000 or block_count > 80,
+                }
+            )
             version_rows.append(
                 {
                     "id": version_id,
@@ -385,16 +435,7 @@ def _persist_messages(
                     "version_number": 1,
                     "plain_text": draft.plain_text,
                     "display_text": draft.display_text,
-                    "blocks": [
-                        {
-                            "block_index": index,
-                            "block_type": block.block_type,
-                            "plain_text": block.plain_text,
-                            "data": block.data,
-                            "char_count": block.char_count,
-                        }
-                        for index, block in enumerate(block_drafts)
-                    ],
+                    "blocks": [],
                     "edit_type": draft.edit_type,
                     "created_by": "import",
                     "content_hash": draft.content_hash,
@@ -432,14 +473,30 @@ def _persist_messages(
                 }
             )
 
+        db.execute(insert(Message), message_rows)
         db.execute(insert(MessageVersion), version_rows)
         for block_batch in _batches(block_rows, 500):
-            db.execute(insert(RenderBlock), block_batch)
+            insert_rows(db, RenderBlock, block_batch)
         db.execute(insert(SourceMessageRef), source_ref_rows)
+        completed += len(batch)
+        processed = processed_before + completed
+        progress = 10 + round(65 * processed / max(total_messages, 1))
+        _report(progress_callback, "persisting", min(progress, 75), processed, total_messages)
 
 
 def _batches(items: list[T], size: int) -> list[list[T]]:
     return [items[index : index + size] for index in range(0, len(items), size)]
+
+
+def _report(
+    callback: ProgressCallback | None,
+    phase: str,
+    progress: int,
+    processed_messages: int,
+    total_messages: int,
+) -> None:
+    if callback is not None:
+        callback(phase, progress, processed_messages, total_messages)
 
 
 def _read_artifact(import_id: uuid.UUID, artifact: SourceArtifact | None) -> bytes:

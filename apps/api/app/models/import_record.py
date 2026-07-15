@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Uuid
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -19,6 +19,10 @@ class ImportRecord(Base):
     source_profile: Mapped[str] = mapped_column(String, nullable=False)
     source_fingerprint: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="previewed")
+    phase: Mapped[str] = mapped_column(String, nullable=False, default="previewed")
+    progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    processed_messages: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_messages: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     alignment_status: Mapped[str] = mapped_column(String, nullable=False, default="not_applicable")
     warnings: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     json_filename: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -33,6 +37,12 @@ class ImportRecord(Base):
         nullable=True,
     )
     committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -46,3 +56,6 @@ class ImportRecord(Base):
         back_populates="import_record",
         cascade="all, delete-orphan",
     )
+
+
+Index("idx_imports_status_queued_at", ImportRecord.status, ImportRecord.queued_at)

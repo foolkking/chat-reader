@@ -44,7 +44,10 @@ def list_conversations(
     include_archived: bool = False,
     db: Session = Depends(get_db),
 ) -> list[ConversationListItem]:
-    query = db.query(Conversation).filter(Conversation.deleted_at.is_(None))
+    query = db.query(Conversation).filter(
+        Conversation.deleted_at.is_(None),
+        Conversation.status.in_(("active", "archived")),
+    )
     if not include_archived:
         query = query.filter(Conversation.status != "archived")
     if source_type:

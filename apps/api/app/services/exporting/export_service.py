@@ -181,11 +181,11 @@ def _message_payload(db: Session, message: Message, version: MessageVersion, inc
         "order_key": message.order_key,
         "turn_index": message.turn_index,
         "created_at": _dt(message.created_at),
-        "current_version": _version_payload(version),
+        "current_version": _version_payload(db, version),
     }
     if include_versions:
         payload["versions"] = [
-            _version_payload(row)
+            _version_payload(db, row)
             for row in (
                 db.query(MessageVersion)
                 .filter(MessageVersion.message_id == message.id)
@@ -196,13 +196,30 @@ def _message_payload(db: Session, message: Message, version: MessageVersion, inc
     return payload
 
 
-def _version_payload(version: MessageVersion) -> dict:
+def _version_payload(db: Session, version: MessageVersion) -> dict:
+    blocks = (
+        db.query(RenderBlock)
+        .filter(RenderBlock.message_version_id == version.id)
+        .order_by(RenderBlock.block_index.asc())
+        .all()
+    )
     return {
         "id": str(version.id),
         "version_number": version.version_number,
         "plain_text": version.plain_text,
         "display_text": version.display_text,
-        "blocks": version.blocks,
+        "blocks": [
+            {
+                "block_index": block.block_index,
+                "block_type": block.block_type,
+                "plain_text": block.plain_text,
+                "data": block.data,
+                "char_count": block.char_count,
+                "collapsed_by_default": block.collapsed_by_default,
+                "render_priority": block.render_priority,
+            }
+            for block in blocks
+        ],
         "edit_type": version.edit_type,
         "edit_reason": version.edit_reason,
         "created_at": _dt(version.created_at),

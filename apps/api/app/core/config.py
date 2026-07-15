@@ -21,6 +21,9 @@ class Settings(BaseSettings):
         alias="IMPORT_STORAGE_DIR",
     )
     public_web_base_url: str = Field(default="http://localhost:3000", alias="PUBLIC_WEB_BASE_URL")
+    import_commit_inline: bool = Field(default=False, alias="IMPORT_COMMIT_INLINE")
+    import_worker_poll_seconds: float = Field(default=1.0, alias="IMPORT_WORKER_POLL_SECONDS")
+    import_stale_after_seconds: int = Field(default=300, alias="IMPORT_STALE_AFTER_SECONDS")
 
     model_config = SettingsConfigDict(
         env_file=".env",

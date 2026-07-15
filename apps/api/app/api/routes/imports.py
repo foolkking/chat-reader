@@ -1,18 +1,21 @@
 import uuid
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.import_record import ImportRecord
+from app.models.conversation import Conversation
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import (
     ConversationPreview,
     ImportPreviewFile,
     ImportPreviewResponse,
     ImportWarningsResponse,
+    ImportStatusResponse,
     MessagePreview,
     SourceDetectionResult,
     SourceArtifactRead,
@@ -20,6 +23,12 @@ from app.schemas.import_schema import (
 )
 from app.schemas.canonical import CommitImportResponse
 from app.services.canonical.persistence import CommitImportError, commit_import_preview
+from app.services.import_queue import (
+    ACTIVE_IMPORT_STATUSES,
+    conversation_ids_for_import,
+    primary_filename,
+    queue_import,
+)
 from app.services.import_pipeline.canonical_draft import preview_text
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
@@ -196,8 +205,45 @@ def get_import_warnings(import_id: uuid.UUID, db: Session = Depends(get_db)) -> 
     return ImportWarningsResponse(import_id=import_record.id, warnings=import_record.warnings)
 
 
-@router.post("/{import_id}/commit", response_model=CommitImportResponse)
-def commit_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -> CommitImportResponse:
+@router.get("/active", response_model=list[ImportStatusResponse])
+def list_active_imports(db: Session = Depends(get_db)) -> list[ImportStatusResponse]:
+    records = (
+        db.query(ImportRecord)
+        .filter(ImportRecord.status.in_((*ACTIVE_IMPORT_STATUSES, "failed")))
+        .order_by(ImportRecord.queued_at.asc(), ImportRecord.created_at.asc())
+        .limit(20)
+        .all()
+    )
+    return [_import_status(record, db) for record in records]
+
+
+@router.get("/{import_id}/status", response_model=ImportStatusResponse)
+def get_import_status(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportStatusResponse:
+    return _import_status(_get_import_or_404(import_id, db), db)
+
+
+@router.post("/{import_id}/commit", response_model=CommitImportResponse, status_code=status.HTTP_202_ACCEPTED)
+def commit_import(
+    import_id: uuid.UUID,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> CommitImportResponse:
+    import_record = _get_import_or_404(import_id, db)
+    if import_record.status == "committed":
+        response.status_code = status.HTTP_200_OK
+        return _commit_response(import_record, db)
+
+    queue_import(import_record, db)
+    db.commit()
+
+    if not get_settings().import_commit_inline:
+        return _commit_response(import_record, db)
+
+    import_record.status = "processing"
+    import_record.phase = "parsing"
+    import_record.started_at = datetime.now(timezone.utc)
+    import_record.heartbeat_at = import_record.started_at
+    db.commit()
     try:
         result = commit_import_preview(import_id, db)
     except CommitImportError as exc:
@@ -210,14 +256,9 @@ def commit_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -> Commit
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Import commit could not be saved.",
         ) from exc
-    return CommitImportResponse(
-        import_id=result.import_id,
-        status=result.status,
-        conversation_ids=result.conversation_ids,
-        conversation_count=result.conversation_count,
-        message_count=result.message_count,
-        warnings=result.warnings,
-    )
+    response.status_code = status.HTTP_200_OK
+    db.refresh(import_record)
+    return _commit_response(import_record, db, result.message_count)
 
 
 def _get_import_or_404(import_id: uuid.UUID, db: Session) -> ImportRecord:
@@ -225,6 +266,43 @@ def _get_import_or_404(import_id: uuid.UUID, db: Session) -> ImportRecord:
     if import_record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Import record not found.")
     return import_record
+
+
+def _import_status(record: ImportRecord, db: Session) -> ImportStatusResponse:
+    conversation_ids = conversation_ids_for_import(db, record)
+    message_count = _message_count(db, conversation_ids)
+    return ImportStatusResponse(
+        import_id=record.id,
+        status=record.status,
+        phase=record.phase,
+        progress=record.progress,
+        processed_messages=record.processed_messages,
+        total_messages=record.total_messages,
+        conversation_ids=conversation_ids,
+        conversation_count=len(conversation_ids),
+        message_count=message_count,
+        filename=primary_filename(record),
+        error_message=record.error_message,
+        warnings=record.warnings or [],
+        queued_at=record.queued_at,
+        started_at=record.started_at,
+        heartbeat_at=record.heartbeat_at,
+        completed_at=record.completed_at,
+    )
+
+
+def _commit_response(record: ImportRecord, db: Session, message_count: int | None = None) -> CommitImportResponse:
+    task = _import_status(record, db)
+    payload = task.model_dump()
+    payload["message_count"] = message_count if message_count is not None else task.message_count
+    return CommitImportResponse(**payload)
+
+
+def _message_count(db: Session, conversation_ids: list[uuid.UUID]) -> int:
+    if not conversation_ids:
+        return 0
+    rows = db.query(Conversation.message_count).filter(Conversation.id.in_(conversation_ids)).all()
+    return sum(row[0] for row in rows)
 
 
 def _extension(filename: str) -> str:

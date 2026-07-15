@@ -6,6 +6,7 @@
   "scripts": {
     "dev:web": "corepack pnpm --filter web dev -H 0.0.0.0 -p 3000",
     "dev:api": "cd apps/api && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:worker": "cd apps/api && python -m app.workers.import_worker",
     "lint": "pnpm --filter web lint",
     "typecheck": "pnpm --filter web typecheck",
     "test:api": "cd apps/api && pytest",

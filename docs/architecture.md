@@ -8,6 +8,8 @@ flowchart LR
   W -->|API_INTERNAL_URL| A[FastAPI]
   A --> P[(PostgreSQL)]
   A --> S[(Import storage)]
+  Q[Import worker] -->|SKIP LOCKED| P
+  Q --> S
 ```
 
 浏览器始终请求 Web 当前 origin 下的 `/api/*`。Next.js rewrite 在服务端把请求转发给 FastAPI，因此 localhost、局域网和生产域名使用同一客户端代码，也不会把 `localhost:8000` 暴露给远端浏览器。
@@ -45,10 +47,14 @@ Conversation -> ConversationEvent / Share / ReadingPosition
 ## 导入流程
 
 ```text
-upload -> detect -> parse -> preview/warnings -> commit
-       -> align JSON/Markdown -> clean -> canonicalize
-       -> blocks/headings/search -> PostgreSQL
+upload -> detect -> parse preview/warnings -> enqueue (202)
+worker -> align JSON/Markdown -> clean -> canonicalize
+       -> blocks -> headings -> search -> atomic publish
 ```
+
+Import queue 持久化在 PostgreSQL。独立单并发 worker 使用 `FOR UPDATE SKIP LOCKED` 领取任务，并写入阶段、百分比、消息计数和 heartbeat；崩溃任务超过五分钟会重新排队。导入主体在 worker 事务中完成，conversation 在成功前保持 `importing`，不会进入列表、搜索或分享。
+
+大批量 `RenderBlock`、`Heading` 和 `SearchDocument` 在 PostgreSQL 使用 COPY；SQLite 测试使用 SQLAlchemy Core fallback。导入版本的 `MessageVersion.blocks` 保持兼容但写入空数组，正式 block 来源为 `render_blocks`，避免双份 JSON。
 
 raw artifact 存在受控 storage 中，只用于追踪和诊断。reader 和 share 页面不直接渲染 raw artifact。官方 conversations JSON 选择 primary path 形成线性阅读内容，分支节点引用仍可追踪。
 
