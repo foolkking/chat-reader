@@ -17,6 +17,10 @@ export function MessageItem({
   expandHeavyBlocks = false,
   cachedBlocks,
   onLoadBlocks,
+  hasPreviousBlocks = false,
+  hasMoreBlocks = false,
+  onLoadPreviousBlocks,
+  onLoadMoreBlocks,
 }: {
   message: MessageListItem;
   onChanged?: () => Promise<void> | void;
@@ -27,10 +31,16 @@ export function MessageItem({
   expandHeavyBlocks?: boolean;
   cachedBlocks?: RenderBlockRead[];
   onLoadBlocks?: (messageId: string) => Promise<RenderBlockRead[]>;
+  hasPreviousBlocks?: boolean;
+  hasMoreBlocks?: boolean;
+  onLoadPreviousBlocks?: () => Promise<void>;
+  onLoadMoreBlocks?: () => Promise<void>;
 }) {
   const queryClient = useQueryClient();
   const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
   const [isLoadingHeavyBlocks, setIsLoadingHeavyBlocks] = useState(false);
+  const [isLoadingPreviousBlocks, setIsLoadingPreviousBlocks] = useState(false);
+  const [isLoadingMoreBlocks, setIsLoadingMoreBlocks] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSplitting, setIsSplitting] = useState(false);
   const [showSplitPanel, setShowSplitPanel] = useState(false);
@@ -232,7 +242,39 @@ export function MessageItem({
               </button>
             </div>
               ) : (
-                <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
+                <>
+                  {hasPreviousBlocks ? (
+                    <BlockPageButton
+                      label="Load previous blocks"
+                      loadingLabel="Loading previous blocks"
+                      loading={isLoadingPreviousBlocks}
+                      onClick={async () => {
+                        setIsLoadingPreviousBlocks(true);
+                        try {
+                          await onLoadPreviousBlocks?.();
+                        } finally {
+                          setIsLoadingPreviousBlocks(false);
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
+                  {hasMoreBlocks ? (
+                    <BlockPageButton
+                      label="Load more blocks"
+                      loadingLabel="Loading more blocks"
+                      loading={isLoadingMoreBlocks}
+                      onClick={async () => {
+                        setIsLoadingMoreBlocks(true);
+                        try {
+                          await onLoadMoreBlocks?.();
+                        } finally {
+                          setIsLoadingMoreBlocks(false);
+                        }
+                      }}
+                    />
+                  ) : null}
+                </>
               )}
             </>
           )}
@@ -251,6 +293,32 @@ export function MessageItem({
       ) : null}
       </div>
     </article>
+  );
+}
+
+function BlockPageButton({
+  label,
+  loadingLabel,
+  loading,
+  onClick,
+}: {
+  label: string;
+  loadingLabel: string;
+  loading: boolean;
+  onClick: () => Promise<void>;
+}) {
+  return (
+    <div className="my-4 flex justify-center">
+      <button
+        type="button"
+        disabled={loading}
+        onClick={() => void onClick()}
+        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
+      >
+        {loading ? <Spinner /> : null}
+        {loading ? loadingLabel : label}
+      </button>
+    </div>
   );
 }
 

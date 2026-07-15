@@ -149,13 +149,24 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               limit: 1,
               anchorMessageId: messageId,
             })).items.find((message) => message.id === messageId);
-          if (knownMessage && !messageHasInlineBlocks(knownMessage) && !blockCache[messageId]) {
-            const start = Math.max(0, blockIndex - 20);
-            const blocks = await getMessageBlocks(messageId, { start, limit: 200 });
+          const cachedBlocks = blockCache[messageId] ?? [];
+          const contextStart = Math.max(0, blockIndex - 20);
+          const contextEnd = Math.min(Math.max((knownMessage?.block_count ?? 1) - 1, 0), blockIndex + 20);
+          const cachedBounds = getBlockBounds(cachedBlocks);
+          const needsTargetWindow =
+            !cachedBlocks.some((block) => block.block_index === blockIndex) ||
+            cachedBounds === null ||
+            cachedBounds.min > contextStart ||
+            cachedBounds.max < contextEnd;
+          if (knownMessage && !messageHasInlineBlocks(knownMessage) && needsTargetWindow) {
+            const blocks = await getMessageBlocks(messageId, { start: contextStart, limit: 200 });
             if (navigationTokenRef.current !== token) {
               return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
             }
-            setBlockCache((current) => ({ ...current, [messageId]: blocks }));
+            setBlockCache((current) => ({
+              ...current,
+              [messageId]: mergeBlockWindows(current[messageId], blocks),
+            }));
           }
           setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
         }
@@ -331,8 +342,33 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       return [];
     }
     const blocks = await getMessageBlocks(message.id, { start: 0, limit: 200 });
-    setBlockCache((current) => ({ ...current, [message.id]: blocks }));
+    setBlockCache((current) => ({
+      ...current,
+      [message.id]: mergeBlockWindows(current[message.id], blocks),
+    }));
     return blocks;
+  }
+
+  async function loadAdjacentMessageBlocks(
+    message: MessageListItem,
+    direction: "previous" | "next",
+  ): Promise<void> {
+    const cached = blockCache[message.id] ?? [];
+    const bounds = getBlockBounds(cached);
+    if (!bounds) {
+      await ensureMessageBlocks(message);
+      return;
+    }
+    const start = direction === "previous" ? Math.max(0, bounds.min - 200) : bounds.max + 1;
+    const limit = direction === "previous" ? bounds.min - start : 200;
+    if (limit <= 0 || start >= message.block_count) {
+      return;
+    }
+    const blocks = await getMessageBlocks(message.id, { start, limit });
+    setBlockCache((current) => ({
+      ...current,
+      [message.id]: mergeBlockWindows(current[message.id], blocks),
+    }));
   }
 
   if (conversationQuery.isLoading) {
@@ -507,7 +543,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               {messages.length > 0 ? (
                 <div className="space-y-6">
                   <ReadingPositionClient conversationId={conversationId} messages={messages} />
-                  {messages.map((message) => (
+                  {messages.map((message) => {
+                    const cachedMessageBlocks = blockCache[message.id];
+                    const cachedBounds = getBlockBounds(cachedMessageBlocks ?? []);
+                    return (
                     <MessageItem
                       key={message.id}
                       message={message}
@@ -526,14 +565,19 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                         });
                       }}
                       expandHeavyBlocks={expandAllHeavyBlocks || expandedHeavyMessageIds.has(message.id)}
-                      cachedBlocks={blockCache[message.id]}
+                      cachedBlocks={cachedMessageBlocks}
+                      hasPreviousBlocks={Boolean(cachedBounds && cachedBounds.min > 0)}
+                      hasMoreBlocks={Boolean(cachedBounds && cachedBounds.max < message.block_count - 1)}
                       onLoadBlocks={async () => {
                         const blocks = await ensureMessageBlocks(message);
                         setExpandedHeavyMessageIds((current) => new Set(current).add(message.id));
                         return blocks;
                       }}
+                      onLoadPreviousBlocks={() => loadAdjacentMessageBlocks(message, "previous")}
+                      onLoadMoreBlocks={() => loadAdjacentMessageBlocks(message, "next")}
                     />
-                  ))}
+                    );
+                  })}
                   <div ref={loadMoreSentinelRef} className="flex min-h-12 items-center justify-center">
                     {hasMore && windowQuery.isFetching ? (
                       <span className="inline-flex items-center gap-2 text-sm text-[#6b7280]">
@@ -709,6 +753,33 @@ function messageHasInlineBlocks(message: MessageListItem): boolean {
     (message.render_blocks && message.render_blocks.length > 0) ||
       (message.current_version?.blocks && message.current_version.blocks.length > 0),
   );
+}
+
+function getBlockBounds(blocks: RenderBlockRead[]): { min: number; max: number } | null {
+  if (blocks.length === 0) {
+    return null;
+  }
+  let min = blocks[0].block_index;
+  let max = blocks[0].block_index;
+  for (const block of blocks) {
+    min = Math.min(min, block.block_index);
+    max = Math.max(max, block.block_index);
+  }
+  return { min, max };
+}
+
+function mergeBlockWindows(
+  current: RenderBlockRead[] | undefined,
+  incoming: RenderBlockRead[],
+): RenderBlockRead[] {
+  const byIndex = new Map<number, RenderBlockRead>();
+  for (const block of current ?? []) {
+    byIndex.set(block.block_index, block);
+  }
+  for (const block of incoming) {
+    byIndex.set(block.block_index, block);
+  }
+  return Array.from(byIndex.values()).sort((left, right) => left.block_index - right.block_index);
 }
 
 function getTargetElement(messageId: string, blockIndex?: number): HTMLElement | null {
