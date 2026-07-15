@@ -1,7 +1,12 @@
 import json
+import uuid
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import sessionmaker
 
+from app.core.database import get_db
+from app.main import app
+from app.services.background_jobs import claim_next_job, process_background_job
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -31,6 +36,21 @@ def _window(client: TestClient, conversation_id: str, **params) -> dict:
     response = client.get(f"/api/conversations/{conversation_id}/message-window", params=params)
     assert response.status_code == 200
     return response.json()
+
+
+def _complete_background_job(job_id: str) -> None:
+    override = app.dependency_overrides[get_db]
+    override_generator = override()
+    fixture_db = next(override_generator)
+    testing_session_local = sessionmaker(bind=fixture_db.get_bind(), autoflush=False, autocommit=False)
+    fixture_db.close()
+    override_generator.close()
+
+    with testing_session_local() as db:
+        claimed_id = claim_next_job(db)
+        assert claimed_id == uuid.UUID(job_id)
+        db.commit()
+    process_background_job(uuid.UUID(job_id), testing_session_local)
 
 
 def test_split_message_creates_inserted_message_version_event_and_reindex(client: TestClient) -> None:
@@ -124,11 +144,28 @@ def test_conversation_merge_and_split_create_new_conversations_without_modifying
     merge = client.post(
         "/api/conversations/merge",
         json={"conversation_ids": [first_id, second_id], "title": "Merged Sources"},
+        headers={"Idempotency-Key": "merge-forward"},
     )
-    assert merge.status_code == 200
-    merged_id = merge.json()["conversation_id"]
+    assert merge.status_code == 202
+    assert merge.json()["status"] == "queued"
+    forward_job_id = merge.json()["job_id"]
+
+    duplicate = client.post(
+        "/api/conversations/merge",
+        json={"conversation_ids": [first_id, second_id], "title": "Merged Sources"},
+        headers={"Idempotency-Key": "merge-forward"},
+    )
+    assert duplicate.status_code == 202
+    assert duplicate.json()["job_id"] == forward_job_id
+
+    _complete_background_job(forward_job_id)
+    completed = client.get(f"/api/tasks/{forward_job_id}")
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "committed"
+    assert completed.json()["progress"] == 100
+    merged_id = completed.json()["result"]["conversation_id"]
     assert merged_id not in {first_id, second_id}
-    assert merge.json()["message_count"] == 4
+    assert completed.json()["result"]["message_count"] == 4
     assert _window(client, first_id, limit=10)["total"] == 2
     assert _window(client, second_id, limit=10)["total"] == 2
 
@@ -144,8 +181,10 @@ def test_conversation_merge_and_split_create_new_conversations_without_modifying
         "/api/conversations/merge",
         json={"conversation_ids": [second_id, first_id], "title": "Reverse Merged Sources"},
     )
-    assert reverse_merge.status_code == 200
-    reverse_messages = _window(client, reverse_merge.json()["conversation_id"], limit=10)["items"]
+    assert reverse_merge.status_code == 202
+    _complete_background_job(reverse_merge.json()["job_id"])
+    reverse_task = client.get(f"/api/tasks/{reverse_merge.json()['job_id']}").json()
+    reverse_messages = _window(client, reverse_task["result"]["conversation_id"], limit=10)["items"]
     assert [message["current_version"]["display_text"] for message in reverse_messages] == [
         "second q",
         "second a",

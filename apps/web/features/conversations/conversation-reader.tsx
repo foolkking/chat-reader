@@ -49,6 +49,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [blockCache, setBlockCache] = useState<Record<string, RenderBlockRead[]>>({});
   const [expandAllHeavyBlocks, setExpandAllHeavyBlocks] = useState(false);
   const [expandProgress, setExpandProgress] = useState({ current: 0, total: 0, active: false });
+  const [initialPaintReady, setInitialPaintReady] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const nextOffsetRef = useRef(0);
@@ -83,7 +84,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     setBlockCache({});
     setExpandAllHeavyBlocks(false);
     setExpandProgress({ current: 0, total: 0, active: false });
+    setInitialPaintReady(false);
   }, [conversationId, targetMessageId]);
+
+  useEffect(() => {
+    if (!conversationQuery.isSuccess || !windowQuery.isSuccess) return;
+    const frame = window.requestAnimationFrame(() => setInitialPaintReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [conversationQuery.isSuccess, windowQuery.isSuccess]);
 
   useEffect(() => {
     if (!windowQuery.isSuccess) {
@@ -261,6 +269,13 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }, [messages]);
 
   const conversation = conversationQuery.data;
+  const loadingProgress = initialPaintReady
+    ? 100
+    : windowQuery.isSuccess
+      ? messages.length > 0 || windowQuery.data?.total === 0 ? 90 : 70
+      : conversationQuery.isSuccess
+        ? 25
+        : 10;
   const loadedLabel = useMemo(() => `${messages.length} / ${total} loaded`, [messages.length, total]);
   const selectedIds = useMemo(() => Array.from(selectedMessageIds), [selectedMessageIds]);
   const selectedOrderedIds = useMemo(
@@ -372,7 +387,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }
 
   if (conversationQuery.isLoading) {
-    return <ReaderState title="Loading conversation" detail="Fetching conversation metadata." />;
+    return <ReaderLoadingShell progress={loadingProgress} />;
   }
 
   if (conversationQuery.isError) {
@@ -388,6 +403,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       <ProjectSidebar />
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
+          {loadingProgress < 100 ? (
+            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[#e5e7eb]">
+              <div className="h-full bg-[#10a37f] transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
+            </div>
+          ) : null}
           <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 pl-16 md:px-6 md:pl-6">
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold text-[#111827]">
@@ -814,5 +834,27 @@ function ReaderState({
       <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
+  );
+}
+
+function ReaderLoadingShell({ progress }: { progress: number }) {
+  return (
+    <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]">
+      <ProjectSidebar />
+      <section className="relative min-w-0 flex-1 overflow-hidden">
+        <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-[#e5e7eb]">
+          <div className="h-full bg-[#10a37f] transition-[width] duration-300" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="mx-auto max-w-3xl animate-pulse space-y-10 px-3 py-20 sm:px-6">
+          <div className="h-5 w-48 rounded bg-[#e5e7eb]" />
+          <div className="ml-auto h-28 w-full rounded-2xl bg-[#ececeb] sm:w-2/3" />
+          <div className="space-y-3">
+            <div className="h-4 w-full rounded bg-[#e5e7eb]" />
+            <div className="h-4 w-5/6 rounded bg-[#e5e7eb]" />
+            <div className="h-4 w-3/4 rounded bg-[#e5e7eb]" />
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

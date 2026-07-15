@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from http import HTTPStatus
 
@@ -17,9 +18,14 @@ from app.services.canonical.block_builder import build_basic_render_blocks
 from app.services.import_pipeline.canonical_draft import PARSER_VERSION
 from app.services.import_pipeline.canonical_draft import content_hash
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
-from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
+from app.services.search.search_indexer import (
+    rebuild_search_and_toc_for_conversation,
+    rebuild_search_documents_for_conversation,
+)
+from app.services.toc.toc_builder import rebuild_headings_for_conversation
 
 MAX_EDIT_TEXT_LENGTH = 200_000
+MergeProgressCallback = Callable[[str, int, int, int], None]
 
 
 class MessageEditError(ValueError):
@@ -254,6 +260,7 @@ def merge_conversations(
     conversation_ids: list[uuid.UUID],
     title: str | None = None,
     project_id: uuid.UUID | None = None,
+    progress_callback: MergeProgressCallback | None = None,
 ) -> ConversationTransformResult:
     if len(conversation_ids) < 2:
         raise MessageEditError("At least two conversations are required for merge.")
@@ -270,16 +277,20 @@ def merge_conversations(
         title=merged_title,
         source_type="merged",
         source_profile="merged",
+        status="processing",
     )
+    source_messages = [
+        message
+        for conversation in conversations
+        for message in _active_messages(db, conversation.id)
+    ]
+    _report_merge(progress_callback, "creating", 10, 0, len(source_messages))
     copied_count = _copy_messages_to_conversation(
         db=db,
         target=new_conversation,
-        source_messages=[
-            message
-            for conversation in conversations
-            for message in _active_messages(db, conversation.id)
-        ],
+        source_messages=source_messages,
         source_operation="conversation_merge",
+        progress_callback=progress_callback,
     )
     _refresh_conversation_stats(db, new_conversation.id)
     _attach_conversation_to_project(db, new_conversation.id, project_id)
@@ -306,7 +317,12 @@ def merge_conversations(
                 created_by="user",
             )
         )
-    rebuild_search_and_toc_for_conversation(db, new_conversation.id)
+    _report_merge(progress_callback, "headings", 80, copied_count, copied_count)
+    rebuild_headings_for_conversation(db, new_conversation.id)
+    _report_merge(progress_callback, "search", 88, copied_count, copied_count)
+    rebuild_search_documents_for_conversation(db, new_conversation.id)
+    _report_merge(progress_callback, "publishing", 98, copied_count, copied_count)
+    new_conversation.status = "active"
     db.flush()
     return ConversationTransformResult(conversation=new_conversation, message_count=copied_count)
 
@@ -640,6 +656,7 @@ def _create_empty_conversation(
     title: str,
     source_type: str,
     source_profile: str,
+    status: str = "active",
 ) -> Conversation:
     conversation = Conversation(
         id=uuid.uuid4(),
@@ -647,7 +664,7 @@ def _create_empty_conversation(
         display_title=title,
         source_type=source_type,
         source_profile=source_profile,
-        status="active",
+        status=status,
         imported_at=utc_now(),
         parser_version=PARSER_VERSION,
         render_version=1,
@@ -663,6 +680,7 @@ def _copy_messages_to_conversation(
     target: Conversation,
     source_messages: list[Message],
     source_operation: str,
+    progress_callback: MergeProgressCallback | None = None,
 ) -> int:
     count = 0
     for index, source_message in enumerate(source_messages, start=1):
@@ -697,8 +715,22 @@ def _copy_messages_to_conversation(
             )
         )
         count += 1
+        if progress_callback and (count == len(source_messages) or count % 5 == 0):
+            progress = 10 + round(70 * count / max(len(source_messages), 1))
+            _report_merge(progress_callback, "copying", progress, count, len(source_messages))
     _renumber_conversation(db, target.id)
     return count
+
+
+def _report_merge(
+    callback: MergeProgressCallback | None,
+    phase: str,
+    progress: int,
+    processed: int,
+    total: int,
+) -> None:
+    if callback is not None:
+        callback(phase, progress, processed, total)
 
 
 def _attach_conversation_to_project(

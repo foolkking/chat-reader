@@ -7,9 +7,9 @@
 ## 当前基线
 
 - Web：Next.js 14 App Router，浏览器使用相对 `/api/*`，Next.js 服务端通过 `API_INTERNAL_URL` 转发到 FastAPI。
-- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260715_0006`。
-- 最近完整后端测试基线：121 tests passed；前端 typecheck、lint 和 production build 已通过。
-- 生产部署文件已包含 PostgreSQL、migration、API、单并发 import worker、Web、Nginx 示例和数据库备份脚本。
+- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260715_0007`。
+- 最近完整后端测试基线：122 tests passed；前端 typecheck、lint 和 production build 已通过。
+- 生产部署文件已包含 PostgreSQL、migration、API、单并发 task worker、Web、Nginx 示例和数据库备份脚本。
 
 ## 已实现
 
@@ -25,7 +25,7 @@
 
 ### 阅读与导航
 
-- user/assistant Markdown 安全渲染，支持 GFM、Shiki、KaTeX、Mermaid 和 callout。
+- user/assistant Markdown 安全渲染，支持 GFM、浅色 Shiki、KaTeX、Mermaid 和 callout；代码块支持复制、换行和长内容展开。
 - 消息窗口加载和 heavy message blocks 按需加载。
 - 左侧对话索引按 `U#`、`A#` 编号，右侧 TOC 默认绑定 active message。
 - 未挂载 message/block 可通过 anchor window 加载后定位；移动 sheet 和只读分享页复用可靠导航。
@@ -33,9 +33,11 @@
 
 ### 管理、搜索和分享
 
-- Project 创建/重命名/归档、会话加入/移动/移出和 Project 内置顶。
+- Project 创建/重命名/归档、展开子会话、拖放移动和 Project 内置顶。
+- Conversation 使用单 Project 归属：未归类会话只在 history，进入 Project 后不重复；归档保留关系，恢复回原位置。
 - 会话重命名、全局置顶、归档、软删除和批量操作。
-- 消息拆分/合并；会话拆分和按明确顺序进行非破坏式合并。
+- 消息拆分/合并；会话拆分和按可拖动顺序进行非破坏式后台合并。
+- import 与 conversation merge 共用 PostgreSQL 持久化任务队列、全局进度条、heartbeat、失败重试和完成后自动刷新。
 - 消息编辑、版本历史和通过新版本恢复。
 - PostgreSQL full-text 与 substring 混合搜索，支持 conversation/project/document type 过滤和分页。
 - 分享链接创建、列表、标题/描述/有效期更新、撤销和只读访问。
@@ -48,7 +50,7 @@
 - TanStack Virtual 等真正的消息虚拟滚动；当前是窗口加载和 DOM 增量渲染。
 - HTML/PDF/Project 打包导出。
 - Tag、Bookmark、笔记系统和语义/向量搜索。
-- 批量 blocks read API 和通用后台 Job 框架；当前只有专用 import worker。
+- 批量 blocks read API和可扩展到任意任务类型的通用调度框架；当前 task worker 只处理 import 与 conversation merge。
 - 通用 UndoToast；部分操作可通过现有 restore/archive API恢复。
 - 在线聊天、SSE streaming、重新生成、工具调用持久化和回答分支 UI。
 - 私有会话离线缓存；service worker 不缓存 `/api/*` 或会话正文。

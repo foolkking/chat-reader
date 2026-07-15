@@ -68,11 +68,34 @@ def test_add_and_remove_conversation_to_project(client: TestClient) -> None:
 
     project_conversations = client.get(f"/api/projects/{project_id}/conversations")
     assert len(project_conversations.json()) == 1
+    assert conversation_id not in {item["id"] for item in client.get("/api/conversations", params={"scope": "history"}).json()}
+
+    archived = client.patch(f"/api/conversations/{conversation_id}", json={"status": "archived"})
+    assert archived.status_code == 200
+    assert client.get(f"/api/projects/{project_id}/conversations").json() == []
+    restored = client.patch(f"/api/conversations/{conversation_id}", json={"status": "active"})
+    assert restored.status_code == 200
+    assert [item["id"] for item in client.get(f"/api/projects/{project_id}/conversations").json()] == [conversation_id]
 
     removed = client.delete(f"/api/projects/{project_id}/conversations/{conversation_id}")
     assert removed.status_code == 204
+    assert conversation_id in {item["id"] for item in client.get("/api/conversations", params={"scope": "history"}).json()}
     missing = client.delete(f"/api/projects/{project_id}/conversations/{conversation_id}")
     assert missing.status_code == 404
+
+
+def test_archived_project_conversations_temporarily_return_to_history(client: TestClient) -> None:
+    conversation_id = _commit_conversation(client, "Archived Project Membership")
+    project_id = client.post("/api/projects", json={"name": "Temporary Archive"}).json()["id"]
+    assert client.put(f"/api/conversations/{conversation_id}/project", json={"project_id": project_id}).status_code == 200
+
+    assert conversation_id not in {item["id"] for item in client.get("/api/conversations", params={"scope": "history"}).json()}
+    assert client.patch(project_id_path(project_id), json={"is_archived": True}).status_code == 200
+    assert conversation_id in {item["id"] for item in client.get("/api/conversations", params={"scope": "history"}).json()}
+
+    assert client.patch(project_id_path(project_id), json={"is_archived": False}).status_code == 200
+    assert conversation_id not in {item["id"] for item in client.get("/api/conversations", params={"scope": "history"}).json()}
+    assert [item["id"] for item in client.get(f"/api/projects/{project_id}/conversations").json()] == [conversation_id]
 
 
 def project_id_path(project_id: str) -> str:

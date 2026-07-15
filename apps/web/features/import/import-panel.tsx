@@ -36,10 +36,7 @@ export function ImportPanel() {
     mutationFn: commitImport,
     onSuccess: (result) => {
       setCommitResult(result);
-      queryClient.setQueryData<CommitImportResponse[]>(["active-imports"], (current = []) => [
-        result,
-        ...current.filter((task) => task.import_id !== result.import_id),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       void queryClient.invalidateQueries({ queryKey: ["project-conversations"] });

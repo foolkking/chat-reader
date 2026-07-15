@@ -8,7 +8,7 @@ flowchart LR
   W -->|API_INTERNAL_URL| A[FastAPI]
   A --> P[(PostgreSQL)]
   A --> S[(Import storage)]
-  Q[Import worker] -->|SKIP LOCKED| P
+  Q[Task worker] -->|SKIP LOCKED| P
   Q --> S
 ```
 
@@ -33,7 +33,7 @@ Import -> SourceArtifact
 Conversation -> Message -> MessageVersion -> RenderBlock
 Conversation -> Heading
 Conversation/MessageVersion -> SearchDocument
-Conversation <-> Project
+Conversation -> ProjectConversation -> Project
 Conversation -> ConversationEvent / Share / ReadingPosition
 ```
 
@@ -43,6 +43,7 @@ Conversation -> ConversationEvent / Share / ReadingPosition
 - `RenderBlock` 是阅读 read model，包含 heading、paragraph、list、code、table 等结构。
 - `SourceMessageRef` 保留导入源节点追踪信息。
 - `Heading` 和 `SearchDocument` 在导入或编辑后重建，不依赖浏览器扫描 DOM。
+- 每个 Conversation 最多只有一个 ProjectConversation 关系。默认 Inbox 是内部未归类位置，不在侧栏显示为普通 Project。
 
 ## 导入流程
 
@@ -53,6 +54,8 @@ worker -> align JSON/Markdown -> clean -> canonicalize
 ```
 
 Import queue 持久化在 PostgreSQL。独立单并发 worker 使用 `FOR UPDATE SKIP LOCKED` 领取任务，并写入阶段、百分比、消息计数和 heartbeat；崩溃任务超过五分钟会重新排队。导入主体在 worker 事务中完成，conversation 在成功前保持 `importing`，不会进入列表、搜索或分享。
+
+同一 worker 也领取 `background_jobs` 中的 conversation merge。Merge API 立即返回 `202`，任务按请求中的 conversation ID 顺序分批复制当前 canonical 内容；目标 conversation 在发布前保持 `processing`，失败事务不会留下不完整会话。Import 与 merge 共用单并发调度，避免小内存服务器同时执行两个高内存任务。
 
 大批量 `RenderBlock`、`Heading` 和 `SearchDocument` 在 PostgreSQL 使用 COPY；SQLite 测试使用 SQLAlchemy Core fallback。导入版本的 `MessageVersion.blocks` 保持兼容但写入空数组，正式 block 来源为 `render_blocks`，避免双份 JSON。
 
@@ -68,7 +71,14 @@ raw artifact 存在受控 storage 中，只用于追踪和诊断。reader 和 sh
 
 ## Markdown 安全
 
-renderer 使用 React 组件和受控 Markdown pipeline，禁止 raw HTML 执行，不使用 `dangerouslySetInnerHTML` 渲染导入内容。链接限制协议，未知外部图片不会直接热加载。Mermaid 在客户端初始化，失败时回退为代码内容。
+renderer 使用 React 组件和受控 Markdown pipeline，禁止 raw HTML 执行，不使用 `dangerouslySetInnerHTML` 渲染导入内容。链接限制协议，未知外部图片不会直接热加载。Mermaid 在客户端初始化，失败时回退为代码内容。Shiki 使用缓存的 `github-light` highlighter；代码、表格、公式和图表只允许在自身容器横向滚动。
+
+## Project 可见性
+
+- active conversation 归属内部 Inbox 时出现在 Conversation history。
+- active conversation 归属普通且未归档 Project 时，只出现在该 Project。
+- archived conversation 保留关系但不出现在 history 或 Project 列表。
+- Project 被归档时，其 active conversations 临时出现在 history；恢复 Project 后自动回到原 Project。
 
 ## 搜索
 

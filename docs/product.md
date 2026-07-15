@@ -7,7 +7,7 @@
 ## 主要工作流
 
 1. 在 Import 中选择导出文件并查看识别结果、消息数和 warning。
-2. commit 导入后，系统生成 Conversation、MessageVersion、RenderBlock、Heading 和 SearchDocument。
+2. commit 导入后任务进入后台队列；全局任务条显示阶段和进度，完成后系统自动刷新会话列表。
 3. 在全部会话或 Project 中管理会话，通过阅读器查看长对话。
 4. 使用对话索引、当前消息章节 TOC 或搜索结果定位内容。
 5. 编辑、拆分或合并内容；历史版本保留。
@@ -26,7 +26,7 @@
 
 - user 和 assistant 都支持安全 Markdown。
 - GFM 表格、任务列表、删除线、嵌套列表和 blockquote。
-- Shiki 代码高亮、语言标签和复制按钮。
+- Shiki 浅色代码高亮、语言标签、复制、换行切换和长代码展开。
 - KaTeX 数学公式、Mermaid 图表和 Obsidian 风格 callout。
 - 消息窗口与 heavy blocks 懒加载，加载进度不会阻塞首屏。
 - 对话索引、active-message TOC、搜索定位和目标高亮。
@@ -34,10 +34,13 @@
 
 ## 组织与编辑
 
+- 每个会话只有一个可见 Project 归属；未归类会话显示在 Conversation history，移入 Project 后不再重复出现。
+- Project 支持展开子会话和桌面拖放移动；移动端使用 Project picker。
+- 归档会话会从 history 和 Project 隐藏，但保留归属，恢复后返回原位置。
 - Project、全局置顶、Project 内置顶、最近打开和阅读位置。
 - 重命名、归档、软删除、Project 移动和批量管理。
 - 消息编辑、版本恢复、消息拆分/合并。
-- 非破坏式会话拆分/合并；源会话不会被修改。
+- 非破坏式会话拆分/合并；源会话不会被修改。合并顺序可拖动调整，并由后台任务按提交顺序处理。
 
 ## 搜索、分享和导出
 

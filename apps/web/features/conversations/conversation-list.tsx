@@ -14,6 +14,7 @@ import {
 import type { ConversationListItem } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
+import { MergeOrderList } from "./merge-order-list";
 
 export function ConversationList({
   onImportClick,
@@ -32,7 +33,10 @@ export function ConversationList({
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const conversationsQuery = useQuery({
     queryKey: ["conversations", mode],
-    queryFn: () => getConversations({ includeArchived: mode === "archived" }),
+    queryFn: () => getConversations({
+      includeArchived: mode === "archived",
+      scope: mode === "active" ? "history" : "all",
+    }),
   });
   const isArchivedMode = mode === "archived";
 
@@ -120,17 +124,19 @@ export function ConversationList({
             onTitleChange={setMergeTitle}
             isMerging={isMerging}
             bulkBusy={bulkBusy}
-            onMove={(id, direction) => {
-              setMergeOrderIds((current) => moveId(current, id, direction));
-            }}
+            onReorder={setMergeOrderIds}
             onMerge={async (ids, title) => {
               setIsMerging(true);
               try {
-                await mergeConversations({ conversationIds: ids, title: title.trim() || "Merged conversation" });
+                await mergeConversations({
+                  conversationIds: ids,
+                  title: title.trim() || "Merged conversation",
+                  idempotencyKey: crypto.randomUUID(),
+                });
                 setSelectedConversationIds(new Set());
                 setMergeOrderIds([]);
                 setMergeTitle("Merged conversation");
-                await refreshLists();
+                await queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
               } finally {
                 setIsMerging(false);
               }
@@ -280,7 +286,7 @@ function BulkActions({
   onTitleChange,
   isMerging,
   bulkBusy,
-  onMove,
+  onReorder,
   onMerge,
   onArchive,
   onRestore,
@@ -292,7 +298,7 @@ function BulkActions({
   onTitleChange: (title: string) => void;
   isMerging: boolean;
   bulkBusy: string | null;
-  onMove: (id: string, direction: -1 | 1) => void;
+  onReorder: (ids: string[]) => void;
   onMerge: (ids: string[], title: string) => Promise<void>;
   onArchive: (ids: string[]) => Promise<void>;
   onRestore: (ids: string[]) => Promise<void>;
@@ -343,32 +349,7 @@ function BulkActions({
             />
           </label>
           <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Merge order</p>
-          <div className="mt-2 space-y-1">
-            {selectedConversations.map((conversation, index) => (
-              <div key={conversation.id} className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2 py-1.5">
-                <span className="text-xs font-semibold text-[#6b7280]">{index + 1}</span>
-                <span className="truncate text-sm text-[#111827]">{conversation.display_title || conversation.title}</span>
-                <span className="flex gap-1">
-                  <button
-                    type="button"
-                    disabled={index === 0 || isMerging}
-                    onClick={() => onMove(conversation.id, -1)}
-                    className="h-7 rounded-md border border-[#d1d5db] px-2 text-xs disabled:opacity-40"
-                  >
-                    Up
-                  </button>
-                  <button
-                    type="button"
-                    disabled={index === selectedConversations.length - 1 || isMerging}
-                    onClick={() => onMove(conversation.id, 1)}
-                    className="h-7 rounded-md border border-[#d1d5db] px-2 text-xs disabled:opacity-40"
-                  >
-                    Down
-                  </button>
-                </span>
-              </div>
-            ))}
-          </div>
+          <MergeOrderList conversations={selectedConversations} disabled={isMerging} onReorder={onReorder} />
           <button
             type="button"
             disabled={isMerging}
@@ -381,17 +362,6 @@ function BulkActions({
       ) : null}
     </div>
   );
-}
-
-function moveId(ids: string[], id: string, direction: -1 | 1): string[] {
-  const index = ids.indexOf(id);
-  const nextIndex = index + direction;
-  if (index < 0 || nextIndex < 0 || nextIndex >= ids.length) {
-    return ids;
-  }
-  const next = [...ids];
-  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-  return next;
 }
 
 function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {

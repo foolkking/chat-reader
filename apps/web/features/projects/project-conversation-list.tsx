@@ -15,6 +15,7 @@ import {
 } from "../../lib/api";
 import type { ProjectConversationRead } from "../../lib/types";
 import { ConversationActionMenu, type UndoAction } from "../conversations/conversation-action-menu";
+import { MergeOrderList } from "../conversations/merge-order-list";
 import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
 import { ProjectSidebar } from "./project-sidebar";
 
@@ -28,7 +29,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const projectsQuery = useQuery({
     queryKey: ["projects"],
-    queryFn: getProjects,
+    queryFn: () => getProjects(),
   });
   const conversationsQuery = useQuery({
     queryKey: ["project-conversations", projectId],
@@ -117,9 +118,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 title={mergeTitle}
                 onTitleChange={setMergeTitle}
                 busy={bulkBusy}
-                onMove={(id, direction) => {
-                  setMergeOrderIds((current) => moveId(current, id, direction));
-                }}
+                onReorder={setMergeOrderIds}
                 onRemove={async (ids) => {
                   setBulkBusy("remove");
                   try {
@@ -134,11 +133,16 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 onMerge={async (ids, title) => {
                   setBulkBusy("merge");
                   try {
-                    await mergeConversations({ conversationIds: ids, title: title.trim() || "Merged conversation", projectId });
+                    await mergeConversations({
+                      conversationIds: ids,
+                      title: title.trim() || "Merged conversation",
+                      projectId,
+                      idempotencyKey: crypto.randomUUID(),
+                    });
                     setSelectedConversationIds(new Set());
                     setMergeOrderIds([]);
                     setMergeTitle(`${project?.name ?? "Project"} merged`);
-                    await refreshProject();
+                    await queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
                   } finally {
                     setBulkBusy(null);
                   }
@@ -273,7 +277,7 @@ function ProjectBulkActions({
   title,
   onTitleChange,
   busy,
-  onMove,
+  onReorder,
   onRemove,
   onMerge,
   onArchive,
@@ -283,7 +287,7 @@ function ProjectBulkActions({
   title: string;
   onTitleChange: (title: string) => void;
   busy: string | null;
-  onMove: (id: string, direction: -1 | 1) => void;
+  onReorder: (ids: string[]) => void;
   onRemove: (ids: string[]) => Promise<void>;
   onMerge: (ids: string[], title: string) => Promise<void>;
   onArchive: (ids: string[]) => Promise<void>;
@@ -330,32 +334,7 @@ function ProjectBulkActions({
             />
           </label>
           <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Merge order</p>
-          <div className="mt-2 space-y-1">
-            {selectedConversations.map((conversation, index) => (
-              <div key={conversation.id} className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2 py-1.5">
-                <span className="text-xs font-semibold text-[#6b7280]">{index + 1}</span>
-                <span className="truncate text-sm text-[#111827]">{conversation.display_title || conversation.title}</span>
-                <span className="flex gap-1">
-                  <button
-                    type="button"
-                    disabled={index === 0 || busy !== null}
-                    onClick={() => onMove(conversation.id, -1)}
-                    className="h-7 rounded-md border border-[#d1d5db] px-2 text-xs disabled:opacity-40"
-                  >
-                    Up
-                  </button>
-                  <button
-                    type="button"
-                    disabled={index === selectedConversations.length - 1 || busy !== null}
-                    onClick={() => onMove(conversation.id, 1)}
-                    className="h-7 rounded-md border border-[#d1d5db] px-2 text-xs disabled:opacity-40"
-                  >
-                    Down
-                  </button>
-                </span>
-              </div>
-            ))}
-          </div>
+          <MergeOrderList conversations={selectedConversations} disabled={busy !== null} onReorder={onReorder} />
           <button
             type="button"
             disabled={busy !== null}
@@ -395,15 +374,4 @@ function StateBlock({ label }: { label: string }) {
 function previewConversationText(text?: string | null): string {
   const cleaned = stripLeadingTimestamp(text ?? "").replace(/\s+/g, " ").trim();
   return cleaned || "No first user message.";
-}
-
-function moveId(ids: string[], id: string, direction: -1 | 1): string[] {
-  const index = ids.indexOf(id);
-  const nextIndex = index + direction;
-  if (index < 0 || nextIndex < 0 || nextIndex >= ids.length) {
-    return ids;
-  }
-  const next = [...ids];
-  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-  return next;
 }

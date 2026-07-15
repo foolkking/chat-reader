@@ -9,7 +9,7 @@ export function AddToProjectControl({ conversationId }: { conversationId: string
   const [projectId, setProjectId] = useState("");
   const projectsQuery = useQuery({
     queryKey: ["projects"],
-    queryFn: getProjects,
+    queryFn: () => getProjects(),
   });
   const addMutation = useMutation({
     mutationFn: () => addConversationToProject(projectId, conversationId),

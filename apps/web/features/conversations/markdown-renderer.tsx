@@ -7,6 +7,7 @@ import {
   type SyntaxHighlighterProps,
 } from "@assistant-ui/react-markdown";
 import { useEffect, useMemo, useState } from "react";
+import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import type { Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import rehypeSanitize from "rehype-sanitize";
@@ -133,37 +134,37 @@ const markdownComponents: Components & {
     const callout = parseCallout(rawText);
     if (callout) {
       return (
-        <div className={`my-4 rounded-xl border px-4 py-3 shadow-sm ${calloutClassName(callout.type)}`}>
+        <div className={`markdown-callout my-4 border-l-4 px-4 py-3 ${calloutClassName(callout.type)}`}>
           <div className="mb-2 text-xs font-semibold uppercase tracking-normal">{callout.label}</div>
           <AssistantMarkdownPart text={callout.body} className="text-sm" />
         </div>
       );
     }
     return (
-      <blockquote className="my-4 border-l-4 border-[#cbd5e1] bg-[#f8fafc] py-1 pl-4 text-[#475569]">
+      <blockquote className="my-4 border-l-2 border-[#cbd5e1] py-0.5 pl-4 text-[#475569]">
         {children}
       </blockquote>
     );
   },
-  CodeHeader: CodeHeader,
+  CodeHeader: EmptyCodeHeader,
   SyntaxHighlighter: CodeOrMermaidBlock,
   code({ children }) {
-    return <code className="rounded bg-[#eef2f7] px-1.5 py-0.5 font-mono text-[0.9em] text-[#0f172a]">{children}</code>;
+    return <code className="rounded-md border border-[#e2e5e9] bg-[#f3f4f6] px-1.5 py-0.5 font-mono text-[0.9em] text-[#1f2937]">{children}</code>;
   },
   h1({ children }) {
-    return <h1 className="mt-7 border-l-4 border-[#10a37f] pl-3 text-2xl font-semibold leading-9 text-[#111827] first:mt-0">{children}</h1>;
+    return <h1 className="mt-8 border-b border-[#e5e7eb] pb-2 text-2xl font-semibold leading-9 text-[#111827] first:mt-0">{children}</h1>;
   },
   h2({ children }) {
-    return <h2 className="mt-6 border-l-4 border-[#a7f3d0] pl-3 text-xl font-semibold leading-8 text-[#111827] first:mt-0">{children}</h2>;
+    return <h2 className="mt-7 text-xl font-semibold leading-8 text-[#111827] first:mt-0">{children}</h2>;
   },
   h3({ children }) {
-    return <h3 className="mt-5 text-lg font-semibold leading-7 text-[#111827] first:mt-0">{children}</h3>;
+    return <h3 className="mt-6 text-lg font-semibold leading-7 text-[#1f2937] first:mt-0">{children}</h3>;
   },
   h4({ children }) {
     return <h4 className="mt-4 text-base font-semibold leading-7 text-[#111827] first:mt-0">{children}</h4>;
   },
   hr() {
-    return <hr className="my-6 border-[#e5e7eb]" />;
+    return <hr className="my-8 border-[#e5e7eb]" />;
   },
   img({ alt, src }) {
     const safeSrc = typeof src === "string" && isSafeHref(src) ? src : undefined;
@@ -193,38 +194,38 @@ const markdownComponents: Components & {
     );
   },
   li({ children, className }) {
-    return <li className={`my-1.5 pl-1 marker:text-[#94a3b8] ${className ?? ""}`}>{children}</li>;
+    return <li className={`my-1 pl-1 marker:text-[#9ca3af] ${className ?? ""}`}>{children}</li>;
   },
   ol({ children }) {
-    return <ol className="my-4 list-decimal space-y-1 pl-6">{children}</ol>;
+    return <ol className="my-4 list-decimal space-y-1 pl-7">{children}</ol>;
   },
   p({ children }) {
-    return <p className="my-3 break-words leading-7 first:mt-0 last:mb-0">{children}</p>;
+    return <p className="my-3.5 break-words leading-[1.8] first:mt-0 last:mb-0">{children}</p>;
   },
   pre({ children }) {
-    return <pre className="max-w-full overflow-x-auto rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm leading-6 text-slate-100">{children}</pre>;
+    return <pre className="max-w-full overflow-x-auto rounded-lg border border-[#dfe3e8] bg-[#f6f7f8] p-4 text-sm leading-6 text-[#24292f]">{children}</pre>;
   },
   table({ children }) {
     return (
-      <div className="my-4 max-w-full overflow-x-auto rounded-xl border border-[#d8dee9] bg-white">
-        <table className="w-full min-w-max border-collapse text-sm">{children}</table>
+      <div className="markdown-table my-5 max-w-full overflow-x-auto rounded-lg border border-[#dfe3e8] bg-white">
+        <table className="w-max min-w-full border-collapse text-sm">{children}</table>
       </div>
     );
   },
   tbody({ children }) {
-    return <tbody className="divide-y divide-[#e5e7eb]">{children}</tbody>;
+    return <tbody className="divide-y divide-[#e8eaed]">{children}</tbody>;
   },
   td({ children }) {
-    return <td className="border-r border-[#e5e7eb] px-3 py-2 align-top last:border-r-0">{children}</td>;
+    return <td className="border-r border-[#e8eaed] px-3 py-2.5 align-top last:border-r-0">{children}</td>;
   },
   th({ children }) {
-    return <th className="border-r border-[#d1d5db] bg-[#f8fafc] px-3 py-2 text-left font-semibold last:border-r-0">{children}</th>;
+    return <th className="sticky top-0 border-r border-[#dfe3e8] bg-[#f4f5f6] px-3 py-2.5 text-left font-semibold last:border-r-0">{children}</th>;
   },
   thead({ children }) {
     return <thead className="border-b border-[#d1d5db]">{children}</thead>;
   },
   ul({ children }) {
-    return <ul className="my-4 list-disc space-y-1 pl-6">{children}</ul>;
+    return <ul className="my-4 list-disc space-y-1 pl-7">{children}</ul>;
   },
 };
 
@@ -326,28 +327,12 @@ function CanonicalPartRenderer({ part }: { part: CanonicalMessagePart }) {
   return <AttachmentPart name={part.alt ?? "图片附件"} detail="image" url={part.url} />;
 }
 
-function CodeHeader({ language, code }: CodeHeaderProps) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="mt-4 flex items-center justify-between gap-3 rounded-t-xl border border-[#111827] border-b-white/10 bg-[#0f172a] px-3 py-2 text-xs text-slate-400 first:mt-0">
-      <span className="min-w-0 truncate">{language || "text"}</span>
-      <button
-        type="button"
-        onClick={async () => {
-          await navigator.clipboard.writeText(code);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1200);
-        }}
-        className="rounded-md border border-white/10 px-2 py-1 text-slate-200 transition hover:bg-white/10"
-      >
-        {copied ? "已复制" : "复制代码"}
-      </button>
-    </div>
-  );
+function EmptyCodeHeader(_: CodeHeaderProps) {
+  return null;
 }
 
-function MermaidCodeHeader({ code }: CodeHeaderProps) {
-  return <CodeHeader language="mermaid" code={code} />;
+function MermaidCodeHeader(_: CodeHeaderProps) {
+  return null;
 }
 
 function CodeOrMermaidBlock(props: SyntaxHighlighterProps) {
@@ -360,6 +345,10 @@ function CodeOrMermaidBlock(props: SyntaxHighlighterProps) {
 function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
   const [tokens, setTokens] = useState<ThemedToken[][] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [wrapped, setWrapped] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const longCode = code.split("\n").length > 80;
 
   useEffect(() => {
     let cancelled = false;
@@ -389,40 +378,47 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
     };
   }, [code, language]);
 
-  if (tokens && !failed) {
-    return (
-      <pre className="max-w-full overflow-x-auto rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm leading-6 text-slate-100">
-        <code>
-          {tokens.map((line, lineIndex) => (
-            <span key={lineIndex} className="block min-h-[1.5rem]">
-              {line.map((token, tokenIndex) => (
-                <span key={`${lineIndex}-${tokenIndex}`} style={{ color: token.color }}>
-                  {token.content}
-                </span>
-              ))}
-            </span>
-          ))}
-        </code>
-      </pre>
-    );
-  }
-
   return (
-    <pre className="max-w-full overflow-x-auto rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm leading-6 text-slate-100">
-      <code>{code}</code>
-    </pre>
+    <section className="my-5 max-w-full overflow-hidden rounded-lg border border-[#d9dde3] bg-[#f6f7f8]">
+      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-[#dfe3e8] bg-[#eef0f2] px-3 text-xs text-[#667085]">
+        <span className="min-w-0 truncate font-mono">{language || "text"}</span>
+        <div className="flex items-center gap-1">
+          <CodeAction title={wrapped ? "Disable line wrapping" : "Wrap long lines"} onClick={() => setWrapped((value) => !value)}><WrapText className="h-3.5 w-3.5" /></CodeAction>
+          {longCode ? <CodeAction title={expanded ? "Collapse code" : "Expand code"} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}</CodeAction> : null}
+          <CodeAction title={copied ? "Copied" : "Copy code"} onClick={async () => { await navigator.clipboard.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1200); }}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</CodeAction>
+        </div>
+      </div>
+      <div className={`relative ${longCode && !expanded ? "max-h-[30rem] overflow-hidden" : ""}`}>
+        <pre className={`max-w-full overflow-x-auto bg-[#f6f7f8] p-4 text-[13px] leading-6 text-[#24292f] ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
+          <code>
+            {tokens && !failed
+              ? tokens.map((line, lineIndex) => (
+                  <span key={lineIndex} className="block min-h-6">
+                    {line.map((token, tokenIndex) => <span key={`${lineIndex}-${tokenIndex}`} style={{ color: token.color }}>{token.content}</span>)}
+                  </span>
+                ))
+              : code}
+          </code>
+        </pre>
+        {longCode && !expanded ? <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#f6f7f8] to-transparent" /> : null}
+      </div>
+    </section>
   );
 }
 
+function CodeAction({ title, onClick, children }: { title: string; onClick: () => void | Promise<void>; children: React.ReactNode }) {
+  return <button type="button" title={title} aria-label={title} onClick={() => void onClick()} className="flex h-7 w-7 items-center justify-center rounded-md text-[#667085] transition hover:bg-white hover:text-[#111827]">{children}</button>;
+}
+
 async function getShikiTokens(language: BundledLanguage, code: string): Promise<ThemedToken[][]> {
-  const key = `${language}:${hashCode(code)}`;
+  const key = `github-light:${language}:${hashCode(code)}`;
   const cached = shikiTokenCache.get(key);
   if (cached) {
     return cached;
   }
   shikiHighlighterPromise ??= createCachedHighlighter();
   const highlighter = await shikiHighlighterPromise;
-  const result = highlighter.codeToTokens(code, { lang: language, theme: "github-dark" }).tokens;
+  const result = highlighter.codeToTokens(code, { lang: language, theme: "github-light" }).tokens;
   if (shikiTokenCache.size >= 300) {
     const oldestKey = shikiTokenCache.keys().next().value;
     if (oldestKey) {
@@ -435,7 +431,7 @@ async function getShikiTokens(language: BundledLanguage, code: string): Promise<
 
 async function createCachedHighlighter() {
   const { createHighlighter } = await import("shiki");
-  return createHighlighter({ themes: ["github-dark"], langs: SHIKI_LANGUAGES });
+  return createHighlighter({ themes: ["github-light"], langs: SHIKI_LANGUAGES });
 }
 
 function hashCode(value: string): string {
@@ -488,7 +484,7 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
 
   if (svgUri) {
     return (
-      <div className="overflow-x-auto rounded-b-xl border border-t-0 border-[#d8dee9] bg-[#f8fafc] p-4">
+      <div className="overflow-x-auto rounded-b-md border border-t-0 border-[#d8dee9] bg-white p-4">
         <img src={svgUri} alt="Mermaid diagram" className="mx-auto max-w-full" />
       </div>
     );
@@ -496,16 +492,16 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
 
   if (error) {
     return (
-      <div className="space-y-2 rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4">
-        <p className="text-xs text-amber-300">Mermaid 渲染失败，已回退为源码。</p>
-        <pre className="max-w-full overflow-x-auto text-sm leading-6 text-slate-100">
+      <div className="space-y-2 rounded-b-md border border-t-0 border-[#d8dee9] bg-[#f8fafc] p-4">
+        <p className="text-xs text-[#9a6700]">Mermaid 渲染失败，已回退为源码。</p>
+        <pre className="max-w-full overflow-x-auto rounded border border-[#d8dee9] bg-white p-3 text-sm leading-6 text-[#24292f]">
           <code>{code}</code>
         </pre>
       </div>
     );
   }
 
-  return <div className="rounded-b-xl border border-t-0 border-[#111827] bg-[#0f172a] p-4 text-sm text-slate-300">正在渲染 Mermaid 图表...</div>;
+  return <div className="rounded-b-md border border-t-0 border-[#d8dee9] bg-[#f8fafc] p-4 text-sm text-[#57606a]">正在渲染 Mermaid 图表...</div>;
 }
 
 function CitationPart({ part }: { part: CanonicalSourcePart }) {

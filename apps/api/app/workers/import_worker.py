@@ -1,5 +1,5 @@
-from app.services.import_queue import run_worker_forever
+from app.services.task_worker import run_task_worker_forever
 
 
 if __name__ == "__main__":
-    run_worker_forever()
+    run_task_worker_forever()

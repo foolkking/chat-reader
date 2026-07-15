@@ -20,10 +20,10 @@ export function BlockRenderer({ block, isAssistant = true }: { block: RenderBloc
     const baseClass = "whitespace-pre-wrap break-words font-semibold tracking-normal text-[#111827]";
 
     if (level === 1) {
-      return <h1 className={`${baseClass} border-l-4 border-[#10a37f] pl-3 text-2xl leading-9`}>{title}</h1>;
+      return <h1 className={`${baseClass} border-b border-[#e5e7eb] pb-2 text-2xl leading-9`}>{title}</h1>;
     }
     if (level === 2) {
-      return <h2 className={`${baseClass} border-l-4 border-[#a7f3d0] pl-3 text-xl leading-8`}>{title}</h2>;
+      return <h2 className={`${baseClass} text-xl leading-8`}>{title}</h2>;
     }
     if (level === 3) {
       return <h3 className={`${baseClass} text-lg leading-7`}>{title}</h3>;

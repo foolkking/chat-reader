@@ -1,5 +1,6 @@
 import type {
   CommitImportResponse,
+  BackgroundTaskRead,
   ConversationEventListResponse,
   ConversationDetail,
   ConversationListItem,
@@ -42,10 +43,15 @@ export async function getHealth(): Promise<HealthResponse> {
   return fetchJson<HealthResponse>("/api/health");
 }
 
-export async function getConversations(input: { includeArchived?: boolean } = {}): Promise<ConversationListItem[]> {
+export async function getConversations(
+  input: { includeArchived?: boolean; scope?: "all" | "history" } = {},
+): Promise<ConversationListItem[]> {
   const params = new URLSearchParams();
   if (input.includeArchived) {
     params.set("include_archived", "true");
+  }
+  if (input.scope) {
+    params.set("scope", input.scope);
   }
   const query = params.toString();
   return fetchJson<ConversationListItem[]>(`/api/conversations${query ? `?${query}` : ""}`);
@@ -163,14 +169,21 @@ export async function mergeConversations(input: {
   conversationIds: string[];
   title?: string;
   projectId?: string;
-}): Promise<ConversationTransformResponse> {
-  return fetchJson<ConversationTransformResponse>(
+  idempotencyKey?: string;
+}): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(
     "/api/conversations/merge",
-    jsonRequest("POST", {
-      conversation_ids: input.conversationIds,
-      title: input.title,
-      project_id: input.projectId,
-    }),
+    {
+      ...jsonRequest("POST", {
+        conversation_ids: input.conversationIds,
+        title: input.title,
+        project_id: input.projectId,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : {}),
+      },
+    },
   );
 }
 
@@ -244,8 +257,21 @@ export async function getImportStatus(importId: string): Promise<ImportStatusRes
   return fetchJson<ImportStatusResponse>(`/api/imports/${importId}/status`);
 }
 
-export async function getProjects(): Promise<ProjectRead[]> {
-  return fetchJson<ProjectRead[]>("/api/projects");
+export async function getActiveTasks(): Promise<BackgroundTaskRead[]> {
+  return fetchJson<BackgroundTaskRead[]>("/api/tasks/active");
+}
+
+export async function getTask(jobId: string): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`);
+}
+
+export async function retryTask(jobId: string): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST" });
+}
+
+export async function getProjects(input: { includeArchived?: boolean } = {}): Promise<ProjectRead[]> {
+  const query = input.includeArchived ? "?include_archived=true" : "";
+  return fetchJson<ProjectRead[]>(`/api/projects${query}`);
 }
 
 export async function createProject(input: ProjectCreate): Promise<ProjectRead> {
@@ -293,6 +319,16 @@ export async function removeConversationFromProjectMembership(
   await fetchJson<void>(`/api/conversations/${conversationId}/projects/${projectId}`, {
     method: "DELETE",
   });
+}
+
+export async function moveConversationToProject(
+  conversationId: string,
+  projectId: string | null,
+): Promise<ConversationManagementResponse> {
+  return fetchJson<ConversationManagementResponse>(
+    `/api/conversations/${conversationId}/project`,
+    jsonRequest("PUT", { project_id: projectId }),
+  );
 }
 
 export async function setProjectConversationPin(

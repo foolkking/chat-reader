@@ -1,6 +1,6 @@
 # 生产部署
 
-当前生产路径使用 `docker-compose.production.yml`：PostgreSQL、一次性 migration、FastAPI、单并发 import worker 和 Next.js 五个服务。只有 Web 端口对宿主机暴露。
+当前生产路径使用 `docker-compose.production.yml`：PostgreSQL、一次性 migration、FastAPI、单并发 task worker 和 Next.js 五个服务。Compose 服务名仍为 `import-worker`，但它同时处理 import 与 conversation merge。只有 Web 端口对宿主机暴露。
 
 ## 服务器准备
 
@@ -92,4 +92,4 @@ docker compose --env-file .env.production -f docker-compose.production.yml logs 
 docker compose --env-file .env.production -f docker-compose.production.yml restart api import-worker web
 ```
 
-建议监控磁盘、PostgreSQL volume、容器 health、5xx、导入失败率和备份时间。密钥、真实域名配置和备份文件不得提交到 Git。
+建议监控磁盘、PostgreSQL volume、容器 health、5xx、后台任务失败率和备份时间。密钥、真实域名配置和备份文件不得提交到 Git。

@@ -1,3 +1,4 @@
+from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
 from app.models.heading import Heading
@@ -15,6 +16,7 @@ from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 
 __all__ = [
+    "BackgroundJob",
     "Conversation",
     "ConversationEvent",
     "Heading",

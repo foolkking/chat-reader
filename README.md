@@ -63,4 +63,4 @@ corepack pnpm run test:api
 
 ## 当前边界
 
-当前没有认证或多用户隔离、真正的虚拟滚动、HTML/PDF 导出、标签/收藏、语义搜索、通用后台 Job 框架和离线会话缓存。现有后台能力仅包含 PostgreSQL 驱动的专用 import worker。部署到公网前应通过反向代理增加 HTTPS 和访问控制。
+当前没有认证或多用户隔离、真正的虚拟滚动、HTML/PDF 导出、标签/收藏、语义搜索、可任意扩展的通用 Job 类型和离线会话缓存。现有单并发 task worker 处理 import 与 conversation merge。部署到公网前应通过反向代理增加 HTTPS 和访问控制。

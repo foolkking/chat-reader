@@ -11,6 +11,7 @@ from app.api.routes.reading import router as reading_router
 from app.api.routes.search import router as search_router
 from app.api.routes.shares import router as shares_router
 from app.api.routes.toc import router as toc_router
+from app.api.routes.tasks import router as tasks_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -39,3 +40,4 @@ app.include_router(reading_router)
 app.include_router(search_router)
 app.include_router(shares_router)
 app.include_router(toc_router)
+app.include_router(tasks_router)

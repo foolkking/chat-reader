@@ -149,6 +149,28 @@ export type CommitImportResponse = {
 export type ImportStatusResponse = CommitImportResponse;
 export type ActiveImportTask = ImportStatusResponse;
 
+export type BackgroundTaskRead = {
+  job_id: string;
+  job_type: "import" | "conversation_merge" | string;
+  status: "queued" | "processing" | "committed" | "failed" | string;
+  phase: string;
+  progress: number;
+  processed_items: number;
+  total_items: number;
+  label: string | null;
+  result: {
+    conversation_ids?: string[];
+    conversation_id?: string;
+    title?: string;
+    message_count?: number;
+  } & Record<string, unknown>;
+  error_message: string | null;
+  queued_at: string | null;
+  started_at: string | null;
+  heartbeat_at: string | null;
+  completed_at: string | null;
+};
+
 export type ProjectRead = {
   id: string;
   name: string;

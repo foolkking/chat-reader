@@ -103,16 +103,40 @@ def add_conversation_to_project(
     *,
     added_by: str = "system",
 ) -> ProjectConversation:
+    return move_conversation_to_project(
+        db,
+        conversation_id=conversation_id,
+        project_id=project_id,
+        added_by=added_by,
+    )
+
+
+def move_conversation_to_project(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    project_id: uuid.UUID | None,
+    added_by: str = "user",
+) -> ProjectConversation:
+    if project_id is None:
+        project_id = ensure_default_project(db).id
     project = db.get(Project, project_id)
-    if project is None:
+    if project is None or project.is_archived:
         raise ProjectServiceError("Project not found.")
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
         raise ProjectServiceError("Conversation not found.")
 
-    relation = _get_relation(db, project_id, conversation_id)
-    if relation is not None:
-        return relation
+    current = (
+        db.query(ProjectConversation)
+        .filter(ProjectConversation.conversation_id == conversation_id)
+        .one_or_none()
+    )
+    if current is not None and current.project_id == project_id:
+        return current
+    if current is not None:
+        db.delete(current)
+        db.flush()
 
     relation = ProjectConversation(
         id=uuid.uuid4(),
@@ -129,8 +153,15 @@ def remove_conversation_from_project(db: Session, project_id: uuid.UUID, convers
     relation = _get_relation(db, project_id, conversation_id)
     if relation is None:
         raise ProjectServiceError("Project conversation relation not found.")
-    db.delete(relation)
-    db.flush()
+    default_project = ensure_default_project(db)
+    if relation.project_id == default_project.id:
+        return
+    move_conversation_to_project(
+        db,
+        conversation_id=conversation_id,
+        project_id=default_project.id,
+        added_by="user",
+    )
 
 
 def list_project_conversations(
@@ -148,7 +179,7 @@ def list_project_conversations(
         .filter(
             ProjectConversation.project_id == project_id,
             Conversation.deleted_at.is_(None),
-            Conversation.status.in_(("active", "archived")),
+            Conversation.status == "active",
         )
         .order_by(
             ProjectConversation.is_pinned.desc(),
@@ -180,13 +211,24 @@ def set_project_conversation_pin(
 def project_counts(db: Session, project_id: uuid.UUID) -> ProjectCounts:
     conversation_count = (
         db.query(func.count(ProjectConversation.id))
-        .filter(ProjectConversation.project_id == project_id)
+        .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
+        .filter(
+            ProjectConversation.project_id == project_id,
+            Conversation.deleted_at.is_(None),
+            Conversation.status == "active",
+        )
         .scalar()
         or 0
     )
     pinned_count = (
         db.query(func.count(ProjectConversation.id))
-        .filter(ProjectConversation.project_id == project_id, ProjectConversation.is_pinned.is_(True))
+        .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
+        .filter(
+            ProjectConversation.project_id == project_id,
+            ProjectConversation.is_pinned.is_(True),
+            Conversation.deleted_at.is_(None),
+            Conversation.status == "active",
+        )
         .scalar()
         or 0
     )

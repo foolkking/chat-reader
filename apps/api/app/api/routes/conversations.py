@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -8,6 +8,8 @@ from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.models.project import Project
+from app.models.project_conversation import ProjectConversation
 from app.models.render_block import RenderBlock
 from app.schemas.conversation import ConversationDetail, ConversationListItem, ConversationUpdate
 from app.schemas.editing import (
@@ -20,17 +22,20 @@ from app.schemas.editing import (
 from app.schemas.message import MessageListItem, MessageVersionRead, RenderBlockRead
 from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
+from app.schemas.task import BackgroundTaskRead, ConversationProjectMoveRequest
 from app.models.import_record import utc_now
 from app.services.editing.message_edit_service import (
     MessageEditError,
-    merge_conversations,
     split_conversation,
 )
+from app.services.background_jobs import queue_conversation_merge
 from app.services.projects.project_service import (
     ProjectServiceError,
     add_conversation_to_project,
+    move_conversation_to_project,
     remove_conversation_from_project,
 )
+from app.api.routes.tasks import background_job_read
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -42,6 +47,7 @@ def list_conversations(
     source_type: str | None = None,
     source_profile: str | None = None,
     include_archived: bool = False,
+    scope: str = Query(default="all", pattern="^(all|history)$"),
     db: Session = Depends(get_db),
 ) -> list[ConversationListItem]:
     query = db.query(Conversation).filter(
@@ -50,6 +56,16 @@ def list_conversations(
     )
     if not include_archived:
         query = query.filter(Conversation.status != "archived")
+    if scope == "history":
+        query = (
+            query.outerjoin(ProjectConversation, ProjectConversation.conversation_id == Conversation.id)
+            .outerjoin(Project, Project.id == ProjectConversation.project_id)
+            .filter(
+                (ProjectConversation.id.is_(None))
+                | (Project.is_default.is_(True))
+                | (Project.is_archived.is_(True))
+            )
+        )
     if source_type:
         query = query.filter(Conversation.source_type == source_type)
     if source_profile:
@@ -68,28 +84,25 @@ def list_conversations(
     return [_conversation_item(conversation) for conversation in conversations]
 
 
-@router.post("/merge", response_model=ConversationTransformResponse)
+@router.post("/merge", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
 def merge_conversations_endpoint(
     payload: ConversationMergeRequest,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
-) -> ConversationTransformResponse:
+) -> BackgroundTaskRead:
     try:
-        result = merge_conversations(
+        job = queue_conversation_merge(
             db=db,
             conversation_ids=payload.conversation_ids,
             title=payload.title,
             project_id=payload.project_id,
+            idempotency_key=idempotency_key,
         )
         db.commit()
     except MessageEditError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    return ConversationTransformResponse(
-        conversation_id=result.conversation.id,
-        title=result.conversation.title,
-        display_title=result.conversation.display_title,
-        message_count=result.message_count,
-    )
+    return background_job_read(job)
 
 
 @router.get("/{conversation_id}", response_model=ConversationDetail)
@@ -215,6 +228,40 @@ def add_conversation_project_membership(
             conversation_id,
             "project_changed",
             {"action": "added", "project_id": str(project_id)},
+        )
+        db.commit()
+    except ProjectServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return _conversation_detail(conversation)
+
+
+@router.put("/{conversation_id}/project", response_model=ConversationDetail)
+def move_conversation_project(
+    conversation_id: uuid.UUID,
+    payload: ConversationProjectMoveRequest,
+    db: Session = Depends(get_db),
+) -> ConversationDetail:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    if conversation.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only active conversations can be moved.",
+        )
+    try:
+        relation = move_conversation_to_project(
+            db,
+            conversation_id=conversation_id,
+            project_id=payload.project_id,
+            added_by="user",
+        )
+        _add_conversation_event(
+            db,
+            conversation_id,
+            "project_changed",
+            {"action": "moved", "project_id": str(relation.project_id)},
         )
         db.commit()
     except ProjectServiceError as exc:

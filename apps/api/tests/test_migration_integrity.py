@@ -7,7 +7,7 @@ from sqlalchemy.dialects import postgresql
 from app.models.search_document import SearchDocument
 
 
-def test_alembic_current_head_matches_stage_10_environment() -> None:
+def test_alembic_current_matches_repository_head() -> None:
     env = os.environ.copy()
     env["PATH"] = r"E:\PostgreSQL\17\bin;" + env.get("PATH", "")
     result = subprocess.run(
@@ -18,16 +18,16 @@ def test_alembic_current_head_matches_stage_10_environment() -> None:
         capture_output=True,
         check=True,
     )
-    assert "20260715_0006" in result.stdout
+    assert "20260715_0007" in result.stdout
 
 
 def test_latest_migration_has_upgrade_and_downgrade() -> None:
-    migration = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "20260707_0005_create_shares.py"
+    migration = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "20260715_0007_background_jobs_and_single_project.py"
     source = migration.read_text(encoding="utf-8")
     assert "def upgrade()" in source
     assert "def downgrade()" in source
-    assert 'op.create_table(\n        "shares"' in source
-    assert 'op.drop_table("shares")' in source
+    assert 'op.create_table(\n        "background_jobs"' in source
+    assert 'op.drop_table("background_jobs")' in source
 
 
 def test_search_document_model_uses_postgresql_tsvector_type() -> None:

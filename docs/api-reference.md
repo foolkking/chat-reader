@@ -26,11 +26,11 @@ Import 状态为 `previewed / queued / processing / committed / failed`。failed
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| GET | `/api/conversations` | 会话列表；支持状态、Project 等 query |
+| GET | `/api/conversations` | 会话列表；`scope=history` 只返回未归类或归属已归档 Project 的 active 会话 |
 | GET | `/api/conversations/{id}` | 会话详情 |
 | PATCH | `/api/conversations/{id}` | 重命名、归档或恢复 |
 | DELETE | `/api/conversations/{id}` | 软删除 |
-| POST | `/api/conversations/merge` | 按请求顺序非破坏式合并多个会话 |
+| POST | `/api/conversations/merge` | 按请求顺序排队非破坏式合并，返回 `202 BackgroundTaskRead` |
 | POST | `/api/conversations/{id}/split` | 从连续消息范围创建新会话 |
 | PATCH | `/api/conversations/{id}/pin` | 修改全局置顶 |
 | GET | `/api/conversations/{id}/events` | 管理和编辑事件 |
@@ -58,11 +58,22 @@ Import 状态为 `previewed / queued / processing / committed / failed`。failed
 | POST | `/api/projects` | 创建 Project |
 | PATCH | `/api/projects/{id}` | 重命名、置顶或归档 Project |
 | GET | `/api/projects/{id}/conversations` | Project 会话列表 |
-| POST | `/api/projects/{id}/conversations/{conversation_id}` | 加入 Project |
-| DELETE | `/api/projects/{id}/conversations/{conversation_id}` | 移出 Project |
+| POST | `/api/projects/{id}/conversations/{conversation_id}` | 兼容接口；将会话移动到该 Project |
+| DELETE | `/api/projects/{id}/conversations/{conversation_id}` | 移回内部 Inbox/Conversation history |
 | PATCH | `/api/projects/{id}/conversations/{conversation_id}/pin` | Project 内置顶 |
 | POST | `/api/conversations/{id}/projects/{project_id}` | conversation 侧兼容加入接口 |
 | DELETE | `/api/conversations/{id}/projects/{project_id}` | conversation 侧兼容移出接口 |
+| PUT | `/api/conversations/{id}/project` | 单归属移动；`project_id=null` 移回 history |
+
+## Background Tasks
+
+| Method | Path | 说明 |
+| --- | --- | --- |
+| GET | `/api/tasks/active` | 返回 queued、processing 和 failed 的 import/merge 任务 |
+| GET | `/api/tasks/{job_id}` | 查询统一任务阶段、进度、结果或错误 |
+| POST | `/api/tasks/{job_id}/retry` | 重试 failed 任务 |
+
+Conversation merge 可携带 `Idempotency-Key` 请求头。相同 key 的 queued、processing 或 committed 请求返回已有任务，不会重复创建结果。
 
 ## Search And TOC
 

@@ -1,16 +1,28 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Archive,
+  FileJson,
+  FileText,
+  FolderInput,
+  History,
+  MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  addConversationToProjectMembership,
   archiveConversation,
   deleteConversation,
   getConversationExportUrl,
   getProjects,
-  removeConversationFromProjectMembership,
+  moveConversationToProject,
   restoreConversation,
   setConversationGlobalPin,
   setProjectConversationPin,
@@ -44,15 +56,18 @@ export function ConversationActionMenu({
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [targetProjectId, setTargetProjectId] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const projectsQuery = useQuery({
     queryKey: ["projects"],
-    queryFn: getProjects,
+    queryFn: () => getProjects(),
     enabled: open,
   });
-  const projects = projectsQuery.data ?? [];
+  const projects = (projectsQuery.data ?? []).filter(
+    (project) => !project.is_default && project.name.toLowerCase().includes(projectSearch.trim().toLowerCase()),
+  );
 
   useEffect(() => {
     setOpen(false);
@@ -133,7 +148,7 @@ export function ConversationActionMenu({
         }`}
         aria-label={`Manage ${conversation.display_title || conversation.title}`}
       >
-        ...
+        <MoreHorizontal className="h-4 w-4" />
       </button>
       {open
         ? createPortal(
@@ -148,6 +163,7 @@ export function ConversationActionMenu({
           </div>
               <div className="grid gap-1 py-1">
             <MenuButton
+              icon={<Pencil className="h-4 w-4" />}
               disabled={busy !== null}
               onClick={() =>
                 run("rename", async () => {
@@ -167,6 +183,7 @@ export function ConversationActionMenu({
               Rename
             </MenuButton>
             <MenuButton
+              icon={conversation.is_global_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
               disabled={busy !== null}
               onClick={() =>
                 run("pin", async () => {
@@ -178,6 +195,7 @@ export function ConversationActionMenu({
             </MenuButton>
             {projectId ? (
               <MenuButton
+                icon={projectPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                 disabled={busy !== null}
                 onClick={() =>
                   run("project-pin", async () => {
@@ -188,58 +206,49 @@ export function ConversationActionMenu({
                 {projectPinned ? "Unpin in project" : "Pin in project"}
               </MenuButton>
             ) : null}
-                <div className="my-1 border-t border-[#f0f0f0] pt-2">
-              <select
-                value={targetProjectId}
-                onChange={(event) => setTargetProjectId(event.target.value)}
-                    className="min-h-9 w-full rounded-lg border border-[#d1d5db] bg-white px-2 text-sm text-[#111827] outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/10"
-              >
-                <option value="">Choose project</option>
+            {conversation.status !== "archived" ? <div className="my-1 border-t border-[#f0f0f0] pt-2">
+              <input
+                value={projectSearch}
+                onChange={(event) => setProjectSearch(event.target.value)}
+                placeholder="Search projects"
+                className="min-h-9 w-full rounded-lg border border-[#d1d5db] bg-white px-2 text-sm text-[#111827] outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/10"
+              />
+              <div className="mt-1 max-h-32 overflow-y-auto rounded-lg bg-[#f7f7f8] p-1">
                 {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => setTargetProjectId(project.id)}
+                    className={`block min-h-8 w-full truncate rounded-md px-2 text-left text-sm ${targetProjectId === project.id ? "bg-white font-medium text-[#111827] shadow-sm" : "text-[#4b5563] hover:bg-white"}`}
+                  >
                     {project.name}
-                  </option>
+                  </button>
                 ))}
-              </select>
-                  <div className="mt-1 grid grid-cols-2 gap-1">
-                <MenuButton
-                  disabled={!targetProjectId || busy !== null}
-                  onClick={() =>
-                    run("add-project", async () => {
-                      await addConversationToProjectMembership(conversation.id, targetProjectId);
-                    })
-                  }
-                >
-                  Add
-                </MenuButton>
-                <MenuButton
-                  disabled={!targetProjectId || busy !== null}
-                  onClick={() =>
-                    run("move-project", async () => {
-                      if (projectId && projectId !== targetProjectId) {
-                        await removeConversationFromProjectMembership(conversation.id, projectId);
-                      }
-                      await addConversationToProjectMembership(conversation.id, targetProjectId);
-                    })
-                  }
-                >
-                  Move
-                </MenuButton>
+                {projects.length === 0 ? <p className="px-2 py-1.5 text-xs text-[#9ca3af]">No matching projects</p> : null}
               </div>
-            </div>
-            {projectId ? (
               <MenuButton
+                icon={<FolderInput className="h-4 w-4" />}
+                disabled={!targetProjectId || busy !== null}
+                onClick={() => run("move-project", async () => { await moveConversationToProject(conversation.id, targetProjectId); })}
+              >
+                Move to selected project
+              </MenuButton>
+            </div> : null}
+            {projectId && conversation.status !== "archived" ? (
+              <MenuButton
+                icon={<History className="h-4 w-4" />}
                 disabled={busy !== null}
                 onClick={() =>
                   run("remove-project", async () => {
-                    await removeConversationFromProjectMembership(conversation.id, projectId);
+                    await moveConversationToProject(conversation.id, null);
                   })
                 }
               >
-                Remove from project
+                Move to conversation history
               </MenuButton>
             ) : null}
             <MenuButton
+              icon={<FileText className="h-4 w-4" />}
               disabled={busy !== null}
               onClick={() => {
                 window.location.href = getConversationExportUrl(conversation.id, { format: "markdown" });
@@ -248,6 +257,7 @@ export function ConversationActionMenu({
               Export Markdown
             </MenuButton>
             <MenuButton
+              icon={<FileJson className="h-4 w-4" />}
               disabled={busy !== null}
               onClick={() => {
                 window.location.href = getConversationExportUrl(conversation.id, { format: "canonical_json" });
@@ -257,6 +267,7 @@ export function ConversationActionMenu({
             </MenuButton>
             {conversation.status === "archived" ? (
               <MenuButton
+                icon={<RotateCcw className="h-4 w-4" />}
                 disabled={busy !== null}
                 onClick={() =>
                   run("restore", async () => {
@@ -275,6 +286,7 @@ export function ConversationActionMenu({
               </MenuButton>
             ) : (
               <MenuButton
+                icon={<Archive className="h-4 w-4" />}
                 disabled={busy !== null}
                 onClick={() =>
                   run("archive", async () => {
@@ -293,6 +305,7 @@ export function ConversationActionMenu({
               </MenuButton>
             )}
             <MenuButton
+              icon={<Trash2 className="h-4 w-4" />}
               danger
               disabled={busy !== null}
               onClick={() => {
@@ -325,11 +338,13 @@ export function ConversationActionMenu({
 
 function MenuButton({
   children,
+  icon,
   danger = false,
   disabled,
   onClick,
 }: {
   children: ReactNode;
+  icon?: ReactNode;
   danger?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -339,11 +354,12 @@ function MenuButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`min-h-9 rounded-lg px-3 text-left text-sm transition disabled:cursor-wait disabled:opacity-45 ${
+      className={`flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm transition disabled:cursor-wait disabled:opacity-45 ${
         danger ? "text-red-700 hover:bg-red-50" : "text-[#374151] hover:bg-[#f7f7f8]"
       }`}
     >
-      {children}
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icon}</span>
+      <span className="min-w-0 flex-1">{children}</span>
     </button>
   );
 }

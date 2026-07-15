@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ConversationList } from "../features/conversations/conversation-list";
 import { ImportPanel } from "../features/import/import-panel";
+import { ArchivedProjectList } from "../features/projects/archived-project-list";
 import { ProjectSidebar } from "../features/projects/project-sidebar";
 
 export function AppShell({ mode = "active" }: { mode?: "active" | "archived" }) {
@@ -37,6 +38,7 @@ export function AppShell({ mode = "active" }: { mode?: "active" | "archived" }) 
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-8 md:px-6">
+            {isArchivedMode ? <ArchivedProjectList /> : null}
             <ConversationList mode={mode} onImportClick={() => setShowImport(true)} />
           </div>
         </div>
