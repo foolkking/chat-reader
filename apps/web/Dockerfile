@@ -18,6 +18,7 @@ ARG API_INTERNAL_URL=http://chat-reader-api:8000
 ENV API_INTERNAL_URL=$API_INTERNAL_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_STANDALONE=1
+ENV NODE_OPTIONS="--max-old-space-size=640"
 RUN pnpm --filter web build
 
 FROM node:20-alpine AS runtime
