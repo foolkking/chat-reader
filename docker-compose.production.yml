@@ -31,6 +31,7 @@ services:
       PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL}
       MAX_IMPORT_FILE_SIZE_MB: ${MAX_IMPORT_FILE_SIZE_MB:-50}
       IMPORT_STORAGE_DIR: /data/imports
+      WEB_CONCURRENCY: ${API_WORKERS:-1}
     depends_on:
       postgres:
         condition: service_healthy

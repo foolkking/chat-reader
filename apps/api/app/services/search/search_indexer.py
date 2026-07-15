@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import text
+from sqlalchemy import insert, text
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -42,19 +42,20 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         ]
         if part
     )
+    document_rows: list[dict] = []
     if conversation_text.strip():
-        db.add(
-            SearchDocument(
-                id=uuid.uuid4(),
-                conversation_id=conversation.id,
-                document_type="conversation",
-                title=conversation.display_title,
-                plain_text=conversation_text,
-                search_text=conversation_text,
-                source_type=conversation.source_type,
-                source_profile=conversation.source_profile,
-                metadata_={},
-            )
+        document_rows.append(
+            {
+                "id": uuid.uuid4(),
+                "conversation_id": conversation.id,
+                "document_type": "conversation",
+                "title": conversation.display_title,
+                "plain_text": conversation_text,
+                "search_text": conversation_text,
+                "source_type": conversation.source_type,
+                "source_profile": conversation.source_profile,
+                "metadata_": {},
+            }
         )
         indexed_count += 1
 
@@ -62,46 +63,55 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         search_text = " ".join([message.role, version.display_text, version.plain_text]).strip()
         if not search_text:
             continue
-        db.add(
-            SearchDocument(
-                id=uuid.uuid4(),
-                conversation_id=conversation.id,
-                message_id=message.id,
-                message_version_id=version.id,
-                document_type="message",
-                role=message.role,
-                title=conversation.display_title,
-                plain_text=version.plain_text,
-                search_text=search_text,
-                source_type=conversation.source_type,
-                source_profile=conversation.source_profile,
-                order_key=message.order_key,
-                turn_index=message.turn_index,
-                created_at=message.created_at,
-                metadata_={"char_count": message.char_count, "block_count": message.block_count},
-            )
+        document_rows.append(
+            {
+                "id": uuid.uuid4(),
+                "conversation_id": conversation.id,
+                "message_id": message.id,
+                "message_version_id": version.id,
+                "document_type": "message",
+                "role": message.role,
+                "title": conversation.display_title,
+                "plain_text": version.plain_text,
+                "search_text": search_text,
+                "source_type": conversation.source_type,
+                "source_profile": conversation.source_profile,
+                "order_key": message.order_key,
+                "turn_index": message.turn_index,
+                "created_at": message.created_at,
+                "metadata_": {"char_count": message.char_count, "block_count": message.block_count},
+            }
         )
         indexed_count += 1
+        if len(document_rows) >= 500:
+            db.execute(insert(SearchDocument), document_rows)
+            document_rows.clear()
 
-    for heading in db.query(Heading).filter(Heading.conversation_id == conversation.id).all():
+    for heading in db.query(Heading).filter(Heading.conversation_id == conversation.id).yield_per(500):
         search_text = f"{heading.text} {conversation.display_title}".strip()
-        db.add(
-            SearchDocument(
-                id=uuid.uuid4(),
-                conversation_id=conversation.id,
-                message_id=heading.message_id,
-                message_version_id=heading.message_version_id,
-                document_type="heading",
-                title=conversation.display_title,
-                plain_text=heading.text,
-                search_text=search_text,
-                source_type=conversation.source_type,
-                source_profile=conversation.source_profile,
-                order_key=heading.order_key,
-                metadata_={"heading_index": heading.heading_index, "slug": heading.slug},
-            )
+        document_rows.append(
+            {
+                "id": uuid.uuid4(),
+                "conversation_id": conversation.id,
+                "message_id": heading.message_id,
+                "message_version_id": heading.message_version_id,
+                "document_type": "heading",
+                "title": conversation.display_title,
+                "plain_text": heading.text,
+                "search_text": search_text,
+                "source_type": conversation.source_type,
+                "source_profile": conversation.source_profile,
+                "order_key": heading.order_key,
+                "metadata_": {"heading_index": heading.heading_index, "slug": heading.slug},
+            }
         )
         indexed_count += 1
+        if len(document_rows) >= 500:
+            db.execute(insert(SearchDocument), document_rows)
+            document_rows.clear()
+
+    if document_rows:
+        db.execute(insert(SearchDocument), document_rows)
 
     db.flush()
     _refresh_postgres_tsv(db, conversation.id)

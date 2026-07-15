@@ -2,6 +2,7 @@ import re
 import uuid
 from dataclasses import dataclass
 
+from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -32,30 +33,36 @@ def rebuild_headings_for_conversation(db: Session, conversation_id: uuid.UUID) -
     slug_counts: dict[str, int] = {}
     heading_count = 0
 
+    heading_rows: list[dict] = []
     for heading_index, (message, version, block) in enumerate(rows):
         text = _heading_text(block)
         if not text:
             continue
         level = _heading_level(block)
         slug = _unique_slug(text, heading_index, slug_counts)
-        db.add(
-            Heading(
-                id=uuid.uuid4(),
-                conversation_id=conversation_id,
-                message_id=message.id,
-                message_version_id=version.id,
-                render_block_id=block.id,
-                block_index=block.block_index,
-                heading_index=heading_count,
-                level=level,
-                text=text,
-                slug=slug,
-                order_key=message.order_key,
-                metadata_={},
-            )
+        heading_rows.append(
+            {
+                "id": uuid.uuid4(),
+                "conversation_id": conversation_id,
+                "message_id": message.id,
+                "message_version_id": version.id,
+                "render_block_id": block.id,
+                "block_index": block.block_index,
+                "heading_index": heading_count,
+                "level": level,
+                "text": text,
+                "slug": slug,
+                "order_key": message.order_key,
+                "metadata_": {},
+            }
         )
+        if len(heading_rows) >= 500:
+            db.execute(insert(Heading), heading_rows)
+            heading_rows.clear()
         heading_count += 1
 
+    if heading_rows:
+        db.execute(insert(Heading), heading_rows)
     db.flush()
     return TocBuildResult(conversation_count=1, heading_count=heading_count)
 
@@ -71,7 +78,7 @@ def rebuild_headings_for_all(db: Session) -> TocBuildResult:
     return TocBuildResult(conversation_count=len(conversation_ids), heading_count=total)
 
 
-def _heading_source_rows(db: Session, conversation_id: uuid.UUID) -> list[tuple[Message, MessageVersion, RenderBlock]]:
+def _heading_source_rows(db: Session, conversation_id: uuid.UUID):
     return (
         db.query(Message, MessageVersion, RenderBlock)
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
@@ -82,7 +89,7 @@ def _heading_source_rows(db: Session, conversation_id: uuid.UUID) -> list[tuple[
             RenderBlock.block_type == "heading",
         )
         .order_by(Message.order_key.asc(), RenderBlock.block_index.asc())
-        .all()
+        .yield_per(500)
     )
 
 

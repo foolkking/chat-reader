@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -379,19 +380,23 @@ def _persist_message(conversation: Conversation, draft: PersistableMessage, db: 
 
     message.current_version_id = version.id
 
-    for index, block in enumerate(block_drafts):
-        db.add(
-            RenderBlock(
-                id=uuid.uuid4(),
-                message_version_id=version.id,
-                block_index=index,
-                block_type=block.block_type,
-                plain_text=block.plain_text,
-                data=block.data,
-                char_count=block.char_count,
-                collapsed_by_default=block.collapsed_by_default,
-                render_priority=block.render_priority,
-            )
+    if block_drafts:
+        db.execute(
+            insert(RenderBlock),
+            [
+                {
+                    "id": uuid.uuid4(),
+                    "message_version_id": version.id,
+                    "block_index": index,
+                    "block_type": block.block_type,
+                    "plain_text": block.plain_text,
+                    "data": block.data,
+                    "char_count": block.char_count,
+                    "collapsed_by_default": block.collapsed_by_default,
+                    "render_priority": block.render_priority,
+                }
+                for index, block in enumerate(block_drafts)
+            ],
         )
 
     db.add(
