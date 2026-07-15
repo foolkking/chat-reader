@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
@@ -36,6 +36,9 @@ from app.services.search.search_indexer import rebuild_search_and_toc_for_conver
 
 class CommitImportError(ValueError):
     pass
+
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True)
@@ -310,8 +313,7 @@ def _persist_conversation(
     db.add(conversation)
     db.flush()
 
-    for message_draft in draft.messages:
-        _persist_message(conversation, message_draft, db)
+    _persist_messages(conversation, draft.messages, db)
 
     event_payload = {
         "import_id": str(import_record.id),
@@ -334,59 +336,74 @@ def _persist_conversation(
     return conversation
 
 
-def _persist_message(conversation: Conversation, draft: PersistableMessage, db: Session) -> None:
-    block_drafts = build_basic_render_blocks(draft.display_text)
-    blocks_payload = [
-        {
-            "block_index": index,
-            "block_type": block.block_type,
-            "plain_text": block.plain_text,
-            "data": block.data,
-            "char_count": block.char_count,
-        }
-        for index, block in enumerate(block_drafts)
-    ]
-    char_count = len(draft.display_text)
-    message = Message(
-        id=uuid.uuid4(),
-        conversation_id=conversation.id,
-        role=draft.role,
-        order_key=draft.order_key,
-        turn_index=draft.turn_index,
-        created_at=draft.created_at,
-        created_by="import",
-        source_type="import",
-        content_hash=draft.content_hash,
-        block_count=len(block_drafts),
-        char_count=char_count,
-        is_heavy=char_count > 12000 or len(block_drafts) > 80,
-    )
-    db.add(message)
-    db.flush()
+def _persist_messages(
+    conversation: Conversation,
+    drafts: list[PersistableMessage],
+    db: Session,
+) -> None:
+    prepared: list[tuple[PersistableMessage, uuid.UUID, uuid.UUID, int, int]] = []
+    message_rows: list[dict] = []
 
-    version = MessageVersion(
-        id=uuid.uuid4(),
-        message_id=message.id,
-        version_number=1,
-        plain_text=draft.plain_text,
-        display_text=draft.display_text,
-        blocks=blocks_payload,
-        edit_type=draft.edit_type,
-        created_by="import",
-        content_hash=draft.content_hash,
-    )
-    db.add(version)
-    db.flush()
+    for draft in drafts:
+        message_id = uuid.uuid4()
+        version_id = uuid.uuid4()
+        char_count = len(draft.display_text)
+        block_count = len(build_basic_render_blocks(draft.display_text))
+        prepared.append((draft, message_id, version_id, char_count, block_count))
+        message_rows.append(
+            {
+                "id": message_id,
+                "conversation_id": conversation.id,
+                "role": draft.role,
+                "order_key": draft.order_key,
+                "turn_index": draft.turn_index,
+                "created_at": draft.created_at,
+                "current_version_id": version_id,
+                "created_by": "import",
+                "source_type": "import",
+                "content_hash": draft.content_hash,
+                "block_count": block_count,
+                "char_count": char_count,
+                "is_heavy": char_count > 12000 or block_count > 80,
+            }
+        )
 
-    message.current_version_id = version.id
+    if message_rows:
+        db.execute(insert(Message), message_rows)
 
-    if block_drafts:
-        db.execute(
-            insert(RenderBlock),
-            [
+    for batch in _batches(prepared, 25):
+        version_rows: list[dict] = []
+        block_rows: list[dict] = []
+        source_ref_rows: list[dict] = []
+
+        for draft, message_id, version_id, _, _ in batch:
+            block_drafts = build_basic_render_blocks(draft.display_text)
+            version_rows.append(
+                {
+                    "id": version_id,
+                    "message_id": message_id,
+                    "version_number": 1,
+                    "plain_text": draft.plain_text,
+                    "display_text": draft.display_text,
+                    "blocks": [
+                        {
+                            "block_index": index,
+                            "block_type": block.block_type,
+                            "plain_text": block.plain_text,
+                            "data": block.data,
+                            "char_count": block.char_count,
+                        }
+                        for index, block in enumerate(block_drafts)
+                    ],
+                    "edit_type": draft.edit_type,
+                    "created_by": "import",
+                    "content_hash": draft.content_hash,
+                }
+            )
+            block_rows.extend(
                 {
                     "id": uuid.uuid4(),
-                    "message_version_id": version.id,
+                    "message_version_id": version_id,
                     "block_index": index,
                     "block_type": block.block_type,
                     "plain_text": block.plain_text,
@@ -396,26 +413,33 @@ def _persist_message(conversation: Conversation, draft: PersistableMessage, db: 
                     "render_priority": block.render_priority,
                 }
                 for index, block in enumerate(block_drafts)
-            ],
-        )
+            )
+            source_ref_rows.append(
+                {
+                    "id": uuid.uuid4(),
+                    "message_id": message_id,
+                    "source_type": conversation.source_type,
+                    "source_profile": conversation.source_profile,
+                    "source_conversation_id": draft.source_conversation_id or conversation.external_source_id,
+                    "source_node_id": draft.source_node_id,
+                    "source_message_id": draft.source_message_id,
+                    "source_json_index": draft.source_json_index,
+                    "source_markdown_index": draft.source_markdown_index,
+                    "parent_node_id": draft.parent_node_id,
+                    "child_node_ids": draft.child_node_ids,
+                    "is_primary_path": draft.is_primary_path,
+                    "raw_metadata": {"warnings": draft.warnings, **draft.raw_metadata},
+                }
+            )
 
-    db.add(
-        SourceMessageRef(
-            id=uuid.uuid4(),
-            message_id=message.id,
-            source_type=conversation.source_type,
-            source_profile=conversation.source_profile,
-            source_conversation_id=draft.source_conversation_id or conversation.external_source_id,
-            source_node_id=draft.source_node_id,
-            source_message_id=draft.source_message_id,
-            source_json_index=draft.source_json_index,
-            source_markdown_index=draft.source_markdown_index,
-            parent_node_id=draft.parent_node_id,
-            child_node_ids=draft.child_node_ids,
-            is_primary_path=draft.is_primary_path,
-            raw_metadata={"warnings": draft.warnings, **draft.raw_metadata},
-        )
-    )
+        db.execute(insert(MessageVersion), version_rows)
+        for block_batch in _batches(block_rows, 500):
+            db.execute(insert(RenderBlock), block_batch)
+        db.execute(insert(SourceMessageRef), source_ref_rows)
+
+
+def _batches(items: list[T], size: int) -> list[list[T]]:
+    return [items[index : index + size] for index in range(0, len(items), size)]
 
 
 def _read_artifact(import_id: uuid.UUID, artifact: SourceArtifact | None) -> bytes:
