@@ -22,7 +22,10 @@ export async function POST(
       request.headers.get("accept") ?? "application/json",
     );
 
-    const headers = new Headers({ "cache-control": "no-store" });
+    const headers = new Headers({
+      "cache-control": "no-store",
+      "x-chat-reader-proxy": "import-commit-route",
+    });
     const contentTypeHeader = upstream.headers["content-type"];
     const contentType = Array.isArray(contentTypeHeader) ? contentTypeHeader[0] : contentTypeHeader;
     if (contentType) {
@@ -38,7 +41,10 @@ export async function POST(
     console.error("Import commit upstream request failed", error);
     return Response.json(
       { detail: "Import commit service is temporarily unavailable." },
-      { status: 502 },
+      {
+        status: 502,
+        headers: { "x-chat-reader-proxy": "import-commit-route" },
+      },
     );
   }
 }
