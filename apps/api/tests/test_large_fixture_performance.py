@@ -47,6 +47,16 @@ def test_large_200_and_1000_message_conversations_have_window_limits(client: Tes
         assert reindex.status_code == 200
         assert reindex.json()["indexed_count"] >= total_messages
 
+        role_search = client.get(
+            "/api/search",
+            params={"q": "large prompt 0", "conversation_id": conversation_id},
+        )
+        assert role_search.status_code == 200
+        message_result = next(
+            item for item in role_search.json()["items"] if item["document_type"] == "message"
+        )
+        assert message_result["role"] == "user"
+
 
 def test_heavy_message_and_block_limit_guards(client: TestClient) -> None:
     preview = client.post(
