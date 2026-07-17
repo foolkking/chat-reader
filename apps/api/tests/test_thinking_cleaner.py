@@ -33,6 +33,24 @@ def test_assistant_search_trace_before_duration_removed() -> None:
     assert "npm | Home" in (result.removed_text or "")
 
 
+def test_inline_duration_marker_keeps_answer_on_same_quoted_line() -> None:
+    result = clean_thinking_summary(
+        "assistant",
+        """> **搜索当前 Node.js LTS 版本信息**
+>
+> [Node.js Releases](https://github.com/nodejs/node/releases)
+>
+> > > > 思考了 1m 2s 下面这条路线建议叫 TypeScript 全栈工程学习路线。
+
+## 正式内容""",
+    )
+
+    assert result.removed is True
+    assert result.text == "下面这条路线建议叫 TypeScript 全栈工程学习路线。\n\n## 正式内容"
+    assert "思考了 1m 2s" in (result.removed_text or "")
+    assert "下面这条路线" not in (result.removed_text or "")
+
+
 def test_assistant_exporter_search_narration_before_duration_removed() -> None:
     result = clean_thinking_summary(
         "assistant",
