@@ -151,36 +151,63 @@ def search(
             base_query = base_query.filter(SearchDocument.role == role)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
 
-    rows = ordered_query.all()
-    message_ids = {document.message_id for document, _, _ in rows if document.message_id is not None}
+    rows = ordered_query.with_entities(
+        SearchDocument.id.label("document_id"),
+        SearchDocument.document_type,
+        SearchDocument.conversation_id,
+        SearchDocument.message_id,
+        Conversation.display_title.label("conversation_title"),
+        rank_expr.label("rank"),
+    ).all()
+    message_ids = {
+        row.message_id
+        for row in rows
+        if row.document_type == "message" and row.message_id is not None
+    }
     content_hashes = (
         dict(db.query(Message.id, Message.content_hash).filter(Message.id.in_(message_ids)).all())
         if message_ids
         else {}
     )
-    grouped_rows: list[tuple[SearchDocument, str, float, int]] = []
+    grouped_rows: list[tuple[uuid.UUID, str, uuid.UUID, uuid.UUID | None, str, float, int]] = []
     group_positions: dict[tuple[str, str], int] = {}
     group_conversations: list[set[uuid.UUID]] = []
-    for document, conversation_title, rank in rows:
-        content_hash = content_hashes.get(document.message_id)
+    for row in rows:
+        content_hash = content_hashes.get(row.message_id)
         key = (
             ("message", content_hash)
-            if document.document_type == "message" and content_hash
-            else (document.document_type, str(document.id))
+            if row.document_type == "message" and content_hash
+            else (row.document_type, str(row.document_id))
         )
         existing_position = group_positions.get(key)
         if existing_position is None:
             group_positions[key] = len(grouped_rows)
-            grouped_rows.append((document, conversation_title, float(rank or 0), 1))
-            group_conversations.append({document.conversation_id})
+            grouped_rows.append(
+                (
+                    row.document_id,
+                    row.document_type,
+                    row.conversation_id,
+                    row.message_id,
+                    row.conversation_title,
+                    float(row.rank or 0),
+                    1,
+                )
+            )
+            group_conversations.append({row.conversation_id})
             continue
         conversations = group_conversations[existing_position]
-        conversations.add(document.conversation_id)
+        conversations.add(row.conversation_id)
         current = grouped_rows[existing_position]
-        grouped_rows[existing_position] = (*current[:3], len(conversations))
+        grouped_rows[existing_position] = (*current[:6], len(conversations))
 
     total = len(grouped_rows)
     page_rows = grouped_rows[offset : offset + limit]
+    documents = {
+        document.id: document
+        for document in db.query(SearchDocument)
+        .filter(SearchDocument.id.in_([row[0] for row in page_rows]))
+        .all()
+    }
     items = [
         SearchResult(
             document_id=document.id,
@@ -195,7 +222,8 @@ def search(
             source_profile=document.source_profile,
             occurrence_count=occurrence_count,
         )
-        for document, conversation_title, rank, occurrence_count in page_rows
+        for document_id, _, _, _, conversation_title, rank, occurrence_count in page_rows
+        if (document := documents.get(document_id)) is not None
     ]
     return SearchResultPage(query=normalized_query, items=items, limit=limit, offset=offset, total=total)
 

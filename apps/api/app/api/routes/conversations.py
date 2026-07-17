@@ -546,7 +546,7 @@ _LEADING_TIMESTAMP_RE = re.compile(
     r"^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?\s*$"
 )
 _THINKING_DURATION_RE = re.compile(
-    r"^(?:(?:已\s*)?思考(?:了)?|thinking|reasoning)\s*[:：]?\s*"
+    r"^(?:已?\s*思考(?:了)?|thinking|reasoning)\s*[:：]?\s*"
     r"(?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒)$",
     re.IGNORECASE,
 )

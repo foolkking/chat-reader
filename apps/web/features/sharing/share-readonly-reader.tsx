@@ -9,6 +9,8 @@ import { navigateMountedTarget } from "../conversations/reader-navigation";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 
+const ACTIVE_READING_OFFSET = 96;
+
 export function ShareReadonlyReader({ token }: { token: string }) {
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
@@ -62,6 +64,21 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     return result;
   }, []);
 
+  const refreshActiveMessageFromLayout = useCallback((unlockNavigation = false) => {
+    if (unlockNavigation) {
+      navigationLockUntilRef.current = 0;
+      setNavigationTargetMessageId(null);
+    }
+    if (!unlockNavigation && Date.now() < navigationLockUntilRef.current) {
+      return;
+    }
+    const nextActiveId = resolveActiveMessageId();
+    if (nextActiveId) {
+      setActiveMessageId(nextActiveId);
+      setActiveBlockId(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (messages.length === 0) {
       setActiveMessageId(null);
@@ -91,6 +108,40 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     }
     return () => observer.disconnect();
   }, [messages]);
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      return undefined;
+    }
+    let frame = 0;
+    const scheduleRefresh = (unlockNavigation = false) => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        refreshActiveMessageFromLayout(unlockNavigation);
+      });
+    };
+    const onManualIntent = () => scheduleRefresh(true);
+    const onScroll = () => scheduleRefresh(false);
+    window.addEventListener("pointerdown", onManualIntent, { passive: true });
+    window.addEventListener("wheel", onManualIntent, { passive: true });
+    window.addEventListener("touchstart", onManualIntent, { passive: true });
+    window.addEventListener("click", onManualIntent, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    scheduleRefresh(false);
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      window.removeEventListener("pointerdown", onManualIntent);
+      window.removeEventListener("wheel", onManualIntent);
+      window.removeEventListener("touchstart", onManualIntent);
+      window.removeEventListener("click", onManualIntent);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [messages, refreshActiveMessageFromLayout]);
 
   if (shareQuery.isLoading) {
     return <ShareState title="Loading share" detail="Fetching read-only conversation." />;
@@ -160,7 +211,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               message={message}
               readOnly
               highlightTargetId={targetHighlightId}
-              expandHeavyBlocks={expandedMessageIds.has(message.id)}
+              expandHeavyBlocks={expandedMessageIds.has(message.id) || Boolean(message.content_truncated)}
             />
           ))}
           <div aria-hidden="true" className="h-[calc(100vh-6rem)] min-h-72" />
@@ -267,4 +318,28 @@ function ShareState({ title, detail }: { title: string; detail: string }) {
       </div>
     </main>
   );
+}
+
+function resolveActiveMessageId(): string | null {
+  const messages = Array.from(document.querySelectorAll<HTMLElement>("article[data-message-id]"));
+  if (messages.length === 0) {
+    return null;
+  }
+  const readingLine = ACTIVE_READING_OFFSET;
+  let nearest: { id: string; distance: number } | null = null;
+  for (const message of messages) {
+    const rect = message.getBoundingClientRect();
+    const id = message.dataset.messageId;
+    if (!id) {
+      continue;
+    }
+    if (rect.top <= readingLine && rect.bottom >= readingLine) {
+      return id;
+    }
+    const distance = Math.min(Math.abs(rect.top - readingLine), Math.abs(rect.bottom - readingLine));
+    if (!nearest || distance < nearest.distance) {
+      nearest = { id, distance };
+    }
+  }
+  return nearest?.id ?? null;
 }

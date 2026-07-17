@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import json
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -97,6 +98,41 @@ def test_shared_readonly_response_and_access_count(client: TestClient) -> None:
     assert second.status_code == 200
     shares = client.get(f"/api/conversations/{conversation_id}/shares").json()
     assert shares[0]["access_count"] == 2
+
+
+def test_shared_readonly_response_uses_heavy_message_preview(client: TestClient) -> None:
+    long_text = "# Long answer\n\n" + ("content line\n" * 1200)
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "share-heavy.json",
+                json.dumps(
+                    {
+                        "metadata": {"title": "Share Heavy", "powered_by": "ChatGPT Exporter"},
+                        "messages": [
+                            {"role": "Prompt", "say": "question"},
+                            {"role": "Response", "say": long_text},
+                        ],
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
+    )
+    conversation_id = client.post(f"/api/imports/{preview.json()['import_id']}/commit").json()["conversation_ids"][0]
+    create = client.post(f"/api/conversations/{conversation_id}/shares", json={})
+    token = create.json()["token"]
+
+    response = client.get(f"/api/shared/{token}")
+    assert response.status_code == 200
+    heavy = response.json()["messages"][1]
+    assert heavy["is_heavy"] is True
+    assert heavy["content_truncated"] is True
+    assert heavy["render_blocks"] == []
+    assert heavy["current_version"]["blocks"] == []
+    assert len(heavy["current_version"]["display_text"]) <= 500
+    assert len(response.content) < 20_000
 
 
 def test_share_validation_revoke_and_expiry(client: TestClient, tmp_path) -> None:

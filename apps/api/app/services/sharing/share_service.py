@@ -238,7 +238,7 @@ def _share_toc(db: Session, share: Share) -> list[TocItem]:
     selected_ids = {uuid.UUID(str(message_id)) for message_id in share.selected_message_ids}
     if share.scope == "selected_messages":
         query = query.filter(Heading.message_id.in_(selected_ids))
-    headings = query.order_by(Heading.heading_index.asc()).all()
+    headings = query.order_by(Heading.heading_index.asc()).limit(500).all()
     return [
         TocItem(
             id=heading.id,
@@ -257,13 +257,16 @@ def _share_toc(db: Session, share: Share) -> list[TocItem]:
 def _message_item(db: Session, message: Message) -> MessageListItem:
     version = db.get(MessageVersion, message.current_version_id) if message.current_version_id else None
     blocks = []
-    if version is not None:
+    should_inline_blocks = version is not None and not message.is_heavy
+    if should_inline_blocks:
         blocks = (
             db.query(RenderBlock)
             .filter(RenderBlock.message_version_id == version.id)
             .order_by(RenderBlock.block_index.asc())
             .all()
         )
+    content_truncated = bool(version is not None and message.is_heavy)
+    preview = " ".join((version.display_text if version else "").split())[:500] if content_truncated else None
     return MessageListItem(
         id=message.id,
         conversation_id=message.conversation_id,
@@ -271,21 +274,23 @@ def _message_item(db: Session, message: Message) -> MessageListItem:
         order_key=message.order_key,
         turn_index=message.turn_index,
         created_at=message.created_at,
-        current_version=_version_read(version) if version else None,
+        current_version=_version_read(version, truncate=content_truncated) if version else None,
         render_blocks=[_block_read(block) for block in blocks],
         block_count=message.block_count,
         char_count=message.char_count,
         is_heavy=message.is_heavy,
+        content_preview=preview,
+        content_truncated=content_truncated,
     )
 
 
-def _version_read(version: MessageVersion) -> MessageVersionRead:
+def _version_read(version: MessageVersion, *, truncate: bool = False) -> MessageVersionRead:
     return MessageVersionRead(
         id=version.id,
         version_number=version.version_number,
-        plain_text=version.plain_text,
-        display_text=version.display_text,
-        blocks=version.blocks,
+        plain_text=version.plain_text[:500] if truncate else version.plain_text,
+        display_text=version.display_text[:500] if truncate else version.display_text,
+        blocks=[] if truncate else version.blocks,
         edit_type=version.edit_type,
         created_at=version.created_at,
         created_by=version.created_by,

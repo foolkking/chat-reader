@@ -24,6 +24,7 @@ import { MessageItem } from "./message-item";
 import { navigateMountedTarget } from "./reader-navigation";
 
 const PAGE_SIZE = 30;
+const ACTIVE_READING_OFFSET = 120;
 
 export function ConversationReader({ conversationId }: { conversationId: string }) {
   const searchParams = useSearchParams();
@@ -207,6 +208,21 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     [blockCache, conversationId, mergeWindowItems, messages],
   );
 
+  const refreshActiveMessageFromLayout = useCallback((unlockNavigation = false) => {
+    if (unlockNavigation) {
+      navigationLockUntilRef.current = 0;
+      setPendingTargetMessageId(null);
+    }
+    if (!unlockNavigation && Date.now() < navigationLockUntilRef.current) {
+      return;
+    }
+    const nextActiveId = resolveActiveMessageId(scrollContainerRef.current);
+    if (nextActiveId) {
+      setActiveMessageId(nextActiveId);
+      setActiveBlockId(null);
+    }
+  }, []);
+
   useEffect(() => {
     const messageId = pendingTargetMessageId ?? targetMessageId;
     if (!messageId) {
@@ -270,6 +286,41 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     }
     return () => observer.disconnect();
   }, [messages]);
+
+  useEffect(() => {
+    const root = scrollContainerRef.current;
+    if (!root || messages.length === 0) {
+      return undefined;
+    }
+    let frame = 0;
+    const scheduleRefresh = (unlockNavigation = false) => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        refreshActiveMessageFromLayout(unlockNavigation);
+      });
+    };
+    const onManualIntent = () => scheduleRefresh(true);
+    const onScroll = () => scheduleRefresh(false);
+    root.addEventListener("pointerdown", onManualIntent, { passive: true });
+    root.addEventListener("wheel", onManualIntent, { passive: true });
+    root.addEventListener("touchstart", onManualIntent, { passive: true });
+    root.addEventListener("click", onManualIntent, { passive: true });
+    root.addEventListener("scroll", onScroll, { passive: true });
+    scheduleRefresh(false);
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      root.removeEventListener("pointerdown", onManualIntent);
+      root.removeEventListener("wheel", onManualIntent);
+      root.removeEventListener("touchstart", onManualIntent);
+      root.removeEventListener("click", onManualIntent);
+      root.removeEventListener("scroll", onScroll);
+    };
+  }, [messages, refreshActiveMessageFromLayout]);
 
   const conversation = conversationQuery.data;
   const loadingProgress = initialPaintReady
@@ -776,6 +827,34 @@ function getTargetElement(messageId: string, blockIndex?: number): HTMLElement |
     return document.getElementById(`block-${messageId}-${blockIndex}`);
   }
   return document.getElementById(`message-${messageId}`);
+}
+
+function resolveActiveMessageId(root: HTMLElement | null): string | null {
+  const messages = Array.from(document.querySelectorAll<HTMLElement>("article[data-message-id]"));
+  if (messages.length === 0) {
+    return null;
+  }
+  const rootRect = root?.getBoundingClientRect();
+  const viewportTop = rootRect?.top ?? 0;
+  const readingLine = viewportTop + ACTIVE_READING_OFFSET;
+  let nearest: { id: string; distance: number } | null = null;
+
+  for (const message of messages) {
+    const rect = message.getBoundingClientRect();
+    const id = message.dataset.messageId;
+    if (!id) {
+      continue;
+    }
+    if (rect.top <= readingLine && rect.bottom >= readingLine) {
+      return id;
+    }
+    const distance = Math.min(Math.abs(rect.top - readingLine), Math.abs(rect.bottom - readingLine));
+    if (!nearest || distance < nearest.distance) {
+      nearest = { id, distance };
+    }
+  }
+
+  return nearest?.id ?? null;
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {
