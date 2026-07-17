@@ -108,3 +108,6 @@ def test_dialogue_index_is_lightweight_and_preview_window_truncates_heavy_text(c
     assert heavy["is_heavy"] is True
     assert heavy["content_truncated"] is True
     assert len(heavy["current_version"]["display_text"]) <= 500
+    assert len(heavy["current_version"]["plain_text"]) <= 500
+    assert heavy["current_version"]["blocks"] == []
+    assert len(window.content) < 20_000
