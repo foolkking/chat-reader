@@ -553,6 +553,7 @@ _THINKING_DURATION_RE = re.compile(
 _MARKDOWN_FENCE_RE = re.compile(r"^\s*(?:`{3,}|~{3,})")
 _MARKDOWN_BLOCK_PREFIX_RE = re.compile(r"^\s*(?:#{1,6}\s+|>+\s*|[-+*]\s+|\d+[.)]\s+)")
 _MARKDOWN_TASK_RE = re.compile(r"^\s*\[[ xX]\]\s+")
+_MARKDOWN_LINKED_IMAGE_RE = re.compile(r"\[!\[([^\]]*)\]\([^)]*\)\]\([^)]*\)")
 _MARKDOWN_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
 _MARKDOWN_STRONG_RE = re.compile(r"(\*\*|__|~~)(.+?)\1")
 _MARKDOWN_EMPHASIS_RE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
@@ -580,6 +581,7 @@ def _dialogue_preview(text: str) -> str:
                 break
             value = cleaned.strip()
         value = _MARKDOWN_TASK_RE.sub("", value)
+        value = _MARKDOWN_LINKED_IMAGE_RE.sub(lambda match: match.group(1), value)
         value = _MARKDOWN_LINK_RE.sub(lambda match: match.group(1), value)
         value = _MARKDOWN_INLINE_CODE_RE.sub(lambda match: match.group(1), value)
         value = _MARKDOWN_STRONG_RE.sub(lambda match: match.group(2), value)

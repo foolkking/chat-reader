@@ -74,6 +74,7 @@ def test_dialogue_index_is_lightweight_and_preview_window_truncates_heavy_text(c
     long_text = (
         "# Large heading\n\n"
         "**important** [documentation](https://example.com)\n\n"
+        "[![Architecture preview](https://example.com/image.png)](https://example.com/details)\n\n"
         "```ts title=\"sample\"\nconst value = 1\n```\n\n"
         + ("content line\n" * 1100)
     )
@@ -104,7 +105,7 @@ def test_dialogue_index_is_lightweight_and_preview_window_truncates_heavy_text(c
     assert all(len(item["preview"]) <= 160 for item in index.json()["items"])
     assert "current_version" not in index.json()["items"][1]
     assert index.json()["items"][1]["preview"].startswith(
-        "Large heading important documentation const value = 1"
+        "Large heading important documentation Architecture preview const value = 1"
     )
     assert not any(marker in index.json()["items"][1]["preview"] for marker in ("#", "**", "```", "]("))
 
