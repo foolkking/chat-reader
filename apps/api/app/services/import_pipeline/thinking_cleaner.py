@@ -10,7 +10,7 @@ class CleanedText:
     warnings: list[str] = field(default_factory=list)
 
 
-MAX_SCAN_LINES = 40
+MAX_SCAN_LINES = 80
 MAX_SCAN_CHARS = 4000
 
 _DURATION_RE = re.compile(
