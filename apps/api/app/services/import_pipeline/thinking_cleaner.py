@@ -11,7 +11,7 @@ class CleanedText:
 
 
 MAX_SCAN_LINES = 80
-MAX_SCAN_CHARS = 4000
+MAX_SCAN_CHARS = 8000
 
 _DURATION_RE = re.compile(
     r"^(?:(?:\u5df2\s*)?\u601d\u8003(?:\u4e86)?|thinking|reasoning)\s*[:\uff1a]?\s*"

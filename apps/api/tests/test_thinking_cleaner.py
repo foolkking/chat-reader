@@ -52,7 +52,9 @@ def test_inline_duration_marker_keeps_answer_on_same_quoted_line() -> None:
 
 
 def test_long_search_source_list_can_reach_marker_after_forty_lines() -> None:
-    sources = "\n".join(f"> [Source {index}](https://example.com/{index})" for index in range(45))
+    sources = "\n".join(
+        f"> [Source {index}](https://example.com/{index}/{'x' * 100})" for index in range(45)
+    )
     result = clean_thinking_summary(
         "assistant",
         f"> **搜索当前版本**\n{sources}\n> 思考了 1m 2s\n\n正式回答。",
