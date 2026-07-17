@@ -550,6 +550,13 @@ _THINKING_DURATION_RE = re.compile(
     r"(?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒)$",
     re.IGNORECASE,
 )
+_MARKDOWN_FENCE_RE = re.compile(r"^\s*(?:`{3,}|~{3,})")
+_MARKDOWN_BLOCK_PREFIX_RE = re.compile(r"^\s*(?:#{1,6}\s+|>+\s*|[-+*]\s+|\d+[.)]\s+)")
+_MARKDOWN_TASK_RE = re.compile(r"^\s*\[[ xX]\]\s+")
+_MARKDOWN_LINK_RE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_MARKDOWN_STRONG_RE = re.compile(r"(\*\*|__|~~)(.+?)\1")
+_MARKDOWN_EMPHASIS_RE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
+_MARKDOWN_INLINE_CODE_RE = re.compile(r"`+([^`\n]+)`+")
 
 
 def _dialogue_preview(text: str) -> str:
@@ -562,7 +569,25 @@ def _dialogue_preview(text: str) -> str:
         if _THINKING_DURATION_RE.match(line.strip().lstrip(">").strip()):
             lines = lines[index + 1 :]
             break
-    preview = " ".join("\n".join(lines).split())[:160]
+    plain_lines: list[str] = []
+    for line in lines:
+        value = line.strip()
+        if not value or _MARKDOWN_FENCE_RE.match(value) or re.fullmatch(r"[-*_]{3,}", value):
+            continue
+        while True:
+            cleaned = _MARKDOWN_BLOCK_PREFIX_RE.sub("", value, count=1)
+            if cleaned == value:
+                break
+            value = cleaned.strip()
+        value = _MARKDOWN_TASK_RE.sub("", value)
+        value = _MARKDOWN_LINK_RE.sub(lambda match: match.group(1), value)
+        value = _MARKDOWN_INLINE_CODE_RE.sub(lambda match: match.group(1), value)
+        value = _MARKDOWN_STRONG_RE.sub(lambda match: match.group(2), value)
+        value = _MARKDOWN_EMPHASIS_RE.sub(lambda match: match.group(1), value)
+        value = value.strip().strip("|").strip()
+        if value:
+            plain_lines.append(value)
+    preview = " ".join("\n".join(plain_lines).split())[:160]
     return preview or "打开消息查看正文"
 
 
