@@ -4,11 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUpdate, SharedConversationResponse
+from app.schemas.message import DialogueIndexResponse, RenderBlockRead
+from app.schemas.search import MessageWindowResponse
+from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUpdate, SharedConversationBootstrap
+from app.schemas.toc import TocResponse
 from app.services.sharing.share_service import (
     ShareError,
     create_share,
+    get_shared_dialogue_index,
     get_shared_conversation_by_token,
+    get_shared_message_blocks,
+    get_shared_message_window,
+    get_shared_toc,
     list_shares,
     revoke_share,
     share_create_response,
@@ -75,15 +82,97 @@ def update_conversation_share(
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
-@router.get("/api/shared/{token}", response_model=SharedConversationResponse)
+@router.get("/api/shared/{token}", response_model=SharedConversationBootstrap)
 def get_shared_conversation(
     token: str,
     db: Session = Depends(get_db),
-) -> SharedConversationResponse:
+) -> SharedConversationBootstrap:
     try:
         response = get_shared_conversation_by_token(db, token)
         db.commit()
         return response
     except ShareError as exc:
         db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/shared/{token}/message-window", response_model=MessageWindowResponse)
+def get_shared_messages(
+    token: str,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=30, ge=1, le=100),
+    anchor_message_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+) -> MessageWindowResponse:
+    try:
+        return get_shared_message_window(
+            db,
+            token,
+            offset=offset,
+            limit=limit,
+            anchor_message_id=anchor_message_id,
+        )
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/shared/{token}/dialogue-index", response_model=DialogueIndexResponse)
+def get_shared_index(
+    token: str,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=80, ge=1, le=200),
+    anchor_message_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+) -> DialogueIndexResponse:
+    try:
+        return get_shared_dialogue_index(
+            db,
+            token,
+            offset=offset,
+            limit=limit,
+            anchor_message_id=anchor_message_id,
+        )
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/shared/{token}/toc", response_model=TocResponse)
+def get_shared_contents(
+    token: str,
+    message_id: uuid.UUID | None = None,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=500),
+    max_level: int | None = Query(default=None, ge=1, le=6),
+    db: Session = Depends(get_db),
+) -> TocResponse:
+    try:
+        return get_shared_toc(
+            db,
+            token,
+            message_id=message_id,
+            offset=offset,
+            limit=limit,
+            max_level=max_level,
+        )
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/shared/{token}/messages/{message_id}/blocks", response_model=list[RenderBlockRead])
+def get_shared_blocks(
+    token: str,
+    message_id: uuid.UUID,
+    start: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=500),
+    db: Session = Depends(get_db),
+) -> list[RenderBlockRead]:
+    try:
+        return get_shared_message_blocks(
+            db,
+            token,
+            message_id=message_id,
+            start=start,
+            limit=limit,
+        )
+    except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

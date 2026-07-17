@@ -92,6 +92,11 @@ export type DialogueIndexResponse = {
   items: DialogueIndexItem[];
   message_count: number;
   turn_count: number;
+  limit: number;
+  offset: number;
+  total: number;
+  has_previous: boolean;
+  has_more: boolean;
 };
 
 export type ImportPreviewFile = {
@@ -259,6 +264,28 @@ export type ReadingPositionInput = {
   anchor_data?: Record<string, unknown>;
 };
 
+export type ReadingAnchor = {
+  position_mode: "block-relative-v1";
+  order_key: string;
+  ordinal: number | null;
+  heading_block_index: number | null;
+  current_version_id: string | null;
+};
+
+export type ReadingRestoreState = {
+  status: "idle" | "loading" | "restoring" | "restored" | "failed";
+  targetMessageId: string | null;
+  targetBlockIndex: number | null;
+};
+
+export type PersistedSharePosition = {
+  message_id: string;
+  block_index: number | null;
+  scroll_offset: number;
+  anchor_data: ReadingAnchor;
+  saved_at: string;
+};
+
 export type RecentItemRead = {
   id: string;
   conversation_id: string;
@@ -358,6 +385,7 @@ export type ConversationTransformResponse = {
 export type NavigateTarget = {
   messageId: string;
   blockIndex?: number;
+  alignmentOffset?: number;
   source?: "dialogue-index" | "section-toc" | "search" | "message-action";
 };
 
@@ -463,9 +491,15 @@ export type ShareUpdateInput = {
   expires_at?: string | null;
 };
 
-export type SharedConversationResponse = {
+export type SharedConversationBootstrap = {
   share: ShareRead;
   conversation: ConversationListItem;
-  toc?: TocItem[];
-  messages: MessageListItem[];
+  message_count: number;
+  turn_count: number;
+  capabilities: {
+    dialogue_index: boolean;
+    toc: boolean;
+    blocks: boolean;
+    export: boolean;
+  };
 };

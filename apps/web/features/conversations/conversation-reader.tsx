@@ -6,16 +6,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getConversation,
   getConversationMessageWindow,
+  getReadingPosition,
   getMessageBlocks,
   mergeMessages,
+  saveReadingPosition,
+  saveReadingPositionKeepalive,
   splitConversation,
 } from "../../lib/api";
-import type { MessageListItem, NavigateTarget, NavigationResult, RenderBlockRead, TocItem } from "../../lib/types";
+import type { MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, RenderBlockRead, TocItem } from "../../lib/types";
 import { ExportButton } from "../exporting/export-button";
 import { ExportPanel } from "../exporting/export-panel";
 import { ProjectSidebar } from "../projects/project-sidebar";
 import { PinButton } from "../reading/pin-button";
-import { ReadingPositionClient } from "../reading/reading-position-client";
 import { ShareButton } from "../sharing/share-button";
 import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
@@ -52,25 +54,44 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [expandProgress, setExpandProgress] = useState({ current: 0, total: 0, active: false });
   const [initialPaintReady, setInitialPaintReady] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const loadPreviousSentinelRef = useRef<HTMLDivElement | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const nextOffsetRef = useRef(0);
+  const minOffsetRef = useRef(0);
+  const loadingPreviousRef = useRef(false);
   const navigationTokenRef = useRef(0);
   const navigationLockUntilRef = useRef(0);
+  const restoreAttemptedRef = useRef(false);
+  const restoreInProgressRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
+  const lastSavedSignatureRef = useRef("");
+  const messagesRef = useRef<MessageListItem[]>([]);
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
     queryFn: () => getConversation(conversationId),
   });
 
+  const positionQuery = useQuery({
+    queryKey: ["reading-position", conversationId],
+    queryFn: () => getReadingPosition(conversationId),
+  });
+
+  const savedPosition = targetMessageId ? null : positionQuery.data?.position ?? null;
+  const initialAnchorMessageId = targetMessageId ?? savedPosition?.message_id ?? null;
+  const canLoadInitialWindow = Boolean(targetMessageId) || positionQuery.isSuccess || positionQuery.isError;
+
   const windowQuery = useQuery({
-    queryKey: ["message-window", conversationId, offset],
+    queryKey: ["message-window", conversationId, offset, offset === 0 ? initialAnchorMessageId : null],
     queryFn: () =>
       getConversationMessageWindow(conversationId, {
         includeBlocks: false,
         limit: PAGE_SIZE,
         offset,
+        anchorMessageId: offset === 0 ? initialAnchorMessageId ?? undefined : undefined,
         contentMode: "preview",
       }),
+    enabled: canLoadInitialWindow,
   });
 
   const hasMore = Boolean(windowQuery.data?.has_more);
@@ -79,7 +100,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   useEffect(() => {
     setOffset(0);
     nextOffsetRef.current = 0;
+    minOffsetRef.current = 0;
+    loadingPreviousRef.current = false;
     setMessages([]);
+    setActiveMessageId(targetMessageId);
+    setActiveBlockId(null);
     setSelectedMessageIds(new Set());
     setPendingTargetMessageId(targetMessageId);
     setExpandedHeavyMessageIds(new Set());
@@ -87,7 +112,20 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     setExpandAllHeavyBlocks(false);
     setExpandProgress({ current: 0, total: 0, active: false });
     setInitialPaintReady(false);
+    restoreAttemptedRef.current = false;
+    restoreInProgressRef.current = false;
+    lastSavedSignatureRef.current = "";
   }, [conversationId, targetMessageId]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    if (!targetMessageId && savedPosition?.message_id) {
+      setActiveMessageId(savedPosition.message_id);
+    }
+  }, [savedPosition?.message_id, targetMessageId]);
 
   useEffect(() => {
     if (!conversationQuery.isSuccess || !windowQuery.isSuccess) return;
@@ -103,6 +141,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       nextOffsetRef.current,
       windowQuery.data.offset + windowQuery.data.items.length,
     );
+    minOffsetRef.current = messages.length === 0
+      ? windowQuery.data.offset
+      : Math.min(minOffsetRef.current, windowQuery.data.offset);
     setMessages((current) => {
       const next = offset === 0 ? [] : [...current];
       for (const message of windowQuery.data.items) {
@@ -115,6 +156,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }, [offset, windowQuery.data, windowQuery.isSuccess]);
 
   const mergeWindowItems = useCallback((page: { items: MessageListItem[]; offset: number }) => {
+    minOffsetRef.current = Math.min(minOffsetRef.current, page.offset);
     nextOffsetRef.current = Math.max(nextOffsetRef.current, page.offset + page.items.length);
     setMessages((current) => {
       const next = [...current];
@@ -127,8 +169,30 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     });
   }, []);
 
+  const loadPreviousWindow = useCallback(async () => {
+    const root = scrollContainerRef.current;
+    if (!root || loadingPreviousRef.current || minOffsetRef.current <= 0) return;
+    loadingPreviousRef.current = true;
+    const beforeHeight = root.scrollHeight;
+    try {
+      const previousOffset = Math.max(0, minOffsetRef.current - PAGE_SIZE);
+      const page = await getConversationMessageWindow(conversationId, {
+        includeBlocks: false,
+        limit: minOffsetRef.current - previousOffset,
+        offset: previousOffset,
+        contentMode: "preview",
+      });
+      mergeWindowItems(page);
+      window.requestAnimationFrame(() => {
+        root.scrollTop += root.scrollHeight - beforeHeight;
+      });
+    } finally {
+      loadingPreviousRef.current = false;
+    }
+  }, [conversationId, mergeWindowItems]);
+
   const navigateToTarget = useCallback(
-    async ({ messageId, blockIndex }: NavigateTarget): Promise<NavigationResult> => {
+    async ({ messageId, blockIndex, alignmentOffset }: NavigateTarget): Promise<NavigationResult> => {
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
       navigationLockUntilRef.current = Date.now() + 5000;
@@ -188,7 +252,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           targetId: blockId ?? messageIdDom,
           fallbackId: undefined,
           tokenIsCurrent: () => navigationTokenRef.current === token,
-          offset: 12,
+          offset: alignmentOffset ?? 12,
         });
         if (result.ok) {
           setActiveMessageId(messageId);
@@ -228,8 +292,77 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     if (!messageId) {
       return;
     }
-    void navigateToTarget({ messageId, source: "search" }).finally(() => setPendingTargetMessageId(null));
+    void navigateToTarget({ messageId, source: "search" }).finally(() => {
+      restoreAttemptedRef.current = true;
+      setPendingTargetMessageId(null);
+    });
   }, [navigateToTarget, pendingTargetMessageId, targetMessageId]);
+
+  useEffect(() => {
+    if (!targetMessageId && positionQuery.isError && windowQuery.isSuccess) {
+      restoreAttemptedRef.current = true;
+      return;
+    }
+    if (
+      targetMessageId ||
+      restoreAttemptedRef.current ||
+      !positionQuery.isSuccess ||
+      !windowQuery.isSuccess
+    ) {
+      return;
+    }
+    restoreAttemptedRef.current = true;
+    const position = positionQuery.data.position;
+    if (!position?.message_id) {
+      return;
+    }
+    restoreInProgressRef.current = true;
+    const anchor = position.anchor_data ?? {};
+    const headingBlockIndex = numberOrNull(anchor.heading_block_index);
+    const blockIndex = position.block_index;
+    const isBlockRelative = anchor.position_mode === "block-relative-v1";
+    const candidates: Array<number | undefined> = [
+      blockIndex ?? undefined,
+      headingBlockIndex ?? undefined,
+      undefined,
+    ].filter(
+      (value, index, values) => values.indexOf(value) === index,
+    );
+    void (async () => {
+      for (const candidate of candidates) {
+        const alignmentOffset = candidate === undefined
+          ? ACTIVE_READING_OFFSET
+          : ACTIVE_READING_OFFSET - (isBlockRelative ? position.scroll_offset : 0);
+        const result = await navigateToTarget({
+          messageId: position.message_id as string,
+          blockIndex: candidate,
+          alignmentOffset,
+          source: "message-action",
+        });
+        if (result.ok) {
+          return;
+        }
+      }
+    })().finally(() => {
+      restoreInProgressRef.current = false;
+    });
+  }, [navigateToTarget, positionQuery.data, positionQuery.isError, positionQuery.isSuccess, targetMessageId, windowQuery.isSuccess]);
+
+  useEffect(() => {
+    const sentinel = loadPreviousSentinelRef.current;
+    const root = scrollContainerRef.current;
+    if (!sentinel || !root || messages.length === 0 || minOffsetRef.current <= 0) {
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void loadPreviousWindow();
+      },
+      { root, rootMargin: "600px 0px", threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadPreviousWindow, messages.length]);
 
   useEffect(() => {
     const sentinel = loadMoreSentinelRef.current;
@@ -321,6 +454,63 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       root.removeEventListener("scroll", onScroll);
     };
   }, [messages, refreshActiveMessageFromLayout]);
+
+  useEffect(() => {
+    const root = scrollContainerRef.current;
+    if (!root) {
+      return undefined;
+    }
+
+    const persist = (keepalive = false) => {
+      if (!restoreAttemptedRef.current || restoreInProgressRef.current) {
+        return;
+      }
+      const payload = captureReadingPosition(root, messagesRef.current);
+      if (!payload) {
+        return;
+      }
+      const signature = JSON.stringify(payload);
+      if (!keepalive && signature === lastSavedSignatureRef.current) {
+        return;
+      }
+      lastSavedSignatureRef.current = signature;
+      if (keepalive) {
+        saveReadingPositionKeepalive(conversationId, payload);
+      } else {
+        void saveReadingPosition(conversationId, payload).catch(() => undefined);
+      }
+    };
+
+    const schedule = () => {
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+      saveTimerRef.current = window.setTimeout(() => {
+        saveTimerRef.current = null;
+        persist(false);
+      }, 1000);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        persist(true);
+      }
+    };
+    const onPageHide = () => persist(true);
+
+    root.addEventListener("scroll", schedule, { passive: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      persist(true);
+      root.removeEventListener("scroll", schedule);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [conversationId, initialPaintReady]);
 
   const conversation = conversationQuery.data;
   const loadingProgress = initialPaintReady
@@ -559,6 +749,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 <ConversationIndex
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
+                  ready={canLoadInitialWindow}
                   onNavigate={(item) => {
                     void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
                   }}
@@ -580,7 +771,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
 
               {messages.length > 0 ? (
                 <div className="space-y-6">
-                  <ReadingPositionClient conversationId={conversationId} messages={messages} />
+                  <div ref={loadPreviousSentinelRef} className="h-px" aria-hidden="true" />
                   {messages.map((message) => {
                     const cachedMessageBlocks = blockCache[message.id];
                     const cachedBounds = getBlockBounds(cachedMessageBlocks ?? []);
@@ -675,6 +866,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             <ConversationIndex
               conversationId={conversationId}
               activeMessageId={activeMessageId}
+              ready={canLoadInitialWindow}
               mode="sheet"
               onNavigate={async (item) => {
                 setMobileNavigation({ pending: true, error: null });
@@ -855,6 +1047,69 @@ function resolveActiveMessageId(root: HTMLElement | null): string | null {
   }
 
   return nearest?.id ?? null;
+}
+
+function captureReadingPosition(
+  root: HTMLElement,
+  messages: MessageListItem[],
+): ReadingPositionInput | null {
+  const messageId = resolveActiveMessageId(root);
+  if (!messageId) {
+    return null;
+  }
+  const article = document.getElementById(`message-${messageId}`);
+  if (!article) {
+    return null;
+  }
+  const readingLine = root.getBoundingClientRect().top + ACTIVE_READING_OFFSET;
+  const blocks = Array.from(article.querySelectorAll<HTMLElement>("[data-block-index]"));
+  let activeBlock: HTMLElement | null = null;
+  for (const block of blocks) {
+    const rect = block.getBoundingClientRect();
+    if (rect.top <= readingLine) {
+      activeBlock = block;
+    }
+    if (rect.top <= readingLine && rect.bottom >= readingLine) {
+      activeBlock = block;
+      break;
+    }
+  }
+  const anchorElement = activeBlock ?? article;
+  const activeBlockIndex = numberOrNull(activeBlock?.dataset.blockIndex);
+  let headingBlockIndex: number | null = null;
+  for (const block of blocks) {
+    const blockIndex = numberOrNull(block.dataset.blockIndex);
+    if (blockIndex === null || (activeBlockIndex !== null && blockIndex > activeBlockIndex)) {
+      break;
+    }
+    if (block.dataset.blockType === "heading") {
+      headingBlockIndex = blockIndex;
+    }
+  }
+  const message = messages.find((item) => item.id === messageId);
+  return {
+    message_id: messageId,
+    block_index: activeBlockIndex,
+    scroll_offset: Math.max(0, Math.round(readingLine - anchorElement.getBoundingClientRect().top)),
+    anchor_data: {
+      position_mode: "block-relative-v1",
+      order_key: message?.order_key ?? article.dataset.orderKey ?? "",
+      ordinal: message?.ordinal ?? null,
+      heading_block_index: headingBlockIndex,
+      current_version_id: message?.current_version?.id ?? null,
+    },
+  };
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) ? number : null;
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {

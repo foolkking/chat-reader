@@ -19,6 +19,7 @@ from app.services.reading.reading_service import (
     get_reading_position,
     list_recent_items,
     record_recent_item,
+    resolve_reading_subject_key,
     upsert_reading_position,
 )
 
@@ -31,7 +32,11 @@ router = APIRouter(tags=["reading"])
 )
 def get_position(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ReadingPositionResponse:
     try:
-        position = get_reading_position(db, conversation_id)
+        position = get_reading_position(
+            db,
+            conversation_id,
+            subject_key=resolve_reading_subject_key(),
+        )
     except ReadingServiceError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return ReadingPositionResponse(
@@ -53,6 +58,7 @@ def put_position(
         position = upsert_reading_position(
             db,
             conversation_id,
+            subject_key=resolve_reading_subject_key(),
             message_id=payload.message_id,
             block_index=payload.block_index,
             scroll_offset=payload.scroll_offset,

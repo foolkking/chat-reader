@@ -88,6 +88,8 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 
 ## Reading
 
+阅读位置由服务端身份解析器绑定到 `local:default`，客户端不能提交身份字段。`anchor_data.position_mode=block-relative-v1` 时，位置由 message、block、最近 heading 和 block 内像素偏移共同确定；重新进入会话时首个 message window 直接使用保存的 `anchor_message_id`。
+
 | Method | Path | 说明 |
 | --- | --- | --- |
 | GET | `/api/conversations/{id}/reading-position` | 获取阅读位置 |
@@ -96,6 +98,18 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 | GET | `/api/recent-items` | 最近项目 |
 
 ## Shares
+
+公开分享采用轻量 bootstrap 和 token 约束分页，不允许通过分享 token 调用内部 conversation/message API：
+
+| Method | Path | 说明 |
+| --- | --- | --- |
+| GET | `/api/shared/{token}` | Share 与 conversation 元数据，不包含完整消息和 TOC |
+| GET | `/api/shared/{token}/message-window` | 30 条消息窗口，支持 `anchor_message_id` |
+| GET | `/api/shared/{token}/dialogue-index` | 分页对话索引，支持围绕目标消息加载 |
+| GET | `/api/shared/{token}/toc` | 当前消息或指定范围的章节目录 |
+| GET | `/api/shared/{token}/messages/{message_id}/blocks` | 授权消息的 RenderBlock 分页 |
+
+所有分页接口都会重新验证 token、有效期、撤销状态和 `selected_messages` 范围。Share 阅读位置只保存在访问浏览器的 localStorage，不写入服务器。
 
 | Method | Path | 说明 |
 | --- | --- | --- |

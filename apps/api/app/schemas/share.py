@@ -4,8 +4,9 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.schemas.conversation import ConversationListItem
-from app.schemas.message import MessageListItem
-from app.schemas.toc import TocItem
+from app.schemas.message import DialogueIndexResponse
+from app.schemas.search import MessageWindowResponse
+from app.schemas.toc import TocResponse
 
 
 class ShareCreate(BaseModel):
@@ -54,8 +55,21 @@ class ShareRevokeResponse(ShareRead):
     pass
 
 
-class SharedConversationResponse(BaseModel):
+class SharedConversationBootstrap(BaseModel):
     share: ShareRead
     conversation: ConversationListItem
-    toc: list[TocItem] = Field(default_factory=list)
-    messages: list[MessageListItem] = Field(default_factory=list)
+    message_count: int
+    turn_count: int
+    capabilities: dict[str, bool] = Field(default_factory=dict)
+
+
+class SharedMessageWindowResponse(MessageWindowResponse):
+    pass
+
+
+class SharedDialogueIndexResponse(DialogueIndexResponse):
+    pass
+
+
+class SharedTocResponse(TocResponse):
+    pass

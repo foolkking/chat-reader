@@ -43,6 +43,7 @@ from app.services.projects.project_service import (
     move_conversation_to_project,
     remove_conversation_from_project,
 )
+from app.services.reader_preview import dialogue_preview
 from app.api.routes.tasks import background_job_read
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
@@ -380,26 +381,59 @@ def list_conversation_messages(
 
 
 @router.get("/{conversation_id}/dialogue-index", response_model=DialogueIndexResponse)
-def get_dialogue_index(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> DialogueIndexResponse:
+def get_dialogue_index(
+    conversation_id: uuid.UUID,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=80, ge=1, le=200),
+    anchor_message_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+) -> DialogueIndexResponse:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    base_query = db.query(Message).filter(
+        Message.conversation_id == conversation_id,
+        Message.is_deleted.is_(False),
+    )
+    total = base_query.count()
+    if anchor_message_id is not None:
+        anchor = base_query.filter(Message.id == anchor_message_id).one_or_none()
+        if anchor is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anchor message not found.")
+        before_anchor = base_query.filter(Message.order_key < anchor.order_key).count()
+        offset = max(0, min(max(total - limit, 0), before_anchor - limit // 2))
     rows = (
         db.query(
             Message.id,
             Message.role,
             Message.order_key,
             Message.turn_index,
-            func.substr(MessageVersion.display_text, 1, 4000).label("display_preview"),
+            func.substr(MessageVersion.display_text, 1, 8000).label("display_preview"),
         )
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
         .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
         .order_by(Message.order_key.asc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
     role_counts: dict[str, int] = {}
+    if rows and offset > 0:
+        role_counts = {
+            role: count
+            for role, count in (
+                db.query(Message.role, func.count(Message.id))
+                .filter(
+                    Message.conversation_id == conversation_id,
+                    Message.is_deleted.is_(False),
+                    Message.order_key < rows[0].order_key,
+                )
+                .group_by(Message.role)
+                .all()
+            )
+        }
     items: list[DialogueIndexItem] = []
-    for ordinal, row in enumerate(rows, start=1):
+    for ordinal, row in enumerate(rows, start=offset + 1):
         role_counts[row.role] = role_counts.get(row.role, 0) + 1
         items.append(
             DialogueIndexItem(
@@ -409,14 +443,19 @@ def get_dialogue_index(conversation_id: uuid.UUID, db: Session = Depends(get_db)
                 ordinal=ordinal,
                 order_key=row.order_key,
                 turn_index=row.turn_index,
-                preview=_dialogue_preview(row.display_preview or ""),
+                preview=dialogue_preview(row.display_preview or ""),
             )
         )
     return DialogueIndexResponse(
         conversation_id=conversation_id,
         items=items,
-        message_count=len(items),
+        message_count=total,
         turn_count=conversation.turn_count,
+        limit=limit,
+        offset=offset,
+        total=total,
+        has_previous=offset > 0,
+        has_more=offset + len(items) < total,
     )
 
 

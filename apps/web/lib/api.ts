@@ -32,7 +32,7 @@ import type {
   ShareCreateResponse,
   ShareRead,
   ShareUpdateInput,
-  SharedConversationResponse,
+  SharedConversationBootstrap,
   TocResponse,
 } from "./types";
 
@@ -132,8 +132,16 @@ export async function getConversationMessageWindow(
 
 export async function getConversationDialogueIndex(
   conversationId: string,
+  options: { offset?: number; limit?: number; anchorMessageId?: string } = {},
 ): Promise<DialogueIndexResponse> {
-  return fetchJson<DialogueIndexResponse>(`/api/conversations/${conversationId}/dialogue-index`);
+  const params = new URLSearchParams({
+    offset: String(options.offset ?? 0),
+    limit: String(options.limit ?? 80),
+  });
+  if (options.anchorMessageId) params.set("anchor_message_id", options.anchorMessageId);
+  return fetchJson<DialogueIndexResponse>(
+    `/api/conversations/${conversationId}/dialogue-index?${params.toString()}`,
+  );
 }
 
 export async function getMessageBlocks(
@@ -390,6 +398,18 @@ export async function saveReadingPosition(
   );
 }
 
+export function saveReadingPositionKeepalive(
+  conversationId: string,
+  input: ReadingPositionInput,
+): void {
+  void fetch(`/api/conversations/${conversationId}/reading-position`, {
+    method: "PUT",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    keepalive: true,
+  });
+}
+
 export async function recordRecentConversation(
   conversationId: string,
   input: RecentItemInput = {},
@@ -486,9 +506,64 @@ export async function updateShare(shareId: string, input: ShareUpdateInput): Pro
   return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}`, jsonRequest("PATCH", input)));
 }
 
-export async function getSharedConversation(token: string): Promise<SharedConversationResponse> {
-  const response = await fetchJson<SharedConversationResponse>(`/api/shared/${encodeURIComponent(token)}`);
+export async function getSharedConversation(token: string): Promise<SharedConversationBootstrap> {
+  const response = await fetchJson<SharedConversationBootstrap>(`/api/shared/${encodeURIComponent(token)}`);
   return { ...response, share: normalizeShareUrl(response.share) };
+}
+
+export async function getSharedMessageWindow(
+  token: string,
+  options: { offset?: number; limit?: number; anchorMessageId?: string } = {},
+): Promise<MessageWindowResponse> {
+  const params = new URLSearchParams({
+    offset: String(options.offset ?? 0),
+    limit: String(options.limit ?? 30),
+  });
+  if (options.anchorMessageId) params.set("anchor_message_id", options.anchorMessageId);
+  return fetchJson<MessageWindowResponse>(
+    `/api/shared/${encodeURIComponent(token)}/message-window?${params.toString()}`,
+  );
+}
+
+export async function getSharedDialogueIndex(
+  token: string,
+  options: { offset?: number; limit?: number; anchorMessageId?: string } = {},
+): Promise<DialogueIndexResponse> {
+  const params = new URLSearchParams({
+    offset: String(options.offset ?? 0),
+    limit: String(options.limit ?? 80),
+  });
+  if (options.anchorMessageId) params.set("anchor_message_id", options.anchorMessageId);
+  return fetchJson<DialogueIndexResponse>(
+    `/api/shared/${encodeURIComponent(token)}/dialogue-index?${params.toString()}`,
+  );
+}
+
+export async function getSharedToc(
+  token: string,
+  options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number } = {},
+): Promise<TocResponse> {
+  const params = new URLSearchParams({
+    offset: String(options.offset ?? 0),
+    limit: String(options.limit ?? 200),
+  });
+  if (options.messageId) params.set("message_id", options.messageId);
+  if (options.maxLevel) params.set("max_level", String(options.maxLevel));
+  return fetchJson<TocResponse>(`/api/shared/${encodeURIComponent(token)}/toc?${params.toString()}`);
+}
+
+export async function getSharedMessageBlocks(
+  token: string,
+  messageId: string,
+  options: { start?: number; limit?: number } = {},
+): Promise<RenderBlockRead[]> {
+  const params = new URLSearchParams({
+    start: String(options.start ?? 0),
+    limit: String(options.limit ?? 200),
+  });
+  return fetchJson<RenderBlockRead[]>(
+    `/api/shared/${encodeURIComponent(token)}/messages/${messageId}/blocks?${params.toString()}`,
+  );
 }
 
 export function getConversationExportUrl(

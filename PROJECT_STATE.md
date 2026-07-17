@@ -46,6 +46,8 @@
 - 分享链接创建、列表、标题/描述/有效期更新、撤销和只读访问。
 - `.cr` 后台快速归档、Markdown 和 Canonical JSON 导出。
 - 阅读位置、最近打开和 PWA-ready 壳。
+- 阅读位置支持 message/block/heading 内偏移、停滚保存和跨浏览器自动续接；首屏直接加载保存位置附近窗口。
+- Share 使用 token 约束的 message/index/TOC/block 分页，匿名访客进度仅保存在当前浏览器。
 
 ## 明确未实现
 

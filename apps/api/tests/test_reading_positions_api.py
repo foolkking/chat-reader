@@ -28,6 +28,7 @@ def test_reading_position_get_create_update(client: TestClient) -> None:
     assert created.status_code == 200
     assert created.json()["message_id"] == message_id
     assert created.json()["scroll_offset"] == 1200
+    assert "subject_key" not in created.json()
 
     updated = client.put(
         f"/api/conversations/{conversation_id}/reading-position",
@@ -65,3 +66,9 @@ def test_reading_position_rejects_wrong_message_and_negative_values(client: Test
         json={"scroll_offset": -1},
     )
     assert negative_offset.status_code == 400
+
+    block_without_message = client.put(
+        f"/api/conversations/{first_conversation_id}/reading-position",
+        json={"block_index": 0, "scroll_offset": 0},
+    )
+    assert block_without_message.status_code == 400

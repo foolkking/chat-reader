@@ -13,15 +13,36 @@ class ReadingServiceError(ValueError):
     pass
 
 
-def get_reading_position(db: Session, conversation_id: uuid.UUID) -> ReadingPosition | None:
+DEFAULT_READING_SUBJECT_KEY = "local:default"
+
+
+def resolve_reading_subject_key() -> str:
+    """Single-user identity boundary; replace with the authenticated subject later."""
+    return DEFAULT_READING_SUBJECT_KEY
+
+
+def get_reading_position(
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    subject_key: str,
+) -> ReadingPosition | None:
     _ensure_conversation(db, conversation_id)
-    return db.query(ReadingPosition).filter(ReadingPosition.conversation_id == conversation_id).one_or_none()
+    return (
+        db.query(ReadingPosition)
+        .filter(
+            ReadingPosition.conversation_id == conversation_id,
+            ReadingPosition.subject_key == subject_key,
+        )
+        .one_or_none()
+    )
 
 
 def upsert_reading_position(
     db: Session,
     conversation_id: uuid.UUID,
     *,
+    subject_key: str,
     message_id: uuid.UUID | None,
     block_index: int | None,
     scroll_offset: int,
@@ -33,12 +54,24 @@ def upsert_reading_position(
     if scroll_offset < 0:
         raise ReadingServiceError("scroll_offset cannot be negative.")
     if message_id is not None:
-        _ensure_message_belongs_to_conversation(db, conversation_id, message_id)
+        message = _ensure_message_belongs_to_conversation(db, conversation_id, message_id)
+        if block_index is not None and message.block_count > 0 and block_index >= message.block_count:
+            raise ReadingServiceError("block_index is outside the current message.")
+    elif block_index is not None:
+        raise ReadingServiceError("block_index requires message_id.")
 
-    position = db.query(ReadingPosition).filter(ReadingPosition.conversation_id == conversation_id).one_or_none()
+    position = (
+        db.query(ReadingPosition)
+        .filter(
+            ReadingPosition.conversation_id == conversation_id,
+            ReadingPosition.subject_key == subject_key,
+        )
+        .one_or_none()
+    )
     if position is None:
         position = ReadingPosition(
             id=uuid.uuid4(),
+            subject_key=subject_key,
             conversation_id=conversation_id,
             message_id=message_id,
             block_index=block_index,

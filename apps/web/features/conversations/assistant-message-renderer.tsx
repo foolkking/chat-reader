@@ -43,6 +43,7 @@ export function AssistantMessageRenderer({
           key={block.id ?? `${message.id}-${index}`}
           id={`block-${message.id}-${block.block_index}`}
           data-block-index={block.block_index}
+          data-block-type={block.block_type}
           className={`max-w-full scroll-mt-3 rounded-xl transition ${
             highlightTargetId === `block-${message.id}-${block.block_index}`
               ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]"

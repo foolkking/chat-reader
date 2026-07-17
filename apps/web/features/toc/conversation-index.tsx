@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getConversationDialogueIndex } from "../../lib/api";
-import type { DialogueIndexItem, MessageListItem } from "../../lib/types";
+import type { DialogueIndexItem, DialogueIndexResponse, MessageListItem } from "../../lib/types";
 
 const AROUND_WINDOW = 24;
 
@@ -21,31 +21,59 @@ export function ConversationIndex({
   conversationId,
   messages,
   activeMessageId,
+  ready = true,
   mode = "rail",
+  loadPage,
   onNavigate,
 }: {
   conversationId: string;
   messages?: MessageListItem[];
   activeMessageId?: string | null;
+  ready?: boolean;
   mode?: "rail" | "sheet";
+  loadPage?: (options: { offset?: number; limit?: number; anchorMessageId?: string }) => Promise<DialogueIndexResponse>;
   onNavigate?: (item: ConversationIndexItem) => void | Promise<void>;
 }) {
   const [showFilter, setShowFilter] = useState(false);
   const [rangeMode, setRangeMode] = useState<"all" | "around" | "custom">("around");
   const [hideBefore, setHideBefore] = useState("");
   const [hideAfter, setHideAfter] = useState("");
+  const [requestedAnchor, setRequestedAnchor] = useState<string | null>(activeMessageId ?? null);
+  const [remotePage, setRemotePage] = useState<DialogueIndexResponse | null>(null);
+  const [pageLoading, setPageLoading] = useState(false);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
+
   const indexQuery = useQuery({
-    queryKey: ["conversation-index", conversationId],
-    queryFn: () => getConversationDialogueIndex(conversationId),
-    enabled: messages === undefined,
+    queryKey: ["conversation-index", conversationId, requestedAnchor],
+    queryFn: () => (loadPage ?? ((options) => getConversationDialogueIndex(conversationId, options)))({
+      anchorMessageId: requestedAnchor ?? undefined,
+      limit: 80,
+    }),
+    enabled: messages === undefined && ready,
     staleTime: 60_000,
   });
 
+  useEffect(() => {
+    setRequestedAnchor(activeMessageId ?? null);
+    setRemotePage(null);
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (indexQuery.data) setRemotePage(indexQuery.data);
+  }, [indexQuery.data]);
+
   const items = useMemo(() => {
     if (messages) return buildItemsFromMessages(messages);
-    return (indexQuery.data?.items ?? []).map(toIndexItem);
-  }, [indexQuery.data?.items, messages]);
+    return (remotePage?.items ?? []).map(toIndexItem);
+  }, [messages, remotePage?.items]);
+
+  useEffect(() => {
+    if (messages !== undefined || !activeMessageId || items.some((item) => item.messageId === activeMessageId)) {
+      return;
+    }
+    setRequestedAnchor(activeMessageId);
+  }, [activeMessageId, items, messages]);
+
   const activeOrdinal = items.find((item) => item.messageId === activeMessageId)?.ordinal ?? null;
   const visibleItems = useMemo(
     () => applyFilter(items, rangeMode, hideBefore, hideAfter, activeOrdinal),
@@ -56,8 +84,12 @@ export function ConversationIndex({
     activeRowRef.current?.scrollIntoView({ block: "nearest" });
   }, [activeMessageId, visibleItems]);
 
-  if (messages === undefined && indexQuery.isLoading) return <IndexShell mode={mode} label="正在加载对话索引" />;
-  if (messages === undefined && indexQuery.isError) return <IndexShell mode={mode} label="对话索引加载失败" />;
+  if (messages === undefined && (!ready || indexQuery.isLoading) && !remotePage) {
+    return <IndexShell mode={mode} label="正在加载对话索引" />;
+  }
+  if (messages === undefined && indexQuery.isError && !remotePage) {
+    return <IndexShell mode={mode} label="对话索引加载失败" />;
+  }
   if (items.length === 0) return <IndexShell mode={mode} label="暂无对话消息" />;
 
   const shellClass = mode === "sheet"
@@ -82,7 +114,7 @@ export function ConversationIndex({
         <div className={`${mode === "sheet" ? "block" : "hidden group-hover:block group-focus-within:block"} min-w-0`}>
           <h2 className="text-xs font-semibold text-[#6b7280]">对话索引</h2>
           <p className="text-[11px] text-[#9ca3af]">
-            显示 {visibleItems.length} / {indexQuery.data?.message_count ?? items.length} 条消息
+            显示 {visibleItems.length} / {remotePage?.message_count ?? items.length} 条消息
           </p>
         </div>
         {showFilter ? (
@@ -120,10 +152,62 @@ export function ConversationIndex({
               </button>
             );
           })}
+          {messages === undefined && remotePage && (remotePage.has_previous || remotePage.has_more) ? (
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                disabled={!remotePage.has_previous || pageLoading}
+                onClick={() => void loadIndexPage("previous")}
+                className="min-h-8 rounded-md border border-[#e5e7eb] px-2 text-xs text-[#6b7280] disabled:opacity-40"
+              >
+                上一段
+              </button>
+              <button
+                type="button"
+                disabled={!remotePage.has_more || pageLoading}
+                onClick={() => void loadIndexPage("next")}
+                className="min-h-8 rounded-md border border-[#e5e7eb] px-2 text-xs text-[#6b7280] disabled:opacity-40"
+              >
+                下一段
+              </button>
+            </div>
+          ) : null}
         </div>
       </nav>
     </section>
   );
+
+  async function loadIndexPage(direction: "previous" | "next") {
+    if (!remotePage || pageLoading) return;
+    const nextOffset = direction === "previous"
+      ? Math.max(0, remotePage.offset - remotePage.limit)
+      : remotePage.offset + remotePage.items.length;
+    setPageLoading(true);
+    try {
+      const page = await (loadPage ?? ((options) => getConversationDialogueIndex(conversationId, options)))({
+        offset: nextOffset,
+        limit: remotePage.limit,
+      });
+      setRemotePage((current) => mergeIndexPages(current, page));
+    } finally {
+      setPageLoading(false);
+    }
+  }
+}
+
+function mergeIndexPages(current: DialogueIndexResponse | null, incoming: DialogueIndexResponse): DialogueIndexResponse {
+  if (!current) return incoming;
+  const byId = new Map(current.items.map((item) => [item.message_id, item]));
+  for (const item of incoming.items) byId.set(item.message_id, item);
+  const items = Array.from(byId.values()).sort((left, right) => left.ordinal - right.ordinal);
+  const offset = Math.min(current.offset, incoming.offset);
+  return {
+    ...incoming,
+    items,
+    offset,
+    has_previous: offset > 0,
+    has_more: offset + items.length < incoming.total,
+  };
 }
 
 function toIndexItem(item: DialogueIndexItem): ConversationIndexItem {
@@ -216,14 +300,14 @@ function FilterPopover({
         <button type="button" onClick={onClose} className="rounded px-2 py-1 text-xs text-[#6b7280] hover:bg-[#f7f7f8]">关闭</button>
       </div>
       <div className="grid gap-1">
-        {(["around", "all", "custom"] as const).map((mode) => (
+        {(["around", "all", "custom"] as const).map((itemMode) => (
           <button
-            key={mode}
+            key={itemMode}
             type="button"
-            onClick={() => onRangeModeChange(mode)}
-            className={`rounded-md px-3 py-2 text-left ${rangeMode === mode ? "bg-[#ecfdf5] text-[#047857]" : "hover:bg-[#f7f7f8]"}`}
+            onClick={() => onRangeModeChange(itemMode)}
+            className={`rounded-md px-3 py-2 text-left ${rangeMode === itemMode ? "bg-[#ecfdf5] text-[#047857]" : "hover:bg-[#f7f7f8]"}`}
           >
-            {mode === "around" ? "围绕当前" : mode === "all" ? "显示全部" : "自定义范围"}
+            {itemMode === "around" ? "围绕当前" : itemMode === "all" ? "显示已加载" : "自定义范围"}
           </button>
         ))}
         {rangeMode === "custom" ? (

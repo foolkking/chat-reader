@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, UniqueConstraint, Uuid
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -11,9 +11,12 @@ from app.models.import_record import utc_now
 
 class ReadingPosition(Base):
     __tablename__ = "reading_positions"
-    __table_args__ = (UniqueConstraint("conversation_id", name="uq_reading_positions_conversation"),)
+    __table_args__ = (
+        UniqueConstraint("subject_key", "conversation_id", name="uq_reading_positions_subject_conversation"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    subject_key: Mapped[str] = mapped_column(Text, nullable=False, default="local:default")
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("conversations.id", ondelete="CASCADE"),
@@ -40,5 +43,6 @@ class ReadingPosition(Base):
 
 
 Index("idx_reading_positions_conversation_id", ReadingPosition.conversation_id)
+Index("idx_reading_positions_subject_key", ReadingPosition.subject_key)
 Index("idx_reading_positions_message_id", ReadingPosition.message_id)
 Index("idx_reading_positions_updated_at", ReadingPosition.updated_at)

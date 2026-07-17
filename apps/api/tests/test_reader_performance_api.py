@@ -121,3 +121,40 @@ def test_dialogue_index_is_lightweight_and_preview_window_truncates_heavy_text(c
     assert len(heavy["current_version"]["plain_text"]) <= 500
     assert heavy["current_version"]["blocks"] == []
     assert len(window.content) < 20_000
+
+
+def test_dialogue_index_centers_a_far_anchor_without_returning_every_message(client: TestClient) -> None:
+    messages = [
+        {"role": "Prompt" if index % 2 == 0 else "Response", "say": f"message {index}"}
+        for index in range(120)
+    ]
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "index-anchor.json",
+                json.dumps(
+                    {
+                        "metadata": {"title": "Index Anchor", "powered_by": "ChatGPT Exporter"},
+                        "messages": messages,
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
+    )
+    conversation_id = client.post(f"/api/imports/{preview.json()['import_id']}/commit").json()["conversation_ids"][0]
+    all_messages = client.get(f"/api/conversations/{conversation_id}/messages", params={"limit": 200}).json()
+    anchor_id = all_messages[100]["id"]
+
+    index = client.get(
+        f"/api/conversations/{conversation_id}/dialogue-index",
+        params={"limit": 20, "anchor_message_id": anchor_id},
+    )
+    assert index.status_code == 200
+    payload = index.json()
+    assert payload["total"] == 120
+    assert len(payload["items"]) == 20
+    assert payload["has_previous"] is True
+    assert payload["has_more"] is True
+    assert anchor_id in {item["message_id"] for item in payload["items"]}

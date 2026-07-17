@@ -89,8 +89,12 @@ def test_shared_readonly_response_and_access_count(client: TestClient) -> None:
     assert first.status_code == 200
     payload = first.json()
     assert payload["conversation"]["id"] == conversation_id
-    assert len(payload["messages"]) == 1
-    assert payload["messages"][0]["id"] == selected_message_id
+    assert payload["message_count"] == 1
+    assert "messages" not in payload
+    window = client.get(f"/api/shared/{token}/message-window")
+    assert window.status_code == 200
+    assert len(window.json()["items"]) == 1
+    assert window.json()["items"][0]["id"] == selected_message_id
     assert "raw_storage_uri" not in str(payload)
     assert "storage/imports" not in str(payload)
 
@@ -124,15 +128,42 @@ def test_shared_readonly_response_uses_heavy_message_preview(client: TestClient)
     create = client.post(f"/api/conversations/{conversation_id}/shares", json={})
     token = create.json()["token"]
 
-    response = client.get(f"/api/shared/{token}")
+    bootstrap = client.get(f"/api/shared/{token}")
+    assert bootstrap.status_code == 200
+    response = client.get(f"/api/shared/{token}/message-window")
     assert response.status_code == 200
-    heavy = response.json()["messages"][1]
+    heavy = response.json()["items"][1]
     assert heavy["is_heavy"] is True
     assert heavy["content_truncated"] is True
     assert heavy["render_blocks"] == []
     assert heavy["current_version"]["blocks"] == []
     assert len(heavy["current_version"]["display_text"]) <= 500
     assert len(response.content) < 20_000
+
+
+def test_shared_paged_endpoints_enforce_selected_scope(client: TestClient) -> None:
+    sample = commit_edit_sample(client)
+    conversation_id = sample["conversation_id"]
+    selected_message_id = sample["messages"][0]["id"]
+    hidden_message_id = sample["messages"][1]["id"]
+    create = client.post(
+        f"/api/conversations/{conversation_id}/shares",
+        json={"scope": "selected_messages", "selected_message_ids": [selected_message_id]},
+    )
+    token = create.json()["token"]
+
+    index = client.get(f"/api/shared/{token}/dialogue-index")
+    assert index.status_code == 200
+    assert index.json()["total"] == 1
+    assert index.json()["items"][0]["message_id"] == selected_message_id
+
+    hidden_window = client.get(
+        f"/api/shared/{token}/message-window",
+        params={"anchor_message_id": hidden_message_id},
+    )
+    assert hidden_window.status_code == 404
+    hidden_blocks = client.get(f"/api/shared/{token}/messages/{hidden_message_id}/blocks")
+    assert hidden_blocks.status_code == 404
 
 
 def test_share_validation_revoke_and_expiry(client: TestClient, tmp_path) -> None:

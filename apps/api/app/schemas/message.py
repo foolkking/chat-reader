@@ -59,6 +59,11 @@ class DialogueIndexResponse(BaseModel):
     items: list[DialogueIndexItem]
     message_count: int
     turn_count: int
+    limit: int = 80
+    offset: int = 0
+    total: int = 0
+    has_previous: bool = False
+    has_more: bool = False
 
 
 class MessageDetail(MessageListItem):
