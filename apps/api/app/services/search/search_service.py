@@ -87,8 +87,8 @@ def search(
             else func.plainto_tsquery("simple", _safe_tsquery_text(normalized_query))
         )
         ts_rank_expr = func.ts_rank_cd(SearchDocument.search_tsv, tsquery)
-        title_match = func.lower(SearchDocument.title).like(like_query)
-        text_match = func.lower(SearchDocument.search_text).like(like_query)
+        title_match = SearchDocument.title.ilike(like_query)
+        text_match = SearchDocument.search_text.ilike(like_query)
         exact_title_match = func.lower(SearchDocument.title) == lowered_query
         heading_match = (SearchDocument.document_type == "heading") & text_match
         rank_expr = (
@@ -124,8 +124,8 @@ def search(
             base_query = base_query.filter(SearchDocument.role == role)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
     else:
-        title_match = func.lower(SearchDocument.title).like(like_query)
-        text_match = func.lower(SearchDocument.search_text).like(like_query)
+        title_match = SearchDocument.title.ilike(like_query)
+        text_match = SearchDocument.search_text.ilike(like_query)
         rank_expr = (
             case((func.lower(SearchDocument.title) == lowered_query, 8.0), else_=0.0)
             + case((title_match, 6.0), else_=0.0)
