@@ -18,7 +18,7 @@ def test_alembic_current_matches_repository_head() -> None:
         capture_output=True,
         check=True,
     )
-    assert "20260715_0007" in result.stdout
+    assert "20260716_0008" in result.stdout
 
 
 def test_latest_migration_has_upgrade_and_downgrade() -> None:

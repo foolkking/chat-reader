@@ -6,6 +6,7 @@ import type {
   ConversationListItem,
   ConversationManagementResponse,
   ConversationUpdateInput,
+  DialogueIndexResponse,
   ConversationTransformResponse,
   HealthResponse,
   ImportPreviewResponse,
@@ -106,6 +107,7 @@ export async function getConversationMessageWindow(
     offset?: number;
     anchorMessageId?: string;
     anchorOrderKey?: string;
+    contentMode?: "full" | "preview";
   } = {},
 ): Promise<MessageWindowResponse> {
   const params = new URLSearchParams({
@@ -119,10 +121,19 @@ export async function getConversationMessageWindow(
   if (options.anchorOrderKey) {
     params.set("anchor_order_key", options.anchorOrderKey);
   }
+  if (options.contentMode) {
+    params.set("content_mode", options.contentMode);
+  }
 
   return fetchJson<MessageWindowResponse>(
     `/api/conversations/${conversationId}/message-window?${params.toString()}`,
   );
+}
+
+export async function getConversationDialogueIndex(
+  conversationId: string,
+): Promise<DialogueIndexResponse> {
+  return fetchJson<DialogueIndexResponse>(`/api/conversations/${conversationId}/dialogue-index`);
 }
 
 export async function getMessageBlocks(
@@ -243,9 +254,22 @@ export async function previewImport(files: File[]): Promise<ImportPreviewRespons
   });
 }
 
-export async function commitImport(importId: string): Promise<CommitImportResponse> {
+export async function commitImport(
+  importId: string,
+  options: {
+    duplicatePolicy?: "reject" | "copy";
+    projectId?: string | null;
+    createArchiveProject?: boolean;
+  } = {},
+): Promise<CommitImportResponse> {
   return fetchJson<CommitImportResponse>(`/api/imports/${importId}/commit`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      duplicate_policy: options.duplicatePolicy ?? "reject",
+      project_id: options.projectId ?? null,
+      create_archive_project: options.createArchiveProject ?? false,
+    }),
   });
 }
 
@@ -387,6 +411,7 @@ export async function searchConversations(input: {
   conversationId?: string;
   projectId?: string;
   documentType?: string;
+  role?: string;
 }): Promise<SearchResponse> {
   const params = new URLSearchParams({
     q: input.q,
@@ -402,6 +427,9 @@ export async function searchConversations(input: {
   if (input.documentType) {
     params.set("document_type", input.documentType);
   }
+  if (input.role) {
+    params.set("role", input.role);
+  }
   return fetchJson<SearchResponse>(`/api/search?${params.toString()}`);
 }
 
@@ -412,8 +440,26 @@ export async function reindexSearch(input: { conversationId?: string } = {}): Pr
   );
 }
 
-export async function getConversationToc(conversationId: string): Promise<TocResponse> {
-  return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc`);
+export async function getConversationToc(
+  conversationId: string,
+  options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number } = {},
+): Promise<TocResponse> {
+  const params = new URLSearchParams({
+    offset: String(options.offset ?? 0),
+    limit: String(options.limit ?? 200),
+  });
+  if (options.messageId) params.set("message_id", options.messageId);
+  if (options.maxLevel) params.set("max_level", String(options.maxLevel));
+  return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc?${params.toString()}`);
+}
+
+export async function queueConversationArchiveExport(
+  conversationId: string,
+): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports`, {
+    method: "POST",
+    headers: { "Idempotency-Key": `cr-export-${conversationId}-${Date.now()}` },
+  });
 }
 
 export async function createShare(

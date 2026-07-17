@@ -31,6 +31,7 @@ export function ConversationList({
   const [menuCloseSignal, setMenuCloseSignal] = useState(0);
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const conversationsQuery = useQuery({
     queryKey: ["conversations", mode],
     queryFn: () => getConversations({
@@ -51,13 +52,13 @@ export function ConversationList({
   }
 
   if (conversationsQuery.isLoading) {
-    return <StateBlock title="Loading conversations" detail="Fetching canonical conversation list." loading />;
+    return <StateBlock title="正在加载对话" detail="正在读取对话列表…" loading />;
   }
 
   if (conversationsQuery.isError) {
     return (
       <StateBlock
-        title="Conversation API unavailable"
+        title="对话加载失败"
         detail={conversationsQuery.error.message}
         action={
           <button
@@ -65,7 +66,7 @@ export function ConversationList({
             onClick={() => void conversationsQuery.refetch()}
             className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white"
           >
-            Retry
+            重试
           </button>
         }
       />
@@ -78,11 +79,11 @@ export function ConversationList({
   if (conversations.length === 0) {
     return (
       <StateBlock
-        title={isArchivedMode ? "No archived conversations" : "No conversations yet"}
+        title={isArchivedMode ? "暂无已归档对话" : "导入你的 ChatGPT 对话记录"}
         detail={
           isArchivedMode
-            ? "Archived conversations will appear here. Restore one to return it to All Conversations."
-            : "Import a ChatGPT export to start building your local reading archive."
+            ? "归档的对话会保留在这里，恢复后将回到原来的项目或对话记录。"
+            : "上传 `.cr` 快速归档，或 ChatGPT Exporter 的 JSON 与 Markdown 文件，即可开始浏览和搜索。"
         }
         action={!isArchivedMode ? (
           <button
@@ -90,7 +91,7 @@ export function ConversationList({
             onClick={onImportClick}
             className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-medium text-white hover:bg-black"
           >
-            Import conversations
+            选择导出文件
           </button>
         ) : undefined}
       />
@@ -110,9 +111,9 @@ export function ConversationList({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[#111827]">
-            {isArchivedMode ? "Archived conversations" : "Conversation history"}
+            {isArchivedMode ? "已归档对话" : "对话记录"}
           </h2>
-          <p className="text-sm text-[#6b7280]">{conversations.length} shown</p>
+          <p className="text-sm text-[#6b7280]">共 {conversations.length} 个</p>
         </div>
         {selectedConversationIds.size > 0 ? (
           <BulkActions
@@ -200,9 +201,9 @@ export function ConversationList({
             }}
           />
         ) : (
-          <span className="text-sm text-[#6b7280]">
-            {isArchivedMode ? "Select conversations to restore or delete" : "Select 2+ to merge"}
-          </span>
+          <button type="button" onClick={() => setSelectionMode((value) => !value)} className="min-h-9 rounded-lg px-3 text-sm text-[#4b5563] hover:bg-white">
+            {selectionMode ? "退出选择" : "选择"}
+          </button>
         )}
       </div>
       <div className="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
@@ -213,7 +214,7 @@ export function ConversationList({
           >
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
               <div className="flex min-w-0 gap-3">
-                <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#d1d5db] bg-white">
+                {selectionMode ? <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#d1d5db] bg-white">
                   <input
                     type="checkbox"
                     checked={selectedConversationIds.has(conversation.id)}
@@ -237,11 +238,11 @@ export function ConversationList({
                     }}
                     aria-label={`Select ${conversation.display_title || conversation.title}`}
                   />
-                </label>
+                </label> : null}
                 <div className="min-w-0">
                   <Link href={`/conversations/${conversation.id}`}>
                     <h3 className="truncate text-base font-semibold text-slate-950">
-                      {conversation.is_global_pinned ? "Pinned / " : ""}
+                      {conversation.is_global_pinned ? "置顶 · " : ""}
                       {conversation.display_title || conversation.title}
                     </h3>
                   </Link>
@@ -252,10 +253,8 @@ export function ConversationList({
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                 <div className="min-w-0 md:order-2">
-                  <p className="inline-flex rounded-full bg-[#f7f7f8] px-2 py-1 text-xs font-medium text-[#4b5563]">
-                    {conversation.source_profile}
-                  </p>
-                  <p className="mt-1 text-sm text-[#6b7280]">{conversation.message_count} messages</p>
+                  <p className="text-xs text-[#9ca3af]">{formatConversationDate(conversation.updated_at ?? conversation.imported_at)}</p>
+                  <p className="mt-1 text-sm text-[#6b7280]">{conversation.message_count} 条消息</p>
                 </div>
                 <div className="md:order-1">
                   <ConversationActionMenu
@@ -276,7 +275,13 @@ export function ConversationList({
 
 function previewConversationText(text?: string | null): string {
   const cleaned = stripLeadingTimestamp(text ?? "").replace(/\s+/g, " ").trim();
-  return cleaned || "No first user message.";
+  return cleaned || "暂无消息预览。";
+}
+
+function formatConversationDate(value: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(date);
 }
 
 function BulkActions({

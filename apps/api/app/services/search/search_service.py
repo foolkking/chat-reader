@@ -6,6 +6,7 @@ from sqlalchemy import case, func, literal, or_
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
+from app.models.message import Message
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.search_document import SearchDocument
@@ -27,6 +28,7 @@ class SearchResult:
     snippet: str
     rank: float
     source_profile: str | None
+    occurrence_count: int = 1
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,7 @@ def search(
     conversation_id: uuid.UUID | None = None,
     project_id: uuid.UUID | None = None,
     document_type: str | None = None,
+    role: str | None = None,
 ) -> SearchResultPage:
     normalized_query = query.strip()
     if not normalized_query:
@@ -62,7 +65,7 @@ def search(
     base_query = (
         db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
         .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-        .filter(Conversation.deleted_at.is_(None))
+        .filter(Conversation.deleted_at.is_(None), Conversation.status == "active")
     )
     if conversation_id is not None:
         base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
@@ -73,6 +76,8 @@ def search(
         ).filter(ProjectConversation.project_id == project_id)
     if document_type is not None:
         base_query = base_query.filter(SearchDocument.document_type == document_type)
+    if role is not None:
+        base_query = base_query.filter(SearchDocument.role == role)
 
     if db.bind is not None and db.bind.dialect.name == "postgresql":
         use_text_query = not _needs_substring_first(normalized_query)
@@ -102,6 +107,7 @@ def search(
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
             .filter(
                 Conversation.deleted_at.is_(None),
+                Conversation.status == "active",
                 or_(*filters),
             )
         )
@@ -114,6 +120,8 @@ def search(
             ).filter(ProjectConversation.project_id == project_id)
         if document_type is not None:
             base_query = base_query.filter(SearchDocument.document_type == document_type)
+        if role is not None:
+            base_query = base_query.filter(SearchDocument.role == role)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
     else:
         title_match = func.lower(SearchDocument.title).like(like_query)
@@ -128,7 +136,7 @@ def search(
         base_query = (
             db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-            .filter(Conversation.deleted_at.is_(None), or_(text_match, title_match))
+            .filter(Conversation.deleted_at.is_(None), Conversation.status == "active", or_(text_match, title_match))
         )
         if conversation_id is not None:
             base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
@@ -139,10 +147,40 @@ def search(
             ).filter(ProjectConversation.project_id == project_id)
         if document_type is not None:
             base_query = base_query.filter(SearchDocument.document_type == document_type)
+        if role is not None:
+            base_query = base_query.filter(SearchDocument.role == role)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
 
-    total = ordered_query.count()
-    rows = ordered_query.offset(offset).limit(limit).all()
+    rows = ordered_query.all()
+    message_ids = {document.message_id for document, _, _ in rows if document.message_id is not None}
+    content_hashes = (
+        dict(db.query(Message.id, Message.content_hash).filter(Message.id.in_(message_ids)).all())
+        if message_ids
+        else {}
+    )
+    grouped_rows: list[tuple[SearchDocument, str, float, int]] = []
+    group_positions: dict[tuple[str, str], int] = {}
+    group_conversations: list[set[uuid.UUID]] = []
+    for document, conversation_title, rank in rows:
+        content_hash = content_hashes.get(document.message_id)
+        key = (
+            ("message", content_hash)
+            if document.document_type == "message" and content_hash
+            else (document.document_type, str(document.id))
+        )
+        existing_position = group_positions.get(key)
+        if existing_position is None:
+            group_positions[key] = len(grouped_rows)
+            grouped_rows.append((document, conversation_title, float(rank or 0), 1))
+            group_conversations.append({document.conversation_id})
+            continue
+        conversations = group_conversations[existing_position]
+        conversations.add(document.conversation_id)
+        current = grouped_rows[existing_position]
+        grouped_rows[existing_position] = (*current[:3], len(conversations))
+
+    total = len(grouped_rows)
+    page_rows = grouped_rows[offset : offset + limit]
     items = [
         SearchResult(
             document_id=document.id,
@@ -153,10 +191,11 @@ def search(
             role=document.role,
             order_key=document.order_key,
             snippet=_snippet(document.search_text, normalized_query),
-            rank=float(rank or 0),
+            rank=rank,
             source_profile=document.source_profile,
+            occurrence_count=occurrence_count,
         )
-        for document, conversation_title, rank in rows
+        for document, conversation_title, rank, occurrence_count in page_rows
     ]
     return SearchResultPage(query=normalized_query, items=items, limit=limit, offset=offset, total=total)
 

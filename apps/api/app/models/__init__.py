@@ -1,6 +1,7 @@
 from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
+from app.models.export_artifact import ExportArtifact
 from app.models.heading import Heading
 from app.models.import_record import ImportRecord
 from app.models.message import Message
@@ -19,6 +20,7 @@ __all__ = [
     "BackgroundJob",
     "Conversation",
     "ConversationEvent",
+    "ExportArtifact",
     "Heading",
     "ImportRecord",
     "Message",

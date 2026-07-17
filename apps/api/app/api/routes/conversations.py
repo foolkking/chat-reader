@@ -1,6 +1,8 @@
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -19,7 +21,13 @@ from app.schemas.editing import (
     ConversationSplitRequest,
     ConversationTransformResponse,
 )
-from app.schemas.message import MessageListItem, MessageVersionRead, RenderBlockRead
+from app.schemas.message import (
+    DialogueIndexItem,
+    DialogueIndexResponse,
+    MessageListItem,
+    MessageVersionRead,
+    RenderBlockRead,
+)
 from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
 from app.schemas.task import BackgroundTaskRead, ConversationProjectMoveRequest
@@ -371,6 +379,47 @@ def list_conversation_messages(
     return [_message_item(message, include_blocks, db) for message in messages]
 
 
+@router.get("/{conversation_id}/dialogue-index", response_model=DialogueIndexResponse)
+def get_dialogue_index(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> DialogueIndexResponse:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    rows = (
+        db.query(
+            Message.id,
+            Message.role,
+            Message.order_key,
+            Message.turn_index,
+            func.substr(MessageVersion.display_text, 1, 4000).label("display_preview"),
+        )
+        .join(MessageVersion, MessageVersion.id == Message.current_version_id)
+        .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
+        .order_by(Message.order_key.asc())
+        .all()
+    )
+    role_counts: dict[str, int] = {}
+    items: list[DialogueIndexItem] = []
+    for ordinal, row in enumerate(rows, start=1):
+        role_counts[row.role] = role_counts.get(row.role, 0) + 1
+        items.append(
+            DialogueIndexItem(
+                message_id=row.id,
+                role=row.role,
+                role_number=role_counts[row.role],
+                ordinal=ordinal,
+                order_key=row.order_key,
+                turn_index=row.turn_index,
+                preview=_dialogue_preview(row.display_preview or ""),
+            )
+        )
+    return DialogueIndexResponse(
+        conversation_id=conversation_id,
+        items=items,
+        message_count=len(items),
+        turn_count=conversation.turn_count,
+    )
+
+
 @router.get("/{conversation_id}/message-window", response_model=MessageWindowResponse)
 def get_message_window(
     conversation_id: uuid.UUID,
@@ -381,6 +430,7 @@ def get_message_window(
     before_order_key: str | None = None,
     anchor_message_id: uuid.UUID | None = None,
     anchor_order_key: str | None = None,
+    content_mode: str = Query(default="full", pattern="^(full|preview)$"),
     db: Session = Depends(get_db),
 ) -> MessageWindowResponse:
     if db.get(Conversation, conversation_id) is None:
@@ -404,7 +454,10 @@ def get_message_window(
         offset = max(0, min(max(total - limit, 0), before_anchor - limit // 2))
     messages = query.order_by(Message.order_key.asc()).offset(offset).limit(limit).all()
     return MessageWindowResponse(
-        items=[_message_item(message, include_blocks, db) for message in messages],
+        items=[
+            _message_item(message, include_blocks, db, ordinal=offset + index + 1, content_mode=content_mode)
+            for index, message in enumerate(messages)
+        ],
         limit=limit,
         offset=offset,
         total=total,
@@ -489,9 +542,42 @@ def _add_conversation_event(
     )
 
 
-def _message_item(message: Message, include_blocks: bool, db: Session) -> MessageListItem:
+_LEADING_TIMESTAMP_RE = re.compile(
+    r"^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?\s*$"
+)
+_THINKING_DURATION_RE = re.compile(
+    r"^(?:(?:已\s*)?思考(?:了)?|thinking|reasoning)\s*[:：]?\s*"
+    r"(?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒)$",
+    re.IGNORECASE,
+)
+
+
+def _dialogue_preview(text: str) -> str:
+    lines = text.replace("\r\n", "\n").split("\n")
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    if lines and _LEADING_TIMESTAMP_RE.match(lines[0].strip().lstrip(">").strip()):
+        lines.pop(0)
+    for index, line in enumerate(lines[:40]):
+        if _THINKING_DURATION_RE.match(line.strip().lstrip(">").strip()):
+            lines = lines[index + 1 :]
+            break
+    preview = " ".join("\n".join(lines).split())[:160]
+    return preview or "打开消息查看正文"
+
+
+def _message_item(
+    message: Message,
+    include_blocks: bool,
+    db: Session,
+    *,
+    ordinal: int | None = None,
+    content_mode: str = "full",
+) -> MessageListItem:
     version = _current_version(message, db)
     blocks = _render_blocks(version.id, db) if include_blocks and version else []
+    truncate_content = bool(version and content_mode == "preview" and message.is_heavy and not include_blocks)
+    preview = " ".join((version.display_text if version else "").split())[:500] if truncate_content else None
     return MessageListItem(
         id=message.id,
         conversation_id=message.conversation_id,
@@ -499,11 +585,14 @@ def _message_item(message: Message, include_blocks: bool, db: Session) -> Messag
         order_key=message.order_key,
         turn_index=message.turn_index,
         created_at=message.created_at,
-        current_version=_version_read(version) if version else None,
+        current_version=_version_read(version, truncate=truncate_content) if version else None,
         render_blocks=blocks,
         block_count=message.block_count,
         char_count=message.char_count,
         is_heavy=message.is_heavy,
+        ordinal=ordinal,
+        content_preview=preview,
+        content_truncated=truncate_content,
     )
 
 
@@ -513,12 +602,12 @@ def _current_version(message: Message, db: Session) -> MessageVersion | None:
     return db.get(MessageVersion, message.current_version_id)
 
 
-def _version_read(version: MessageVersion) -> MessageVersionRead:
+def _version_read(version: MessageVersion, *, truncate: bool = False) -> MessageVersionRead:
     return MessageVersionRead(
         id=version.id,
         version_number=version.version_number,
-        plain_text=version.plain_text,
-        display_text=version.display_text,
+        plain_text=version.plain_text[:500] if truncate else version.plain_text,
+        display_text=version.display_text[:500] if truncate else version.display_text,
         blocks=version.blocks,
         edit_type=version.edit_type,
         created_at=version.created_at,

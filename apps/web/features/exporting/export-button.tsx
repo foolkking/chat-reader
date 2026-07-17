@@ -11,7 +11,7 @@ export function ExportButton({ isOpen, onToggle }: { isOpen: boolean; onToggle: 
           : "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f7f7f8]"
       }`}
     >
-      {isOpen ? "Exporting" : "Export"}
+      导出
     </button>
   );
 }

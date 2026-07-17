@@ -36,7 +36,10 @@ Import 状态为 `previewed / queued / processing / committed / failed`。failed
 | GET | `/api/conversations/{id}/events` | 管理和编辑事件 |
 | GET | `/api/conversations/{id}/messages` | 消息分页列表 |
 | GET | `/api/conversations/{id}/message-window` | 消息窗口；支持 offset、limit、anchor message/order key |
-| GET | `/api/conversations/{id}/toc` | canonical heading TOC |
+| GET | `/api/conversations/{id}/dialogue-index` | 轻量对话索引，不返回完整正文 |
+| GET | `/api/conversations/{id}/toc` | canonical heading TOC；支持 message/offset/limit/max level |
+| POST | `/api/conversations/{id}/exports` | 排队生成 `.cr` 快速归档 |
+| POST | `/api/conversations/{id}/auto-clean` | 排队清理历史 assistant 思考/搜索前缀 |
 
 ## Messages
 
@@ -69,7 +72,7 @@ Import 状态为 `previewed / queued / processing / committed / failed`。failed
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| GET | `/api/tasks/active` | 返回 queued、processing 和 failed 的 import/merge 任务 |
+| GET | `/api/tasks/active` | 返回 queued、processing 和 failed 的 import/merge/export/auto-clean 任务 |
 | GET | `/api/tasks/{job_id}` | 查询统一任务阶段、进度、结果或错误 |
 | POST | `/api/tasks/{job_id}/retry` | 重试 failed 任务 |
 
@@ -77,7 +80,7 @@ Conversation merge 可携带 `Idempotency-Key` 请求头。相同 key 的 queued
 
 ## Search And TOC
 
-`GET /api/search` 接受 `q`、`limit`、`offset`、`conversation_id`、`project_id` 和 `document_type`。`document_type` 当前使用 `conversation`、`message` 或 `heading`。
+`GET /api/search` 接受 `q`、`limit`、`offset`、`conversation_id`、`project_id`、`document_type` 和 `role`。`document_type` 当前使用 `conversation`、`message` 或 `heading`。重复 message 结果通过 `occurrence_count` 表示跨会话出现次数。
 
 `POST /api/search/reindex` 重建 canonical 搜索文档，属于管理操作；当前没有认证，公网部署应在反向代理层限制访问。
 
@@ -109,5 +112,7 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 - `format=markdown` 或 `format=canonical_json`。
 - `include_metadata`、`include_toc`、`include_versions`。
 - `message_ids`：逗号分隔的消息 id，用于范围导出。
+
+`.cr` 使用后台任务：先调用 `POST /api/conversations/{id}/exports`，轮询 `/api/tasks/{job_id}`，任务完成后使用结果中的 `/api/exports/{artifact_id}/download`。下载文件默认 24 小时过期。
 
 接口的精确 request/response schema 以运行时 `/openapi.json` 和 `apps/api/app/schemas` 为准。

@@ -15,6 +15,18 @@ def detect_source_profile(filename: str, content: bytes) -> SourceDetectionResul
     sha256 = hashlib.sha256(content).hexdigest()
     warnings: list[str] = []
 
+    if extension == ".cr" and content.startswith(b"PK"):
+        return SourceDetectionResult(
+            source_profile=SourceProfile.chat_reader_archive_v1,
+            confidence=1.0,
+            reason="File is a Chat Reader archive container.",
+            file_extension=extension,
+            mime_guess="application/vnd.chat-reader.archive+zip",
+            size_bytes=size_bytes,
+            sha256=sha256,
+            warnings=warnings,
+        )
+
     if extension == ".json" or _looks_like_json(content):
         parsed = _parse_json(content, warnings)
         if parsed is None:

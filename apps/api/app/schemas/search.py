@@ -16,6 +16,7 @@ class SearchResultItem(BaseModel):
     snippet: str
     rank: float
     source_profile: str | None
+    occurrence_count: int = 1
 
 
 class SearchResponse(BaseModel):

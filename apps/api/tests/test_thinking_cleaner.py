@@ -33,6 +33,32 @@ def test_assistant_search_trace_before_duration_removed() -> None:
     assert "npm | Home" in (result.removed_text or "")
 
 
+def test_assistant_exporter_search_narration_before_duration_removed() -> None:
+    result = clean_thinking_summary(
+        "assistant",
+        """我会先核对当前版本，避免给出过时路线。
+
+制定学习计划
+
+我正在考虑使用最新文档来定制学习计划。
+
+查找 Node.js 和 React 最新版本和文档
+
+Node.js Releases
+React v19
+https://nodejs.org/en
+
+搜索当前 Node.js LTS 版本信息
+
+思考了 1m 2s
+
+下面这条路线建议叫 TypeScript 全栈工程学习路线。""",
+    )
+
+    assert result.removed is True
+    assert result.text == "下面这条路线建议叫 TypeScript 全栈工程学习路线。"
+
+
 def test_user_text_is_not_cleaned() -> None:
     text = "\u601d\u8003\u4e86 13s\n\u7528\u6237\u6b63\u6587\u3002"
     result = clean_thinking_summary("user", text)

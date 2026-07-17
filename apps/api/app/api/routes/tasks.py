@@ -75,7 +75,7 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         progress=job.progress,
         processed_items=job.processed_items,
         total_items=job.total_items,
-        label=payload.get("title") or "Merged conversation",
+        label=payload.get("title") or _job_label(job.job_type),
         result=job.result or {},
         error_message=job.error_message,
         queued_at=job.queued_at,
@@ -83,6 +83,14 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         heartbeat_at=job.heartbeat_at,
         completed_at=job.completed_at,
     )
+
+
+def _job_label(job_type: str) -> str:
+    return {
+        "conversation_merge": "合并对话",
+        "conversation_export": "导出归档",
+        "conversation_auto_clean": "清理对话内容",
+    }.get(job_type, "后台任务")
 
 
 def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:

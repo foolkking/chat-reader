@@ -15,7 +15,11 @@ export function SharePanel({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [expiryMode, setExpiryMode] = useState<"7d" | "30d" | "never" | "custom">("7d");
   const [useSelection, setUseSelection] = useState(false);
+  const [includeToc, setIncludeToc] = useState(true);
+  const [includeMetadata, setIncludeMetadata] = useState(true);
+  const [allowExport, setAllowExport] = useState(false);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -33,10 +37,10 @@ export function SharePanel({
         description: description.trim() || null,
         scope: useSelection ? "selected_messages" : "conversation",
         selected_message_ids: useSelection ? selectedMessageIds : [],
-        include_toc: true,
-        include_metadata: true,
-        allow_export: false,
-        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        include_toc: includeToc,
+        include_metadata: includeMetadata,
+        allow_export: allowExport,
+        expires_at: expiryValue(expiryMode, expiresAt),
       });
       setCreatedUrl(response.share_url);
       await sharesQuery.refetch();
@@ -55,30 +59,39 @@ export function SharePanel({
   }
 
   return (
-    <section className="overflow-x-hidden rounded-2xl border border-[#e5e5e5] bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-[#111827]">Share</h2>
+    <section className="min-w-0 overflow-x-hidden">
+      <div className="border-b border-[#e5e7eb] pb-4">
+        <h2 className="text-base font-semibold text-[#111827]">分享对话</h2>
+        <p className="mt-1 text-sm text-[#6b7280]">创建只读链接，并随时延长有效期或撤销访问。</p>
+      </div>
       <div className="mt-3 grid gap-3">
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="Share title"
+          placeholder="分享标题（可选）"
           className="rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
         />
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Description"
+          placeholder="说明（可选）"
           className="min-h-20 rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
         />
-        <label className="text-sm text-[#374151]">
-          Expires at
+        <div>
+          <p className="mb-2 text-sm text-[#374151]">有效期</p>
+          <div className="grid grid-cols-4 rounded-lg bg-[#f3f4f6] p-1">
+            {([{"label":"7 天","value":"7d"},{"label":"30 天","value":"30d"},{"label":"永久","value":"never"},{"label":"自定义","value":"custom"}] as const).map((item) => <button key={item.value} type="button" onClick={() => setExpiryMode(item.value)} className={`min-h-9 rounded-md text-xs ${expiryMode === item.value ? "bg-white font-medium shadow-sm" : "text-[#6b7280]"}`}>{item.label}</button>)}
+          </div>
+        </div>
+        {expiryMode === "custom" ? <label className="text-sm text-[#374151]">
+          到期时间
           <input
             type="datetime-local"
             value={expiresAt}
             onChange={(event) => setExpiresAt(event.target.value)}
             className="mt-1 block w-full rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
           />
-        </label>
+        </label> : null}
         <label className="flex items-center gap-2 text-sm text-[#374151]">
           <input
             type="checkbox"
@@ -86,8 +99,11 @@ export function SharePanel({
             disabled={selectedMessageIds.length === 0}
             onChange={(event) => setUseSelection(event.target.checked)}
           />
-          Share selected messages ({selectedMessageIds.length})
+          仅分享所选消息（{selectedMessageIds.length}）
         </label>
+        <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={includeToc} onChange={(event) => setIncludeToc(event.target.checked)} />包含章节目录</label>
+        <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={includeMetadata} onChange={(event) => setIncludeMetadata(event.target.checked)} />包含元数据</label>
+        <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={allowExport} onChange={(event) => setAllowExport(event.target.checked)} />允许导出</label>
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         <button
           type="button"
@@ -96,7 +112,7 @@ export function SharePanel({
           disabled={isCreating || (useSelection && selectedMessageIds.length === 0)}
           className="rounded-xl bg-[#111827] px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#d1d5db]"
         >
-          {isCreating ? "Creating" : "Create share"}
+          {isCreating ? "正在创建…" : "创建分享链接"}
         </button>
         {createdUrl ? (
           <div className="rounded-xl bg-[#f7f7f8] p-3">
@@ -116,14 +132,14 @@ export function SharePanel({
                 rel="noreferrer"
                 className="rounded-lg border border-[#d1d5db] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
               >
-                Open
+                打开
               </a>
               <button
                 type="button"
                 onClick={copyUrl}
                 className="rounded-lg border border-[#d1d5db] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
               >
-                Copy URL
+                复制链接
               </button>
             </div>
           </div>
@@ -131,8 +147,8 @@ export function SharePanel({
       </div>
 
       <div className="mt-5 space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Existing shares</h3>
-        {sharesQuery.isLoading ? <p className="text-sm text-slate-500">Loading shares.</p> : null}
+        <h3 className="text-xs font-semibold text-[#6b7280]">已创建的链接</h3>
+        {sharesQuery.isLoading ? <p className="text-sm text-slate-500">正在加载分享链接…</p> : null}
         {sharesQuery.isError ? <p className="text-sm text-red-700">{sharesQuery.error.message}</p> : null}
         {(sharesQuery.data ?? []).map((share) => (
           <ShareManagementRow
@@ -312,4 +328,11 @@ function toDatetimeLocalValue(value?: string | null): string {
   }
   const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return offsetDate.toISOString().slice(0, 16);
+}
+
+function expiryValue(mode: "7d" | "30d" | "never" | "custom", customValue: string): string | null {
+  if (mode === "never") return null;
+  if (mode === "custom") return customValue ? new Date(customValue).toISOString() : null;
+  const days = mode === "7d" ? 7 : 30;
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }

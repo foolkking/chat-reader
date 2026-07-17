@@ -1,19 +1,33 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.toc import TocItem, TocResponse
-from app.services.toc.toc_service import TocServiceError, list_headings
+from app.services.toc.toc_service import TocServiceError, list_headings_page
 
 router = APIRouter(prefix="/api/conversations", tags=["toc"])
 
 
 @router.get("/{conversation_id}/toc", response_model=TocResponse)
-def get_conversation_toc(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> TocResponse:
+def get_conversation_toc(
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID | None = None,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=500),
+    max_level: int | None = Query(default=None, ge=1, le=6),
+    db: Session = Depends(get_db),
+) -> TocResponse:
     try:
-        headings = list_headings(db, conversation_id)
+        headings, total = list_headings_page(
+            db,
+            conversation_id,
+            message_id=message_id,
+            offset=offset,
+            limit=limit,
+            max_level=max_level,
+        )
     except TocServiceError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return TocResponse(
@@ -31,4 +45,8 @@ def get_conversation_toc(conversation_id: uuid.UUID, db: Session = Depends(get_d
             )
             for heading in headings
         ],
+        limit=limit,
+        offset=offset,
+        total=total,
+        has_more=offset + len(headings) < total,
     )

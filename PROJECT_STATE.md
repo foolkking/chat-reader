@@ -1,14 +1,14 @@
 # 项目当前状态
 
-更新日期：2026-07-15。
+更新日期：2026-07-17。
 
 本文是后续开发者和 AI 的当前实现快照。功能事实以代码、Alembic migration 和自动化测试为最终依据。
 
 ## 当前基线
 
 - Web：Next.js 14 App Router，浏览器使用相对 `/api/*`，Next.js 服务端通过 `API_INTERNAL_URL` 转发到 FastAPI。
-- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260715_0007`。
-- 最近完整后端测试基线：122 tests passed；前端 typecheck、lint 和 production build 已通过。
+- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260716_0008`。
+- 最近聚焦后端测试、前端 typecheck 和 lint 已通过；最终完整测试基线以本次提交验证结果为准。
 - 生产部署文件已包含 PostgreSQL、migration、API、单并发 task worker、Web、Nginx 示例和数据库备份脚本。
 
 ## 已实现
@@ -22,11 +22,14 @@
 - PostgreSQL COPY 批量写入；import commit 快速返回 `202`，worker 使用 heartbeat 和 stale recovery。
 - exporter 带属性的 fenced code、长 fence 和 tilde fence 可正确生成 code blocks。
 - assistant 开头明显的 exporter thinking summary 在导入时清理；历史内容有前端折叠兜底。
+- 历史会话可排队执行 `conversation_auto_clean`，通过新版本删除导出的搜索/思考前缀并重建 TOC/Search。
+- `.cr` 快速归档支持后台导出、校验预览、重复检测和 canonical round-trip 导入。
 
 ### 阅读与导航
 
 - user/assistant Markdown 安全渲染，支持 GFM、浅色 Shiki、KaTeX、Mermaid 和 callout；代码块支持复制、换行和长内容展开。
-- 消息窗口加载和 heavy message blocks 按需加载。
+- 首屏使用 30 条 preview window；heavy message blocks 在视口附近自动加载并分页追加。
+- 对话索引使用独立轻量 API；active-message TOC 使用按消息过滤和分页 API。
 - 左侧对话索引按 `U#`、`A#` 编号，右侧 TOC 默认绑定 active message。
 - 未挂载 message/block 可通过 anchor window 加载后定位；移动 sheet 和只读分享页复用可靠导航。
 - 移动端消息使用全宽阅读布局，代码、表格和图表在自身容器滚动。
@@ -39,9 +42,9 @@
 - 消息拆分/合并；会话拆分和按可拖动顺序进行非破坏式后台合并。
 - import 与 conversation merge 共用 PostgreSQL 持久化任务队列、全局进度条、heartbeat、失败重试和完成后自动刷新。
 - 消息编辑、版本历史和通过新版本恢复。
-- PostgreSQL full-text 与 substring 混合搜索，支持 conversation/project/document type 过滤和分页。
+- PostgreSQL full-text、trigram substring 混合搜索，支持 conversation/project/document type/role 过滤；重复消息按 content hash 折叠。
 - 分享链接创建、列表、标题/描述/有效期更新、撤销和只读访问。
-- Markdown 和 Canonical JSON 导出。
+- `.cr` 后台快速归档、Markdown 和 Canonical JSON 导出。
 - 阅读位置、最近打开和 PWA-ready 壳。
 
 ## 明确未实现
@@ -50,7 +53,7 @@
 - TanStack Virtual 等真正的消息虚拟滚动；当前是窗口加载和 DOM 增量渲染。
 - HTML/PDF/Project 打包导出。
 - Tag、Bookmark、笔记系统和语义/向量搜索。
-- 批量 blocks read API和可扩展到任意任务类型的通用调度框架；当前 task worker 只处理 import 与 conversation merge。
+- 批量 blocks read API 和真正多 worker 调度；当前 worker 固定单并发处理 import、merge、`.cr` export 与 auto-clean。
 - 通用 UndoToast；部分操作可通过现有 restore/archive API恢复。
 - 在线聊天、SSE streaming、重新生成、工具调用持久化和回答分支 UI。
 - 私有会话离线缓存；service worker 不缓存 `/api/*` 或会话正文。

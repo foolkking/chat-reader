@@ -20,6 +20,10 @@ class Settings(BaseSettings):
         default="storage/imports",
         alias="IMPORT_STORAGE_DIR",
     )
+    export_storage_dir: str = Field(
+        default="storage/exports",
+        alias="EXPORT_STORAGE_DIR",
+    )
     public_web_base_url: str = Field(default="http://localhost:3000", alias="PUBLIC_WEB_BASE_URL")
     import_commit_inline: bool = Field(default=False, alias="IMPORT_COMMIT_INLINE")
     import_worker_poll_seconds: float = Field(default=1.0, alias="IMPORT_WORKER_POLL_SECONDS")

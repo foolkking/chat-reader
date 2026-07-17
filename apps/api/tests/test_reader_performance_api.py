@@ -68,3 +68,43 @@ def test_message_blocks_endpoint_sorts_and_caps_limit(client: TestClient) -> Non
 
     too_large = client.get(f"/api/messages/{message_id}/blocks?start=0&limit=201")
     assert too_large.status_code == 422
+
+
+def test_dialogue_index_is_lightweight_and_preview_window_truncates_heavy_text(client: TestClient) -> None:
+    long_text = "# Large\n\n" + ("content line\n" * 1100)
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "light-index.json",
+                json.dumps(
+                    {
+                        "metadata": {"title": "Light Index", "powered_by": "ChatGPT Exporter"},
+                        "messages": [
+                            {"role": "Prompt", "say": "short question"},
+                            {"role": "Response", "say": long_text},
+                        ],
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
+    )
+    conversation_id = client.post(f"/api/imports/{preview.json()['import_id']}/commit").json()["conversation_ids"][0]
+
+    index = client.get(f"/api/conversations/{conversation_id}/dialogue-index")
+    assert index.status_code == 200
+    assert index.json()["message_count"] == 2
+    assert [item["role_number"] for item in index.json()["items"]] == [1, 1]
+    assert all(len(item["preview"]) <= 160 for item in index.json()["items"])
+    assert "current_version" not in index.json()["items"][1]
+
+    window = client.get(
+        f"/api/conversations/{conversation_id}/message-window",
+        params={"limit": 30, "include_blocks": False, "content_mode": "preview"},
+    )
+    assert window.status_code == 200
+    heavy = window.json()["items"][1]
+    assert heavy["is_heavy"] is True
+    assert heavy["content_truncated"] is True
+    assert len(heavy["current_version"]["display_text"]) <= 500

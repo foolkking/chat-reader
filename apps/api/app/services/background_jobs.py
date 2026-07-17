@@ -10,7 +10,12 @@ from app.core.database import SessionLocal
 from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.models.project import Project
-from app.services.editing.message_edit_service import MessageEditError, merge_conversations
+from app.services.editing.message_edit_service import (
+    MessageEditError,
+    auto_clean_conversation,
+    merge_conversations,
+)
+from app.services.exporting.cr_archive import create_cr_archive
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +79,84 @@ def queue_conversation_merge(
             "title": title,
             "project_id": str(project_id) if project_id else None,
         },
+        result={},
+        idempotency_key=idempotency_key,
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
+def queue_conversation_export(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    idempotency_key: str | None,
+) -> BackgroundJob:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None:
+        raise MessageEditError("Conversation not found.", 404)
+    if idempotency_key:
+        existing = (
+            db.query(BackgroundJob)
+            .filter(
+                BackgroundJob.job_type == "conversation_export",
+                BackgroundJob.idempotency_key == idempotency_key,
+                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
+            )
+            .order_by(BackgroundJob.created_at.desc())
+            .first()
+        )
+        if existing is not None:
+            return existing
+    job = BackgroundJob(
+        id=uuid.uuid4(),
+        job_type="conversation_export",
+        status="queued",
+        phase="queued",
+        progress=0,
+        processed_items=0,
+        total_items=conversation.message_count,
+        payload={"conversation_id": str(conversation.id), "title": conversation.display_title},
+        result={},
+        idempotency_key=idempotency_key,
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
+def queue_conversation_auto_clean(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    idempotency_key: str | None,
+) -> BackgroundJob:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None or conversation.status != "active":
+        raise MessageEditError("Conversation not found.", 404)
+    if idempotency_key:
+        existing = (
+            db.query(BackgroundJob)
+            .filter(
+                BackgroundJob.job_type == "conversation_auto_clean",
+                BackgroundJob.idempotency_key == idempotency_key,
+                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
+            )
+            .order_by(BackgroundJob.created_at.desc())
+            .first()
+        )
+        if existing is not None:
+            return existing
+    job = BackgroundJob(
+        id=uuid.uuid4(),
+        job_type="conversation_auto_clean",
+        status="queued",
+        phase="queued",
+        progress=0,
+        processed_items=0,
+        total_items=conversation.message_count,
+        payload={"conversation_id": str(conversation.id), "title": conversation.display_title},
         result={},
         idempotency_key=idempotency_key,
     )
@@ -147,12 +230,7 @@ def process_background_job(
             job = db.get(BackgroundJob, job_id)
             if job is None or job.status != "processing":
                 return
-            if job.job_type != "conversation_merge":
-                raise ValueError(f"Unsupported background job type: {job.job_type}")
             payload = job.payload or {}
-            conversation_ids = [uuid.UUID(value) for value in payload.get("conversation_ids", [])]
-            project_value = payload.get("project_id")
-            project_id = uuid.UUID(project_value) if project_value else None
             is_sqlite = db.get_bind().dialect.name == "sqlite"
 
             def report(phase: str, progress: int, processed: int, total: int) -> None:
@@ -166,25 +244,58 @@ def process_background_job(
                 job.heartbeat_at = datetime.now(timezone.utc)
 
             report("validating", 5, 0, job.total_items)
-            result = merge_conversations(
-                db=db,
-                conversation_ids=conversation_ids,
-                title=payload.get("title"),
-                project_id=project_id,
-                progress_callback=report,
-            )
+            if job.job_type == "conversation_merge":
+                conversation_ids = [uuid.UUID(value) for value in payload.get("conversation_ids", [])]
+                project_value = payload.get("project_id")
+                project_id = uuid.UUID(project_value) if project_value else None
+                result = merge_conversations(
+                    db=db,
+                    conversation_ids=conversation_ids,
+                    title=payload.get("title"),
+                    project_id=project_id,
+                    progress_callback=report,
+                )
+                job_result = {
+                    "conversation_ids": [str(result.conversation.id)],
+                    "conversation_id": str(result.conversation.id),
+                    "title": result.conversation.display_title,
+                    "message_count": result.message_count,
+                }
+                processed_items = result.message_count
+            elif job.job_type == "conversation_export":
+                conversation_id = uuid.UUID(payload["conversation_id"])
+                artifact = create_cr_archive(
+                    db,
+                    conversation_id=conversation_id,
+                    job_id=job.id,
+                    progress_callback=report,
+                )
+                job_result = {
+                    "conversation_id": str(conversation_id),
+                    "artifact_id": str(artifact.id),
+                    "filename": artifact.filename,
+                    "byte_size": artifact.byte_size,
+                    "download_url": f"/api/exports/{artifact.id}/download",
+                }
+                processed_items = job.total_items
+            elif job.job_type == "conversation_auto_clean":
+                conversation_id = uuid.UUID(payload["conversation_id"])
+                result = auto_clean_conversation(db, conversation_id, progress_callback=report)
+                job_result = {
+                    "conversation_id": str(conversation_id),
+                    "conversation_ids": [str(conversation_id)],
+                    "scanned_messages": result.scanned_messages,
+                    "cleaned_messages": result.cleaned_messages,
+                }
+                processed_items = result.scanned_messages
+            else:
+                raise ValueError(f"Unsupported background job type: {job.job_type}")
             now = datetime.now(timezone.utc)
             job.status = "committed"
             job.phase = "completed"
             job.progress = 100
-            job.processed_items = result.message_count
-            job.total_items = result.message_count
-            job.result = {
-                "conversation_ids": [str(result.conversation.id)],
-                "conversation_id": str(result.conversation.id),
-                "title": result.conversation.display_title,
-                "message_count": result.message_count,
-            }
+            job.processed_items = processed_items
+            job.result = job_result
             job.heartbeat_at = now
             job.completed_at = now
             job.error_message = None

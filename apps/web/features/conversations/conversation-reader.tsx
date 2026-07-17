@@ -23,7 +23,7 @@ import { ConversationToc } from "../toc/conversation-toc";
 import { MessageItem } from "./message-item";
 import { navigateMountedTarget } from "./reader-navigation";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 30;
 
 export function ConversationReader({ conversationId }: { conversationId: string }) {
   const searchParams = useSearchParams();
@@ -68,6 +68,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         includeBlocks: false,
         limit: PAGE_SIZE,
         offset,
+        contentMode: "preview",
       }),
   });
 
@@ -142,6 +143,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             includeBlocks: false,
             limit: PAGE_SIZE,
             anchorMessageId: messageId,
+            contentMode: "preview",
           });
           if (navigationTokenRef.current !== token) {
             return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
@@ -156,6 +158,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               includeBlocks: false,
               limit: 1,
               anchorMessageId: messageId,
+              contentMode: "preview",
             })).items.find((message) => message.id === messageId);
           const cachedBlocks = blockCache[messageId] ?? [];
           const contextStart = Math.max(0, blockIndex - 20);
@@ -276,7 +279,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       : conversationQuery.isSuccess
         ? 25
         : 10;
-  const loadedLabel = useMemo(() => `${messages.length} / ${total} loaded`, [messages.length, total]);
+  const loadedLabel = useMemo(() => `${messages.length} / ${total} 条消息`, [messages.length, total]);
   const selectedIds = useMemo(() => Array.from(selectedMessageIds), [selectedMessageIds]);
   const selectedOrderedIds = useMemo(
     () => messages.filter((message) => selectedMessageIds.has(message.id)).map((message) => message.id),
@@ -415,52 +418,16 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               </h1>
               <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-[#6b7280]">
                 <span>{loadedLabel}</span>
-                <span className="hidden max-w-[220px] truncate rounded-full bg-[#f7f7f8] px-2 py-0.5 sm:inline-flex">
-                  {conversation.source_profile}
-                </span>
               </div>
             </div>
-            <div className="hidden items-center gap-1 rounded-2xl bg-[#f7f7f8] p-1 md:flex">
-              <button
-                type="button"
-                onClick={() => void expandLoadedHeavyMessages()}
-                disabled={expandProgress.active}
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
-              >
-                {expandProgress.active ? <Spinner /> : null}
-                {expandProgress.active
-                  ? `${expandProgress.current} / ${expandProgress.total}`
-                  : "Blocks"}
-              </button>
-              <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
-              <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
-              <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
-              {selectedIds.length >= 2 ? (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) {
-                      return;
-                    }
-                    await mergeMessages({ messageIds: selectedIds });
-                    setSelectedMessageIds(new Set());
-                    await refreshReader();
-                  }}
-                  className="inline-flex h-9 items-center rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8]"
-                >
-                  合并所选
-                </button>
-              ) : null}
-              {selectedOrderedIds.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => void splitSelectedConversationRange()}
-                  className="inline-flex h-9 items-center rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8]"
-                >
-                  拆分为新会话
-                </button>
-              ) : null}
-            </div>
+            <button
+              type="button"
+              aria-label="对话操作"
+              onClick={() => setShowMobileActions((current) => !current)}
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-xl text-[#4b5563] hover:bg-[#ececeb] md:inline-flex"
+            >
+              ⋯
+            </button>
             <div className="flex shrink-0 gap-2 md:hidden">
               <button
                 type="button"
@@ -481,12 +448,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 onClick={() => setShowMobileActions((current) => !current)}
                 className="min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white"
               >
-                操作
+                更多
               </button>
             </div>
           </div>
           {showMobileActions ? (
-            <div className="border-t border-[#f0f0f0] px-4 py-3 md:hidden">
+            <div className="absolute right-3 top-14 z-40 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border border-[#e5e7eb] bg-white p-3 shadow-xl">
               <div className="grid gap-2">
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -498,7 +465,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                     {expandProgress.active ? <Spinner /> : null}
                     {expandProgress.active
                       ? `${expandProgress.current} / ${expandProgress.total}`
-                      : "展开 blocks"}
+                      : "展开已加载内容"}
                   </button>
                   <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
                   <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
@@ -549,15 +516,15 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             </div>
             <div className="mx-auto w-full max-w-[820px] min-w-0">
               {windowQuery.isLoading && messages.length === 0 ? (
-                <ReaderState title="Loading messages" detail="Fetching the first message window." />
+                <ReaderState title="正在加载消息" detail="正在获取首屏对话内容。" />
               ) : null}
 
               {windowQuery.isError ? (
-                <ReaderState title="Messages unavailable" detail={windowQuery.error.message} />
+                <ReaderState title="消息加载失败" detail={windowQuery.error.message} />
               ) : null}
 
               {windowQuery.isSuccess && messages.length === 0 ? (
-                <ReaderState title="No messages" detail="This conversation has no persisted canonical messages." />
+                <ReaderState title="暂无消息" detail="这个对话还没有可阅读的消息。" />
               ) : null}
 
               {messages.length > 0 ? (
@@ -602,7 +569,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                     {hasMore && windowQuery.isFetching ? (
                       <span className="inline-flex items-center gap-2 text-sm text-[#6b7280]">
                         <Spinner dark />
-                        正在加载更多对话
+                        正在加载更多消息
                       </span>
                     ) : null}
                   </div>
@@ -713,12 +680,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         </div>
       ) : null}
       {showShare || showExport ? (
-        <div className="pointer-events-none fixed inset-x-4 top-20 z-40 flex justify-end md:inset-x-6">
+        <div className="fixed inset-0 z-40 flex justify-end bg-black/10">
+          <button type="button" aria-label="关闭面板" className="absolute inset-0" onClick={() => { setShowShare(false); setShowExport(false); }} />
           <div
-            className={`pointer-events-auto grid max-h-[calc(100vh-6rem)] w-full gap-4 overflow-y-auto rounded-3xl border border-[#e5e5e5] bg-white/95 p-4 shadow-2xl backdrop-blur ${
-              showShare && showExport ? "max-w-[960px] lg:grid-cols-2" : "max-w-[520px]"
+            className={`relative z-10 grid h-full w-full gap-4 overflow-y-auto border-l border-[#e5e5e5] bg-white p-5 pt-14 shadow-2xl ${
+              showShare && showExport ? "max-w-[760px] lg:grid-cols-2" : "max-w-[440px]"
             }`}
           >
+            <button type="button" aria-label="关闭" onClick={() => { setShowShare(false); setShowExport(false); }} className="absolute right-4 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-xl text-[#6b7280] hover:bg-[#f3f4f6]">×</button>
             {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
             {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
           </div>

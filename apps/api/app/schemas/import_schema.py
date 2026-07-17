@@ -9,6 +9,7 @@ class SourceProfile(StrEnum):
     chatgpt_exporter_json = "chatgpt_exporter_json"
     chatgpt_exporter_markdown = "chatgpt_exporter_markdown"
     chatgpt_exporter_combo = "chatgpt_exporter_combo"
+    chat_reader_archive_v1 = "chat_reader_archive_v1"
     official_conversations_json = "official_conversations_json"
     official_conversation_json = "official_conversation_json"
     third_party_splitter_json = "third_party_splitter_json"
@@ -88,6 +89,15 @@ class ImportPreviewResponse(BaseModel):
     conversation_previews: list[ConversationPreview] = Field(default_factory=list)
     can_commit: bool = False
     commit_endpoint: str | None = None
+    archive_summary: dict | None = None
+    duplicate_conversation_id: UUID | None = None
+    compatibility: str | None = None
+
+
+class ImportCommitOptions(BaseModel):
+    duplicate_policy: str = "reject"
+    project_id: UUID | None = None
+    create_archive_project: bool = False
 
 
 class SourceArtifactRead(BaseModel):

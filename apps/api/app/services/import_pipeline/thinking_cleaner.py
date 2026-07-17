@@ -72,6 +72,10 @@ def clean_thinking_summary(role: str, text: str) -> CleanedText:
 
 
 def _find_opening_marker_index(lines: list[str]) -> int | None:
+    duration_index = _find_duration_marker_near_start(lines)
+    if duration_index is not None:
+        return duration_index
+
     scanned_chars = 0
     prefix_line_count = 0
     for index, line in enumerate(lines[:MAX_SCAN_LINES]):
@@ -95,6 +99,21 @@ def _find_opening_marker_index(lines: list[str]) -> int | None:
         if prefix_line_count == 0:
             return None
         return None
+    return None
+
+
+def _find_duration_marker_near_start(lines: list[str]) -> int | None:
+    scanned_chars = 0
+    for index, line in enumerate(lines[:MAX_SCAN_LINES]):
+        normalized = _strip_quote(line).strip()
+        scanned_chars += len(normalized)
+        if scanned_chars > MAX_SCAN_CHARS:
+            return None
+        if _DURATION_RE.match(normalized):
+            meaningful = [_strip_quote(value).strip() for value in lines[:index] if _strip_quote(value).strip()]
+            if len(meaningful) <= 1 and meaningful and not _looks_like_thinking_trace_line(meaningful[0]):
+                return None
+            return index
     return None
 
 

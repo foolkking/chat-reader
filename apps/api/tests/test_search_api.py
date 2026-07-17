@@ -101,3 +101,18 @@ def test_reindex_rebuilds_search_and_toc(client: TestClient) -> None:
     assert payload["conversation_count"] == 1
     assert payload["indexed_count"] >= 2
     assert payload["heading_count"] == 1
+
+
+def test_search_role_filter_and_duplicate_message_occurrences(client: TestClient) -> None:
+    first_id = _commit_search_sample(client, "Duplicate One")
+    second_id = _commit_search_sample(client, "Duplicate Two")
+    response = client.get("/api/search", params={"q": "alpha result body", "document_type": "message", "role": "assistant"})
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    item = response.json()["items"][0]
+    assert item["role"] == "assistant"
+    assert item["occurrence_count"] == 2
+    assert item["conversation_id"] in {first_id, second_id}
+
+    invalid = client.get("/api/search", params={"q": "alpha", "role": "invalid"})
+    assert invalid.status_code == 400

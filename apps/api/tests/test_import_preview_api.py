@@ -14,6 +14,7 @@ from app.main import app
 @pytest.fixture()
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "storage" / "imports"))
+    monkeypatch.setenv("EXPORT_STORAGE_DIR", str(tmp_path / "storage" / "exports"))
     monkeypatch.setenv("IMPORT_COMMIT_INLINE", "true")
     get_settings.cache_clear()
 

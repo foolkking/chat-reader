@@ -72,6 +72,26 @@ export type MessageListItem = {
   block_count: number;
   char_count: number;
   is_heavy: boolean;
+  ordinal?: number | null;
+  content_preview?: string | null;
+  content_truncated?: boolean;
+};
+
+export type DialogueIndexItem = {
+  message_id: string;
+  role: string;
+  role_number: number;
+  ordinal: number;
+  order_key: string;
+  preview: string;
+  turn_index: number | null;
+};
+
+export type DialogueIndexResponse = {
+  conversation_id: string;
+  items: DialogueIndexItem[];
+  message_count: number;
+  turn_count: number;
 };
 
 export type ImportPreviewFile = {
@@ -125,6 +145,9 @@ export type ImportPreviewResponse = {
   can_commit?: boolean;
   commit_endpoint?: string | null;
   warnings?: string[];
+  archive_summary?: Record<string, unknown> | null;
+  duplicate_conversation_id?: string | null;
+  compatibility?: string | null;
 };
 
 export type CommitImportResponse = {
@@ -163,6 +186,11 @@ export type BackgroundTaskRead = {
     conversation_id?: string;
     title?: string;
     message_count?: number;
+    artifact_id?: string;
+    filename?: string;
+    byte_size?: number;
+    download_url?: string;
+    cleaned_messages?: number;
   } & Record<string, unknown>;
   error_message: string | null;
   queued_at: string | null;
@@ -259,6 +287,7 @@ export type SearchResultItem = {
   snippet: string;
   rank: number;
   source_profile: string | null;
+  occurrence_count: number;
 };
 
 export type SearchResponse = {
@@ -289,6 +318,10 @@ export type TocItem = {
 export type TocResponse = {
   conversation_id: string;
   items: TocItem[];
+  limit: number;
+  offset: number;
+  total: number;
+  has_more: boolean;
 };
 
 export type MessageWindowResponse = {

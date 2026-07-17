@@ -38,6 +38,7 @@ services:
       PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL}
       MAX_IMPORT_FILE_SIZE_MB: ${MAX_IMPORT_FILE_SIZE_MB:-50}
       IMPORT_STORAGE_DIR: /data/imports
+      EXPORT_STORAGE_DIR: /data/exports
       WEB_CONCURRENCY: ${API_WORKERS:-1}
     depends_on:
       postgres:
@@ -53,6 +54,7 @@ services:
     environment: *api-environment
     volumes:
       - import-storage:/data/imports
+      - export-storage:/data/exports
     expose:
       - "8000"
     healthcheck:
@@ -84,6 +86,7 @@ services:
     environment: *api-environment
     volumes:
       - import-storage:/data/imports
+      - export-storage:/data/exports
     depends_on:
       postgres:
         condition: service_healthy
@@ -124,3 +127,4 @@ networks:
 volumes:
   postgres-data:
   import-storage:
+  export-storage:

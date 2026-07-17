@@ -11,7 +11,7 @@
 3. 在全部会话或 Project 中管理会话，通过阅读器查看长对话。
 4. 使用对话索引、当前消息章节 TOC 或搜索结果定位内容。
 5. 编辑、拆分或合并内容；历史版本保留。
-6. 创建只读分享链接，或导出 Markdown / Canonical JSON。
+6. 创建只读分享链接，或导出 `.cr` / Markdown / Canonical JSON。
 
 ## 支持的导入
 
@@ -19,6 +19,7 @@
 - ChatGPT Exporter Markdown。
 - 匹配的 JSON + Markdown 组合，JSON 提供结构，Markdown 提供展示内容。
 - 官方 ChatGPT conversations JSON 的 primary path。
+- Chat Reader `.cr` 快速归档，可直接恢复版本、blocks、目录和搜索文档。
 
 上传入口允许 JSON、Markdown、TXT 和 CSV 文件，但当前稳定 canonical parser 重点覆盖上述 JSON/Markdown 路径。CSV/TXT 不应视为完整格式支持承诺。
 
@@ -28,7 +29,8 @@
 - GFM 表格、任务列表、删除线、嵌套列表和 blockquote。
 - Shiki 浅色代码高亮、语言标签、复制、换行切换和长代码展开。
 - KaTeX 数学公式、Mermaid 图表和 Obsidian 风格 callout。
-- 消息窗口与 heavy blocks 懒加载，加载进度不会阻塞首屏。
+- 首屏使用 30 条轻量消息窗口；heavy blocks 进入阅读区域后自动分页加载，不要求逐条点击。
+- 对话索引使用独立轻量 API，不下载完整消息正文；章节 TOC 默认只读取当前消息。
 - 对话索引、active-message TOC、搜索定位和目标高亮。
 - 手机端采用全宽长文阅读，而不是狭窄的左右聊天气泡。
 
@@ -44,10 +46,11 @@
 
 ## 搜索、分享和导出
 
-- 搜索 conversation、message 和 heading，可限制 Project 或当前会话。
+- 搜索 conversation、message 和 heading，可限制 Project、角色或当前会话；merged/source 中内容相同的消息默认合并显示出现次数。
 - 中文、代码标识符、URL 和符号较多查询使用全文与 substring 混合匹配。
 - 分享链接可设置标题、描述和过期时间，可延期或撤销。
-- 导出格式为 Markdown 和 Canonical JSON，可限制选中消息并选择 metadata/TOC/version 信息。
+- `.cr` 是本系统的 ZIP64 + UTF-8 JSONL 快速归档，包含完整单会话的版本、blocks、目录、搜索文档、事件和阅读位置，不包含 Share token、服务器路径或原始导入文件。
+- `.cr` 导出由后台任务流式生成，文件默认保留 24 小时；Markdown 与 Canonical JSON 可限制选中消息并选择 metadata/TOC/version 信息。
 
 ## 当前限制
 

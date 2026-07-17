@@ -70,13 +70,14 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
           <p className="flex items-center gap-1.5 font-medium">
             <CheckCircle2 className="h-4 w-4" />
-            {completedTask.job_type === "conversation_merge" ? "合并完成" : "导入完成"}
+            {completedLabel(completedTask.job_type)}
           </p>
           {taskConversationId(completedTask) ? (
             <Link className="mt-1 inline-block underline" href={`/conversations/${taskConversationId(completedTask)}`}>
               打开会话
             </Link>
           ) : null}
+          {completedTask.result.download_url ? <a className="mt-1 inline-block underline" href={String(completedTask.result.download_url)}>下载归档</a> : null}
         </div>
       ) : null}
     </div>
@@ -108,7 +109,7 @@ function TaskContent({ task, compact = false, onRetry }: { task: BackgroundTaskR
           <p className="line-clamp-2 text-red-700">{task.error_message || "任务失败"}</p>
           {onRetry ? (
             <button type="button" onClick={onRetry} className="mt-1 inline-flex items-center gap-1 font-medium text-red-800 underline">
-              <RefreshCw className="h-3.5 w-3.5" /> Retry
+              <RefreshCw className="h-3.5 w-3.5" /> 重试
             </button>
           ) : null}
         </div>
@@ -135,12 +136,24 @@ function phaseLabel(task: BackgroundTaskRead): string {
     headings: "生成章节目录",
     search: "构建搜索索引",
     publishing: "发布会话",
+    exporting: "生成 .cr 归档",
+    cleaning_messages: "清理消息内容",
+    rebuilding_index: "重建目录与搜索",
   };
   return labels[task.phase] ?? "正在处理";
 }
 
 function taskTypeLabel(task: BackgroundTaskRead): string {
-  return task.job_type === "conversation_merge" ? "合并会话" : "导入会话";
+  return {
+    conversation_merge: "合并会话",
+    conversation_export: "导出归档",
+    conversation_auto_clean: "清理对话",
+    import: "导入会话",
+  }[task.job_type] ?? "后台任务";
+}
+
+function completedLabel(jobType: string): string {
+  return `${taskTypeLabel({ job_type: jobType } as BackgroundTaskRead)}完成`;
 }
 
 function taskConversationId(task: BackgroundTaskRead): string | null {
@@ -150,7 +163,7 @@ function taskConversationId(task: BackgroundTaskRead): string | null {
 async function invalidateReaderQueries(queryClient: ReturnType<typeof useQueryClient>) {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ["conversations"] }),
-    queryClient.invalidateQueries({ queryKey: ["sidebar-conversations"] }),
+    queryClient.invalidateQueries({ queryKey: ["conversations", "active"] }),
     queryClient.invalidateQueries({ queryKey: ["projects"] }),
     queryClient.invalidateQueries({ queryKey: ["project-conversations"] }),
   ]);

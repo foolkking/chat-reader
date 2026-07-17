@@ -35,6 +35,17 @@ def test_toc_returns_headings_with_unique_slugs(client: TestClient) -> None:
     assert items[0]["message_id"]
     assert items[0]["block_index"] == 0
 
+    message_id = items[0]["message_id"]
+    filtered = client.get(
+        f"/api/conversations/{conversation_id}/toc",
+        params={"message_id": message_id, "offset": 1, "limit": 1},
+    )
+    assert filtered.status_code == 200
+    assert filtered.json()["total"] == 2
+    assert filtered.json()["offset"] == 1
+    assert filtered.json()["has_more"] is False
+    assert len(filtered.json()["items"]) == 1
+
 
 def test_toc_unknown_conversation_returns_404(client: TestClient) -> None:
     response = client.get("/api/conversations/00000000-0000-0000-0000-000000000000/toc")

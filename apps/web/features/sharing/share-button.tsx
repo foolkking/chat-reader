@@ -12,7 +12,7 @@ export function ShareButton({ isOpen, onToggle }: { isOpen: boolean; onToggle: (
           : "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f7f7f8]"
       }`}
     >
-      {isOpen ? "Sharing" : "Share"}
+      分享
     </button>
   );
 }

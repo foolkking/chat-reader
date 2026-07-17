@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -14,6 +15,7 @@ from app.schemas.import_schema import (
     ConversationPreview,
     ImportPreviewFile,
     ImportPreviewResponse,
+    ImportCommitOptions,
     ImportWarningsResponse,
     ImportStatusResponse,
     MessagePreview,
@@ -37,10 +39,11 @@ from app.services.import_pipeline.official_json_parser import OfficialJsonParseE
 from app.services.import_pipeline.official_normalizer import build_official_conversation_preview
 from app.services.import_pipeline.source_detector import detect_source_profile
 from app.services.storage.local_storage import save_import_file
+from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 
-ALLOWED_EXTENSIONS = {".json", ".md", ".markdown", ".txt", ".csv"}
+ALLOWED_EXTENSIONS = {".cr", ".json", ".md", ".markdown", ".txt", ".csv"}
 PREVIEW_MESSAGE_LIMIT = 20
 PREVIEW_CONVERSATION_LIMIT = 20
 
@@ -66,6 +69,9 @@ async def preview_import(
     uploaded_files: list[UploadedPreviewFile] = []
     conversation_preview: ConversationPreview | None = None
     conversation_previews: list[ConversationPreview] = []
+    archive_summary: dict | None = None
+    archive_artifact: SourceArtifact | None = None
+    duplicate_conversation_id: uuid.UUID | None = None
 
     try:
         for upload in files:
@@ -104,6 +110,14 @@ async def preview_import(
                 parsed_summary={},
             )
             db.add(artifact)
+            if detection.source_profile == SourceProfile.chat_reader_archive_v1:
+                try:
+                    archive_path = Path(settings.import_storage_dir) / str(import_id) / stored_file.safe_filename
+                    archive_summary = inspect_cr_archive(archive_path)
+                    artifact.parsed_summary = archive_summary
+                    archive_artifact = artifact
+                except CrArchiveError as exc:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
             preview_files.append(
                 ImportPreviewFile(
@@ -124,6 +138,21 @@ async def preview_import(
             source_profiles.append(detection.source_profile.value)
 
         conversation_preview = _build_exporter_conversation_preview(uploaded_files)
+        if archive_summary is not None:
+            conversation_preview = ConversationPreview(
+                title=archive_summary["title"],
+                source_type="chat_reader_archive",
+                source_profile="chat_reader_archive_v1",
+                alignment_status="archive_ready",
+                message_count=archive_summary["message_count"],
+                prompt_count=0,
+                response_count=0,
+                empty_message_count=0,
+                cleaned_thinking_summary_count=0,
+                first_user_message=None,
+                warnings=[],
+                messages=[],
+            )
         if conversation_preview is None:
             conversation_previews = _build_official_conversation_previews(uploaded_files, import_warnings)
             conversation_preview = conversation_previews[0] if conversation_previews else None
@@ -131,10 +160,31 @@ async def preview_import(
             import_warnings.extend(conversation_preview.warnings)
             source_profiles = [conversation_preview.source_profile]
 
+        source_fingerprint = (
+            archive_summary["archive_fingerprint"] if archive_summary is not None else _combined_source_fingerprint(preview_files)
+        )
+        if archive_summary is not None:
+            existing = (
+                db.query(ImportRecord)
+                .filter(
+                    ImportRecord.source_fingerprint == source_fingerprint,
+                    ImportRecord.status == "committed",
+                    ImportRecord.conversation_id.is_not(None),
+                )
+                .order_by(ImportRecord.committed_at.desc())
+                .first()
+            )
+            duplicate_conversation_id = existing.conversation_id if existing else None
+            if archive_artifact is not None:
+                archive_artifact.parsed_summary = {
+                    **archive_summary,
+                    "duplicate_conversation_id": str(duplicate_conversation_id) if duplicate_conversation_id else None,
+                }
+
         import_record = ImportRecord(
             id=import_id,
             source_profile=_combined_source_profile(source_profiles),
-            source_fingerprint=_combined_source_fingerprint(preview_files),
+            source_fingerprint=source_fingerprint,
             status="previewed",
             alignment_status=conversation_preview.alignment_status if conversation_preview else "not_applicable",
             warnings=import_warnings,
@@ -169,6 +219,9 @@ async def preview_import(
         commit_endpoint=f"/api/imports/{import_id}/commit"
         if conversation_preview is not None or conversation_previews
         else None,
+        archive_summary=archive_summary,
+        duplicate_conversation_id=duplicate_conversation_id,
+        compatibility="compatible" if archive_summary is not None else None,
     )
 
 
@@ -226,12 +279,34 @@ def get_import_status(import_id: uuid.UUID, db: Session = Depends(get_db)) -> Im
 def commit_import(
     import_id: uuid.UUID,
     response: Response,
+    options: ImportCommitOptions = Body(default_factory=ImportCommitOptions),
     db: Session = Depends(get_db),
 ) -> CommitImportResponse:
     import_record = _get_import_or_404(import_id, db)
     if import_record.status == "committed":
         response.status_code = status.HTTP_200_OK
         return _commit_response(import_record, db)
+
+    archive_artifact = (
+        db.query(SourceArtifact)
+        .filter(SourceArtifact.import_id == import_id, SourceArtifact.source_profile == "chat_reader_archive_v1")
+        .first()
+    )
+    if archive_artifact is not None:
+        summary = dict(archive_artifact.parsed_summary or {})
+        duplicate_id = summary.get("duplicate_conversation_id")
+        if duplicate_id and options.duplicate_policy != "copy":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"message": "Archive already exists.", "conversation_id": duplicate_id},
+            )
+        summary["commit_options"] = {
+            "duplicate_policy": options.duplicate_policy,
+            "duplicate_conversation_id": duplicate_id,
+            "project_id": str(options.project_id) if options.project_id else None,
+            "create_archive_project": options.create_archive_project,
+        }
+        archive_artifact.parsed_summary = summary
 
     queue_import(import_record, db)
     db.commit()

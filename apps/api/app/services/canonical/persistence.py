@@ -34,6 +34,7 @@ from app.services.import_pipeline.official_primary_path import resolve_primary_p
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
 from app.services.search.search_indexer import rebuild_search_documents_for_conversation
 from app.services.toc.toc_builder import rebuild_headings_for_conversation
+from app.services.exporting.cr_archive import CrArchiveError, import_cr_archive
 
 
 class CommitImportError(ValueError):
@@ -119,6 +120,47 @@ def commit_import_preview(
     )
     if not artifacts:
         raise CommitImportError("Import has no source artifacts to commit.")
+
+    archive_artifact = next((artifact for artifact in artifacts if artifact.source_profile == "chat_reader_archive_v1"), None)
+    if archive_artifact is not None:
+        try:
+            conversation, message_count = import_cr_archive(
+                db,
+                import_record=import_record,
+                artifact=archive_artifact,
+                progress_callback=progress_callback,
+            )
+        except CrArchiveError as exc:
+            raise CommitImportError(str(exc)) from exc
+        now = datetime.now(timezone.utc)
+        import_record.conversation_id = conversation.id
+        import_record.status = "committed"
+        import_record.phase = "completed"
+        import_record.progress = 100
+        import_record.processed_messages = message_count
+        import_record.total_messages = message_count
+        import_record.committed_at = now
+        import_record.completed_at = now
+        import_record.heartbeat_at = now
+        import_record.error_message = None
+        db.add(
+            ConversationEvent(
+                id=uuid.uuid4(),
+                conversation_id=conversation.id,
+                event_type="conversation_imported",
+                payload={"import_id": str(import_id), "source_profile": "chat_reader_archive_v1"},
+                created_by="system",
+            )
+        )
+        db.commit()
+        return CommitImportResult(
+            import_id=import_id,
+            status="committed",
+            conversation_ids=[conversation.id],
+            conversation_count=1,
+            message_count=message_count,
+            warnings=[],
+        )
 
     _report(progress_callback, "parsing", 3, 0, 0)
     persistable = _build_persistable_conversations(import_id, artifacts)

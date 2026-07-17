@@ -19,6 +19,7 @@ from app.services.search.search_service import SearchServiceError, search
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 DOCUMENT_TYPES = {"conversation", "message", "heading"}
+ROLES = {"user", "assistant", "system", "tool", "note"}
 
 
 @router.get("", response_model=SearchResponse)
@@ -29,10 +30,13 @@ def search_documents(
     conversation_id: uuid.UUID | None = None,
     project_id: uuid.UUID | None = None,
     document_type: str | None = None,
+    role: str | None = None,
     db: Session = Depends(get_db),
 ) -> SearchResponse:
     if document_type is not None and document_type not in DOCUMENT_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document_type.")
+    if role is not None and role not in ROLES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role.")
     try:
         page = search(
             db,
@@ -42,6 +46,7 @@ def search_documents(
             conversation_id=conversation_id,
             project_id=project_id,
             document_type=document_type,
+            role=role,
         )
     except SearchServiceError as exc:
         status_code = status.HTTP_404_NOT_FOUND if "not found" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
@@ -60,6 +65,7 @@ def search_documents(
                 snippet=item.snippet,
                 rank=item.rank,
                 source_profile=item.source_profile,
+                occurrence_count=item.occurrence_count,
             )
             for item in page.items
         ],

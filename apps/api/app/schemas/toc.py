@@ -17,3 +17,7 @@ class TocItem(BaseModel):
 class TocResponse(BaseModel):
     conversation_id: UUID
     items: list[TocItem]
+    limit: int = 200
+    offset: int = 0
+    total: int = 0
+    has_more: bool = False

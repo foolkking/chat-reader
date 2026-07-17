@@ -46,7 +46,7 @@ export function ProjectSidebar({ currentProjectId, onImportClick }: { currentPro
   );
   const projectsQuery = useQuery({ queryKey: ["projects"], queryFn: () => getProjects() });
   const conversationsQuery = useQuery({
-    queryKey: ["sidebar-conversations"],
+    queryKey: ["conversations", "active"],
     queryFn: () => getConversations({ scope: "history" }),
   });
   const createMutation = useMutation({
@@ -73,7 +73,7 @@ export function ProjectSidebar({ currentProjectId, onImportClick }: { currentPro
 
   async function refreshSidebar() {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["sidebar-conversations"] }),
+      queryClient.invalidateQueries({ queryKey: ["conversations", "active"] }),
       queryClient.invalidateQueries({ queryKey: ["conversations"] }),
       queryClient.invalidateQueries({ queryKey: ["projects"] }),
       queryClient.invalidateQueries({ queryKey: ["project-conversations"] }),
@@ -103,6 +103,8 @@ export function ProjectSidebar({ currentProjectId, onImportClick }: { currentPro
       projectsLoading={projectsQuery.isLoading}
       projectsError={projectsQuery.isError ? projectsQuery.error.message : null}
       conversations={conversations}
+      conversationsLoading={conversationsQuery.isLoading}
+      conversationsError={conversationsQuery.isError ? conversationsQuery.error.message : null}
       expandedProjects={expandedProjects}
       toggleProject={(projectId) => setExpandedProjects((current) => toggleSet(current, projectId))}
       onImportClick={() => { setShowMobileDrawer(false); onImportClick?.(); }}
@@ -121,7 +123,7 @@ export function ProjectSidebar({ currentProjectId, onImportClick }: { currentPro
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDrag(null)}>
-      <button type="button" aria-label="Open sidebar" data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-[#d9d9d7] bg-white text-sm font-semibold text-[#111827] shadow-sm md:hidden">cr</button>
+      <button type="button" aria-label="打开侧栏" data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-[#d9d9d7] bg-white text-sm font-semibold text-[#111827] shadow-sm md:hidden">CR</button>
       <ImportTaskMonitor placement="mobile" />
       {showMobileDrawer ? (
         <div className="fixed inset-0 z-50 md:hidden">
@@ -142,6 +144,8 @@ type SidebarContentProps = {
   projectsLoading: boolean;
   projectsError: string | null;
   conversations: ConversationListItem[];
+  conversationsLoading: boolean;
+  conversationsError: string | null;
   expandedProjects: Set<string>;
   toggleProject: (projectId: string) => void;
   onImportClick: () => void;
@@ -161,21 +165,21 @@ function SidebarContent(props: SidebarContentProps) {
   return (
     <>
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-[#e5e5e5] px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f] text-sm font-semibold text-white">cr</div>
-        <div className="min-w-0"><p className="truncate text-sm font-semibold">chat-reader</p><p className="text-xs text-[#6b7280]">local archive reader</p></div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f] text-xs font-semibold text-white">CR</div>
+        <p className="truncate text-sm font-semibold">Chat Reader</p>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d9d9d7] bg-white px-3 text-sm font-medium shadow-sm hover:bg-[#f4f4f4]"><Import className="h-4 w-4" /> Import</button>
+        <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d9d9d7] bg-white px-3 text-sm font-medium shadow-sm hover:bg-[#f4f4f4]"><Import className="h-4 w-4" /> 导入数据</button>
         <ImportTaskMonitor placement="sidebar" />
         <nav className="space-y-1">
-          <NavLink href="/" label="Chats" active={props.pathname === "/"} icon={<FolderOpen className="h-4 w-4" />} onClick={props.closeMobile} />
-          <NavLink href="/search" label="Search" active={props.pathname.startsWith("/search")} icon={<Search className="h-4 w-4" />} onClick={props.closeMobile} />
-          <NavLink href="/archived" label="Archived" active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
+          <NavLink href="/" label="对话" active={props.pathname === "/"} icon={<FolderOpen className="h-4 w-4" />} onClick={props.closeMobile} />
+          <NavLink href="/search" label="搜索" active={props.pathname.startsWith("/search")} icon={<Search className="h-4 w-4" />} onClick={props.closeMobile} />
+          <NavLink href="/archived" label="已归档" active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
         </nav>
 
         <div className="mt-5">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-xs font-semibold uppercase text-[#6b7280]">Projects</h2>
+            <h2 className="text-xs font-semibold text-[#6b7280]">项目</h2>
             <button type="button" aria-label="Create project" title="Create project" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-white"><Plus className="h-4 w-4" /></button>
           </div>
           {props.showProjectForm ? <ProjectCreateForm {...props} /> : null}
@@ -194,13 +198,12 @@ function SidebarContent(props: SidebarContentProps) {
               />
             ))}
           </div>
-          {props.projectsLoading ? <p className="px-2 py-2 text-xs text-[#6b7280]">Loading projects</p> : null}
+          {props.projectsLoading ? <p role="status" className="px-2 py-2 text-xs text-[#6b7280]">正在加载项目…</p> : null}
           {props.projectsError ? <p className="mt-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-700">{props.projectsError}</p> : null}
         </div>
 
-        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} />
+        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} />
       </div>
-      <div className="shrink-0 border-t border-[#e5e5e5] px-4 py-3 text-xs leading-5 text-[#6b7280]">Local mode / PostgreSQL</div>
     </>
   );
 }
@@ -208,8 +211,8 @@ function SidebarContent(props: SidebarContentProps) {
 function ProjectCreateForm(props: SidebarContentProps) {
   return (
     <form className="mt-2 rounded-xl border border-[#e5e5e5] bg-white p-2" onSubmit={(event) => { event.preventDefault(); props.onCreateProject(); }}>
-      <input value={props.name} onChange={(event) => props.setName(event.target.value)} className="min-h-10 w-full rounded-lg border border-[#d9d9d7] px-3 text-sm outline-none focus:border-[#10a37f]" placeholder="Project name" />
-      <button type="submit" disabled={!props.name.trim() || props.createPending} className="mt-2 min-h-10 w-full rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:opacity-50">Add project</button>
+      <input value={props.name} onChange={(event) => props.setName(event.target.value)} className="min-h-10 w-full rounded-lg border border-[#d9d9d7] px-3 text-sm outline-none focus:border-[#10a37f]" placeholder="项目名称" />
+      <button type="submit" disabled={!props.name.trim() || props.createPending} className="mt-2 min-h-10 w-full rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:opacity-50">创建项目</button>
       {props.createError ? <p className="mt-2 text-xs text-red-700">{props.createError}</p> : null}
     </form>
   );
@@ -229,23 +232,25 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
       {expanded ? (
         <div className="ml-6 border-l border-[#e5e7eb] pl-1">
           {conversations.map((conversation) => <DraggableConversationRow key={conversation.id} conversation={conversation} projectId={project.id} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} />)}
-          {conversationsQuery.isLoading ? <p className="px-3 py-2 text-xs text-[#9ca3af]">Loading chats</p> : null}
+          {conversationsQuery.isLoading ? <p className="px-3 py-2 text-xs text-[#9ca3af]">正在加载对话…</p> : null}
           {(conversationsQuery.data?.length ?? 0) > 8 ? <Link href={`/projects/${project.id}`} className="block px-3 py-2 text-xs font-medium text-[#0f766e]">查看全部</Link> : null}
-          {!conversationsQuery.isLoading && conversations.length === 0 ? <p className="px-3 py-2 text-xs text-[#9ca3af]">Drop a chat here</p> : null}
+          {!conversationsQuery.isLoading && conversations.length === 0 ? <p className="px-3 py-2 text-xs text-[#9ca3af]">拖动对话到这里</p> : null}
         </div>
       ) : null}
     </div>
   );
 }
 
-function HistoryDropZone({ pathname, conversations, closeMobile, onChanged }: { pathname: string; conversations: ConversationListItem[]; closeMobile: () => void; onChanged: () => Promise<void> }) {
+function HistoryDropZone({ pathname, conversations, loading, error, closeMobile, onChanged }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: string | null; closeMobile: () => void; onChanged: () => Promise<void> }) {
   const { setNodeRef, isOver } = useDroppable({ id: "history-drop" });
   return (
     <div ref={setNodeRef} className={`mt-5 rounded-lg p-1 ${isOver ? "bg-emerald-50 ring-1 ring-[#10a37f]" : ""}`}>
-      <h2 className="px-2 text-xs font-semibold uppercase text-[#6b7280]">Conversation history</h2>
+      <h2 className="px-2 text-xs font-semibold text-[#6b7280]">对话记录</h2>
       <nav className="mt-2 space-y-1">
-        {conversations.map((conversation) => <DraggableConversationRow key={conversation.id} conversation={conversation} projectId={null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} />)}
-        {conversations.length === 0 ? <p className="px-2 py-2 text-xs text-[#6b7280]">No unfiled conversations</p> : null}
+        {loading ? <p role="status" className="px-2 py-2 text-xs text-[#6b7280]">正在加载对话…</p> : null}
+        {error ? <p role="alert" className="px-2 py-2 text-xs text-red-700">加载失败</p> : null}
+        {!loading && !error ? conversations.map((conversation) => <DraggableConversationRow key={conversation.id} conversation={conversation} projectId={null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} />) : null}
+        {!loading && !error && conversations.length === 0 ? <p className="px-2 py-2 text-xs leading-5 text-[#6b7280]">暂无未分类对话。导入后的对话会显示在这里。</p> : null}
       </nav>
     </div>
   );

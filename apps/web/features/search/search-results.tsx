@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { SearchResultItem } from "../../lib/types";
 
-export function SearchResults({ items }: { items: SearchResultItem[] }) {
+export function SearchResults({ items, query }: { items: SearchResultItem[]; query: string }) {
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border border-[#e5e5e5] bg-white p-6 text-sm text-[#6b7280] shadow-sm">
-        No results.
+        没有找到结果。请尝试清除筛选或缩短关键词。
       </div>
     );
   }
@@ -23,7 +23,8 @@ export function SearchResults({ items }: { items: SearchResultItem[] }) {
               <h2 className="truncate text-base font-semibold text-[#111827]">
                 {item.conversation_title}
               </h2>
-              <p className="mt-1 text-sm leading-6 text-[#374151]">{cleanSearchSnippet(item.snippet)}</p>
+              <p className="mt-1 text-sm leading-6 text-[#374151]"><HighlightedSnippet text={cleanSearchSnippet(item.snippet)} query={query} /></p>
+              {item.occurrence_count > 1 ? <p className="mt-1 text-xs text-[#6b7280]">同时存在于 {item.occurrence_count} 个对话</p> : null}
             </div>
             <div className="flex shrink-0 flex-wrap gap-2 text-xs text-[#6b7280] sm:justify-end">
               <span className="rounded-full border border-[#e5e5e5] bg-[#f7f7f8] px-2 py-1">
@@ -43,6 +44,12 @@ export function SearchResults({ items }: { items: SearchResultItem[] }) {
       ))}
     </div>
   );
+}
+
+function HighlightedSnippet({ text, query }: { text: string; query: string }) {
+  const index = text.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
+  if (index < 0 || !query) return <>{text}</>;
+  return <>{text.slice(0, index)}<mark className="rounded-sm bg-amber-100 px-0.5 text-inherit">{text.slice(index, index + query.length)}</mark>{text.slice(index + query.length)}</>;
 }
 
 function cleanSearchSnippet(snippet: string): string {

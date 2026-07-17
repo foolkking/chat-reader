@@ -1,6 +1,6 @@
 import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { editMessage, splitMessage } from "../../lib/api";
 import { EditMessageForm } from "../editing/edit-message-form";
@@ -47,6 +47,8 @@ export function MessageItem({
   const [splitOffsetValue, setSplitOffsetValue] = useState("");
   const [splitReason, setSplitReason] = useState("");
   const [showVersions, setShowVersions] = useState(false);
+  const autoLoadRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const blocks = normalizedBlocks(message, cachedBlocks);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
   const defaultSplitOffset = Math.max(1, Math.floor(currentText.length / 2));
@@ -68,6 +70,40 @@ export function MessageItem({
     setIsEditing(false);
     setShowVersions(false);
   }, [defaultSplitOffset, message.id]);
+
+  useEffect(() => {
+    const target = autoLoadRef.current;
+    if (!target || !message.is_heavy || showHeavyBlocks || isLoadingHeavyBlocks || !onLoadBlocks) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        setIsLoadingHeavyBlocks(true);
+        void onLoadBlocks(message.id)
+          .then(() => setShowHeavyBlocks(true))
+          .finally(() => setIsLoadingHeavyBlocks(false));
+      },
+      { rootMargin: "600px 0px", threshold: 0 },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [isLoadingHeavyBlocks, message.id, message.is_heavy, onLoadBlocks, showHeavyBlocks]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !hasMoreBlocks || isLoadingMoreBlocks || !onLoadMoreBlocks) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        setIsLoadingMoreBlocks(true);
+        void onLoadMoreBlocks().finally(() => setIsLoadingMoreBlocks(false));
+      },
+      { rootMargin: "500px 0px", threshold: 0 },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMoreBlocks, isLoadingMoreBlocks, onLoadMoreBlocks]);
 
   async function submitSplit() {
     const splitOffset = Number.parseInt(splitOffsetValue, 10);
@@ -144,19 +180,14 @@ export function MessageItem({
     >
       <div className={`${isUser ? "w-full sm:ml-auto sm:max-w-[72%]" : "w-full max-w-full flex-1"} min-w-0`}>
         {isUser ? (
-          <div className="mb-2 flex items-center gap-2 sm:hidden">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#10a37f] text-[10px] font-semibold text-white">
-              YOU
-            </span>
-            <span className="text-xs font-semibold text-[#6b7280]">You</span>
+          <div className="mb-2 flex items-center justify-end gap-2 pr-10">
+            <span className="text-xs font-semibold text-[#6b7280]">你</span>
           </div>
         ) : null}
         {!isUser ? (
-          <div className="mb-2 flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#111827] text-xs font-semibold uppercase text-white">
-              {message.role.slice(0, 1)}
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">{message.role}</span>
+          <div className="mb-2 flex items-center gap-2 pr-10">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-semibold text-white">CR</span>
+            <span className="text-xs font-semibold text-[#6b7280]">ChatGPT</span>
             <span className="hidden font-mono text-[11px] text-[#9ca3af] group-hover:inline">{message.order_key}</span>
           </div>
         ) : null}
@@ -173,13 +204,13 @@ export function MessageItem({
           {isUser ? <span className="sr-only">User message {message.order_key}</span> : null}
           {hasActions ? (
             <>
-              <details className="mb-2 sm:hidden">
-                <summary className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] marker:hidden">
-                  ...
+              <details className="absolute right-0 top-0 z-20 sm:hidden">
+                <summary aria-label="消息操作" className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg text-lg text-[#6b7280] hover:bg-[#ececeb] marker:hidden">
+                  ⋯
                 </summary>
-                <div className="mt-2 flex flex-wrap gap-2">{actionControls}</div>
+                <div className="absolute right-0 top-10 flex w-64 flex-wrap gap-2 rounded-lg border border-[#e5e7eb] bg-white p-3 shadow-xl">{actionControls}</div>
               </details>
-              <div className="mb-2 hidden min-h-9 flex-wrap items-center gap-2 opacity-0 transition sm:flex sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+              <div className="hidden h-0 -translate-y-2 flex-wrap justify-end gap-2 overflow-visible opacity-0 transition sm:flex sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                 {actionControls}
               </div>
             </>
@@ -219,10 +250,8 @@ export function MessageItem({
                 />
               ) : null}
               {message.is_heavy && !showHeavyBlocks ? (
-            <div className="rounded-xl border border-[#e5e5e5] bg-white/70 p-3">
-              <p className="text-sm text-[#6b7280]">
-                Heavy message: {message.char_count} characters / {message.block_count} blocks.
-              </p>
+            <div ref={autoLoadRef} className="border-l-2 border-[#d1fae5] py-3 pl-3">
+              <p className="text-sm text-[#6b7280]">{isLoadingHeavyBlocks ? "正在加载完整内容…" : "长内容将在进入阅读区域时自动加载"}</p>
               <button
                 type="button"
                 onClick={async () => {
@@ -235,10 +264,10 @@ export function MessageItem({
                   }
                 }}
                 disabled={isLoadingHeavyBlocks}
-                className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+                className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
               >
                 {isLoadingHeavyBlocks ? <Spinner /> : null}
-                {isLoadingHeavyBlocks ? "Loading blocks" : "Load blocks"}
+                {isLoadingHeavyBlocks ? "正在加载" : "立即展开"}
               </button>
             </div>
               ) : (
@@ -259,21 +288,7 @@ export function MessageItem({
                     />
                   ) : null}
                   <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
-                  {hasMoreBlocks ? (
-                    <BlockPageButton
-                      label="Load more blocks"
-                      loadingLabel="Loading more blocks"
-                      loading={isLoadingMoreBlocks}
-                      onClick={async () => {
-                        setIsLoadingMoreBlocks(true);
-                        try {
-                          await onLoadMoreBlocks?.();
-                        } finally {
-                          setIsLoadingMoreBlocks(false);
-                        }
-                      }}
-                    />
-                  ) : null}
+                  {hasMoreBlocks ? <div ref={loadMoreRef} className="flex min-h-10 items-center justify-center text-xs text-[#6b7280]">{isLoadingMoreBlocks ? "正在继续加载…" : "继续滚动以加载后续内容"}</div> : null}
                 </>
               )}
             </>
