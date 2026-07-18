@@ -17,23 +17,9 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { BundledLanguage, ThemedToken } from "shiki";
 
-const SHIKI_LANGUAGES: BundledLanguage[] = [
-  "bash",
-  "css",
-  "html",
-  "javascript",
-  "json",
-  "jsx",
-  "markdown",
-  "powershell",
-  "python",
-  "sql",
-  "tsx",
-  "typescript",
-  "yaml",
-];
 const shikiTokenCache = new Map<string, ThemedToken[][]>();
 let shikiHighlighterPromise: ReturnType<typeof createCachedHighlighter> | null = null;
+const shikiLanguagePromises = new Map<BundledLanguage, Promise<void>>();
 
 type MarkdownSegment =
   | { kind: "markdown"; text: string }
@@ -439,6 +425,7 @@ async function getShikiTokens(language: BundledLanguage, code: string, resolvedT
   }
   shikiHighlighterPromise ??= createCachedHighlighter();
   const highlighter = await shikiHighlighterPromise;
+  await ensureShikiLanguage(highlighter, language);
   const result = highlighter.codeToTokens(code, { lang: language, theme }).tokens;
   if (shikiTokenCache.size >= 300) {
     const oldestKey = shikiTokenCache.keys().next().value;
@@ -452,7 +439,24 @@ async function getShikiTokens(language: BundledLanguage, code: string, resolvedT
 
 async function createCachedHighlighter() {
   const { createHighlighter } = await import("shiki");
-  return createHighlighter({ themes: ["github-light", "github-dark"], langs: SHIKI_LANGUAGES });
+  return createHighlighter({ themes: ["github-light", "github-dark"], langs: [] });
+}
+
+async function ensureShikiLanguage(
+  highlighter: Awaited<ReturnType<typeof createCachedHighlighter>>,
+  language: BundledLanguage,
+) {
+  if (highlighter.getLoadedLanguages().includes(language)) return;
+  let request = shikiLanguagePromises.get(language);
+  if (!request) {
+    request = highlighter.loadLanguage(language).then(() => undefined);
+    shikiLanguagePromises.set(language, request);
+  }
+  try {
+    await request;
+  } finally {
+    shikiLanguagePromises.delete(language);
+  }
 }
 
 function hashCode(value: string): string {
