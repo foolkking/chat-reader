@@ -18,7 +18,7 @@ import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame"
 import { useTranslations } from "../../components/preferences-provider";
 
 const PAGE_SIZE = 30;
-const BLOCK_PAGE_SIZE = 40;
+const BLOCK_PAGE_SIZE = 20;
 const ACTIVE_READING_OFFSET = 96;
 
 export function ShareReadonlyReader({ token }: { token: string }) {
@@ -158,7 +158,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const activeIndex = messages.findIndex((message) => message.id === activeMessageId);
     if (activeIndex < 0) return;
     const nearby = messages
-      .slice(Math.max(0, activeIndex - 1), activeIndex + 2)
+      .slice(activeIndex, activeIndex + 1)
       .filter((message) => message.is_heavy && !expandedMessageIds.has(message.id));
     if (nearby.length === 0) return;
     let cancelled = false;

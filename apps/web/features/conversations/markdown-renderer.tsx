@@ -6,7 +6,7 @@ import {
   type CodeHeaderProps,
   type SyntaxHighlighterProps,
 } from "@assistant-ui/react-markdown";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { Components } from "react-markdown";
@@ -345,6 +345,8 @@ function CodeOrMermaidBlock(props: SyntaxHighlighterProps) {
 
 function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
   const { resolvedTheme } = usePreferences();
+  const containerRef = useRef<HTMLElement | null>(null);
+  const [shouldHighlight, setShouldHighlight] = useState(false);
   const [tokens, setTokens] = useState<ThemedToken[][] | null>(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -353,6 +355,22 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
   const longCode = code.split("\n").length > 80;
 
   useEffect(() => {
+    const target = containerRef.current;
+    if (!target || shouldHighlight) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setShouldHighlight(true);
+        observer.disconnect();
+      },
+      { rootMargin: "320px 0px", threshold: 0 },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [shouldHighlight]);
+
+  useEffect(() => {
+    if (!shouldHighlight) return undefined;
     let cancelled = false;
     async function highlight() {
       try {
@@ -378,10 +396,10 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
     return () => {
       cancelled = true;
     };
-  }, [code, language, resolvedTheme]);
+  }, [code, language, resolvedTheme, shouldHighlight]);
 
   return (
-    <section className="my-5 max-w-full overflow-hidden rounded-lg border border-ui bg-[var(--code-bg)]">
+    <section ref={containerRef} className="my-5 max-w-full overflow-hidden rounded-lg border border-ui bg-[var(--code-bg)]">
       <div className="flex min-h-10 items-center justify-between gap-3 border-b border-ui bg-subtle px-3 text-xs text-secondary">
         <span className="min-w-0 truncate font-mono">{language || "text"}</span>
         <div className="flex items-center gap-1">
