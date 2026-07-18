@@ -143,7 +143,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 @container (min-width: 108rem) {
   .reader-layout-grid {
     box-sizing: border-box;
-    padding-left: clamp(17rem, 20cqi, 21rem);
+    padding-left: calc(clamp(17rem, 20cqi, 21rem) + clamp(0.75rem, 1cqi, 1.25rem));
     grid-template-columns: minmax(0, 1fr) clamp(13rem, 15cqi, 17rem);
     gap: clamp(1rem, 1.5cqi, 1.75rem);
   }
