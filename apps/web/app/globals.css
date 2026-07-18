@@ -141,6 +141,10 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 
 @container (min-width: 96rem) {
+  .reader-content-column {
+    transform: translateX(clamp(0.75rem, 1cqi, 1.25rem));
+  }
+
   .reader-toc-column {
     display: block;
     position: absolute;
