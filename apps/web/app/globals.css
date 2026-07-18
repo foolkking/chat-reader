@@ -140,14 +140,12 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   }
 }
 
-@container (min-width: 86rem) {
+@container (min-width: 108rem) {
   .reader-layout-grid {
+    box-sizing: border-box;
+    padding-left: clamp(17rem, 20cqi, 21rem);
     grid-template-columns: minmax(0, 1fr) clamp(13rem, 15cqi, 17rem);
     gap: clamp(1rem, 1.5cqi, 1.75rem);
-  }
-  .reader-content-column {
-    padding-left: clamp(3.5rem, 5cqi, 5.5rem);
-    box-sizing: border-box;
   }
   .reader-toc-column {
     display: block;
