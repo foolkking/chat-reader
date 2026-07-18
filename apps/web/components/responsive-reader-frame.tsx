@@ -18,9 +18,9 @@ export function ResponsiveReaderFrame({
       data-reader-width={readerWidthMode}
     >
       <aside className="reader-index-column">{index}</aside>
+      <aside className="reader-toc-column min-w-0">{toc}</aside>
       <div className="reader-layout-grid">
         <div className="reader-content-column min-w-0">{content}</div>
-        <aside className="reader-toc-column min-w-0">{toc}</aside>
       </div>
     </div>
   );

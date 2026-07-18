@@ -887,7 +887,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 </div>
               ) : null}
             </div>}
-            toc={<div className="sticky top-[4vh]">
+            toc={<div className="h-full">
                 <ConversationToc
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}

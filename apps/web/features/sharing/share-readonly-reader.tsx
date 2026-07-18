@@ -412,7 +412,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           })}
           <div ref={bottomSentinelRef} className="h-px" aria-hidden="true" />
           <div aria-hidden="true" className="h-[calc(100vh-6rem)] min-h-72" />
-        </div>} toc={<div className="sticky top-[4vh] max-h-[92vh] overflow-y-auto">
+        </div>} toc={<div className="h-full overflow-y-auto">
           <ConversationToc
             conversationId={payload.conversation.id}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}
