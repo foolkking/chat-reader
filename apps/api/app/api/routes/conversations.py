@@ -384,7 +384,7 @@ def list_conversation_messages(
 def get_dialogue_index(
     conversation_id: uuid.UUID,
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=80, ge=1, le=200),
+    limit: int = Query(default=80, ge=1, le=5000),
     anchor_message_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
 ) -> DialogueIndexResponse:

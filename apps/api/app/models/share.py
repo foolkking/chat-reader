@@ -27,6 +27,8 @@ class Share(Base):
     include_toc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     include_metadata: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     allow_export: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    theme: Mapped[str] = mapped_column(Text, nullable=False, default="light")
+    locale: Mapped[str] = mapped_column(Text, nullable=False, default="zh-CN")
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     access_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

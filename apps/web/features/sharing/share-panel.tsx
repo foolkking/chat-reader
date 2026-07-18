@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { createShare, getConversationShares, revokeShare, updateShare } from "../../lib/api";
 import type { ShareRead } from "../../lib/types";
+import { usePreferences, useTranslations } from "../../components/preferences-provider";
 
 export function SharePanel({
   conversationId,
@@ -12,6 +13,8 @@ export function SharePanel({
   conversationId: string;
   selectedMessageIds: string[];
 }) {
+  const preferences = usePreferences();
+  const t = useTranslations();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -20,6 +23,8 @@ export function SharePanel({
   const [includeToc, setIncludeToc] = useState(true);
   const [includeMetadata, setIncludeMetadata] = useState(true);
   const [allowExport, setAllowExport] = useState(false);
+  const [shareTheme, setShareTheme] = useState<"light" | "dark">(preferences.resolvedTheme);
+  const [shareLocale, setShareLocale] = useState<"zh-CN" | "en-US">(preferences.resolvedLocale);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -41,6 +46,8 @@ export function SharePanel({
         include_metadata: includeMetadata,
         allow_export: allowExport,
         expires_at: expiryValue(expiryMode, expiresAt),
+        theme: shareTheme,
+        locale: shareLocale,
       });
       setCreatedUrl(response.share_url);
       await sharesQuery.refetch();
@@ -65,6 +72,10 @@ export function SharePanel({
         <p className="mt-1 text-sm text-[#6b7280]">创建只读链接，并随时延长有效期或撤销访问。</p>
       </div>
       <div className="mt-3 grid gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm text-secondary">{t("shareTheme")}<select value={shareTheme} onChange={(event) => setShareTheme(event.target.value as "light" | "dark")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label>
+          <label className="text-sm text-secondary">{t("shareLanguage")}<select value={shareLocale} onChange={(event) => setShareLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label>
+        </div>
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
@@ -175,9 +186,12 @@ function ShareManagementRow({
   onCreatedUrl: (url: string) => void;
   onChanged: () => Promise<unknown>;
 }) {
+  const t = useTranslations();
   const [expiresAt, setExpiresAt] = useState(toDatetimeLocalValue(share.expires_at));
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState(share.theme);
+  const [locale, setLocale] = useState(share.locale);
 
   async function saveExpiry() {
     setBusy("save");
@@ -185,6 +199,8 @@ function ShareManagementRow({
     try {
       await updateShare(share.id, {
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        theme,
+        locale,
       });
       await onChanged();
     } catch (err) {
@@ -293,6 +309,7 @@ function ShareManagementRow({
         </div>
       </div>
       <div className="mt-3 grid gap-2">
+        <div className="grid grid-cols-2 gap-2"><label className="text-xs font-medium text-secondary">{t("shareTheme")}<select value={theme} onChange={(event) => setTheme(event.target.value as "light" | "dark")} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label><label className="text-xs font-medium text-secondary">{t("shareLanguage")}<select value={locale} onChange={(event) => setLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label></div>
         <label className="text-xs font-medium text-[#6b7280]">
           Extend expiry
           <input

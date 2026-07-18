@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { QueryProvider } from "../components/query-provider";
+import { PreferencesProvider } from "../components/preferences-provider";
 import { ServiceWorkerRegistration } from "../components/service-worker-registration";
+import { resolveLocale } from "../lib/i18n";
+import type { UserPreferenceRead } from "../lib/types";
+import { headers } from "next/headers";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
@@ -23,20 +27,41 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#10a37f",
+  themeColor: "#f7f7f5",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const preferences = await loadInitialPreferences();
+  const initialLocale = resolveLocale(preferences.locale_mode, headers().get("accept-language") ?? "");
+  const initialTheme = preferences.theme_mode === "dark" ? "dark" : "light";
   return (
-    <html lang="en">
+    <html lang={initialLocale} data-theme={initialTheme} suppressHydrationWarning>
       <body>
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>{children}</PreferencesProvider>
+        </QueryProvider>
         <ServiceWorkerRegistration />
       </body>
     </html>
   );
+}
+
+async function loadInitialPreferences(): Promise<UserPreferenceRead> {
+  const fallback: UserPreferenceRead = {
+    theme_mode: "light",
+    locale_mode: "auto",
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+  };
+  try {
+    const apiUrl = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+    const response = await fetch(`${apiUrl}/api/preferences`, { cache: "no-store" });
+    return response.ok ? await response.json() as UserPreferenceRead : fallback;
+  } catch {
+    return fallback;
+  }
 }

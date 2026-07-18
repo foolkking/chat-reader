@@ -13,11 +13,12 @@ export function ServiceWorkerRegistration() {
       );
       if ("caches" in window) {
         void caches.delete("chat-reader-shell-v1");
+        void caches.delete("chat-reader-static-v2");
       }
       return;
     }
     const register = () => {
-      void navigator.serviceWorker.register("/sw.js").catch(() => {
+      void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => registration.update()).catch(() => {
         // The reader remains fully usable without the optional offline shell.
       });
     };

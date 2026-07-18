@@ -120,7 +120,7 @@ def get_shared_messages(
 def get_shared_index(
     token: str,
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=80, ge=1, le=200),
+    limit: int = Query(default=80, ge=1, le=5000),
     anchor_message_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
 ) -> DialogueIndexResponse:

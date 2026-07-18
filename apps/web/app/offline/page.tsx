@@ -1,20 +1,13 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "../../components/preferences-provider";
+import { getHealth } from "../../lib/api";
+
 export default function OfflinePage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-4 text-[#111827]">
-      <section className="w-full max-w-md rounded-lg border border-[#e5e7eb] bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#10a37f] text-sm font-semibold text-white">
-            cr
-          </span>
-          <div>
-            <h1 className="text-lg font-semibold">当前处于离线状态</h1>
-            <p className="text-sm text-[#6b7280]">重新连接后即可继续访问会话资料库。</p>
-          </div>
-        </div>
-        <p className="mt-5 text-sm leading-6 text-[#4b5563]">
-          为保护私有内容，chat-reader 不会在浏览器离线缓存中保存会话正文、分享数据或 API 响应。
-        </p>
-      </section>
-    </main>
-  );
+  const t = useTranslations();
+  const [checking, setChecking] = useState(false);
+  const [status, setStatus] = useState<"ok" | "failed" | null>(null);
+  async function checkConnection() { setChecking(true); try { await getHealth(); setStatus("ok"); } catch { setStatus("failed"); } finally { setChecking(false); } }
+  return <main className="flex min-h-screen items-center justify-center bg-page px-[4vw] text-primary"><section className="w-full max-w-md rounded-xl border border-ui bg-raised p-6 shadow-sm"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--accent)] text-sm font-semibold text-white">CR</span><div><h1 className="text-lg font-semibold">{t("connectionFailed")}</h1><p className="text-sm text-secondary">{t("connectionHint")}</p></div></div><div className="mt-5 flex gap-2"><button type="button" onClick={() => void checkConnection()} disabled={checking} className="rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-[var(--surface)] disabled:opacity-60">{checking ? "…" : t("retry")}</button><button type="button" onClick={() => window.location.reload()} className="rounded-lg border border-ui bg-surface px-4 py-2 text-sm font-medium">Reload</button></div>{status ? <p role="status" className={`mt-3 text-sm ${status === "ok" ? "text-accent" : "text-[var(--danger)]"}`}>{status === "ok" ? "API OK" : t("connectionFailed")}</p> : null}</section></main>;
 }

@@ -195,10 +195,10 @@ export function MessageItem({
         <div
           className={
             isUser
-              ? "message-user w-full min-w-0 rounded-lg border border-[#e5e7eb] bg-[#f4f4f4] px-3 py-3 text-[15px] leading-7 text-[#111827] sm:rounded-[22px] sm:border-0 sm:px-4 sm:shadow-sm"
+              ? "message-user w-full min-w-0 rounded-lg border border-[#e5e7eb] bg-[#f4f4f4] px-3 py-3 text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#111827] sm:rounded-[22px] sm:border-0 sm:px-4 sm:shadow-sm"
               : isAssistant
-                ? "text-[15px] leading-7 text-[#111827]"
-                : "rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 text-[15px] leading-7 text-[#111827]"
+                ? "text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#111827]"
+                : "rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#111827]"
           }
         >
           {isUser ? <span className="sr-only">User message {message.order_key}</span> : null}

@@ -14,11 +14,13 @@ import { MessageItem } from "../conversations/message-item";
 import { navigateMountedTarget } from "../conversations/reader-navigation";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
+import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
 
 const PAGE_SIZE = 30;
 const ACTIVE_READING_OFFSET = 96;
 
 export function ShareReadonlyReader({ token }: { token: string }) {
+  const [desktopIndexExpanded, setDesktopIndexExpanded] = useState(false);
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
   const [messages, setMessages] = useState<MessageListItem[]>([]);
@@ -70,6 +72,13 @@ export function ShareReadonlyReader({ token }: { token: string }) {
 
   const payload = shareQuery.data;
   const toc = tocQuery.data?.items ?? [];
+
+  useEffect(() => {
+    if (!payload) return;
+    document.documentElement.dataset.theme = payload.share.theme;
+    document.documentElement.lang = payload.share.locale;
+    document.documentElement.style.colorScheme = payload.share.theme;
+  }, [payload]);
 
   useEffect(() => {
     let cancelled = false;
@@ -304,7 +313,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   if (!payload) return <ShareState title="分享不可用" detail="服务未返回分享信息。" />;
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#f7f7f8] text-[#111827]">
+    <main className="flex min-h-screen flex-col bg-page text-primary">
       <header className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl flex-col justify-center px-4 sm:px-6">
           <p className="text-xs font-medium text-[#6b7280]">只读分享</p>
@@ -321,20 +330,19 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           </div>
         </div>
       </header>
-      <section className="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-6 px-3 py-5 sm:px-6 sm:py-6 xl:grid-cols-[300px_minmax(0,820px)_260px] xl:items-start xl:justify-center">
-        <aside className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
+      <ResponsiveReaderFrame indexExpanded={desktopIndexExpanded} index={<div className="sticky top-[4vh] max-h-[92vh] overflow-y-auto">
           <ConversationIndex
             conversationId={payload.conversation.id}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}
             ready={initialWindowQuery.isSuccess}
             mode="sheet"
             loadPage={indexLoader}
+            onExpandedChange={setDesktopIndexExpanded}
             onNavigate={async (item) => {
               await navigateToTarget(item.messageId);
             }}
           />
-        </aside>
-        <div className="mx-auto w-full max-w-[820px] min-w-0 space-y-5">
+        </div>} content={<div className="reader-content-inner min-w-0 space-y-5">
           {payload.share.description ? <p className="text-sm leading-6 text-[#374151]">{payload.share.description}</p> : null}
           <div ref={topSentinelRef} className="h-px" aria-hidden="true" />
           {initialWindowQuery.isLoading ? <ShareState title="正在加载消息" detail="正在读取首个消息窗口。" /> : null}
@@ -365,8 +373,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           })}
           <div ref={bottomSentinelRef} className="h-px" aria-hidden="true" />
           <div aria-hidden="true" className="h-[calc(100vh-6rem)] min-h-72" />
-        </div>
-        <div className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
+        </div>} toc={<div className="sticky top-[4vh] max-h-[92vh] overflow-y-auto">
           <ConversationToc
             conversationId={payload.conversation.id}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}
@@ -377,8 +384,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               await navigateToTarget(item.message_id, item.block_index);
             }}
           />
-        </div>
-      </section>
+        </div>} />
       {showMobileIndex ? (
         <MobileSheet title="对话索引" navigation={mobileNavigation} onClose={() => setShowMobileIndex(false)}>
           <ConversationIndex

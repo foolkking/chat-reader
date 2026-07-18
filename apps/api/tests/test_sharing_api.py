@@ -30,6 +30,8 @@ def test_create_share_returns_token_once_and_db_stores_hash(
     assert token
     assert payload["share_url"].endswith(f"/share/{token}")
     assert payload["token_prefix"] == token[:10]
+    assert payload["theme"] in {"light", "dark"}
+    assert payload["locale"] in {"zh-CN", "en-US"}
 
     shares = client.get(f"/api/conversations/{conversation_id}/shares")
     assert shares.status_code == 200
@@ -56,10 +58,12 @@ def test_update_share_expiry_and_management_url(client: TestClient) -> None:
     token = create.json()["token"]
 
     next_expiry = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-    update = client.patch(f"/api/shares/{share_id}", json={"expires_at": next_expiry, "title": "Managed share"})
+    update = client.patch(f"/api/shares/{share_id}", json={"expires_at": next_expiry, "title": "Managed share", "theme": "dark", "locale": "en-US"})
     assert update.status_code == 200
     payload = update.json()
     assert payload["title"] == "Managed share"
+    assert payload["theme"] == "dark"
+    assert payload["locale"] == "en-US"
     assert payload["expires_at"] is not None
     assert payload["share_url"].endswith(f"/share/{token}")
 

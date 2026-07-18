@@ -15,6 +15,7 @@ from app.models.search_document import SearchDocument
 from app.models.share import Share
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
+from app.models.user_preference import UserPreference
 
 __all__ = [
     "BackgroundJob",
@@ -34,4 +35,5 @@ __all__ = [
     "Share",
     "SourceArtifact",
     "SourceMessageRef",
+    "UserPreference",
 ]

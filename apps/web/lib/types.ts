@@ -4,6 +4,20 @@ export type HealthResponse = {
   stage: "stage-00-foundation";
 };
 
+export type ThemeMode = "light" | "dark" | "system";
+export type LocaleMode = "auto" | "zh-CN" | "en-US";
+export type ResolvedTheme = "light" | "dark";
+export type ResolvedLocale = "zh-CN" | "en-US";
+
+export type UserPreferenceRead = {
+  theme_mode: ThemeMode;
+  locale_mode: LocaleMode;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead, "theme_mode" | "locale_mode">>;
+
 export type ConversationListItem = {
   id: string;
   title: string;
@@ -460,6 +474,8 @@ export type ShareRead = {
   include_toc: boolean;
   include_metadata: boolean;
   allow_export: boolean;
+  theme: ResolvedTheme;
+  locale: ResolvedLocale;
   expires_at?: string | null;
   revoked_at?: string | null;
   access_count: number;
@@ -478,6 +494,8 @@ export type ShareCreateInput = {
   include_metadata?: boolean;
   allow_export?: boolean;
   expires_at?: string | null;
+  theme?: ResolvedTheme | null;
+  locale?: ResolvedLocale | null;
 };
 
 export type ShareCreateResponse = ShareRead & {
@@ -489,6 +507,8 @@ export type ShareUpdateInput = {
   title?: string | null;
   description?: string | null;
   expires_at?: string | null;
+  theme?: ResolvedTheme | null;
+  locale?: ResolvedLocale | null;
 };
 
 export type SharedConversationBootstrap = {

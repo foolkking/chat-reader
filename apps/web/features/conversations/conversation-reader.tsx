@@ -22,6 +22,8 @@ import { ShareButton } from "../sharing/share-button";
 import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
+import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
+import { useTranslations } from "../../components/preferences-provider";
 import { MessageItem } from "./message-item";
 import { navigateMountedTarget } from "./reader-navigation";
 
@@ -29,6 +31,7 @@ const PAGE_SIZE = 30;
 const ACTIVE_READING_OFFSET = 120;
 
 export function ConversationReader({ conversationId }: { conversationId: string }) {
+  const t = useTranslations();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const targetMessageId = searchParams.get("messageId");
@@ -38,6 +41,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [desktopIndexExpanded, setDesktopIndexExpanded] = useState(false);
+  const [mobileHeaderVisible, setMobileHeaderVisible] = useState(true);
+  const lastMobileScrollTopRef = useRef(0);
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
   const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
@@ -93,6 +99,25 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       }),
     enabled: canLoadInitialWindow,
   });
+
+  useEffect(() => {
+    const root = scrollContainerRef.current;
+    if (!root) return;
+    const handleScroll = () => {
+      if (window.innerWidth >= 768 || showMobileIndex || showMobileToc || showMobileActions) {
+        setMobileHeaderVisible(true);
+        lastMobileScrollTopRef.current = root.scrollTop;
+        return;
+      }
+      const current = root.scrollTop;
+      const delta = current - lastMobileScrollTopRef.current;
+      if (current < 24 || delta < -8) setMobileHeaderVisible(true);
+      else if (delta > 10 && current > 72) setMobileHeaderVisible(false);
+      lastMobileScrollTopRef.current = current;
+    };
+    root.addEventListener("scroll", handleScroll, { passive: true });
+    return () => root.removeEventListener("scroll", handleScroll);
+  }, [showMobileActions, showMobileIndex, showMobileToc]);
 
   const hasMore = Boolean(windowQuery.data?.has_more);
   const total = windowQuery.data?.total ?? messages.length;
@@ -643,10 +668,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }
 
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]">
+    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
       <ProjectSidebar />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
+        <header className={`sticky top-0 z-20 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-200 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
           {loadingProgress < 100 ? (
             <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[#e5e7eb]">
               <div className="h-full bg-[#10a37f] transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
@@ -675,14 +700,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 onClick={() => setShowMobileIndex(true)}
                 className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
               >
-                索引
+                {t("dialogueIndex")}
               </button>
               <button
                 type="button"
                 onClick={() => setShowMobileToc(true)}
                 className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
               >
-                目录
+                {t("sectionToc")}
               </button>
               <button
                 type="button"
@@ -743,9 +768,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         </header>
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="grid min-h-full grid-cols-1 gap-5 px-3 py-6 sm:px-4 sm:py-8 md:px-6 xl:grid-cols-[48px_minmax(0,1fr)_256px]">
-            <div className="relative z-[120] hidden xl:block">
-              <div className="sticky top-20">
+          <ResponsiveReaderFrame
+            indexExpanded={desktopIndexExpanded}
+            index={<div className="sticky top-[4vh]">
                 <ConversationIndex
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
@@ -753,10 +778,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   onNavigate={(item) => {
                     void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
                   }}
+                  onExpandedChange={setDesktopIndexExpanded}
                 />
-              </div>
-            </div>
-            <div className="mx-auto w-full max-w-[820px] min-w-0">
+              </div>}
+            content={<div className="reader-content-inner min-w-0">
               {windowQuery.isLoading && messages.length === 0 ? (
                 <ReaderState title="正在加载消息" detail="正在获取首屏对话内容。" />
               ) : null}
@@ -818,9 +843,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   <div aria-hidden="true" className="h-[calc(100vh-7rem)] min-h-72" />
                 </div>
               ) : null}
-            </div>
-            <div className="hidden xl:block">
-              <div className="sticky top-20">
+            </div>}
+            toc={<div className="sticky top-[4vh]">
                 <ConversationToc
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
@@ -835,9 +859,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                     });
                   }}
                 />
-              </div>
-            </div>
-          </div>
+              </div>}
+          />
         </div>
       </section>
       {showMobileIndex ? (
@@ -851,7 +874,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           <div className="absolute inset-x-0 bottom-0 max-h-[76vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-[#111827]">对话索引</h2>
+                <h2 className="text-sm font-semibold text-primary">{t("dialogueIndex")}</h2>
                 {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
                 {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
               </div>
@@ -860,7 +883,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 onClick={() => setShowMobileIndex(false)}
                 className="min-h-10 rounded-lg px-3 text-sm text-[#6b7280] hover:bg-[#f7f7f8]"
               >
-                关闭
+                {t("close")}
               </button>
             </div>
             <ConversationIndex
@@ -889,7 +912,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           <div className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-[#111827]">章节目录</h2>
+                <h2 className="text-sm font-semibold text-primary">{t("sectionToc")}</h2>
                 {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
                 {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
               </div>
@@ -898,7 +921,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 onClick={() => setShowMobileToc(false)}
                 className="min-h-10 rounded-lg px-3 text-sm text-[#6b7280] hover:bg-[#f7f7f8]"
               >
-                关闭
+                {t("close")}
               </button>
             </div>
             <ConversationToc

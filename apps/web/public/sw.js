@@ -1,8 +1,7 @@
 /* global self, caches, URL, fetch */
 
-const CACHE_NAME = "chat-reader-shell-v1";
-const SHELL_ASSETS = [
-  "/offline",
+const CACHE_NAME = "chat-reader-static-v2";
+const STATIC_ASSETS = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",
@@ -10,7 +9,7 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)));
   self.skipWaiting();
 });
 
@@ -29,27 +28,10 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (isPrivateDataPath(url.pathname)) return;
-
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname === "/manifest.webmanifest") {
     event.respondWith(cacheFirst(request));
-    return;
-  }
-
-  if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match("/offline")));
   }
 });
-
-function isPrivateDataPath(pathname) {
-  return (
-    pathname.startsWith("/api/") ||
-    pathname.startsWith("/share/") ||
-    pathname.startsWith("/conversations/") ||
-    pathname.startsWith("/projects/") ||
-    pathname.startsWith("/search")
-  );
-}
 
 async function cacheFirst(request) {
   const cached = await caches.match(request);

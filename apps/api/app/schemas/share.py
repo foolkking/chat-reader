@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.preferences import ResolvedLocale, ResolvedTheme
 from app.schemas.conversation import ConversationListItem
 from app.schemas.message import DialogueIndexResponse
 from app.schemas.search import MessageWindowResponse
@@ -18,6 +19,8 @@ class ShareCreate(BaseModel):
     include_metadata: bool = True
     allow_export: bool = False
     expires_at: datetime | None = None
+    theme: ResolvedTheme | None = None
+    locale: ResolvedLocale | None = None
 
 
 class ShareRead(BaseModel):
@@ -31,6 +34,8 @@ class ShareRead(BaseModel):
     include_toc: bool
     include_metadata: bool
     allow_export: bool
+    theme: ResolvedTheme
+    locale: ResolvedLocale
     expires_at: datetime | None
     revoked_at: datetime | None
     access_count: int
@@ -49,6 +54,8 @@ class ShareUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     expires_at: datetime | None = None
+    theme: ResolvedTheme | None = None
+    locale: ResolvedLocale | None = None
 
 
 class ShareRevokeResponse(ShareRead):

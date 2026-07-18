@@ -8,6 +8,7 @@ import {
 } from "@assistant-ui/react-markdown";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
+import { usePreferences } from "../../components/preferences-provider";
 import type { Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import rehypeSanitize from "rehype-sanitize";
@@ -240,7 +241,7 @@ export function MarkdownRenderer({
 }) {
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
   return (
-    <div className={`aui-chat-markdown max-w-full break-words text-[15px] leading-7 text-[#1f2937] ${className}`}>
+    <div className={`aui-chat-markdown max-w-full break-words text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#1f2937] ${className}`}>
       {parts.map((part, index) => (
         <CanonicalPartRenderer key={`${part.type}-${index}`} part={part} />
       ))}
@@ -343,6 +344,7 @@ function CodeOrMermaidBlock(props: SyntaxHighlighterProps) {
 }
 
 function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
+  const { resolvedTheme } = usePreferences();
   const [tokens, setTokens] = useState<ThemedToken[][] | null>(null);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -360,7 +362,7 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
           setFailed(true);
           return;
         }
-        const result = await getShikiTokens(lang, code);
+        const result = await getShikiTokens(lang, code, resolvedTheme);
         if (!cancelled) {
           setTokens(result);
           setFailed(false);
@@ -376,11 +378,11 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
     return () => {
       cancelled = true;
     };
-  }, [code, language]);
+  }, [code, language, resolvedTheme]);
 
   return (
-    <section className="my-5 max-w-full overflow-hidden rounded-lg border border-[#d9dde3] bg-[#f6f7f8]">
-      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-[#dfe3e8] bg-[#eef0f2] px-3 text-xs text-[#667085]">
+    <section className="my-5 max-w-full overflow-hidden rounded-lg border border-ui bg-[var(--code-bg)]">
+      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-ui bg-subtle px-3 text-xs text-secondary">
         <span className="min-w-0 truncate font-mono">{language || "text"}</span>
         <div className="flex items-center gap-1">
           <CodeAction title={wrapped ? "Disable line wrapping" : "Wrap long lines"} onClick={() => setWrapped((value) => !value)}><WrapText className="h-3.5 w-3.5" /></CodeAction>
@@ -389,7 +391,7 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
         </div>
       </div>
       <div className={`relative ${longCode && !expanded ? "max-h-[30rem] overflow-hidden" : ""}`}>
-        <pre className={`max-w-full overflow-x-auto bg-[#f6f7f8] p-4 text-[13px] leading-6 text-[#24292f] ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
+        <pre className={`max-w-full overflow-x-auto bg-[var(--code-bg)] p-4 text-[clamp(0.9rem,0.14vw+0.84rem,1rem)] leading-7 text-primary ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
           <code>
             {tokens && !failed
               ? tokens.map((line, lineIndex) => (
@@ -400,25 +402,26 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
               : code}
           </code>
         </pre>
-        {longCode && !expanded ? <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#f6f7f8] to-transparent" /> : null}
+        {longCode && !expanded ? <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[var(--code-bg)] to-transparent" /> : null}
       </div>
     </section>
   );
 }
 
 function CodeAction({ title, onClick, children }: { title: string; onClick: () => void | Promise<void>; children: React.ReactNode }) {
-  return <button type="button" title={title} aria-label={title} onClick={() => void onClick()} className="flex h-7 w-7 items-center justify-center rounded-md text-[#667085] transition hover:bg-white hover:text-[#111827]">{children}</button>;
+  return <button type="button" title={title} aria-label={title} onClick={() => void onClick()} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary transition hover:bg-surface hover:text-primary">{children}</button>;
 }
 
-async function getShikiTokens(language: BundledLanguage, code: string): Promise<ThemedToken[][]> {
-  const key = `github-light:${language}:${hashCode(code)}`;
+async function getShikiTokens(language: BundledLanguage, code: string, resolvedTheme: "light" | "dark"): Promise<ThemedToken[][]> {
+  const theme = resolvedTheme === "dark" ? "github-dark" : "github-light";
+  const key = `${theme}:${language}:${hashCode(code)}`;
   const cached = shikiTokenCache.get(key);
   if (cached) {
     return cached;
   }
   shikiHighlighterPromise ??= createCachedHighlighter();
   const highlighter = await shikiHighlighterPromise;
-  const result = highlighter.codeToTokens(code, { lang: language, theme: "github-light" }).tokens;
+  const result = highlighter.codeToTokens(code, { lang: language, theme }).tokens;
   if (shikiTokenCache.size >= 300) {
     const oldestKey = shikiTokenCache.keys().next().value;
     if (oldestKey) {
@@ -431,7 +434,7 @@ async function getShikiTokens(language: BundledLanguage, code: string): Promise<
 
 async function createCachedHighlighter() {
   const { createHighlighter } = await import("shiki");
-  return createHighlighter({ themes: ["github-light"], langs: SHIKI_LANGUAGES });
+  return createHighlighter({ themes: ["github-light", "github-dark"], langs: SHIKI_LANGUAGES });
 }
 
 function hashCode(value: string): string {

@@ -34,6 +34,8 @@ import type {
   ShareUpdateInput,
   SharedConversationBootstrap,
   TocResponse,
+  UserPreferenceRead,
+  UserPreferenceUpdate,
 } from "./types";
 
 // Browser requests stay on the current Next.js origin. next.config.mjs proxies
@@ -42,6 +44,14 @@ export const API_BASE_URL = "";
 
 export async function getHealth(): Promise<HealthResponse> {
   return fetchJson<HealthResponse>("/api/health");
+}
+
+export async function getPreferences(): Promise<UserPreferenceRead> {
+  return fetchJson<UserPreferenceRead>("/api/preferences");
+}
+
+export async function updatePreferences(input: UserPreferenceUpdate): Promise<UserPreferenceRead> {
+  return fetchJson<UserPreferenceRead>("/api/preferences", jsonRequest("PATCH", input));
 }
 
 export async function getConversations(
@@ -615,13 +625,18 @@ function jsonRequest(method: string, body: unknown): RequestInit {
 }
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
       ...init.headers,
     },
-  });
+    });
+  } catch {
+    throw new Error("CONNECTION_FAILED");
+  }
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, path));

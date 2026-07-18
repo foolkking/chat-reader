@@ -20,6 +20,7 @@ from app.schemas.conversation import ConversationListItem
 from app.schemas.message import DialogueIndexItem, DialogueIndexResponse, MessageListItem, MessageVersionRead, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
 from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareUpdate, SharedConversationBootstrap
+from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
 
@@ -43,6 +44,9 @@ def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) 
     token = secrets.token_urlsafe(32)
     share_url = f"{get_settings().public_web_base_url.rstrip('/')}/share/{token}"
     now = _utc_now()
+    preferences = get_or_create_preferences(db)
+    theme = payload.theme or (preferences.theme_mode if preferences.theme_mode in {"light", "dark"} else "light")
+    locale = payload.locale or (preferences.locale_mode if preferences.locale_mode in {"zh-CN", "en-US"} else "zh-CN")
     share = Share(
         id=uuid.uuid4(),
         conversation_id=conversation.id,
@@ -55,6 +59,8 @@ def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) 
         include_toc=payload.include_toc,
         include_metadata=payload.include_metadata,
         allow_export=payload.allow_export,
+        theme=theme,
+        locale=locale,
         expires_at=payload.expires_at,
         created_at=now,
         updated_at=now,
@@ -305,6 +311,14 @@ def update_share(db: Session, share_id: uuid.UUID, payload: ShareUpdate) -> Shar
         share.description = payload.description.strip() or None
     if "expires_at" in provided_fields:
         share.expires_at = payload.expires_at
+    if "theme" in provided_fields and payload.theme is not None:
+        if payload.theme not in {"light", "dark"}:
+            raise ShareError("Unsupported share theme.")
+        share.theme = payload.theme
+    if "locale" in provided_fields and payload.locale is not None:
+        if payload.locale not in {"zh-CN", "en-US"}:
+            raise ShareError("Unsupported share locale.")
+        share.locale = payload.locale
     share.updated_at = _utc_now()
     _write_event(
         db,
@@ -332,6 +346,8 @@ def share_read(share: Share) -> ShareRead:
         include_toc=share.include_toc,
         include_metadata=share.include_metadata,
         allow_export=share.allow_export,
+        theme=share.theme,
+        locale=share.locale,
         expires_at=share.expires_at,
         revoked_at=share.revoked_at,
         access_count=share.access_count,
@@ -386,6 +402,10 @@ def _validate_share_payload(db: Session, conversation: Conversation, payload: Sh
         raise ShareError("Unsupported share scope.")
     if payload.expires_at is not None and _as_utc(payload.expires_at) <= _utc_now():
         raise ShareError("Share expiry must be in the future.")
+    if payload.theme is not None and payload.theme not in {"light", "dark"}:
+        raise ShareError("Unsupported share theme.")
+    if payload.locale is not None and payload.locale not in {"zh-CN", "en-US"}:
+        raise ShareError("Unsupported share locale.")
     if payload.scope == "selected_messages" and not payload.selected_message_ids:
         raise ShareError("selected_messages share requires at least one message.")
     if payload.selected_message_ids:

@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, ChevronDown, ChevronRight, Folder, FolderOpen, GripVertical, Import, MoreHorizontal, Pencil, Plus, Search } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Folder, FolderOpen, GripVertical, Import, MoreHorizontal, Pencil, Plus, Search, Settings } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,6 +29,8 @@ import {
 import type { ConversationListItem, ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
+import { PreferencesPanel } from "../../components/preferences-panel";
+import { useTranslations } from "../../components/preferences-provider";
 
 type DragConversation = { id: string; title: string; projectId: string | null };
 
@@ -131,7 +133,7 @@ export function ProjectSidebar({ currentProjectId, onImportClick }: { currentPro
           <aside className="absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col overflow-hidden border-r border-[#e5e5e5] bg-[#f9f9f9] text-[#111827] shadow-2xl">{content}</aside>
         </div>
       ) : null}
-      <aside className="hidden h-screen w-[268px] shrink-0 flex-col overflow-hidden border-r border-[#e5e5e5] bg-[#f9f9f9] text-[#111827] md:flex">{content}</aside>
+      <aside className="hidden h-screen w-[clamp(14rem,18vw,20rem)] shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary md:flex">{content}</aside>
       <DragOverlay>{activeDrag ? <div className="max-w-[240px] truncate rounded-lg border border-[#10a37f] bg-white px-3 py-2 text-sm shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
     </DndContext>
   );
@@ -162,6 +164,8 @@ type SidebarContentProps = {
 };
 
 function SidebarContent(props: SidebarContentProps) {
+  const t = useTranslations();
+  const [showPreferences, setShowPreferences] = useState(false);
   return (
     <>
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-[#e5e5e5] px-4">
@@ -203,6 +207,10 @@ function SidebarContent(props: SidebarContentProps) {
         </div>
 
         <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} />
+      </div>
+      <div className="shrink-0 border-t border-ui p-3">
+        <button type="button" onClick={() => setShowPreferences((value) => !value)} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-secondary hover:bg-surface"><Settings className="h-4 w-4" />{t("appearanceLanguage")}</button>
+        {showPreferences ? <div className="mt-2 rounded-xl border border-ui bg-raised p-3"><PreferencesPanel /></div> : null}
       </div>
     </>
   );

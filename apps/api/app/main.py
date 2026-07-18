@@ -7,6 +7,7 @@ from app.api.routes.conversations import router as conversations_router
 from app.api.routes.exports import router as exports_router
 from app.api.routes.messages import router as messages_router
 from app.api.routes.projects import router as projects_router
+from app.api.routes.preferences import router as preferences_router
 from app.api.routes.reading import router as reading_router
 from app.api.routes.search import router as search_router
 from app.api.routes.shares import router as shares_router
@@ -37,6 +38,7 @@ app.include_router(conversations_router)
 app.include_router(exports_router)
 app.include_router(messages_router)
 app.include_router(projects_router)
+app.include_router(preferences_router)
 app.include_router(reading_router)
 app.include_router(search_router)
 app.include_router(shares_router)
