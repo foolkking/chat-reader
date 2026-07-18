@@ -3,15 +3,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getPreferences, updatePreferences } from "../lib/api";
 import { resolveLocale, translate, type ResolvedLocale, type TranslationKey } from "../lib/i18n";
-import type { LocaleMode, ThemeMode, UserPreferenceRead } from "../lib/types";
+import type { LocaleMode, ReaderWidthMode, ThemeMode, UserPreferenceRead } from "../lib/types";
 
 type PreferencesContextValue = {
   themeMode: ThemeMode;
   localeMode: LocaleMode;
+  readerWidthMode: ReaderWidthMode;
   resolvedTheme: "light" | "dark";
   resolvedLocale: ResolvedLocale;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setLocaleMode: (mode: LocaleMode) => Promise<void>;
+  setReaderWidthMode: (mode: ReaderWidthMode) => Promise<void>;
   t: (key: TranslationKey, values?: Record<string, string | number>) => string;
 };
 
@@ -28,6 +30,7 @@ export function PreferencesProvider({
 }) {
   const [themeMode, setThemeModeState] = useState<ThemeMode>(initialPreferences.theme_mode);
   const [localeMode, setLocaleModeState] = useState<LocaleMode>(initialPreferences.locale_mode);
+  const [readerWidthMode, setReaderWidthModeState] = useState<ReaderWidthMode>(initialPreferences.reader_width_mode ?? "standard");
   const [systemDark, setSystemDark] = useState(false);
   const resolvedTheme = themeMode === "system" ? (systemDark ? "dark" : "light") : themeMode;
   const resolvedLocale = localeMode === "auto" ? initialLocale : resolveLocale(localeMode);
@@ -51,6 +54,7 @@ export function PreferencesProvider({
     void getPreferences().then((fresh) => {
       setThemeModeState(fresh.theme_mode);
       setLocaleModeState(fresh.locale_mode);
+      setReaderWidthModeState(fresh.reader_width_mode ?? "standard");
     }).catch(() => undefined);
   }, []);
 
@@ -62,16 +66,22 @@ export function PreferencesProvider({
     setLocaleModeState(mode);
     await updatePreferences({ locale_mode: mode });
   }, []);
+  const setReaderWidthMode = useCallback(async (mode: ReaderWidthMode) => {
+    setReaderWidthModeState(mode);
+    await updatePreferences({ reader_width_mode: mode });
+  }, []);
 
   const value = useMemo<PreferencesContextValue>(() => ({
     themeMode,
     localeMode,
+    readerWidthMode,
     resolvedTheme,
     resolvedLocale,
     setThemeMode,
     setLocaleMode,
+    setReaderWidthMode,
     t: (key, values) => translate(resolvedLocale, key, values),
-  }), [localeMode, resolvedLocale, resolvedTheme, setLocaleMode, setThemeMode, themeMode]);
+  }), [localeMode, readerWidthMode, resolvedLocale, resolvedTheme, setLocaleMode, setReaderWidthMode, setThemeMode, themeMode]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

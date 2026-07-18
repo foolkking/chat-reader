@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ListTree, MoreHorizontal } from "lucide-react";
 import {
   getConversation,
   getConversationMessageWindow,
@@ -28,11 +29,13 @@ import { MessageItem } from "./message-item";
 import { navigateMountedTarget } from "./reader-navigation";
 
 const PAGE_SIZE = 30;
+const BLOCK_PAGE_SIZE = 40;
 const ACTIVE_READING_OFFSET = 120;
 
 export function ConversationReader({ conversationId }: { conversationId: string }) {
   const t = useTranslations();
   const searchParams = useSearchParams();
+  const projectContextId = searchParams.get("projectId") ?? undefined;
   const queryClient = useQueryClient();
   const targetMessageId = searchParams.get("messageId");
   const [offset, setOffset] = useState(0);
@@ -41,7 +44,6 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
-  const [desktopIndexExpanded, setDesktopIndexExpanded] = useState(false);
   const [mobileHeaderVisible, setMobileHeaderVisible] = useState(true);
   const lastMobileScrollTopRef = useRef(0);
   const [showMobileIndex, setShowMobileIndex] = useState(false);
@@ -72,6 +74,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const saveTimerRef = useRef<number | null>(null);
   const lastSavedSignatureRef = useRef("");
   const messagesRef = useRef<MessageListItem[]>([]);
+  const blockCacheRef = useRef<Record<string, RenderBlockRead[]>>({});
+  const blockRequestsRef = useRef(new Map<string, Promise<RenderBlockRead[]>>());
+  const userScrollIntentRef = useRef(false);
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -115,8 +120,19 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       else if (delta > 10 && current > 72) setMobileHeaderVisible(false);
       lastMobileScrollTopRef.current = current;
     };
+    const markScrollIntent = () => {
+      userScrollIntentRef.current = true;
+    };
     root.addEventListener("scroll", handleScroll, { passive: true });
-    return () => root.removeEventListener("scroll", handleScroll);
+    root.addEventListener("wheel", markScrollIntent, { passive: true });
+    root.addEventListener("touchstart", markScrollIntent, { passive: true });
+    root.addEventListener("pointerdown", markScrollIntent, { passive: true });
+    return () => {
+      root.removeEventListener("scroll", handleScroll);
+      root.removeEventListener("wheel", markScrollIntent);
+      root.removeEventListener("touchstart", markScrollIntent);
+      root.removeEventListener("pointerdown", markScrollIntent);
+    };
   }, [showMobileActions, showMobileIndex, showMobileToc]);
 
   const hasMore = Boolean(windowQuery.data?.has_more);
@@ -134,6 +150,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     setPendingTargetMessageId(targetMessageId);
     setExpandedHeavyMessageIds(new Set());
     setBlockCache({});
+    blockCacheRef.current = {};
+    blockRequestsRef.current.clear();
+    userScrollIntentRef.current = false;
     setExpandAllHeavyBlocks(false);
     setExpandProgress({ current: 0, total: 0, active: false });
     setInitialPaintReady(false);
@@ -145,6 +164,28 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    if (!activeMessageId || messages.length === 0) return;
+    const activeIndex = messages.findIndex((message) => message.id === activeMessageId);
+    if (activeIndex < 0) return;
+    const nearby = messages
+      .slice(Math.max(0, activeIndex - 1), activeIndex + 2)
+      .filter((message) => message.is_heavy && !expandedHeavyMessageIds.has(message.id));
+    if (nearby.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      for (const message of nearby) {
+        await ensureMessageBlocks(message);
+        if (cancelled) return;
+        setExpandedHeavyMessageIds((current) => new Set(current).add(message.id));
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMessageId, expandedHeavyMessageIds, messages]);
 
   useEffect(() => {
     if (!targetMessageId && savedPosition?.message_id) {
@@ -250,7 +291,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               anchorMessageId: messageId,
               contentMode: "preview",
             })).items.find((message) => message.id === messageId);
-          const cachedBlocks = blockCache[messageId] ?? [];
+          const cachedBlocks = blockCacheRef.current[messageId] ?? [];
           const contextStart = Math.max(0, blockIndex - 20);
           const contextEnd = Math.min(Math.max((knownMessage?.block_count ?? 1) - 1, 0), blockIndex + 20);
           const cachedBounds = getBlockBounds(cachedBlocks);
@@ -260,14 +301,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             cachedBounds.min > contextStart ||
             cachedBounds.max < contextEnd;
           if (knownMessage && !messageHasInlineBlocks(knownMessage) && needsTargetWindow) {
-            const blocks = await getMessageBlocks(messageId, { start: contextStart, limit: 200 });
+            await loadBlockPage(messageId, contextStart, Math.max(BLOCK_PAGE_SIZE, contextEnd - contextStart + 1));
             if (navigationTokenRef.current !== token) {
               return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
             }
-            setBlockCache((current) => ({
-              ...current,
-              [messageId]: mergeBlockWindows(current[messageId], blocks),
-            }));
           }
           setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
         }
@@ -381,7 +418,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) void loadPreviousWindow();
+        if (userScrollIntentRef.current && entries.some((entry) => entry.isIntersecting)) void loadPreviousWindow();
       },
       { root, rootMargin: "600px 0px", threshold: 0 },
     );
@@ -397,7 +434,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting) && !windowQuery.isFetching) {
+        if (userScrollIntentRef.current && entries.some((entry) => entry.isIntersecting) && !windowQuery.isFetching) {
           setOffset(nextOffsetRef.current);
         }
       },
@@ -616,8 +653,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }
 
   async function ensureMessageBlocks(message: MessageListItem): Promise<RenderBlockRead[]> {
-    if (blockCache[message.id]) {
-      return blockCache[message.id];
+    if (blockCacheRef.current[message.id]?.length) {
+      return blockCacheRef.current[message.id];
     }
     const inlineBlocks = message.render_blocks?.length
       ? message.render_blocks
@@ -625,34 +662,46 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     if (inlineBlocks && inlineBlocks.length > 0) {
       return [];
     }
-    const blocks = await getMessageBlocks(message.id, { start: 0, limit: 200 });
-    setBlockCache((current) => ({
-      ...current,
-      [message.id]: mergeBlockWindows(current[message.id], blocks),
-    }));
-    return blocks;
+    return loadBlockPage(message.id, 0, BLOCK_PAGE_SIZE);
+  }
+
+  async function loadBlockPage(messageId: string, start: number, limit = BLOCK_PAGE_SIZE): Promise<RenderBlockRead[]> {
+    const requestKey = `${messageId}:${start}:${limit}`;
+    const existing = blockRequestsRef.current.get(requestKey);
+    if (existing) return existing;
+    const request = getMessageBlocks(messageId, { start, limit })
+      .then((blocks) => {
+        setBlockCache((current) => {
+          const next = {
+            ...current,
+            [messageId]: mergeBlockWindows(current[messageId], blocks),
+          };
+          blockCacheRef.current = next;
+          return next;
+        });
+        return blocks;
+      })
+      .finally(() => blockRequestsRef.current.delete(requestKey));
+    blockRequestsRef.current.set(requestKey, request);
+    return request;
   }
 
   async function loadAdjacentMessageBlocks(
     message: MessageListItem,
     direction: "previous" | "next",
   ): Promise<void> {
-    const cached = blockCache[message.id] ?? [];
+    const cached = blockCacheRef.current[message.id] ?? [];
     const bounds = getBlockBounds(cached);
     if (!bounds) {
       await ensureMessageBlocks(message);
       return;
     }
-    const start = direction === "previous" ? Math.max(0, bounds.min - 200) : bounds.max + 1;
-    const limit = direction === "previous" ? bounds.min - start : 200;
+    const start = direction === "previous" ? Math.max(0, bounds.min - BLOCK_PAGE_SIZE) : bounds.max + 1;
+    const limit = direction === "previous" ? bounds.min - start : BLOCK_PAGE_SIZE;
     if (limit <= 0 || start >= message.block_count) {
       return;
     }
-    const blocks = await getMessageBlocks(message.id, { start, limit });
-    setBlockCache((current) => ({
-      ...current,
-      [message.id]: mergeBlockWindows(current[message.id], blocks),
-    }));
+    await loadBlockPage(message.id, start, limit);
   }
 
   if (conversationQuery.isLoading) {
@@ -669,9 +718,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar />
-      <section className="flex min-w-0 flex-1 flex-col">
-        <header className={`sticky top-0 z-20 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-200 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
+      <ProjectSidebar currentProjectId={projectContextId} readerMode />
+      <section className="relative flex min-w-0 flex-1 flex-col">
+        <header className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-200 md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
           {loadingProgress < 100 ? (
             <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[#e5e7eb]">
               <div className="h-full bg-[#10a37f] transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
@@ -679,42 +728,40 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           ) : null}
           <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 pl-16 md:px-6 md:pl-6">
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold text-[#111827]">
+              <h1 className="truncate text-base font-semibold text-primary">
                 {conversation.display_title || conversation.title}
               </h1>
-              <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-[#6b7280]">
+              <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-secondary">
                 <span>{loadedLabel}</span>
               </div>
             </div>
+            <button type="button" onClick={() => setShowMobileIndex(true)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
             <button
               type="button"
-              aria-label="对话操作"
+              aria-label={t("messageActions")}
               onClick={() => setShowMobileActions((current) => !current)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-xl text-[#4b5563] hover:bg-[#ececeb] md:inline-flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-subtle md:inline-flex"
             >
-              ⋯
+              <MoreHorizontal className="h-5 w-5" />
             </button>
             <div className="flex shrink-0 gap-2 md:hidden">
               <button
                 type="button"
                 onClick={() => setShowMobileIndex(true)}
-                className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-ui bg-surface text-secondary"
+                aria-label={t("readerNavigation")}
+                title={t("readerNavigation")}
               >
-                {t("dialogueIndex")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowMobileToc(true)}
-                className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
-              >
-                {t("sectionToc")}
+                <ListTree className="h-5 w-5" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowMobileActions((current) => !current)}
-                className="min-h-10 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white"
+                className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]"
+                aria-label={t("more")}
+                title={t("more")}
               >
-                更多
+                <MoreHorizontal className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -767,20 +814,16 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           ) : null}
         </header>
 
-        <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">
           <ResponsiveReaderFrame
-            indexExpanded={desktopIndexExpanded}
-            index={<div className="sticky top-[4vh]">
-                <ConversationIndex
+            index={<ConversationIndex
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
                   ready={canLoadInitialWindow}
                   onNavigate={(item) => {
                     void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
                   }}
-                  onExpandedChange={setDesktopIndexExpanded}
-                />
-              </div>}
+                />}
             content={<div className="reader-content-inner min-w-0">
               {windowQuery.isLoading && messages.length === 0 ? (
                 <ReaderState title="正在加载消息" detail="正在获取首屏对话内容。" />
@@ -863,86 +906,39 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           />
         </div>
       </section>
-      {showMobileIndex ? (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button
-            type="button"
-            aria-label="Close dialogue index"
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setShowMobileIndex(false)}
-          />
-          <div className="absolute inset-x-0 bottom-0 max-h-[76vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-primary">{t("dialogueIndex")}</h2>
-                {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
-                {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMobileIndex(false)}
-                className="min-h-10 rounded-lg px-3 text-sm text-[#6b7280] hover:bg-[#f7f7f8]"
-              >
-                {t("close")}
-              </button>
+      {showMobileIndex || showMobileToc ? (
+        <div className="fixed inset-0 z-50 flex justify-end bg-page 2xl:hidden md:bg-black/25">
+          <button type="button" aria-label={t("close")} className="absolute inset-0 hidden md:block" onClick={() => { setShowMobileIndex(false); setShowMobileToc(false); }} />
+          <section className="relative flex h-full w-full flex-col bg-page md:max-w-[28rem] md:border-l md:border-ui md:shadow-2xl" aria-label={t("readerNavigation")}>
+          <header className="flex shrink-0 items-center gap-3 border-b border-ui bg-surface px-[3vw] pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4">
+            <div className="grid min-w-0 flex-1 grid-cols-2 rounded-lg bg-subtle p-1">
+              <button type="button" onClick={() => { setShowMobileIndex(true); setShowMobileToc(false); }} className={`min-h-10 rounded-md px-3 text-sm font-medium ${showMobileIndex ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("dialogueTab")}</button>
+              <button type="button" onClick={() => { setShowMobileIndex(false); setShowMobileToc(true); }} className={`min-h-10 rounded-md px-3 text-sm font-medium ${showMobileToc ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("sectionsTab")}</button>
             </div>
-            <ConversationIndex
-              conversationId={conversationId}
-              activeMessageId={activeMessageId}
-              ready={canLoadInitialWindow}
-              mode="sheet"
-              onNavigate={async (item) => {
+            <button type="button" onClick={() => { setShowMobileIndex(false); setShowMobileToc(false); }} className="min-h-10 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{t("close")}</button>
+          </header>
+          <div className="shrink-0 px-[3vw] py-2" aria-live="polite">
+            {mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}
+            {mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-[3vw] pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {showMobileIndex ? (
+              <ConversationIndex conversationId={conversationId} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" onNavigate={async (item) => {
                 setMobileNavigation({ pending: true, error: null });
                 const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
-                setMobileNavigation({ pending: false, error: result.ok ? null : "未能定位，请重试。" });
+                setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
                 if (result.ok) setShowMobileIndex(false);
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
-      {showMobileToc ? (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button
-            type="button"
-            aria-label="Close contents"
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setShowMobileToc(false)}
-          />
-          <div className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-primary">{t("sectionToc")}</h2>
-                {mobileNavigation.pending ? <p className="text-xs text-[#10a37f]">定位中…</p> : null}
-                {mobileNavigation.error ? <p className="text-xs text-[#b91c1c]">{mobileNavigation.error}</p> : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMobileToc(false)}
-                className="min-h-10 rounded-lg px-3 text-sm text-[#6b7280] hover:bg-[#f7f7f8]"
-              >
-                {t("close")}
-              </button>
-            </div>
-            <ConversationToc
-              conversationId={conversationId}
-              activeMessageId={activeMessageId}
-              activeItems={activeTocItems}
-              activeBlockId={activeBlockId}
-              observerKey={tocObserverKey}
-              mode="sheet"
-              onNavigate={async (item) => {
+              }} />
+            ) : (
+              <ConversationToc conversationId={conversationId} activeMessageId={activeMessageId} activeItems={activeTocItems} activeBlockId={activeBlockId} observerKey={tocObserverKey} mode="sheet" onNavigate={async (item) => {
                 setMobileNavigation({ pending: true, error: null });
-                const result = await navigateToTarget({
-                  messageId: item.message_id,
-                  blockIndex: item.block_index,
-                  source: "section-toc",
-                });
-                setMobileNavigation({ pending: false, error: result.ok ? null : "未能定位，请重试。" });
+                const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, source: "section-toc" });
+                setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
                 if (result.ok) setShowMobileToc(false);
-              }}
-            />
+              }} />
+            )}
           </div>
+          </section>
         </div>
       ) : null}
       {showShare || showExport ? (

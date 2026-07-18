@@ -54,6 +54,7 @@ async function loadInitialPreferences(): Promise<UserPreferenceRead> {
   const fallback: UserPreferenceRead = {
     theme_mode: "light",
     locale_mode: "auto",
+    reader_width_mode: "standard",
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
   };

@@ -21,6 +21,13 @@ export function PreferencesPanel() {
           </Segment>
         ))}
       </SettingGroup>
+      <SettingGroup label={t("readerWidth")}>
+        {(["compact", "standard", "wide"] as const).map((mode) => (
+          <Segment key={mode} active={preferences.readerWidthMode === mode} onClick={() => void preferences.setReaderWidthMode(mode)}>
+            {t(mode)}
+          </Segment>
+        ))}
+      </SettingGroup>
     </section>
   );
 }

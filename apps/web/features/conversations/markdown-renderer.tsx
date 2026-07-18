@@ -241,7 +241,7 @@ export function MarkdownRenderer({
 }) {
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
   return (
-    <div className={`aui-chat-markdown max-w-full break-words text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#1f2937] ${className}`}>
+    <div className={`aui-chat-markdown max-w-full break-words text-[17px] leading-[1.75] text-primary ${className}`}>
       {parts.map((part, index) => (
         <CanonicalPartRenderer key={`${part.type}-${index}`} part={part} />
       ))}
@@ -267,7 +267,7 @@ export function AssistantMarkdownPart({ text, className = "" }: { text: string; 
   return (
     <TextMessagePartProvider text={text}>
       <MarkdownTextPrimitive
-        className={className}
+        className={`reader-prose ${className}`}
         remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
         rehypePlugins={[rehypeSanitize, rehypeKatex]}
         components={markdownComponents}
@@ -391,7 +391,7 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
         </div>
       </div>
       <div className={`relative ${longCode && !expanded ? "max-h-[30rem] overflow-hidden" : ""}`}>
-        <pre className={`max-w-full overflow-x-auto bg-[var(--code-bg)] p-4 text-[clamp(0.9rem,0.14vw+0.84rem,1rem)] leading-7 text-primary ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
+        <pre className={`max-w-full overflow-x-auto bg-[var(--code-bg)] p-4 text-[15px] leading-7 text-primary ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
           <code>
             {tokens && !failed
               ? tokens.map((line, lineIndex) => (

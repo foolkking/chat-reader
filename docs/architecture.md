@@ -70,6 +70,7 @@ raw artifact 存在受控 storage 中，只用于追踪和诊断。reader 和 sh
 - heavy message 首先返回轻量消息元数据；进入视口附近或导航到 block 时再调用 message blocks API，并通过 sentinel 继续分页。
 - block cache 以 message id 为键复用结果。
 - 导航等待目标挂载、布局稳定并校验 scroll root 中的位置，必要时补偿滚动。
+- Reader 使用稳定正文列与覆盖式索引面板；`reader_width_mode` 由 `user_preferences` 按 `local:default` 跨浏览器保存。
 - 当前方案不是严格的虚拟列表：长会话仍会随窗口合并增加 DOM 数量。
 
 ## Markdown 安全

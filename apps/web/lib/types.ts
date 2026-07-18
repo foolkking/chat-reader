@@ -8,15 +8,19 @@ export type ThemeMode = "light" | "dark" | "system";
 export type LocaleMode = "auto" | "zh-CN" | "en-US";
 export type ResolvedTheme = "light" | "dark";
 export type ResolvedLocale = "zh-CN" | "en-US";
+export type ReaderWidthMode = "compact" | "standard" | "wide";
+export type DialogueIndexPanelState = "rail" | "preview" | "pinned";
+export type ReaderSidebarState = "collapsed" | "expanded";
 
 export type UserPreferenceRead = {
   theme_mode: ThemeMode;
   locale_mode: LocaleMode;
+  reader_width_mode: ReaderWidthMode;
   created_at: string;
   updated_at: string;
 };
 
-export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead, "theme_mode" | "locale_mode">>;
+export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead, "theme_mode" | "locale_mode" | "reader_width_mode">>;
 
 export type ConversationListItem = {
   id: string;

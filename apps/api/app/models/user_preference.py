@@ -13,6 +13,7 @@ class UserPreference(Base):
     subject_key: Mapped[str] = mapped_column(Text, primary_key=True)
     theme_mode: Mapped[str] = mapped_column(Text, nullable=False, default="light")
     locale_mode: Mapped[str] = mapped_column(Text, nullable=False, default="auto")
+    reader_width_mode: Mapped[str] = mapped_column(Text, nullable=False, default="standard")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

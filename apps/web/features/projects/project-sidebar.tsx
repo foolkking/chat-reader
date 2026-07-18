@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, ChevronDown, ChevronRight, Folder, FolderOpen, GripVertical, Import, MoreHorizontal, Pencil, Plus, Search, Settings } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Folder, FolderOpen, GripVertical, Import, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Search, Settings } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,12 +34,14 @@ import { useTranslations } from "../../components/preferences-provider";
 
 type DragConversation = { id: string; title: string; projectId: string | null };
 
-export function ProjectSidebar({ currentProjectId, onImportClick }: { currentProjectId?: string; onImportClick?: () => void }) {
+export function ProjectSidebar({ currentProjectId, onImportClick, readerMode = false }: { currentProjectId?: string; onImportClick?: () => void; readerMode?: boolean }) {
+  const t = useTranslations();
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const [name, setName] = useState("");
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | null>(null);
   const sensors = useSensors(
@@ -69,6 +71,16 @@ export function ProjectSidebar({ currentProjectId, onImportClick }: { currentPro
   useEffect(() => {
     if (currentProjectId) setExpandedProjects((current) => new Set(current).add(currentProjectId));
   }, [currentProjectId]);
+
+  useEffect(() => {
+    if (!readerMode || currentProjectId) return;
+    setDesktopExpanded(window.localStorage.getItem("chat-reader:reader-sidebar-expanded") === "true");
+  }, [currentProjectId, readerMode]);
+
+  function setReaderSidebarExpanded(expanded: boolean) {
+    setDesktopExpanded(expanded);
+    if (readerMode) window.localStorage.setItem("chat-reader:reader-sidebar-expanded", String(expanded));
+  }
 
   const projects = useMemo(() => (projectsQuery.data ?? []).filter((project) => !project.is_default), [projectsQuery.data]);
   const conversations = (conversationsQuery.data ?? []).slice(0, 14);
@@ -120,21 +132,30 @@ export function ProjectSidebar({ currentProjectId, onImportClick }: { currentPro
       onConversationChanged={refreshSidebar}
       onProjectChanged={refreshSidebar}
       closeMobile={() => setShowMobileDrawer(false)}
+      onCollapse={readerMode ? () => setReaderSidebarExpanded(false) : undefined}
     />
   );
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDrag(null)}>
-      <button type="button" aria-label="打开侧栏" data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-[#d9d9d7] bg-white text-sm font-semibold text-[#111827] shadow-sm md:hidden">CR</button>
+      <button type="button" aria-label={t("openSidebar")} data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-ui bg-surface text-sm font-semibold text-primary shadow-sm md:hidden">CR</button>
       <ImportTaskMonitor placement="mobile" />
       {showMobileDrawer ? (
         <div className="fixed inset-0 z-50 md:hidden">
-          <button type="button" aria-label="Close sidebar" className="absolute inset-0 bg-black/30" onClick={() => setShowMobileDrawer(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-[86vw] max-w-[320px] flex-col overflow-hidden border-r border-[#e5e5e5] bg-[#f9f9f9] text-[#111827] shadow-2xl">{content}</aside>
+          <button type="button" aria-label={t("closeSidebar")} className="absolute inset-0 bg-black/30" onClick={() => setShowMobileDrawer(false)} />
+          <aside className="absolute inset-y-0 left-0 flex w-[86vw] max-w-[20rem] flex-col overflow-hidden border-r border-ui bg-sidebar text-primary shadow-2xl">{content}</aside>
         </div>
       ) : null}
-      <aside className="hidden h-screen w-[clamp(14rem,18vw,20rem)] shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary md:flex">{content}</aside>
-      <DragOverlay>{activeDrag ? <div className="max-w-[240px] truncate rounded-lg border border-[#10a37f] bg-white px-3 py-2 text-sm shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
+      {readerMode && !desktopExpanded ? (
+        <aside className="hidden h-screen w-14 shrink-0 flex-col items-center border-r border-ui bg-sidebar py-3 text-primary md:flex">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-semibold text-white">CR</div>
+          <button type="button" onClick={() => setReaderSidebarExpanded(true)} className="mt-4 flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-surface hover:text-primary" aria-label={t("openSidebar")} title={t("openSidebar")}><PanelLeftOpen className="h-5 w-5" /></button>
+          {currentProjectId ? <Folder className="mt-4 h-4 w-4 text-accent" aria-hidden="true" /> : null}
+        </aside>
+      ) : (
+        <aside className="hidden h-screen w-[clamp(14rem,18vw,20rem)] shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary md:flex">{content}</aside>
+      )}
+      <DragOverlay>{activeDrag ? <div className="max-w-[15rem] truncate rounded-lg border border-[var(--accent)] bg-raised px-3 py-2 text-sm text-primary shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
     </DndContext>
   );
 }
@@ -161,6 +182,7 @@ type SidebarContentProps = {
   onConversationChanged: () => Promise<void>;
   onProjectChanged: () => Promise<void>;
   closeMobile: () => void;
+  onCollapse?: () => void;
 };
 
 function SidebarContent(props: SidebarContentProps) {
@@ -168,22 +190,23 @@ function SidebarContent(props: SidebarContentProps) {
   const [showPreferences, setShowPreferences] = useState(false);
   return (
     <>
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-[#e5e5e5] px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10a37f] text-xs font-semibold text-white">CR</div>
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-ui px-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-semibold text-white">CR</div>
         <p className="truncate text-sm font-semibold">Chat Reader</p>
+        {props.onCollapse ? <button type="button" onClick={props.onCollapse} className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-surface hover:text-primary" aria-label={t("closeSidebar")} title={t("closeSidebar")}><PanelLeftClose className="h-5 w-5" /></button> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d9d9d7] bg-white px-3 text-sm font-medium shadow-sm hover:bg-[#f4f4f4]"><Import className="h-4 w-4" /> 导入数据</button>
+        <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><Import className="h-4 w-4" /> {t("importData")}</button>
         <ImportTaskMonitor placement="sidebar" />
         <nav className="space-y-1">
-          <NavLink href="/" label="对话" active={props.pathname === "/"} icon={<FolderOpen className="h-4 w-4" />} onClick={props.closeMobile} />
-          <NavLink href="/search" label="搜索" active={props.pathname.startsWith("/search")} icon={<Search className="h-4 w-4" />} onClick={props.closeMobile} />
-          <NavLink href="/archived" label="已归档" active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
+          <NavLink href="/" label={t("conversations")} active={props.pathname === "/"} icon={<FolderOpen className="h-4 w-4" />} onClick={props.closeMobile} />
+          <NavLink href="/search" label={t("search")} active={props.pathname.startsWith("/search")} icon={<Search className="h-4 w-4" />} onClick={props.closeMobile} />
+          <NavLink href="/archived" label={t("archived")} active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
         </nav>
 
         <div className="mt-5">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-xs font-semibold text-[#6b7280]">项目</h2>
+            <h2 className="text-xs font-semibold text-secondary">{t("projects")}</h2>
             <button type="button" aria-label="Create project" title="Create project" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-white"><Plus className="h-4 w-4" /></button>
           </div>
           {props.showProjectForm ? <ProjectCreateForm {...props} /> : null}
@@ -270,7 +293,7 @@ function DraggableConversationRow({ conversation, projectId, active, closeMobile
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }} className={`group flex min-h-9 items-center gap-1 rounded-lg pl-1 pr-1 ${isDragging ? "opacity-30" : ""} ${active ? "bg-[#e9e9e7]" : "hover:bg-white"}`}>
       <button type="button" className="hidden h-7 w-6 touch-none items-center justify-center text-[#9ca3af] group-hover:flex md:flex md:opacity-0 md:group-hover:opacity-100" aria-label={`Drag ${title}`} title="Drag to move" {...attributes} {...listeners}><GripVertical className="h-3.5 w-3.5" /></button>
-      <Link href={`/conversations/${conversation.id}`} onClick={closeMobile} className="min-w-0 flex-1 truncate py-2 text-sm">{title}</Link>
+      <Link href={`/conversations/${conversation.id}${projectId ? `?projectId=${projectId}` : ""}`} onClick={closeMobile} className="min-w-0 flex-1 truncate py-2 text-sm">{title}</Link>
       <div className={active ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}><ConversationActionMenu compact conversation={conversation} projectId={projectId ?? undefined} onChanged={onChanged} /></div>
     </div>
   );

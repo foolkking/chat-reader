@@ -111,6 +111,15 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 
 所有分页接口都会重新验证 token、有效期、撤销状态和 `selected_messages` 范围。Share 阅读位置只保存在访问浏览器的 localStorage，不写入服务器。
 
+## Preferences
+
+| Method | Path | 说明 |
+| --- | --- | --- |
+| GET | `/api/preferences` | 获取主题、语言与正文宽度偏好 |
+| PATCH | `/api/preferences` | 更新 `theme_mode`、`locale_mode` 或 `reader_width_mode` |
+
+`reader_width_mode` 支持 `compact / standard / wide`。客户端不能提交 `subject_key`；当前服务端身份固定解析为 `local:default`。
+
 | Method | Path | 说明 |
 | --- | --- | --- |
 | POST | `/api/conversations/{id}/shares` | 创建分享链接 |

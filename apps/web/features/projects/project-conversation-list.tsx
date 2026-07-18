@@ -227,7 +227,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                           />
                         </label>
                         <div className="min-w-0">
-                          <Link href={`/conversations/${conversation.id}`}>
+                          <Link href={`/conversations/${conversation.id}?projectId=${projectId}`}>
                             <h2 className="truncate text-base font-semibold text-[#111827]">
                               {conversation.project_relation.is_pinned ? "Pinned / " : ""}
                               {conversation.display_title || conversation.title}

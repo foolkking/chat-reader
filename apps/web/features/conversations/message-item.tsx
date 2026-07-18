@@ -2,7 +2,9 @@ import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { MoreHorizontal } from "lucide-react";
 import { editMessage, splitMessage } from "../../lib/api";
+import { useTranslations } from "../../components/preferences-provider";
 import { EditMessageForm } from "../editing/edit-message-form";
 import { VersionHistoryButton } from "../editing/version-history-button";
 import { VersionHistoryPanel } from "../editing/version-history-panel";
@@ -36,6 +38,7 @@ export function MessageItem({
   onLoadPreviousBlocks?: () => Promise<void>;
   onLoadMoreBlocks?: () => Promise<void>;
 }) {
+  const t = useTranslations();
   const queryClient = useQueryClient();
   const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
   const [isLoadingHeavyBlocks, setIsLoadingHeavyBlocks] = useState(false);
@@ -47,7 +50,6 @@ export function MessageItem({
   const [splitOffsetValue, setSplitOffsetValue] = useState("");
   const [splitReason, setSplitReason] = useState("");
   const [showVersions, setShowVersions] = useState(false);
-  const autoLoadRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const blocks = normalizedBlocks(message, cachedBlocks);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
@@ -55,6 +57,7 @@ export function MessageItem({
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
+  const wideUserMessage = isUser && shouldUseWideUserLayout(currentText, blocks);
   const hasActions = !readOnly || Boolean(onSelectedChange);
 
   useEffect(() => {
@@ -70,24 +73,6 @@ export function MessageItem({
     setIsEditing(false);
     setShowVersions(false);
   }, [defaultSplitOffset, message.id]);
-
-  useEffect(() => {
-    const target = autoLoadRef.current;
-    if (!target || !message.is_heavy || showHeavyBlocks || isLoadingHeavyBlocks || !onLoadBlocks) return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer.disconnect();
-        setIsLoadingHeavyBlocks(true);
-        void onLoadBlocks(message.id)
-          .then(() => setShowHeavyBlocks(true))
-          .finally(() => setIsLoadingHeavyBlocks(false));
-      },
-      { rootMargin: "600px 0px", threshold: 0 },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [isLoadingHeavyBlocks, message.id, message.is_heavy, onLoadBlocks, showHeavyBlocks]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -174,39 +159,39 @@ export function MessageItem({
       id={`message-${message.id}`}
       data-message-id={message.id}
       data-order-key={message.order_key}
-      className={`group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:rounded-2xl ${
+      className={`reader-message group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:rounded-2xl ${
         highlightTargetId === `message-${message.id}` ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]" : ""
       } ${isUser ? "sm:justify-end" : "sm:justify-start"}`}
     >
-      <div className={`${isUser ? "w-full sm:ml-auto sm:max-w-[72%]" : "w-full max-w-full flex-1"} min-w-0`}>
+      <div className={`${isUser && !wideUserMessage ? "w-full sm:ml-auto sm:max-w-[70%]" : "w-full max-w-full flex-1"} min-w-0`}>
         {isUser ? (
           <div className="mb-2 flex items-center justify-end gap-2 pr-10">
-            <span className="text-xs font-semibold text-[#6b7280]">你</span>
+            <span className="text-xs font-semibold text-secondary">{t("you")}</span>
           </div>
         ) : null}
         {!isUser ? (
           <div className="mb-2 flex items-center gap-2 pr-10">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[10px] font-semibold text-white">CR</span>
-            <span className="text-xs font-semibold text-[#6b7280]">ChatGPT</span>
-            <span className="hidden font-mono text-[11px] text-[#9ca3af] group-hover:inline">{message.order_key}</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--text)] text-[10px] font-semibold text-[var(--surface)]">CR</span>
+            <span className="text-xs font-semibold text-secondary">ChatGPT</span>
+            <span className="hidden font-mono text-[11px] text-secondary group-hover:inline">{message.order_key}</span>
           </div>
         ) : null}
 
         <div
           className={
             isUser
-              ? "message-user w-full min-w-0 rounded-lg border border-[#e5e7eb] bg-[#f4f4f4] px-3 py-3 text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#111827] sm:rounded-[22px] sm:border-0 sm:px-4 sm:shadow-sm"
+              ? `message-user w-full min-w-0 text-[17px] leading-[1.75] text-primary ${wideUserMessage ? "message-user-rich rounded-xl border border-ui bg-subtle px-4 py-4 sm:px-5" : "rounded-lg border border-ui bg-subtle px-3 py-3 sm:rounded-[22px] sm:border-0 sm:px-4 sm:shadow-sm"}`
               : isAssistant
-                ? "text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#111827]"
-                : "rounded-2xl border border-[#e5e5e5] bg-white px-4 py-3 text-[clamp(1rem,0.24vw+0.94rem,1.125rem)] leading-8 text-[#111827]"
+                ? "text-[17px] leading-[1.75] text-primary"
+                : "rounded-2xl border border-ui bg-surface px-4 py-3 text-[17px] leading-[1.75] text-primary"
           }
         >
           {isUser ? <span className="sr-only">User message {message.order_key}</span> : null}
           {hasActions ? (
             <>
               <details className="absolute right-0 top-0 z-20 sm:hidden">
-                <summary aria-label="消息操作" className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg text-lg text-[#6b7280] hover:bg-[#ececeb] marker:hidden">
-                  ⋯
+                <summary aria-label={t("messageActions")} className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg text-secondary hover:bg-subtle marker:hidden">
+                  <MoreHorizontal className="h-5 w-5" />
                 </summary>
                 <div className="absolute right-0 top-10 flex w-64 flex-wrap gap-2 rounded-lg border border-[#e5e7eb] bg-white p-3 shadow-xl">{actionControls}</div>
               </details>
@@ -250,8 +235,8 @@ export function MessageItem({
                 />
               ) : null}
               {message.is_heavy && !showHeavyBlocks ? (
-            <div ref={autoLoadRef} className="border-l-2 border-[#d1fae5] py-3 pl-3">
-              <p className="text-sm text-[#6b7280]">{isLoadingHeavyBlocks ? "正在加载完整内容…" : "长内容将在进入阅读区域时自动加载"}</p>
+            <div className="border-l-2 border-[#d1fae5] py-3 pl-3">
+              <p className="text-sm text-secondary">{isLoadingHeavyBlocks ? t("loadingFullContent") : t("longContentHint")}</p>
               <button
                 type="button"
                 onClick={async () => {
@@ -267,7 +252,7 @@ export function MessageItem({
                 className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
               >
                 {isLoadingHeavyBlocks ? <Spinner /> : null}
-                {isLoadingHeavyBlocks ? "正在加载" : "立即展开"}
+                {isLoadingHeavyBlocks ? t("loadingFullContent") : t("expandNow")}
               </button>
             </div>
               ) : (
@@ -288,7 +273,7 @@ export function MessageItem({
                     />
                   ) : null}
                   <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
-                  {hasMoreBlocks ? <div ref={loadMoreRef} className="flex min-h-10 items-center justify-center text-xs text-[#6b7280]">{isLoadingMoreBlocks ? "正在继续加载…" : "继续滚动以加载后续内容"}</div> : null}
+                  {hasMoreBlocks ? <div ref={loadMoreRef} className="flex min-h-10 items-center justify-center text-xs text-secondary">{isLoadingMoreBlocks ? t("loadingMore") : t("continueLoading")}</div> : null}
                 </>
               )}
             </>
@@ -433,6 +418,12 @@ function normalizedBlocks(message: MessageListItem, cachedBlocks?: RenderBlockRe
       data: { text: displayText },
     },
   ];
+}
+
+function shouldUseWideUserLayout(text: string, blocks: RenderBlockRead[]): boolean {
+  if (text.length > 360 || text.split(/\r?\n/).length > 5) return true;
+  const richTypes = new Set(["heading", "code", "table", "blockquote", "image", "attachment", "math", "mermaid"]);
+  return blocks.some((block) => richTypes.has(block.block_type));
 }
 
 function normalizeVersionBlock(block: RenderBlockRead | Record<string, unknown>, fallbackIndex: number): RenderBlockRead {

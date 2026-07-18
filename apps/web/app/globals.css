@@ -50,7 +50,7 @@ body {
   margin: 0;
   background: var(--page);
   color: var(--text);
-  font-size: clamp(15px, 0.18vw + 14px, 17px);
+  font-size: 16px;
 }
 
 .bg-page { background-color: var(--page); }
@@ -86,38 +86,111 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .reader-frame {
   container-type: inline-size;
   position: relative;
-  gap: clamp(0.75rem, 1.2vw, 1.75rem);
-  padding-inline: clamp(0.75rem, 1.6vw, 2.5rem);
+  padding-inline: clamp(0.75rem, 1.4vw, 2rem);
+  --reader-content-max: 64rem;
 }
+
+.reader-frame[data-reader-width="compact"] { --reader-content-max: 54rem; }
+.reader-frame[data-reader-width="wide"] { --reader-content-max: 76rem; }
+
+.reader-layout-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.reader-content-column {
+  width: min(100%, var(--reader-content-max));
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.reader-content-inner {
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+
+.reader-message {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 36rem;
+}
+
+.reader-markdown-block {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 8rem;
+}
+
+.reader-index-column,
+.reader-toc-column { display: none; }
 
 @media (min-width: 1280px) {
-  .reader-frame {
-    grid-template-columns: minmax(0, 1fr) clamp(12rem, 15vw, 19rem);
-  }
   .reader-index-column {
-    position: absolute;
-    top: clamp(1rem, 2vw, 2rem);
-    bottom: clamp(1rem, 2vw, 2rem);
-    left: clamp(0.75rem, 1.6vw, 2.5rem);
-    width: clamp(2.5rem, 3.5vw, 4.5rem);
-    transition: width 160ms ease;
-  }
-  .reader-frame[data-index-expanded="true"] .reader-index-column {
-    width: clamp(15rem, 18vw, 23rem);
-  }
-  .reader-content-column {
-    margin-left: clamp(9rem, 19vw, 24rem);
+    display: block;
+    --reader-index-height: min(68rem, calc(100dvh - clamp(7rem, 9vh, 9rem)));
+    position: sticky;
+    z-index: 30;
+    top: clamp(0.75rem, 1.5vw, 1.5rem);
+    margin-bottom: calc(-1 * var(--reader-index-height));
+    width: clamp(2.75rem, 3.5cqi, 4rem);
+    height: var(--reader-index-height);
+    pointer-events: none;
   }
 }
 
-.reader-content-column { width: 100%; }
-.reader-content-inner { width: 100%; max-width: none; margin-inline: auto; font-size: clamp(1rem, 0.28vw + 0.92rem, 1.125rem); }
-.reader-toc-column { justify-self: stretch; }
-.reader-index-column .text-xs { font-size: clamp(0.78rem, 0.18vw + 0.7rem, 0.9rem); }
-.reader-toc-column { font-size: clamp(0.9rem, 0.2vw + 0.8rem, 1rem); }
+@container (min-width: 86rem) {
+  .reader-layout-grid {
+    grid-template-columns: minmax(0, 1fr) clamp(13rem, 15cqi, 17rem);
+    gap: clamp(1rem, 1.5cqi, 1.75rem);
+  }
+  .reader-content-column {
+    padding-left: clamp(3.5rem, 5cqi, 5.5rem);
+    box-sizing: border-box;
+  }
+  .reader-toc-column {
+    display: block;
+    justify-self: stretch;
+    font-size: 0.875rem;
+  }
+}
+
+.dialogue-index {
+  height: var(--reader-index-height, 100%);
+  max-height: 100%;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.dialogue-index-panel {
+  height: var(--reader-index-height, 100%);
+  width: clamp(17rem, 20cqi, 21rem);
+  max-height: var(--reader-index-height, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  box-shadow: 0 14px 40px rgb(15 23 42 / 0.16);
+}
+
+.dialogue-index-rail {
+  width: clamp(2.75rem, 3.5cqi, 4rem);
+}
+
+.reader-aux-scroll {
+  scrollbar-width: none;
+}
+.reader-aux-scroll:hover,
+.reader-aux-scroll:focus-within { scrollbar-width: thin; }
+.reader-aux-scroll::-webkit-scrollbar { width: 0; }
+.reader-aux-scroll:hover::-webkit-scrollbar,
+.reader-aux-scroll:focus-within::-webkit-scrollbar { width: 6px; }
+.reader-aux-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
 
 @media (max-width: 767px) {
-  .reader-frame { padding-inline: 3vw; gap: 0; }
+  .reader-frame { padding-inline: 3vw; }
+  .reader-content-inner { font-size: 1rem; }
 }
 
 .message-user .aui-chat-markdown h1 {

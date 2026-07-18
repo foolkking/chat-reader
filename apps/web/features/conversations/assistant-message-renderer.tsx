@@ -44,7 +44,7 @@ export function AssistantMessageRenderer({
           id={`block-${message.id}-${block.block_index}`}
           data-block-index={block.block_index}
           data-block-type={block.block_type}
-          className={`max-w-full scroll-mt-3 rounded-xl transition ${
+          className={`reader-markdown-block max-w-full scroll-mt-3 rounded-xl transition ${
             highlightTargetId === `block-${message.id}-${block.block_index}`
               ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]"
               : ""
@@ -61,14 +61,14 @@ export function AssistantMessageRenderer({
 function findLeadingThinkingBlocks(blocks: RenderBlockRead[]): { endIndex: number; text: string; label: string } | null {
   let scannedChars = 0;
   const captured: string[] = [];
-  for (let index = 0; index < Math.min(blocks.length, 24); index += 1) {
+  for (let index = 0; index < Math.min(blocks.length, 80); index += 1) {
     const text = stripLeadingTimestamp(readBlockText(blocks[index] ?? null)).trim();
     if (!text) {
       continue;
     }
     const lines = text.split(/\r?\n/).map((line) => stripQuote(line).trim()).filter(Boolean);
     scannedChars += text.length;
-    if (scannedChars > 4000) {
+    if (scannedChars > 8000) {
       return null;
     }
     if (lines.some((line) => ANSWER_START_RE.test(line))) {

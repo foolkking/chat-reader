@@ -16,6 +16,7 @@ def get_or_create_preferences(db: Session) -> UserPreference:
         subject_key=DEFAULT_SUBJECT_KEY,
         theme_mode="light",
         locale_mode="auto",
+        reader_width_mode="standard",
         created_at=now,
         updated_at=now,
     )
@@ -30,6 +31,8 @@ def update_preferences(db: Session, payload: UserPreferenceUpdate) -> UserPrefer
         preference.theme_mode = payload.theme_mode
     if payload.locale_mode is not None:
         preference.locale_mode = payload.locale_mode
+    if payload.reader_width_mode is not None:
+        preference.reader_width_mode = payload.reader_width_mode
     preference.updated_at = utc_now()
     db.flush()
     return preference
@@ -39,6 +42,7 @@ def preference_read(preference: UserPreference) -> UserPreferenceRead:
     return UserPreferenceRead(
         theme_mode=preference.theme_mode,
         locale_mode=preference.locale_mode,
+        reader_width_mode=preference.reader_width_mode,
         created_at=preference.created_at,
         updated_at=preference.updated_at,
     )
