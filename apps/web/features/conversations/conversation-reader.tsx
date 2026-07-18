@@ -26,7 +26,7 @@ import { ConversationToc } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
 import { useTranslations } from "../../components/preferences-provider";
 import { MessageItem } from "./message-item";
-import { navigateMountedTarget } from "./reader-navigation";
+import { navigateMountedTarget, stabilizeMountedTarget } from "./reader-navigation";
 
 const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
@@ -69,6 +69,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const loadingPreviousRef = useRef(false);
   const navigationTokenRef = useRef(0);
   const navigationLockUntilRef = useRef(0);
+  const stopNavigationStabilizerRef = useRef<(() => void) | null>(null);
   const restoreAttemptedRef = useRef(false);
   const restoreInProgressRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
@@ -139,6 +140,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const total = windowQuery.data?.total ?? messages.length;
 
   useEffect(() => {
+    navigationTokenRef.current += 1;
+    stopNavigationStabilizerRef.current?.();
+    stopNavigationStabilizerRef.current = null;
     setOffset(0);
     nextOffsetRef.current = 0;
     minOffsetRef.current = 0;
@@ -239,7 +243,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     const root = scrollContainerRef.current;
     if (!root || loadingPreviousRef.current || minOffsetRef.current <= 0) return;
     loadingPreviousRef.current = true;
-    const beforeHeight = root.scrollHeight;
+    const rootTop = root.getBoundingClientRect().top;
+    const anchor = Array.from(root.querySelectorAll<HTMLElement>("article[data-message-id]"))
+      .find((article) => article.getBoundingClientRect().bottom > rootTop + 8);
+    const anchorOffset = anchor ? anchor.getBoundingClientRect().top - rootTop : null;
     try {
       const previousOffset = Math.max(0, minOffsetRef.current - PAGE_SIZE);
       const page = await getConversationMessageWindow(conversationId, {
@@ -249,9 +256,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         contentMode: "preview",
       });
       mergeWindowItems(page);
-      window.requestAnimationFrame(() => {
-        root.scrollTop += root.scrollHeight - beforeHeight;
-      });
+      if (anchor && anchorOffset !== null) {
+        stabilizeMountedTarget({
+          root,
+          targetId: anchor.id,
+          offset: anchorOffset,
+          durationMs: 1200,
+        });
+      }
     } finally {
       loadingPreviousRef.current = false;
     }
@@ -261,6 +273,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     async ({ messageId, blockIndex, alignmentOffset }: NavigateTarget): Promise<NavigationResult> => {
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
+      stopNavigationStabilizerRef.current?.();
+      stopNavigationStabilizerRef.current = null;
+      userScrollIntentRef.current = false;
       navigationLockUntilRef.current = Date.now() + 5000;
       const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
       const messageIdDom = `message-${messageId}`;
@@ -319,6 +334,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         if (result.ok) {
           setActiveMessageId(messageId);
           setActiveBlockId(blockId);
+          stopNavigationStabilizerRef.current = stabilizeMountedTarget({
+            root: scrollContainerRef.current,
+            targetId: result.targetId,
+            offset: alignmentOffset ?? 12,
+            tokenIsCurrent: () => navigationTokenRef.current === token,
+          });
           window.setTimeout(() => {
             if (navigationTokenRef.current === token) {
               setTargetHighlightId(null);
@@ -333,6 +354,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     },
     [blockCache, conversationId, mergeWindowItems, messages],
   );
+
+  useEffect(() => () => stopNavigationStabilizerRef.current?.(), []);
 
   const refreshActiveMessageFromLayout = useCallback((unlockNavigation = false) => {
     if (unlockNavigation) {
@@ -716,6 +739,46 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     return <ReaderState title="Conversation unavailable" detail="The API returned no conversation payload." />;
   }
 
+  const headerActions = (
+    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <button
+        type="button"
+        onClick={() => void expandLoadedHeavyMessages()}
+        disabled={expandProgress.active}
+        className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-70"
+      >
+        {expandProgress.active ? <Spinner /> : null}
+        {expandProgress.active ? `${expandProgress.current} / ${expandProgress.total}` : t("expandLoaded")}
+      </button>
+      <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
+      <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
+      <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
+      {selectedIds.length >= 2 ? (
+        <button
+          type="button"
+          onClick={async () => {
+            if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) return;
+            await mergeMessages({ messageIds: selectedIds });
+            setSelectedMessageIds(new Set());
+            await refreshReader();
+          }}
+          className="inline-flex h-9 shrink-0 items-center rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle"
+        >
+          {t("mergeSelected")}
+        </button>
+      ) : null}
+      {selectedOrderedIds.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => void splitSelectedConversationRange()}
+          className="inline-flex h-9 shrink-0 items-center rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle"
+        >
+          {t("splitToNewConversation")}
+        </button>
+      ) : null}
+    </div>
+  );
+
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
       <ProjectSidebar currentProjectId={projectContextId} readerMode />
@@ -727,18 +790,21 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             </div>
           ) : null}
           <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 pl-16 md:px-6 md:pl-6">
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold text-primary">
-                {conversation.display_title || conversation.title}
-              </h1>
-              <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-secondary">
-                <span>{loadedLabel}</span>
+            {showMobileActions ? headerActions : (
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-base font-semibold text-primary">
+                  {conversation.display_title || conversation.title}
+                </h1>
+                <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-secondary">
+                  <span>{loadedLabel}</span>
+                </div>
               </div>
-            </div>
+            )}
             <button type="button" onClick={() => setShowMobileIndex(true)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
             <button
               type="button"
               aria-label={t("messageActions")}
+              aria-expanded={showMobileActions}
               onClick={() => setShowMobileActions((current) => !current)}
               className="hidden h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-subtle md:inline-flex"
             >
@@ -759,59 +825,13 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 onClick={() => setShowMobileActions((current) => !current)}
                 className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]"
                 aria-label={t("more")}
+                aria-expanded={showMobileActions}
                 title={t("more")}
               >
                 <MoreHorizontal className="h-5 w-5" />
               </button>
             </div>
           </div>
-          {showMobileActions ? (
-            <div className="absolute right-3 top-14 z-40 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border border-[#e5e7eb] bg-white p-3 shadow-xl">
-              <div className="grid gap-2">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void expandLoadedHeavyMessages()}
-                    disabled={expandProgress.active}
-                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#d1d5db] bg-white px-3 text-xs font-medium text-[#374151] disabled:cursor-wait disabled:opacity-70"
-                  >
-                    {expandProgress.active ? <Spinner /> : null}
-                    {expandProgress.active
-                      ? `${expandProgress.current} / ${expandProgress.total}`
-                      : "展开已加载内容"}
-                  </button>
-                  <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
-                  <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
-                  <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
-                  {selectedIds.length >= 2 ? (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) {
-                          return;
-                        }
-                        await mergeMessages({ messageIds: selectedIds });
-                        setSelectedMessageIds(new Set());
-                        await refreshReader();
-                      }}
-                      className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
-                    >
-                      合并所选
-                    </button>
-                  ) : null}
-                  {selectedOrderedIds.length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => void splitSelectedConversationRange()}
-                      className="inline-flex min-h-10 items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151]"
-                    >
-                      拆分为新会话
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ) : null}
         </header>
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">

@@ -11,7 +11,7 @@ import {
 } from "../../lib/api";
 import type { MessageListItem, NavigationResult, PersistedSharePosition, RenderBlockRead } from "../../lib/types";
 import { MessageItem } from "../conversations/message-item";
-import { navigateMountedTarget } from "../conversations/reader-navigation";
+import { navigateMountedTarget, stabilizeMountedTarget } from "../conversations/reader-navigation";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
@@ -42,6 +42,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   });
   const navigationTokenRef = useRef(0);
   const navigationLockUntilRef = useRef(0);
+  const stopNavigationStabilizerRef = useRef<(() => void) | null>(null);
   const restoreAttemptedRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
   const messagesRef = useRef<MessageListItem[]>([]);
@@ -182,6 +183,9 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   ): Promise<NavigationResult> => {
     const navigationToken = navigationTokenRef.current + 1;
     navigationTokenRef.current = navigationToken;
+    stopNavigationStabilizerRef.current?.();
+    stopNavigationStabilizerRef.current = null;
+    userScrollIntentRef.current = false;
     navigationLockUntilRef.current = Date.now() + 5000;
     setNavigationTargetMessageId(messageId);
     const messageDomId = `message-${messageId}`;
@@ -211,6 +215,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         setActiveMessageId(messageId);
         setActiveBlockId(blockDomId);
         setTargetHighlightId(result.targetId);
+        stopNavigationStabilizerRef.current = stabilizeMountedTarget({
+          root: null,
+          targetId: result.targetId,
+          offset: alignmentOffset,
+          tokenIsCurrent: () => navigationTokenRef.current === navigationToken,
+        });
         window.setTimeout(() => {
           if (navigationTokenRef.current === navigationToken) {
             setTargetHighlightId(null);
@@ -223,6 +233,8 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       return { ok: false, targetId: blockDomId ?? messageDomId, reason: "load-failed" };
     }
   }, [ensureMessageBlocks, mergeWindow, token]);
+
+  useEffect(() => () => stopNavigationStabilizerRef.current?.(), []);
 
   useEffect(() => {
     if (restoreAttemptedRef.current || !initialWindowQuery.isSuccess) return;
@@ -356,7 +368,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   if (!payload) return <ShareState title="分享不可用" detail="服务未返回分享信息。" />;
 
   return (
-    <main className="flex min-h-screen flex-col bg-page text-primary">
+    <main className="flex min-h-screen flex-col bg-page text-primary [--reader-sticky-top:5rem]">
       <header className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl flex-col justify-center px-4 sm:px-6">
           <p className="text-xs font-medium text-[#6b7280]">只读分享</p>
@@ -458,14 +470,21 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   async function loadPreviousPage() {
     if (loadingPreviousRef.current || minOffsetRef.current <= 0) return;
     loadingPreviousRef.current = true;
-    const beforeHeight = document.documentElement.scrollHeight;
+    const anchor = Array.from(document.querySelectorAll<HTMLElement>("article[data-message-id]"))
+      .find((article) => article.getBoundingClientRect().bottom > 8);
+    const anchorOffset = anchor?.getBoundingClientRect().top ?? null;
     try {
       const offset = Math.max(0, minOffsetRef.current - PAGE_SIZE);
       const page = await getSharedMessageWindow(token, { offset, limit: minOffsetRef.current - offset });
       mergeWindow(page);
-      window.requestAnimationFrame(() => {
-        window.scrollBy({ top: document.documentElement.scrollHeight - beforeHeight, behavior: "auto" });
-      });
+      if (anchor && anchorOffset !== null) {
+        stabilizeMountedTarget({
+          root: null,
+          targetId: anchor.id,
+          offset: anchorOffset,
+          durationMs: 1200,
+        });
+      }
     } finally {
       loadingPreviousRef.current = false;
     }
