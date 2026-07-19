@@ -158,3 +158,31 @@ def test_dialogue_index_centers_a_far_anchor_without_returning_every_message(cli
     assert payload["has_previous"] is True
     assert payload["has_more"] is True
     assert anchor_id in {item["message_id"] for item in payload["items"]}
+
+    window_cases = (
+        (0, 0, False, True),
+        (60, 48, True, True),
+        (119, 90, True, False),
+    )
+    for anchor_index, expected_offset, has_previous, has_more in window_cases:
+        window = client.get(
+            f"/api/conversations/{conversation_id}/message-window",
+            params={
+                "limit": 30,
+                "anchor_message_id": all_messages[anchor_index]["id"],
+                "anchor_before": 12,
+                "content_mode": "preview",
+            },
+        )
+        assert window.status_code == 200
+        window_payload = window.json()
+        assert window_payload["offset"] == expected_offset
+        assert window_payload["has_previous"] is has_previous
+        assert window_payload["has_more"] is has_more
+        assert all_messages[anchor_index]["id"] in {item["id"] for item in window_payload["items"]}
+
+    invalid_anchor_before = client.get(
+        f"/api/conversations/{conversation_id}/message-window",
+        params={"limit": 30, "anchor_message_id": anchor_id, "anchor_before": 30},
+    )
+    assert invalid_anchor_before.status_code == 422

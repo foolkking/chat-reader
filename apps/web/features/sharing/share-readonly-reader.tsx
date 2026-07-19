@@ -9,9 +9,10 @@ import {
   getSharedMessageWindow,
   getSharedToc,
 } from "../../lib/api";
-import type { MessageListItem, NavigationResult, PersistedSharePosition, RenderBlockRead } from "../../lib/types";
+import type { LoadedMessageWindow, MessageListItem, NavigationResult, PersistedSharePosition, RenderBlockRead, ScrollDirection } from "../../lib/types";
 import { MessageItem } from "../conversations/message-item";
-import { navigateMountedTarget, stabilizeMountedTarget } from "../conversations/reader-navigation";
+import { captureScrollAnchor, navigateMountedTarget, restoreScrollAnchor } from "../conversations/reader-navigation";
+import { appendLoadedWindow, emptyLoadedWindow, prependLoadedWindow, replaceLoadedWindow } from "../conversations/reader-window";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
@@ -20,12 +21,14 @@ import { useTranslations } from "../../components/preferences-provider";
 const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
 const ACTIVE_READING_OFFSET = 96;
+const ANCHOR_BEFORE = 12;
 
 export function ShareReadonlyReader({ token }: { token: string }) {
   const t = useTranslations();
   const [showMobileIndex, setShowMobileIndex] = useState(false);
   const [showMobileToc, setShowMobileToc] = useState(false);
-  const [messages, setMessages] = useState<MessageListItem[]>([]);
+  const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
+  const messages = loadedWindow.items;
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [navigationTargetMessageId, setNavigationTargetMessageId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
@@ -42,13 +45,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   });
   const navigationTokenRef = useRef(0);
   const navigationLockUntilRef = useRef(0);
-  const stopNavigationStabilizerRef = useRef<(() => void) | null>(null);
   const restoreAttemptedRef = useRef(false);
   const saveTimerRef = useRef<number | null>(null);
   const messagesRef = useRef<MessageListItem[]>([]);
-  const minOffsetRef = useRef(0);
-  const maxOffsetRef = useRef(0);
-  const totalRef = useRef(0);
+  const loadedWindowRef = useRef<LoadedMessageWindow>(emptyLoadedWindow());
+  const windowGenerationRef = useRef(0);
+  const initialWindowAppliedRef = useRef(false);
   const loadingPreviousRef = useRef(false);
   const loadingNextRef = useRef(false);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -56,6 +58,13 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const blockCacheRef = useRef<Record<string, RenderBlockRead[]>>({});
   const blockRequestsRef = useRef(new Map<string, Promise<RenderBlockRead[]>>());
   const userScrollIntentRef = useRef(false);
+  const scrollDirectionRef = useRef<ScrollDirection>(null);
+  const scrollIntentSequenceRef = useRef(0);
+  const lastScrollTopRef = useRef(0);
+  const loadPreviousActionRef = useRef<() => void>(() => undefined);
+  const loadNextActionRef = useRef<() => void>(() => undefined);
+  const [edgeLoading, setEdgeLoading] = useState<"previous" | "next" | null>(null);
+  const [edgeError, setEdgeError] = useState<"previous" | "next" | null>(null);
 
   const shareQuery = useQuery({
     queryKey: ["shared-conversation", token],
@@ -66,6 +75,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     queryFn: () => getSharedMessageWindow(token, {
       limit: PAGE_SIZE,
       anchorMessageId: savedPosition?.message_id ?? undefined,
+      anchorBefore: ANCHOR_BEFORE,
     }),
     enabled: shareQuery.isSuccess && storageReady,
   });
@@ -100,36 +110,58 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   }, [token]);
 
   useEffect(() => {
+    windowGenerationRef.current += 1;
+    navigationTokenRef.current += 1;
+    const emptyWindow = emptyLoadedWindow(windowGenerationRef.current);
+    loadedWindowRef.current = emptyWindow;
+    setLoadedWindow(emptyWindow);
+    initialWindowAppliedRef.current = false;
+    loadingPreviousRef.current = false;
+    loadingNextRef.current = false;
+    userScrollIntentRef.current = false;
+    scrollDirectionRef.current = null;
+    scrollIntentSequenceRef.current += 1;
+    setEdgeLoading(null);
+    setEdgeError(null);
+  }, [token]);
+
+  useEffect(() => {
     if (!shareQuery.isError || !storageKey) return;
     window.localStorage.removeItem(storageKey);
   }, [shareQuery.isError, storageKey]);
 
   useEffect(() => {
-    if (!initialWindowQuery.data) return;
+    if (!initialWindowQuery.data || initialWindowAppliedRef.current) return;
+    initialWindowAppliedRef.current = true;
     const page = initialWindowQuery.data;
-    minOffsetRef.current = page.offset;
-    maxOffsetRef.current = page.offset + page.items.length;
-    totalRef.current = page.total;
-    setMessages(page.items);
+    const next = replaceLoadedWindow(page, windowGenerationRef.current);
+    loadedWindowRef.current = next;
+    setLoadedWindow(next);
     setActiveMessageId(savedPosition?.message_id ?? page.items[0]?.id ?? null);
   }, [initialWindowQuery.data, savedPosition?.message_id]);
 
   useEffect(() => {
     messagesRef.current = messages;
+    const retained = new Set(messages.map((message) => message.id));
+    setBlockCache((current) => {
+      const entries = Object.entries(current).filter(([messageId]) => retained.has(messageId));
+      if (entries.length === Object.keys(current).length) return current;
+      const next = Object.fromEntries(entries);
+      blockCacheRef.current = next;
+      return next;
+    });
+    setExpandedMessageIds((current) => {
+      const next = new Set(Array.from(current).filter((messageId) => retained.has(messageId)));
+      return next.size === current.size ? current : next;
+    });
   }, [messages]);
 
-  const mergeWindow = useCallback((page: { items: MessageListItem[]; offset: number; total: number }) => {
-    minOffsetRef.current = Math.min(minOffsetRef.current, page.offset);
-    maxOffsetRef.current = Math.max(maxOffsetRef.current, page.offset + page.items.length);
-    totalRef.current = page.total;
-    setMessages((current) => {
-      const byId = new Map(current.map((message) => [message.id, message]));
-      for (const message of page.items) byId.set(message.id, message);
-      return Array.from(byId.values()).sort((left, right) => left.order_key.localeCompare(right.order_key));
-    });
+  const applyLoadedWindow = useCallback((next: LoadedMessageWindow) => {
+    loadedWindowRef.current = next;
+    setLoadedWindow(next);
   }, []);
 
-  const ensureMessageBlocks = useCallback(async (messageId: string, start = 0): Promise<RenderBlockRead[]> => {
+  const ensureMessageBlocks = useCallback(async (messageId: string, start = 0, preserveReadingAnchor = false): Promise<RenderBlockRead[]> => {
     const cached = blockCacheRef.current[messageId] ?? [];
     if (cached.some((block) => block.block_index === start) || (start === 0 && cached.length > 0)) {
       return cached;
@@ -138,7 +170,10 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const existing = blockRequestsRef.current.get(requestKey);
     if (existing) return existing;
     const request = getSharedMessageBlocks(token, messageId, { start, limit: BLOCK_PAGE_SIZE })
-      .then((blocks) => {
+      .then(async (blocks) => {
+        if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) return blocks;
+        const anchor = preserveReadingAnchor ? captureScrollAnchor(null, ACTIVE_READING_OFFSET) : null;
+        const intentSequence = scrollIntentSequenceRef.current;
         setBlockCache((current) => {
           const next = {
             ...current,
@@ -146,6 +181,11 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           };
           blockCacheRef.current = next;
           return next;
+        });
+        if (anchor) await restoreScrollAnchor({
+          root: null,
+          anchor,
+          tokenIsCurrent: () => scrollIntentSequenceRef.current === intentSequence,
         });
         return blocks;
       })
@@ -183,9 +223,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   ): Promise<NavigationResult> => {
     const navigationToken = navigationTokenRef.current + 1;
     navigationTokenRef.current = navigationToken;
-    stopNavigationStabilizerRef.current?.();
-    stopNavigationStabilizerRef.current = null;
+    const generation = windowGenerationRef.current + 1;
+    windowGenerationRef.current = generation;
+    applyLoadedWindow({ ...loadedWindowRef.current, generation });
     userScrollIntentRef.current = false;
+    scrollDirectionRef.current = null;
+    scrollIntentSequenceRef.current += 1;
     navigationLockUntilRef.current = Date.now() + 5000;
     setNavigationTargetMessageId(messageId);
     const messageDomId = `message-${messageId}`;
@@ -195,11 +238,13 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         const page = await getSharedMessageWindow(token, {
           limit: PAGE_SIZE,
           anchorMessageId: messageId,
+          anchorBefore: ANCHOR_BEFORE,
         });
         if (navigationTokenRef.current !== navigationToken) {
           return { ok: false, targetId: blockDomId ?? messageDomId, reason: "cancelled" };
         }
-        mergeWindow(page);
+        initialWindowAppliedRef.current = true;
+        applyLoadedWindow(replaceLoadedWindow(page, generation));
       }
       if (blockIndex !== undefined) {
         await ensureMessageBlocks(messageId, Math.max(0, blockIndex - 20));
@@ -215,11 +260,10 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         setActiveMessageId(messageId);
         setActiveBlockId(blockDomId);
         setTargetHighlightId(result.targetId);
-        stopNavigationStabilizerRef.current = stabilizeMountedTarget({
+        await restoreScrollAnchor({
           root: null,
-          targetId: result.targetId,
-          offset: alignmentOffset,
-          tokenIsCurrent: () => navigationTokenRef.current === navigationToken,
+          anchor: { targetId: result.targetId, offset: alignmentOffset },
+          tokenIsCurrent: () => navigationTokenRef.current === navigationToken && !userScrollIntentRef.current,
         });
         window.setTimeout(() => {
           if (navigationTokenRef.current === navigationToken) {
@@ -232,9 +276,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     } catch {
       return { ok: false, targetId: blockDomId ?? messageDomId, reason: "load-failed" };
     }
-  }, [ensureMessageBlocks, mergeWindow, token]);
-
-  useEffect(() => () => stopNavigationStabilizerRef.current?.(), []);
+  }, [applyLoadedWindow, ensureMessageBlocks, token]);
 
   useEffect(() => {
     if (restoreAttemptedRef.current || !initialWindowQuery.isSuccess) return;
@@ -286,22 +328,57 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       });
     };
     const onManualIntent = () => scheduleRefresh(true);
-    const onScroll = () => scheduleRefresh(false);
-    const markManualIntent = () => {
+    const onScroll = () => {
+      const current = window.scrollY;
+      const delta = current - lastScrollTopRef.current;
+      if (
+        Math.abs(delta) > 1 &&
+        !userScrollIntentRef.current &&
+        Date.now() >= navigationLockUntilRef.current
+      ) {
+        userScrollIntentRef.current = true;
+        scrollIntentSequenceRef.current += 1;
+      }
+      if (userScrollIntentRef.current && Math.abs(delta) > 1) {
+        scrollDirectionRef.current = delta < 0 ? "up" : "down";
+        const edgeThreshold = window.innerHeight * 0.45;
+        if (scrollDirectionRef.current === "up" && current <= edgeThreshold) {
+          loadPreviousActionRef.current();
+        }
+        if (
+          scrollDirectionRef.current === "down" &&
+          document.documentElement.scrollHeight - window.innerHeight - current <= edgeThreshold
+        ) {
+          loadNextActionRef.current();
+        }
+      }
+      lastScrollTopRef.current = current;
+      scheduleRefresh(false);
+    };
+    const markScrollIntent = () => {
       userScrollIntentRef.current = true;
+      scrollIntentSequenceRef.current += 1;
       onManualIntent();
     };
-    window.addEventListener("pointerdown", markManualIntent, { passive: true });
-    window.addEventListener("wheel", markManualIntent, { passive: true });
-    window.addEventListener("touchstart", markManualIntent, { passive: true });
+    const markKeyboardIntent = (event: KeyboardEvent) => {
+      if (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) return;
+      markScrollIntent();
+      if (["ArrowUp", "PageUp", "Home"].includes(event.key)) scrollDirectionRef.current = "up";
+      if (["ArrowDown", "PageDown", "End", " "].includes(event.key)) scrollDirectionRef.current = "down";
+    };
+    window.addEventListener("pointerdown", onManualIntent, { passive: true });
+    window.addEventListener("wheel", markScrollIntent, { passive: true });
+    window.addEventListener("touchstart", markScrollIntent, { passive: true });
+    window.addEventListener("keydown", markKeyboardIntent);
     window.addEventListener("click", onManualIntent, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
     scheduleRefresh(false);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("pointerdown", markManualIntent);
-      window.removeEventListener("wheel", markManualIntent);
-      window.removeEventListener("touchstart", markManualIntent);
+      window.removeEventListener("pointerdown", onManualIntent);
+      window.removeEventListener("wheel", markScrollIntent);
+      window.removeEventListener("touchstart", markScrollIntent);
+      window.removeEventListener("keydown", markKeyboardIntent);
       window.removeEventListener("click", onManualIntent);
       window.removeEventListener("scroll", onScroll);
     };
@@ -314,10 +391,10 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting || !userScrollIntentRef.current) continue;
-        if (entry.target === top) void loadPreviousPage();
-        if (entry.target === bottom) void loadNextPage();
+        if (entry.target === top && scrollDirectionRef.current === "up") void loadPreviousPage();
+        if (entry.target === bottom && scrollDirectionRef.current === "down") void loadNextPage();
       }
-    }, { rootMargin: "600px 0px", threshold: 0 });
+    }, { rootMargin: "45% 0px", threshold: 0 });
     observer.observe(top);
     observer.observe(bottom);
     return () => observer.disconnect();
@@ -361,6 +438,11 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     [activeMessageId, blockCache, expandedMessageIds.size],
   );
 
+  useEffect(() => {
+    loadPreviousActionRef.current = () => void loadPreviousPage();
+    loadNextActionRef.current = () => void loadNextPage();
+  });
+
   if (shareQuery.isLoading || !storageReady) {
     return <ShareState title="正在加载分享" detail="正在获取只读会话信息。" />;
   }
@@ -368,7 +450,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   if (!payload) return <ShareState title="分享不可用" detail="服务未返回分享信息。" />;
 
   return (
-    <main className="flex min-h-screen flex-col bg-page text-primary [--reader-sticky-top:5rem]">
+    <main className="flex min-h-screen flex-col bg-page text-primary [--reader-sticky-top:5rem] [overflow-anchor:none]">
       <header className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl flex-col justify-center px-4 sm:px-6">
           <p className="text-xs font-medium text-[#6b7280]">只读分享</p>
@@ -395,7 +477,10 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             }}
           />} content={<div className="reader-content-inner min-w-0 space-y-5">
           {payload.share.description ? <p className="text-sm leading-6 text-[#374151]">{payload.share.description}</p> : null}
-          <div ref={topSentinelRef} className="h-px" aria-hidden="true" />
+          <div ref={topSentinelRef} className={`flex items-center justify-center ${edgeLoading === "previous" || edgeError === "previous" ? "min-h-10" : "h-px"}`}>
+            {edgeLoading === "previous" ? <span className="text-sm text-secondary">{t("loadingEarlier")}</span> : null}
+            {edgeError === "previous" ? <button type="button" onClick={() => void loadPreviousPage()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryEarlier")}</button> : null}
+          </div>
           {initialWindowQuery.isLoading ? <ShareState title="正在加载消息" detail="正在读取首个消息窗口。" /> : null}
           {messages.map((message) => {
             const cached = blockCache[message.id];
@@ -413,7 +498,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
                 hasMoreBlocks={Boolean(bounds && bounds.max < message.block_count - 1)}
                 onLoadPreviousBlocks={async () => {
                   if (!bounds) return;
-                  await ensureMessageBlocks(message.id, Math.max(0, bounds.min - BLOCK_PAGE_SIZE));
+                  await ensureMessageBlocks(message.id, Math.max(0, bounds.min - BLOCK_PAGE_SIZE), true);
                 }}
                 onLoadMoreBlocks={async () => {
                   if (!bounds) return;
@@ -422,9 +507,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               />
             );
           })}
-          <div ref={bottomSentinelRef} className="h-px" aria-hidden="true" />
+          <div ref={bottomSentinelRef} className={`flex items-center justify-center ${edgeLoading === "next" || edgeError === "next" ? "min-h-10" : "h-px"}`}>
+            {edgeLoading === "next" ? <span className="text-sm text-secondary">{t("loadingLater")}</span> : null}
+            {edgeError === "next" ? <button type="button" onClick={() => void loadNextPage()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryLater")}</button> : null}
+          </div>
           <div aria-hidden="true" className="h-[calc(100vh-6rem)] min-h-72" />
-        </div>} toc={<div className="h-full overflow-y-auto">
+        </div>} toc={<div className="h-full">
           <ConversationToc
             conversationId={payload.conversation.id}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}
@@ -468,37 +556,60 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   );
 
   async function loadPreviousPage() {
-    if (loadingPreviousRef.current || minOffsetRef.current <= 0) return;
+    const current = loadedWindowRef.current;
+    if (loadingPreviousRef.current || !current.hasPrevious) return;
     loadingPreviousRef.current = true;
-    const anchor = Array.from(document.querySelectorAll<HTMLElement>("article[data-message-id]"))
-      .find((article) => article.getBoundingClientRect().bottom > 8);
-    const anchorOffset = anchor?.getBoundingClientRect().top ?? null;
+    setEdgeLoading("previous");
+    setEdgeError(null);
+    const generation = current.generation;
     try {
-      const offset = Math.max(0, minOffsetRef.current - PAGE_SIZE);
-      const page = await getSharedMessageWindow(token, { offset, limit: minOffsetRef.current - offset });
-      mergeWindow(page);
-      if (anchor && anchorOffset !== null) {
-        stabilizeMountedTarget({
-          root: null,
-          targetId: anchor.id,
-          offset: anchorOffset,
-          durationMs: 1200,
-        });
-      }
+      const offset = Math.max(0, current.startOffset - PAGE_SIZE);
+      const page = await getSharedMessageWindow(token, { offset, limit: current.startOffset - offset });
+      if (loadedWindowRef.current.generation !== generation) return;
+      const anchor = captureScrollAnchor(null, ACTIVE_READING_OFFSET);
+      const intentSequence = scrollIntentSequenceRef.current;
+      applyLoadedWindow(prependLoadedWindow(loadedWindowRef.current, page));
+      if (anchor) await restoreScrollAnchor({
+        root: null,
+        anchor,
+        tokenIsCurrent: () => loadedWindowRef.current.generation === generation && scrollIntentSequenceRef.current === intentSequence,
+      });
+    } catch {
+      if (loadedWindowRef.current.generation === generation) setEdgeError("previous");
     } finally {
       loadingPreviousRef.current = false;
+      setEdgeLoading((currentLoading) => currentLoading === "previous" ? null : currentLoading);
     }
   }
 
   async function loadNextPage() {
-    if (loadingNextRef.current || maxOffsetRef.current >= totalRef.current) return;
+    const current = loadedWindowRef.current;
+    if (loadingNextRef.current || !current.hasMore) return;
     loadingNextRef.current = true;
+    setEdgeLoading("next");
+    setEdgeError(null);
+    const generation = current.generation;
     try {
-      mergeWindow(await getSharedMessageWindow(token, { offset: maxOffsetRef.current, limit: PAGE_SIZE }));
+      const page = await getSharedMessageWindow(token, { offset: current.endOffset, limit: PAGE_SIZE });
+      if (loadedWindowRef.current.generation !== generation) return;
+      const anchor = captureScrollAnchor(null, ACTIVE_READING_OFFSET);
+      const intentSequence = scrollIntentSequenceRef.current;
+      const next = appendLoadedWindow(loadedWindowRef.current, page);
+      const trimmedTop = next.startOffset > loadedWindowRef.current.startOffset;
+      applyLoadedWindow(next);
+      if (trimmedTop && anchor) await restoreScrollAnchor({
+        root: null,
+        anchor,
+        tokenIsCurrent: () => loadedWindowRef.current.generation === generation && scrollIntentSequenceRef.current === intentSequence,
+      });
+    } catch {
+      if (loadedWindowRef.current.generation === generation) setEdgeError("next");
     } finally {
       loadingNextRef.current = false;
+      setEdgeLoading((currentLoading) => currentLoading === "next" ? null : currentLoading);
     }
   }
+
 }
 
 function ShareState({ title, detail }: { title: string; detail: string }) {

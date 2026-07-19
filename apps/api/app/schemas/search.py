@@ -42,4 +42,5 @@ class MessageWindowResponse(BaseModel):
     limit: int
     offset: int
     total: int
+    has_previous: bool = False
     has_more: bool

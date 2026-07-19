@@ -117,6 +117,7 @@ export async function getConversationMessageWindow(
     offset?: number;
     anchorMessageId?: string;
     anchorOrderKey?: string;
+    anchorBefore?: number;
     contentMode?: "full" | "preview";
   } = {},
 ): Promise<MessageWindowResponse> {
@@ -130,6 +131,9 @@ export async function getConversationMessageWindow(
   }
   if (options.anchorOrderKey) {
     params.set("anchor_order_key", options.anchorOrderKey);
+  }
+  if (options.anchorBefore !== undefined) {
+    params.set("anchor_before", String(options.anchorBefore));
   }
   if (options.contentMode) {
     params.set("content_mode", options.contentMode);
@@ -523,13 +527,14 @@ export async function getSharedConversation(token: string): Promise<SharedConver
 
 export async function getSharedMessageWindow(
   token: string,
-  options: { offset?: number; limit?: number; anchorMessageId?: string } = {},
+  options: { offset?: number; limit?: number; anchorMessageId?: string; anchorBefore?: number } = {},
 ): Promise<MessageWindowResponse> {
   const params = new URLSearchParams({
     offset: String(options.offset ?? 0),
     limit: String(options.limit ?? 30),
   });
   if (options.anchorMessageId) params.set("anchor_message_id", options.anchorMessageId);
+  if (options.anchorBefore !== undefined) params.set("anchor_before", String(options.anchorBefore));
   return fetchJson<MessageWindowResponse>(
     `/api/shared/${encodeURIComponent(token)}/message-window?${params.toString()}`,
   );

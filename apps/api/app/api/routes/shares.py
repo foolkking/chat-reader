@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -102,15 +102,22 @@ def get_shared_messages(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=30, ge=1, le=100),
     anchor_message_id: uuid.UUID | None = None,
+    anchor_before: int | None = Query(default=None, ge=0, le=99),
     db: Session = Depends(get_db),
 ) -> MessageWindowResponse:
     try:
+        if anchor_before is not None and anchor_before >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="anchor_before must be smaller than limit.",
+            )
         return get_shared_message_window(
             db,
             token,
             offset=offset,
             limit=limit,
             anchor_message_id=anchor_message_id,
+            anchor_before=min(anchor_before if anchor_before is not None else 12, limit - 1),
         )
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

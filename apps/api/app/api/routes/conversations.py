@@ -469,6 +469,7 @@ def get_message_window(
     before_order_key: str | None = None,
     anchor_message_id: uuid.UUID | None = None,
     anchor_order_key: str | None = None,
+    anchor_before: int | None = Query(default=None, ge=0, le=199),
     content_mode: str = Query(default="full", pattern="^(full|preview)$"),
     db: Session = Depends(get_db),
 ) -> MessageWindowResponse:
@@ -481,6 +482,11 @@ def get_message_window(
         query = query.filter(Message.order_key < before_order_key)
     total = query.count()
     if anchor_message_id is not None or anchor_order_key is not None:
+        if anchor_before is not None and anchor_before >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="anchor_before must be smaller than limit.",
+            )
         anchor_order = _anchor_order_key(
             db=db,
             conversation_id=conversation_id,
@@ -490,7 +496,8 @@ def get_message_window(
             before_order_key=before_order_key,
         )
         before_anchor = query.filter(Message.order_key < anchor_order).count()
-        offset = max(0, min(max(total - limit, 0), before_anchor - limit // 2))
+        effective_anchor_before = min(anchor_before if anchor_before is not None else 12, limit - 1)
+        offset = max(0, min(max(total - limit, 0), before_anchor - effective_anchor_before))
     messages = query.order_by(Message.order_key.asc()).offset(offset).limit(limit).all()
     return MessageWindowResponse(
         items=[
@@ -500,6 +507,7 @@ def get_message_window(
         limit=limit,
         offset=offset,
         total=total,
+        has_previous=offset > 0,
         has_more=offset + len(messages) < total,
     )
 

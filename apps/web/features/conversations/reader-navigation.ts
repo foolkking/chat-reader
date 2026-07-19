@@ -1,4 +1,4 @@
-import type { NavigationResult } from "../../lib/types";
+import type { NavigationResult, ScrollAnchorSnapshot } from "../../lib/types";
 
 type NavigateMountedTargetOptions = {
   root: HTMLElement | null;
@@ -9,12 +9,12 @@ type NavigateMountedTargetOptions = {
   timeoutMs?: number;
 };
 
-type StabilizeMountedTargetOptions = {
+type RestoreScrollAnchorOptions = {
   root: HTMLElement | null;
-  targetId: string;
-  offset: number;
+  anchor: ScrollAnchorSnapshot;
   tokenIsCurrent?: () => boolean;
-  durationMs?: number;
+  minimumMs?: number;
+  timeoutMs?: number;
 };
 
 export async function navigateMountedTarget({
@@ -50,62 +50,86 @@ export async function navigateMountedTarget({
   return { ok: false, targetId: target.id, reason: "target-not-aligned" };
 }
 
-export function stabilizeMountedTarget({
-  root,
-  targetId,
-  offset,
-  tokenIsCurrent = () => true,
-  durationMs = 2500,
-}: StabilizeMountedTargetOptions): () => void {
-  const target = document.getElementById(targetId);
-  if (!target) return () => undefined;
+export function captureScrollAnchor(
+  root: HTMLElement | null,
+  readingLineOffset: number,
+): ScrollAnchorSnapshot | null {
+  const rootTop = root?.getBoundingClientRect().top ?? 0;
+  const readingLine = rootTop + readingLineOffset;
+  const scope: ParentNode = root ?? document;
+  const articles = Array.from(scope.querySelectorAll<HTMLElement>("article[data-message-id]"));
+  const article = articles.find((item) => {
+    const rect = item.getBoundingClientRect();
+    return rect.top <= readingLine && rect.bottom >= readingLine;
+  }) ?? articles.find((item) => item.getBoundingClientRect().bottom > readingLine);
+  if (!article) return null;
+  const blocks = Array.from(article.querySelectorAll<HTMLElement>("[data-block-index]"));
+  const block = blocks.find((item) => {
+    const rect = item.getBoundingClientRect();
+    return rect.top <= readingLine && rect.bottom >= readingLine;
+  });
+  const target = block ?? article;
+  if (!target.id) return null;
+  return {
+    targetId: target.id,
+    offset: target.getBoundingClientRect().top - rootTop,
+  };
+}
 
-  let stopped = false;
+export async function restoreScrollAnchor({
+  root,
+  anchor,
+  tokenIsCurrent = () => true,
+  minimumMs = 320,
+  timeoutMs = 1500,
+}: RestoreScrollAnchorOptions): Promise<boolean> {
+  const target = document.getElementById(anchor.targetId);
+  if (!target || !tokenIsCurrent()) return false;
+  const startedAt = window.performance.now();
+  let lastChangeAt = startedAt;
   let frame = 0;
-  const scrollTarget: HTMLElement | Window = root ?? window;
+  let stopped = false;
   const observedLayout = target.closest<HTMLElement>(".reader-content-inner") ?? target.parentElement;
 
-  const stop = () => {
-    if (stopped) return;
-    stopped = true;
-    if (frame) window.cancelAnimationFrame(frame);
-    observer.disconnect();
-    window.clearInterval(intervalId);
-    window.clearTimeout(timeoutId);
-    scrollTarget.removeEventListener("wheel", stop);
-    scrollTarget.removeEventListener("touchstart", stop);
-    scrollTarget.removeEventListener("pointerdown", stop);
-  };
-
-  const correct = () => {
-    if (stopped || !tokenIsCurrent() || !target.isConnected) {
-      stop();
-      return;
-    }
-    const rootTop = root?.getBoundingClientRect().top ?? 0;
-    const delta = target.getBoundingClientRect().top - (rootTop + offset);
-    if (Math.abs(delta) <= 1) return;
-    if (root) root.scrollTop += delta;
-    else window.scrollBy({ top: delta, behavior: "auto" });
-  };
-
-  const scheduleCorrection = () => {
-    if (frame) window.cancelAnimationFrame(frame);
-    frame = window.requestAnimationFrame(() => {
+  return new Promise((resolve) => {
+    const finish = (restored: boolean) => {
+      if (stopped) return;
+      stopped = true;
+      if (frame) window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      resolve(restored);
+    };
+    const check = () => {
       frame = 0;
-      correct();
+      if (!tokenIsCurrent() || !target.isConnected) {
+        finish(false);
+        return;
+      }
+      const rootTop = root?.getBoundingClientRect().top ?? 0;
+      const delta = target.getBoundingClientRect().top - (rootTop + anchor.offset);
+      if (Math.abs(delta) > 0.5) {
+        if (root) root.scrollTop += delta;
+        else window.scrollBy({ top: delta, behavior: "auto" });
+        lastChangeAt = window.performance.now();
+      }
+      const now = window.performance.now();
+      if (now - startedAt >= minimumMs && now - lastChangeAt >= 120) {
+        finish(true);
+        return;
+      }
+      if (now - startedAt >= timeoutMs) {
+        finish(true);
+        return;
+      }
+      frame = window.requestAnimationFrame(check);
+    };
+    const observer = new ResizeObserver(() => {
+      lastChangeAt = window.performance.now();
+      if (!frame) frame = window.requestAnimationFrame(check);
     });
-  };
-
-  const observer = new ResizeObserver(scheduleCorrection);
-  if (observedLayout) observer.observe(observedLayout);
-  const intervalId = window.setInterval(correct, 120);
-  const timeoutId = window.setTimeout(stop, durationMs);
-  scrollTarget.addEventListener("wheel", stop, { passive: true });
-  scrollTarget.addEventListener("touchstart", stop, { passive: true });
-  scrollTarget.addEventListener("pointerdown", stop, { passive: true });
-  scheduleCorrection();
-  return stop;
+    if (observedLayout) observer.observe(observedLayout);
+    frame = window.requestAnimationFrame(check);
+  });
 }
 
 async function waitForTarget(

@@ -128,6 +128,7 @@ def get_shared_message_window(
     offset: int,
     limit: int,
     anchor_message_id: uuid.UUID | None,
+    anchor_before: int,
 ) -> MessageWindowResponse:
     share = _get_accessible_share(db, token)
     query = _share_message_query(db, share)
@@ -137,13 +138,14 @@ def get_shared_message_window(
         if anchor is None:
             raise ShareError("Shared message not found.", HTTPStatus.NOT_FOUND)
         before_anchor = query.filter(Message.order_key < anchor.order_key).count()
-        offset = max(0, min(max(total - limit, 0), before_anchor - limit // 2))
+        offset = max(0, min(max(total - limit, 0), before_anchor - anchor_before))
     messages = query.order_by(Message.order_key.asc()).offset(offset).limit(limit).all()
     return MessageWindowResponse(
         items=[_message_item(db, message, ordinal=offset + index + 1) for index, message in enumerate(messages)],
         limit=limit,
         offset=offset,
         total=total,
+        has_previous=offset > 0,
         has_more=offset + len(messages) < total,
     )
 

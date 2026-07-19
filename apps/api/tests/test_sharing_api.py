@@ -161,6 +161,14 @@ def test_shared_paged_endpoints_enforce_selected_scope(client: TestClient) -> No
     assert index.json()["total"] == 1
     assert index.json()["items"][0]["message_id"] == selected_message_id
 
+    selected_window = client.get(
+        f"/api/shared/{token}/message-window",
+        params={"limit": 1, "anchor_message_id": selected_message_id},
+    )
+    assert selected_window.status_code == 200
+    assert selected_window.json()["has_previous"] is False
+    assert selected_window.json()["has_more"] is False
+
     hidden_window = client.get(
         f"/api/shared/{token}/message-window",
         params={"anchor_message_id": hidden_message_id},

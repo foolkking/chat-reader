@@ -374,7 +374,26 @@ export type MessageWindowResponse = {
   limit: number;
   offset: number;
   total: number;
+  has_previous: boolean;
   has_more: boolean;
+};
+
+export type WindowGeneration = number;
+export type ScrollDirection = "up" | "down" | null;
+
+export type LoadedMessageWindow = {
+  items: MessageListItem[];
+  startOffset: number;
+  endOffset: number;
+  total: number;
+  hasPrevious: boolean;
+  hasMore: boolean;
+  generation: WindowGeneration;
+};
+
+export type ScrollAnchorSnapshot = {
+  targetId: string;
+  offset: number;
 };
 
 export type MessageSplitResponse = {

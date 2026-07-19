@@ -48,6 +48,7 @@ export function ConversationIndex({
   const [remotePage, setRemotePage] = useState<DialogueIndexResponse | null>(null);
   const [pageLoading, setPageLoading] = useState(false);
   const sectionRef = useRef<HTMLElement | null>(null);
+  const listRef = useRef<HTMLElement | null>(null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
   const openTimerRef = useRef<number | null>(null);
   const closeTimerRef = useRef<number | null>(null);
@@ -101,7 +102,19 @@ export function ConversationIndex({
     [activeOrdinal, hideAfter, hideBefore, items, rangeMode],
   );
 
-  useEffect(() => { activeRowRef.current?.scrollIntoView({ block: "nearest" }); }, [activeMessageId, visibleItems]);
+  useEffect(() => {
+    const list = listRef.current;
+    const row = activeRowRef.current;
+    if (!list || !row) return;
+    const frame = window.requestAnimationFrame(() => {
+      const listRect = list.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      const desiredTop = list.scrollTop + rowRect.top - listRect.top - list.clientHeight / 3;
+      const maxTop = Math.max(0, list.scrollHeight - list.clientHeight);
+      list.scrollTop = Math.max(0, Math.min(maxTop, desiredTop));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeMessageId, activeOrdinal, mode, panelState, rangeMode, remotePage?.offset, visibleItems.length]);
 
   if (messages === undefined && (!ready || indexQuery.isLoading) && !remotePage) return <IndexShell mode={mode} label={t("loadingIndex")} />;
   if (messages === undefined && indexQuery.isError && !remotePage) return <IndexShell mode={mode} label={t("indexFailed")} />;
@@ -142,7 +155,7 @@ export function ConversationIndex({
     return (
       <section ref={sectionRef} className="flex min-h-0 flex-1 flex-col" aria-label={t("dialogueIndex")}>
         <JumpForm />
-        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto pr-1">{rows}</div>
+        <div ref={(node) => { listRef.current = node; }} className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto pr-1">{rows}</div>
       </section>
     );
   }
@@ -175,12 +188,12 @@ export function ConversationIndex({
             <button type="button" onClick={() => { setShowFilter((value) => !value); setPanelState("pinned"); }} className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-sm text-secondary hover:bg-subtle"><SlidersHorizontal className="h-4 w-4" />{t("indexRange")}</button>
             {showFilter ? <FilterPopover rangeMode={rangeMode} hideBefore={hideBefore} hideAfter={hideAfter} onRangeModeChange={(value) => { setRangeMode(value); setPanelState("pinned"); }} onHideBeforeChange={setHideBefore} onHideAfterChange={setHideAfter} onClose={() => setShowFilter(false)} /> : null}
           </div>
-          <nav className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">{rows}</nav>
+          <nav ref={(node) => { listRef.current = node; }} className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">{rows}</nav>
         </div>
       ) : (
         <div className="flex h-full min-h-0 flex-col items-center rounded-xl bg-surface py-2 shadow-sm ring-1 ring-[var(--border)]">
           <button type="button" onClick={() => setPanelState("pinned")} className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary" aria-label={t("openIndex")} title={t("openIndex")}><ListTree className="h-4 w-4" /></button>
-          <nav className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">{rows}</nav>
+          <nav ref={(node) => { listRef.current = node; }} className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">{rows}</nav>
         </div>
       )}
     </section>
