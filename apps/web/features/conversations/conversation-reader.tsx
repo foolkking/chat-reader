@@ -3,9 +3,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ListTree, MoreHorizontal } from "lucide-react";
+import { Download, Layers3, ListTree, Merge, Scissors, Share2, X } from "lucide-react";
 import {
   getConversation,
+  getConversationDialogueIndex,
   getConversationMessageWindow,
   getReadingPosition,
   getMessageBlocks,
@@ -14,12 +15,9 @@ import {
   saveReadingPositionKeepalive,
   splitConversation,
 } from "../../lib/api";
-import type { LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, RenderBlockRead, ScrollDirection, TocItem } from "../../lib/types";
-import { ExportButton } from "../exporting/export-button";
+import type { LoadedMessageWindow, MessageListItem, MessageWindowResponse, NavigateTarget, NavigationResult, NeighborhoodExpansionState, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollDirection, TocItem } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
 import { ProjectSidebar } from "../projects/project-sidebar";
-import { PinButton } from "../reading/pin-button";
-import { ShareButton } from "../sharing/share-button";
 import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
@@ -28,6 +26,11 @@ import { useTranslations } from "../../components/preferences-provider";
 import { MessageItem } from "./message-item";
 import { captureScrollAnchor, navigateMountedTarget, restoreScrollAnchor } from "./reader-navigation";
 import { appendLoadedWindow, emptyLoadedWindow, prependLoadedWindow, replaceLoadedWindow } from "./reader-window";
+import { hasCompleteBlockSet, resolveNeighborhoodRange } from "./neighborhood-expansion";
+import { ReaderHeaderActionRail, type ReaderHeaderAction } from "../../components/reader-header-action-rail";
+import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
+import { ReaderPanelShell } from "../../components/reader-panel-shell";
+import { useMobileHeaderAutoHide } from "./use-mobile-header-auto-hide";
 
 const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
@@ -45,11 +48,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [showMobileActions, setShowMobileActions] = useState(false);
-  const [mobileHeaderVisible, setMobileHeaderVisible] = useState(true);
-  const lastMobileScrollTopRef = useRef(0);
-  const [showMobileIndex, setShowMobileIndex] = useState(false);
-  const [showMobileToc, setShowMobileToc] = useState(false);
+  const [desktopActionsExpanded, setDesktopActionsExpanded] = useState(false);
+  const [mobileActionsExpanded, setMobileActionsExpanded] = useState(false);
+  const [utilityPanel, setUtilityPanel] = useState<ReaderUtilityPanel>(null);
+  const [navigationTab, setNavigationTab] = useState<"dialogue" | "sections">("dialogue");
+  const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
   const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
     pending: false,
     error: null,
@@ -60,8 +63,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [pendingTargetMessageId, setPendingTargetMessageId] = useState<string | null>(targetMessageId);
   const [expandedHeavyMessageIds, setExpandedHeavyMessageIds] = useState<Set<string>>(new Set());
   const [blockCache, setBlockCache] = useState<Record<string, RenderBlockRead[]>>({});
-  const [expandAllHeavyBlocks, setExpandAllHeavyBlocks] = useState(false);
-  const [expandProgress, setExpandProgress] = useState({ current: 0, total: 0, active: false });
+  const [neighborhoodExpansion, setNeighborhoodExpansion] = useState<NeighborhoodExpansionState>({
+    active: false,
+    current: 0,
+    total: 0,
+    error: null,
+  });
   const [initialPaintReady, setInitialPaintReady] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadPreviousSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -87,6 +94,13 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const blockCacheRef = useRef<Record<string, RenderBlockRead[]>>({});
   const blockRequestsRef = useRef(new Map<string, Promise<RenderBlockRead[]>>());
   const userScrollIntentRef = useRef(false);
+  const neighborhoodExpansionRef = useRef({ active: false, generation: 0 });
+
+  const mobileHeaderVisible = useMobileHeaderAutoHide({
+    scrollRootRef: scrollContainerRef,
+    forcedVisible: mobileActionsExpanded || utilityPanel !== null,
+    resetKey: conversationId,
+  });
 
   const conversationQuery = useQuery({
     queryKey: ["conversation", conversationId],
@@ -121,7 +135,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     if (!root) return;
     const handleScroll = () => {
       const current = root.scrollTop;
-      const delta = current - lastMobileScrollTopRef.current;
+      const delta = current - (root.dataset.previousScrollTop ? Number(root.dataset.previousScrollTop) : current);
+      root.dataset.previousScrollTop = String(current);
       if (
         Math.abs(delta) > 1 &&
         !userScrollIntentRef.current &&
@@ -143,14 +158,6 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           loadNextActionRef.current();
         }
       }
-      if (window.innerWidth >= 768 || showMobileIndex || showMobileToc || showMobileActions) {
-        setMobileHeaderVisible(true);
-        lastMobileScrollTopRef.current = current;
-        return;
-      }
-      if (current < 24 || delta < -8) setMobileHeaderVisible(true);
-      else if (delta > 10 && current > 72) setMobileHeaderVisible(false);
-      lastMobileScrollTopRef.current = current;
     };
     const markScrollIntent = () => {
       userScrollIntentRef.current = true;
@@ -172,7 +179,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       root.removeEventListener("touchstart", markScrollIntent);
       window.removeEventListener("keydown", markKeyboardIntent);
     };
-  }, [showMobileActions, showMobileIndex, showMobileToc]);
+  }, []);
 
   const hasPrevious = loadedWindow.hasPrevious;
   const hasMore = loadedWindow.hasMore;
@@ -200,8 +207,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     userScrollIntentRef.current = false;
     scrollDirectionRef.current = null;
     scrollIntentSequenceRef.current += 1;
-    setExpandAllHeavyBlocks(false);
-    setExpandProgress({ current: 0, total: 0, active: false });
+    neighborhoodExpansionRef.current = { active: false, generation: neighborhoodExpansionRef.current.generation + 1 };
+    setNeighborhoodExpansion({ active: false, current: 0, total: 0, error: null });
     setInitialPaintReady(false);
     restoreAttemptedRef.current = false;
     restoreInProgressRef.current = false;
@@ -263,7 +270,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const loadPreviousWindow = useCallback(async () => {
     const root = scrollContainerRef.current;
     const current = loadedWindowRef.current;
-    if (!root || loadingPreviousRef.current || !current.hasPrevious) return;
+    if (!root || neighborhoodExpansionRef.current.active || loadingPreviousRef.current || !current.hasPrevious) return;
     loadingPreviousRef.current = true;
     setEdgeLoading("previous");
     setEdgeError(null);
@@ -302,7 +309,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const loadNextWindow = useCallback(async () => {
     const root = scrollContainerRef.current;
     const current = loadedWindowRef.current;
-    if (!root || loadingNextRef.current || !current.hasMore) return;
+    if (!root || neighborhoodExpansionRef.current.active || loadingNextRef.current || !current.hasMore) return;
     loadingNextRef.current = true;
     setEdgeLoading("next");
     setEdgeError(null);
@@ -345,6 +352,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
 
   const navigateToTarget = useCallback(
     async ({ messageId, blockIndex, alignmentOffset }: NavigateTarget): Promise<NavigationResult> => {
+      neighborhoodExpansionRef.current = {
+        active: false,
+        generation: neighborhoodExpansionRef.current.generation + 1,
+      };
+      setNeighborhoodExpansion((current) => current.active ? { ...current, active: false } : current);
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
       const generation = windowGenerationRef.current + 1;
@@ -736,32 +748,151 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     await queryClient.invalidateQueries({ queryKey: ["conversations"] });
   }
 
-  async function expandLoadedHeavyMessages() {
-    const heavyMessages = messages.filter(
-      (message) => message.is_heavy && !expandedHeavyMessageIds.has(message.id),
-    );
-    if (heavyMessages.length === 0) {
-      setExpandAllHeavyBlocks(true);
+  async function mergeSelectedMessages() {
+    if (selectedIds.length < 2) return;
+    if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) return;
+    await mergeMessages({ messageIds: selectedIds });
+    setSelectedMessageIds(new Set());
+    await refreshReader();
+  }
+
+  function openUtilityPanel(panel: Exclude<ReaderUtilityPanel, null | "navigation">) {
+    setDesktopActionsExpanded(false);
+    setMobileActionsExpanded(false);
+    if (window.innerWidth < 768) {
+      setShowShare(false);
+      setShowExport(false);
+      setUtilityPanel(panel);
       return;
     }
-    setExpandAllHeavyBlocks(true);
-    setExpandProgress({ current: 0, total: heavyMessages.length, active: true });
-    let completed = 0;
-    for (let index = 0; index < heavyMessages.length; index += 2) {
-      const batch = heavyMessages.slice(index, index + 2);
-      await Promise.all(batch.map((message) => ensureMessageBlocks(message)));
-      setExpandedHeavyMessageIds((current) => {
-        const next = new Set(current);
-        for (const message of batch) {
-          next.add(message.id);
-        }
-        return next;
-      });
-      completed += batch.length;
-      setExpandProgress({ current: completed, total: heavyMessages.length, active: true });
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    setUtilityPanel(null);
+    setShowShare(panel === "share");
+    setShowExport(panel === "export");
+  }
+
+  function openNavigation(tab: "dialogue" | "sections") {
+    setNavigationTab(tab);
+    setMobileNavigation({ pending: false, error: null });
+    setDesktopActionsExpanded(false);
+    setMobileActionsExpanded(false);
+    setUtilityPanel("navigation");
+  }
+
+  async function expandNeighborhood() {
+    const currentMessageId = resolveActiveMessageId(scrollContainerRef.current) ?? activeMessageId;
+    const root = scrollContainerRef.current;
+    if (neighborhoodExpansionRef.current.active) {
+      neighborhoodExpansionRef.current = {
+        active: false,
+        generation: neighborhoodExpansionRef.current.generation + 1,
+      };
+      setNeighborhoodExpansion((current) => ({ ...current, active: false }));
+      return;
     }
-    setExpandProgress((current) => ({ ...current, active: false }));
+    if (!currentMessageId || !root) return;
+
+    const expansionGeneration = neighborhoodExpansionRef.current.generation + 1;
+    neighborhoodExpansionRef.current = { active: true, generation: expansionGeneration };
+    navigationTokenRef.current += 1;
+    setNeighborhoodExpansion({ active: true, current: 0, total: 0, error: null });
+    setEdgeLoading(null);
+    setEdgeError(null);
+
+    try {
+      const indexPage = await getConversationDialogueIndex(conversationId, {
+        anchorMessageId: currentMessageId,
+        limit: 200,
+      });
+      if (!isCurrentExpansion(expansionGeneration)) return;
+      const range = resolveNeighborhoodRange(indexPage.items, currentMessageId);
+      if (!range) throw new Error("The active conversation turn could not be located.");
+
+      const messagePage = await loadCompleteMessageRange(conversationId, range.offset, range.limit);
+      if (!isCurrentExpansion(expansionGeneration)) return;
+      const preparedCache: Record<string, RenderBlockRead[]> = {};
+      let completed = 0;
+      setNeighborhoodExpansion({
+        active: true,
+        current: 0,
+        total: messagePage.items.length,
+        error: null,
+      });
+
+      await runWithConcurrency(messagePage.items, 2, async (message) => {
+        const cached = blockCacheRef.current[message.id];
+        if (hasCompleteBlockSet(cached, message.block_count)) {
+          preparedCache[message.id] = cached ?? [];
+        } else {
+          const blocks: RenderBlockRead[] = [];
+          for (let start = 0; start < message.block_count; start += 200) {
+            const page = await getMessageBlocks(message.id, {
+              start,
+              limit: Math.min(200, message.block_count - start),
+            });
+            if (page.length === 0 && start < message.block_count) {
+              throw new Error(`Blocks for message ${message.id} are incomplete.`);
+            }
+            blocks.push(...page);
+          }
+          preparedCache[message.id] = mergeBlockWindows([], blocks);
+        }
+        completed += 1;
+        if (isCurrentExpansion(expansionGeneration)) {
+          setNeighborhoodExpansion({
+            active: true,
+            current: completed,
+            total: messagePage.items.length,
+            error: null,
+          });
+        }
+      });
+      if (!isCurrentExpansion(expansionGeneration)) return;
+
+      const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+      const nextGeneration = windowGenerationRef.current + 1;
+      windowGenerationRef.current = nextGeneration;
+      initialWindowAppliedRef.current = true;
+      const nextWindow = replaceLoadedWindow(messagePage, nextGeneration);
+      const expandedIds = new Set(
+        messagePage.items.filter((message) => message.block_count > 0).map((message) => message.id),
+      );
+      blockCacheRef.current = preparedCache;
+      applyLoadedWindow(nextWindow);
+      setBlockCache(preparedCache);
+      setExpandedHeavyMessageIds(expandedIds);
+
+      if (anchor) {
+        await restoreScrollAnchor({
+          root,
+          anchor,
+          tokenIsCurrent: () => isCurrentExpansion(expansionGeneration),
+          minimumMs: 420,
+          timeoutMs: 2400,
+        });
+      }
+      if (!isCurrentExpansion(expansionGeneration)) return;
+      setNeighborhoodExpansion({
+        active: false,
+        current: messagePage.items.length,
+        total: messagePage.items.length,
+        error: null,
+      });
+    } catch (error) {
+      if (!isCurrentExpansion(expansionGeneration)) return;
+      setNeighborhoodExpansion((current) => ({
+        ...current,
+        active: false,
+        error: error instanceof Error ? error.message : t("connectionFailed"),
+      }));
+    } finally {
+      if (neighborhoodExpansionRef.current.generation === expansionGeneration) {
+        neighborhoodExpansionRef.current.active = false;
+      }
+    }
+  }
+
+  function isCurrentExpansion(generation: number) {
+    return neighborhoodExpansionRef.current.active && neighborhoodExpansionRef.current.generation === generation;
   }
 
   async function ensureMessageBlocks(message: MessageListItem): Promise<RenderBlockRead[]> {
@@ -865,49 +996,77 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     return <ReaderState title="Conversation unavailable" detail="The API returned no conversation payload." />;
   }
 
-  const headerActions = (
-    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <button
-        type="button"
-        onClick={() => void expandLoadedHeavyMessages()}
-        disabled={expandProgress.active}
-        className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-70"
-      >
-        {expandProgress.active ? <Spinner /> : null}
-        {expandProgress.active ? `${expandProgress.current} / ${expandProgress.total}` : t("expandLoaded")}
-      </button>
-      <PinButton scope="global" conversationId={conversation.id} isPinned={conversation.is_global_pinned} />
-      <ShareButton isOpen={showShare} onToggle={() => setShowShare((current) => !current)} />
-      <ExportButton isOpen={showExport} onToggle={() => setShowExport((current) => !current)} />
-      {selectedIds.length >= 2 ? (
-        <button
-          type="button"
-          onClick={async () => {
-            if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) return;
-            await mergeMessages({ messageIds: selectedIds });
-            setSelectedMessageIds(new Set());
-            await refreshReader();
-          }}
-          className="inline-flex h-9 shrink-0 items-center rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle"
-        >
-          {t("mergeSelected")}
-        </button>
-      ) : null}
-      {selectedOrderedIds.length > 0 ? (
-        <button
-          type="button"
-          onClick={() => void splitSelectedConversationRange()}
-          className="inline-flex h-9 shrink-0 items-center rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle"
-        >
-          {t("splitToNewConversation")}
-        </button>
-      ) : null}
+  const headerActions: ReaderHeaderAction[] = [
+    {
+      id: "expand-nearby",
+      label: neighborhoodExpansion.active
+        ? t("expandingNearby", { current: neighborhoodExpansion.current, total: neighborhoodExpansion.total })
+        : t("expandNearbyHint"),
+      icon: Layers3,
+      busy: neighborhoodExpansion.active,
+      onSelect: () => void expandNeighborhood(),
+      closeOnSelect: !neighborhoodExpansion.active,
+    },
+    {
+      id: "share",
+      label: t("share"),
+      icon: Share2,
+      onSelect: () => openUtilityPanel("share"),
+    },
+    {
+      id: "export",
+      label: t("export"),
+      icon: Download,
+      onSelect: () => openUtilityPanel("export"),
+    },
+    ...(selectedIds.length >= 2 ? [{
+      id: "merge-selected",
+      label: t("mergeSelected"),
+      icon: Merge,
+      onSelect: () => void mergeSelectedMessages(),
+    }] : []),
+    ...(selectedOrderedIds.length > 0 ? [{
+      id: "split-selected",
+      label: t("splitToNewConversation"),
+      icon: Scissors,
+      onSelect: () => void splitSelectedConversationRange(),
+    }] : []),
+  ];
+
+  const navigationTabs = (
+    <div className="flex items-center gap-2">
+      <div className="grid min-w-0 flex-1 grid-cols-2 rounded-lg bg-subtle p-1">
+        <button type="button" onClick={() => setNavigationTab("dialogue")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${navigationTab === "dialogue" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("dialogueTab")}</button>
+        <button type="button" onClick={() => setNavigationTab("sections")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${navigationTab === "sections" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("sectionsTab")}</button>
+      </div>
+      <button type="button" onClick={() => setUtilityPanel(null)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")} title={t("close")}><X className="h-5 w-5" /></button>
     </div>
+  );
+
+  const navigationContent = navigationTab === "dialogue" ? (
+    <ConversationIndex conversationId={conversationId} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" onNavigate={async (item) => {
+      setMobileNavigation({ pending: true, error: null });
+      const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
+      setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
+      if (result.ok) setUtilityPanel(null);
+    }} />
+  ) : (
+    <ConversationToc conversationId={conversationId} activeMessageId={activeMessageId} activeItems={activeTocItems} activeBlockId={activeBlockId} observerKey={tocObserverKey} mode="sheet" onNavigate={async (item) => {
+      setMobileNavigation({ pending: true, error: null });
+      const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, source: "section-toc" });
+      setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
+      if (result.ok) setUtilityPanel(null);
+    }} />
   );
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar currentProjectId={projectContextId} readerMode />
+      <ProjectSidebar
+        currentProjectId={projectContextId}
+        readerMode
+        mobileOpenSignal={mobileSidebarOpenSignal}
+        showMobileTrigger={false}
+      />
       <section className="relative flex min-w-0 flex-1 flex-col">
         <header className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-200 md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
           {loadingProgress < 100 ? (
@@ -915,49 +1074,60 @@ export function ConversationReader({ conversationId }: { conversationId: string 
               <div className="h-full bg-[#10a37f] transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
             </div>
           ) : null}
-          <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 pl-16 md:px-6 md:pl-6">
-            {showMobileActions ? headerActions : (
-              <div className="min-w-0 flex-1">
+          <div className="hidden min-h-14 items-center justify-between gap-3 px-6 py-2 md:flex">
+            <div className="min-w-0 flex-1">
                 <h1 className="truncate text-base font-semibold text-primary">
                   {conversation.display_title || conversation.title}
                 </h1>
                 <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-secondary">
                   <span>{loadedLabel}</span>
                 </div>
-              </div>
-            )}
-            <button type="button" onClick={() => setShowMobileIndex(true)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
+            </div>
+            <button type="button" onClick={() => openNavigation("dialogue")} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
+            <ReaderHeaderActionRail
+              expanded={desktopActionsExpanded}
+              onExpandedChange={setDesktopActionsExpanded}
+              actions={headerActions}
+              triggerLabel={t("messageActions")}
+              closeLabel={t("collapseActions")}
+            />
+          </div>
+          <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
             <button
               type="button"
-              aria-label={t("messageActions")}
-              aria-expanded={showMobileActions}
-              onClick={() => setShowMobileActions((current) => !current)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-subtle md:inline-flex"
+              onClick={() => setMobileSidebarOpenSignal((value) => value + 1)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
+              aria-label={t("openSidebar")}
+              title={t("openSidebar")}
             >
-              <MoreHorizontal className="h-5 w-5" />
+              CR
             </button>
-            <div className="flex shrink-0 gap-2 md:hidden">
+            <div className={`min-w-0 flex-1 transition-[opacity,transform,max-width] duration-200 ${mobileActionsExpanded ? "max-w-0 -translate-x-3 overflow-hidden opacity-0" : "max-w-full translate-x-0 opacity-100"}`}>
+              <h1 className="truncate text-[15px] font-semibold text-primary">{conversation.display_title || conversation.title}</h1>
+              <p className="truncate text-xs text-secondary">{loadedLabel}</p>
+            </div>
+            {!mobileActionsExpanded ? (
               <button
                 type="button"
-                onClick={() => setShowMobileIndex(true)}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-ui bg-surface text-secondary"
+                onClick={() => openNavigation("dialogue")}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary"
                 aria-label={t("readerNavigation")}
                 title={t("readerNavigation")}
               >
                 <ListTree className="h-5 w-5" />
               </button>
-              <button
-                type="button"
-                onClick={() => setShowMobileActions((current) => !current)}
-                className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]"
-                aria-label={t("more")}
-                aria-expanded={showMobileActions}
-                title={t("more")}
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
-            </div>
+            ) : null}
+            <ReaderHeaderActionRail
+              expanded={mobileActionsExpanded}
+              onExpandedChange={setMobileActionsExpanded}
+              actions={headerActions.slice(0, 3)}
+              triggerLabel={t("more")}
+              closeLabel={t("collapseActions")}
+              compact
+            />
           </div>
+          {neighborhoodExpansion.active ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-secondary" role="status">{t("expandingNearby", { current: neighborhoodExpansion.current, total: neighborhoodExpansion.total })}</div> : null}
+          {neighborhoodExpansion.error ? <div className="border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert">{t("expandNearbyFailed")}: {neighborhoodExpansion.error} <button type="button" onClick={() => void expandNeighborhood()} className="ml-2 font-semibold underline">{t("retry")}</button></div> : null}
         </header>
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
@@ -1010,7 +1180,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                           return next;
                         });
                       }}
-                      expandHeavyBlocks={expandAllHeavyBlocks || expandedHeavyMessageIds.has(message.id)}
+                      expandHeavyBlocks={expandedHeavyMessageIds.has(message.id)}
                       cachedBlocks={cachedMessageBlocks}
                       hasPreviousBlocks={Boolean(cachedBounds && cachedBounds.min > 0)}
                       hasMoreBlocks={Boolean(cachedBounds && cachedBounds.max < message.block_count - 1)}
@@ -1056,52 +1226,39 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           />
         </div>
       </section>
-      {showMobileIndex || showMobileToc ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-page 2xl:hidden md:bg-black/25">
-          <button type="button" aria-label={t("close")} className="absolute inset-0 hidden md:block" onClick={() => { setShowMobileIndex(false); setShowMobileToc(false); }} />
-          <section className="relative flex h-full w-full flex-col bg-page md:max-w-[28rem] md:border-l md:border-ui md:shadow-2xl" aria-label={t("readerNavigation")}>
-          <header className="flex shrink-0 items-center gap-3 border-b border-ui bg-surface px-[3vw] pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4">
-            <div className="grid min-w-0 flex-1 grid-cols-2 rounded-lg bg-subtle p-1">
-              <button type="button" onClick={() => { setShowMobileIndex(true); setShowMobileToc(false); }} className={`min-h-10 rounded-md px-3 text-sm font-medium ${showMobileIndex ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("dialogueTab")}</button>
-              <button type="button" onClick={() => { setShowMobileIndex(false); setShowMobileToc(true); }} className={`min-h-10 rounded-md px-3 text-sm font-medium ${showMobileToc ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("sectionsTab")}</button>
-            </div>
-            <button type="button" onClick={() => { setShowMobileIndex(false); setShowMobileToc(false); }} className="min-h-10 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{t("close")}</button>
-          </header>
-          <div className="shrink-0 px-[3vw] py-2" aria-live="polite">
-            {mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}
-            {mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-[3vw] pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {showMobileIndex ? (
-              <ConversationIndex conversationId={conversationId} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" onNavigate={async (item) => {
-                setMobileNavigation({ pending: true, error: null });
-                const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
-                setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-                if (result.ok) setShowMobileIndex(false);
-              }} />
-            ) : (
-              <ConversationToc conversationId={conversationId} activeMessageId={activeMessageId} activeItems={activeTocItems} activeBlockId={activeBlockId} observerKey={tocObserverKey} mode="sheet" onNavigate={async (item) => {
-                setMobileNavigation({ pending: true, error: null });
-                const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, source: "section-toc" });
-                setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-                if (result.ok) setShowMobileToc(false);
-              }} />
-            )}
-          </div>
+      <MobileReaderSheet
+        open={utilityPanel === "navigation"}
+        onOpenChange={(open) => { if (!open) setUtilityPanel(null); }}
+        title={t("navigationTitle")}
+        header={navigationTabs}
+        status={<>{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</>}
+      >
+        {navigationContent}
+      </MobileReaderSheet>
+      {utilityPanel === "navigation" ? (
+        <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
+          <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => setUtilityPanel(null)} />
+          <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl" aria-label={t("readerNavigation")}>
+            <header className="shrink-0 border-b border-ui bg-surface p-4">{navigationTabs}</header>
+            <div className="shrink-0 px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationContent}</div>
           </section>
         </div>
       ) : null}
+      <MobileReaderSheet open={utilityPanel === "share"} onOpenChange={(open) => { if (!open) setUtilityPanel(null); }} title={t("shareConversation")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("shareConversation")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
+        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /></div>
+      </MobileReaderSheet>
+      <MobileReaderSheet open={utilityPanel === "export"} onOpenChange={(open) => { if (!open) setUtilityPanel(null); }} title={t("export")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("export")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
+        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /></div>
+      </MobileReaderSheet>
       {showShare || showExport ? (
-        <div className="fixed inset-0 z-40 flex justify-end bg-black/10">
-          <button type="button" aria-label="关闭面板" className="absolute inset-0" onClick={() => { setShowShare(false); setShowExport(false); }} />
-          <div
-            className={`relative z-10 grid h-full w-full gap-4 overflow-y-auto border-l border-[#e5e5e5] bg-white p-5 pt-14 shadow-2xl ${
-              showShare && showExport ? "max-w-[760px] lg:grid-cols-2" : "max-w-[440px]"
-            }`}
-          >
-            <button type="button" aria-label="关闭" onClick={() => { setShowShare(false); setShowExport(false); }} className="absolute right-4 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-xl text-[#6b7280] hover:bg-[#f3f4f6]">×</button>
-            {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-            {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+        <div className="fixed inset-0 z-40 hidden justify-end bg-black/15 md:flex">
+          <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => { setShowShare(false); setShowExport(false); }} />
+          <div className="relative z-10 flex h-full w-[min(30rem,38vw)] min-w-[24rem] border-l border-ui bg-raised shadow-2xl">
+            <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+              {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+              {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+            </ReaderPanelShell>
           </div>
         </div>
       ) : null}
@@ -1181,6 +1338,54 @@ function mergeBlockWindows(
     byIndex.set(block.block_index, block);
   }
   return Array.from(byIndex.values()).sort((left, right) => left.block_index - right.block_index);
+}
+
+async function loadCompleteMessageRange(
+  conversationId: string,
+  offset: number,
+  limit: number,
+): Promise<MessageWindowResponse> {
+  const items: MessageListItem[] = [];
+  let cursor = offset;
+  let remaining = limit;
+  let total = 0;
+  while (remaining > 0) {
+    const page = await getConversationMessageWindow(conversationId, {
+      includeBlocks: false,
+      offset: cursor,
+      limit: Math.min(200, remaining),
+      contentMode: "preview",
+    });
+    total = page.total;
+    items.push(...page.items);
+    if (page.items.length === 0) break;
+    cursor += page.items.length;
+    remaining -= page.items.length;
+  }
+  return {
+    items,
+    offset,
+    limit: items.length,
+    total,
+    has_previous: offset > 0,
+    has_more: offset + items.length < total,
+  };
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  task: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      await task(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()));
 }
 
 function resolveActiveMessageId(root: HTMLElement | null): string | null {

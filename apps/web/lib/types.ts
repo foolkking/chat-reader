@@ -11,6 +11,15 @@ export type ResolvedLocale = "zh-CN" | "en-US";
 export type ReaderWidthMode = "compact" | "standard" | "wide";
 export type DialogueIndexPanelState = "rail" | "preview" | "pinned";
 export type ReaderSidebarState = "collapsed" | "expanded";
+export type ReaderUtilityPanel = null | "navigation" | "share" | "export";
+export type HeaderActionRailState = "collapsed" | "expanded";
+
+export type NeighborhoodExpansionState = {
+  active: boolean;
+  current: number;
+  total: number;
+  error: string | null;
+};
 
 export type UserPreferenceRead = {
   theme_mode: ThemeMode;

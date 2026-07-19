@@ -34,7 +34,19 @@ import { useTranslations } from "../../components/preferences-provider";
 
 type DragConversation = { id: string; title: string; projectId: string | null };
 
-export function ProjectSidebar({ currentProjectId, onImportClick, readerMode = false }: { currentProjectId?: string; onImportClick?: () => void; readerMode?: boolean }) {
+export function ProjectSidebar({
+  currentProjectId,
+  onImportClick,
+  readerMode = false,
+  mobileOpenSignal = 0,
+  showMobileTrigger = true,
+}: {
+  currentProjectId?: string;
+  onImportClick?: () => void;
+  readerMode?: boolean;
+  mobileOpenSignal?: number;
+  showMobileTrigger?: boolean;
+}) {
   const t = useTranslations();
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -71,6 +83,10 @@ export function ProjectSidebar({ currentProjectId, onImportClick, readerMode = f
   useEffect(() => {
     if (currentProjectId) setExpandedProjects((current) => new Set(current).add(currentProjectId));
   }, [currentProjectId]);
+
+  useEffect(() => {
+    if (mobileOpenSignal > 0) setShowMobileDrawer(true);
+  }, [mobileOpenSignal]);
 
   useEffect(() => {
     if (!readerMode || currentProjectId) return;
@@ -138,7 +154,7 @@ export function ProjectSidebar({ currentProjectId, onImportClick, readerMode = f
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDrag(null)}>
-      <button type="button" aria-label={t("openSidebar")} data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-ui bg-surface text-sm font-semibold text-primary shadow-sm md:hidden">CR</button>
+      {showMobileTrigger ? <button type="button" aria-label={t("openSidebar")} data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-ui bg-surface text-sm font-semibold text-primary shadow-sm md:hidden">CR</button> : null}
       <ImportTaskMonitor placement="mobile" />
       {showMobileDrawer ? (
         <div className="fixed inset-0 z-50 md:hidden">

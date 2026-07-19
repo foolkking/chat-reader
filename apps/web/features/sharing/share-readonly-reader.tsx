@@ -17,6 +17,8 @@ import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
 import { useTranslations } from "../../components/preferences-provider";
+import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
+import { X } from "lucide-react";
 
 const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
@@ -25,8 +27,8 @@ const ANCHOR_BEFORE = 12;
 
 export function ShareReadonlyReader({ token }: { token: string }) {
   const t = useTranslations();
-  const [showMobileIndex, setShowMobileIndex] = useState(false);
-  const [showMobileToc, setShowMobileToc] = useState(false);
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const [navigationTab, setNavigationTab] = useState<"dialogue" | "sections">("dialogue");
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
   const messages = loadedWindow.items;
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
@@ -459,10 +461,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               {payload.share.title || payload.conversation.display_title || payload.conversation.title}
             </h1>
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => setShowMobileIndex(true)} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium 2xl:hidden">{t("readerNavigation")}</button>
-              {payload.capabilities.toc ? (
-                <button type="button" onClick={() => setShowMobileToc(true)} className="hidden min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium">{t("sectionToc")}</button>
-              ) : null}
+              <button type="button" onClick={() => { setNavigationTab("dialogue"); setNavigationOpen(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium 2xl:hidden">{t("readerNavigation")}</button>
             </div>
           </div>
         </div>
@@ -524,31 +523,32 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             }}
           />
         </div>} />
-      {showMobileIndex || showMobileToc ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-page 2xl:hidden md:bg-black/25">
-          <button type="button" aria-label={t("close")} className="absolute inset-0 hidden md:block" onClick={() => { setShowMobileIndex(false); setShowMobileToc(false); }} />
-          <section className="relative flex h-full w-full flex-col bg-page md:max-w-[28rem] md:border-l md:border-ui md:shadow-2xl" aria-label={t("readerNavigation")}>
-            <header className="flex shrink-0 items-center gap-3 border-b border-ui bg-surface px-[3vw] pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4">
-              <div className="grid min-w-0 flex-1 grid-cols-2 rounded-lg bg-subtle p-1">
-                <button type="button" onClick={() => { setShowMobileIndex(true); setShowMobileToc(false); }} className={`min-h-10 rounded-md px-3 text-sm font-medium ${showMobileIndex ? "bg-surface shadow-sm" : "text-secondary"}`}>{t("dialogueTab")}</button>
-                <button type="button" onClick={() => { setShowMobileIndex(false); setShowMobileToc(true); }} className={`min-h-10 rounded-md px-3 text-sm font-medium ${showMobileToc ? "bg-surface shadow-sm" : "text-secondary"}`}>{t("sectionsTab")}</button>
-              </div>
-              <button type="button" onClick={() => { setShowMobileIndex(false); setShowMobileToc(false); }} className="min-h-10 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{t("close")}</button>
-            </header>
-            <div className="shrink-0 px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">
-              {showMobileIndex ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => {
-                setMobileNavigation({ pending: true, error: null });
-                const result = await navigateToTarget(item.messageId);
-                setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-                if (result.ok) setShowMobileIndex(false);
-              }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeBlockId={activeBlockId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => {
-                setMobileNavigation({ pending: true, error: null });
-                const result = await navigateToTarget(item.message_id, item.block_index);
-                setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-                if (result.ok) setShowMobileToc(false);
-              }} />}
-            </div>
+      <MobileReaderSheet
+        open={navigationOpen}
+        onOpenChange={setNavigationOpen}
+        title={t("navigationTitle")}
+        header={<NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} />}
+        status={<>{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</>}
+      >
+        {navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => {
+          setMobileNavigation({ pending: true, error: null });
+          const result = await navigateToTarget(item.messageId);
+          setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
+          if (result.ok) setNavigationOpen(false);
+        }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeBlockId={activeBlockId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => {
+          setMobileNavigation({ pending: true, error: null });
+          const result = await navigateToTarget(item.message_id, item.block_index);
+          setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
+          if (result.ok) setNavigationOpen(false);
+        }} />}
+      </MobileReaderSheet>
+      {navigationOpen ? (
+        <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
+          <button type="button" className="absolute inset-0" aria-label={t("close")} onClick={() => setNavigationOpen(false)} />
+          <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
+            <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} /></header>
+            <div className="px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeBlockId={activeBlockId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget(item.message_id, item.block_index); if (result.ok) setNavigationOpen(false); }} />}</div>
           </section>
         </div>
       ) : null}
@@ -610,6 +610,27 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     }
   }
 
+}
+
+function NavigationTabs({
+  tab,
+  onTabChange,
+  onClose,
+}: {
+  tab: "dialogue" | "sections";
+  onTabChange: (tab: "dialogue" | "sections") => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations();
+  return (
+    <div className="flex items-center gap-2">
+      <div className="grid min-w-0 flex-1 grid-cols-2 rounded-lg bg-subtle p-1">
+        <button type="button" onClick={() => onTabChange("dialogue")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${tab === "dialogue" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("dialogueTab")}</button>
+        <button type="button" onClick={() => onTabChange("sections")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${tab === "sections" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("sectionsTab")}</button>
+      </div>
+      <button type="button" onClick={onClose} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="h-5 w-5" /></button>
+    </div>
+  );
 }
 
 function ShareState({ title, detail }: { title: string; detail: string }) {

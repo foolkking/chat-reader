@@ -67,11 +67,7 @@ export function SharePanel({
 
   return (
     <section className="min-w-0 overflow-x-hidden">
-      <div className="border-b border-[#e5e7eb] pb-4">
-        <h2 className="text-base font-semibold text-[#111827]">分享对话</h2>
-        <p className="mt-1 text-sm text-[#6b7280]">创建只读链接，并随时延长有效期或撤销访问。</p>
-      </div>
-      <div className="mt-3 grid gap-3">
+      <div className="grid gap-4">
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-secondary">{t("shareTheme")}<select value={shareTheme} onChange={(event) => setShareTheme(event.target.value as "light" | "dark")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label>
           <label className="text-sm text-secondary">{t("shareLanguage")}<select value={shareLocale} onChange={(event) => setShareLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label>
@@ -80,17 +76,17 @@ export function SharePanel({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="分享标题（可选）"
-          className="rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
+          className="rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]"
         />
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="说明（可选）"
-          className="min-h-20 rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
+          className="min-h-20 rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]"
         />
         <div>
-          <p className="mb-2 text-sm text-[#374151]">有效期</p>
-          <div className="grid grid-cols-4 rounded-lg bg-[#f3f4f6] p-1">
+          <p className="mb-2 text-sm text-secondary">有效期</p>
+          <div className="grid grid-cols-4 rounded-lg bg-subtle p-1">
             {([{"label":"7 天","value":"7d"},{"label":"30 天","value":"30d"},{"label":"永久","value":"never"},{"label":"自定义","value":"custom"}] as const).map((item) => <button key={item.value} type="button" onClick={() => setExpiryMode(item.value)} className={`min-h-9 rounded-md text-xs ${expiryMode === item.value ? "bg-white font-medium shadow-sm" : "text-[#6b7280]"}`}>{item.label}</button>)}
           </div>
         </div>
@@ -121,12 +117,12 @@ export function SharePanel({
           data-testid="create-share-button"
           onClick={submit}
           disabled={isCreating || (useSelection && selectedMessageIds.length === 0)}
-          className="rounded-xl bg-[#111827] px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-[#d1d5db]"
+        className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-45"
         >
           {isCreating ? "正在创建…" : "创建分享链接"}
         </button>
         {createdUrl ? (
-          <div className="rounded-xl bg-[#f7f7f8] p-3">
+          <div className="rounded-lg border border-ui bg-subtle p-3">
             <a
               data-testid="created-share-url"
               href={createdUrl}
