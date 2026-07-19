@@ -14,6 +14,7 @@ type RestoreScrollAnchorOptions = {
   anchor: ScrollAnchorSnapshot;
   tokenIsCurrent?: () => boolean;
   minimumMs?: number;
+  settleMs?: number;
   timeoutMs?: number;
 };
 
@@ -81,6 +82,7 @@ export async function restoreScrollAnchor({
   anchor,
   tokenIsCurrent = () => true,
   minimumMs = 320,
+  settleMs = 120,
   timeoutMs = 1500,
 }: RestoreScrollAnchorOptions): Promise<boolean> {
   const target = document.getElementById(anchor.targetId);
@@ -113,7 +115,7 @@ export async function restoreScrollAnchor({
         lastChangeAt = window.performance.now();
       }
       const now = window.performance.now();
-      if (now - startedAt >= minimumMs && now - lastChangeAt >= 120) {
+      if (now - startedAt >= minimumMs && now - lastChangeAt >= settleMs) {
         finish(true);
         return;
       }

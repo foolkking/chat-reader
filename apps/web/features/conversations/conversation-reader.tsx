@@ -866,8 +866,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           root,
           anchor,
           tokenIsCurrent: () => isCurrentExpansion(expansionGeneration),
-          minimumMs: 420,
-          timeoutMs: 2400,
+          minimumMs: 2500,
+          settleMs: 600,
+          timeoutMs: 8000,
         });
       }
       if (!isCurrentExpansion(expansionGeneration)) return;
