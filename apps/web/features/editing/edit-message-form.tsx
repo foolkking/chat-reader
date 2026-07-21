@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "../../components/preferences-provider";
 
 export function EditMessageForm({
   initialText,
@@ -11,6 +12,7 @@ export function EditMessageForm({
   onCancel: () => void;
   onSave: (text: string, reason?: string) => Promise<void>;
 }) {
+  const t = useTranslations();
   const [text, setText] = useState(initialText);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function EditMessageForm({
     try {
       await onSave(trimmedText, reason.trim() || undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save edit.");
+      setError(err instanceof Error ? err.message : t("unableSaveEdit"));
     } finally {
       setIsSaving(false);
     }
@@ -38,31 +40,31 @@ export function EditMessageForm({
       <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
-        className="min-h-48 w-full resize-y rounded-md border border-slate-300 bg-white p-3 font-mono text-sm leading-6 text-slate-950 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+        className="min-h-48 w-full resize-y rounded-lg border border-ui bg-surface p-3 font-mono text-sm leading-6 text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
       />
       <input
         value={reason}
         onChange={(event) => setReason(event.target.value)}
-        placeholder="Edit reason"
-        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+        placeholder={t("editReason")}
+        className="w-full rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
       />
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={submit}
           disabled={isSaving || !trimmedText || isUnchanged}
-          className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSaving ? "Saving" : "Save"}
+          {isSaving ? t("saving") : t("save")}
         </button>
         <button
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400"
+          className="rounded-lg border border-ui bg-surface px-3 py-2 text-sm font-medium text-primary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Cancel
+          {t("cancel")}
         </button>
       </div>
     </div>

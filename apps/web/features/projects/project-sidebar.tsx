@@ -13,7 +13,8 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, ChevronDown, ChevronRight, Folder, FolderOpen, GripVertical, Import, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Search, Settings } from "lucide-react";
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { Archive, ChevronDown, ChevronRight, Folder, FolderOpen, GripVertical, Import, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Settings } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,14 +26,22 @@ import {
   getProjects,
   moveConversationToProject,
   updateProject,
+  updateProjectOrder,
 } from "../../lib/api";
 import type { ConversationListItem, ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
 import { PreferencesPanel } from "../../components/preferences-panel";
 import { useTranslations } from "../../components/preferences-provider";
+import { usePreferences } from "../../components/preferences-provider";
+import { useImportDialog } from "../../components/import-dialog-provider";
+import { SidebarSearch } from "../search/sidebar-search";
+import { ProjectSortMenu } from "../../components/sort-menu";
+import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 type DragConversation = { id: string; title: string; projectId: string | null };
+type DragProject = { kind: "project"; id: string };
 
 export function ProjectSidebar({
   currentProjectId,
@@ -48,6 +57,8 @@ export function ProjectSidebar({
   showMobileTrigger?: boolean;
 }) {
   const t = useTranslations();
+  const { openImportDialog } = useImportDialog();
+  const { conversationSortMode, conversationSortDirection, projectSortMode, projectSortDirection } = usePreferences();
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const [name, setName] = useState("");
@@ -60,10 +71,18 @@ export function ProjectSidebar({
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
-  const projectsQuery = useQuery({ queryKey: ["projects"], queryFn: () => getProjects() });
+  const projectsQuery = useQuery({
+    queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
+  });
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", "active"],
-    queryFn: () => getConversations({ scope: "history" }),
+    queryKey: ["conversations", "active", conversationSortMode, conversationSortDirection],
+    queryFn: () => getConversations({
+      scope: "history",
+      sort: conversationSortMode,
+      direction: conversationSortDirection,
+      limit: 200,
+    }),
   });
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -111,11 +130,25 @@ export function ProjectSidebar({
   }
 
   function handleDragStart(event: DragStartEvent) {
-    const data = event.active.data.current as DragConversation | undefined;
+    const raw = event.active.data.current as (DragConversation & { kind?: string }) | undefined;
+    if (raw?.kind === "project") return;
+    const data = raw as DragConversation | undefined;
     if (data) setActiveDrag(data);
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
+    const projectDrag = event.active.data.current as DragProject | undefined;
+    if (projectDrag?.kind === "project") {
+      const targetId = String(event.over?.id ?? "").replace(/^project-order:/, "");
+      const oldIndex = projects.findIndex((project) => project.id === projectDrag.id);
+      const newIndex = projects.findIndex((project) => project.id === targetId);
+      if (projectSortMode === "custom" && oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
+        await updateProjectOrder(arrayMove(projects, oldIndex, newIndex).map((project) => project.id));
+        await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      }
+      setActiveDrag(null);
+      return;
+    }
     const data = event.active.data.current as DragConversation | undefined;
     const target = String(event.over?.id ?? "");
     setActiveDrag(null);
@@ -137,7 +170,10 @@ export function ProjectSidebar({
       conversationsError={conversationsQuery.isError ? conversationsQuery.error.message : null}
       expandedProjects={expandedProjects}
       toggleProject={(projectId) => setExpandedProjects((current) => toggleSet(current, projectId))}
-      onImportClick={() => { setShowMobileDrawer(false); onImportClick?.(); }}
+      onImportClick={() => {
+        setShowMobileDrawer(false);
+        (onImportClick ?? openImportDialog)();
+      }}
       showProjectForm={showProjectForm}
       setShowProjectForm={setShowProjectForm}
       name={name}
@@ -153,7 +189,7 @@ export function ProjectSidebar({
   );
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDrag(null)}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={(event) => void handleDragEnd(event)} onDragCancel={() => setActiveDrag(null)}>
       {showMobileTrigger ? <button type="button" aria-label={t("openSidebar")} data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-ui bg-surface text-sm font-semibold text-primary shadow-sm md:hidden">CR</button> : null}
       <ImportTaskMonitor placement="mobile" />
       {showMobileDrawer ? (
@@ -213,20 +249,20 @@ function SidebarContent(props: SidebarContentProps) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><Import className="h-4 w-4" /> {t("importData")}</button>
+        <SidebarSearch onNavigate={props.closeMobile} />
         <ImportTaskMonitor placement="sidebar" />
         <nav className="space-y-1">
           <NavLink href="/" label={t("conversations")} active={props.pathname === "/"} icon={<FolderOpen className="h-4 w-4" />} onClick={props.closeMobile} />
-          <NavLink href="/search" label={t("search")} active={props.pathname.startsWith("/search")} icon={<Search className="h-4 w-4" />} onClick={props.closeMobile} />
           <NavLink href="/archived" label={t("archived")} active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
         </nav>
 
         <div className="mt-5">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-semibold text-secondary">{t("projects")}</h2>
-            <button type="button" aria-label="Create project" title="Create project" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-white"><Plus className="h-4 w-4" /></button>
+            <div className="flex items-center gap-1"><ProjectSortMenu /><button type="button" aria-label="Create project" title="Create project" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button></div>
           </div>
           {props.showProjectForm ? <ProjectCreateForm {...props} /> : null}
-          <div className="mt-2 space-y-1">
+          <SortableContext items={props.projects.map((project) => `project-order:${project.id}`)} strategy={verticalListSortingStrategy}><div className="mt-2 space-y-1">
             {props.projects.map((project) => (
               <ProjectBranch
                 key={project.id}
@@ -240,9 +276,9 @@ function SidebarContent(props: SidebarContentProps) {
                 onProjectChanged={props.onProjectChanged}
               />
             ))}
-          </div>
-          {props.projectsLoading ? <p role="status" className="px-2 py-2 text-xs text-[#6b7280]">正在加载项目…</p> : null}
-          {props.projectsError ? <p className="mt-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-700">{props.projectsError}</p> : null}
+          </div></SortableContext>
+          {props.projectsLoading ? <p role="status" className="px-2 py-2 text-xs text-secondary">{t("loadingProjects")}</p> : null}
+          {props.projectsError ? <p className="mt-2 rounded-md bg-[var(--danger-soft)] px-2 py-1 text-xs text-[var(--danger)]">{props.projectsError}</p> : null}
         </div>
 
         <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} />
@@ -257,47 +293,54 @@ function SidebarContent(props: SidebarContentProps) {
 
 function ProjectCreateForm(props: SidebarContentProps) {
   return (
-    <form className="mt-2 rounded-xl border border-[#e5e5e5] bg-white p-2" onSubmit={(event) => { event.preventDefault(); props.onCreateProject(); }}>
-      <input value={props.name} onChange={(event) => props.setName(event.target.value)} className="min-h-10 w-full rounded-lg border border-[#d9d9d7] px-3 text-sm outline-none focus:border-[#10a37f]" placeholder="项目名称" />
-      <button type="submit" disabled={!props.name.trim() || props.createPending} className="mt-2 min-h-10 w-full rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:opacity-50">创建项目</button>
-      {props.createError ? <p className="mt-2 text-xs text-red-700">{props.createError}</p> : null}
+    <form className="mt-2 rounded-xl border border-ui bg-surface p-2" onSubmit={(event) => { event.preventDefault(); props.onCreateProject(); }}>
+      <input value={props.name} onChange={(event) => props.setName(event.target.value)} className="min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary outline-none focus:border-[var(--accent)]" placeholder="项目名称" />
+      <button type="submit" disabled={!props.name.trim() || props.createPending} className="mt-2 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50">创建项目</button>
+      {props.createError ? <p className="mt-2 text-xs text-[var(--danger)]">{props.createError}</p> : null}
     </form>
   );
 }
 
 function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobile, onChanged, onProjectChanged }: { project: ProjectRead; expanded: boolean; active: boolean; pathname: string; toggle: () => void; closeMobile: () => void; onChanged: () => Promise<void>; onProjectChanged: () => Promise<void> }) {
+  const { conversationSortMode, conversationSortDirection, projectSortMode, resolvedLocale } = usePreferences();
+  const sortable = useSortable({ id: `project-order:${project.id}`, disabled: projectSortMode !== "custom", data: { kind: "project", id: project.id } satisfies DragProject });
   const { setNodeRef, isOver } = useDroppable({ id: `project-drop:${project.id}` });
-  const conversationsQuery = useQuery({ queryKey: ["project-conversations", project.id], queryFn: () => getProjectConversations(project.id), enabled: expanded });
+  const conversationsQuery = useQuery({
+    queryKey: ["project-conversations", project.id, conversationSortMode, conversationSortDirection],
+    queryFn: () => getProjectConversations(project.id, { sort: conversationSortMode, direction: conversationSortDirection }),
+    enabled: expanded,
+  });
   const conversations = (conversationsQuery.data ?? []).slice(0, 8);
+  const projectActivityTime = projectSortMode === "updated" ? project.updated_at : projectSortMode === "created" ? project.created_at : project.last_read_at;
   return (
-    <div ref={setNodeRef} className={`rounded-lg ${isOver ? "bg-emerald-50 ring-1 ring-[#10a37f]" : ""}`}>
-      <div className={`group flex min-h-9 items-center rounded-lg ${active ? "bg-[#e9e9e7]" : "hover:bg-white"}`}>
-        <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`} onClick={toggle} className="flex h-9 w-8 shrink-0 items-center justify-center text-[#6b7280]">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
-        <Link href={`/projects/${project.id}`} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm"><Folder className="h-4 w-4 shrink-0" /><span className="truncate">{project.name}</span><span className="ml-auto text-[11px] text-[#9ca3af]">{project.conversation_count}</span></Link>
+    <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}><div ref={setNodeRef} className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
+      <div className={`group flex min-h-9 items-center rounded-lg ${active ? "bg-subtle" : "hover:bg-surface"}`}>
+        {projectSortMode === "custom" ? <button type="button" className="flex h-9 w-7 touch-none items-center justify-center text-secondary" aria-label="Drag to reorder project" {...sortable.attributes} {...sortable.listeners}><GripVertical className="h-4 w-4" /></button> : null}<button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`} onClick={toggle} className="flex h-9 w-8 shrink-0 items-center justify-center text-secondary">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
+        <Link href={`/projects/${project.id}`} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm" title={`${fullActivityTime(projectActivityTime, resolvedLocale)} · ${project.conversation_count}`}><Folder className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate">{project.name}</span><span className="shrink-0 text-[11px] text-secondary">{formatActivityTime(projectActivityTime, resolvedLocale)}</span></Link>
         <ProjectMenu project={project} onChanged={onProjectChanged} />
       </div>
       {expanded ? (
-        <div className="ml-6 border-l border-[#e5e7eb] pl-1">
+        <div className="ml-6 border-l border-ui pl-1">
           {conversations.map((conversation) => <DraggableConversationRow key={conversation.id} conversation={conversation} projectId={project.id} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} />)}
-          {conversationsQuery.isLoading ? <p className="px-3 py-2 text-xs text-[#9ca3af]">正在加载对话…</p> : null}
-          {(conversationsQuery.data?.length ?? 0) > 8 ? <Link href={`/projects/${project.id}`} className="block px-3 py-2 text-xs font-medium text-[#0f766e]">查看全部</Link> : null}
-          {!conversationsQuery.isLoading && conversations.length === 0 ? <p className="px-3 py-2 text-xs text-[#9ca3af]">拖动对话到这里</p> : null}
+          {conversationsQuery.isLoading ? <p className="px-3 py-2 text-xs text-secondary">正在加载对话…</p> : null}
+          {(conversationsQuery.data?.length ?? 0) > 8 ? <Link href={`/projects/${project.id}`} className="block px-3 py-2 text-xs font-medium text-accent">查看全部</Link> : null}
+          {!conversationsQuery.isLoading && conversations.length === 0 ? <p className="px-3 py-2 text-xs text-secondary">拖动对话到这里</p> : null}
         </div>
       ) : null}
-    </div>
+    </div></div>
   );
 }
 
 function HistoryDropZone({ pathname, conversations, loading, error, closeMobile, onChanged }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: string | null; closeMobile: () => void; onChanged: () => Promise<void> }) {
   const { setNodeRef, isOver } = useDroppable({ id: "history-drop" });
   return (
-    <div ref={setNodeRef} className={`mt-5 rounded-lg p-1 ${isOver ? "bg-emerald-50 ring-1 ring-[#10a37f]" : ""}`}>
-      <h2 className="px-2 text-xs font-semibold text-[#6b7280]">对话记录</h2>
+    <div ref={setNodeRef} className={`mt-5 rounded-lg p-1 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
+      <h2 className="px-2 text-xs font-semibold text-secondary">对话记录</h2>
       <nav className="mt-2 space-y-1">
-        {loading ? <p role="status" className="px-2 py-2 text-xs text-[#6b7280]">正在加载对话…</p> : null}
-        {error ? <p role="alert" className="px-2 py-2 text-xs text-red-700">加载失败</p> : null}
+        {loading ? <p role="status" className="px-2 py-2 text-xs text-secondary">正在加载对话…</p> : null}
+        {error ? <p role="alert" className="px-2 py-2 text-xs text-[var(--danger)]">加载失败</p> : null}
         {!loading && !error ? conversations.map((conversation) => <DraggableConversationRow key={conversation.id} conversation={conversation} projectId={null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} />) : null}
-        {!loading && !error && conversations.length === 0 ? <p className="px-2 py-2 text-xs leading-5 text-[#6b7280]">暂无未分类对话。导入后的对话会显示在这里。</p> : null}
+        {!loading && !error && conversations.length === 0 ? <p className="px-2 py-2 text-xs leading-5 text-secondary">暂无未分类对话。导入后的对话会显示在这里。</p> : null}
       </nav>
     </div>
   );
@@ -305,11 +348,13 @@ function HistoryDropZone({ pathname, conversations, loading, error, closeMobile,
 
 function DraggableConversationRow({ conversation, projectId, active, closeMobile, onChanged }: { conversation: ConversationListItem | ProjectConversationRead; projectId: string | null; active: boolean; closeMobile: () => void; onChanged: () => Promise<void> }) {
   const title = conversation.display_title || conversation.title;
+  const { resolvedLocale } = usePreferences();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `conversation:${conversation.id}`, data: { id: conversation.id, title, projectId } satisfies DragConversation });
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }} className={`group flex min-h-9 items-center gap-1 rounded-lg pl-1 pr-1 ${isDragging ? "opacity-30" : ""} ${active ? "bg-[#e9e9e7]" : "hover:bg-white"}`}>
-      <button type="button" className="hidden h-7 w-6 touch-none items-center justify-center text-[#9ca3af] group-hover:flex md:flex md:opacity-0 md:group-hover:opacity-100" aria-label={`Drag ${title}`} title="Drag to move" {...attributes} {...listeners}><GripVertical className="h-3.5 w-3.5" /></button>
+    <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }} className={`group flex min-h-9 items-center gap-1 rounded-lg pl-1 pr-1 ${isDragging ? "opacity-30" : ""} ${active ? "bg-subtle" : "hover:bg-surface"}`}>
+      <button type="button" className="hidden h-7 w-6 touch-none items-center justify-center text-secondary group-hover:flex md:flex md:opacity-0 md:group-hover:opacity-100" aria-label={`Drag ${title}`} title="Drag to move" {...attributes} {...listeners}><GripVertical className="h-3.5 w-3.5" /></button>
       <Link href={`/conversations/${conversation.id}${projectId ? `?projectId=${projectId}` : ""}`} onClick={closeMobile} className="min-w-0 flex-1 truncate py-2 text-sm">{title}</Link>
+      <span className="shrink-0 text-[11px] text-secondary group-hover:hidden group-focus-within:hidden" title={fullActivityTime(conversation.last_read_at, resolvedLocale)}>{formatActivityTime(conversation.last_read_at, resolvedLocale)}</span>
       <div className={active ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}><ConversationActionMenu compact conversation={conversation} projectId={projectId ?? undefined} onChanged={onChanged} /></div>
     </div>
   );
@@ -317,19 +362,22 @@ function DraggableConversationRow({ conversation, projectId, active, closeMobile
 
 function ProjectMenu({ project, onChanged }: { project: ProjectRead; onChanged: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
+  const { resolvedLocale } = usePreferences();
+  const dialog = useInteractionDialog();
+  const zh = resolvedLocale === "zh-CN";
   return (
     <div className="relative mr-1">
-      <button type="button" aria-label={`Manage ${project.name}`} onClick={() => setOpen((value) => !value)} className="flex h-7 w-7 items-center justify-center rounded-md opacity-0 hover:bg-[#f3f4f6] group-hover:opacity-100 focus:opacity-100"><MoreHorizontal className="h-4 w-4" /></button>
-      {open ? <div className="absolute right-0 top-8 z-50 w-40 rounded-lg border border-[#e5e7eb] bg-white p-1 shadow-xl">
-        <button type="button" className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-[#f3f4f6]" onClick={async () => { const name = window.prompt("Rename project", project.name); if (name?.trim()) { await updateProject(project.id, { name: name.trim() }); await onChanged(); } setOpen(false); }}><Pencil className="h-4 w-4" /> Rename</button>
-        <button type="button" className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50" onClick={async () => { if (window.confirm(`Archive ${project.name}?`)) { await updateProject(project.id, { is_archived: true }); await onChanged(); } setOpen(false); }}><Archive className="h-4 w-4" /> Archive</button>
+      <button type="button" aria-label={`${zh ? "管理" : "Manage"} ${project.name}`} onClick={() => setOpen((value) => !value)} className="flex h-7 w-7 items-center justify-center rounded-md opacity-0 hover:bg-subtle group-hover:opacity-100 focus:opacity-100"><MoreHorizontal className="h-4 w-4" /></button>
+      {open ? <div className="absolute right-0 top-8 z-50 w-40 rounded-lg border border-ui bg-raised p-1 shadow-xl">
+        <button type="button" className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-subtle" onClick={async () => { const name = await dialog.prompt({ title: zh ? "重命名项目" : "Rename project", label: zh ? "项目名称" : "Project name", initialValue: project.name, confirmLabel: zh ? "保存" : "Save" }); if (name) { await updateProject(project.id, { name }); await onChanged(); } setOpen(false); }}><Pencil className="h-4 w-4" /> {zh ? "重命名" : "Rename"}</button>
+        <button type="button" className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--danger-soft)]" onClick={async () => { const confirmed = await dialog.confirm({ title: zh ? `归档 ${project.name}？` : `Archive ${project.name}?`, description: zh ? "项目中的对话会暂时回到对话记录。" : "Conversations in this project will temporarily return to history.", confirmLabel: zh ? "归档" : "Archive", danger: true }); if (confirmed) { await updateProject(project.id, { is_archived: true }); await onChanged(); } setOpen(false); }}><Archive className="h-4 w-4" /> {zh ? "归档" : "Archive"}</button>
       </div> : null}
     </div>
   );
 }
 
 function NavLink({ href, label, active, icon, onClick }: { href: string; label: string; active: boolean; icon: React.ReactNode; onClick?: () => void }) {
-  return <Link href={href} onClick={onClick} className={`flex min-h-9 items-center gap-2 truncate rounded-lg px-3 py-2 text-sm ${active ? "bg-[#e9e9e7]" : "hover:bg-white"}`}>{icon}{label}</Link>;
+  return <Link href={href} onClick={onClick} className={`flex min-h-9 items-center gap-2 truncate rounded-lg px-3 py-2 text-sm ${active ? "bg-subtle" : "hover:bg-surface"}`}>{icon}{label}</Link>;
 }
 
 function toggleSet(current: Set<string>, value: string): Set<string> {

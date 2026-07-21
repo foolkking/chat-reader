@@ -17,10 +17,10 @@ export function BlockRenderer({ block, isAssistant = true }: { block: RenderBloc
   if (block.block_type === "heading") {
     const level = normalizeHeadingLevel(block.data.level);
     const title = stripLeadingTimestamp(readString(block.data.title) ?? text);
-    const baseClass = "whitespace-pre-wrap break-words font-semibold tracking-normal text-[#111827]";
+    const baseClass = "whitespace-pre-wrap break-words font-semibold tracking-normal text-primary";
 
     if (level === 1) {
-      return <h1 className={`${baseClass} border-b border-[#e5e7eb] pb-2 text-2xl leading-9`}>{title}</h1>;
+      return <h1 className={`${baseClass} border-b border-ui pb-2 text-2xl leading-9`}>{title}</h1>;
     }
     if (level === 2) {
       return <h2 className={`${baseClass} text-xl leading-8`}>{title}</h2>;

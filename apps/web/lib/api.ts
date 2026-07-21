@@ -6,6 +6,7 @@ import type {
   ConversationListItem,
   ConversationManagementResponse,
   ConversationUpdateInput,
+  ConversationSortMode,
   DialogueIndexResponse,
   ConversationTransformResponse,
   HealthResponse,
@@ -21,6 +22,7 @@ import type {
   ProjectCreate,
   ProjectRead,
   ProjectUpdate,
+  ProjectSortMode,
   ReadingPositionInput,
   ReadingPositionResponse,
   RecentItemInput,
@@ -36,6 +38,7 @@ import type {
   TocResponse,
   UserPreferenceRead,
   UserPreferenceUpdate,
+  SortDirection,
 } from "./types";
 
 // Browser requests stay on the current Next.js origin. next.config.mjs proxies
@@ -55,7 +58,13 @@ export async function updatePreferences(input: UserPreferenceUpdate): Promise<Us
 }
 
 export async function getConversations(
-  input: { includeArchived?: boolean; scope?: "all" | "history" } = {},
+  input: {
+    includeArchived?: boolean;
+    scope?: "all" | "history";
+    sort?: ConversationSortMode;
+    direction?: SortDirection;
+    limit?: number;
+  } = {},
 ): Promise<ConversationListItem[]> {
   const params = new URLSearchParams();
   if (input.includeArchived) {
@@ -64,6 +73,9 @@ export async function getConversations(
   if (input.scope) {
     params.set("scope", input.scope);
   }
+  if (input.sort) params.set("sort", input.sort);
+  if (input.direction) params.set("direction", input.direction);
+  if (input.limit) params.set("limit", String(input.limit));
   const query = params.toString();
   return fetchJson<ConversationListItem[]>(`/api/conversations${query ? `?${query}` : ""}`);
 }
@@ -315,9 +327,16 @@ export async function retryTask(jobId: string): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST" });
 }
 
-export async function getProjects(input: { includeArchived?: boolean } = {}): Promise<ProjectRead[]> {
-  const query = input.includeArchived ? "?include_archived=true" : "";
-  return fetchJson<ProjectRead[]>(`/api/projects${query}`);
+export async function getProjects(input: {
+  includeArchived?: boolean;
+  sort?: ProjectSortMode;
+  direction?: SortDirection;
+} = {}): Promise<ProjectRead[]> {
+  const params = new URLSearchParams();
+  if (input.includeArchived) params.set("include_archived", "true");
+  if (input.sort) params.set("sort", input.sort);
+  if (input.direction) params.set("direction", input.direction);
+  return fetchJson<ProjectRead[]>(`/api/projects${params.size ? `?${params.toString()}` : ""}`);
 }
 
 export async function createProject(input: ProjectCreate): Promise<ProjectRead> {
@@ -328,8 +347,36 @@ export async function updateProject(projectId: string, input: ProjectUpdate): Pr
   return fetchJson<ProjectRead>(`/api/projects/${projectId}`, jsonRequest("PATCH", input));
 }
 
-export async function getProjectConversations(projectId: string): Promise<ProjectConversationRead[]> {
-  return fetchJson<ProjectConversationRead[]>(`/api/projects/${projectId}/conversations`);
+export async function getProjectConversations(
+  projectId: string,
+  input: { sort?: ConversationSortMode; direction?: SortDirection; limit?: number } = {},
+): Promise<ProjectConversationRead[]> {
+  const params = new URLSearchParams();
+  if (input.sort) params.set("sort", input.sort);
+  if (input.direction) params.set("direction", input.direction);
+  if (input.limit) params.set("limit", String(input.limit));
+  return fetchJson<ProjectConversationRead[]>(
+    `/api/projects/${projectId}/conversations${params.size ? `?${params.toString()}` : ""}`,
+  );
+}
+
+export async function updateProjectOrder(projectIds: string[]): Promise<void> {
+  await fetchJson<void>("/api/projects/order", jsonRequest("PUT", { project_ids: projectIds }));
+}
+
+export async function updateConversationOrder(conversationIds: string[]): Promise<void> {
+  await fetchJson<void>("/api/conversations/order", jsonRequest("PUT", { conversation_ids: conversationIds }));
+}
+
+export async function updateProjectConversationOrder(projectId: string, conversationIds: string[]): Promise<void> {
+  await fetchJson<void>(
+    `/api/projects/${projectId}/conversations/order`,
+    jsonRequest("PUT", { conversation_ids: conversationIds }),
+  );
+}
+
+export async function recordRecentProject(projectId: string): Promise<ProjectRead> {
+  return fetchJson<ProjectRead>(`/api/projects/${projectId}/recent`, { method: "POST" });
 }
 
 export async function addConversationToProject(
@@ -446,6 +493,9 @@ export async function searchConversations(input: {
   projectId?: string;
   documentType?: string;
   role?: string;
+  statusScope?: "active" | "archived" | "all";
+  dateFrom?: string;
+  dateTo?: string;
 }): Promise<SearchResponse> {
   const params = new URLSearchParams({
     q: input.q,
@@ -464,6 +514,9 @@ export async function searchConversations(input: {
   if (input.role) {
     params.set("role", input.role);
   }
+  if (input.statusScope) params.set("status_scope", input.statusScope);
+  if (input.dateFrom) params.set("date_from", input.dateFrom);
+  if (input.dateTo) params.set("date_to", input.dateTo);
   return fetchJson<SearchResponse>(`/api/search?${params.toString()}`);
 }
 

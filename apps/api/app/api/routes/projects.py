@@ -13,7 +13,9 @@ from app.schemas.project import (
     ProjectConversationPinUpdate,
     ProjectConversationRead,
     ProjectConversationRelationRead,
+    ProjectConversationOrderUpdate,
     ProjectCreate,
+    ProjectOrderUpdate,
     ProjectRead,
     ProjectUpdate,
 )
@@ -24,6 +26,7 @@ from app.services.projects.project_service import (
     list_project_conversations,
     list_projects,
     project_counts,
+    record_project_recent,
     remove_conversation_from_project,
     set_project_conversation_pin,
     update_project,
@@ -35,9 +38,14 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 @router.get("", response_model=list[ProjectRead])
 def get_projects(
     include_archived: bool = False,
+    sort: str = Query(
+        default="recent_read",
+        pattern="^(recent_read|updated|created|title|conversation_count|custom)$",
+    ),
+    direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ) -> list[ProjectRead]:
-    projects = list_projects(db, include_archived=include_archived)
+    projects = list_projects(db, include_archived=include_archived, sort=sort, direction=direction)
     db.commit()
     return [_project_read(project, db) for project in projects]
 
@@ -76,13 +84,65 @@ def get_project_conversations(
     project_id: uuid.UUID,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    sort: str = Query(
+        default="recent_read",
+        pattern="^(recent_read|updated|created|imported|title|message_count|custom)$",
+    ),
+    direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ) -> list[ProjectConversationRead]:
     try:
-        relations = list_project_conversations(db, project_id, limit=limit, offset=offset)
+        relations = list_project_conversations(
+            db,
+            project_id,
+            limit=limit,
+            offset=offset,
+            sort=sort,
+            direction=direction,
+        )
     except ProjectServiceError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return [_project_conversation_read(relation) for relation in relations]
+
+
+@router.put("/order", status_code=status.HTTP_204_NO_CONTENT)
+def update_project_order(payload: ProjectOrderUpdate, db: Session = Depends(get_db)) -> None:
+    rows = db.query(Project).filter(Project.id.in_(payload.project_ids)).all()
+    if len(rows) != len(set(payload.project_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+    by_id = {row.id: row for row in rows}
+    for index, project_id in enumerate(payload.project_ids):
+        by_id[project_id].sort_order = index
+    db.commit()
+
+
+@router.post("/{project_id}/recent", response_model=ProjectRead)
+def record_project_recent_route(project_id: uuid.UUID, db: Session = Depends(get_db)) -> ProjectRead:
+    try:
+        project = record_project_recent(db, project_id)
+        db.commit()
+    except ProjectServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return _project_read(project, db)
+
+
+@router.put("/{project_id}/conversations/order", status_code=status.HTTP_204_NO_CONTENT)
+def update_project_conversation_order(
+    project_id: uuid.UUID,
+    payload: ProjectConversationOrderUpdate,
+    db: Session = Depends(get_db),
+) -> None:
+    rows = db.query(ProjectConversation).filter(
+        ProjectConversation.project_id == project_id,
+        ProjectConversation.conversation_id.in_(payload.conversation_ids),
+    ).all()
+    if len(rows) != len(set(payload.conversation_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project conversation not found.")
+    by_id = {row.conversation_id: row for row in rows}
+    for index, conversation_id in enumerate(payload.conversation_ids):
+        by_id[conversation_id].sort_order = index
+    db.commit()
 
 
 @router.post("/{project_id}/conversations/{conversation_id}", response_model=ProjectConversationRead)
@@ -164,6 +224,7 @@ def _project_read(project: Project, db: Session) -> ProjectRead:
         archived_at=project.archived_at,
         created_at=project.created_at,
         updated_at=project.updated_at,
+        last_read_at=project.last_read_at,
         conversation_count=counts.conversation_count,
         pinned_count=counts.pinned_count,
     )

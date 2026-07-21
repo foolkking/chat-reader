@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -18,7 +19,7 @@ from app.services.search.search_service import SearchServiceError, search
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
-DOCUMENT_TYPES = {"conversation", "message", "heading"}
+DOCUMENT_TYPES = {"conversation", "message", "heading", "code"}
 ROLES = {"user", "assistant", "system", "tool", "note"}
 
 
@@ -31,6 +32,9 @@ def search_documents(
     project_id: uuid.UUID | None = None,
     document_type: str | None = None,
     role: str | None = None,
+    status_scope: str = Query(default="active", pattern="^(active|archived|all)$"),
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
     db: Session = Depends(get_db),
 ) -> SearchResponse:
     if document_type is not None and document_type not in DOCUMENT_TYPES:
@@ -47,6 +51,9 @@ def search_documents(
             project_id=project_id,
             document_type=document_type,
             role=role,
+            status_scope=status_scope,
+            date_from=date_from,
+            date_to=date_to,
         )
     except SearchServiceError as exc:
         status_code = status.HTTP_404_NOT_FOUND if "not found" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
@@ -62,6 +69,7 @@ def search_documents(
                 message_id=item.message_id,
                 role=item.role,
                 order_key=item.order_key,
+                block_index=item.block_index,
                 snippet=item.snippet,
                 rank=item.rank,
                 source_profile=item.source_profile,

@@ -1,13 +1,13 @@
 # 项目当前状态
 
-更新日期：2026-07-17。
+更新日期：2026-07-21。
 
 本文是后续开发者和 AI 的当前实现快照。功能事实以代码、Alembic migration 和自动化测试为最终依据。
 
 ## 当前基线
 
 - Web：Next.js 14 App Router，浏览器使用相对 `/api/*`，Next.js 服务端通过 `API_INTERNAL_URL` 转发到 FastAPI。
-- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260716_0008`。
+- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260721_0013`。
 - 最近聚焦后端测试、前端 typecheck 和 lint 已通过；最终完整测试基线以本次提交验证结果为准。
 - 生产部署文件已包含 PostgreSQL、migration、API、单并发 task worker、Web、Nginx 示例和数据库备份脚本。
 
@@ -42,10 +42,12 @@
 - 消息拆分/合并；会话拆分和按可拖动顺序进行非破坏式后台合并。
 - import 与 conversation merge 共用 PostgreSQL 持久化任务队列、全局进度条、heartbeat、失败重试和完成后自动刷新。
 - 消息编辑、版本历史和通过新版本恢复。
-- PostgreSQL full-text、trigram substring 混合搜索，支持 conversation/project/document type/role 过滤；重复消息按 content hash 折叠。
+- PostgreSQL full-text、trigram substring 混合搜索，支持 conversation/project/status/date/document type/role 过滤；heading/code 结果包含 block 定位，重复消息按 content hash 折叠。
 - 分享链接创建、列表、标题/描述/有效期更新、撤销和只读访问。
 - `.cr` 后台快速归档、Markdown 和 Canonical JSON 导出。
 - 阅读位置、最近打开和 PWA-ready 壳。
+- Conversation/Project 最近阅读时间、置顶优先的多字段排序、跨浏览器排序偏好和自定义拖动顺序。
+- Sidebar 全局即时搜索、Reader 当前会话搜索，以及搜索与阅读键盘快捷键。
 - 阅读位置支持 message/block/heading 内偏移、停滚保存和跨浏览器自动续接；首屏直接加载保存位置附近窗口。
 - Share 使用 token 约束的 message/index/TOC/block 分页，匿名访客进度仅保存在当前浏览器。
 
@@ -56,7 +58,7 @@
 - HTML/PDF/Project 打包导出。
 - Tag、Bookmark、笔记系统和语义/向量搜索。
 - 批量 blocks read API 和真正多 worker 调度；当前 worker 固定单并发处理 import、merge、`.cr` export 与 auto-clean。
-- 通用 UndoToast；部分操作可通过现有 restore/archive API恢复。
+- 全局操作反馈仍以各功能内状态为主，尚未统一成应用级 Toast 队列。
 - 在线聊天、SSE streaming、重新生成、工具调用持久化和回答分支 UI。
 - 私有会话离线缓存；service worker 不缓存 `/api/*` 或会话正文。
 

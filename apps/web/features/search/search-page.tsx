@@ -2,167 +2,102 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getProjects, searchConversations } from "../../lib/api";
 import type { SearchResultItem } from "../../lib/types";
+import { usePreferences } from "../../components/preferences-provider";
 import { ProjectSidebar } from "../projects/project-sidebar";
 import { SearchBox } from "./search-box";
 import { SearchResults } from "./search-results";
 
-const SEARCH_PAGE_SIZE = 50;
-const DOCUMENT_FILTERS = [
-  { label: "全部", value: "all" },
-  { label: "对话", value: "conversation" },
-  { label: "消息", value: "message" },
-  { label: "章节", value: "heading" },
-];
+const PAGE_SIZE = 50;
 
 export function SearchPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const query = searchParams.get("q") ?? "";
-  const documentType = searchParams.get("document_type") ?? "all";
-  const role = searchParams.get("role") ?? "all";
-  const projectId = searchParams.get("project_id") ?? "all";
+  const params = useSearchParams();
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
+  const query = params.get("q") ?? "";
+  const documentType = params.get("document_type") ?? "all";
+  const role = params.get("role") ?? "all";
+  const projectId = params.get("project_id") ?? "all";
+  const statusScope = params.get("status_scope") ?? "active";
+  const dateFrom = params.get("date_from") ?? "";
+  const dateTo = params.get("date_to") ?? "";
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<SearchResultItem[]>([]);
-  const searchQuery = useQuery({
-    queryKey: ["search", query, documentType, role, projectId, offset],
-    queryFn: () =>
-      searchConversations({
-        q: query,
-        limit: SEARCH_PAGE_SIZE,
-        offset,
-        documentType: documentType === "all" ? undefined : documentType,
-        role: role === "all" ? undefined : role,
-        projectId: projectId === "all" ? undefined : projectId,
-      }),
+  const [activeIndex, setActiveIndex] = useState(0);
+  const result = useQuery({
+    queryKey: ["search", query, documentType, role, projectId, statusScope, dateFrom, dateTo, offset],
+    queryFn: () => searchConversations({
+      q: query,
+      limit: PAGE_SIZE,
+      offset,
+      documentType: documentType === "all" ? undefined : documentType,
+      role: role === "all" ? undefined : role,
+      projectId: projectId === "all" ? undefined : projectId,
+      statusScope: statusScope as "active" | "archived" | "all",
+      dateFrom: dateFrom ? new Date(`${dateFrom}T00:00:00`).toISOString() : undefined,
+      dateTo: dateTo ? new Date(`${dateTo}T23:59:59.999`).toISOString() : undefined,
+    }),
     enabled: query.trim().length > 0,
   });
-  const projectsQuery = useQuery({ queryKey: ["projects"], queryFn: () => getProjects() });
-  const total = searchQuery.data?.total ?? items.length;
-  const hasMore = items.length < total;
-  const isInitialSearchLoading = query.trim().length > 0 && searchQuery.isFetching && items.length === 0;
-  const loadedLabel = useMemo(() => {
-    if (!query.trim()) {
-      return "";
-    }
-    if (isInitialSearchLoading) {
-      return "正在搜索…";
-    }
-    return `${items.length} / ${total} 条结果`;
-  }, [isInitialSearchLoading, items.length, query, total]);
-
+  const projects = useQuery({ queryKey: ["projects", "search-filter"], queryFn: () => getProjects() });
+  useEffect(() => { setOffset(0); setItems([]); setActiveIndex(0); }, [query, documentType, role, projectId, statusScope, dateFrom, dateTo]);
   useEffect(() => {
-    setOffset(0);
-    setItems([]);
-  }, [query, documentType, role, projectId]);
-
-  useEffect(() => {
-    if (!searchQuery.isSuccess) {
-      return;
-    }
+    if (!result.data) return;
     setItems((current) => {
       const next = offset === 0 ? [] : [...current];
-      for (const item of searchQuery.data.items) {
-        if (!next.some((existing) => existing.document_id === item.document_id)) {
-          next.push(item);
-        }
-      }
+      for (const item of result.data.items) if (!next.some((existing) => existing.document_id === item.document_id)) next.push(item);
       return next;
     });
-  }, [offset, searchQuery.data, searchQuery.isSuccess]);
-
-  function pushSearch(nextQuery: string, overrides: { documentType?: string; role?: string; projectId?: string } = {}) {
-    const nextDocumentType = overrides.documentType ?? documentType;
-    const nextRole = overrides.role ?? role;
-    const nextProjectId = overrides.projectId ?? projectId;
-    const params = new URLSearchParams();
-    if (nextQuery) {
-      params.set("q", nextQuery);
+  }, [offset, result.data]);
+  const update = (changes: Record<string, string>) => {
+    const next = new URLSearchParams(params.toString());
+    for (const [key, value] of Object.entries(changes)) {
+      if (value && value !== "all") next.set(key, value);
+      else next.delete(key);
     }
-    if (nextDocumentType !== "all") {
-      params.set("document_type", nextDocumentType);
-    }
-    if (nextRole !== "all") params.set("role", nextRole);
-    if (nextProjectId !== "all") params.set("project_id", nextProjectId);
-    router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`);
-  }
-
+    router.push(`/search${next.size ? `?${next}` : ""}`);
+  };
+  const total = result.data?.total ?? items.length;
+  const openSelected = () => {
+    const item = items[activeIndex];
+    if (!item) return;
+    const target = new URLSearchParams();
+    if (item.message_id) target.set("messageId", item.message_id);
+    if (item.block_index !== null) target.set("blockIndex", String(item.block_index));
+    router.push(`/conversations/${item.conversation_id}${target.size ? `?${target}` : ""}`);
+  };
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]">
+    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
       <ProjectSidebar />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center border-b border-[#e5e5e5] bg-white/95 px-4 pl-16 backdrop-blur md:px-6 md:pl-6">
-          <div>
-            <h1 className="text-base font-semibold">搜索</h1>
-            <p className="text-xs text-[#6b7280]">搜索对话标题、消息正文和章节</p>
+        <header className="flex min-h-14 items-center border-b border-ui bg-surface px-4 pl-16 md:px-[2vw] md:pl-[2vw]"><div><h1 className="text-base font-semibold">{zh ? "搜索" : "Search"}</h1><p className="text-xs text-secondary">{zh ? "搜索对话标题、消息正文、章节和代码" : "Search titles, messages, sections, and code"}</p></div></header>
+        <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
+          <SearchBox initialQuery={query} onSearch={(value) => update({ q: value })} hasResults={items.length > 0} onMoveSelection={(delta) => setActiveIndex((value) => Math.max(0, Math.min(items.length - 1, value + delta)))} onOpenSelection={openSelected} />
+          <div className="grid gap-3 rounded-xl border border-ui bg-surface p-4 md:grid-cols-2 lg:grid-cols-4">
+            <Filter label={zh ? "范围" : "Status"} value={statusScope} onChange={(value) => update({ status_scope: value })} options={[["active", zh ? "未归档" : "Active"], ["archived", zh ? "已归档" : "Archived"], ["all", zh ? "全部" : "All"]]} />
+            <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"]]} />
+            <Filter label={zh ? "角色" : "Role"} value={role} onChange={(value) => update({ role: value })} options={[["all", zh ? "全部" : "All"], ["user", zh ? "用户" : "User"], ["assistant", "ChatGPT"]]} />
+            <Filter label={zh ? "项目" : "Project"} value={projectId} onChange={(value) => update({ project_id: value })} options={[["all", zh ? "全部项目" : "All projects"], ...(projects.data ?? []).filter((project) => !project.is_default).map((project) => [project.id, project.name] as [string, string])]} />
+            <label className="text-xs font-medium text-secondary">{zh ? "开始日期" : "From"}<input type="date" value={dateFrom} onChange={(event) => update({ date_from: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
+            <label className="text-xs font-medium text-secondary">{zh ? "结束日期" : "To"}<input type="date" value={dateTo} onChange={(event) => update({ date_to: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
+            <div className="flex items-end text-sm text-secondary">{query ? (result.isFetching && items.length === 0 ? (zh ? "正在搜索…" : "Searching…") : (zh ? `${items.length} / ${total} 条结果` : `${items.length} / ${total} results`)) : ""}</div>
           </div>
-        </header>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto max-w-4xl space-y-5 px-4 py-8 md:px-6">
-
-          <SearchBox
-            initialQuery={query}
-            onSearch={(nextQuery) => {
-              pushSearch(nextQuery);
-            }}
-          />
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
-              {DOCUMENT_FILTERS.map((filter) => (
-                <button
-                  key={filter.value}
-                  type="button"
-                  onClick={() => pushSearch(query, { documentType: filter.value })}
-                  className={`min-h-10 rounded-full border px-3 text-sm font-medium ${
-                    documentType === filter.value
-                      ? "border-[#10a37f] bg-[#ecfdf5] text-[#047857]"
-                      : "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f7f7f8]"
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-            {loadedLabel ? <span className="text-sm text-[#6b7280]">{loadedLabel}</span> : null}
-          </div>
-
-          <div className="flex flex-wrap gap-2 border-b border-[#e5e7eb] pb-4">
-            <span className="self-center text-xs font-medium text-[#6b7280]">角色</span>
-            {[{ label: "全部", value: "all" }, { label: "用户", value: "user" }, { label: "ChatGPT", value: "assistant" }].map((item) => (
-              <button key={item.value} type="button" onClick={() => pushSearch(query, { role: item.value })} className={`min-h-9 rounded-lg px-3 text-sm ${role === item.value ? "bg-[#111827] text-white" : "bg-white text-[#374151] hover:bg-[#ececeb]"}`}>{item.label}</button>
-            ))}
-            <details className="relative ml-auto">
-              <summary className="inline-flex min-h-9 cursor-pointer list-none items-center rounded-lg border border-[#d1d5db] bg-white px-3 text-sm marker:hidden">{projectId === "all" ? "全部项目" : projectsQuery.data?.find((project) => project.id === projectId)?.name ?? "项目"}</summary>
-              <div className="absolute right-0 top-11 z-20 max-h-64 w-56 overflow-y-auto rounded-lg border border-[#e5e7eb] bg-white p-1 shadow-xl">
-                <button type="button" onClick={() => pushSearch(query, { projectId: "all" })} className="block min-h-9 w-full rounded-md px-3 text-left text-sm hover:bg-[#f7f7f8]">全部项目</button>
-                {projectsQuery.data?.filter((project) => !project.is_default).map((project) => <button key={project.id} type="button" onClick={() => pushSearch(query, { projectId: project.id })} className="block min-h-9 w-full truncate rounded-md px-3 text-left text-sm hover:bg-[#f7f7f8]">{project.name}</button>)}
-              </div>
-            </details>
-          </div>
-
-          {!query ? <StateBlock label="输入关键词以搜索标题、消息正文和章节。" /> : null}
-          {isInitialSearchLoading ? <StateBlock label="正在搜索…" /> : null}
-          {searchQuery.isError ? <StateBlock label={searchQuery.error.message} /> : null}
-          {query && !isInitialSearchLoading && (searchQuery.isSuccess || items.length > 0) ? <SearchResults items={items} query={query} /> : null}
-          {hasMore ? (
-            <button
-              type="button"
-              onClick={() => setOffset(items.length)}
-              disabled={searchQuery.isFetching}
-              className="mx-auto block rounded-full border border-[#d1d5db] bg-white px-5 py-2 text-sm font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-60"
-            >
-              {searchQuery.isFetching ? "正在加载" : "加载更多结果"}
-            </button>
-          ) : null}
-          </div>
-        </div>
+          {!query ? <State text={zh ? "输入关键词开始搜索。" : "Enter a keyword to search."} /> : null}
+          {result.isError ? <State text={zh ? "搜索失败，请重试。" : "Search failed. Try again."} /> : null}
+          {query && !result.isFetching && items.length === 0 ? <State text={zh ? "没有找到结果。请清除筛选或修改关键词。" : "No results. Clear filters or try another query."} /> : null}
+          {items.length ? <SearchResults items={items} query={query} activeIndex={activeIndex} onActiveIndexChange={setActiveIndex} /> : null}
+          {items.length < total ? <button type="button" onClick={() => setOffset(items.length)} disabled={result.isFetching} className="mx-auto block min-h-10 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
+        </div></div>
       </section>
     </main>
   );
 }
 
-function StateBlock({ label }: { label: string }) {
-  return <div className="border-l-2 border-[#d1d5db] py-2 pl-4 text-sm text-[#6b7280]">{label}</div>;
+function Filter({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (value: string) => void }) {
+  return <label className="text-xs font-medium text-secondary">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary">{options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}</select></label>;
 }
+
+function State({ text }: { text: string }) { return <div className="border-l-2 border-ui py-2 pl-4 text-sm text-secondary">{text}</div>; }

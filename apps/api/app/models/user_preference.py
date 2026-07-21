@@ -14,6 +14,10 @@ class UserPreference(Base):
     theme_mode: Mapped[str] = mapped_column(Text, nullable=False, default="light")
     locale_mode: Mapped[str] = mapped_column(Text, nullable=False, default="auto")
     reader_width_mode: Mapped[str] = mapped_column(Text, nullable=False, default="standard")
+    conversation_sort_mode: Mapped[str] = mapped_column(Text, nullable=False, default="recent_read")
+    conversation_sort_direction: Mapped[str] = mapped_column(Text, nullable=False, default="desc")
+    project_sort_mode: Mapped[str] = mapped_column(Text, nullable=False, default="recent_read")
+    project_sort_direction: Mapped[str] = mapped_column(Text, nullable=False, default="desc")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

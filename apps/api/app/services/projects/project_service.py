@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from app.models.conversation import Conversation
 from app.models.import_record import utc_now
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
+from app.models.recent_item import RecentItem
 
 DEFAULT_PROJECT_NAME = "Inbox"
 
@@ -50,12 +51,45 @@ def ensure_default_project(db: Session) -> Project:
     return project
 
 
-def list_projects(db: Session, include_archived: bool = False) -> list[Project]:
+def list_projects(
+    db: Session,
+    include_archived: bool = False,
+    *,
+    sort: str = "recent_read",
+    direction: str = "desc",
+) -> list[Project]:
     ensure_default_project(db)
     query = db.query(Project)
     if not include_archived:
         query = query.filter(Project.is_archived.is_(False))
-    return query.order_by(Project.is_default.desc(), Project.sort_order.asc(), Project.created_at.asc()).all()
+    field = {
+        "recent_read": Project.last_read_at,
+        "updated": Project.updated_at,
+        "created": Project.created_at,
+        "title": func.lower(Project.name),
+        "custom": Project.sort_order,
+    }.get(sort)
+    if sort == "conversation_count":
+        field = (
+            db.query(func.count(ProjectConversation.id))
+            .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
+            .filter(
+                ProjectConversation.project_id == Project.id,
+                Conversation.deleted_at.is_(None),
+                Conversation.status == "active",
+            )
+            .correlate(Project)
+            .scalar_subquery()
+        )
+    assert field is not None
+    ordered_field = field.asc() if direction == "asc" else field.desc()
+    return query.order_by(
+        Project.is_default.desc(),
+        case((field.is_(None), 1), else_=0).asc(),
+        ordered_field,
+        Project.updated_at.desc(),
+        Project.id.asc(),
+    ).all()
 
 
 def create_project(db: Session, *, name: str, description: str | None, color: str | None, icon: str | None) -> Project:
@@ -170,27 +204,53 @@ def list_project_conversations(
     *,
     limit: int,
     offset: int,
+    sort: str = "recent_read",
+    direction: str = "desc",
 ) -> list[ProjectConversation]:
     if db.get(Project, project_id) is None:
         raise ProjectServiceError("Project not found.")
-    return (
+    query = (
         db.query(ProjectConversation)
         .join(ProjectConversation.conversation)
+        .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
         .filter(
             ProjectConversation.project_id == project_id,
             Conversation.deleted_at.is_(None),
             Conversation.status == "active",
         )
-        .order_by(
+    )
+    field = {
+        "recent_read": RecentItem.last_opened_at,
+        "updated": Conversation.updated_at,
+        "created": Conversation.created_at,
+        "imported": Conversation.imported_at,
+        "title": func.lower(Conversation.display_title),
+        "message_count": Conversation.message_count,
+        "custom": ProjectConversation.sort_order,
+    }[sort]
+    ordered_field = field.asc() if direction == "asc" else field.desc()
+    return (
+        query.order_by(
             ProjectConversation.is_pinned.desc(),
             ProjectConversation.pinned_at.desc(),
-            ProjectConversation.sort_order.asc(),
-            ProjectConversation.added_at.desc(),
+            case((field.is_(None), 1), else_=0).asc(),
+            ordered_field,
+            Conversation.sort_time.desc(),
+            Conversation.id.asc(),
         )
         .offset(offset)
         .limit(limit)
         .all()
     )
+
+
+def record_project_recent(db: Session, project_id: uuid.UUID) -> Project:
+    project = db.get(Project, project_id)
+    if project is None or project.is_archived:
+        raise ProjectServiceError("Project not found.")
+    project.last_read_at = utc_now()
+    db.flush()
+    return project
 
 
 def set_project_conversation_pin(

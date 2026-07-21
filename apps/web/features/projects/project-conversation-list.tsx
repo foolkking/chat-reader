@@ -2,7 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import {
   archiveConversation,
   deleteConversation,
@@ -10,17 +15,25 @@ import {
   getProjects,
   mergeConversations,
   removeConversationFromProject,
+  recordRecentProject,
   restoreConversation,
   updateProject,
+  updateProjectConversationOrder,
 } from "../../lib/api";
 import type { ProjectConversationRead } from "../../lib/types";
 import { ConversationActionMenu, type UndoAction } from "../conversations/conversation-action-menu";
 import { MergeOrderList } from "../conversations/merge-order-list";
 import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
 import { ProjectSidebar } from "./project-sidebar";
+import { ConversationSortMenu } from "../../components/sort-menu";
+import { usePreferences } from "../../components/preferences-provider";
+import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 export function ProjectConversationList({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
+  const { conversationSortMode, conversationSortDirection, projectSortMode, projectSortDirection, resolvedLocale } = usePreferences();
+  const dialog = useInteractionDialog();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [undo, setUndo] = useState<UndoAction | null>(null);
@@ -28,12 +41,12 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const projectsQuery = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => getProjects(),
+    queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
   });
   const conversationsQuery = useQuery({
-    queryKey: ["project-conversations", projectId],
-    queryFn: () => getProjectConversations(projectId),
+    queryKey: ["project-conversations", projectId, conversationSortMode, conversationSortDirection],
+    queryFn: () => getProjectConversations(projectId, { sort: conversationSortMode, direction: conversationSortDirection, limit: 200 }),
   });
   const removeMutation = useMutation({
     mutationFn: (conversationId: string) => removeConversationFromProject(projectId, conversationId),
@@ -43,6 +56,22 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   });
 
   const project = projectsQuery.data?.find((item) => item.id === projectId);
+  const zh = resolvedLocale === "zh-CN";
+
+  async function handleSortEnd(event: DragEndEvent) {
+    if (conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id || !conversationsQuery.data) return;
+    const oldIndex = conversationsQuery.data.findIndex((item) => item.id === event.active.id);
+    const newIndex = conversationsQuery.data.findIndex((item) => item.id === event.over?.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    await updateProjectConversationOrder(projectId, arrayMove(conversationsQuery.data, oldIndex, newIndex).map((item) => item.id));
+    await queryClient.invalidateQueries({ queryKey: ["project-conversations", projectId] });
+  }
+
+  useEffect(() => {
+    void recordRecentProject(projectId).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    }).catch(() => undefined);
+  }, [projectId, queryClient]);
 
   async function refreshProject() {
     await Promise.all([
@@ -54,47 +83,48 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]">
+    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
       <ProjectSidebar currentProjectId={projectId} />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between gap-3 border-b border-[#e5e5e5] bg-white/95 px-4 pl-16 backdrop-blur md:px-6 md:pl-6">
+        <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between gap-3 border-b border-ui bg-surface/95 px-4 pl-16 backdrop-blur md:px-6 md:pl-6">
           <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold">{project?.name ?? "Project"}</h1>
-            <p className="text-xs text-[#6b7280]">
-              {project?.conversation_count ?? 0} conversations / {project?.pinned_count ?? 0} pinned
+            <h1 className="truncate text-base font-semibold">{project?.name ?? (zh ? "项目" : "Project")}</h1>
+            <p className="text-xs text-secondary">
+              {zh ? `${project?.conversation_count ?? 0} 个对话 · ${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
+            <ConversationSortMenu />
             <button
               type="button"
               onClick={async () => {
                 if (!project) {
                   return;
                 }
-                const name = window.prompt("Rename project", project.name);
+                const name = await dialog.prompt({ title: zh ? "重命名项目" : "Rename project", label: zh ? "项目名称" : "Project name", initialValue: project.name, confirmLabel: zh ? "保存" : "Save" });
                 if (name === null || !name.trim()) {
                   return;
                 }
                 await updateProject(project.id, { name: name.trim() });
                 await refreshProject();
               }}
-              className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8]"
+              className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle"
             >
-              Rename
+              {zh ? "重命名" : "Rename"}
             </button>
             <button
               type="button"
               disabled={!project || project.is_default}
               onClick={async () => {
-                if (!project || !window.confirm(`Archive project ${project.name}?`)) {
+                if (!project || !(await dialog.confirm({ title: zh ? `归档项目 ${project.name}？` : `Archive project ${project.name}?`, description: zh ? "项目中的对话会暂时回到对话记录。" : "Conversations in this project will temporarily return to history.", confirmLabel: zh ? "归档" : "Archive", danger: true }))) {
                   return;
                 }
                 await updateProject(project.id, { is_archived: true });
                 await refreshProject();
               }}
-              className="min-h-10 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Archive
+              {zh ? "归档" : "Archive"}
             </button>
           </div>
         </header>
@@ -166,7 +196,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                   }
                 }}
                 onDelete={async (ids) => {
-                  if (!window.confirm(`Delete ${ids.length} selected conversations?`)) {
+                  if (!(await dialog.confirm({ title: zh ? `删除 ${ids.length} 个对话？` : `Delete ${ids.length} conversations?`, description: zh ? "此操作完成后可立即撤销。" : "You can undo immediately afterward.", confirmLabel: zh ? "删除" : "Delete", danger: true }))) {
                     return;
                   }
                   setBulkBusy("delete");
@@ -189,19 +219,19 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               />
             ) : null}
 
-            {conversationsQuery.isLoading ? <StateBlock label="Loading project conversations" /> : null}
+            {conversationsQuery.isLoading ? <StateBlock label={resolvedLocale === "zh-CN" ? "正在加载项目对话…" : "Loading project conversations…"} /> : null}
             {conversationsQuery.isError ? <StateBlock label={conversationsQuery.error.message} /> : null}
             {conversationsQuery.isSuccess && conversationsQuery.data.length === 0 ? (
-              <StateBlock label="No conversations in this project" />
+              <StateBlock label={resolvedLocale === "zh-CN" ? "这个项目还没有对话" : "No conversations in this project"} />
             ) : null}
 
             {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
-              <div className="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
+              <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
                 {conversationsQuery.data.map((conversation) => (
-                  <article key={conversation.id} className="border-b border-[#f0f0f0] px-5 py-4 last:border-b-0 hover:bg-[#fbfbfb]">
+                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom"}><article className="border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle">
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
                       <div className="flex min-w-0 gap-3">
-                        <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#d1d5db] bg-white">
+                        <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-ui bg-surface">
                           <input
                             type="checkbox"
                             checked={selectedConversationIds.has(conversation.id)}
@@ -228,25 +258,26 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                         </label>
                         <div className="min-w-0">
                           <Link href={`/conversations/${conversation.id}?projectId=${projectId}`}>
-                            <h2 className="truncate text-base font-semibold text-[#111827]">
-                              {conversation.project_relation.is_pinned ? "Pinned / " : ""}
+                            <h2 className="truncate text-base font-semibold text-primary">
+                              {conversation.project_relation.is_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}
                               {conversation.display_title || conversation.title}
                             </h2>
                           </Link>
-                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#6b7280]">
+                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
                             {previewConversationText(conversation.first_user_message)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                         <div className="min-w-0 md:order-2">
-                          <p className="text-sm text-[#6b7280]">{conversation.message_count} messages</p>
+                          <p className="text-xs text-secondary" title={fullActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}</p>
+                          <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                           <button
                             type="button"
                             onClick={() => removeMutation.mutate(conversation.id)}
-                            className="mt-2 rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-white"
+                            className="mt-2 rounded-lg border border-ui px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-subtle"
                           >
-                            Remove
+                            {resolvedLocale === "zh-CN" ? "移出项目" : "Remove"}
                           </button>
                         </div>
                         <div className="md:order-1">
@@ -261,15 +292,27 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                         </div>
                       </div>
                     </div>
-                  </article>
+                  </article></SortableProjectConversationRow>
                 ))}
-              </div>
+              </div></SortableContext></DndContext>
             ) : null}
           </div>
         </div>
       </section>
     </main>
   );
+}
+
+function SortableProjectConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
+  const sortable = useSortable({ id, disabled: !enabled });
+  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} className="relative"><button type="button" className={`absolute left-1 top-1/2 z-10 flex h-8 w-7 -translate-y-1/2 touch-none items-center justify-center rounded-md text-secondary hover:bg-surface ${enabled ? "opacity-100" : "pointer-events-none opacity-0"}`} aria-label="Drag to reorder" {...sortable.attributes} {...sortable.listeners}><GripVertical className="h-4 w-4" /></button>{children}</div>;
+}
+
+function projectConversationActivity(conversation: ProjectConversationRead, mode: string): string | null {
+  if (mode === "updated") return conversation.updated_at;
+  if (mode === "created") return conversation.created_at;
+  if (mode === "imported") return conversation.imported_at;
+  return conversation.last_read_at;
 }
 
 function ProjectBulkActions({
@@ -294,54 +337,56 @@ function ProjectBulkActions({
   onDelete: (ids: string[]) => Promise<void>;
 }) {
   const selectedIds = selectedConversations.map((conversation) => conversation.id);
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   return (
-    <div className="rounded-2xl border border-[#e5e5e5] bg-white p-3 shadow-sm">
+    <div className="rounded-xl border border-ui bg-surface p-3">
       <div className="flex flex-wrap justify-end gap-2">
-        <span className="mr-auto text-sm text-[#6b7280]">{selectedIds.length} selected</span>
+        <span className="mr-auto text-sm text-secondary">{zh ? `已选择 ${selectedIds.length} 个` : `${selectedIds.length} selected`}</span>
         <button
           type="button"
           disabled={busy !== null}
           onClick={() => void onRemove(selectedIds)}
-          className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
+          className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
         >
-          Remove
+          {zh ? "移出项目" : "Remove"}
         </button>
         <button
           type="button"
           disabled={busy !== null}
           onClick={() => void onArchive(selectedIds)}
-          className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
+          className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
         >
-          Archive
+          {zh ? "归档" : "Archive"}
         </button>
         <button
           type="button"
           disabled={busy !== null}
           onClick={() => void onDelete(selectedIds)}
-          className="min-h-9 rounded-lg border border-red-200 bg-white px-3 text-sm font-medium text-red-700 disabled:cursor-wait disabled:opacity-60"
+          className="min-h-9 rounded-lg border border-[var(--danger)] bg-surface px-3 text-sm font-medium text-[var(--danger)] disabled:cursor-wait disabled:opacity-60"
         >
-          Delete
+          {zh ? "删除" : "Delete"}
         </button>
       </div>
       {selectedIds.length >= 2 ? (
-        <div className="mt-3 rounded-xl bg-[#f7f7f8] p-3">
-          <label className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">
-            Merge title
+        <div className="mt-3 rounded-xl bg-subtle p-3">
+          <label className="text-xs font-semibold uppercase tracking-normal text-secondary">
+            {zh ? "合并标题" : "Merge title"}
             <input
               value={title}
               onChange={(event) => onTitleChange(event.target.value)}
-              className="mt-1 block w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-sm font-normal normal-case text-[#111827] outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/10"
+              className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-sm font-normal normal-case text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
             />
           </label>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Merge order</p>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-secondary">{zh ? "合并顺序" : "Merge order"}</p>
           <MergeOrderList conversations={selectedConversations} disabled={busy !== null} onReorder={onReorder} />
           <button
             type="button"
             disabled={busy !== null}
             onClick={() => void onMerge(selectedIds, title)}
-            className="mt-3 min-h-10 w-full rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+            className="mt-3 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:cursor-wait disabled:opacity-60"
           >
-            {busy === "merge" ? "Merging" : `Merge ${selectedIds.length} in this order`}
+            {busy === "merge" ? (zh ? "正在合并…" : "Merging…") : (zh ? `按此顺序合并 ${selectedIds.length} 个对话` : `Merge ${selectedIds.length} in this order`)}
           </button>
         </div>
       ) : null}
@@ -350,8 +395,9 @@ function ProjectBulkActions({
 }
 
 function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {
+  const { resolvedLocale } = usePreferences();
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--callout-warning-border)] bg-[var(--callout-warning-bg)] px-4 py-3 text-sm text-[var(--callout-warning-text)]">
       <span>{undo.label}</span>
       <button
         type="button"
@@ -359,16 +405,16 @@ function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {
           await undo.action();
           onDone();
         }}
-        className="min-h-9 rounded-lg bg-amber-900 px-3 text-sm font-medium text-white"
+        className="min-h-9 rounded-lg bg-[var(--callout-warning-text)] px-3 text-sm font-medium text-[var(--surface)]"
       >
-        撤销
+        {resolvedLocale === "zh-CN" ? "撤销" : "Undo"}
       </button>
     </div>
   );
 }
 
 function StateBlock({ label }: { label: string }) {
-  return <div className="rounded-2xl border border-[#e5e5e5] bg-white p-5 text-sm text-[#6b7280] shadow-sm">{label}</div>;
+  return <div className="rounded-xl border border-ui bg-surface p-5 text-sm text-secondary">{label}</div>;
 }
 
 function previewConversationText(text?: string | null): string {

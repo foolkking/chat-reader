@@ -17,6 +17,10 @@ def get_or_create_preferences(db: Session) -> UserPreference:
         theme_mode="light",
         locale_mode="auto",
         reader_width_mode="standard",
+        conversation_sort_mode="recent_read",
+        conversation_sort_direction="desc",
+        project_sort_mode="recent_read",
+        project_sort_direction="desc",
         created_at=now,
         updated_at=now,
     )
@@ -33,6 +37,14 @@ def update_preferences(db: Session, payload: UserPreferenceUpdate) -> UserPrefer
         preference.locale_mode = payload.locale_mode
     if payload.reader_width_mode is not None:
         preference.reader_width_mode = payload.reader_width_mode
+    if payload.conversation_sort_mode is not None:
+        preference.conversation_sort_mode = payload.conversation_sort_mode
+    if payload.conversation_sort_direction is not None:
+        preference.conversation_sort_direction = payload.conversation_sort_direction
+    if payload.project_sort_mode is not None:
+        preference.project_sort_mode = payload.project_sort_mode
+    if payload.project_sort_direction is not None:
+        preference.project_sort_direction = payload.project_sort_direction
     preference.updated_at = utc_now()
     db.flush()
     return preference
@@ -43,6 +55,10 @@ def preference_read(preference: UserPreference) -> UserPreferenceRead:
         theme_mode=preference.theme_mode,
         locale_mode=preference.locale_mode,
         reader_width_mode=preference.reader_width_mode,
+        conversation_sort_mode=preference.conversation_sort_mode,
+        conversation_sort_direction=preference.conversation_sort_direction,
+        project_sort_mode=preference.project_sort_mode,
+        project_sort_direction=preference.project_sort_direction,
         created_at=preference.created_at,
         updated_at=preference.updated_at,
     )

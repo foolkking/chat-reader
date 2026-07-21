@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Layers3, ListTree, Merge, Scissors, Share2, X } from "lucide-react";
+import { Download, Layers3, ListTree, Merge, Scissors, Search, Share2, X } from "lucide-react";
 import {
   getConversation,
   getConversationDialogueIndex,
@@ -14,6 +14,7 @@ import {
   saveReadingPosition,
   saveReadingPositionKeepalive,
   splitConversation,
+  recordRecentConversation,
 } from "../../lib/api";
 import type { LoadedMessageWindow, MessageListItem, MessageWindowResponse, NavigateTarget, NavigationResult, NeighborhoodExpansionState, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollDirection, TocItem } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
@@ -31,6 +32,8 @@ import { ReaderHeaderActionRail, type ReaderHeaderAction } from "../../component
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
 import { ReaderPanelShell } from "../../components/reader-panel-shell";
 import { useMobileHeaderAutoHide } from "./use-mobile-header-auto-hide";
+import { ConversationSearchPanel } from "../search/conversation-search-panel";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
@@ -39,15 +42,18 @@ const ANCHOR_BEFORE = 12;
 
 export function ConversationReader({ conversationId }: { conversationId: string }) {
   const t = useTranslations();
+  const dialog = useInteractionDialog();
   const searchParams = useSearchParams();
   const projectContextId = searchParams.get("projectId") ?? undefined;
   const queryClient = useQueryClient();
   const targetMessageId = searchParams.get("messageId");
+  const targetBlockIndex = numberOrNull(searchParams.get("blockIndex"));
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
   const messages = loadedWindow.items;
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [desktopActionsExpanded, setDesktopActionsExpanded] = useState(false);
   const [mobileActionsExpanded, setMobileActionsExpanded] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<ReaderUtilityPanel>(null);
@@ -106,6 +112,13 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     queryKey: ["conversation", conversationId],
     queryFn: () => getConversation(conversationId),
   });
+
+  useEffect(() => {
+    void recordRecentConversation(conversationId, { project_id: projectContextId ?? null }).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    }).catch(() => undefined);
+  }, [conversationId, projectContextId, queryClient]);
 
   const positionQuery = useQuery({
     queryKey: ["reading-position", conversationId],
@@ -449,6 +462,36 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     [applyLoadedWindow, conversationId],
   );
 
+  useEffect(() => {
+    const handleReadingShortcut = (event: KeyboardEvent) => {
+      if (utilityPanel !== null || isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
+      const root = scrollContainerRef.current;
+      if (!root) return;
+      const page = Math.max(120, root.clientHeight * 0.88);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        root.scrollBy({ top: event.key === "ArrowDown" ? 56 : -56, behavior: "smooth" });
+      } else if (event.key === " " || event.key === "PageDown" || event.key === "PageUp") {
+        event.preventDefault();
+        const up = event.shiftKey || event.key === "PageUp";
+        root.scrollBy({ top: up ? -page : page, behavior: "smooth" });
+      } else if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        root.scrollTo({ top: event.key === "Home" ? 0 : root.scrollHeight, behavior: "smooth" });
+      } else if (event.key.toLowerCase() === "j" || event.key.toLowerCase() === "k") {
+        const current = messages.findIndex((message) => message.id === activeMessageId);
+        const next = event.key.toLowerCase() === "j" ? current + 1 : current - 1;
+        const target = messages[next];
+        if (target) {
+          event.preventDefault();
+          void navigateToTarget({ messageId: target.id, source: "message-action" });
+        }
+      }
+    };
+    window.addEventListener("keydown", handleReadingShortcut);
+    return () => window.removeEventListener("keydown", handleReadingShortcut);
+  }, [activeMessageId, messages, navigateToTarget, utilityPanel]);
+
   const refreshActiveMessageFromLayout = useCallback((unlockNavigation = false) => {
     if (unlockNavigation) {
       navigationLockUntilRef.current = 0;
@@ -469,11 +512,11 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     if (!messageId) {
       return;
     }
-    void navigateToTarget({ messageId, source: "search" }).finally(() => {
+    void navigateToTarget({ messageId, blockIndex: targetBlockIndex ?? undefined, source: "search" }).finally(() => {
       restoreAttemptedRef.current = true;
       setPendingTargetMessageId(null);
     });
-  }, [navigateToTarget, pendingTargetMessageId, targetMessageId]);
+  }, [navigateToTarget, pendingTargetMessageId, targetBlockIndex, targetMessageId]);
 
   useEffect(() => {
     if (!targetMessageId && positionQuery.isError && windowQuery.isSuccess) {
@@ -735,7 +778,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     if (selectedOrderedIds.length === 0) {
       return;
     }
-    const title = window.prompt("New conversation title", `${conversation?.display_title || conversation?.title || "Conversation"} excerpt`);
+    const title = await dialog.prompt({
+      title: "New conversation title",
+      label: "Conversation title",
+      initialValue: `${conversation?.display_title || conversation?.title || "Conversation"} excerpt`,
+      confirmLabel: "Create",
+    });
     if (title === null) {
       return;
     }
@@ -750,25 +798,44 @@ export function ConversationReader({ conversationId }: { conversationId: string 
 
   async function mergeSelectedMessages() {
     if (selectedIds.length < 2) return;
-    if (!window.confirm(`Merge ${selectedIds.length} selected messages?`)) return;
+    if (!(await dialog.confirm({ title: `Merge ${selectedIds.length} selected messages?`, description: "The selected adjacent messages will be merged into the first message.", confirmLabel: "Merge" }))) return;
     await mergeMessages({ messageIds: selectedIds });
     setSelectedMessageIds(new Set());
     await refreshReader();
   }
 
-  function openUtilityPanel(panel: Exclude<ReaderUtilityPanel, null | "navigation">) {
+  const openUtilityPanel = useCallback((panel: Exclude<ReaderUtilityPanel, null | "navigation">) => {
     setDesktopActionsExpanded(false);
     setMobileActionsExpanded(false);
     if (window.innerWidth < 768) {
       setShowShare(false);
       setShowExport(false);
+      setShowSearch(false);
       setUtilityPanel(panel);
       return;
     }
     setUtilityPanel(null);
     setShowShare(panel === "share");
     setShowExport(panel === "export");
-  }
+    setShowSearch(panel === "search");
+  }, []);
+
+  useEffect(() => {
+    const openSearch = () => openUtilityPanel("search");
+    window.addEventListener("chat-reader:open-reader-search", openSearch);
+    return () => window.removeEventListener("chat-reader:open-reader-search", openSearch);
+  }, [openUtilityPanel]);
+
+  useEffect(() => {
+    const closeTopSurface = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (utilityPanel !== null) { setUtilityPanel(null); event.preventDefault(); return; }
+      if (showSearch || showShare || showExport) { setShowSearch(false); setShowShare(false); setShowExport(false); event.preventDefault(); return; }
+      if (mobileActionsExpanded || desktopActionsExpanded) { setMobileActionsExpanded(false); setDesktopActionsExpanded(false); event.preventDefault(); }
+    };
+    window.addEventListener("keydown", closeTopSurface);
+    return () => window.removeEventListener("keydown", closeTopSurface);
+  }, [desktopActionsExpanded, mobileActionsExpanded, showExport, showSearch, showShare, utilityPanel]);
 
   function openNavigation(tab: "dialogue" | "sections") {
     setNavigationTab(tab);
@@ -990,14 +1057,20 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   }
 
   if (conversationQuery.isError) {
-    return <ReaderState title="Conversation unavailable" detail={conversationQuery.error.message} />;
+    return <ReaderState title={t("conversationUnavailable")} detail={conversationQuery.error.message} />;
   }
 
   if (!conversation) {
-    return <ReaderState title="Conversation unavailable" detail="The API returned no conversation payload." />;
+    return <ReaderState title={t("conversationUnavailable")} detail={t("noConversationPayload")} />;
   }
 
   const headerActions: ReaderHeaderAction[] = [
+    {
+      id: "search",
+      label: t("search"),
+      icon: Search,
+      onSelect: () => openUtilityPanel("search"),
+    },
     {
       id: "expand-nearby",
       label: neighborhoodExpansion.active
@@ -1071,8 +1144,8 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       <section className="relative flex min-w-0 flex-1 flex-col">
         <header className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-200 md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
           {loadingProgress < 100 ? (
-            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[#e5e7eb]">
-              <div className="h-full bg-[#10a37f] transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
+            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-subtle">
+              <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
             </div>
           ) : null}
           <div className="hidden min-h-14 items-center justify-between gap-3 px-6 py-2 md:flex">
@@ -1121,7 +1194,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
             <ReaderHeaderActionRail
               expanded={mobileActionsExpanded}
               onExpandedChange={setMobileActionsExpanded}
-              actions={headerActions.slice(0, 3)}
+              actions={headerActions.slice(0, 4)}
               triggerLabel={t("more")}
               closeLabel={t("collapseActions")}
               compact
@@ -1143,15 +1216,15 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                 />}
             content={<div className="reader-content-inner min-w-0">
               {windowQuery.isLoading && messages.length === 0 ? (
-                <ReaderState title="正在加载消息" detail="正在获取首屏对话内容。" />
+                <ReaderState title={t("loadingMessages")} detail={t("loadingInitialMessages")} />
               ) : null}
 
               {windowQuery.isError ? (
-                <ReaderState title="消息加载失败" detail={windowQuery.error.message} />
+                <ReaderState title={t("loadFailed")} detail={windowQuery.error.message} />
               ) : null}
 
               {windowQuery.isSuccess && messages.length === 0 ? (
-                <ReaderState title="暂无消息" detail="这个对话还没有可阅读的消息。" />
+                <ReaderState title={t("noMessagesTitle")} detail={t("noConversationMessages")} />
               ) : null}
 
               {messages.length > 0 ? (
@@ -1236,6 +1309,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       >
         {navigationContent}
       </MobileReaderSheet>
+      <MobileReaderSheet open={utilityPanel === "search"} onOpenChange={(open) => { if (!open) setUtilityPanel(null); }} title={t("search")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("search")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
+        <ConversationSearchPanel conversationId={conversation.id} onNavigate={({ messageId, blockIndex }) => navigateToTarget({ messageId, blockIndex, source: "search" })} onClose={() => setUtilityPanel(null)} showHeader={false} />
+      </MobileReaderSheet>
       {utilityPanel === "navigation" ? (
         <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
           <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => setUtilityPanel(null)} />
@@ -1252,14 +1328,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       <MobileReaderSheet open={utilityPanel === "export"} onOpenChange={(open) => { if (!open) setUtilityPanel(null); }} title={t("export")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("export")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /></div>
       </MobileReaderSheet>
-      {showShare || showExport ? (
+      {showShare || showExport || showSearch ? (
         <div className="fixed inset-0 z-40 hidden justify-end bg-black/15 md:flex">
-          <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => { setShowShare(false); setShowExport(false); }} />
+          <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => { setShowShare(false); setShowExport(false); setShowSearch(false); }} />
           <div className="relative z-10 flex h-full w-[min(30rem,38vw)] min-w-[24rem] border-l border-ui bg-raised shadow-2xl">
-            <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+            {showSearch ? <ConversationSearchPanel conversationId={conversation.id} onNavigate={({ messageId, blockIndex }) => navigateToTarget({ messageId, blockIndex, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
               {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
               {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-            </ReaderPanelShell>
+            </ReaderPanelShell>}
           </div>
         </div>
       ) : null}
@@ -1325,6 +1401,10 @@ function getBlockBounds(blocks: RenderBlockRead[]): { min: number; max: number }
     max = Math.max(max, block.block_index);
   }
   return { min, max };
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, button, [contenteditable='true']"));
 }
 
 function mergeBlockWindows(
@@ -1483,9 +1563,7 @@ function numberOrNull(value: unknown): number | null {
 function Spinner({ dark = false }: { dark?: boolean }) {
   return (
     <span
-      className={`h-4 w-4 animate-spin rounded-full border-2 ${
-        dark ? "border-[#d1d5db] border-t-[#374151]" : "border-[#d1d5db] border-t-[#10a37f]"
-      }`}
+      className={`h-4 w-4 animate-spin rounded-full border-2 border-current/25 ${dark ? "border-t-current" : "border-t-[var(--accent)]"}`}
     />
   );
 }
@@ -1500,9 +1578,9 @@ function ReaderState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+    <div className="rounded-lg border border-ui bg-surface p-5">
+      <h2 className="text-base font-semibold text-primary">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-secondary">{detail}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -1510,19 +1588,19 @@ function ReaderState({
 
 function ReaderLoadingShell({ progress }: { progress: number }) {
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]">
+    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
       <ProjectSidebar />
       <section className="relative min-w-0 flex-1 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-[#e5e7eb]">
-          <div className="h-full bg-[#10a37f] transition-[width] duration-300" style={{ width: `${progress}%` }} />
+        <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-subtle">
+          <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${progress}%` }} />
         </div>
         <div className="mx-auto max-w-3xl animate-pulse space-y-10 px-3 py-20 sm:px-6">
-          <div className="h-5 w-48 rounded bg-[#e5e7eb]" />
-          <div className="ml-auto h-28 w-full rounded-2xl bg-[#ececeb] sm:w-2/3" />
+          <div className="h-5 w-48 rounded bg-subtle" />
+          <div className="ml-auto h-28 w-full rounded-2xl bg-subtle sm:w-2/3" />
           <div className="space-y-3">
-            <div className="h-4 w-full rounded bg-[#e5e7eb]" />
-            <div className="h-4 w-5/6 rounded bg-[#e5e7eb]" />
-            <div className="h-4 w-3/4 rounded bg-[#e5e7eb]" />
+            <div className="h-4 w-full rounded bg-subtle" />
+            <div className="h-4 w-5/6 rounded bg-subtle" />
+            <div className="h-4 w-3/4 rounded bg-subtle" />
           </div>
         </div>
       </section>

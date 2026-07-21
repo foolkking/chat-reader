@@ -8,6 +8,7 @@ from app.models.conversation import Conversation
 from app.models.heading import Heading
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
 from app.services.database.bulk_insert import insert_rows
 from app.services.toc.toc_builder import rebuild_headings_for_all, rebuild_headings_for_conversation
@@ -104,7 +105,52 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 "source_type": conversation.source_type,
                 "source_profile": conversation.source_profile,
                 "order_key": heading.order_key,
-                "metadata_": {"heading_index": heading.heading_index, "slug": heading.slug},
+                "metadata_": {
+                    "heading_index": heading.heading_index,
+                    "block_index": heading.block_index,
+                    "slug": heading.slug,
+                },
+            }
+        )
+        indexed_count += 1
+        if len(document_rows) >= 500:
+            insert_rows(db, SearchDocument, document_rows)
+            document_rows.clear()
+
+    code_rows = (
+        db.query(Message, MessageVersion, RenderBlock)
+        .join(MessageVersion, MessageVersion.id == Message.current_version_id)
+        .join(RenderBlock, RenderBlock.message_version_id == MessageVersion.id)
+        .filter(
+            Message.conversation_id == conversation.id,
+            Message.is_deleted.is_(False),
+            RenderBlock.block_type == "code",
+        )
+        .order_by(Message.order_key.asc(), RenderBlock.block_index.asc())
+        .yield_per(500)
+    )
+    for message, version, block in code_rows:
+        code_text = (block.plain_text or str(block.data.get("text") or "")).strip()
+        if not code_text:
+            continue
+        language = str(block.data.get("language") or "text")
+        document_rows.append(
+            {
+                "id": uuid.uuid4(),
+                "conversation_id": conversation.id,
+                "message_id": message.id,
+                "message_version_id": version.id,
+                "document_type": "code",
+                "role": message.role,
+                "title": conversation.display_title,
+                "plain_text": code_text,
+                "search_text": f"{language} {code_text}",
+                "source_type": conversation.source_type,
+                "source_profile": conversation.source_profile,
+                "order_key": message.order_key,
+                "turn_index": message.turn_index,
+                "created_at": message.created_at,
+                "metadata_": {"block_index": block.block_index, "language": language},
             }
         )
         indexed_count += 1

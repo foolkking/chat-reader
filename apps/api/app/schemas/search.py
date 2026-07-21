@@ -13,6 +13,7 @@ class SearchResultItem(BaseModel):
     message_id: UUID | None
     role: str | None
     order_key: str | None
+    block_index: int | None = None
     snippet: str
     rank: float
     source_profile: str | None

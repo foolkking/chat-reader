@@ -67,6 +67,12 @@ Import 状态为 `previewed / queued / processing / committed / failed`。failed
 | POST | `/api/conversations/{id}/projects/{project_id}` | conversation 侧兼容加入接口 |
 | DELETE | `/api/conversations/{id}/projects/{project_id}` | conversation 侧兼容移出接口 |
 | PUT | `/api/conversations/{id}/project` | 单归属移动；`project_id=null` 移回 history |
+| PUT | `/api/projects/order` | 更新 Project 自定义顺序 |
+| PUT | `/api/conversations/order` | 更新未分类 Conversation 自定义顺序 |
+| PUT | `/api/projects/{id}/conversations/order` | 更新 Project 内 Conversation 自定义顺序 |
+| POST | `/api/projects/{id}/recent` | 更新 Project 最近阅读时间 |
+
+Project 列表支持 `sort=recent_read|updated|created|title|conversation_count|custom` 与 `direction=asc|desc`。Conversation 列表和 Project 内列表支持 `sort=recent_read|updated|created|imported|title|message_count|custom`；置顶项始终优先。
 
 ## Background Tasks
 
@@ -80,7 +86,7 @@ Conversation merge 可携带 `Idempotency-Key` 请求头。相同 key 的 queued
 
 ## Search And TOC
 
-`GET /api/search` 接受 `q`、`limit`、`offset`、`conversation_id`、`project_id`、`document_type` 和 `role`。`document_type` 当前使用 `conversation`、`message` 或 `heading`。重复 message 结果通过 `occurrence_count` 表示跨会话出现次数。
+`GET /api/search` 接受 `q`、`limit`、`offset`、`conversation_id`、`project_id`、`document_type`、`role`、`status_scope`、`date_from` 和 `date_to`。`document_type` 使用 `conversation`、`message`、`heading` 或 `code`；heading/code 结果返回 `block_index` 以支持精确定位。重复 message 结果通过 `occurrence_count` 表示跨会话出现次数。
 
 `POST /api/search/reindex` 重建 canonical 搜索文档，属于管理操作；当前没有认证，公网部署应在反向代理层限制访问。
 
@@ -115,8 +121,8 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| GET | `/api/preferences` | 获取主题、语言与正文宽度偏好 |
-| PATCH | `/api/preferences` | 更新 `theme_mode`、`locale_mode` 或 `reader_width_mode` |
+| GET | `/api/preferences` | 获取主题、语言、正文宽度与列表排序偏好 |
+| PATCH | `/api/preferences` | 更新外观或 Conversation/Project 排序模式与方向 |
 
 `reader_width_mode` 支持 `compact / standard / wide`。客户端不能提交 `subject_key`；当前服务端身份固定解析为 `local:default`。
 

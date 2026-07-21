@@ -2,8 +2,8 @@ import re
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import case, func
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.models.conversation import Conversation
@@ -13,7 +13,13 @@ from app.models.message_version import MessageVersion
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.render_block import RenderBlock
-from app.schemas.conversation import ConversationDetail, ConversationListItem, ConversationUpdate
+from app.models.recent_item import RecentItem
+from app.schemas.conversation import (
+    ConversationDetail,
+    ConversationListItem,
+    ConversationOrderUpdate,
+    ConversationUpdate,
+)
 from app.schemas.editing import (
     ConversationEventListResponse,
     ConversationEventRead,
@@ -57,11 +63,21 @@ def list_conversations(
     source_profile: str | None = None,
     include_archived: bool = False,
     scope: str = Query(default="all", pattern="^(all|history)$"),
+    sort: str = Query(
+        default="recent_read",
+        pattern="^(recent_read|updated|created|imported|title|message_count|custom)$",
+    ),
+    direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ) -> list[ConversationListItem]:
-    query = db.query(Conversation).filter(
+    query = (
+        db.query(Conversation)
+        .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
+        .options(selectinload(Conversation.recent_item))
+        .filter(
         Conversation.deleted_at.is_(None),
         Conversation.status.in_(("active", "archived")),
+        )
     )
     if not include_archived:
         query = query.filter(Conversation.status != "archived")
@@ -80,17 +96,26 @@ def list_conversations(
     if source_profile:
         query = query.filter(Conversation.source_profile == source_profile)
     conversations = (
-        query.order_by(
-            Conversation.is_global_pinned.desc(),
-            Conversation.global_pinned_at.desc(),
-            Conversation.sort_time.desc(),
-            Conversation.imported_at.desc(),
-        )
+        query.order_by(*_conversation_sort_order(sort, direction))
         .offset(offset)
         .limit(limit)
         .all()
     )
     return [_conversation_item(conversation) for conversation in conversations]
+
+
+@router.put("/order", status_code=status.HTTP_204_NO_CONTENT)
+def update_conversation_order(
+    payload: ConversationOrderUpdate,
+    db: Session = Depends(get_db),
+) -> None:
+    rows = db.query(Conversation).filter(Conversation.id.in_(payload.conversation_ids)).all()
+    if len(rows) != len(set(payload.conversation_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    by_id = {row.id: row for row in rows}
+    for index, conversation_id in enumerate(payload.conversation_ids):
+        by_id[conversation_id].manual_sort_order = index
+    db.commit()
 
 
 @router.post("/merge", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
@@ -558,6 +583,30 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         status=conversation.status,
         is_global_pinned=conversation.is_global_pinned,
         global_pinned_at=conversation.global_pinned_at,
+        last_read_at=conversation.recent_item.last_opened_at if conversation.recent_item else None,
+        manual_sort_order=conversation.manual_sort_order,
+    )
+
+
+def _conversation_sort_order(sort: str, direction: str) -> tuple:
+    field = {
+        "recent_read": RecentItem.last_opened_at,
+        "updated": Conversation.updated_at,
+        "created": Conversation.created_at,
+        "imported": Conversation.imported_at,
+        "title": func.lower(Conversation.display_title),
+        "message_count": Conversation.message_count,
+        "custom": Conversation.manual_sort_order,
+    }[sort]
+    ordered_field = field.asc() if direction == "asc" else field.desc()
+    return (
+        Conversation.is_global_pinned.desc(),
+        Conversation.global_pinned_at.desc(),
+        case((field.is_(None), 1), else_=0).asc(),
+        ordered_field,
+        Conversation.sort_time.desc(),
+        Conversation.imported_at.desc(),
+        Conversation.id.asc(),
     )
 
 

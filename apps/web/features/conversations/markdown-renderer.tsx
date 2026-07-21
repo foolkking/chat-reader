@@ -81,7 +81,7 @@ const THINKING_DURATION_RE =
 const THINKING_LABEL_RE = /^(?:思考|思考过程|thinking|reasoning)\s*[:：]?\s*$/i;
 const ANSWER_START_RE = /^(?:#{1,6}\s+\S+|(?:答案|回答|结论|最终回答|正式回答|final answer|answer)\s*[:：])/i;
 const MAX_THINKING_SCAN_LINES = 40;
-const MAX_THINKING_SCAN_CHARS = 4000;
+const MAX_THINKING_SCAN_CHARS = 8000;
 
 const TRACE_PREFIXES = [
   "考虑",
@@ -103,14 +103,14 @@ const markdownComponents: Components & {
   a({ href, children }) {
     const safeHref = typeof href === "string" && isSafeHref(href) ? href : undefined;
     if (!safeHref) {
-      return <span className="text-[#374151]">{children}</span>;
+      return <span className="text-secondary">{children}</span>;
     }
     return (
       <a
         href={safeHref}
         target={safeHref.startsWith("#") || safeHref.startsWith("/") ? undefined : "_blank"}
         rel={safeHref.startsWith("#") || safeHref.startsWith("/") ? undefined : "noreferrer"}
-        className="font-medium text-[#0f766e] underline decoration-[#99f6e4] underline-offset-2 hover:text-[#0f5f59]"
+        className="font-medium text-[var(--link)] underline decoration-[var(--link-decoration)] underline-offset-2 hover:text-[var(--link-hover)]"
       >
         {children}
       </a>
@@ -128,7 +128,7 @@ const markdownComponents: Components & {
       );
     }
     return (
-      <blockquote className="my-4 border-l-2 border-[#cbd5e1] py-0.5 pl-4 text-[#475569]">
+      <blockquote className="my-4 border-l-2 border-[var(--quote-border)] py-0.5 pl-4 text-[var(--quote-text)]">
         {children}
       </blockquote>
     );
@@ -136,31 +136,31 @@ const markdownComponents: Components & {
   CodeHeader: EmptyCodeHeader,
   SyntaxHighlighter: CodeOrMermaidBlock,
   code({ children }) {
-    return <code className="rounded-md border border-[#e2e5e9] bg-[#f3f4f6] px-1.5 py-0.5 font-mono text-[0.9em] text-[#1f2937]">{children}</code>;
+    return <code className="rounded-md border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1.5 py-0.5 font-mono text-[0.9em] text-[var(--inline-code-text)]">{children}</code>;
   },
   h1({ children }) {
-    return <h1 className="mt-8 border-b border-[#e5e7eb] pb-2 text-2xl font-semibold leading-9 text-[#111827] first:mt-0">{children}</h1>;
+    return <h1 className="mt-8 border-b border-ui pb-2 text-2xl font-semibold leading-9 text-primary first:mt-0">{children}</h1>;
   },
   h2({ children }) {
-    return <h2 className="mt-7 text-xl font-semibold leading-8 text-[#111827] first:mt-0">{children}</h2>;
+    return <h2 className="mt-7 text-xl font-semibold leading-8 text-primary first:mt-0">{children}</h2>;
   },
   h3({ children }) {
-    return <h3 className="mt-6 text-lg font-semibold leading-7 text-[#1f2937] first:mt-0">{children}</h3>;
+    return <h3 className="mt-6 text-lg font-semibold leading-7 text-primary first:mt-0">{children}</h3>;
   },
   h4({ children }) {
-    return <h4 className="mt-4 text-base font-semibold leading-7 text-[#111827] first:mt-0">{children}</h4>;
+    return <h4 className="mt-4 text-base font-semibold leading-7 text-primary first:mt-0">{children}</h4>;
   },
   hr() {
-    return <hr className="my-8 border-[#e5e7eb]" />;
+    return <hr className="my-8 border-ui" />;
   },
   img({ alt, src }) {
     const safeSrc = typeof src === "string" && isSafeHref(src) ? src : undefined;
     return (
-      <span className="my-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-[#d1d5db] bg-[#f9fafb] px-2 py-1 text-xs text-[#6b7280]">
+      <span className="my-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-xs text-secondary">
         图片附件
         {alt ? <span className="truncate">{alt}</span> : null}
         {safeSrc ? (
-          <a href={safeSrc} target="_blank" rel="noreferrer" className="text-[#0f766e] underline">
+          <a href={safeSrc} target="_blank" rel="noreferrer" className="text-[var(--link)] underline">
             打开
           </a>
         ) : null}
@@ -176,12 +176,12 @@ const markdownComponents: Components & {
         type="checkbox"
         checked={Boolean(checked)}
         readOnly
-        className="mr-2 h-4 w-4 rounded border-[#cbd5e1] align-[-2px] accent-[#10a37f]"
+        className="mr-2 h-4 w-4 rounded border-ui align-[-2px] accent-[var(--accent)]"
       />
     );
   },
   li({ children, className }) {
-    return <li className={`my-1 pl-1 marker:text-[#9ca3af] ${className ?? ""}`}>{children}</li>;
+    return <li className={`my-1 pl-1 marker:text-secondary ${className ?? ""}`}>{children}</li>;
   },
   ol({ children }) {
     return <ol className="my-4 list-decimal space-y-1 pl-7">{children}</ol>;
@@ -190,26 +190,26 @@ const markdownComponents: Components & {
     return <p className="my-3.5 break-words leading-[1.8] first:mt-0 last:mb-0">{children}</p>;
   },
   pre({ children }) {
-    return <pre className="max-w-full overflow-x-auto rounded-lg border border-[#dfe3e8] bg-[#f6f7f8] p-4 text-sm leading-6 text-[#24292f]">{children}</pre>;
+    return <pre className="max-w-full overflow-x-auto rounded-lg border border-ui bg-[var(--code-bg)] p-4 text-sm leading-6 text-primary">{children}</pre>;
   },
   table({ children }) {
     return (
-      <div className="markdown-table my-5 max-w-full overflow-x-auto rounded-lg border border-[#dfe3e8] bg-white">
+      <div className="markdown-table my-5 max-w-full overflow-x-auto rounded-lg border border-ui bg-surface">
         <table className="w-max min-w-full border-collapse text-sm">{children}</table>
       </div>
     );
   },
   tbody({ children }) {
-    return <tbody className="divide-y divide-[#e8eaed]">{children}</tbody>;
+    return <tbody className="divide-y divide-[var(--border)]">{children}</tbody>;
   },
   td({ children }) {
-    return <td className="border-r border-[#e8eaed] px-3 py-2.5 align-top last:border-r-0">{children}</td>;
+    return <td className="border-r border-ui px-3 py-2.5 align-top last:border-r-0">{children}</td>;
   },
   th({ children }) {
-    return <th className="sticky top-0 border-r border-[#dfe3e8] bg-[#f4f5f6] px-3 py-2.5 text-left font-semibold last:border-r-0">{children}</th>;
+    return <th className="sticky top-0 border-r border-ui bg-[var(--table-header)] px-3 py-2.5 text-left font-semibold last:border-r-0">{children}</th>;
   },
   thead({ children }) {
-    return <thead className="border-b border-[#d1d5db]">{children}</thead>;
+    return <thead className="border-b border-ui">{children}</thead>;
   },
   ul({ children }) {
     return <ul className="my-4 list-disc space-y-1 pl-7">{children}</ul>;
@@ -237,8 +237,8 @@ export function MarkdownRenderer({
 
 export function ThinkingDisclosure({ label, text }: { label: string; text: string }) {
   return (
-    <details className="my-3 rounded-xl border border-[#d8dee9] bg-[#f8fafc] px-4 py-3 text-[#475569]">
-      <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-[#334155]">
+    <details className="my-3 rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]">
+      <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-primary">
         {label}
       </summary>
       {text.trim() ? <AssistantMarkdownPart text={text} className="mt-3 text-sm" /> : null}
@@ -469,6 +469,7 @@ function hashCode(value: string): string {
 }
 
 function MermaidDiagram({ code }: SyntaxHighlighterProps) {
+  const { resolvedTheme } = usePreferences();
   const [svgUri, setSvgUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -482,10 +483,11 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
           securityLevel: "strict",
           theme: "base",
           themeVariables: {
-            primaryColor: "#f8fafc",
-            primaryTextColor: "#111827",
-            primaryBorderColor: "#cbd5e1",
-            lineColor: "#64748b",
+            primaryColor: resolvedTheme === "dark" ? "#292c2a" : "#f6f8fa",
+            primaryTextColor: resolvedTheme === "dark" ? "#ecedeb" : "#202123",
+            primaryBorderColor: resolvedTheme === "dark" ? "#667069" : "#b9c2cb",
+            lineColor: resolvedTheme === "dark" ? "#a7aaa5" : "#57606a",
+            background: resolvedTheme === "dark" ? "#202120" : "#ffffff",
           },
         });
         const id = `mermaid-${Math.random().toString(36).slice(2)}`;
@@ -505,11 +507,11 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, resolvedTheme]);
 
   if (svgUri) {
     return (
-      <div className="overflow-x-auto rounded-b-md border border-t-0 border-[#d8dee9] bg-white p-4">
+      <div className="overflow-x-auto rounded-b-md border border-t-0 border-ui bg-surface p-4">
         <img src={svgUri} alt="Mermaid diagram" className="mx-auto max-w-full" />
       </div>
     );
@@ -517,25 +519,25 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
 
   if (error) {
     return (
-      <div className="space-y-2 rounded-b-md border border-t-0 border-[#d8dee9] bg-[#f8fafc] p-4">
-        <p className="text-xs text-[#9a6700]">Mermaid 渲染失败，已回退为源码。</p>
-        <pre className="max-w-full overflow-x-auto rounded border border-[#d8dee9] bg-white p-3 text-sm leading-6 text-[#24292f]">
+      <div className="space-y-2 rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4">
+        <p className="text-xs text-[var(--callout-warning-text)]">Mermaid 渲染失败，已回退为源码。</p>
+        <pre className="max-w-full overflow-x-auto rounded border border-ui bg-surface p-3 text-sm leading-6 text-primary">
           <code>{code}</code>
         </pre>
       </div>
     );
   }
 
-  return <div className="rounded-b-md border border-t-0 border-[#d8dee9] bg-[#f8fafc] p-4 text-sm text-[#57606a]">正在渲染 Mermaid 图表...</div>;
+  return <div className="rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4 text-sm text-secondary">正在渲染 Mermaid 图表…</div>;
 }
 
 function CitationPart({ part }: { part: CanonicalSourcePart }) {
   return (
-    <div className="my-3 rounded-xl border border-[#d8dee9] bg-white px-4 py-3 text-sm shadow-sm">
-      <div className="font-semibold text-[#111827]">{part.title}</div>
-      {part.snippet ? <p className="mt-1 leading-6 text-[#475569]">{part.snippet}</p> : null}
+    <div className="my-3 rounded-xl border border-ui bg-surface px-4 py-3 text-sm">
+      <div className="font-semibold text-primary">{part.title}</div>
+      {part.snippet ? <p className="mt-1 leading-6 text-secondary">{part.snippet}</p> : null}
       {part.url && isSafeHref(part.url) ? (
-        <a href={part.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-medium text-[#0f766e] underline">
+        <a href={part.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-medium text-[var(--link)] underline">
           来源链接
         </a>
       ) : null}
@@ -545,11 +547,11 @@ function CitationPart({ part }: { part: CanonicalSourcePart }) {
 
 function ToolPart({ part }: { part: CanonicalToolPart }) {
   return (
-    <div className="my-3 rounded-xl border border-[#d8dee9] bg-[#f8fafc] px-4 py-3 text-sm text-[#475569]">
-      <div className="font-semibold text-[#111827]">工具结果 · {part.name}</div>
-      {part.status ? <div className="mt-1 text-xs text-[#64748b]">{part.status}</div> : null}
+    <div className="my-3 rounded-xl border border-ui bg-[var(--attachment-bg)] px-4 py-3 text-sm text-secondary">
+      <div className="font-semibold text-primary">工具结果 · {part.name}</div>
+      {part.status ? <div className="mt-1 text-xs text-secondary">{part.status}</div> : null}
       {part.result !== undefined ? (
-        <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-white p-3 text-xs">{JSON.stringify(part.result, null, 2)}</pre>
+        <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-surface p-3 text-xs text-primary">{JSON.stringify(part.result, null, 2)}</pre>
       ) : null}
     </div>
   );
@@ -558,13 +560,13 @@ function ToolPart({ part }: { part: CanonicalToolPart }) {
 function AttachmentPart({ name, detail, url }: { name: string; detail?: string; url?: string }) {
   const safeUrl = url && isSafeHref(url) ? url : undefined;
   return (
-    <div className="my-3 flex max-w-full items-center justify-between gap-3 rounded-xl border border-dashed border-[#cbd5e1] bg-[#f8fafc] px-4 py-3 text-sm text-[#475569]">
+    <div className="my-3 flex max-w-full items-center justify-between gap-3 rounded-xl border border-dashed border-ui bg-[var(--attachment-bg)] px-4 py-3 text-sm text-secondary">
       <div className="min-w-0">
-        <div className="truncate font-medium text-[#111827]">{name}</div>
-        {detail ? <div className="text-xs text-[#64748b]">{detail}</div> : null}
+        <div className="truncate font-medium text-primary">{name}</div>
+        {detail ? <div className="text-xs text-secondary">{detail}</div> : null}
       </div>
       {safeUrl ? (
-        <a href={safeUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-medium text-[#0f766e] underline">
+        <a href={safeUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-medium text-[var(--link)] underline">
           打开
         </a>
       ) : null}
@@ -685,15 +687,15 @@ function calloutLabel(type: string): string {
 
 function calloutClassName(type: string): string {
   if (type === "warning" || type === "caution" || type === "danger") {
-    return "border-amber-200 bg-amber-50 text-amber-950";
+    return "border-[var(--callout-warning-border)] bg-[var(--callout-warning-bg)] text-[var(--callout-warning-text)]";
   }
   if (type === "tip" || type === "todo") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-950";
+    return "border-[var(--callout-tip-border)] bg-[var(--callout-tip-bg)] text-[var(--callout-tip-text)]";
   }
   if (type === "important") {
-    return "border-purple-200 bg-purple-50 text-purple-950";
+    return "border-[var(--callout-important-border)] bg-[var(--callout-important-bg)] text-[var(--callout-important-text)]";
   }
-  return "border-sky-200 bg-sky-50 text-sky-950";
+  return "border-[var(--callout-note-border)] bg-[var(--callout-note-bg)] text-[var(--callout-note-text)]";
 }
 
 function collectNodeText(node: unknown): string {

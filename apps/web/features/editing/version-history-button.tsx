@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "../../components/preferences-provider";
+
 export function VersionHistoryButton({
   isOpen,
   onToggle,
@@ -7,13 +9,14 @@ export function VersionHistoryButton({
   isOpen: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslations();
   return (
     <button
       type="button"
       onClick={onToggle}
-      className="min-h-10 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
+      className="min-h-10 rounded-full border border-ui bg-raised px-3 text-xs font-medium text-primary hover:bg-subtle"
     >
-      {isOpen ? "Hide versions" : "Versions"}
+      {isOpen ? t("hideVersions") : t("versions")}
     </button>
   );
 }

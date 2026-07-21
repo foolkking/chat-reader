@@ -98,5 +98,44 @@ def test_archived_project_conversations_temporarily_return_to_history(client: Te
     assert [item["id"] for item in client.get(f"/api/projects/{project_id}/conversations").json()] == [conversation_id]
 
 
+def test_activity_sorting_and_custom_orders(client: TestClient) -> None:
+    alpha_id = _commit_conversation(client, "Alpha activity")
+    beta_id = _commit_conversation(client, "Beta activity")
+
+    assert client.post(f"/api/conversations/{alpha_id}/recent").status_code == 200
+    assert client.post(f"/api/conversations/{beta_id}/recent").status_code == 200
+    recent = client.get("/api/conversations", params={"sort": "recent_read", "direction": "desc"}).json()
+    assert recent[0]["id"] == beta_id
+    assert recent[0]["last_read_at"] is not None
+
+    title_sorted = client.get("/api/conversations", params={"sort": "title", "direction": "asc"}).json()
+    assert [item["display_title"] for item in title_sorted] == sorted(
+        item["display_title"] for item in title_sorted
+    )
+    assert client.put("/api/conversations/order", json={"conversation_ids": [beta_id, alpha_id]}).status_code == 204
+    custom = client.get("/api/conversations", params={"sort": "custom", "direction": "asc"}).json()
+    custom_ids = [item["id"] for item in custom]
+    assert custom_ids.index(beta_id) < custom_ids.index(alpha_id)
+
+    first_project = client.post("/api/projects", json={"name": "Alpha project"}).json()
+    second_project = client.post("/api/projects", json={"name": "Beta project"}).json()
+    assert client.post(f"/api/projects/{first_project['id']}/recent").status_code == 200
+    projects = client.get("/api/projects", params={"sort": "recent_read", "direction": "desc"}).json()
+    assert next(item for item in projects if item["id"] == first_project["id"])["last_read_at"] is not None
+    assert client.put("/api/projects/order", json={"project_ids": [second_project["id"], first_project["id"]]}).status_code == 204
+
+    assert client.put(f"/api/conversations/{alpha_id}/project", json={"project_id": first_project["id"]}).status_code == 200
+    assert client.put(f"/api/conversations/{beta_id}/project", json={"project_id": first_project["id"]}).status_code == 200
+    assert client.put(
+        f"/api/projects/{first_project['id']}/conversations/order",
+        json={"conversation_ids": [beta_id, alpha_id]},
+    ).status_code == 204
+    project_custom = client.get(
+        f"/api/projects/{first_project['id']}/conversations",
+        params={"sort": "custom", "direction": "asc"},
+    ).json()
+    assert [item["id"] for item in project_custom] == [beta_id, alpha_id]
+
+
 def project_id_path(project_id: str) -> str:
     return f"/api/projects/{project_id}"

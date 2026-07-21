@@ -27,6 +27,7 @@ class Project(Base):
         default=utc_now,
         onupdate=utc_now,
     )
+    last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     conversations = relationship("ProjectConversation", back_populates="project", cascade="all, delete-orphan")
     recent_items = relationship("RecentItem", back_populates="project")
@@ -36,3 +37,4 @@ Index("idx_projects_is_default", Project.is_default)
 Index("idx_projects_is_archived", Project.is_archived)
 Index("idx_projects_sort_order", Project.sort_order)
 Index("idx_projects_created_at", Project.created_at)
+Index("idx_projects_last_read_at", Project.last_read_at)

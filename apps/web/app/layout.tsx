@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { QueryProvider } from "../components/query-provider";
 import { PreferencesProvider } from "../components/preferences-provider";
+import { ImportDialogProvider } from "../components/import-dialog-provider";
+import { ShortcutManager } from "../components/shortcut-manager";
+import { InteractionDialogProvider } from "../components/interaction-dialog-provider";
 import { ServiceWorkerRegistration } from "../components/service-worker-registration";
 import { resolveLocale } from "../lib/i18n";
 import type { UserPreferenceRead } from "../lib/types";
@@ -42,7 +45,9 @@ export default async function RootLayout({
     <html lang={initialLocale} data-theme={initialTheme} suppressHydrationWarning>
       <body>
         <QueryProvider>
-          <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>{children}</PreferencesProvider>
+          <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
+            <InteractionDialogProvider><ImportDialogProvider><ShortcutManager />{children}</ImportDialogProvider></InteractionDialogProvider>
+          </PreferencesProvider>
         </QueryProvider>
         <ServiceWorkerRegistration />
       </body>
@@ -55,6 +60,10 @@ async function loadInitialPreferences(): Promise<UserPreferenceRead> {
     theme_mode: "light",
     locale_mode: "auto",
     reader_width_mode: "standard",
+    conversation_sort_mode: "recent_read",
+    conversation_sort_direction: "desc",
+    project_sort_mode: "recent_read",
+    project_sort_direction: "desc",
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
   };

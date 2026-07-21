@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
 import { editMessage, splitMessage } from "../../lib/api";
-import { useTranslations } from "../../components/preferences-provider";
+import { usePreferences } from "../../components/preferences-provider";
 import { EditMessageForm } from "../editing/edit-message-form";
 import { VersionHistoryButton } from "../editing/version-history-button";
 import { VersionHistoryPanel } from "../editing/version-history-panel";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 export function MessageItem({
   message,
@@ -38,7 +39,8 @@ export function MessageItem({
   onLoadPreviousBlocks?: () => Promise<void>;
   onLoadMoreBlocks?: () => Promise<void>;
 }) {
-  const t = useTranslations();
+  const { t } = usePreferences();
+  const dialog = useInteractionDialog();
   const queryClient = useQueryClient();
   const [showHeavyBlocks, setShowHeavyBlocks] = useState(!message.is_heavy);
   const [isLoadingHeavyBlocks, setIsLoadingHeavyBlocks] = useState(false);
@@ -93,7 +95,11 @@ export function MessageItem({
   async function submitSplit() {
     const splitOffset = Number.parseInt(splitOffsetValue, 10);
     if (!Number.isFinite(splitOffset) || splitOffset <= 0 || splitOffset >= currentText.length) {
-      window.alert(`Split offset must be between 1 and ${Math.max(currentText.length - 1, 1)}.`);
+      await dialog.confirm({
+        title: t("invalidSplitPosition"),
+        description: t("splitPositionHint", { max: Math.max(currentText.length - 1, 1) }),
+        confirmLabel: t("close"),
+      });
       return;
     }
     setIsSplitting(true);
@@ -113,13 +119,13 @@ export function MessageItem({
   const actionControls = (
     <>
       {onSelectedChange ? (
-        <label className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151]">
+        <label className="inline-flex min-h-10 items-center gap-2 rounded-full border border-ui bg-raised px-3 text-xs font-medium text-primary">
           <input
             type="checkbox"
             checked={selected}
             onChange={(event) => onSelectedChange(event.target.checked)}
           />
-          Select
+          {t("select")}
         </label>
       ) : null}
       {!readOnly ? (
@@ -127,9 +133,9 @@ export function MessageItem({
           <button
             type="button"
             onClick={() => setIsEditing((current) => !current)}
-            className="min-h-10 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
+            className="min-h-10 rounded-full border border-ui bg-raised px-3 text-xs font-medium text-primary hover:bg-subtle"
           >
-            {isEditing ? "Close edit" : "Edit"}
+            {isEditing ? t("closeEdit") : t("edit")}
           </button>
           <button
             type="button"
@@ -144,9 +150,9 @@ export function MessageItem({
                 return next;
               });
             }}
-            className="min-h-10 rounded-full border border-[#d1d5db] bg-white/90 px-3 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-60"
+            className="min-h-10 rounded-full border border-ui bg-raised px-3 text-xs font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-60"
           >
-            {showSplitPanel ? "Close split" : isSplitting ? "Splitting" : "Split"}
+            {showSplitPanel ? t("closeSplit") : isSplitting ? t("splitting") : t("split")}
           </button>
           <VersionHistoryButton isOpen={showVersions} onToggle={() => setShowVersions((current) => !current)} />
         </>
@@ -160,7 +166,7 @@ export function MessageItem({
       data-message-id={message.id}
       data-order-key={message.order_key}
       className={`reader-message group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:rounded-2xl ${
-        highlightTargetId === `message-${message.id}` ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]" : ""
+        highlightTargetId === `message-${message.id}` ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""
       } ${isUser ? "sm:justify-end" : "sm:justify-start"}`}
     >
       <div className={`${isUser && !wideUserMessage ? "w-full sm:ml-auto sm:max-w-[70%]" : "w-full max-w-full flex-1"} min-w-0`}>
@@ -193,7 +199,7 @@ export function MessageItem({
                 <summary aria-label={t("messageActions")} className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg text-secondary hover:bg-subtle marker:hidden">
                   <MoreHorizontal className="h-5 w-5" />
                 </summary>
-                <div className="absolute right-0 top-10 flex w-64 flex-wrap gap-2 rounded-lg border border-[#e5e7eb] bg-white p-3 shadow-xl">{actionControls}</div>
+                <div className="absolute right-0 top-10 flex w-64 flex-wrap gap-2 rounded-lg border border-ui bg-raised p-3 shadow-xl">{actionControls}</div>
               </details>
               <div className="hidden h-0 -translate-y-2 flex-wrap justify-end gap-2 overflow-visible opacity-0 transition sm:flex sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                 {actionControls}
@@ -235,7 +241,7 @@ export function MessageItem({
                 />
               ) : null}
               {message.is_heavy && !showHeavyBlocks ? (
-            <div className="border-l-2 border-[#d1fae5] py-3 pl-3">
+            <div className="border-l-2 border-[var(--accent)] py-3 pl-3">
               <p className="text-sm text-secondary">{isLoadingHeavyBlocks ? t("loadingFullContent") : t("longContentHint")}</p>
               <button
                 type="button"
@@ -249,7 +255,7 @@ export function MessageItem({
                   }
                 }}
                 disabled={isLoadingHeavyBlocks}
-                className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
+                className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg border border-ui bg-raised px-3 text-sm font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-70"
               >
                 {isLoadingHeavyBlocks ? <Spinner /> : null}
                 {isLoadingHeavyBlocks ? t("loadingFullContent") : t("expandNow")}
@@ -259,8 +265,8 @@ export function MessageItem({
                 <>
                   {hasPreviousBlocks ? (
                     <BlockPageButton
-                      label="Load previous blocks"
-                      loadingLabel="Loading previous blocks"
+                      label={t("loadPreviousBlocks")}
+                      loadingLabel={t("loadingPreviousBlocks")}
                       loading={isLoadingPreviousBlocks}
                       onClick={async () => {
                         setIsLoadingPreviousBlocks(true);
@@ -272,7 +278,7 @@ export function MessageItem({
                       }}
                     />
                   ) : null}
-                  <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
+                      <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} />
                   {hasMoreBlocks ? <div ref={loadMoreRef} className="flex min-h-10 items-center justify-center text-xs text-secondary">{isLoadingMoreBlocks ? t("loadingMore") : t("continueLoading")}</div> : null}
                 </>
               )}
@@ -313,7 +319,7 @@ function BlockPageButton({
         type="button"
         disabled={loading}
         onClick={() => void onClick()}
-        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] shadow-sm hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-70"
+        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-ui bg-raised px-3 text-sm font-medium text-primary shadow-sm hover:bg-subtle disabled:cursor-wait disabled:opacity-70"
       >
         {loading ? <Spinner /> : null}
         {loading ? loadingLabel : label}
@@ -341,47 +347,48 @@ function SplitMessageForm({
   onCancel: () => void;
   onSubmit: () => void;
 }) {
+  const t = usePreferences().t;
   return (
-    <div className="mb-3 rounded-2xl border border-[#dbeafe] bg-white/90 p-3 shadow-sm">
+    <div className="mb-3 rounded-2xl border border-ui bg-raised p-3 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="min-w-0 flex-1 text-xs font-medium text-[#374151]">
-          Split offset
+        <label className="min-w-0 flex-1 text-xs font-medium text-primary">
+          {t("splitOffset")}
           <input
             type="number"
             min={1}
             max={Math.max(textLength - 1, 1)}
             value={offsetValue}
             onChange={(event) => onOffsetChange(event.target.value)}
-            className="mt-1 min-h-10 w-full rounded-lg border border-[#d1d5db] bg-white px-3 text-sm text-[#111827]"
+            className="mt-1 min-h-10 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
           />
         </label>
-        <label className="min-w-0 flex-[2] text-xs font-medium text-[#374151]">
-          Reason
+        <label className="min-w-0 flex-[2] text-xs font-medium text-primary">
+          {t("splitReason")}
           <input
             value={reason}
             onChange={(event) => onReasonChange(event.target.value)}
-            placeholder="manual split"
-            className="mt-1 min-h-10 w-full rounded-lg border border-[#d1d5db] bg-white px-3 text-sm text-[#111827]"
+            placeholder={t("manualSplit")}
+            className="mt-1 min-h-10 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
           />
         </label>
       </div>
-      <p className="mt-2 text-xs text-[#6b7280]">Message length: {textLength} characters. The offset must be inside the message.</p>
+      <p className="mt-2 text-xs text-secondary">{t("messageLengthHint", { count: textLength })}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           disabled={busy || textLength < 2}
           onClick={onSubmit}
-          className="min-h-9 rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+          className="min-h-9 rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:cursor-wait disabled:opacity-60"
         >
-          {busy ? "Splitting" : "Split message"}
+          {busy ? t("splitting") : t("splitMessage")}
         </button>
         <button
           type="button"
           disabled={busy}
           onClick={onCancel}
-          className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:opacity-60"
+          className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60"
         >
-          Cancel
+          {t("cancel")}
         </button>
       </div>
     </div>
@@ -389,7 +396,7 @@ function SplitMessageForm({
 }
 
 function Spinner() {
-  return <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />;
+  return <span className="h-4 w-4 animate-spin rounded-full border-2 border-current/25 border-t-current" />;
 }
 
 function normalizedBlocks(message: MessageListItem, cachedBlocks?: RenderBlockRead[]): RenderBlockRead[] {

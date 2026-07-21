@@ -86,7 +86,7 @@ renderer 使用 React 组件和受控 Markdown pipeline，禁止 raw HTML 执行
 
 ## 搜索
 
-PostgreSQL `search_documents` 同时支持全文排名和基于 `pg_trgm` GIN 索引的大小写不敏感 substring。substring 对中文、`package.json`、URL 和标点查询尤其重要。搜索结果只引用 canonical conversation/message/heading，不索引 raw artifact；相同 `Message.content_hash` 的跨会话 message 结果会折叠并返回 `occurrence_count`。
+PostgreSQL `search_documents` 同时支持全文排名和基于 `pg_trgm` GIN 索引的大小写不敏感 substring。substring 对中文、`package.json`、URL 和标点查询尤其重要。搜索结果只引用 canonical conversation/message/heading/code，不索引 raw artifact；heading/code 记录 block index，相同 `Message.content_hash` 的跨会话 message 结果会折叠并返回 `occurrence_count`。
 
 ## 编辑和版本
 

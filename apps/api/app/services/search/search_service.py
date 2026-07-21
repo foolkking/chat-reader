@@ -1,6 +1,7 @@
 import re
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy import case, func, literal, or_
 from sqlalchemy.orm import Session
@@ -25,6 +26,7 @@ class SearchResult:
     message_id: uuid.UUID | None
     role: str | None
     order_key: str | None
+    block_index: int | None
     snippet: str
     rank: float
     source_profile: str | None
@@ -50,6 +52,9 @@ def search(
     project_id: uuid.UUID | None = None,
     document_type: str | None = None,
     role: str | None = None,
+    status_scope: str = "active",
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
 ) -> SearchResultPage:
     normalized_query = query.strip()
     if not normalized_query:
@@ -65,7 +70,7 @@ def search(
     base_query = (
         db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
         .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-        .filter(Conversation.deleted_at.is_(None), Conversation.status == "active")
+        .filter(Conversation.deleted_at.is_(None), _status_filter(status_scope))
     )
     if conversation_id is not None:
         base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
@@ -78,6 +83,10 @@ def search(
         base_query = base_query.filter(SearchDocument.document_type == document_type)
     if role is not None:
         base_query = base_query.filter(SearchDocument.role == role)
+    if date_from is not None:
+        base_query = base_query.filter(SearchDocument.created_at >= date_from)
+    if date_to is not None:
+        base_query = base_query.filter(SearchDocument.created_at <= date_to)
 
     if db.bind is not None and db.bind.dialect.name == "postgresql":
         use_text_query = not _needs_substring_first(normalized_query)
@@ -107,7 +116,7 @@ def search(
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
             .filter(
                 Conversation.deleted_at.is_(None),
-                Conversation.status == "active",
+                _status_filter(status_scope),
                 or_(*filters),
             )
         )
@@ -122,6 +131,10 @@ def search(
             base_query = base_query.filter(SearchDocument.document_type == document_type)
         if role is not None:
             base_query = base_query.filter(SearchDocument.role == role)
+        if date_from is not None:
+            base_query = base_query.filter(SearchDocument.created_at >= date_from)
+        if date_to is not None:
+            base_query = base_query.filter(SearchDocument.created_at <= date_to)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
     else:
         title_match = SearchDocument.title.ilike(like_query)
@@ -136,7 +149,7 @@ def search(
         base_query = (
             db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-            .filter(Conversation.deleted_at.is_(None), Conversation.status == "active", or_(text_match, title_match))
+            .filter(Conversation.deleted_at.is_(None), _status_filter(status_scope), or_(text_match, title_match))
         )
         if conversation_id is not None:
             base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
@@ -149,6 +162,10 @@ def search(
             base_query = base_query.filter(SearchDocument.document_type == document_type)
         if role is not None:
             base_query = base_query.filter(SearchDocument.role == role)
+        if date_from is not None:
+            base_query = base_query.filter(SearchDocument.created_at >= date_from)
+        if date_to is not None:
+            base_query = base_query.filter(SearchDocument.created_at <= date_to)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
 
     rows = ordered_query.with_entities(
@@ -217,6 +234,7 @@ def search(
             message_id=document.message_id,
             role=document.role,
             order_key=document.order_key,
+            block_index=_document_block_index(document),
             snippet=_snippet(document.search_text, normalized_query),
             rank=rank,
             source_profile=document.source_profile,
@@ -226,6 +244,22 @@ def search(
         if (document := documents.get(document_id)) is not None
     ]
     return SearchResultPage(query=normalized_query, items=items, limit=limit, offset=offset, total=total)
+
+
+def _status_filter(status_scope: str):
+    if status_scope == "archived":
+        return Conversation.status == "archived"
+    if status_scope == "all":
+        return Conversation.status.in_(("active", "archived"))
+    return Conversation.status == "active"
+
+
+def _document_block_index(document: SearchDocument) -> int | None:
+    raw = document.metadata_.get("block_index") if isinstance(document.metadata_, dict) else None
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _snippet(text: str, query: str) -> str:

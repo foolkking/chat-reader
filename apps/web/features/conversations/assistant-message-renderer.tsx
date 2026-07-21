@@ -3,6 +3,7 @@
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { BlockRenderer } from "./block-renderer";
 import { MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./markdown-renderer";
+import { useTranslations } from "../../components/preferences-provider";
 
 const THINKING_LABEL = "思考过程";
 const THINKING_DURATION_RE =
@@ -19,6 +20,7 @@ export function AssistantMessageRenderer({
   blocks: RenderBlockRead[];
   highlightTargetId?: string | null;
 }) {
+  const t = useTranslations();
   const isAssistant = message.role === "assistant";
 
   if (blocks.length === 0) {
@@ -26,7 +28,7 @@ export function AssistantMessageRenderer({
     return text.trim() ? (
       <MarkdownRenderer text={text} isAssistant={isAssistant} />
     ) : (
-      <p className="text-sm text-[#6b7280]">No displayable content.</p>
+      <p className="text-sm text-secondary">{t("noDisplayableContent")}</p>
     );
   }
 
@@ -46,7 +48,7 @@ export function AssistantMessageRenderer({
           data-block-type={block.block_type}
           className={`reader-markdown-block max-w-full scroll-mt-3 rounded-xl transition ${
             highlightTargetId === `block-${message.id}-${block.block_index}`
-              ? "ring-2 ring-[#f59e0b]/70 ring-offset-4 ring-offset-[#f7f7f8]"
+              ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]"
               : ""
           }`}
         >

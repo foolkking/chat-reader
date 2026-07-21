@@ -34,6 +34,7 @@ class ProjectRead(BaseModel):
     archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    last_read_at: datetime | None = None
     conversation_count: int = 0
     pinned_count: int = 0
 
@@ -55,3 +56,11 @@ class ProjectConversationPinUpdate(BaseModel):
 
 class ConversationPinUpdate(BaseModel):
     is_pinned: bool
+
+
+class ProjectOrderUpdate(BaseModel):
+    project_ids: list[UUID] = Field(min_length=1, max_length=500)
+
+
+class ProjectConversationOrderUpdate(BaseModel):
+    conversation_ids: list[UUID] = Field(min_length=1, max_length=500)

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.conversation import Conversation
 from app.models.import_record import utc_now
 from app.models.message import Message
+from app.models.project import Project
 from app.models.reading_position import ReadingPosition
 from app.models.recent_item import RecentItem
 
@@ -86,6 +87,12 @@ def upsert_reading_position(
         position.anchor_data = anchor_data
         position.updated_at = utc_now()
     db.flush()
+    _touch_recent_item(
+        db,
+        conversation_id,
+        last_message_id=message_id,
+        increment_open_count=False,
+    )
     return position
 
 
@@ -101,6 +108,30 @@ def record_recent_item(
     if last_message_id is not None:
         _ensure_message_belongs_to_conversation(db, conversation_id, last_message_id)
 
+    recent = _touch_recent_item(
+        db,
+        conversation_id,
+        project_id=project_id,
+        last_message_id=last_message_id,
+        context=context,
+        increment_open_count=True,
+    )
+    if project_id is not None:
+        project = db.get(Project, project_id)
+        if project is not None:
+            project.last_read_at = utc_now()
+    return recent
+
+
+def _touch_recent_item(
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    project_id: uuid.UUID | None = None,
+    last_message_id: uuid.UUID | None = None,
+    context: dict | None = None,
+    increment_open_count: bool,
+) -> RecentItem:
     recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation_id).one_or_none()
     if recent is None:
         recent = RecentItem(
@@ -112,10 +143,14 @@ def record_recent_item(
         )
         db.add(recent)
     else:
-        recent.project_id = project_id
-        recent.last_message_id = last_message_id
-        recent.context = context or {}
-        recent.open_count += 1
+        if project_id is not None:
+            recent.project_id = project_id
+        if last_message_id is not None:
+            recent.last_message_id = last_message_id
+        if context is not None:
+            recent.context = context
+        if increment_open_count:
+            recent.open_count += 1
         recent.last_opened_at = utc_now()
     db.flush()
     return recent

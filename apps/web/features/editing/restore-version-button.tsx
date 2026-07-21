@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
+import { useTranslations } from "../../components/preferences-provider";
 
 export function RestoreVersionButton({
   versionNumber,
@@ -10,10 +12,12 @@ export function RestoreVersionButton({
   onRestore: () => Promise<void>;
 }) {
   const [isRestoring, setIsRestoring] = useState(false);
+  const dialog = useInteractionDialog();
+  const t = useTranslations();
   const [error, setError] = useState<string | null>(null);
 
   async function restore() {
-    if (!window.confirm(`Restore version ${versionNumber}?`)) {
+    if (!(await dialog.confirm({ title: t("restoreVersionTitle", { version: versionNumber }), description: t("restoreVersionDescription"), confirmLabel: t("restore") }))) {
       return;
     }
     setError(null);
@@ -21,7 +25,7 @@ export function RestoreVersionButton({
     try {
       await onRestore();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to restore version.");
+      setError(err instanceof Error ? err.message : t("unableRestoreVersion"));
     } finally {
       setIsRestoring(false);
     }
@@ -33,11 +37,11 @@ export function RestoreVersionButton({
         type="button"
         onClick={restore}
         disabled={isRestoring}
-        className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+        className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-xs font-medium text-primary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isRestoring ? "Restoring" : "Restore"}
+        {isRestoring ? t("restoring") : t("restore")}
       </button>
-      {error ? <p className="text-xs text-red-700">{error}</p> : null}
+      {error ? <p className="text-xs text-[var(--danger)]">{error}</p> : null}
     </div>
   );
 }

@@ -9,9 +9,12 @@ export type LocaleMode = "auto" | "zh-CN" | "en-US";
 export type ResolvedTheme = "light" | "dark";
 export type ResolvedLocale = "zh-CN" | "en-US";
 export type ReaderWidthMode = "compact" | "standard" | "wide";
+export type SortDirection = "asc" | "desc";
+export type ConversationSortMode = "recent_read" | "updated" | "created" | "imported" | "title" | "message_count" | "custom";
+export type ProjectSortMode = "recent_read" | "updated" | "created" | "title" | "conversation_count" | "custom";
 export type DialogueIndexPanelState = "rail" | "preview" | "pinned";
 export type ReaderSidebarState = "collapsed" | "expanded";
-export type ReaderUtilityPanel = null | "navigation" | "share" | "export";
+export type ReaderUtilityPanel = null | "navigation" | "search" | "share" | "export";
 export type HeaderActionRailState = "collapsed" | "expanded";
 
 export type NeighborhoodExpansionState = {
@@ -25,11 +28,18 @@ export type UserPreferenceRead = {
   theme_mode: ThemeMode;
   locale_mode: LocaleMode;
   reader_width_mode: ReaderWidthMode;
+  conversation_sort_mode: ConversationSortMode;
+  conversation_sort_direction: SortDirection;
+  project_sort_mode: ProjectSortMode;
+  project_sort_direction: SortDirection;
   created_at: string;
   updated_at: string;
 };
 
-export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead, "theme_mode" | "locale_mode" | "reader_width_mode">>;
+export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead,
+  "theme_mode" | "locale_mode" | "reader_width_mode" | "conversation_sort_mode" |
+  "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction"
+>>;
 
 export type ConversationListItem = {
   id: string;
@@ -46,6 +56,8 @@ export type ConversationListItem = {
   status: string;
   is_global_pinned: boolean;
   global_pinned_at: string | null;
+  last_read_at: string | null;
+  manual_sort_order: number;
 };
 
 export type ConversationDetail = ConversationListItem & {
@@ -243,6 +255,7 @@ export type ProjectRead = {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  last_read_at: string | null;
   conversation_count: number;
   pinned_count: number;
 };
@@ -338,6 +351,7 @@ export type SearchResultItem = {
   message_id: string | null;
   role: string | null;
   order_key: string | null;
+  block_index: number | null;
   snippet: string;
   rank: number;
   source_profile: string | null;

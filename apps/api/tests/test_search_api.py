@@ -116,3 +116,37 @@ def test_search_role_filter_and_duplicate_message_occurrences(client: TestClient
 
     invalid = client.get("/api/search", params={"q": "alpha", "role": "invalid"})
     assert invalid.status_code == 400
+
+
+def test_search_code_blocks_block_location_and_archive_scope(client: TestClient) -> None:
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "code-search.json",
+                json.dumps(
+                    {
+                        "metadata": {"title": "Code Search", "powered_by": "ChatGPT Exporter"},
+                        "messages": [
+                            {"role": "Prompt", "say": "show code"},
+                            {"role": "Response", "say": "```ts\nconst uniqueCodeNeedle = 42;\n```"},
+                        ],
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
+    )
+    conversation_id = client.post(f"/api/imports/{preview.json()['import_id']}/commit").json()["conversation_ids"][0]
+    code = client.get("/api/search", params={"q": "uniqueCodeNeedle", "document_type": "code"})
+    assert code.status_code == 200
+    item = next(item for item in code.json()["items"] if item["conversation_id"] == conversation_id)
+    assert item["document_type"] == "code"
+    assert item["message_id"] is not None
+    assert item["block_index"] is not None
+
+    assert client.patch(f"/api/conversations/{conversation_id}", json={"status": "archived"}).status_code == 200
+    active = client.get("/api/search", params={"q": "uniqueCodeNeedle", "status_scope": "active"})
+    archived = client.get("/api/search", params={"q": "uniqueCodeNeedle", "status_scope": "archived"})
+    assert all(item["conversation_id"] != conversation_id for item in active.json()["items"])
+    assert any(item["conversation_id"] == conversation_id for item in archived.json()["items"])

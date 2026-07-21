@@ -29,6 +29,8 @@ import {
   updateConversation,
 } from "../../lib/api";
 import type { ConversationListItem, ProjectConversationRead } from "../../lib/types";
+import { usePreferences } from "../../components/preferences-provider";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 export type UndoAction = {
   label: string;
@@ -53,6 +55,9 @@ export function ConversationActionMenu({
   onUndo?: (undo: UndoAction) => void;
 }) {
   const queryClient = useQueryClient();
+  const { resolvedLocale, projectSortMode, projectSortDirection } = usePreferences();
+  const dialog = useInteractionDialog();
+  const zh = resolvedLocale === "zh-CN";
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [targetProjectId, setTargetProjectId] = useState("");
@@ -62,8 +67,8 @@ export function ConversationActionMenu({
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const projectsQuery = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => getProjects(),
+    queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
     enabled: open,
   });
   const projects = (projectsQuery.data ?? []).filter(
@@ -143,12 +148,12 @@ export function ConversationActionMenu({
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className={`inline-flex items-center justify-center border text-sm font-semibold text-[#374151] transition hover:bg-[#f7f7f8] focus:outline-none focus:ring-2 focus:ring-[#10a37f] ${
+        className={`inline-flex items-center justify-center border text-sm font-semibold text-secondary transition hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)] ${
           compact
-            ? "h-7 w-7 rounded-md border-transparent bg-transparent shadow-none hover:border-[#d1d5db] hover:bg-white"
-            : "h-9 w-9 rounded-lg border-[#d1d5db] bg-white shadow-sm"
+            ? "h-7 w-7 rounded-md border-transparent bg-transparent shadow-none hover:border-ui hover:bg-surface"
+            : "h-9 w-9 rounded-lg border-ui bg-surface shadow-sm"
         }`}
-        aria-label={`Manage ${conversation.display_title || conversation.title}`}
+        aria-label={`${zh ? "管理" : "Manage"} ${conversation.display_title || conversation.title}`}
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
@@ -156,7 +161,7 @@ export function ConversationActionMenu({
         ? createPortal(
             <div
               ref={menuRef}
-              className="fixed z-[220] max-h-[min(620px,calc(100vh-24px))] w-72 overflow-y-auto rounded-xl border border-[#e5e7eb] bg-white p-2 text-sm shadow-2xl"
+              className="fixed z-[220] max-h-[min(620px,calc(100vh-24px))] w-72 overflow-y-auto rounded-xl border border-ui bg-raised p-2 text-sm shadow-2xl"
               style={{ top: menuPosition.top, left: menuPosition.left }}
             >
               <div className="grid gap-1 py-1">
@@ -165,20 +170,21 @@ export function ConversationActionMenu({
               disabled={busy !== null}
               onClick={() =>
                 run("rename", async () => {
-                  const title = window.prompt("重命名对话", conversation.display_title || conversation.title);
+                  const title = await dialog.prompt({
+                    title: zh ? "重命名对话" : "Rename conversation",
+                    label: zh ? "对话标题" : "Conversation title",
+                    initialValue: conversation.display_title || conversation.title,
+                    confirmLabel: zh ? "保存" : "Save",
+                  });
                   if (title === null) {
                     return;
                   }
                   const trimmed = title.trim();
-                  if (!trimmed) {
-                    window.alert("标题不能为空。");
-                    return;
-                  }
                   await updateConversation(conversation.id, { title: trimmed, display_title: trimmed });
                 })
               }
             >
-              重命名
+              {zh ? "重命名" : "Rename"}
             </MenuButton>
             <MenuButton
               icon={conversation.is_global_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -189,7 +195,7 @@ export function ConversationActionMenu({
                 })
               }
             >
-              {conversation.is_global_pinned ? "取消置顶" : "置顶"}
+              {conversation.is_global_pinned ? (zh ? "取消置顶" : "Unpin") : (zh ? "置顶" : "Pin")}
             </MenuButton>
             {projectId ? (
               <MenuButton
@@ -201,37 +207,37 @@ export function ConversationActionMenu({
                   })
                 }
               >
-                {projectPinned ? "取消项目内置顶" : "在项目内置顶"}
+                {projectPinned ? (zh ? "取消项目内置顶" : "Unpin in project") : (zh ? "在项目内置顶" : "Pin in project")}
               </MenuButton>
             ) : null}
-            {conversation.status !== "archived" ? <div className="my-1 border-t border-[#f0f0f0] pt-1">
-              <MenuButton icon={<FolderInput className="h-4 w-4" />} disabled={busy !== null} onClick={() => setShowProjectPicker((value) => !value)}>移动到项目</MenuButton>
-              {showProjectPicker ? <div className="mt-1 rounded-lg bg-[#f7f7f8] p-2">
+            {conversation.status !== "archived" ? <div className="my-1 border-t border-ui pt-1">
+              <MenuButton icon={<FolderInput className="h-4 w-4" />} disabled={busy !== null} onClick={() => setShowProjectPicker((value) => !value)}>{zh ? "移动到项目" : "Move to project"}</MenuButton>
+              {showProjectPicker ? <div className="mt-1 rounded-lg bg-subtle p-2">
               <input
                 value={projectSearch}
                 onChange={(event) => setProjectSearch(event.target.value)}
-                placeholder="搜索项目"
-                className="min-h-9 w-full rounded-lg border border-[#d1d5db] bg-white px-2 text-sm text-[#111827] outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/10"
+                placeholder={zh ? "搜索项目" : "Search projects"}
+                className="min-h-9 w-full rounded-lg border border-ui bg-surface px-2 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
               />
-              <div className="mt-1 max-h-32 overflow-y-auto rounded-lg bg-[#f7f7f8] p-1">
+              <div className="mt-1 max-h-32 overflow-y-auto rounded-lg bg-subtle p-1">
                 {projects.map((project) => (
                   <button
                     key={project.id}
                     type="button"
                     onClick={() => setTargetProjectId(project.id)}
-                    className={`block min-h-8 w-full truncate rounded-md px-2 text-left text-sm ${targetProjectId === project.id ? "bg-white font-medium text-[#111827] shadow-sm" : "text-[#4b5563] hover:bg-white"}`}
+                    className={`block min-h-8 w-full truncate rounded-md px-2 text-left text-sm ${targetProjectId === project.id ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:bg-surface"}`}
                   >
                     {project.name}
                   </button>
                 ))}
-                {projects.length === 0 ? <p className="px-2 py-1.5 text-xs text-[#9ca3af]">没有匹配的项目</p> : null}
+                {projects.length === 0 ? <p className="px-2 py-1.5 text-xs text-secondary">{zh ? "没有匹配的项目" : "No matching projects"}</p> : null}
               </div>
               <MenuButton
                 icon={<FolderInput className="h-4 w-4" />}
                 disabled={!targetProjectId || busy !== null}
                 onClick={() => run("move-project", async () => { await moveConversationToProject(conversation.id, targetProjectId); })}
               >
-                移动到所选项目
+                {zh ? "移动到所选项目" : "Move to selected project"}
               </MenuButton>
               </div> : null}
             </div> : null}
@@ -245,7 +251,7 @@ export function ConversationActionMenu({
                   })
                 }
               >
-                移回对话记录
+                {zh ? "移回对话记录" : "Move to conversation history"}
               </MenuButton>
             ) : null}
             <MenuButton
@@ -255,7 +261,7 @@ export function ConversationActionMenu({
                 window.location.href = getConversationExportUrl(conversation.id, { format: "markdown" });
               }}
             >
-              导出 Markdown
+              {zh ? "导出 Markdown" : "Export Markdown"}
             </MenuButton>
             <MenuButton
               icon={<FileJson className="h-4 w-4" />}
@@ -264,7 +270,7 @@ export function ConversationActionMenu({
                 window.location.href = getConversationExportUrl(conversation.id, { format: "canonical_json" });
               }}
             >
-              导出 Canonical JSON
+              {zh ? "导出 Canonical JSON" : "Export Canonical JSON"}
             </MenuButton>
             {conversation.status === "archived" ? (
               <MenuButton
@@ -274,7 +280,7 @@ export function ConversationActionMenu({
                   run("restore", async () => {
                     await restoreConversation(conversation.id);
                     onUndo?.({
-                      label: "已恢复会话",
+                      label: zh ? "已恢复会话" : "Conversation restored",
                       action: async () => {
                         await archiveConversation(conversation.id);
                         await finish();
@@ -283,7 +289,7 @@ export function ConversationActionMenu({
                   })
                 }
               >
-                恢复
+                {zh ? "恢复" : "Restore"}
               </MenuButton>
             ) : (
               <MenuButton
@@ -293,7 +299,7 @@ export function ConversationActionMenu({
                   run("archive", async () => {
                     await archiveConversation(conversation.id);
                     onUndo?.({
-                      label: "已归档会话",
+                      label: zh ? "已归档会话" : "Conversation archived",
                       action: async () => {
                         await restoreConversation(conversation.id);
                         await finish();
@@ -302,7 +308,7 @@ export function ConversationActionMenu({
                   })
                 }
               >
-                归档
+                {zh ? "归档" : "Archive"}
               </MenuButton>
             )}
             <MenuButton
@@ -310,25 +316,31 @@ export function ConversationActionMenu({
               danger
               disabled={busy !== null}
               onClick={() => {
-                if (!window.confirm("删除这个对话？此操作完成后可立即撤销。")) {
-                  return;
-                }
-                void run("delete", async () => {
+                void (async () => {
+                  const confirmed = await dialog.confirm({
+                    title: zh ? "删除这个对话？" : "Delete this conversation?",
+                    description: zh ? "删除后可立即撤销。" : "You can undo immediately afterward.",
+                    confirmLabel: zh ? "删除" : "Delete",
+                    danger: true,
+                  });
+                  if (!confirmed) return;
+                  await run("delete", async () => {
                   await deleteConversation(conversation.id);
                   onUndo?.({
-                    label: "已删除会话",
+                    label: zh ? "已删除会话" : "Conversation deleted",
                     action: async () => {
                       await restoreConversation(conversation.id);
                       await finish();
                     },
                   });
-                });
+                  });
+                })();
               }}
             >
-              删除
+              {zh ? "删除" : "Delete"}
             </MenuButton>
           </div>
-              {busy ? <p role="status" className="px-2 pb-1 text-xs text-[#6b7280]">正在处理…</p> : null}
+              {busy ? <p role="status" className="px-2 pb-1 text-xs text-secondary">{zh ? "正在处理…" : "Working…"}</p> : null}
             </div>,
             document.body,
           )
@@ -356,7 +368,7 @@ function MenuButton({
       disabled={disabled}
       onClick={onClick}
       className={`flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm transition disabled:cursor-wait disabled:opacity-45 ${
-        danger ? "text-red-700 hover:bg-red-50" : "text-[#374151] hover:bg-[#f7f7f8]"
+        danger ? "text-[var(--danger)] hover:bg-[var(--danger-soft)]" : "text-primary hover:bg-subtle"
       }`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icon}</span>

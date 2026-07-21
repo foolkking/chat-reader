@@ -4,17 +4,26 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import {
   archiveConversation,
   deleteConversation,
   getConversations,
   mergeConversations,
   restoreConversation,
+  updateConversationOrder,
 } from "../../lib/api";
 import type { ConversationListItem } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
 import { MergeOrderList } from "./merge-order-list";
+import { ConversationSortMenu } from "../../components/sort-menu";
+import { usePreferences } from "../../components/preferences-provider";
+import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 export function ConversationList({
   onImportClick,
@@ -24,6 +33,8 @@ export function ConversationList({
   mode?: "active" | "archived";
 }) {
   const queryClient = useQueryClient();
+  const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const dialog = useInteractionDialog();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [isMerging, setIsMerging] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
@@ -33,13 +44,26 @@ export function ConversationList({
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", mode],
+    queryKey: ["conversations", mode, conversationSortMode, conversationSortDirection],
     queryFn: () => getConversations({
       includeArchived: mode === "archived",
       scope: mode === "active" ? "history" : "all",
+      sort: conversationSortMode,
+      direction: conversationSortDirection,
+      limit: 200,
     }),
   });
   const isArchivedMode = mode === "archived";
+
+  async function handleSortEnd(event: DragEndEvent) {
+    if (conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
+    const rows = conversationsQuery.data ?? [];
+    const oldIndex = rows.findIndex((item) => item.id === event.active.id);
+    const newIndex = rows.findIndex((item) => item.id === event.over?.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    await updateConversationOrder(arrayMove(rows, oldIndex, newIndex).map((item) => item.id));
+    await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+  }
 
   async function refreshLists() {
     await Promise.all([
@@ -52,21 +76,21 @@ export function ConversationList({
   }
 
   if (conversationsQuery.isLoading) {
-    return <StateBlock title="正在加载对话" detail="正在读取对话列表…" loading />;
+    return <StateBlock title={resolvedLocale === "zh-CN" ? "正在加载对话" : "Loading conversations"} detail={resolvedLocale === "zh-CN" ? "正在读取对话列表…" : "Fetching conversation list…"} loading />;
   }
 
   if (conversationsQuery.isError) {
     return (
       <StateBlock
-        title="对话加载失败"
+        title={resolvedLocale === "zh-CN" ? "对话加载失败" : "Failed to load conversations"}
         detail={conversationsQuery.error.message}
         action={
           <button
             type="button"
             onClick={() => void conversationsQuery.refetch()}
-            className="rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white"
+            className="rounded-md bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)]"
           >
-            重试
+            {resolvedLocale === "zh-CN" ? "重试" : "Retry"}
           </button>
         }
       />
@@ -79,19 +103,19 @@ export function ConversationList({
   if (conversations.length === 0) {
     return (
       <StateBlock
-        title={isArchivedMode ? "暂无已归档对话" : "导入你的 ChatGPT 对话记录"}
+        title={isArchivedMode ? (resolvedLocale === "zh-CN" ? "暂无已归档对话" : "No archived conversations") : (resolvedLocale === "zh-CN" ? "导入你的 ChatGPT 对话" : "Import your ChatGPT conversations")}
         detail={
           isArchivedMode
-            ? "归档的对话会保留在这里，恢复后将回到原来的项目或对话记录。"
-            : "上传 `.cr` 快速归档，或 ChatGPT Exporter 的 JSON 与 Markdown 文件，即可开始浏览和搜索。"
+            ? (resolvedLocale === "zh-CN" ? "归档的对话会保留在这里，恢复后回到原项目或对话记录。" : "Archived conversations return to their previous location when restored.")
+            : (resolvedLocale === "zh-CN" ? "支持 .cr 快速归档、JSON、Markdown 和 CSV。数据保存在当前服务器。" : "Supports .cr archives, JSON, Markdown, and CSV. Data remains on this server.")
         }
         action={!isArchivedMode ? (
           <button
             type="button"
             onClick={onImportClick}
-            className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-medium text-white hover:bg-black"
+            className="rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-[var(--surface)] hover:opacity-90"
           >
-            选择导出文件
+            {resolvedLocale === "zh-CN" ? "导入 ChatGPT 数据" : "Import ChatGPT data"}
           </button>
         ) : undefined}
       />
@@ -110,10 +134,10 @@ export function ConversationList({
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-[#111827]">
-            {isArchivedMode ? "已归档对话" : "对话记录"}
+          <h2 className="text-lg font-semibold text-primary">
+            {isArchivedMode ? (resolvedLocale === "zh-CN" ? "已归档对话" : "Archived conversations") : (resolvedLocale === "zh-CN" ? "对话记录" : "Conversation history")}
           </h2>
-          <p className="text-sm text-[#6b7280]">共 {conversations.length} 个</p>
+          <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `共 ${conversations.length} 个` : `${conversations.length} total`}</p>
         </div>
         {selectedConversationIds.size > 0 ? (
           <BulkActions
@@ -179,7 +203,7 @@ export function ConversationList({
               }
             }}
             onDelete={async (ids) => {
-              if (!window.confirm(`Delete ${ids.length} selected conversations?`)) {
+              if (!(await dialog.confirm({ title: resolvedLocale === "zh-CN" ? `删除 ${ids.length} 个对话？` : `Delete ${ids.length} conversations?`, description: resolvedLocale === "zh-CN" ? "此操作完成后可立即撤销。" : "You can undo immediately afterward.", confirmLabel: resolvedLocale === "zh-CN" ? "删除" : "Delete", danger: true }))) {
                 return;
               }
               setBulkBusy("delete");
@@ -201,20 +225,17 @@ export function ConversationList({
             }}
           />
         ) : (
-          <button type="button" onClick={() => setSelectionMode((value) => !value)} className="min-h-9 rounded-lg px-3 text-sm text-[#4b5563] hover:bg-white">
-            {selectionMode ? "退出选择" : "选择"}
-          </button>
+          <div className="flex items-center gap-2"><ConversationSortMenu /><button type="button" onClick={() => setSelectionMode((value) => !value)} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-surface">{selectionMode ? (resolvedLocale === "zh-CN" ? "退出选择" : "Done") : (resolvedLocale === "zh-CN" ? "选择" : "Select")}</button></div>
         )}
       </div>
-      <div className="overflow-hidden rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
+      <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation) => (
-          <article
-            key={conversation.id}
-            className="group border-b border-[#ececec] px-4 py-3 transition last:border-b-0 hover:bg-[#fbfbfb]"
+          <SortableConversationRow id={conversation.id} enabled={conversationSortMode === "custom"} key={conversation.id}><article
+            className="group border-b border-ui px-4 py-3 transition last:border-b-0 hover:bg-subtle"
           >
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
               <div className="flex min-w-0 gap-3">
-                {selectionMode ? <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#d1d5db] bg-white">
+                {selectionMode ? <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-ui bg-surface">
                   <input
                     type="checkbox"
                     checked={selectedConversationIds.has(conversation.id)}
@@ -241,20 +262,20 @@ export function ConversationList({
                 </label> : null}
                 <div className="min-w-0">
                   <Link href={`/conversations/${conversation.id}`}>
-                    <h3 className="truncate text-base font-semibold text-slate-950">
-                      {conversation.is_global_pinned ? "置顶 · " : ""}
+                    <h3 className="truncate text-base font-semibold text-primary">
+                      {conversation.is_global_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}
                       {conversation.display_title || conversation.title}
                     </h3>
                   </Link>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4b5563]">
-                    {previewConversationText(conversation.first_user_message)}
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
+                    {previewConversationText(conversation.first_user_message, resolvedLocale)}
                   </p>
                 </div>
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                 <div className="min-w-0 md:order-2">
-                  <p className="text-xs text-[#9ca3af]">{formatConversationDate(conversation.updated_at ?? conversation.imported_at)}</p>
-                  <p className="mt-1 text-sm text-[#6b7280]">{conversation.message_count} 条消息</p>
+                  <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)} aria-label={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}</p>
+                  <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                 </div>
                 <div className="md:order-1">
                   <ConversationActionMenu
@@ -266,22 +287,28 @@ export function ConversationList({
                 </div>
               </div>
             </div>
-          </article>
+          </article></SortableConversationRow>
         ))}
-      </div>
+      </div></SortableContext></DndContext>
     </section>
   );
 }
 
-function previewConversationText(text?: string | null): string {
-  const cleaned = stripLeadingTimestamp(text ?? "").replace(/\s+/g, " ").trim();
-  return cleaned || "暂无消息预览。";
+function SortableConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
+  const sortable = useSortable({ id, disabled: !enabled });
+  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} className="relative"><button type="button" aria-label="Drag to reorder" title="Drag to reorder" className={`absolute left-1 top-1/2 z-10 flex h-8 w-7 -translate-y-1/2 touch-none items-center justify-center rounded-md text-secondary hover:bg-surface ${enabled ? "opacity-100" : "pointer-events-none opacity-0"}`} {...sortable.attributes} {...sortable.listeners}><GripVertical className="h-4 w-4" /></button>{children}</div>;
 }
 
-function formatConversationDate(value: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(date);
+function previewConversationText(text: string | null | undefined, locale: "zh-CN" | "en-US"): string {
+  const cleaned = stripLeadingTimestamp(text ?? "").replace(/\s+/g, " ").trim();
+  return cleaned || (locale === "zh-CN" ? "暂无消息预览。" : "No message preview.");
+}
+
+function activityTimestamp(conversation: ConversationListItem, mode: string): string | null {
+  if (mode === "updated") return conversation.updated_at;
+  if (mode === "created") return conversation.created_at;
+  if (mode === "imported") return conversation.imported_at;
+  return conversation.last_read_at;
 }
 
 function BulkActions({
@@ -311,57 +338,59 @@ function BulkActions({
 }) {
   const selectedIds = selectedConversations.map((conversation) => conversation.id);
   const isArchivedMode = mode === "archived";
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   return (
-    <div className="w-full rounded-2xl border border-[#e5e5e5] bg-white p-3 shadow-sm sm:max-w-xl">
+    <div className="w-full rounded-xl border border-ui bg-surface p-3 sm:max-w-xl">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-auto text-sm text-[#6b7280]">{selectedIds.length} selected</span>
+        <span className="mr-auto text-sm text-secondary">{zh ? `已选择 ${selectedIds.length} 个` : `${selectedIds.length} selected`}</span>
         {isArchivedMode ? (
           <button
             type="button"
             disabled={bulkBusy !== null}
             onClick={() => void onRestore(selectedIds)}
-            className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
+            className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
           >
-            Restore
+            {zh ? "恢复" : "Restore"}
           </button>
         ) : (
           <button
             type="button"
             disabled={bulkBusy !== null}
             onClick={() => void onArchive(selectedIds)}
-            className="min-h-9 rounded-lg border border-[#d1d5db] bg-white px-3 text-sm font-medium text-[#374151] disabled:cursor-wait disabled:opacity-60"
+            className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
           >
-            Archive
+            {zh ? "归档" : "Archive"}
           </button>
         )}
         <button
           type="button"
           disabled={bulkBusy !== null}
           onClick={() => void onDelete(selectedIds)}
-          className="min-h-9 rounded-lg border border-red-200 bg-white px-3 text-sm font-medium text-red-700 disabled:cursor-wait disabled:opacity-60"
+          className="min-h-9 rounded-lg border border-[var(--danger)] bg-surface px-3 text-sm font-medium text-[var(--danger)] disabled:cursor-wait disabled:opacity-60"
         >
-          Delete
+          {zh ? "删除" : "Delete"}
         </button>
       </div>
       {!isArchivedMode && selectedIds.length >= 2 ? (
-        <div className="mt-3 rounded-xl bg-[#f7f7f8] p-3">
-          <label className="text-xs font-semibold uppercase tracking-normal text-[#6b7280]">
-            Merge title
+        <div className="mt-3 rounded-xl bg-subtle p-3">
+          <label className="text-xs font-semibold uppercase tracking-normal text-secondary">
+            {zh ? "合并标题" : "Merge title"}
             <input
               value={title}
               onChange={(event) => onTitleChange(event.target.value)}
-              className="mt-1 block w-full rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-sm font-normal normal-case text-[#111827] outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/10"
+              className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-sm font-normal normal-case text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
             />
           </label>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-[#6b7280]">Merge order</p>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-secondary">{zh ? "合并顺序" : "Merge order"}</p>
           <MergeOrderList conversations={selectedConversations} disabled={isMerging} onReorder={onReorder} />
           <button
             type="button"
             disabled={isMerging}
             onClick={() => void onMerge(selectedIds, title)}
-            className="mt-3 min-h-10 w-full rounded-lg bg-[#111827] px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+            className="mt-3 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:cursor-wait disabled:opacity-70"
           >
-            {isMerging ? "Merging" : `Merge ${selectedIds.length} in this order`}
+            {isMerging ? (zh ? "正在合并…" : "Merging…") : (zh ? `按此顺序合并 ${selectedIds.length} 个对话` : `Merge ${selectedIds.length} in this order`)}
           </button>
         </div>
       ) : null}
@@ -370,8 +399,9 @@ function BulkActions({
 }
 
 function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {
+  const { resolvedLocale } = usePreferences();
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--callout-warning-border)] bg-[var(--callout-warning-bg)] px-4 py-3 text-sm text-[var(--callout-warning-text)]">
       <span>{undo.label}</span>
       <button
         type="button"
@@ -379,9 +409,9 @@ function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {
           await undo.action();
           onDone();
         }}
-        className="min-h-9 rounded-lg bg-amber-900 px-3 text-sm font-medium text-white"
+        className="min-h-9 rounded-lg bg-[var(--callout-warning-text)] px-3 text-sm font-medium text-[var(--surface)]"
       >
-        撤销
+        {resolvedLocale === "zh-CN" ? "撤销" : "Undo"}
       </button>
     </div>
   );
@@ -399,11 +429,11 @@ function StateBlock({
   loading?: boolean;
 }) {
   return (
-    <section className="flex min-h-64 items-center justify-center rounded-2xl border border-[#e5e5e5] bg-white p-8 text-center shadow-sm">
+    <section className="flex min-h-64 items-center justify-center rounded-xl border border-ui bg-surface p-8 text-center">
       <div>
-        {loading ? <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-[#ececec]" /> : null}
-        <h2 className="text-base font-semibold text-[#111827]">{title}</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6b7280]">{detail}</p>
+        {loading ? <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-subtle" /> : null}
+        <h2 className="text-base font-semibold text-primary">{title}</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-secondary">{detail}</p>
         {action ? <div className="mt-4">{action}</div> : null}
       </div>
     </section>
