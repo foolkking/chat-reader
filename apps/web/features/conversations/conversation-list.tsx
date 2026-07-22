@@ -53,6 +53,18 @@ export function ConversationList({
       limit: 200,
     }),
   });
+  const globalExistenceQuery = useQuery({
+    queryKey: ["conversations", "existence"],
+    queryFn: () => getConversations({
+      includeArchived: true,
+      scope: "all",
+      sort: "recent_read",
+      direction: "desc",
+      limit: 1,
+    }),
+    enabled: mode === "active",
+    staleTime: 30_000,
+  });
   const isArchivedMode = mode === "archived";
 
   async function handleSortEnd(event: DragEndEvent) {
@@ -101,15 +113,36 @@ export function ConversationList({
     isArchivedMode ? conversation.status === "archived" : conversation.status !== "archived",
   );
   if (conversations.length === 0) {
+    if (!isArchivedMode && globalExistenceQuery.isLoading) {
+      return (
+        <StateBlock
+          title={resolvedLocale === "zh-CN" ? "正在加载对话" : "Loading conversations"}
+          detail={resolvedLocale === "zh-CN" ? "正在确认对话归属…" : "Checking conversation locations…"}
+          loading
+        />
+      );
+    }
+    const shouldShowImportCta =
+      !isArchivedMode
+      && globalExistenceQuery.isSuccess
+      && (globalExistenceQuery.data?.length ?? 0) === 0;
     return (
       <StateBlock
-        title={isArchivedMode ? (resolvedLocale === "zh-CN" ? "暂无已归档对话" : "No archived conversations") : (resolvedLocale === "zh-CN" ? "导入你的 ChatGPT 对话" : "Import your ChatGPT conversations")}
+        title={
+          isArchivedMode
+            ? (resolvedLocale === "zh-CN" ? "暂无已归档对话" : "No archived conversations")
+            : shouldShowImportCta
+              ? (resolvedLocale === "zh-CN" ? "导入你的 ChatGPT 对话" : "Import your ChatGPT conversations")
+              : (resolvedLocale === "zh-CN" ? "暂无未分类对话" : "No unfiled conversations")
+        }
         detail={
           isArchivedMode
             ? (resolvedLocale === "zh-CN" ? "归档的对话会保留在这里，恢复后回到原项目或对话记录。" : "Archived conversations return to their previous location when restored.")
-            : (resolvedLocale === "zh-CN" ? "支持 .cr 快速归档、JSON、Markdown 和 CSV。数据保存在当前服务器。" : "Supports .cr archives, JSON, Markdown, and CSV. Data remains on this server.")
+            : shouldShowImportCta
+              ? (resolvedLocale === "zh-CN" ? "支持 .cr 快速归档、JSON、Markdown 和 CSV。数据保存在当前服务器。" : "Supports .cr archives, JSON, Markdown, and CSV. Data remains on this server.")
+              : (resolvedLocale === "zh-CN" ? "现有对话已归入项目，可在左侧展开项目查看。" : "Existing conversations are filed in projects. Expand a project in the sidebar to view them.")
         }
-        action={!isArchivedMode ? (
+        action={shouldShowImportCta ? (
           <button
             type="button"
             onClick={onImportClick}
