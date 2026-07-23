@@ -276,3 +276,13 @@ def test_offline_catalog_and_package_are_downloadable(client: TestClient, monkey
     assert archive.status_code == 200
     assert archive.content.startswith(b"PK")
     assert Path(metadata.json()["filename"]).name == metadata.json()["filename"]
+    with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
+        payload = json.loads(bundle.read("package.json"))
+    assert payload["format"] == "chat-reader-offline-package"
+    assert payload["version"] == 1
+    assert len(payload["conversations"]) == 1
+    packaged_conversation = payload["conversations"][0]
+    assert packaged_conversation["id"] == conversation_id
+    assert packaged_conversation["messages"]
+    assert packaged_conversation["messages"][0]["current_version"]
+    assert packaged_conversation["messages"][0]["render_blocks"]

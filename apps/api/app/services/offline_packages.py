@@ -4,9 +4,10 @@ import hashlib
 import json
 import os
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, BinaryIO, Callable, Iterable
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from sqlalchemy.orm import Session
@@ -32,6 +33,14 @@ from app.schemas.offline import (
 from app.services.annotations import annotation_read, notebook_read
 
 ProgressCallback = Callable[[str, int, int, int], None]
+MessageProgressCallback = Callable[[int, int], None]
+
+_MESSAGE_BATCH_SIZE = 20
+_JSON_ENCODER = json.JSONEncoder(
+    ensure_ascii=False,
+    separators=(",", ":"),
+    default=lambda value: _json_value(value),
+)
 
 
 class OfflinePackageError(ValueError):
@@ -148,7 +157,7 @@ def build_offline_package(
     )
     catalog = build_catalog(db)
     total = max(len(conversations), 1)
-    package = {
+    package_metadata = {
         "format": "chat-reader-offline-package",
         "version": 1,
         "catalog_revision": catalog.revision,
@@ -156,11 +165,7 @@ def build_offline_package(
         "scope": scope,
         "scope_id": str(conversation_id or project_id) if scope != "all" else None,
         "projects": [project.model_dump(mode="json") for project in catalog.projects],
-        "conversations": [],
     }
-    for index, conversation in enumerate(conversations, start=1):
-        package["conversations"].append(_conversation_payload(db, conversation))
-        _report(progress_callback, "packaging", min(92, round(index * 90 / total)), index, total)
 
     root = Path(get_settings().offline_storage_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -169,10 +174,16 @@ def build_offline_package(
     if not destination.is_relative_to(root):
         raise OfflinePackageError("Invalid offline package path.")
     temporary = destination.with_suffix(destination.suffix + ".tmp")
-    data = json.dumps(package, ensure_ascii=False, separators=(",", ":"), default=_json_value).encode("utf-8")
     try:
-        with ZipFile(temporary, "w", compression=ZIP_DEFLATED, compresslevel=6) as archive:
-            archive.writestr("package.json", data)
+        with ZipFile(temporary, "w", compression=ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+            with archive.open("package.json", "w", force_zip64=True) as output:
+                _write_package_payload(
+                    output,
+                    db,
+                    package_metadata,
+                    conversations,
+                    progress_callback=progress_callback,
+                )
         os.replace(temporary, destination)
     finally:
         if temporary.exists():
@@ -212,42 +223,48 @@ def build_offline_package(
     return artifact
 
 
-def _conversation_payload(db: Session, conversation: Conversation) -> dict[str, Any]:
-    messages: list[dict[str, Any]] = []
+def _write_package_payload(
+    output: BinaryIO,
+    db: Session,
+    package_metadata: dict[str, Any],
+    conversations: list[Conversation],
+    *,
+    progress_callback: ProgressCallback | None,
+) -> None:
+    output.write(b"{")
+    first_field = True
+    for key, value in package_metadata.items():
+        first_field = _write_json_field(output, key, value, first=first_field)
+    _write_json_key(output, "conversations", first=first_field)
+    output.write(b"[")
+    total = max(len(conversations), 1)
+    for index, conversation in enumerate(conversations, start=1):
+        if index > 1:
+            output.write(b",")
+
+        def report_messages(processed: int, message_total: int) -> None:
+            fraction = processed / max(message_total, 1)
+            progress = min(90, round(90 * ((index - 1 + fraction) / total)))
+            _report(progress_callback, "packaging", progress, index - 1, total)
+
+        _write_conversation_payload(output, db, conversation, progress_callback=report_messages)
+        _report(progress_callback, "packaging", min(92, round(index * 90 / total)), index, total)
+    output.write(b"]}")
+
+
+def _write_conversation_payload(
+    output: BinaryIO,
+    db: Session,
+    conversation: Conversation,
+    *,
+    progress_callback: MessageProgressCallback | None = None,
+) -> None:
     message_rows = (
         db.query(Message)
         .filter(Message.conversation_id == conversation.id, Message.is_deleted.is_(False))
         .order_by(Message.order_key.asc())
         .all()
     )
-    for message in message_rows:
-        version = db.get(MessageVersion, message.current_version_id) if message.current_version_id else None
-        blocks = (
-            db.query(RenderBlock)
-            .filter(RenderBlock.message_version_id == version.id)
-            .order_by(RenderBlock.block_index.asc())
-            .all()
-            if version is not None
-            else []
-        )
-        messages.append(
-            {
-                "id": message.id,
-                "conversation_id": message.conversation_id,
-                "role": message.role,
-                "order_key": message.order_key,
-                "turn_index": message.turn_index,
-                "created_at": message.created_at,
-                "block_count": message.block_count,
-                "char_count": message.char_count,
-                "is_heavy": message.is_heavy,
-                "current_version": _version_payload(version),
-                "render_blocks": [_block_payload(block) for block in blocks],
-            }
-        )
-    headings = db.query(Heading).filter(Heading.conversation_id == conversation.id).order_by(Heading.heading_index.asc()).all()
-    documents = db.query(SearchDocument).filter(SearchDocument.conversation_id == conversation.id).all()
-    annotations = list_annotations_payload(db, conversation.id)
     notebook = (
         db.query(ConversationNotebook)
         .filter(
@@ -260,7 +277,7 @@ def _conversation_payload(db: Session, conversation: Conversation) -> dict[str, 
     )
     position = db.query(ReadingPosition).filter(ReadingPosition.conversation_id == conversation.id).first()
     project_id, project_name = _conversation_project(conversation)
-    return {
+    metadata = {
         "id": conversation.id,
         "title": conversation.title,
         "display_title": conversation.display_title,
@@ -279,13 +296,123 @@ def _conversation_payload(db: Session, conversation: Conversation) -> dict[str, 
         "content_hash": conversation.content_hash,
         "project_id": project_id,
         "project_name": project_name,
-        "messages": messages,
-        "headings": [_heading_payload(item) for item in headings],
-        "search_documents": [_search_payload(item) for item in documents],
-        "annotations": annotations,
-        "notebook": notebook_read(notebook).model_dump(mode="json") if notebook else None,
-        "reading_position": _reading_position_payload(position),
     }
+
+    output.write(b"{")
+    first_field = True
+    for key, value in metadata.items():
+        first_field = _write_json_field(output, key, value, first=first_field)
+
+    _write_json_key(output, "messages", first=first_field)
+    output.write(b"[")
+    first_message = True
+    for batch_start in range(0, len(message_rows), _MESSAGE_BATCH_SIZE):
+        batch = message_rows[batch_start : batch_start + _MESSAGE_BATCH_SIZE]
+        version_ids = [message.current_version_id for message in batch if message.current_version_id]
+        versions = (
+            db.query(MessageVersion).filter(MessageVersion.id.in_(version_ids)).all()
+            if version_ids
+            else []
+        )
+        versions_by_id = {version.id: version for version in versions}
+        block_rows = (
+            db.query(RenderBlock)
+            .filter(RenderBlock.message_version_id.in_(version_ids))
+            .order_by(RenderBlock.message_version_id.asc(), RenderBlock.block_index.asc())
+            .all()
+            if version_ids
+            else []
+        )
+        blocks_by_version: dict[uuid.UUID, list[RenderBlock]] = defaultdict(list)
+        for block in block_rows:
+            blocks_by_version[block.message_version_id].append(block)
+
+        for message in batch:
+            if not first_message:
+                output.write(b",")
+            first_message = False
+            version = versions_by_id.get(message.current_version_id)
+            _write_json_value(
+                output,
+                {
+                    "id": message.id,
+                    "conversation_id": message.conversation_id,
+                    "role": message.role,
+                    "order_key": message.order_key,
+                    "turn_index": message.turn_index,
+                    "created_at": message.created_at,
+                    "block_count": message.block_count,
+                    "char_count": message.char_count,
+                    "is_heavy": message.is_heavy,
+                    "current_version": _version_payload(version),
+                    "render_blocks": [
+                        _block_payload(block) for block in blocks_by_version.get(message.current_version_id, [])
+                    ],
+                },
+            )
+        if progress_callback:
+            progress_callback(min(batch_start + len(batch), len(message_rows)), len(message_rows))
+    if not message_rows and progress_callback:
+        progress_callback(0, 0)
+    output.write(b"]")
+
+    _write_json_key(output, "headings", first=False)
+    _write_json_array(
+        output,
+        (
+            _heading_payload(item)
+            for item in db.query(Heading)
+            .filter(Heading.conversation_id == conversation.id)
+            .order_by(Heading.heading_index.asc())
+            .yield_per(200)
+        ),
+    )
+    _write_json_key(output, "search_documents", first=False)
+    _write_json_array(
+        output,
+        (
+            _search_payload(item)
+            for item in db.query(SearchDocument)
+            .filter(SearchDocument.conversation_id == conversation.id)
+            .yield_per(100)
+        ),
+    )
+    _write_json_field(output, "annotations", list_annotations_payload(db, conversation.id), first=False)
+    _write_json_field(
+        output,
+        "notebook",
+        notebook_read(notebook).model_dump(mode="json") if notebook else None,
+        first=False,
+    )
+    _write_json_field(output, "reading_position", _reading_position_payload(position), first=False)
+    output.write(b"}")
+
+
+def _write_json_array(output: BinaryIO, values: Iterable[Any]) -> None:
+    output.write(b"[")
+    for index, value in enumerate(values):
+        if index:
+            output.write(b",")
+        _write_json_value(output, value)
+    output.write(b"]")
+
+
+def _write_json_field(output: BinaryIO, key: str, value: Any, *, first: bool) -> bool:
+    _write_json_key(output, key, first=first)
+    _write_json_value(output, value)
+    return False
+
+
+def _write_json_key(output: BinaryIO, key: str, *, first: bool) -> None:
+    if not first:
+        output.write(b",")
+    _write_json_value(output, key)
+    output.write(b":")
+
+
+def _write_json_value(output: BinaryIO, value: Any) -> None:
+    for chunk in _JSON_ENCODER.iterencode(value):
+        output.write(chunk.encode("utf-8"))
 
 
 def list_annotations_payload(db: Session, conversation_id: uuid.UUID) -> list[dict[str, Any]]:
