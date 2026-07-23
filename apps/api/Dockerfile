@@ -15,7 +15,7 @@ RUN pip install --upgrade pip && pip install .
 
 RUN addgroup --system chatreader \
     && adduser --system --ingroup chatreader chatreader \
-    && mkdir -p /data/imports /data/exports \
+    && mkdir -p /data/imports /data/exports /data/offline \
     && chown -R chatreader:chatreader /app /data
 
 USER chatreader
