@@ -8,6 +8,7 @@ import type {
   LocaleMode,
   ProjectSortMode,
   ReaderWidthMode,
+  SectionTocMode,
   SortDirection,
   ThemeMode,
   UserPreferenceRead,
@@ -17,6 +18,7 @@ type PreferencesContextValue = {
   themeMode: ThemeMode;
   localeMode: LocaleMode;
   readerWidthMode: ReaderWidthMode;
+  sectionTocMode: SectionTocMode;
   conversationSortMode: ConversationSortMode;
   conversationSortDirection: SortDirection;
   projectSortMode: ProjectSortMode;
@@ -26,6 +28,7 @@ type PreferencesContextValue = {
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setLocaleMode: (mode: LocaleMode) => Promise<void>;
   setReaderWidthMode: (mode: ReaderWidthMode) => Promise<void>;
+  setSectionTocMode: (mode: SectionTocMode) => Promise<void>;
   setConversationSort: (mode: ConversationSortMode, direction: SortDirection) => Promise<void>;
   setProjectSort: (mode: ProjectSortMode, direction: SortDirection) => Promise<void>;
   t: (key: TranslationKey, values?: Record<string, string | number>) => string;
@@ -45,6 +48,7 @@ export function PreferencesProvider({
   const [themeMode, setThemeModeState] = useState<ThemeMode>(initialPreferences.theme_mode);
   const [localeMode, setLocaleModeState] = useState<LocaleMode>(initialPreferences.locale_mode);
   const [readerWidthMode, setReaderWidthModeState] = useState<ReaderWidthMode>(initialPreferences.reader_width_mode ?? "standard");
+  const [sectionTocMode, setSectionTocModeState] = useState<SectionTocMode>(initialPreferences.section_toc_mode ?? "visible");
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>(initialPreferences.conversation_sort_mode ?? "recent_read");
   const [conversationSortDirection, setConversationSortDirection] = useState<SortDirection>(initialPreferences.conversation_sort_direction ?? "desc");
   const [projectSortMode, setProjectSortMode] = useState<ProjectSortMode>(initialPreferences.project_sort_mode ?? "recent_read");
@@ -73,6 +77,7 @@ export function PreferencesProvider({
       setThemeModeState(fresh.theme_mode);
       setLocaleModeState(fresh.locale_mode);
       setReaderWidthModeState(fresh.reader_width_mode ?? "standard");
+      setSectionTocModeState(fresh.section_toc_mode ?? "visible");
       setConversationSortMode(fresh.conversation_sort_mode ?? "recent_read");
       setConversationSortDirection(fresh.conversation_sort_direction ?? "desc");
       setProjectSortMode(fresh.project_sort_mode ?? "recent_read");
@@ -92,6 +97,10 @@ export function PreferencesProvider({
     setReaderWidthModeState(mode);
     await updatePreferences({ reader_width_mode: mode });
   }, []);
+  const setSectionTocMode = useCallback(async (mode: SectionTocMode) => {
+    setSectionTocModeState(mode);
+    await updatePreferences({ section_toc_mode: mode });
+  }, []);
   const setConversationSort = useCallback(async (mode: ConversationSortMode, direction: SortDirection) => {
     setConversationSortMode(mode);
     setConversationSortDirection(direction);
@@ -107,6 +116,7 @@ export function PreferencesProvider({
     themeMode,
     localeMode,
     readerWidthMode,
+    sectionTocMode,
     conversationSortMode,
     conversationSortDirection,
     projectSortMode,
@@ -116,10 +126,11 @@ export function PreferencesProvider({
     setThemeMode,
     setLocaleMode,
     setReaderWidthMode,
+    setSectionTocMode,
     setConversationSort,
     setProjectSort,
     t: (key, values) => translate(resolvedLocale, key, values),
-  }), [conversationSortDirection, conversationSortMode, localeMode, projectSortDirection, projectSortMode, readerWidthMode, resolvedLocale, resolvedTheme, setConversationSort, setLocaleMode, setProjectSort, setReaderWidthMode, setThemeMode, themeMode]);
+  }), [conversationSortDirection, conversationSortMode, localeMode, projectSortDirection, projectSortMode, readerWidthMode, resolvedLocale, resolvedTheme, sectionTocMode, setConversationSort, setLocaleMode, setProjectSort, setReaderWidthMode, setSectionTocMode, setThemeMode, themeMode]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

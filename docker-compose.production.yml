@@ -39,6 +39,7 @@ services:
       MAX_IMPORT_FILE_SIZE_MB: ${MAX_IMPORT_FILE_SIZE_MB:-50}
       IMPORT_STORAGE_DIR: /data/imports
       EXPORT_STORAGE_DIR: /data/exports
+      OFFLINE_STORAGE_DIR: /data/offline
       WEB_CONCURRENCY: ${API_WORKERS:-1}
     depends_on:
       postgres:
@@ -55,6 +56,7 @@ services:
     volumes:
       - import-storage:/data/imports
       - export-storage:/data/exports
+      - offline-storage:/data/offline
     expose:
       - "8000"
     healthcheck:
@@ -87,6 +89,7 @@ services:
     volumes:
       - import-storage:/data/imports
       - export-storage:/data/exports
+      - offline-storage:/data/offline
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,3 +131,4 @@ volumes:
   postgres-data:
   import-storage:
   export-storage:
+  offline-storage:

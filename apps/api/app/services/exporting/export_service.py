@@ -7,6 +7,7 @@ from http import HTTPStatus
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
+from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.models.conversation_event import ConversationEvent
 from app.models.heading import Heading
 from app.models.message import Message
@@ -38,6 +39,9 @@ def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, option
             ]
         )
 
+    if options.include_description and conversation.description_markdown:
+        lines.extend(["## Description", "", conversation.description_markdown.strip(), ""])
+
     if toc:
         lines.extend(["## Table of Contents", ""])
         for heading in toc:
@@ -53,6 +57,28 @@ def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, option
         block_text = _markdown_blocks(db, version)
         lines.append(block_text or version.display_text)
         lines.append("")
+
+    if options.include_annotations:
+        annotations = _annotation_rows(db, conversation, options.message_ids)
+        if annotations:
+            lines.extend(["## Annotations", ""])
+            for annotation in annotations:
+                quote = annotation.quote or "Whole message"
+                lines.append(f"> {quote.replace(chr(10), ' ')}")
+                if annotation.comment_markdown:
+                    lines.extend(["", annotation.comment_markdown])
+                lines.append("")
+    if options.include_notebook:
+        notebook = _notebook_row(db, conversation)
+        if notebook and notebook.blocks:
+            lines.extend(["## Curated Notes", ""])
+            for block in notebook.blocks:
+                if isinstance(block, dict) and block.get("type") == "markdown":
+                    lines.extend([str(block.get("markdown") or ""), ""])
+                elif isinstance(block, dict) and block.get("type") == "annotation_reference":
+                    annotation = db.get(ConversationAnnotation, uuid.UUID(str(block.get("annotation_id"))))
+                    if annotation and annotation.quote:
+                        lines.extend([f"> {annotation.quote}", ""])
 
     _write_export_event(db, conversation.id, options, len(rows))
     content = "\n".join(lines).strip() + "\n"
@@ -102,10 +128,20 @@ def export_conversation_canonical_json(db: Session, conversation_id: uuid.UUID, 
                 "include_metadata": options.include_metadata,
                 "include_toc": options.include_toc,
                 "include_versions": options.include_versions,
+                "include_description": options.include_description,
+                "include_annotations": options.include_annotations,
+                "include_notebook": options.include_notebook,
                 "selected_message_count": len(options.message_ids),
             }
         },
     }
+    if options.include_description:
+        payload["conversation"]["description_markdown"] = conversation.description_markdown
+    if options.include_annotations:
+        payload["annotations"] = [_annotation_payload(annotation) for annotation in _annotation_rows(db, conversation, options.message_ids)]
+    if options.include_notebook:
+        notebook = _notebook_row(db, conversation)
+        payload["notebook"] = _notebook_payload(notebook) if notebook else None
     if not options.include_metadata:
         payload["metadata"] = {"export_options": {"include_metadata": False}}
 
@@ -149,6 +185,54 @@ def _toc_rows(db: Session, conversation: Conversation, message_ids: list[uuid.UU
     if message_ids:
         query = query.filter(Heading.message_id.in_(message_ids))
     return query.order_by(Heading.heading_index.asc()).all()
+
+
+def _annotation_rows(db: Session, conversation: Conversation, message_ids: list[uuid.UUID]) -> list[ConversationAnnotation]:
+    query = db.query(ConversationAnnotation).filter(
+        ConversationAnnotation.conversation_id == conversation.id,
+        ConversationAnnotation.subject_key == "local:default",
+        ConversationAnnotation.is_deleted.is_(False),
+    )
+    if message_ids:
+        query = query.filter(ConversationAnnotation.message_id.in_(message_ids))
+    return query.order_by(ConversationAnnotation.created_at.asc()).all()
+
+
+def _notebook_row(db: Session, conversation: Conversation) -> ConversationNotebook | None:
+    return db.query(ConversationNotebook).filter(
+        ConversationNotebook.conversation_id == conversation.id,
+        ConversationNotebook.subject_key == "local:default",
+        ConversationNotebook.is_conflict.is_(False),
+    ).order_by(ConversationNotebook.created_at.asc()).first()
+
+
+def _annotation_payload(annotation: ConversationAnnotation) -> dict:
+    return {
+        "id": str(annotation.id),
+        "message_id": str(annotation.message_id) if annotation.message_id else None,
+        "message_version_id": str(annotation.message_version_id) if annotation.message_version_id else None,
+        "annotation_type": annotation.annotation_type,
+        "color": annotation.color,
+        "start_block_index": annotation.start_block_index,
+        "start_offset": annotation.start_offset,
+        "end_block_index": annotation.end_block_index,
+        "end_offset": annotation.end_offset,
+        "quote": annotation.quote,
+        "prefix": annotation.prefix,
+        "suffix": annotation.suffix,
+        "comment_markdown": annotation.comment_markdown,
+        "anchor_status": annotation.anchor_status,
+        "revision": annotation.revision,
+    }
+
+
+def _notebook_payload(notebook: ConversationNotebook) -> dict:
+    return {
+        "id": str(notebook.id),
+        "title": notebook.title,
+        "blocks": notebook.blocks,
+        "revision": notebook.revision,
+    }
 
 
 def _markdown_blocks(db: Session, version: MessageVersion) -> str:

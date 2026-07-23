@@ -1,6 +1,11 @@
 import type {
   CommitImportResponse,
   BackgroundTaskRead,
+  AnnotationCreateInput,
+  AnnotationRead,
+  AnnotationSyncOperation,
+  AnnotationSyncResponse,
+  AnnotationUpdateInput,
   ConversationEventListResponse,
   ConversationDetail,
   ConversationListItem,
@@ -12,6 +17,7 @@ import type {
   HealthResponse,
   ImportPreviewResponse,
   ImportStatusResponse,
+  NotebookRead,
   MessageEditResponse,
   MessageListItem,
   MessageMergeResponse,
@@ -30,6 +36,8 @@ import type {
   RenderBlockRead,
   SearchReindexResponse,
   SearchResponse,
+  OfflineCatalogResponse,
+  OfflinePackageQueued,
   ShareCreateInput,
   ShareCreateResponse,
   ShareRead,
@@ -92,6 +100,55 @@ export async function updateConversation(
     `/api/conversations/${conversationId}`,
     jsonRequest("PATCH", input),
   );
+}
+
+export async function getConversationAnnotations(conversationId: string): Promise<AnnotationRead[]> {
+  return fetchJson<AnnotationRead[]>(`/api/conversations/${conversationId}/annotations`);
+}
+
+export async function createConversationAnnotation(conversationId: string, input: AnnotationCreateInput): Promise<AnnotationRead> {
+  return fetchJson<AnnotationRead>(`/api/conversations/${conversationId}/annotations`, jsonRequest("POST", input));
+}
+
+export async function updateConversationAnnotation(annotationId: string, input: AnnotationUpdateInput): Promise<AnnotationRead> {
+  return fetchJson<AnnotationRead>(`/api/annotations/${annotationId}`, jsonRequest("PATCH", input));
+}
+
+export async function deleteConversationAnnotation(annotationId: string, baseRevision: number): Promise<void> {
+  await fetchJson<void>(`/api/annotations/${annotationId}?base_revision=${baseRevision}`, { method: "DELETE" });
+}
+
+export async function syncConversationAnnotations(operations: AnnotationSyncOperation[]): Promise<AnnotationSyncResponse> {
+  return fetchJson<AnnotationSyncResponse>("/api/annotations/sync", jsonRequest("POST", { operations }));
+}
+
+export async function getConversationNotebook(conversationId: string): Promise<NotebookRead> {
+  return fetchJson<NotebookRead>(`/api/conversations/${conversationId}/notebook`);
+}
+
+export async function getConversationNotebookConflicts(conversationId: string): Promise<NotebookRead[]> {
+  return fetchJson<NotebookRead[]>(`/api/conversations/${conversationId}/notebook/conflicts`);
+}
+
+export async function updateConversationNotebook(
+  conversationId: string,
+  input: Pick<NotebookRead, "title" | "blocks"> & { id?: string; base_revision: number },
+): Promise<NotebookRead> {
+  return fetchJson<NotebookRead>(`/api/conversations/${conversationId}/notebook`, jsonRequest("PUT", input));
+}
+
+export async function getOfflineCatalog(): Promise<OfflineCatalogResponse> {
+  return fetchJson<OfflineCatalogResponse>("/api/offline/catalog");
+}
+
+export async function queueOfflinePackage(
+  input: { scope: "conversation" | "project" | "all"; conversation_id?: string; project_id?: string },
+): Promise<OfflinePackageQueued> {
+  return fetchJson<OfflinePackageQueued>("/api/offline/packages", jsonRequest("POST", input));
+}
+
+export function getOfflinePackageDownloadUrl(packageId: string): string {
+  return `${API_BASE_URL}/api/offline/packages/${packageId}/download`;
 }
 
 export async function deleteConversation(conversationId: string): Promise<void> {
@@ -542,8 +599,14 @@ export async function getConversationToc(
 
 export async function queueConversationArchiveExport(
   conversationId: string,
+  options: { includeDescription?: boolean; includeAnnotations?: boolean; includeNotebook?: boolean } = {},
 ): Promise<BackgroundTaskRead> {
-  return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports`, {
+  const params = new URLSearchParams({
+    include_description: String(options.includeDescription ?? false),
+    include_annotations: String(options.includeAnnotations ?? false),
+    include_notebook: String(options.includeNotebook ?? false),
+  });
+  return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports?${params.toString()}`, {
     method: "POST",
     headers: { "Idempotency-Key": `cr-export-${conversationId}-${Date.now()}` },
   });
@@ -641,6 +704,9 @@ export function getConversationExportUrl(
     includeMetadata?: boolean;
     includeToc?: boolean;
     includeVersions?: boolean;
+    includeDescription?: boolean;
+    includeAnnotations?: boolean;
+    includeNotebook?: boolean;
     messageIds?: string[];
   },
 ): string {
@@ -649,6 +715,9 @@ export function getConversationExportUrl(
     include_metadata: String(options.includeMetadata ?? true),
     include_toc: String(options.includeToc ?? true),
     include_versions: String(options.includeVersions ?? false),
+    include_description: String(options.includeDescription ?? false),
+    include_annotations: String(options.includeAnnotations ?? false),
+    include_notebook: String(options.includeNotebook ?? false),
   });
   if (options.messageIds?.length) {
     params.set("message_ids", options.messageIds.join(","));

@@ -57,7 +57,7 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 @router.get("", response_model=list[ConversationListItem])
 def list_conversations(
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=5000),
     offset: int = Query(default=0, ge=0),
     source_type: str | None = None,
     source_profile: str | None = None,
@@ -167,6 +167,18 @@ def update_conversation(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
 
     event_payload: dict[str, object] = {}
+    if "description_markdown" in payload.model_fields_set:
+        description = payload.description_markdown.strip() or None if payload.description_markdown else None
+        if description != conversation.description_markdown:
+            conversation.description_markdown = description
+            conversation.offline_revision += 1
+            conversation.updated_at = utc_now()
+            _add_conversation_event(
+                db,
+                conversation.id,
+                "conversation_description_updated",
+                {"description_markdown": description},
+            )
     if payload.title is not None or payload.display_title is not None:
         title = (payload.title if payload.title is not None else payload.display_title or "").strip()
         display_title = (payload.display_title if payload.display_title is not None else payload.title or "").strip()
@@ -177,6 +189,7 @@ def update_conversation(
         conversation.title = title or display_title
         conversation.display_title = display_title or title
         conversation.updated_at = utc_now()
+        conversation.offline_revision += 1
         event_payload.update(
             {
                 "previous_title": previous_title,
@@ -194,6 +207,7 @@ def update_conversation(
         if payload.status == "active":
             conversation.deleted_at = None
         conversation.updated_at = utc_now()
+        conversation.offline_revision += 1
         event_type = "conversation_archived" if payload.status == "archived" else "conversation_restored"
         _add_conversation_event(
             db,
@@ -568,6 +582,14 @@ def _anchor_order_key(
 
 
 def _conversation_item(conversation: Conversation) -> ConversationListItem:
+    project_id = None
+    project_name = None
+    for relation in conversation.project_links:
+        project = relation.project
+        if project is not None and not project.is_default and not project.is_archived:
+            project_id = project.id
+            project_name = project.name
+            break
     return ConversationListItem(
         id=conversation.id,
         title=conversation.title,
@@ -580,6 +602,10 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         updated_at=conversation.updated_at,
         imported_at=conversation.imported_at,
         first_user_message=conversation.first_user_message,
+        description_markdown=conversation.description_markdown,
+        project_id=project_id,
+        project_name=project_name,
+        offline_revision=conversation.offline_revision,
         status=conversation.status,
         is_global_pinned=conversation.is_global_pinned,
         global_pinned_at=conversation.global_pinned_at,

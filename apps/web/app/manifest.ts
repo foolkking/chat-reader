@@ -5,9 +5,9 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "chat-reader",
     short_name: "chat-reader",
     description: "ChatGPT export archive reader",
-    start_url: "/",
+    start_url: "/library",
+    scope: "/",
     display: "standalone",
-    orientation: "portrait-primary",
     background_color: "#f7f7f8",
     theme_color: "#10a37f",
     icons: [

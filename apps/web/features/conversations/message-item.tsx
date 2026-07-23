@@ -2,7 +2,7 @@ import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal } from "lucide-react";
+import { BookmarkPlus, MoreHorizontal } from "lucide-react";
 import { editMessage, splitMessage } from "../../lib/api";
 import { usePreferences } from "../../components/preferences-provider";
 import { EditMessageForm } from "../editing/edit-message-form";
@@ -24,6 +24,7 @@ export function MessageItem({
   hasMoreBlocks = false,
   onLoadPreviousBlocks,
   onLoadMoreBlocks,
+  onBookmark,
 }: {
   message: MessageListItem;
   onChanged?: () => Promise<void> | void;
@@ -38,6 +39,7 @@ export function MessageItem({
   hasMoreBlocks?: boolean;
   onLoadPreviousBlocks?: () => Promise<void>;
   onLoadMoreBlocks?: () => Promise<void>;
+  onBookmark?: (message: MessageListItem) => void | Promise<void>;
 }) {
   const { t } = usePreferences();
   const dialog = useInteractionDialog();
@@ -60,7 +62,7 @@ export function MessageItem({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const wideUserMessage = isUser && shouldUseWideUserLayout(currentText, blocks);
-  const hasActions = !readOnly || Boolean(onSelectedChange);
+  const hasActions = !readOnly || Boolean(onSelectedChange) || Boolean(onBookmark);
 
   useEffect(() => {
     if (expandHeavyBlocks && message.is_heavy) {
@@ -118,6 +120,7 @@ export function MessageItem({
 
   const actionControls = (
     <>
+      {onBookmark ? <button type="button" onClick={() => void onBookmark(message)} className="hidden h-9 w-9 items-center justify-center rounded-full border border-ui bg-raised text-primary hover:bg-subtle sm:inline-flex" aria-label="Bookmark message" title="Bookmark message"><BookmarkPlus className="h-4 w-4" /></button> : null}
       {onSelectedChange ? (
         <label className="inline-flex min-h-10 items-center gap-2 rounded-full border border-ui bg-raised px-3 text-xs font-medium text-primary">
           <input
@@ -195,12 +198,12 @@ export function MessageItem({
           {isUser ? <span className="sr-only">User message {message.order_key}</span> : null}
           {hasActions ? (
             <>
-              <details className="absolute right-0 top-0 z-20 sm:hidden">
+              {!readOnly || onSelectedChange ? <details className="absolute right-0 top-0 z-20 sm:hidden">
                 <summary aria-label={t("messageActions")} className="inline-flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg text-secondary hover:bg-subtle marker:hidden">
                   <MoreHorizontal className="h-5 w-5" />
                 </summary>
                 <div className="absolute right-0 top-10 flex w-64 flex-wrap gap-2 rounded-lg border border-ui bg-raised p-3 shadow-xl">{actionControls}</div>
-              </details>
+              </details> : null}
               <div className="hidden h-0 -translate-y-2 flex-wrap justify-end gap-2 overflow-visible opacity-0 transition sm:flex sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                 {actionControls}
               </div>

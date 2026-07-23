@@ -16,6 +16,7 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.models.share import Share
+from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.schemas.conversation import ConversationListItem
 from app.schemas.message import DialogueIndexItem, DialogueIndexResponse, MessageListItem, MessageVersionRead, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
@@ -58,6 +59,9 @@ def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) 
         selected_message_ids=[str(message_id) for message_id in payload.selected_message_ids],
         include_toc=payload.include_toc,
         include_metadata=payload.include_metadata,
+        include_description=payload.include_description,
+        include_annotations=payload.include_annotations,
+        include_notebook=payload.include_notebook,
         allow_export=payload.allow_export,
         theme=theme,
         locale=locale,
@@ -117,7 +121,10 @@ def get_shared_conversation_by_token(db: Session, token: str) -> SharedConversat
             "toc": share.include_toc,
             "blocks": True,
             "export": share.allow_export,
+            "annotations": share.include_annotations,
+            "notebook": share.include_notebook,
         },
+        description_markdown=conversation.description_markdown if share.include_description else None,
     )
 
 
@@ -279,6 +286,31 @@ def get_shared_message_blocks(
     return [_block_read(block) for block in blocks]
 
 
+def get_shared_annotations(db: Session, token: str):
+    share = _get_accessible_share(db, token)
+    if not share.include_annotations:
+        return []
+    query = db.query(ConversationAnnotation).filter(
+        ConversationAnnotation.conversation_id == share.conversation_id,
+        ConversationAnnotation.subject_key == "local:default",
+        ConversationAnnotation.is_deleted.is_(False),
+    )
+    if share.scope == "selected_messages":
+        query = query.filter(ConversationAnnotation.message_id.in_(_selected_message_ids(share)))
+    return query.order_by(ConversationAnnotation.created_at.asc()).all()
+
+
+def get_shared_notebook(db: Session, token: str):
+    share = _get_accessible_share(db, token)
+    if not share.include_notebook:
+        return None
+    return db.query(ConversationNotebook).filter(
+        ConversationNotebook.conversation_id == share.conversation_id,
+        ConversationNotebook.subject_key == "local:default",
+        ConversationNotebook.is_conflict.is_(False),
+    ).order_by(ConversationNotebook.created_at.asc()).first()
+
+
 def revoke_share(db: Session, share_id: uuid.UUID) -> Share:
     share = db.get(Share, share_id)
     if share is None:
@@ -347,6 +379,9 @@ def share_read(share: Share) -> ShareRead:
         selected_message_ids=[uuid.UUID(str(message_id)) for message_id in share.selected_message_ids],
         include_toc=share.include_toc,
         include_metadata=share.include_metadata,
+        include_description=share.include_description,
+        include_annotations=share.include_annotations,
+        include_notebook=share.include_notebook,
         allow_export=share.allow_export,
         theme=share.theme,
         locale=share.locale,
@@ -515,6 +550,10 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         updated_at=conversation.updated_at,
         imported_at=conversation.imported_at,
         first_user_message=conversation.first_user_message,
+        description_markdown=None,
+        project_id=None,
+        project_name=None,
+        offline_revision=conversation.offline_revision,
         status=conversation.status,
         is_global_pinned=conversation.is_global_pinned,
         global_pinned_at=conversation.global_pinned_at,

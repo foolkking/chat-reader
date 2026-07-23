@@ -25,6 +25,9 @@ router = APIRouter(tags=["exports"])
 )
 def queue_archive_export(
     conversation_id: uuid.UUID,
+    include_description: bool = False,
+    include_annotations: bool = False,
+    include_notebook: bool = False,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
@@ -33,6 +36,9 @@ def queue_archive_export(
             db,
             conversation_id=conversation_id,
             idempotency_key=idempotency_key,
+            include_description=include_description,
+            include_annotations=include_annotations,
+            include_notebook=include_notebook,
         )
         db.commit()
     except MessageEditError as exc:

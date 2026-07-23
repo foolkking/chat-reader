@@ -142,6 +142,11 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .reader-prose > :where(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6) { max-width: 88ch; }
 .reader-rich-block { max-width: none; width: 100%; }
 
+::highlight(annotation-yellow) { background: rgb(253 224 71 / 0.48); }
+::highlight(annotation-green) { background: rgb(110 231 183 / 0.42); }
+::highlight(annotation-blue) { background: rgb(125 211 252 / 0.42); }
+::highlight(annotation-pink) { background: rgb(249 168 212 / 0.45); }
+
 .reader-frame {
   container-type: inline-size;
   position: relative;
@@ -199,7 +204,11 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   }
 }
 
-@container (min-width: 90rem) {
+@container (min-width: 62rem) {
+  .reader-layout-grid {
+    padding-left: clamp(3.5rem, 5cqi, 4.5rem);
+  }
+
   .reader-content-column {
     transform: translateX(clamp(0.75rem, 1cqi, 1.25rem));
   }
@@ -216,6 +225,21 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
     height: var(--reader-toc-height);
     font-size: 0.875rem;
     pointer-events: auto;
+  }
+
+  .reader-frame[data-section-toc="rail"] .reader-toc-column {
+    width: 2.75rem;
+  }
+
+  .reader-frame[data-section-toc="visible"] .reader-content-column {
+    width: min(calc(100% - 15rem), var(--reader-content-max));
+    margin-left: max(0px, calc((100% - var(--reader-content-max) - 15rem) / 2));
+    margin-right: 15rem;
+  }
+
+  .reader-frame[data-section-toc="rail"] .reader-content-column {
+    width: min(calc(100% - 3.75rem), var(--reader-content-max));
+    margin-right: 3.75rem;
   }
 
   .reader-toc-column > * {

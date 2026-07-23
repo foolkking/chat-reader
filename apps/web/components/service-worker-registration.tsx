@@ -14,6 +14,7 @@ export function ServiceWorkerRegistration() {
       if ("caches" in window) {
         void caches.delete("chat-reader-shell-v1");
         void caches.delete("chat-reader-static-v2");
+        void caches.delete("chat-reader-library-v3");
       }
       return;
     }

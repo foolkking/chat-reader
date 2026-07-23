@@ -22,6 +22,9 @@ export function SharePanel({
   const [useSelection, setUseSelection] = useState(false);
   const [includeToc, setIncludeToc] = useState(true);
   const [includeMetadata, setIncludeMetadata] = useState(true);
+  const [includeDescription, setIncludeDescription] = useState(false);
+  const [includeAnnotations, setIncludeAnnotations] = useState(false);
+  const [includeNotebook, setIncludeNotebook] = useState(false);
   const [allowExport, setAllowExport] = useState(false);
   const [shareTheme, setShareTheme] = useState<"light" | "dark">(preferences.resolvedTheme);
   const [shareLocale, setShareLocale] = useState<"zh-CN" | "en-US">(preferences.resolvedLocale);
@@ -44,6 +47,9 @@ export function SharePanel({
         selected_message_ids: useSelection ? selectedMessageIds : [],
         include_toc: includeToc,
         include_metadata: includeMetadata,
+        include_description: includeDescription,
+        include_annotations: includeAnnotations,
+        include_notebook: includeNotebook,
         allow_export: allowExport,
         expires_at: expiryValue(expiryMode, expiresAt),
         theme: shareTheme,
@@ -111,6 +117,12 @@ export function SharePanel({
         <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={includeToc} onChange={(event) => setIncludeToc(event.target.checked)} />包含章节目录</label>
         <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={includeMetadata} onChange={(event) => setIncludeMetadata(event.target.checked)} />包含元数据</label>
         <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={allowExport} onChange={(event) => setAllowExport(event.target.checked)} />允许导出</label>
+        <fieldset className="grid gap-2 border-y border-ui py-3">
+          <legend className="px-1 text-xs font-semibold text-secondary">私人内容（默认不分享）</legend>
+          <PrivacyToggle label="包含 description" checked={includeDescription} onChange={setIncludeDescription} />
+          <PrivacyToggle label="包含批注" checked={includeAnnotations} onChange={setIncludeAnnotations} />
+          <PrivacyToggle label="包含精选笔记" checked={includeNotebook} onChange={setIncludeNotebook} />
+        </fieldset>
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         <button
           type="button"
@@ -224,6 +236,9 @@ function ShareManagementRow({
         selected_message_ids: share.selected_message_ids ?? [],
         include_toc: share.include_toc,
         include_metadata: share.include_metadata,
+        include_description: share.include_description,
+        include_annotations: share.include_annotations,
+        include_notebook: share.include_notebook,
         allow_export: share.allow_export,
         expires_at: share.expires_at ?? null,
       });
@@ -328,6 +343,15 @@ function ShareManagementRow({
       {share.expires_at ? <p className="mt-1 text-xs text-[#6b7280]">Current expiry: {new Date(share.expires_at).toLocaleString()}</p> : null}
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
     </div>
+  );
+}
+
+function PrivacyToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
+  return (
+    <label className="flex min-h-9 items-center justify-between gap-3 text-sm text-primary">
+      <span>{label}</span>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
+    </label>
   );
 }
 

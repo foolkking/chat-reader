@@ -9,6 +9,9 @@ class ExportOptions:
     include_metadata: bool = True
     include_toc: bool = True
     include_versions: bool = False
+    include_description: bool = False
+    include_annotations: bool = False
+    include_notebook: bool = False
 
 
 @dataclass(frozen=True)

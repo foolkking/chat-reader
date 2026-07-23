@@ -90,6 +90,7 @@ def _job_label(job_type: str) -> str:
         "conversation_merge": "合并对话",
         "conversation_export": "导出归档",
         "conversation_auto_clean": "清理对话内容",
+        "offline_package": "生成离线资料库",
     }.get(job_type, "后台任务")
 
 

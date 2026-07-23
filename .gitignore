@@ -22,3 +22,4 @@ __pycache__/
 apps/api/alembic/versions/*.pyc
 
 storage/imports/
+apps/api/storage/offline/

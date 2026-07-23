@@ -11,11 +11,12 @@ export function ResponsiveReaderFrame({
   content: React.ReactNode;
   toc: React.ReactNode;
 }) {
-  const { readerWidthMode } = usePreferences();
+  const { readerWidthMode, sectionTocMode } = usePreferences();
   return (
     <div
       className="reader-frame min-h-full w-full py-[clamp(1rem,2vw,2rem)]"
       data-reader-width={readerWidthMode}
+      data-section-toc={sectionTocMode}
     >
       <aside className="reader-index-column">{index}</aside>
       <aside className="reader-toc-column min-w-0">{toc}</aside>

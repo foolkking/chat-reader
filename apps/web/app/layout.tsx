@@ -5,6 +5,7 @@ import { ImportDialogProvider } from "../components/import-dialog-provider";
 import { ShortcutManager } from "../components/shortcut-manager";
 import { InteractionDialogProvider } from "../components/interaction-dialog-provider";
 import { ServiceWorkerRegistration } from "../components/service-worker-registration";
+import { OfflineSyncManager } from "../components/offline-sync-manager";
 import { resolveLocale } from "../lib/i18n";
 import type { UserPreferenceRead } from "../lib/types";
 import { headers } from "next/headers";
@@ -46,7 +47,7 @@ export default async function RootLayout({
       <body>
         <QueryProvider>
           <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
-            <InteractionDialogProvider><ImportDialogProvider><ShortcutManager />{children}</ImportDialogProvider></InteractionDialogProvider>
+            <InteractionDialogProvider><ImportDialogProvider><ShortcutManager /><OfflineSyncManager />{children}</ImportDialogProvider></InteractionDialogProvider>
           </PreferencesProvider>
         </QueryProvider>
         <ServiceWorkerRegistration />
@@ -60,6 +61,7 @@ async function loadInitialPreferences(): Promise<UserPreferenceRead> {
     theme_mode: "light",
     locale_mode: "auto",
     reader_width_mode: "standard",
+    section_toc_mode: "visible",
     conversation_sort_mode: "recent_read",
     conversation_sort_direction: "desc",
     project_sort_mode: "recent_read",

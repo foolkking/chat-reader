@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text, Uuid
+from sqlalchemy import BigInteger, Boolean, DateTime, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -24,12 +24,14 @@ class Conversation(Base):
     message_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     turn_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     first_user_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     parser_version: Mapped[str] = mapped_column(String, nullable=False)
     render_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     content_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     sort_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     manual_sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    offline_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
     is_global_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     global_pinned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

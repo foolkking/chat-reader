@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.conversation import Conversation
+from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.models.conversation_event import ConversationEvent
 from app.models.export_artifact import ExportArtifact
 from app.models.heading import Heading
@@ -29,7 +30,7 @@ from app.services.projects.project_service import add_conversation_to_project, e
 from app.services.search.search_indexer import _refresh_postgres_tsv
 
 ARCHIVE_FORMAT = "chat-reader-archive"
-ARCHIVE_VERSION = 1
+ARCHIVE_VERSION = 2
 ARCHIVE_MIME = "application/vnd.chat-reader.archive+zip"
 ARCHIVE_NAMESPACE = uuid.UUID("12f7e0d6-8ef6-46bd-a4bb-843ed437a14c")
 JSONL_ENTRIES = (
@@ -76,6 +77,9 @@ def create_cr_archive(
     conversation_id: uuid.UUID,
     job_id: uuid.UUID,
     progress_callback: ProgressCallback | None = None,
+    include_description: bool = False,
+    include_annotations: bool = False,
+    include_notebook: bool = False,
 ) -> ExportArtifact:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
@@ -115,6 +119,8 @@ def create_cr_archive(
 
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
         conversation_payload = _conversation_payload(db, conversation)
+        if include_description:
+            conversation_payload["description_markdown"] = conversation.description_markdown
         checksums["conversation.json"] = _write_json(archive, "conversation.json", conversation_payload)
         _report(progress_callback, "exporting", 5, processed, total_records)
 
@@ -148,6 +154,26 @@ def create_cr_archive(
             processed += written
             _report(progress_callback, "exporting", min(90, 5 + round(85 * processed / total_records)), processed, total_records)
 
+        if include_annotations:
+            annotation_rows = db.query(ConversationAnnotation).filter(
+                ConversationAnnotation.conversation_id == conversation.id,
+                ConversationAnnotation.subject_key == "local:default",
+                ConversationAnnotation.is_deleted.is_(False),
+            ).order_by(ConversationAnnotation.created_at.asc()).all()
+            checksums["annotations.jsonl"], written = _write_jsonl(
+                archive, "annotations.jsonl", (_annotation_payload(row) for row in annotation_rows)
+            )
+            counts["annotations"] = written
+        if include_notebook:
+            notebook = db.query(ConversationNotebook).filter(
+                ConversationNotebook.conversation_id == conversation.id,
+                ConversationNotebook.subject_key == "local:default",
+                ConversationNotebook.is_conflict.is_(False),
+            ).order_by(ConversationNotebook.created_at.asc()).first()
+            if notebook is not None:
+                checksums["notebook.json"] = _write_json(archive, "notebook.json", _notebook_payload(notebook))
+                counts["notebooks"] = 1
+
         manifest = {
             "format": ARCHIVE_FORMAT,
             "version": ARCHIVE_VERSION,
@@ -157,6 +183,11 @@ def create_cr_archive(
             "scope": "conversation",
             "summary": counts,
             "entries": checksums,
+            "optional_entries": {
+                "description": include_description,
+                "annotations": include_annotations,
+                "notebook": include_notebook,
+            },
         }
         _write_json(archive, "manifest.json", manifest)
 
@@ -219,6 +250,7 @@ def import_cr_archive(
             message_count=int(source_conversation.get("message_count") or summary.get("messages") or 0),
             turn_count=int(source_conversation.get("turn_count") or 0),
             first_user_message=source_conversation.get("first_user_message"),
+            description_markdown=source_conversation.get("description_markdown"),
             summary=source_conversation.get("summary"),
             parser_version="chat-reader-archive-v1",
             render_version=int(manifest.get("render_version") or 1),
@@ -280,6 +312,7 @@ def import_cr_archive(
         _report(progress_callback, "search", 96, total, total)
         _import_source_refs(db, archive, target_id)
         _import_events(db, archive, target_id)
+        _import_optional_reader_metadata(db, archive, target_id)
         _restore_placement(db, conversation, source_conversation, options)
         _restore_reading_position(db, conversation, source_conversation)
 
@@ -492,6 +525,95 @@ def _conversation_payload(db: Session, conversation: Conversation) -> dict[str, 
     }
 
 
+def _annotation_payload(row: ConversationAnnotation) -> dict[str, Any]:
+    return {
+        "id": str(row.id),
+        "message_id": str(row.message_id) if row.message_id else None,
+        "message_version_id": str(row.message_version_id) if row.message_version_id else None,
+        "annotation_type": row.annotation_type,
+        "color": row.color,
+        "start_block_index": row.start_block_index,
+        "start_offset": row.start_offset,
+        "end_block_index": row.end_block_index,
+        "end_offset": row.end_offset,
+        "quote": row.quote,
+        "prefix": row.prefix,
+        "suffix": row.suffix,
+        "comment_markdown": row.comment_markdown,
+        "anchor_status": row.anchor_status,
+        "revision": row.revision,
+        "metadata": row.metadata_,
+        "created_at": _dt(row.created_at),
+        "updated_at": _dt(row.updated_at),
+    }
+
+
+def _notebook_payload(row: ConversationNotebook) -> dict[str, Any]:
+    return {
+        "id": str(row.id),
+        "title": row.title,
+        "blocks": row.blocks,
+        "revision": row.revision,
+        "created_at": _dt(row.created_at),
+        "updated_at": _dt(row.updated_at),
+    }
+
+
+def _import_optional_reader_metadata(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) -> None:
+    names = set(archive.namelist())
+    annotation_map: dict[uuid.UUID, uuid.UUID] = {}
+    if "annotations.jsonl" in names:
+        for row in _read_jsonl(archive, "annotations.jsonl"):
+            source_id = uuid.UUID(row["id"])
+            annotation_id = _mapped_id(target_id, "annotation", source_id)
+            annotation_map[source_id] = annotation_id
+            db.add(
+                ConversationAnnotation(
+                    id=annotation_id,
+                    subject_key="local:default",
+                    conversation_id=target_id,
+                    message_id=_mapped_id(target_id, "message", uuid.UUID(row["message_id"])) if row.get("message_id") else None,
+                    message_version_id=_mapped_id(target_id, "version", uuid.UUID(row["message_version_id"])) if row.get("message_version_id") else None,
+                    annotation_type=row.get("annotation_type") or "highlight",
+                    color=row.get("color"),
+                    start_block_index=row.get("start_block_index"),
+                    start_offset=row.get("start_offset"),
+                    end_block_index=row.get("end_block_index"),
+                    end_offset=row.get("end_offset"),
+                    quote=row.get("quote"),
+                    prefix=row.get("prefix"),
+                    suffix=row.get("suffix"),
+                    comment_markdown=row.get("comment_markdown") or "",
+                    anchor_status=row.get("anchor_status") or "active",
+                    revision=int(row.get("revision") or 1),
+                    metadata_=row.get("metadata") or {},
+                    created_at=_parse_dt(row.get("created_at")) or datetime.now(timezone.utc),
+                    updated_at=_parse_dt(row.get("updated_at")) or datetime.now(timezone.utc),
+                )
+            )
+    if "notebook.json" in names:
+        row = _read_json_entry(archive, "notebook.json")
+        blocks = []
+        for block in row.get("blocks") or []:
+            value = dict(block) if isinstance(block, dict) else {}
+            if value.get("annotation_id"):
+                source_annotation_id = uuid.UUID(str(value["annotation_id"]))
+                value["annotation_id"] = str(annotation_map.get(source_annotation_id) or _mapped_id(target_id, "annotation", source_annotation_id))
+            blocks.append(value)
+        db.add(
+            ConversationNotebook(
+                id=_mapped_id(target_id, "notebook", uuid.UUID(row["id"])),
+                subject_key="local:default",
+                conversation_id=target_id,
+                title=row.get("title"),
+                blocks=blocks,
+                revision=int(row.get("revision") or 1),
+                created_at=_parse_dt(row.get("created_at")) or datetime.now(timezone.utc),
+                updated_at=_parse_dt(row.get("updated_at")) or datetime.now(timezone.utc),
+            )
+        )
+
+
 def _message_payload(row: Message) -> dict[str, Any]:
     return {key: _json_value(getattr(row, key)) for key in (
         "id", "role", "author_label", "order_key", "turn_index", "created_at", "current_version_id",
@@ -617,7 +739,7 @@ def _open_validated_zip(path: Path) -> zipfile.ZipFile:
 
 
 def _validate_manifest(archive: zipfile.ZipFile, manifest: dict[str, Any]) -> None:
-    if manifest.get("format") != ARCHIVE_FORMAT or manifest.get("version") != ARCHIVE_VERSION:
+    if manifest.get("format") != ARCHIVE_FORMAT or manifest.get("version") not in {1, ARCHIVE_VERSION}:
         raise CrArchiveError("Unsupported .cr archive version.")
     required = {"manifest.json", "conversation.json", *JSONL_ENTRIES}
     if not required.issubset(set(archive.namelist())):
@@ -629,6 +751,12 @@ def _validate_manifest(archive: zipfile.ZipFile, manifest: dict[str, Any]) -> No
             raise CrArchiveError(f"Archive checksum is missing for {name}.")
         actual = hashlib.sha256(archive.read(name)).hexdigest()
         if actual != expected:
+            raise CrArchiveError(f"Archive checksum failed for {name}.")
+    for name in ("annotations.jsonl", "notebook.json"):
+        if name not in archive.namelist():
+            continue
+        expected = entries.get(name, {}).get("sha256") if isinstance(entries.get(name), dict) else None
+        if not expected or hashlib.sha256(archive.read(name)).hexdigest() != expected:
             raise CrArchiveError(f"Archive checksum failed for {name}.")
 
 

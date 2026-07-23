@@ -12,18 +12,21 @@ import {
   archiveConversation,
   deleteConversation,
   getConversations,
+  getProjects,
   mergeConversations,
+  moveConversationToProject,
   restoreConversation,
   updateConversationOrder,
 } from "../../lib/api";
-import type { ConversationListItem } from "../../lib/types";
+import type { ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
-import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
+import type { UndoAction } from "./conversation-action-menu";
 import { MergeOrderList } from "./merge-order-list";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
+import { downloadConversationBundle } from "../../lib/bulk-export";
 
 export function ConversationList({
   onImportClick,
@@ -39,7 +42,6 @@ export function ConversationList({
   const [isMerging, setIsMerging] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [undo, setUndo] = useState<UndoAction | null>(null);
-  const [menuCloseSignal, setMenuCloseSignal] = useState(0);
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -47,11 +49,16 @@ export function ConversationList({
     queryKey: ["conversations", mode, conversationSortMode, conversationSortDirection],
     queryFn: () => getConversations({
       includeArchived: mode === "archived",
-      scope: mode === "active" ? "history" : "all",
+      scope: "all",
       sort: conversationSortMode,
       direction: conversationSortDirection,
-      limit: 200,
+      limit: 5000,
     }),
+  });
+  const projectsQuery = useQuery({
+    queryKey: ["projects", "bulk-actions"],
+    queryFn: () => getProjects(),
+    enabled: selectionMode && mode === "active",
   });
   const globalExistenceQuery = useQuery({
     queryKey: ["conversations", "existence"],
@@ -182,7 +189,27 @@ export function ConversationList({
             onTitleChange={setMergeTitle}
             isMerging={isMerging}
             bulkBusy={bulkBusy}
+            projects={(projectsQuery.data ?? []).filter((project) => !project.is_default && !project.is_archived)}
             onReorder={setMergeOrderIds}
+            onMove={async (ids, projectId) => {
+              setBulkBusy("move");
+              try {
+                await Promise.all(ids.map((id) => moveConversationToProject(id, projectId)));
+                setSelectedConversationIds(new Set());
+                setMergeOrderIds([]);
+                await refreshLists();
+              } finally {
+                setBulkBusy(null);
+              }
+            }}
+            onExport={async (selected) => {
+              setBulkBusy("export");
+              try {
+                await downloadConversationBundle(selected);
+              } finally {
+                setBulkBusy(null);
+              }
+            }}
             onMerge={async (ids, title) => {
               setIsMerging(true);
               try {
@@ -273,7 +300,6 @@ export function ConversationList({
                     type="checkbox"
                     checked={selectedConversationIds.has(conversation.id)}
                     onChange={(event) => {
-                      setMenuCloseSignal((signal) => signal + 1);
                       setSelectedConversationIds((current) => {
                         const next = new Set(current);
                         if (event.target.checked) {
@@ -301,22 +327,14 @@ export function ConversationList({
                     </h3>
                   </Link>
                   <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
-                    {previewConversationText(conversation.first_user_message, resolvedLocale)}
+                    {conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)}
                   </p>
                 </div>
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
-                <div className="min-w-0 md:order-2">
+                <div className="min-w-0">
                   <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)} aria-label={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}</p>
                   <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
-                </div>
-                <div className="md:order-1">
-                  <ConversationActionMenu
-                    conversation={conversation}
-                    closeSignal={menuCloseSignal}
-                    onUndo={setUndo}
-                    onChanged={refreshLists}
-                  />
                 </div>
               </div>
             </div>
@@ -351,7 +369,10 @@ function BulkActions({
   onTitleChange,
   isMerging,
   bulkBusy,
+  projects,
   onReorder,
+  onMove,
+  onExport,
   onMerge,
   onArchive,
   onRestore,
@@ -363,7 +384,10 @@ function BulkActions({
   onTitleChange: (title: string) => void;
   isMerging: boolean;
   bulkBusy: string | null;
+  projects: ProjectRead[];
   onReorder: (ids: string[]) => void;
+  onMove: (ids: string[], projectId: string | null) => Promise<void>;
+  onExport: (conversations: ConversationListItem[]) => Promise<void>;
   onMerge: (ids: string[], title: string) => Promise<void>;
   onArchive: (ids: string[]) => Promise<void>;
   onRestore: (ids: string[]) => Promise<void>;
@@ -377,6 +401,18 @@ function BulkActions({
     <div className="w-full rounded-xl border border-ui bg-surface p-3 sm:max-w-xl">
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-auto text-sm text-secondary">{zh ? `已选择 ${selectedIds.length} 个` : `${selectedIds.length} selected`}</span>
+        {!isArchivedMode ? <select
+          defaultValue=""
+          disabled={bulkBusy !== null}
+          onChange={(event) => { const value = event.target.value; if (value) void onMove(selectedIds, value === "__none" ? null : value); event.target.value = ""; }}
+          className="min-h-9 rounded-lg border border-ui bg-surface px-2 text-sm text-primary"
+          aria-label={zh ? "移动到项目" : "Move to project"}
+        >
+          <option value="" disabled>{zh ? "移动到项目" : "Move to project"}</option>
+          <option value="__none">{zh ? "移出项目" : "Remove from project"}</option>
+          {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+        </select> : null}
+        <button type="button" disabled={bulkBusy !== null} onClick={() => void onExport(selectedConversations)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{bulkBusy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
         {isArchivedMode ? (
           <button
             type="button"

@@ -16,6 +16,7 @@ from app.services.editing.message_edit_service import (
     merge_conversations,
 )
 from app.services.exporting.cr_archive import create_cr_archive
+from app.services.offline_packages import build_catalog, build_offline_package, select_conversations
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,9 @@ def queue_conversation_export(
     *,
     conversation_id: uuid.UUID,
     idempotency_key: str | None,
+    include_description: bool = False,
+    include_annotations: bool = False,
+    include_notebook: bool = False,
 ) -> BackgroundJob:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
@@ -117,7 +121,13 @@ def queue_conversation_export(
         progress=0,
         processed_items=0,
         total_items=conversation.message_count,
-        payload={"conversation_id": str(conversation.id), "title": conversation.display_title},
+        payload={
+            "conversation_id": str(conversation.id),
+            "title": conversation.display_title,
+            "include_description": include_description,
+            "include_annotations": include_annotations,
+            "include_notebook": include_notebook,
+        },
         result={},
         idempotency_key=idempotency_key,
     )
@@ -157,6 +167,52 @@ def queue_conversation_auto_clean(
         processed_items=0,
         total_items=conversation.message_count,
         payload={"conversation_id": str(conversation.id), "title": conversation.display_title},
+        result={},
+        idempotency_key=idempotency_key,
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
+def queue_offline_package(
+    db: Session,
+    *,
+    scope: str,
+    conversation_id: uuid.UUID | None,
+    project_id: uuid.UUID | None,
+    idempotency_key: str | None,
+) -> BackgroundJob:
+    conversations = select_conversations(db, scope=scope, conversation_id=conversation_id, project_id=project_id)
+    catalog = build_catalog(db)
+    if idempotency_key:
+        existing = (
+            db.query(BackgroundJob)
+            .filter(
+                BackgroundJob.job_type == "offline_package",
+                BackgroundJob.idempotency_key == idempotency_key,
+                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
+            )
+            .order_by(BackgroundJob.created_at.desc())
+            .first()
+        )
+        if existing is not None:
+            return existing
+    job = BackgroundJob(
+        id=uuid.uuid4(),
+        job_type="offline_package",
+        status="queued",
+        phase="queued",
+        progress=0,
+        processed_items=0,
+        total_items=len(conversations),
+        payload={
+            "package_id": str(uuid.uuid4()),
+            "scope": scope,
+            "conversation_id": str(conversation_id) if conversation_id else None,
+            "project_id": str(project_id) if project_id else None,
+            "catalog_revision": catalog.revision,
+        },
         result={},
         idempotency_key=idempotency_key,
     )
@@ -269,6 +325,9 @@ def process_background_job(
                     conversation_id=conversation_id,
                     job_id=job.id,
                     progress_callback=report,
+                    include_description=bool(payload.get("include_description")),
+                    include_annotations=bool(payload.get("include_annotations")),
+                    include_notebook=bool(payload.get("include_notebook")),
                 )
                 job_result = {
                     "conversation_id": str(conversation_id),
@@ -288,6 +347,25 @@ def process_background_job(
                     "cleaned_messages": result.cleaned_messages,
                 }
                 processed_items = result.scanned_messages
+            elif job.job_type == "offline_package":
+                package = build_offline_package(
+                    db,
+                    job_id=job.id,
+                    package_id=uuid.UUID(payload["package_id"]),
+                    scope=str(payload["scope"]),
+                    conversation_id=uuid.UUID(payload["conversation_id"]) if payload.get("conversation_id") else None,
+                    project_id=uuid.UUID(payload["project_id"]) if payload.get("project_id") else None,
+                    progress_callback=report,
+                )
+                job_result = {
+                    "package_id": str(package.id),
+                    "filename": package.filename,
+                    "byte_size": package.byte_size,
+                    "sha256": package.sha256,
+                    "conversation_count": package.conversation_count,
+                    "download_url": f"/api/offline/packages/{package.id}/download",
+                }
+                processed_items = package.conversation_count
             else:
                 raise ValueError(f"Unsupported background job type: {job.job_type}")
             now = datetime.now(timezone.utc)

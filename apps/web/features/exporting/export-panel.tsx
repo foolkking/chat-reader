@@ -19,6 +19,9 @@ export function ExportPanel({
   const [includeMetadata, setIncludeMetadata] = useState(true);
   const [includeToc, setIncludeToc] = useState(true);
   const [includeVersions, setIncludeVersions] = useState(false);
+  const [includeDescription, setIncludeDescription] = useState(false);
+  const [includeAnnotations, setIncludeAnnotations] = useState(false);
+  const [includeNotebook, setIncludeNotebook] = useState(false);
   const [useSelection, setUseSelection] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [queueError, setQueueError] = useState<string | null>(null);
@@ -36,6 +39,9 @@ export function ExportPanel({
     includeMetadata,
     includeToc,
     includeVersions,
+    includeDescription,
+    includeAnnotations,
+    includeNotebook,
     messageIds: useSelection ? selectedMessageIds : [],
   });
   const archiveUrl = taskQuery.data?.result.download_url;
@@ -69,6 +75,13 @@ export function ExportPanel({
           </div>
         )}
 
+        <fieldset className="grid gap-2 border-y border-ui py-3">
+          <legend className="px-1 text-xs font-semibold text-secondary">私人内容（默认不导出）</legend>
+          <Toggle label="包含 description" checked={includeDescription} onChange={setIncludeDescription} />
+          <Toggle label="包含批注" checked={includeAnnotations} onChange={setIncludeAnnotations} />
+          <Toggle label="包含精选笔记" checked={includeNotebook} onChange={setIncludeNotebook} />
+        </fieldset>
+
         {format === "cr" ? (
           archiveUrl && taskQuery.data?.status === "committed" ? (
             <a href={String(archiveUrl)} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[var(--text)] px-4 font-medium text-[var(--surface)] hover:opacity-85">下载 .cr 归档</a>
@@ -79,7 +92,11 @@ export function ExportPanel({
               onClick={async () => {
                 setQueueError(null);
                 try {
-                  const task = await queueConversationArchiveExport(conversationId);
+                  const task = await queueConversationArchiveExport(conversationId, {
+                    includeDescription,
+                    includeAnnotations,
+                    includeNotebook,
+                  });
                   setJobId(task.job_id);
                 } catch (error) {
                   setQueueError(error instanceof Error ? error.message : "导出任务提交失败");

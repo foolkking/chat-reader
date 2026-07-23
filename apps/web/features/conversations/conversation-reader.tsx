@@ -3,19 +3,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Layers3, ListTree, Merge, Scissors, Search, Share2, X } from "lucide-react";
+import { Download, Layers3, ListTree, Merge, MessageSquareText, Scissors, Search, Share2, X } from "lucide-react";
 import {
-  getConversation,
-  getConversationDialogueIndex,
-  getConversationMessageWindow,
-  getReadingPosition,
-  getMessageBlocks,
   mergeMessages,
-  saveReadingPosition,
   saveReadingPositionKeepalive,
   splitConversation,
-  recordRecentConversation,
 } from "../../lib/api";
+import { remoteReaderDataSource, type ReaderDataSource } from "../../lib/reader-data-source";
 import type { LoadedMessageWindow, MessageListItem, MessageWindowResponse, NavigateTarget, NavigationResult, NeighborhoodExpansionState, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollDirection, TocItem } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
 import { ProjectSidebar } from "../projects/project-sidebar";
@@ -34,13 +28,25 @@ import { ReaderPanelShell } from "../../components/reader-panel-shell";
 import { useMobileHeaderAutoHide } from "./use-mobile-header-auto-hide";
 import { ConversationSearchPanel } from "../search/conversation-search-panel";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
+import { AnnotationWorkspace } from "../annotations/annotation-workspace";
+import { offlineAnnotationRepository, remoteAnnotationRepository } from "../../lib/annotation-repository";
 
 const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
 const ACTIVE_READING_OFFSET = 120;
 const ANCHOR_BEFORE = 12;
 
-export function ConversationReader({ conversationId }: { conversationId: string }) {
+export function ConversationReader({
+  conversationId,
+  dataSource = remoteReaderDataSource,
+  libraryMode = false,
+  onOpenLibrary,
+}: {
+  conversationId: string;
+  dataSource?: ReaderDataSource;
+  libraryMode?: boolean;
+  onOpenLibrary?: () => void;
+}) {
   const t = useTranslations();
   const dialog = useInteractionDialog();
   const searchParams = useSearchParams();
@@ -54,6 +60,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [annotationsOpen, setAnnotationsOpen] = useState(searchParams.get("annotations") === "open");
   const [desktopActionsExpanded, setDesktopActionsExpanded] = useState(false);
   const [mobileActionsExpanded, setMobileActionsExpanded] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<ReaderUtilityPanel>(null);
@@ -76,6 +83,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     error: null,
   });
   const [initialPaintReady, setInitialPaintReady] = useState(false);
+  const annotationRepository = libraryMode ? offlineAnnotationRepository : remoteAnnotationRepository;
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadPreviousSentinelRef = useRef<HTMLDivElement | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -109,20 +117,20 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   });
 
   const conversationQuery = useQuery({
-    queryKey: ["conversation", conversationId],
-    queryFn: () => getConversation(conversationId),
+    queryKey: ["conversation", dataSource.mode, conversationId],
+    queryFn: () => dataSource.getConversation(conversationId),
   });
 
   useEffect(() => {
-    void recordRecentConversation(conversationId, { project_id: projectContextId ?? null }).then(() => {
+    void dataSource.recordRecent(conversationId, projectContextId ?? null).then(() => {
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     }).catch(() => undefined);
-  }, [conversationId, projectContextId, queryClient]);
+  }, [conversationId, dataSource, projectContextId, queryClient]);
 
   const positionQuery = useQuery({
-    queryKey: ["reading-position", conversationId],
-    queryFn: () => getReadingPosition(conversationId),
+    queryKey: ["reading-position", dataSource.mode, conversationId],
+    queryFn: () => dataSource.getReadingPosition(conversationId),
   });
 
   const savedPosition = targetMessageId ? null : positionQuery.data?.position ?? null;
@@ -132,7 +140,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   const windowQuery = useQuery({
     queryKey: ["message-window", conversationId, "initial", initialAnchorMessageId],
     queryFn: () =>
-      getConversationMessageWindow(conversationId, {
+      dataSource.getMessageWindow(conversationId, {
         includeBlocks: false,
         limit: PAGE_SIZE,
         offset: 0,
@@ -290,7 +298,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     const generation = current.generation;
     try {
       const previousOffset = Math.max(0, current.startOffset - PAGE_SIZE);
-      const page = await getConversationMessageWindow(conversationId, {
+      const page = await dataSource.getMessageWindow(conversationId, {
         includeBlocks: false,
         limit: current.startOffset - previousOffset,
         offset: previousOffset,
@@ -328,7 +336,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     setEdgeError(null);
     const generation = current.generation;
     try {
-      const page = await getConversationMessageWindow(conversationId, {
+      const page = await dataSource.getMessageWindow(conversationId, {
         includeBlocks: false,
         limit: PAGE_SIZE,
         offset: current.endOffset,
@@ -386,9 +394,9 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       setTargetHighlightId(blockId ?? messageIdDom);
 
       try {
-        let targetPage: Awaited<ReturnType<typeof getConversationMessageWindow>> | null = null;
+        let targetPage: MessageWindowResponse | null = null;
         if (!document.getElementById(messageIdDom)) {
-          const page = await getConversationMessageWindow(conversationId, {
+          const page = await dataSource.getMessageWindow(conversationId, {
             includeBlocks: false,
             limit: PAGE_SIZE,
             anchorMessageId: messageId,
@@ -407,7 +415,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           const knownMessage =
             targetPage?.items.find((message) => message.id === messageId) ??
             loadedWindowRef.current.items.find((message) => message.id === messageId) ??
-            (await getConversationMessageWindow(conversationId, {
+            (await dataSource.getMessageWindow(conversationId, {
               includeBlocks: false,
               limit: 1,
               anchorMessageId: messageId,
@@ -701,9 +709,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       }
       lastSavedSignatureRef.current = signature;
       if (keepalive) {
-        saveReadingPositionKeepalive(conversationId, payload);
+        if (dataSource.mode === "remote") saveReadingPositionKeepalive(conversationId, payload);
+        else void dataSource.saveReadingPosition(conversationId, payload).catch(() => undefined);
       } else {
-        void saveReadingPosition(conversationId, payload).catch(() => undefined);
+        void dataSource.saveReadingPosition(conversationId, payload).catch(() => undefined);
       }
     };
 
@@ -866,7 +875,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     setEdgeError(null);
 
     try {
-      const indexPage = await getConversationDialogueIndex(conversationId, {
+      const indexPage = await dataSource.getDialogueIndex(conversationId, {
         anchorMessageId: currentMessageId,
         limit: 200,
       });
@@ -874,7 +883,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       const range = resolveNeighborhoodRange(indexPage.items, currentMessageId);
       if (!range) throw new Error("The active conversation turn could not be located.");
 
-      const messagePage = await loadCompleteMessageRange(conversationId, range.offset, range.limit);
+      const messagePage = await loadCompleteMessageRange(dataSource, conversationId, range.offset, range.limit);
       if (!isCurrentExpansion(expansionGeneration)) return;
       const preparedCache: Record<string, RenderBlockRead[]> = {};
       let completed = 0;
@@ -892,7 +901,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
         } else {
           const blocks: RenderBlockRead[] = [];
           for (let start = 0; start < message.block_count; start += 200) {
-            const page = await getMessageBlocks(message.id, {
+            const page = await dataSource.getMessageBlocks(message.id, {
               start,
               limit: Math.min(200, message.block_count - start),
             });
@@ -985,7 +994,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
     const requestKey = `${messageId}:${start}:${limit}`;
     const existing = blockRequestsRef.current.get(requestKey);
     if (existing) return existing;
-    const request = getMessageBlocks(messageId, { start, limit })
+    const request = dataSource.getMessageBlocks(messageId, { start, limit })
       .then(async (blocks) => {
         if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) return blocks;
         const root = scrollContainerRef.current;
@@ -1069,7 +1078,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       id: "search",
       label: t("search"),
       icon: Search,
-      onSelect: () => openUtilityPanel("search"),
+      onSelect: () => libraryMode ? onOpenLibrary?.() : openUtilityPanel("search"),
     },
     {
       id: "expand-nearby",
@@ -1082,24 +1091,30 @@ export function ConversationReader({ conversationId }: { conversationId: string 
       closeOnSelect: !neighborhoodExpansion.active,
     },
     {
+      id: "annotations",
+      label: "批注",
+      icon: MessageSquareText,
+      onSelect: () => setAnnotationsOpen(true),
+    },
+    ...(!libraryMode ? [{
       id: "share",
       label: t("share"),
       icon: Share2,
       onSelect: () => openUtilityPanel("share"),
-    },
-    {
+    } as ReaderHeaderAction] : []),
+    ...(!libraryMode ? [{
       id: "export",
       label: t("export"),
       icon: Download,
       onSelect: () => openUtilityPanel("export"),
-    },
-    ...(selectedIds.length >= 2 ? [{
+    } as ReaderHeaderAction] : []),
+    ...(!libraryMode && selectedIds.length >= 2 ? [{
       id: "merge-selected",
       label: t("mergeSelected"),
       icon: Merge,
       onSelect: () => void mergeSelectedMessages(),
     }] : []),
-    ...(selectedOrderedIds.length > 0 ? [{
+    ...(!libraryMode && selectedOrderedIds.length > 0 ? [{
       id: "split-selected",
       label: t("splitToNewConversation"),
       icon: Scissors,
@@ -1118,14 +1133,14 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   );
 
   const navigationContent = navigationTab === "dialogue" ? (
-    <ConversationIndex conversationId={conversationId} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" onNavigate={async (item) => {
+    <ConversationIndex conversationId={conversationId} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
       const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
       if (result.ok) setUtilityPanel(null);
     }} />
   ) : (
-    <ConversationToc conversationId={conversationId} activeMessageId={activeMessageId} activeItems={activeTocItems} activeBlockId={activeBlockId} observerKey={tocObserverKey} mode="sheet" onNavigate={async (item) => {
+    <ConversationToc conversationId={conversationId} activeMessageId={activeMessageId} activeItems={activeTocItems} activeBlockId={activeBlockId} observerKey={tocObserverKey} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
       const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, source: "section-toc" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
@@ -1134,13 +1149,13 @@ export function ConversationReader({ conversationId }: { conversationId: string 
   );
 
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar
+    <main className={`flex overflow-hidden bg-page text-primary ${libraryMode ? "h-full w-full" : "h-screen w-screen"}`}>
+      {!libraryMode ? <ProjectSidebar
         currentProjectId={projectContextId}
         readerMode
         mobileOpenSignal={mobileSidebarOpenSignal}
         showMobileTrigger={false}
-      />
+      /> : null}
       <section className="relative flex min-w-0 flex-1 flex-col">
         <header className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-200 md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
           {loadingProgress < 100 ? (
@@ -1169,7 +1184,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
             <button
               type="button"
-              onClick={() => setMobileSidebarOpenSignal((value) => value + 1)}
+              onClick={() => libraryMode ? onOpenLibrary?.() : setMobileSidebarOpenSignal((value) => value + 1)}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
               aria-label={t("openSidebar")}
               title={t("openSidebar")}
@@ -1210,6 +1225,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   conversationId={conversationId}
                   activeMessageId={activeMessageId}
                   ready={canLoadInitialWindow}
+                  loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)}
                   onNavigate={(item) => {
                     void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
                   }}
@@ -1241,9 +1257,10 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                       key={message.id}
                       message={message}
                       onChanged={refreshReader}
+                      readOnly={libraryMode}
                       highlightTargetId={targetHighlightId}
                       selected={selectedMessageIds.has(message.id)}
-                      onSelectedChange={(selected) => {
+                      onSelectedChange={libraryMode ? undefined : (selected) => {
                         setSelectedMessageIds((current) => {
                           const next = new Set(current);
                           if (selected) {
@@ -1265,6 +1282,12 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                       }}
                       onLoadPreviousBlocks={() => loadAdjacentMessageBlocks(message, "previous")}
                       onLoadMoreBlocks={() => loadAdjacentMessageBlocks(message, "next")}
+                      onBookmark={() => {
+                        window.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", {
+                          detail: { messageId: message.id, messageVersionId: message.current_version?.id },
+                        }));
+                        setAnnotationsOpen(true);
+                      }}
                     />
                     );
                   })}
@@ -1288,6 +1311,7 @@ export function ConversationReader({ conversationId }: { conversationId: string 
                   activeItems={activeTocItems}
                   activeBlockId={activeBlockId}
                   observerKey={tocObserverKey}
+                  loadPage={(options) => dataSource.getToc(conversationId, options)}
                   onNavigate={(item) => {
                     void navigateToTarget({
                       messageId: item.message_id,
@@ -1339,6 +1363,15 @@ export function ConversationReader({ conversationId }: { conversationId: string 
           </div>
         </div>
       ) : null}
+      <AnnotationWorkspace
+        conversationId={conversation.id}
+        messages={messages}
+        activeMessageId={activeMessageId}
+        repository={annotationRepository}
+        open={annotationsOpen}
+        onOpenChange={setAnnotationsOpen}
+        onNavigate={navigateToTarget}
+      />
     </main>
   );
 }
@@ -1422,6 +1455,7 @@ function mergeBlockWindows(
 }
 
 async function loadCompleteMessageRange(
+  dataSource: ReaderDataSource,
   conversationId: string,
   offset: number,
   limit: number,
@@ -1431,7 +1465,7 @@ async function loadCompleteMessageRange(
   let remaining = limit;
   let total = 0;
   while (remaining > 0) {
-    const page = await getConversationMessageWindow(conversationId, {
+    const page = await dataSource.getMessageWindow(conversationId, {
       includeBlocks: false,
       offset: cursor,
       limit: Math.min(200, remaining),

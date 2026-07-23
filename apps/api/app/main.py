@@ -14,6 +14,8 @@ from app.api.routes.shares import router as shares_router
 from app.api.routes.toc import router as toc_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.archive_exports import router as archive_exports_router
+from app.api.routes.annotations import router as annotations_router
+from app.api.routes.offline import router as offline_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -45,3 +47,5 @@ app.include_router(shares_router)
 app.include_router(toc_router)
 app.include_router(tasks_router)
 app.include_router(archive_exports_router)
+app.include_router(annotations_router)
+app.include_router(offline_router)

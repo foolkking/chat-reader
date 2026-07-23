@@ -26,6 +26,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      OFFLINE_STORAGE_DIR: /workspace/apps/api/storage/offline
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -44,6 +45,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
       IMPORT_STORAGE_DIR: /workspace/apps/api/storage/imports
+      OFFLINE_STORAGE_DIR: /workspace/apps/api/storage/offline
     volumes:
       - .:/workspace
     depends_on:

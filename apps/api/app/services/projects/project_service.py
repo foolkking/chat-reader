@@ -119,6 +119,9 @@ def update_project(db: Session, project: Project, updates: dict) -> Project:
         project.is_archived = updates["is_archived"]
         project.archived_at = utc_now() if project.is_archived else None
     project.updated_at = utc_now()
+    if "name" in updates or "is_archived" in updates:
+        for relation in project.conversations:
+            relation.conversation.offline_revision += 1
     try:
         db.flush()
     except IntegrityError as exc:
@@ -179,6 +182,7 @@ def move_conversation_to_project(
         added_by=added_by,
     )
     db.add(relation)
+    conversation.offline_revision += 1
     db.flush()
     return relation
 

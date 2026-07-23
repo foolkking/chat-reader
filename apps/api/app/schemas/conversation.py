@@ -16,6 +16,10 @@ class ConversationListItem(BaseModel):
     updated_at: datetime | None
     imported_at: datetime
     first_user_message: str | None
+    description_markdown: str | None = None
+    project_id: UUID | None = None
+    project_name: str | None = None
+    offline_revision: int = 1
     status: str
     is_global_pinned: bool
     global_pinned_at: datetime | None
@@ -35,6 +39,7 @@ class ConversationUpdate(BaseModel):
     title: str | None = None
     display_title: str | None = None
     status: str | None = None
+    description_markdown: str | None = Field(default=None, max_length=500)
 
 
 class ConversationOrderUpdate(BaseModel):

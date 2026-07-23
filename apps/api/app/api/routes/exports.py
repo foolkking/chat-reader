@@ -22,6 +22,9 @@ def export_conversation(
     include_metadata: bool = True,
     include_toc: bool = True,
     include_versions: bool = False,
+    include_description: bool = False,
+    include_annotations: bool = False,
+    include_notebook: bool = False,
     message_ids: str | None = None,
     db: Session = Depends(get_db),
 ) -> Response:
@@ -34,6 +37,9 @@ def export_conversation(
             include_metadata=include_metadata,
             include_toc=include_toc,
             include_versions=include_versions,
+            include_description=include_description,
+            include_annotations=include_annotations,
+            include_notebook=include_notebook,
         )
         if format == "markdown":
             result = export_conversation_markdown(db, conversation_id, options)

@@ -17,6 +17,9 @@ class ShareCreate(BaseModel):
     selected_message_ids: list[UUID] = Field(default_factory=list)
     include_toc: bool = True
     include_metadata: bool = True
+    include_description: bool = False
+    include_annotations: bool = False
+    include_notebook: bool = False
     allow_export: bool = False
     expires_at: datetime | None = None
     theme: ResolvedTheme | None = None
@@ -33,6 +36,9 @@ class ShareRead(BaseModel):
     selected_message_ids: list[UUID] = Field(default_factory=list)
     include_toc: bool
     include_metadata: bool
+    include_description: bool
+    include_annotations: bool
+    include_notebook: bool
     allow_export: bool
     theme: ResolvedTheme
     locale: ResolvedLocale
@@ -68,6 +74,7 @@ class SharedConversationBootstrap(BaseModel):
     message_count: int
     turn_count: int
     capabilities: dict[str, bool] = Field(default_factory=dict)
+    description_markdown: str | None = None
 
 
 class SharedMessageWindowResponse(MessageWindowResponse):

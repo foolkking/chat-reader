@@ -17,6 +17,7 @@ def get_or_create_preferences(db: Session) -> UserPreference:
         theme_mode="light",
         locale_mode="auto",
         reader_width_mode="standard",
+        section_toc_mode="visible",
         conversation_sort_mode="recent_read",
         conversation_sort_direction="desc",
         project_sort_mode="recent_read",
@@ -37,6 +38,8 @@ def update_preferences(db: Session, payload: UserPreferenceUpdate) -> UserPrefer
         preference.locale_mode = payload.locale_mode
     if payload.reader_width_mode is not None:
         preference.reader_width_mode = payload.reader_width_mode
+    if payload.section_toc_mode is not None:
+        preference.section_toc_mode = payload.section_toc_mode
     if payload.conversation_sort_mode is not None:
         preference.conversation_sort_mode = payload.conversation_sort_mode
     if payload.conversation_sort_direction is not None:
@@ -55,6 +58,7 @@ def preference_read(preference: UserPreference) -> UserPreferenceRead:
         theme_mode=preference.theme_mode,
         locale_mode=preference.locale_mode,
         reader_width_mode=preference.reader_width_mode,
+        section_toc_mode=preference.section_toc_mode,
         conversation_sort_mode=preference.conversation_sort_mode,
         conversation_sort_direction=preference.conversation_sort_direction,
         project_sort_mode=preference.project_sort_mode,

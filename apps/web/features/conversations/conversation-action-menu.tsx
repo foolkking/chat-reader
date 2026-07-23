@@ -12,6 +12,8 @@ import {
   Pin,
   PinOff,
   RotateCcw,
+  MessageSquareText,
+  StickyNote,
   Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -165,6 +167,24 @@ export function ConversationActionMenu({
               style={{ top: menuPosition.top, left: menuPosition.left }}
             >
               <div className="grid gap-1 py-1">
+            {compact ? <MenuButton
+              icon={<StickyNote className="h-4 w-4" />}
+              disabled={busy !== null}
+              onClick={() => run("description", async () => {
+                const description = await dialog.prompt({
+                  title: zh ? "编辑简介" : "Edit description",
+                  label: zh ? "Markdown 简介（最多 500 字）" : "Markdown description (500 characters max)",
+                  initialValue: conversation.description_markdown ?? "",
+                  confirmLabel: zh ? "保存" : "Save",
+                });
+                if (description !== null) await updateConversation(conversation.id, { description_markdown: description.slice(0, 500) });
+              })}
+            >{zh ? "编辑简介" : "Edit description"}</MenuButton> : null}
+            {compact ? <MenuButton
+              icon={<MessageSquareText className="h-4 w-4" />}
+              disabled={busy !== null}
+              onClick={() => { window.location.href = `/conversations/${conversation.id}?annotations=open`; }}
+            >{zh ? "打开批注" : "Open annotations"}</MenuButton> : null}
             <MenuButton
               icon={<Pencil className="h-4 w-4" />}
               disabled={busy !== null}
@@ -254,7 +274,7 @@ export function ConversationActionMenu({
                 {zh ? "移回对话记录" : "Move to conversation history"}
               </MenuButton>
             ) : null}
-            <MenuButton
+            {!compact ? <><MenuButton
               icon={<FileText className="h-4 w-4" />}
               disabled={busy !== null}
               onClick={() => {
@@ -272,7 +292,8 @@ export function ConversationActionMenu({
             >
               {zh ? "导出 Canonical JSON" : "Export Canonical JSON"}
             </MenuButton>
-            {conversation.status === "archived" ? (
+            </> : null}
+            {!compact && (conversation.status === "archived" ? (
               <MenuButton
                 icon={<RotateCcw className="h-4 w-4" />}
                 disabled={busy !== null}
@@ -310,8 +331,8 @@ export function ConversationActionMenu({
               >
                 {zh ? "归档" : "Archive"}
               </MenuButton>
-            )}
-            <MenuButton
+            ))}
+            {!compact ? <MenuButton
               icon={<Trash2 className="h-4 w-4" />}
               danger
               disabled={busy !== null}
@@ -338,7 +359,7 @@ export function ConversationActionMenu({
               }}
             >
               {zh ? "删除" : "Delete"}
-            </MenuButton>
+            </MenuButton> : null}
           </div>
               {busy ? <p role="status" className="px-2 pb-1 text-xs text-secondary">{zh ? "正在处理…" : "Working…"}</p> : null}
             </div>,

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.message import DialogueIndexResponse, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
+from app.schemas.annotation import AnnotationRead, NotebookRead
 from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUpdate, SharedConversationBootstrap
 from app.schemas.toc import TocResponse
 from app.services.sharing.share_service import (
@@ -15,6 +16,8 @@ from app.services.sharing.share_service import (
     get_shared_conversation_by_token,
     get_shared_message_blocks,
     get_shared_message_window,
+    get_shared_annotations,
+    get_shared_notebook,
     get_shared_toc,
     list_shares,
     revoke_share,
@@ -22,6 +25,7 @@ from app.services.sharing.share_service import (
     share_read,
     update_share,
 )
+from app.services.annotations import annotation_read, notebook_read
 
 router = APIRouter(tags=["shares"])
 
@@ -181,5 +185,22 @@ def get_shared_blocks(
             start=start,
             limit=limit,
         )
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/shared/{token}/annotations", response_model=list[AnnotationRead])
+def get_shared_annotations_route(token: str, db: Session = Depends(get_db)) -> list[AnnotationRead]:
+    try:
+        return [annotation_read(item) for item in get_shared_annotations(db, token)]
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/shared/{token}/notebook", response_model=NotebookRead | None)
+def get_shared_notebook_route(token: str, db: Session = Depends(get_db)) -> NotebookRead | None:
+    try:
+        notebook = get_shared_notebook(db, token)
+        return notebook_read(notebook) if notebook else None
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

@@ -24,6 +24,7 @@ from app.services.search.search_indexer import (
     rebuild_search_documents_for_conversation,
 )
 from app.services.toc.toc_builder import rebuild_headings_for_conversation
+from app.services.annotations import relocate_annotations_for_new_version
 
 MAX_EDIT_TEXT_LENGTH = 200_000
 MergeProgressCallback = Callable[[str, int, int, int], None]
@@ -602,11 +603,20 @@ def _create_version(
             )
         )
 
+    relocate_annotations_for_new_version(
+        db,
+        message=message,
+        version=version,
+        block_texts=[block.plain_text for block in block_drafts],
+    )
     message.current_version_id = version.id
     message.content_hash = new_hash
     message.block_count = len(block_drafts)
     message.char_count = len(text)
     message.is_heavy = len(text) > 12000 or len(block_drafts) > 80
+    conversation = db.get(Conversation, message.conversation_id)
+    if conversation is not None:
+        conversation.offline_revision += 1
     db.flush()
     return version
 
@@ -710,6 +720,7 @@ def _refresh_conversation_stats(db: Session, conversation_id: uuid.UUID) -> None
     conversation.content_hash = content_hash("\n".join(text_parts)) if text_parts else None
     conversation.updated_at = utc_now()
     conversation.sort_time = conversation.updated_at
+    conversation.offline_revision += 1
     db.flush()
 
 

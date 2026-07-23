@@ -9,6 +9,7 @@ export type LocaleMode = "auto" | "zh-CN" | "en-US";
 export type ResolvedTheme = "light" | "dark";
 export type ResolvedLocale = "zh-CN" | "en-US";
 export type ReaderWidthMode = "compact" | "standard" | "wide";
+export type SectionTocMode = "visible" | "rail";
 export type SortDirection = "asc" | "desc";
 export type ConversationSortMode = "recent_read" | "updated" | "created" | "imported" | "title" | "message_count" | "custom";
 export type ProjectSortMode = "recent_read" | "updated" | "created" | "title" | "conversation_count" | "custom";
@@ -28,6 +29,7 @@ export type UserPreferenceRead = {
   theme_mode: ThemeMode;
   locale_mode: LocaleMode;
   reader_width_mode: ReaderWidthMode;
+  section_toc_mode: SectionTocMode;
   conversation_sort_mode: ConversationSortMode;
   conversation_sort_direction: SortDirection;
   project_sort_mode: ProjectSortMode;
@@ -37,7 +39,7 @@ export type UserPreferenceRead = {
 };
 
 export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead,
-  "theme_mode" | "locale_mode" | "reader_width_mode" | "conversation_sort_mode" |
+  "theme_mode" | "locale_mode" | "reader_width_mode" | "section_toc_mode" | "conversation_sort_mode" |
   "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction"
 >>;
 
@@ -53,6 +55,10 @@ export type ConversationListItem = {
   updated_at: string | null;
   imported_at: string | null;
   first_user_message: string | null;
+  description_markdown: string | null;
+  project_id: string | null;
+  project_name: string | null;
+  offline_revision: number;
   status: string;
   is_global_pinned: boolean;
   global_pinned_at: string | null;
@@ -72,6 +78,7 @@ export type ConversationUpdateInput = {
   title?: string | null;
   display_title?: string | null;
   status?: "active" | "archived" | null;
+  description_markdown?: string | null;
 };
 
 export type ConversationManagementResponse = ConversationDetail;
@@ -519,6 +526,9 @@ export type ShareRead = {
   selected_message_ids?: string[];
   include_toc: boolean;
   include_metadata: boolean;
+  include_description: boolean;
+  include_annotations: boolean;
+  include_notebook: boolean;
   allow_export: boolean;
   theme: ResolvedTheme;
   locale: ResolvedLocale;
@@ -538,6 +548,9 @@ export type ShareCreateInput = {
   selected_message_ids?: string[];
   include_toc?: boolean;
   include_metadata?: boolean;
+  include_description?: boolean;
+  include_annotations?: boolean;
+  include_notebook?: boolean;
   allow_export?: boolean;
   expires_at?: string | null;
   theme?: ResolvedTheme | null;
@@ -567,5 +580,121 @@ export type SharedConversationBootstrap = {
     toc: boolean;
     blocks: boolean;
     export: boolean;
+    annotations?: boolean;
+    notebook?: boolean;
   };
+  description_markdown?: string | null;
+};
+
+export type AnnotationType = "highlight" | "bookmark";
+export type AnnotationColor = "yellow" | "green" | "blue" | "pink";
+
+export type AnnotationRead = {
+  id: string;
+  conversation_id: string;
+  message_id: string | null;
+  message_version_id: string | null;
+  annotation_type: AnnotationType;
+  color: AnnotationColor | null;
+  start_block_index: number | null;
+  start_offset: number | null;
+  end_block_index: number | null;
+  end_offset: number | null;
+  quote: string | null;
+  prefix: string | null;
+  suffix: string | null;
+  comment_markdown: string;
+  anchor_status: "active" | "relocated" | "stale";
+  revision: number;
+  is_deleted: boolean;
+  conflict_of_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnnotationCreateInput = Partial<Pick<AnnotationRead, "id" | "message_id" | "message_version_id" | "color" | "start_block_index" | "start_offset" | "end_block_index" | "end_offset" | "quote" | "prefix" | "suffix" | "anchor_status">> & {
+  annotation_type: AnnotationType;
+  comment_markdown?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type AnnotationUpdateInput = Partial<Pick<AnnotationRead, "color" | "comment_markdown" | "anchor_status" | "message_version_id" | "start_block_index" | "start_offset" | "end_block_index" | "end_offset" | "quote" | "prefix" | "suffix">> & {
+  base_revision: number;
+  metadata?: Record<string, unknown>;
+};
+
+export type NotebookBlock = {
+  id: string;
+  type: "markdown" | "annotation_reference";
+  markdown?: string | null;
+  annotation_id?: string | null;
+};
+
+export type NotebookRead = {
+  id: string;
+  conversation_id: string;
+  title: string | null;
+  blocks: NotebookBlock[];
+  revision: number;
+  is_conflict: boolean;
+  conflict_of_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnnotationSyncOperation = {
+  operation_id: string;
+  entity_type: "annotation" | "notebook";
+  entity_id: string;
+  action: "upsert" | "delete";
+  conversation_id: string;
+  base_revision: number;
+  payload: Record<string, unknown>;
+};
+
+export type AnnotationSyncResponse = {
+  results: Array<{
+    operation_id: string;
+    entity_type: "annotation" | "notebook";
+    entity_id: string;
+    status: "applied" | "conflict" | "duplicate";
+    revision: number;
+    conflict_copy_id: string | null;
+  }>;
+};
+
+export type OfflineCatalogConversation = {
+  id: string;
+  display_title: string;
+  project_id: string | null;
+  project_name: string | null;
+  revision: number;
+  estimated_bytes: number;
+  updated_at: string | null;
+};
+
+export type OfflineCatalogProject = {
+  id: string;
+  name: string;
+  conversation_ids: string[];
+  revision: string;
+  estimated_bytes: number;
+};
+
+export type OfflineCatalogResponse = {
+  revision: string;
+  generated_at: string;
+  estimated_bytes: number;
+  conversations: OfflineCatalogConversation[];
+  projects: OfflineCatalogProject[];
+};
+
+export type OfflinePackageQueued = {
+  package_id: string;
+  job_id: string;
+  status: string;
+  scope: "conversation" | "project" | "all";
+  estimated_bytes: number;
+  catalog_revision: string;
 };
