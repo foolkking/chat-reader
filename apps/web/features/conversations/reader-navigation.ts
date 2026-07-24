@@ -6,6 +6,7 @@ type NavigateMountedTargetOptions = {
   fallbackId?: string;
   tokenIsCurrent?: () => boolean;
   offset?: number;
+  characterOffset?: number;
   timeoutMs?: number;
 };
 
@@ -24,6 +25,7 @@ export async function navigateMountedTarget({
   fallbackId,
   tokenIsCurrent = () => true,
   offset = 12,
+  characterOffset,
   timeoutMs = 6000,
 }: NavigateMountedTargetOptions): Promise<NavigationResult> {
   const target = await waitForTarget(targetId, fallbackId, timeoutMs, tokenIsCurrent);
@@ -33,16 +35,17 @@ export async function navigateMountedTarget({
   if (!target) {
     return { ok: false, targetId, reason: "target-not-mounted" };
   }
+  const resolvedCharacterOffset = target.id === targetId ? characterOffset : undefined;
 
   for (let attempt = 0; attempt < 6; attempt += 1) {
     if (!tokenIsCurrent()) {
       return { ok: false, targetId, reason: "cancelled" };
     }
-    scrollToAlignedPosition(root, target, offset);
+    scrollToAlignedPosition(root, target, offset, resolvedCharacterOffset);
     await waitForLayoutSettle();
-    if (isAligned(root, target, offset)) {
+    if (isAligned(root, target, offset, resolvedCharacterOffset)) {
       await new Promise<void>((resolve) => window.setTimeout(resolve, 400));
-      if (isAligned(root, target, offset)) {
+      if (isAligned(root, target, offset, resolvedCharacterOffset)) {
         return { ok: true, targetId: target.id };
       }
     }
@@ -140,7 +143,7 @@ async function waitForTarget(
   timeoutMs: number,
   tokenIsCurrent: () => boolean,
 ): Promise<HTMLElement | null> {
-  const existing = getTarget(targetId, fallbackId);
+  const existing = document.getElementById(targetId);
   if (existing) {
     return existing;
   }
@@ -160,24 +163,20 @@ async function waitForTarget(
         finish(null);
         return;
       }
-      const target = getTarget(targetId, fallbackId);
+      const target = document.getElementById(targetId);
       if (target) {
         finish(target);
       }
     };
     const observer = new MutationObserver(check);
     observer.observe(document.body, { childList: true, subtree: true });
-    const timeoutId = window.setTimeout(() => finish(null), timeoutMs);
+    const timeoutId = window.setTimeout(() => finish(fallbackId ? document.getElementById(fallbackId) : null), timeoutMs);
     const frameId = window.requestAnimationFrame(check);
   });
 }
 
-function getTarget(targetId: string, fallbackId?: string): HTMLElement | null {
-  return document.getElementById(targetId) ?? (fallbackId ? document.getElementById(fallbackId) : null);
-}
-
-function scrollToAlignedPosition(root: HTMLElement | null, target: HTMLElement, offset: number) {
-  const targetRect = target.getBoundingClientRect();
+function scrollToAlignedPosition(root: HTMLElement | null, target: HTMLElement, offset: number, characterOffset?: number) {
+  const targetRect = textOffsetRect(target, characterOffset) ?? target.getBoundingClientRect();
   if (root) {
     const rootRect = root.getBoundingClientRect();
     root.scrollTo({
@@ -202,8 +201,28 @@ function nextFrame(): Promise<void> {
   return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
 }
 
-function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number): boolean {
+function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number, characterOffset?: number): boolean {
   const rootTop = root?.getBoundingClientRect().top ?? 0;
   const expectedTop = rootTop + offset;
-  return Math.abs(target.getBoundingClientRect().top - expectedTop) <= 24;
+  const targetRect = textOffsetRect(target, characterOffset) ?? target.getBoundingClientRect();
+  return Math.abs(targetRect.top - expectedTop) <= 24;
+}
+
+function textOffsetRect(target: HTMLElement, characterOffset?: number): DOMRect | null {
+  if (characterOffset === undefined) return null;
+  const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+  let remaining = Math.max(0, characterOffset);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const length = node.textContent?.length ?? 0;
+    if (remaining <= length) {
+      const range = document.createRange();
+      range.setStart(node, remaining);
+      range.setEnd(node, Math.min(length, remaining + 1));
+      const rect = range.getBoundingClientRect();
+      return rect.width || rect.height ? rect : null;
+    }
+    remaining -= length;
+  }
+  return null;
 }

@@ -98,6 +98,13 @@ def test_archived_project_conversations_temporarily_return_to_history(client: Te
     assert [item["id"] for item in client.get(f"/api/projects/{project_id}/conversations").json()] == [conversation_id]
 
 
+def test_project_conversation_list_supports_bulk_management_limit(client: TestClient) -> None:
+    project_id = client.post("/api/projects", json={"name": "Bulk management"}).json()["id"]
+
+    assert client.get(f"/api/projects/{project_id}/conversations", params={"limit": 5000}).status_code == 200
+    assert client.get(f"/api/projects/{project_id}/conversations", params={"limit": 5001}).status_code == 422
+
+
 def test_activity_sorting_and_custom_orders(client: TestClient) -> None:
     alpha_id = _commit_conversation(client, "Alpha activity")
     beta_id = _commit_conversation(client, "Beta activity")

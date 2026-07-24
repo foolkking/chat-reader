@@ -30,6 +30,7 @@ import { ConversationSearchPanel } from "../search/conversation-search-panel";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { AnnotationWorkspace } from "../annotations/annotation-workspace";
 import { offlineAnnotationRepository, remoteAnnotationRepository } from "../../lib/annotation-repository";
+import { ResizableDockPanel } from "../../components/resizable-pane";
 
 const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
@@ -372,7 +373,7 @@ export function ConversationReader({
   }, [loadNextWindow, loadPreviousWindow]);
 
   const navigateToTarget = useCallback(
-    async ({ messageId, blockIndex, alignmentOffset }: NavigateTarget): Promise<NavigationResult> => {
+    async ({ messageId, blockIndex, characterOffset, alignmentOffset }: NavigateTarget): Promise<NavigationResult> => {
       neighborhoodExpansionRef.current = {
         active: false,
         generation: neighborhoodExpansionRef.current.generation + 1,
@@ -431,7 +432,7 @@ export function ConversationReader({
             cachedBounds === null ||
             cachedBounds.min > contextStart ||
             cachedBounds.max < contextEnd;
-          if (knownMessage && !messageHasInlineBlocks(knownMessage) && needsTargetWindow) {
+          if (knownMessage && !messageHasInlineBlock(knownMessage, blockIndex) && needsTargetWindow) {
             await loadBlockPage(messageId, contextStart, Math.max(BLOCK_PAGE_SIZE, contextEnd - contextStart + 1));
             if (navigationTokenRef.current !== token) {
               return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
@@ -443,18 +444,21 @@ export function ConversationReader({
         const result = await navigateMountedTarget({
           root: scrollContainerRef.current,
           targetId: blockId ?? messageIdDom,
-          fallbackId: undefined,
+          fallbackId: blockId ? messageIdDom : undefined,
           tokenIsCurrent: () => navigationTokenRef.current === token,
           offset: alignmentOffset ?? 12,
+          characterOffset: blockId ? characterOffset : undefined,
         });
         if (result.ok) {
           setActiveMessageId(messageId);
           setActiveBlockId(blockId);
-          await restoreScrollAnchor({
-            root: scrollContainerRef.current,
-            anchor: { targetId: result.targetId, offset: alignmentOffset ?? 12 },
-            tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
-          });
+          if (characterOffset === undefined) {
+            await restoreScrollAnchor({
+              root: scrollContainerRef.current,
+              anchor: { targetId: result.targetId, offset: alignmentOffset ?? 12 },
+              tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
+            });
+          }
           window.setTimeout(() => {
             if (navigationTokenRef.current === token) {
               setTargetHighlightId(null);
@@ -1191,7 +1195,7 @@ export function ConversationReader({
             >
               CR
             </button>
-            <div className={`min-w-0 flex-1 transition-[opacity,transform,max-width] duration-200 ${mobileActionsExpanded ? "max-w-0 -translate-x-3 overflow-hidden opacity-0" : "max-w-full translate-x-0 opacity-100"}`}>
+            <div className={`min-w-0 flex-1 overflow-hidden transition-opacity duration-150 ${mobileActionsExpanded ? "pointer-events-none opacity-0" : "opacity-100"}`}>
               <h1 className="truncate text-[15px] font-semibold text-primary">{conversation.display_title || conversation.title}</h1>
               <p className="truncate text-xs text-secondary">{loadedLabel}</p>
             </div>
@@ -1213,6 +1217,7 @@ export function ConversationReader({
               triggerLabel={t("more")}
               closeLabel={t("collapseActions")}
               compact
+              fixedTrigger
             />
           </div>
           {neighborhoodExpansion.active ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-secondary" role="status">{t("expandingNearby", { current: neighborhoodExpansion.current, total: neighborhoodExpansion.total })}</div> : null}
@@ -1339,11 +1344,13 @@ export function ConversationReader({
       {utilityPanel === "navigation" ? (
         <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
           <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => setUtilityPanel(null)} />
-          <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl" aria-label={t("readerNavigation")}>
-            <header className="shrink-0 border-b border-ui bg-surface p-4">{navigationTabs}</header>
-            <div className="shrink-0 px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationContent}</div>
-          </section>
+          <ResizableDockPanel storageKey="chat-reader:reader-navigation-width" defaultSize={448} minSize={320} maxSize={() => Math.min(720, window.innerWidth * 0.6)} side="left" className="relative z-10 border-l border-ui bg-page shadow-2xl">
+            <section className="flex h-full w-full flex-col" aria-label={t("readerNavigation")}>
+              <header className="shrink-0 border-b border-ui bg-surface p-4">{navigationTabs}</header>
+              <div className="shrink-0 px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationContent}</div>
+            </section>
+          </ResizableDockPanel>
         </div>
       ) : null}
       <MobileReaderSheet open={utilityPanel === "share"} onOpenChange={(open) => { if (!open) setUtilityPanel(null); }} title={t("shareConversation")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("shareConversation")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
@@ -1355,12 +1362,14 @@ export function ConversationReader({
       {showShare || showExport || showSearch ? (
         <div className="fixed inset-0 z-40 hidden justify-end bg-black/15 md:flex">
           <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => { setShowShare(false); setShowExport(false); setShowSearch(false); }} />
-          <div className="relative z-10 flex h-full w-[min(30rem,38vw)] min-w-[24rem] border-l border-ui bg-raised shadow-2xl">
-            {showSearch ? <ConversationSearchPanel conversationId={conversation.id} onNavigate={({ messageId, blockIndex }) => navigateToTarget({ messageId, blockIndex, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
-              {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-              {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-            </ReaderPanelShell>}
-          </div>
+          <ResizableDockPanel storageKey="chat-reader:reader-utility-panel-width" defaultSize={480} minSize={384} maxSize={() => Math.min(860, window.innerWidth * 0.6)} side="left" className="relative z-10 border-l border-ui bg-raised shadow-2xl">
+            <div className="flex h-full w-full">
+              {showSearch ? <ConversationSearchPanel conversationId={conversation.id} onNavigate={({ messageId, blockIndex }) => navigateToTarget({ messageId, blockIndex, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+                {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+                {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+              </ReaderPanelShell>}
+            </div>
+          </ResizableDockPanel>
         </div>
       ) : null}
       <AnnotationWorkspace
@@ -1416,10 +1425,10 @@ function normalizeHeadingLevel(value: unknown): number {
   return 2;
 }
 
-function messageHasInlineBlocks(message: MessageListItem): boolean {
+function messageHasInlineBlock(message: MessageListItem, blockIndex: number): boolean {
   return Boolean(
-    (message.render_blocks && message.render_blocks.length > 0) ||
-      (message.current_version?.blocks && message.current_version.blocks.length > 0),
+    message.render_blocks?.some((block) => block.block_index === blockIndex) ||
+      message.current_version?.blocks?.some((block) => block.block_index === blockIndex),
   );
 }
 

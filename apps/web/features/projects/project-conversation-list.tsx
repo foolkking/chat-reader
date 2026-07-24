@@ -30,6 +30,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { downloadConversationBundle } from "../../lib/bulk-export";
+import { SelectionToolbar } from "../../components/selection-toolbar";
 
 export function ProjectConversationList({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
@@ -47,10 +48,30 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   });
   const conversationsQuery = useQuery({
     queryKey: ["project-conversations", projectId, conversationSortMode, conversationSortDirection],
-    queryFn: () => getProjectConversations(projectId, { sort: conversationSortMode, direction: conversationSortDirection, limit: 200 }),
+    queryFn: () => getProjectConversations(projectId, { sort: conversationSortMode, direction: conversationSortDirection, limit: 5000 }),
   });
   const project = projectsQuery.data?.find((item) => item.id === projectId);
   const zh = resolvedLocale === "zh-CN";
+  const conversations = conversationsQuery.data ?? [];
+
+  function clearSelection() {
+    setSelectedConversationIds(new Set());
+    setMergeOrderIds([]);
+  }
+
+  function applySelection(ids: Iterable<string>) {
+    const requested = new Set(ids);
+    const orderedIds = conversations.filter((conversation) => requested.has(conversation.id)).map((conversation) => conversation.id);
+    setSelectedConversationIds(new Set(orderedIds));
+    setMergeOrderIds(orderedIds);
+  }
+
+  function toggleConversationSelection(conversationId: string, selected: boolean) {
+    const next = new Set(selectedConversationIds);
+    if (selected) next.add(conversationId);
+    else next.delete(conversationId);
+    applySelection(next);
+  }
 
   async function handleSortEnd(event: DragEndEvent) {
     if (conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id || !conversationsQuery.data) return;
@@ -66,6 +87,24 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     }).catch(() => undefined);
   }, [projectId, queryClient]);
+
+  useEffect(() => {
+    setSelectedConversationIds(new Set());
+    setMergeOrderIds([]);
+    setSelectionMode(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!selectionMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || bulkBusy !== null) return;
+      setSelectedConversationIds(new Set());
+      setMergeOrderIds([]);
+      setSelectionMode(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [bulkBusy, selectionMode]);
 
   async function refreshProject() {
     await Promise.all([
@@ -87,20 +126,19 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               {zh ? `${project?.conversation_count ?? 0} 个对话 · ${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}
             </p>
           </div>
-          <div className="flex shrink-0 gap-2">
+          {!selectionMode ? <div className="flex shrink-0 gap-2">
             <ConversationSortMenu />
             <button
               type="button"
               onClick={() => {
-                setSelectionMode((value) => !value);
-                setSelectedConversationIds(new Set());
-                setMergeOrderIds([]);
+                setSelectionMode(true);
+                clearSelection();
               }}
               className="min-h-10 rounded-lg px-3 text-sm font-medium text-secondary hover:bg-subtle"
             >
-              {selectionMode ? (zh ? "退出选择" : "Done") : (zh ? "选择" : "Select")}
+              {zh ? "选择对话" : "Select conversations"}
             </button>
-          </div>
+          </div> : null}
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
@@ -113,6 +151,21 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 }}
               />
             ) : null}
+
+            {selectionMode ? <SelectionToolbar
+              selectedCount={selectedConversationIds.size}
+              totalCount={conversations.length}
+              busy={bulkBusy !== null}
+              locale={resolvedLocale}
+              onSelectAll={() => applySelection(conversations.map((conversation) => conversation.id))}
+              onInvert={() => applySelection(conversations.filter((conversation) => !selectedConversationIds.has(conversation.id)).map((conversation) => conversation.id))}
+              onClear={clearSelection}
+              onDone={() => {
+                if (bulkBusy !== null) return;
+                clearSelection();
+                setSelectionMode(false);
+              }}
+            /> : null}
 
             {selectedConversationIds.size > 0 ? (
               <ProjectBulkActions
@@ -222,43 +275,37 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
               <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
                 {conversationsQuery.data.map((conversation) => (
-                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom"}><article className="border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle">
+                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article className={`border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}>
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
                       <div className="flex min-w-0 gap-3">
                         {selectionMode ? <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-ui bg-surface">
                           <input
                             type="checkbox"
                             checked={selectedConversationIds.has(conversation.id)}
-                            onChange={(event) => {
-                              setSelectedConversationIds((current) => {
-                                const next = new Set(current);
-                                if (event.target.checked) {
-                                  next.add(conversation.id);
-                                } else {
-                                  next.delete(conversation.id);
-                                }
-                                return next;
-                              });
-                              setMergeOrderIds((current) => {
-                                if (event.target.checked) {
-                                  return current.includes(conversation.id) ? current : [...current, conversation.id];
-                                }
-                                return current.filter((id) => id !== conversation.id);
-                              });
-                            }}
-                            aria-label={`Select ${conversation.display_title || conversation.title}`}
+                            onChange={(event) => toggleConversationSelection(conversation.id, event.target.checked)}
+                            aria-label={`${zh ? "选择" : "Select"} ${conversation.display_title || conversation.title}`}
                           />
                         </label> : null}
                         <div className="min-w-0">
-                          <Link href={`/conversations/${conversation.id}?projectId=${projectId}`}>
+                          {selectionMode ? <button type="button" className="block w-full text-left" onClick={() => toggleConversationSelection(conversation.id, !selectedConversationIds.has(conversation.id))}>
                             <h2 className="truncate text-base font-semibold text-primary">
                               {conversation.project_relation.is_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}
                               {conversation.display_title || conversation.title}
                             </h2>
-                          </Link>
-                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
-                            {conversation.description_markdown || previewConversationText(conversation.first_user_message)}
-                          </p>
+                            <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
+                              {conversation.description_markdown || previewConversationText(conversation.first_user_message)}
+                            </p>
+                          </button> : <>
+                            <Link href={`/conversations/${conversation.id}?projectId=${projectId}`}>
+                              <h2 className="truncate text-base font-semibold text-primary">
+                                {conversation.project_relation.is_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}
+                                {conversation.display_title || conversation.title}
+                              </h2>
+                            </Link>
+                            <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
+                              {conversation.description_markdown || previewConversationText(conversation.first_user_message)}
+                            </p>
+                          </>}
                         </div>
                       </div>
                       <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">

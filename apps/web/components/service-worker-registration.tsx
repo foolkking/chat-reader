@@ -15,11 +15,29 @@ export function ServiceWorkerRegistration() {
         void caches.delete("chat-reader-shell-v1");
         void caches.delete("chat-reader-static-v2");
         void caches.delete("chat-reader-library-v3");
+        void caches.delete("chat-reader-library-v4");
       }
       return;
     }
     const register = () => {
-      void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => registration.update()).catch(() => {
+      void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+        const libraryScope = new URL("/library", window.location.origin).href;
+        await Promise.all(registrations.map(async (registration) => {
+          const normalizedScope = registration.scope.replace(/\/+$/, "");
+          if (normalizedScope === libraryScope.replace(/\/+$/, "")) return;
+          const scriptUrl = registration.active?.scriptURL ?? registration.waiting?.scriptURL ?? registration.installing?.scriptURL;
+          if (scriptUrl?.endsWith("/sw.js")) {
+            await registration.update();
+            return;
+          }
+          await registration.unregister();
+        }));
+        const registration = await navigator.serviceWorker.register("/library-sw.js", {
+          scope: "/library",
+          updateViaCache: "none",
+        });
+        await registration.update();
+      }).catch(() => {
         // The reader remains fully usable without the optional offline shell.
       });
     };

@@ -452,6 +452,7 @@ export type ConversationTransformResponse = {
 export type NavigateTarget = {
   messageId: string;
   blockIndex?: number;
+  characterOffset?: number;
   alignmentOffset?: number;
   source?: "dialogue-index" | "section-toc" | "search" | "message-action";
 };

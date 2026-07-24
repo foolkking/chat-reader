@@ -32,6 +32,7 @@ import type { ConversationListItem, ProjectConversationRead, ProjectRead } from 
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
 import { PreferencesPanel } from "../../components/preferences-panel";
+import { ResizeHandle, useResizablePane } from "../../components/resizable-pane";
 import { useTranslations } from "../../components/preferences-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import { useImportDialog } from "../../components/import-dialog-provider";
@@ -67,6 +68,12 @@ export function ProjectSidebar({
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | null>(null);
+  const sidebarSize = useResizablePane({
+    storageKey: "chat-reader:sidebar-width",
+    defaultSize: 288,
+    minSize: 224,
+    maxSize: () => Math.min(448, Math.max(224, window.innerWidth * 0.42)),
+  });
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
@@ -205,7 +212,7 @@ export function ProjectSidebar({
           {currentProjectId ? <Folder className="mt-4 h-4 w-4 text-accent" aria-hidden="true" /> : null}
         </aside>
       ) : (
-        <aside className="hidden h-screen w-[clamp(14rem,18vw,20rem)] shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary md:flex">{content}</aside>
+        <aside className="relative hidden h-screen shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary md:flex" style={{ width: sidebarSize.size }}>{content}<ResizeHandle side="right" label="Resize sidebar" onPointerDown={(event) => sidebarSize.startResize(event)} onDoubleClick={sidebarSize.resetSize} /></aside>
       )}
       <DragOverlay>{activeDrag ? <div className="max-w-[15rem] truncate rounded-lg border border-[var(--accent)] bg-raised px-3 py-2 text-sm text-primary shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
     </DndContext>

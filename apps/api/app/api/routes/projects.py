@@ -82,7 +82,7 @@ def update_project_route(project_id: uuid.UUID, payload: ProjectUpdate, db: Sess
 @router.get("/{project_id}/conversations", response_model=list[ProjectConversationRead])
 def get_project_conversations(
     project_id: uuid.UUID,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=5000),
     offset: int = Query(default=0, ge=0),
     sort: str = Query(
         default="recent_read",

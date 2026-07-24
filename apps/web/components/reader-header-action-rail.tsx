@@ -20,6 +20,7 @@ export function ReaderHeaderActionRail({
   triggerLabel,
   closeLabel,
   compact = false,
+  fixedTrigger = false,
 }: {
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -27,6 +28,7 @@ export function ReaderHeaderActionRail({
   triggerLabel: string;
   closeLabel: string;
   compact?: boolean;
+  fixedTrigger?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -63,12 +65,18 @@ export function ReaderHeaderActionRail({
     }
   }
 
+  const actionContainerClass = fixedTrigger
+    ? `reader-aux-scroll absolute right-[calc(100%+0.25rem)] top-1/2 flex min-w-0 items-center justify-end gap-1 overflow-x-auto overflow-y-hidden transition-[max-width,opacity,transform] duration-200 ease-out ${
+      expanded ? "visible max-w-[calc(100vw-5.5rem)] -translate-y-1/2 translate-x-0 opacity-100" : "invisible pointer-events-none max-w-0 -translate-y-1/2 translate-x-2 opacity-0"
+    }`
+    : `flex min-w-0 items-center justify-end gap-1 overflow-hidden transition-[max-width,opacity,transform] duration-200 ease-out ${
+      expanded ? "visible max-w-[22rem] translate-x-0 opacity-100" : "invisible pointer-events-none max-w-0 translate-x-3 opacity-0"
+    }`;
+
   return (
-    <div ref={rootRef} className="flex min-w-0 shrink-0 items-center justify-end gap-1.5">
+    <div ref={rootRef} className={`${fixedTrigger ? (compact ? "h-9 w-9" : "h-10 w-10") : "min-w-0"} relative flex shrink-0 items-center justify-end gap-1.5`}>
       <div
-        className={`flex min-w-0 items-center justify-end gap-1 overflow-hidden transition-[max-width,opacity,transform] duration-200 ease-out ${
-          expanded ? "visible max-w-[22rem] translate-x-0 opacity-100" : "invisible pointer-events-none max-w-0 translate-x-3 opacity-0"
-        }`}
+        className={actionContainerClass}
         aria-hidden={!expanded}
       >
         {actions.map((action, index) => {

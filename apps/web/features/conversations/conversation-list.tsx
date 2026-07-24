@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -27,6 +27,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { downloadConversationBundle } from "../../lib/bulk-export";
+import { SelectionToolbar } from "../../components/selection-toolbar";
 
 export function ConversationList({
   onImportClick,
@@ -74,6 +75,29 @@ export function ConversationList({
   });
   const isArchivedMode = mode === "archived";
 
+  function clearSelection() {
+    setSelectedConversationIds(new Set());
+    setMergeOrderIds([]);
+  }
+
+  function exitSelectionMode() {
+    if (bulkBusy !== null || isMerging) return;
+    clearSelection();
+    setSelectionMode(false);
+  }
+
+  useEffect(() => {
+    if (!selectionMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || bulkBusy !== null || isMerging) return;
+      setSelectedConversationIds(new Set());
+      setMergeOrderIds([]);
+      setSelectionMode(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [bulkBusy, isMerging, selectionMode]);
+
   async function handleSortEnd(event: DragEndEvent) {
     if (conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
     const rows = conversationsQuery.data ?? [];
@@ -119,6 +143,20 @@ export function ConversationList({
   const conversations = (conversationsQuery.data ?? []).filter((conversation) =>
     isArchivedMode ? conversation.status === "archived" : conversation.status !== "archived",
   );
+
+  function applySelection(ids: Iterable<string>) {
+    const requested = new Set(ids);
+    const orderedIds = conversations.filter((conversation) => requested.has(conversation.id)).map((conversation) => conversation.id);
+    setSelectedConversationIds(new Set(orderedIds));
+    setMergeOrderIds(orderedIds);
+  }
+
+  function toggleConversationSelection(conversationId: string, selected: boolean) {
+    const next = new Set(selectedConversationIds);
+    if (selected) next.add(conversationId);
+    else next.delete(conversationId);
+    applySelection(next);
+  }
   if (conversations.length === 0) {
     if (!isArchivedMode && globalExistenceQuery.isLoading) {
       return (
@@ -284,14 +322,24 @@ export function ConversationList({
               }
             }}
           />
-        ) : (
-          <div className="flex items-center gap-2"><ConversationSortMenu /><button type="button" onClick={() => setSelectionMode((value) => !value)} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-surface">{selectionMode ? (resolvedLocale === "zh-CN" ? "退出选择" : "Done") : (resolvedLocale === "zh-CN" ? "选择" : "Select")}</button></div>
-        )}
+        ) : !selectionMode ? (
+          <div className="flex items-center gap-2"><ConversationSortMenu /><button type="button" onClick={() => setSelectionMode(true)} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-surface">{resolvedLocale === "zh-CN" ? "选择对话" : "Select conversations"}</button></div>
+        ) : null}
       </div>
+      {selectionMode ? <SelectionToolbar
+        selectedCount={selectedConversationIds.size}
+        totalCount={conversations.length}
+        busy={bulkBusy !== null || isMerging}
+        locale={resolvedLocale}
+        onSelectAll={() => applySelection(conversations.map((conversation) => conversation.id))}
+        onInvert={() => applySelection(conversations.filter((conversation) => !selectedConversationIds.has(conversation.id)).map((conversation) => conversation.id))}
+        onClear={() => clearSelection()}
+        onDone={exitSelectionMode}
+      /> : null}
       <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation) => (
-          <SortableConversationRow id={conversation.id} enabled={conversationSortMode === "custom"} key={conversation.id}><article
-            className="group border-b border-ui px-4 py-3 transition last:border-b-0 hover:bg-subtle"
+          <SortableConversationRow id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode} key={conversation.id}><article
+            className={`group border-b border-ui px-4 py-3 transition last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}
           >
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
               <div className="flex min-w-0 gap-3">
@@ -299,36 +347,30 @@ export function ConversationList({
                   <input
                     type="checkbox"
                     checked={selectedConversationIds.has(conversation.id)}
-                    onChange={(event) => {
-                      setSelectedConversationIds((current) => {
-                        const next = new Set(current);
-                        if (event.target.checked) {
-                          next.add(conversation.id);
-                        } else {
-                          next.delete(conversation.id);
-                        }
-                        return next;
-                      });
-                      setMergeOrderIds((current) => {
-                        if (event.target.checked) {
-                          return current.includes(conversation.id) ? current : [...current, conversation.id];
-                        }
-                        return current.filter((id) => id !== conversation.id);
-                      });
-                    }}
-                    aria-label={`Select ${conversation.display_title || conversation.title}`}
+                    onChange={(event) => toggleConversationSelection(conversation.id, event.target.checked)}
+                    aria-label={`${resolvedLocale === "zh-CN" ? "选择" : "Select"} ${conversation.display_title || conversation.title}`}
                   />
                 </label> : null}
                 <div className="min-w-0">
-                  <Link href={`/conversations/${conversation.id}`}>
+                  {selectionMode ? <button type="button" className="block w-full text-left" onClick={() => toggleConversationSelection(conversation.id, !selectedConversationIds.has(conversation.id))}>
                     <h3 className="truncate text-base font-semibold text-primary">
                       {conversation.is_global_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}
                       {conversation.display_title || conversation.title}
                     </h3>
-                  </Link>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
-                    {conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)}
-                  </p>
+                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
+                      {conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)}
+                    </p>
+                  </button> : <>
+                    <Link href={`/conversations/${conversation.id}`}>
+                      <h3 className="truncate text-base font-semibold text-primary">
+                        {conversation.is_global_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}
+                        {conversation.display_title || conversation.title}
+                      </h3>
+                    </Link>
+                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
+                      {conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)}
+                    </p>
+                  </>}
                 </div>
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">

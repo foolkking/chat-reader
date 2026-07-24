@@ -1,5 +1,6 @@
 import {
   createConversationAnnotation,
+  deleteConversationAnnotation,
   getConversationAnnotations,
   getConversationNotebook,
   getConversationNotebookConflicts,
@@ -21,6 +22,7 @@ export interface AnnotationRepository {
   list(conversationId: string): Promise<AnnotationRead[]>;
   create(conversationId: string, input: AnnotationCreateInput): Promise<AnnotationRead>;
   update(annotation: AnnotationRead, input: Omit<AnnotationUpdateInput, "base_revision">): Promise<AnnotationRead>;
+  delete(annotation: AnnotationRead): Promise<void>;
   getNotebook(conversationId: string): Promise<NotebookRead>;
   listNotebookConflicts(conversationId: string): Promise<NotebookRead[]>;
   saveNotebook(notebook: NotebookRead, blocks: NotebookBlock[], title?: string | null): Promise<NotebookRead>;
@@ -32,6 +34,9 @@ export const remoteAnnotationRepository: AnnotationRepository = {
   create: createConversationAnnotation,
   update(annotation, input) {
     return updateConversationAnnotation(annotation.id, { ...input, base_revision: annotation.revision });
+  },
+  delete(annotation) {
+    return deleteConversationAnnotation(annotation.id, annotation.revision);
   },
   getNotebook: getConversationNotebook,
   listNotebookConflicts: getConversationNotebookConflicts,
@@ -105,6 +110,24 @@ export const offlineAnnotationRepository: AnnotationRepository = {
       payload: annotationPayload(updated),
     });
     return updated;
+  },
+  async delete(annotation) {
+    const deleted: AnnotationRead = {
+      ...annotation,
+      is_deleted: true,
+      revision: annotation.revision + 1,
+      updated_at: new Date().toISOString(),
+    };
+    await offlineDb.annotations.put(deleted);
+    await queueOfflineOperation({
+      operation_id: crypto.randomUUID(),
+      entity_type: "annotation",
+      entity_id: annotation.id,
+      action: "delete",
+      conversation_id: annotation.conversation_id,
+      base_revision: annotation.revision,
+      payload: {},
+    });
   },
   async getNotebook(conversationId) {
     const existing = await offlineDb.notebooks.where("conversation_id").equals(conversationId).filter((item) => !item.is_conflict).first();

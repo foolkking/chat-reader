@@ -66,12 +66,12 @@ export function ConversationIndex({
     staleTime: 60_000,
   });
 
-  useEffect(() => { if (indexQuery.data) setRemotePage(indexQuery.data); }, [indexQuery.data]);
   useEffect(() => {
     setRemotePage(null);
     setRangeMode("around");
     setPanelState(mode === "sheet" ? "pinned" : "rail");
   }, [conversationId, mode]);
+  useEffect(() => { if (indexQuery.data) setRemotePage(indexQuery.data); }, [indexQuery.data]);
 
   useEffect(() => () => {
     if (openTimerRef.current) window.clearTimeout(openTimerRef.current);
@@ -92,9 +92,10 @@ export function ConversationIndex({
     };
   }, [mode, panelState]);
 
+  const resolvedPage = remotePage ?? indexQuery.data ?? null;
   const items = useMemo(
-    () => messages ? buildItemsFromMessages(messages) : (remotePage?.items ?? []).map(toIndexItem),
-    [messages, remotePage?.items],
+    () => messages ? buildItemsFromMessages(messages) : (resolvedPage?.items ?? []).map(toIndexItem),
+    [messages, resolvedPage?.items],
   );
   const activeOrdinal = items.find((item) => item.messageId === activeMessageId)?.ordinal ?? null;
   const visibleItems = useMemo(
@@ -116,8 +117,8 @@ export function ConversationIndex({
     return () => window.cancelAnimationFrame(frame);
   }, [activeMessageId, activeOrdinal, mode, panelState, rangeMode, remotePage?.offset, visibleItems.length]);
 
-  if (messages === undefined && (!ready || indexQuery.isLoading) && !remotePage) return <IndexShell mode={mode} label={t("loadingIndex")} />;
-  if (messages === undefined && indexQuery.isError && !remotePage) return <IndexShell mode={mode} label={t("indexFailed")} />;
+  if (messages === undefined && (!ready || indexQuery.isLoading) && !resolvedPage) return <IndexShell mode={mode} label={t("loadingIndex")} />;
+  if (messages === undefined && indexQuery.isError && !resolvedPage) return <IndexShell mode={mode} label={t("indexFailed")} />;
   if (!items.length) return <IndexShell mode={mode} label={t("noMessages")} />;
 
   const showDetails = mode === "sheet" || panelState !== "rail";
