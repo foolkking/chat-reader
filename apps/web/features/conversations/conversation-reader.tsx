@@ -74,6 +74,7 @@ export function ConversationReader({
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
+  const [navigationStatus, setNavigationStatus] = useState<"idle" | "loading" | "failed" | "stale">("idle");
   const [pendingTargetMessageId, setPendingTargetMessageId] = useState<string | null>(targetMessageId);
   const [expandedHeavyMessageIds, setExpandedHeavyMessageIds] = useState<Set<string>>(new Set());
   const [blockCache, setBlockCache] = useState<Record<string, RenderBlockRead[]>>({});
@@ -110,6 +111,7 @@ export function ConversationReader({
   const blockRequestsRef = useRef(new Map<string, Promise<RenderBlockRead[]>>());
   const userScrollIntentRef = useRef(false);
   const neighborhoodExpansionRef = useRef({ active: false, generation: 0 });
+  const navigationInProgressRef = useRef(false);
 
   const mobileHeaderVisible = useMobileHeaderAutoHide({
     scrollRootRef: scrollContainerRef,
@@ -220,6 +222,8 @@ export function ConversationReader({
     setEdgeError(null);
     setActiveMessageId(targetMessageId);
     setActiveBlockId(null);
+    setNavigationStatus("idle");
+    navigationInProgressRef.current = false;
     setSelectedMessageIds(new Set());
     setPendingTargetMessageId(targetMessageId);
     setExpandedHeavyMessageIds(new Set());
@@ -292,7 +296,7 @@ export function ConversationReader({
   const loadPreviousWindow = useCallback(async () => {
     const root = scrollContainerRef.current;
     const current = loadedWindowRef.current;
-    if (!root || neighborhoodExpansionRef.current.active || loadingPreviousRef.current || !current.hasPrevious) return;
+    if (!root || navigationInProgressRef.current || neighborhoodExpansionRef.current.active || loadingPreviousRef.current || !current.hasPrevious) return;
     loadingPreviousRef.current = true;
     setEdgeLoading("previous");
     setEdgeError(null);
@@ -331,7 +335,7 @@ export function ConversationReader({
   const loadNextWindow = useCallback(async () => {
     const root = scrollContainerRef.current;
     const current = loadedWindowRef.current;
-    if (!root || neighborhoodExpansionRef.current.active || loadingNextRef.current || !current.hasMore) return;
+    if (!root || navigationInProgressRef.current || neighborhoodExpansionRef.current.active || loadingNextRef.current || !current.hasMore) return;
     loadingNextRef.current = true;
     setEdgeLoading("next");
     setEdgeError(null);
@@ -381,13 +385,15 @@ export function ConversationReader({
       setNeighborhoodExpansion((current) => current.active ? { ...current, active: false } : current);
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
+      navigationInProgressRef.current = true;
+      setNavigationStatus("loading");
       const generation = windowGenerationRef.current + 1;
       windowGenerationRef.current = generation;
       applyLoadedWindow({ ...loadedWindowRef.current, generation });
       userScrollIntentRef.current = false;
       scrollDirectionRef.current = null;
       scrollIntentSequenceRef.current += 1;
-      navigationLockUntilRef.current = Date.now() + 5000;
+      navigationLockUntilRef.current = Date.now() + 10_000;
       const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
       const messageIdDom = `message-${messageId}`;
       setActiveMessageId(messageId);
@@ -408,36 +414,68 @@ export function ConversationReader({
             return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
           }
           targetPage = page;
-          initialWindowAppliedRef.current = true;
-          applyLoadedWindow(replaceLoadedWindow(page, generation));
         }
 
+        const knownMessage = targetPage?.items.find((message) => message.id === messageId) ??
+          loadedWindowRef.current.items.find((message) => message.id === messageId) ??
+          (await dataSource.getMessageWindow(conversationId, {
+            includeBlocks: false,
+            limit: 1,
+            anchorMessageId: messageId,
+            anchorBefore: 0,
+            contentMode: "preview",
+          })).items.find((message) => message.id === messageId);
+        if (!knownMessage) {
+          setNavigationStatus("failed");
+          return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-not-mounted" };
+        }
+
+        let targetBlocks: RenderBlockRead[] | null = null;
         if (blockIndex !== undefined) {
-          const knownMessage =
-            targetPage?.items.find((message) => message.id === messageId) ??
-            loadedWindowRef.current.items.find((message) => message.id === messageId) ??
-            (await dataSource.getMessageWindow(conversationId, {
-              includeBlocks: false,
-              limit: 1,
-              anchorMessageId: messageId,
-              anchorBefore: 0,
-              contentMode: "preview",
-            })).items.find((message) => message.id === messageId);
           const cachedBlocks = blockCacheRef.current[messageId] ?? [];
           const contextStart = Math.max(0, blockIndex - 20);
-          const contextEnd = Math.min(Math.max((knownMessage?.block_count ?? 1) - 1, 0), blockIndex + 20);
+          const contextEnd = Math.min(Math.max(knownMessage.block_count - 1, 0), blockIndex + 20);
           const cachedBounds = getBlockBounds(cachedBlocks);
           const needsTargetWindow =
             !cachedBlocks.some((block) => block.block_index === blockIndex) ||
             cachedBounds === null ||
             cachedBounds.min > contextStart ||
             cachedBounds.max < contextEnd;
-          if (knownMessage && !messageHasInlineBlock(knownMessage, blockIndex) && needsTargetWindow) {
-            await loadBlockPage(messageId, contextStart, Math.max(BLOCK_PAGE_SIZE, contextEnd - contextStart + 1));
+          if (!messageHasInlineBlock(knownMessage, blockIndex) && needsTargetWindow) {
+            targetBlocks = await dataSource.getMessageBlocks(messageId, {
+              start: contextStart,
+              limit: Math.max(BLOCK_PAGE_SIZE, contextEnd - contextStart + 1),
+            });
             if (navigationTokenRef.current !== token) {
               return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
             }
           }
+        }
+
+        if (navigationTokenRef.current !== token) {
+          return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
+        }
+
+        const nextBlockCache = { ...blockCacheRef.current };
+        if (targetBlocks) {
+          nextBlockCache[messageId] = mergeBlockWindows(nextBlockCache[messageId], targetBlocks);
+        }
+        if (targetPage) {
+          initialWindowAppliedRef.current = true;
+          const root = scrollContainerRef.current;
+          if (root) {
+            root.scrollTop = 0;
+            root.dataset.previousScrollTop = "0";
+          }
+          blockCacheRef.current = nextBlockCache;
+          setBlockCache(nextBlockCache);
+          setExpandedHeavyMessageIds((current) => blockIndex === undefined ? current : new Set(current).add(messageId));
+          applyLoadedWindow(replaceLoadedWindow(targetPage, generation));
+        } else if (targetBlocks) {
+          blockCacheRef.current = nextBlockCache;
+          setBlockCache(nextBlockCache);
+          setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
+        } else if (blockIndex !== undefined) {
           setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
         }
 
@@ -448,8 +486,11 @@ export function ConversationReader({
           tokenIsCurrent: () => navigationTokenRef.current === token,
           offset: alignmentOffset ?? 12,
           characterOffset: blockId ? characterOffset : undefined,
+          timeoutMs: 8000,
+          allowFallback: false,
         });
         if (result.ok) {
+          setNavigationStatus(result.fallback ? "stale" : "idle");
           setActiveMessageId(messageId);
           setActiveBlockId(blockId);
           if (characterOffset === undefined) {
@@ -463,15 +504,21 @@ export function ConversationReader({
             if (navigationTokenRef.current === token) {
               setTargetHighlightId(null);
               setActiveBlockId(null);
+              setNavigationStatus("idle");
             }
           }, 2000);
+        } else {
+          setNavigationStatus("failed");
         }
         return result;
       } catch {
+        setNavigationStatus("failed");
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "load-failed" };
+      } finally {
+        if (navigationTokenRef.current === token) navigationInProgressRef.current = false;
       }
     },
-    [applyLoadedWindow, conversationId],
+    [applyLoadedWindow, conversationId, dataSource],
   );
 
   useEffect(() => {
@@ -1222,6 +1269,9 @@ export function ConversationReader({
           </div>
           {neighborhoodExpansion.active ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-secondary" role="status">{t("expandingNearby", { current: neighborhoodExpansion.current, total: neighborhoodExpansion.total })}</div> : null}
           {neighborhoodExpansion.error ? <div className="border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert">{t("expandNearbyFailed")}: {neighborhoodExpansion.error} <button type="button" onClick={() => void expandNeighborhood()} className="ml-2 font-semibold underline">{t("retry")}</button></div> : null}
+          {navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">Locating the referenced text...</div> : null}
+          {navigationStatus === "stale" ? <div className="border-t border-ui bg-amber-50 px-[3vw] py-2 text-sm text-amber-800" role="status">The original text changed; showing the message.</div> : null}
+          {navigationStatus === "failed" ? <div className="border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert">The referenced text could not be located.</div> : null}
         </header>
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">

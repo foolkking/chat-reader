@@ -2,11 +2,13 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-AnnotationType = Literal["highlight", "bookmark"]
+AnnotationType = Literal["highlight", "underline", "strikethrough", "comment", "bookmark"]
 AnnotationColor = Literal["yellow", "green", "blue", "pink"]
+
+TEXT_ANNOTATION_TYPES = {"highlight", "underline", "strikethrough", "comment"}
 
 
 class AnnotationCreate(BaseModel):
@@ -28,10 +30,10 @@ class AnnotationCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_anchor(self) -> "AnnotationCreate":
-        if self.annotation_type == "highlight":
+        if self.annotation_type in TEXT_ANNOTATION_TYPES:
             required = (self.message_id, self.message_version_id, self.start_block_index, self.end_block_index)
             if any(value is None for value in required) or not (self.quote or "").strip():
-                raise ValueError("Highlights require a message, version, block range, and quote.")
+                raise ValueError("Text annotations require a message, version, block range, and quote.")
         elif self.message_id is None:
             raise ValueError("Bookmarks require a message.")
         return self
@@ -39,6 +41,7 @@ class AnnotationCreate(BaseModel):
 
 class AnnotationUpdate(BaseModel):
     base_revision: int = Field(ge=1)
+    annotation_type: AnnotationType | None = None
     color: AnnotationColor | None = None
     comment_markdown: str | None = Field(default=None, max_length=20_000)
     anchor_status: Literal["active", "relocated", "stale"] | None = None
@@ -51,6 +54,13 @@ class AnnotationUpdate(BaseModel):
     prefix: str | None = Field(default=None, max_length=500)
     suffix: str | None = Field(default=None, max_length=500)
     metadata: dict[str, Any] | None = None
+
+    @field_validator("annotation_type")
+    @classmethod
+    def annotation_type_cannot_be_null(cls, value: AnnotationType | None) -> AnnotationType | None:
+        if value is None:
+            raise ValueError("annotation_type cannot be null when provided.")
+        return value
 
 
 class AnnotationRead(BaseModel):

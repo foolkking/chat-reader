@@ -8,6 +8,7 @@ type NavigateMountedTargetOptions = {
   offset?: number;
   characterOffset?: number;
   timeoutMs?: number;
+  allowFallback?: boolean;
 };
 
 type RestoreScrollAnchorOptions = {
@@ -27,12 +28,21 @@ export async function navigateMountedTarget({
   offset = 12,
   characterOffset,
   timeoutMs = 6000,
+  allowFallback = false,
 }: NavigateMountedTargetOptions): Promise<NavigationResult> {
-  const target = await waitForTarget(targetId, fallbackId, timeoutMs, tokenIsCurrent);
+  const target = await waitForTarget(targetId, timeoutMs, tokenIsCurrent);
   if (!tokenIsCurrent()) {
     return { ok: false, targetId, reason: "cancelled" };
   }
   if (!target) {
+    if (allowFallback && fallbackId) {
+      const fallback = document.getElementById(fallbackId);
+      if (fallback) {
+        scrollToAlignedPosition(root, fallback, offset);
+        await waitForLayoutSettle();
+        return { ok: true, targetId: fallback.id, fallback: true, reason: "stale-anchor" };
+      }
+    }
     return { ok: false, targetId, reason: "target-not-mounted" };
   }
   const resolvedCharacterOffset = target.id === targetId ? characterOffset : undefined;
@@ -139,7 +149,6 @@ export async function restoreScrollAnchor({
 
 async function waitForTarget(
   targetId: string,
-  fallbackId: string | undefined,
   timeoutMs: number,
   tokenIsCurrent: () => boolean,
 ): Promise<HTMLElement | null> {
@@ -170,7 +179,7 @@ async function waitForTarget(
     };
     const observer = new MutationObserver(check);
     observer.observe(document.body, { childList: true, subtree: true });
-    const timeoutId = window.setTimeout(() => finish(fallbackId ? document.getElementById(fallbackId) : null), timeoutMs);
+    const timeoutId = window.setTimeout(() => finish(null), timeoutMs);
     const frameId = window.requestAnimationFrame(check);
   });
 }

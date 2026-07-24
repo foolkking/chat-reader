@@ -64,6 +64,8 @@ def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, option
             lines.extend(["## Annotations", ""])
             for annotation in annotations:
                 quote = annotation.quote or "Whole message"
+                lines.append(f"### {annotation.annotation_type.replace('_', ' ').title()}")
+                lines.append("")
                 lines.append(f"> {quote.replace(chr(10), ' ')}")
                 if annotation.comment_markdown:
                     lines.extend(["", annotation.comment_markdown])

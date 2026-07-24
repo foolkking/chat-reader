@@ -16,6 +16,7 @@ export function ServiceWorkerRegistration() {
         void caches.delete("chat-reader-static-v2");
         void caches.delete("chat-reader-library-v3");
         void caches.delete("chat-reader-library-v4");
+        void caches.delete("chat-reader-library-v5");
       }
       return;
     }
@@ -25,11 +26,6 @@ export function ServiceWorkerRegistration() {
         await Promise.all(registrations.map(async (registration) => {
           const normalizedScope = registration.scope.replace(/\/+$/, "");
           if (normalizedScope === libraryScope.replace(/\/+$/, "")) return;
-          const scriptUrl = registration.active?.scriptURL ?? registration.waiting?.scriptURL ?? registration.installing?.scriptURL;
-          if (scriptUrl?.endsWith("/sw.js")) {
-            await registration.update();
-            return;
-          }
           await registration.unregister();
         }));
         const registration = await navigator.serviceWorker.register("/library-sw.js", {

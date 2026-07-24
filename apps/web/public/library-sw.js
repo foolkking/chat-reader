@@ -1,6 +1,6 @@
 /* global self, caches, URL, fetch */
 
-const CACHE_NAME = "chat-reader-library-v4";
+const CACHE_NAME = "chat-reader-library-v5";
 const STATIC_ASSETS = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -51,13 +51,32 @@ async function cacheFirst(request) {
 
 async function libraryNavigation(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetchWithRetry(request);
     if (response.ok) {
       const cache = await caches.open(CACHE_NAME);
       await cache.put("/library", response.clone());
     }
     return response;
   } catch {
+    if (self.navigator?.onLine !== false) {
+      return new self.Response("The library network request failed. Retry when the connection is stable.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Retry-After": "1" },
+      });
+    }
     return (await caches.match("/library")) || new self.Response("Offline library is unavailable.", { status: 503 });
+  }
+}
+
+async function fetchWithRetry(request) {
+  try {
+    return await fetch(request);
+  } catch (firstError) {
+    await new Promise((resolve) => self.setTimeout(resolve, 450));
+    try {
+      return await fetch(request);
+    } catch {
+      throw firstError;
+    }
   }
 }

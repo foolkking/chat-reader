@@ -162,6 +162,47 @@ def test_annotations_revision_conflict_sync_idempotency_and_notebook(client: Tes
     assert opted_export["notebook"]["title"] == "精选笔记"
 
 
+def test_text_annotation_types_create_update_and_export(client: TestClient) -> None:
+    conversation_id, message, version = _message_context(client)
+    created = []
+    for annotation_type in ("highlight", "underline", "strikethrough", "comment"):
+        response = client.post(
+            f"/api/conversations/{conversation_id}/annotations",
+            json={
+                "message_id": message["id"],
+                "message_version_id": version["id"],
+                "annotation_type": annotation_type,
+                "color": "blue",
+                "start_block_index": 0,
+                "start_offset": 0,
+                "end_block_index": 0,
+                "end_offset": 5,
+                "quote": "hello",
+                "comment_markdown": "review" if annotation_type == "comment" else "",
+            },
+        )
+        assert response.status_code == 201
+        assert response.json()["annotation_type"] == annotation_type
+        created.append(response.json())
+
+    updated = client.patch(
+        f"/api/annotations/{created[0]['id']}",
+        json={"base_revision": created[0]["revision"], "annotation_type": "underline", "color": "pink"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["annotation_type"] == "underline"
+    assert updated.json()["color"] == "pink"
+
+    exported = client.get(
+        f"/api/conversations/{conversation_id}/export?format=canonical_json&include_annotations=true"
+    ).json()
+    assert {item["annotation_type"] for item in exported["annotations"]} >= {
+        "underline",
+        "strikethrough",
+        "comment",
+    }
+
+
 def test_annotation_anchor_relocates_and_marks_stale_after_message_edits(client: TestClient) -> None:
     conversation_id, message, version = _message_context(client)
     created = client.post(

@@ -460,7 +460,8 @@ export type NavigateTarget = {
 export type NavigationResult = {
   ok: boolean;
   targetId: string;
-  reason?: "cancelled" | "target-not-mounted" | "target-not-aligned" | "load-failed";
+  fallback?: boolean;
+  reason?: "cancelled" | "target-not-mounted" | "target-not-aligned" | "load-failed" | "stale-anchor";
 };
 
 export type NavigationState = {
@@ -587,7 +588,7 @@ export type SharedConversationBootstrap = {
   description_markdown?: string | null;
 };
 
-export type AnnotationType = "highlight" | "bookmark";
+export type AnnotationType = "highlight" | "underline" | "strikethrough" | "comment" | "bookmark";
 export type AnnotationColor = "yellow" | "green" | "blue" | "pink";
 
 export type AnnotationRead = {
@@ -620,7 +621,7 @@ export type AnnotationCreateInput = Partial<Pick<AnnotationRead, "id" | "message
   metadata?: Record<string, unknown>;
 };
 
-export type AnnotationUpdateInput = Partial<Pick<AnnotationRead, "color" | "comment_markdown" | "anchor_status" | "message_version_id" | "start_block_index" | "start_offset" | "end_block_index" | "end_offset" | "quote" | "prefix" | "suffix">> & {
+export type AnnotationUpdateInput = Partial<Pick<AnnotationRead, "annotation_type" | "color" | "comment_markdown" | "anchor_status" | "message_version_id" | "start_block_index" | "start_offset" | "end_block_index" | "end_offset" | "quote" | "prefix" | "suffix">> & {
   base_revision: number;
   metadata?: Record<string, unknown>;
 };

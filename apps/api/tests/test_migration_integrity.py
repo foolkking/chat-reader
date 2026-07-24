@@ -18,16 +18,17 @@ def test_alembic_current_matches_repository_head() -> None:
         capture_output=True,
         check=True,
     )
-    assert "20260723_0014" in result.stdout
+    assert "20260724_0015" in result.stdout
 
 
 def test_latest_migration_has_upgrade_and_downgrade() -> None:
-    migration = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "20260723_0014_offline_annotations.py"
+    migration = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "20260724_0015_annotation_types.py"
     source = migration.read_text(encoding="utf-8")
     assert "def upgrade()" in source
     assert "def downgrade()" in source
     assert '"conversation_annotations"' in source
-    assert '"offline_package_artifacts"' in source
+    assert "underline" in source
+    assert "strikethrough" in source
 
 
 def test_search_document_model_uses_postgresql_tsvector_type() -> None:

@@ -146,6 +146,19 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 ::highlight(annotation-green) { background: rgb(110 231 183 / 0.42); }
 ::highlight(annotation-blue) { background: rgb(125 211 252 / 0.42); }
 ::highlight(annotation-pink) { background: rgb(249 168 212 / 0.45); }
+::highlight(annotation-highlight-yellow) { background: rgb(253 224 71 / 0.48); }
+::highlight(annotation-highlight-green) { background: rgb(110 231 183 / 0.42); }
+::highlight(annotation-highlight-blue) { background: rgb(125 211 252 / 0.42); }
+::highlight(annotation-highlight-pink) { background: rgb(249 168 212 / 0.45); }
+::highlight(annotation-underline-yellow), ::highlight(annotation-comment-yellow) { text-decoration: underline 2px rgb(180 83 9); text-decoration-skip-ink: none; }
+::highlight(annotation-underline-green), ::highlight(annotation-comment-green) { text-decoration: underline 2px rgb(4 120 87); text-decoration-skip-ink: none; }
+::highlight(annotation-underline-blue), ::highlight(annotation-comment-blue) { text-decoration: underline 2px rgb(3 105 161); text-decoration-skip-ink: none; }
+::highlight(annotation-underline-pink), ::highlight(annotation-comment-pink) { text-decoration: underline 2px rgb(190 24 93); text-decoration-skip-ink: none; }
+::highlight(annotation-strikethrough-yellow) { text-decoration: line-through 2px rgb(180 83 9); }
+::highlight(annotation-strikethrough-green) { text-decoration: line-through 2px rgb(4 120 87); }
+::highlight(annotation-strikethrough-blue) { text-decoration: line-through 2px rgb(3 105 161); }
+::highlight(annotation-strikethrough-pink) { text-decoration: line-through 2px rgb(190 24 93); }
+.annotation-bookmark { box-shadow: inset 3px 0 0 var(--accent); }
 
 .reader-frame {
   container-type: inline-size;

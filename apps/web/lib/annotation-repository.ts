@@ -63,7 +63,7 @@ export const offlineAnnotationRepository: AnnotationRepository = {
       message_id: input.message_id ?? null,
       message_version_id: input.message_version_id ?? null,
       annotation_type: input.annotation_type,
-      color: input.color ?? (input.annotation_type === "highlight" ? "yellow" : null),
+      color: input.color ?? (input.annotation_type === "bookmark" ? null : "yellow"),
       start_block_index: input.start_block_index ?? null,
       start_offset: input.start_offset ?? null,
       end_block_index: input.end_block_index ?? null,

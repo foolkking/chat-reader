@@ -12,9 +12,19 @@ export function ConversationToc({ conversationId, activeMessageId, activeItems =
   const t = useTranslations();
   const { sectionTocMode, setSectionTocMode } = usePreferences();
   const [observedHeadingId, setObservedHeadingId] = useState<string | null>(null);
+  const [cachedItems, setCachedItems] = useState<Record<string, TocItem[]>>({});
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
-  const tocQuery = useQuery({ queryKey: ["toc", conversationId, activeMessageId], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: activeMessageId ?? undefined, limit: 200 }), enabled: items === undefined && Boolean(activeMessageId), staleTime: 30_000 });
-  const visibleItems = useMemo(() => { if (!activeMessageId) return []; const apiItems = items ?? tocQuery.data?.items ?? []; const currentApiItems = apiItems.filter((item) => item.message_id === activeMessageId); return currentApiItems.length ? currentApiItems : activeItems.filter((item) => item.message_id === activeMessageId); }, [activeItems, activeMessageId, items, tocQuery.data?.items]);
+  const tocQuery = useQuery({ queryKey: ["toc", conversationId, activeMessageId, mode, observerKey ?? "initial"], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: activeMessageId ?? undefined, limit: 200 }), enabled: items === undefined && Boolean(activeMessageId), staleTime: 30_000 });
+  useEffect(() => {
+    if (!activeMessageId || !tocQuery.data) return;
+    setCachedItems((current) => ({ ...current, [activeMessageId]: tocQuery.data.items }));
+  }, [activeMessageId, tocQuery.data]);
+  const visibleItems = useMemo(() => {
+    if (!activeMessageId) return [];
+    const apiItems = items ?? tocQuery.data?.items ?? cachedItems[activeMessageId] ?? [];
+    const currentApiItems = apiItems.filter((item) => item.message_id === activeMessageId);
+    return currentApiItems.length ? currentApiItems : activeItems.filter((item) => item.message_id === activeMessageId);
+  }, [activeItems, activeMessageId, cachedItems, items, tocQuery.data?.items]);
   const activeHeadingId = activeBlockId ?? observedHeadingId;
 
   useEffect(() => {
