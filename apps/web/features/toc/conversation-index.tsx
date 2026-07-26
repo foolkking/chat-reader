@@ -27,6 +27,7 @@ export function ConversationIndex({
   activeMessageId,
   ready = true,
   mode = "rail",
+  sourceKey = "remote",
   loadPage,
   onNavigate,
 }: {
@@ -35,6 +36,7 @@ export function ConversationIndex({
   activeMessageId?: string | null;
   ready?: boolean;
   mode?: "rail" | "sheet";
+  sourceKey?: string;
   loadPage?: (options: { offset?: number; limit?: number; anchorMessageId?: string }) => Promise<DialogueIndexResponse>;
   onNavigate?: (item: ConversationIndexItem) => void | Promise<void>;
 }) {
@@ -56,7 +58,7 @@ export function ConversationIndex({
   const desktopFullIndex = mode === "rail" && rangeMode !== "around";
 
   const indexQuery = useQuery({
-    queryKey: ["conversation-index", conversationId, desktopFullIndex ? "all" : activeMessageId ?? "start", mode],
+    queryKey: ["conversation-index", sourceKey, conversationId, desktopFullIndex ? "all" : activeMessageId ?? "start", mode],
     queryFn: () => loader({
       anchorMessageId: desktopFullIndex ? undefined : activeMessageId ?? undefined,
       offset: desktopFullIndex ? 0 : undefined,
@@ -64,13 +66,14 @@ export function ConversationIndex({
     }),
     enabled: messages === undefined && ready,
     staleTime: 60_000,
+    placeholderData: (previous) => previous,
   });
 
   useEffect(() => {
     setRemotePage(null);
     setRangeMode("around");
     setPanelState(mode === "sheet" ? "pinned" : "rail");
-  }, [conversationId, mode]);
+  }, [conversationId, mode, sourceKey]);
   useEffect(() => { if (indexQuery.data) setRemotePage(indexQuery.data); }, [indexQuery.data]);
 
   useEffect(() => () => {

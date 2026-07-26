@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Folder, GripVertical, Import, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Settings } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Folder, GripVertical, Import, MoreHorizontal, PanelLeftClose, Pencil, Plus, Settings } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,7 +32,7 @@ import type { ConversationListItem, ProjectConversationRead, ProjectRead } from 
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
 import { PreferencesPanel } from "../../components/preferences-panel";
-import { ResizeHandle, useResizablePane } from "../../components/resizable-pane";
+import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
 import { useTranslations } from "../../components/preferences-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import { useImportDialog } from "../../components/import-dialog-provider";
@@ -68,12 +68,6 @@ export function ProjectSidebar({
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | null>(null);
-  const sidebarSize = useResizablePane({
-    storageKey: "chat-reader:sidebar-width",
-    defaultSize: 288,
-    minSize: 224,
-    maxSize: () => Math.min(448, Math.max(224, window.innerWidth * 0.42)),
-  });
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
@@ -199,21 +193,15 @@ export function ProjectSidebar({
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={(event) => void handleDragEnd(event)} onDragCancel={() => setActiveDrag(null)}>
       {showMobileTrigger ? <button type="button" aria-label={t("openSidebar")} data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-ui bg-surface text-sm font-semibold text-primary shadow-sm md:hidden">CR</button> : null}
       <ImportTaskMonitor placement="mobile" />
-      {showMobileDrawer ? (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button type="button" aria-label={t("closeSidebar")} className="absolute inset-0 bg-black/30" onClick={() => setShowMobileDrawer(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-[86vw] max-w-[20rem] flex-col overflow-hidden border-r border-ui bg-sidebar text-primary shadow-2xl">{content}</aside>
-        </div>
-      ) : null}
-      {readerMode && !desktopExpanded ? (
-        <aside className="hidden h-screen w-14 shrink-0 flex-col items-center border-r border-ui bg-sidebar py-3 text-primary md:flex">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-semibold text-white">CR</div>
-          <button type="button" onClick={() => setReaderSidebarExpanded(true)} className="mt-4 flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-surface hover:text-primary" aria-label={t("openSidebar")} title={t("openSidebar")}><PanelLeftOpen className="h-5 w-5" /></button>
-          {currentProjectId ? <Folder className="mt-4 h-4 w-4 text-accent" aria-hidden="true" /> : null}
-        </aside>
-      ) : (
-        <aside className="relative hidden h-screen shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary md:flex" style={{ width: sidebarSize.size }}>{content}<ResizeHandle side="right" label="Resize sidebar" onPointerDown={(event) => sidebarSize.startResize(event)} onDoubleClick={sidebarSize.resetSize} /></aside>
-      )}
+      <ReaderSidebarFrame
+        desktopExpanded={!readerMode || desktopExpanded}
+        onDesktopExpand={() => setReaderSidebarExpanded(true)}
+        mobileOpen={showMobileDrawer}
+        onMobileClose={() => setShowMobileDrawer(false)}
+        railExtra={currentProjectId ? <Folder className="mt-4 h-4 w-4 text-accent" aria-hidden="true" /> : null}
+      >
+        {content}
+      </ReaderSidebarFrame>
       <DragOverlay>{activeDrag ? <div className="max-w-[15rem] truncate rounded-lg border border-[var(--accent)] bg-raised px-3 py-2 text-sm text-primary shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
     </DndContext>
   );

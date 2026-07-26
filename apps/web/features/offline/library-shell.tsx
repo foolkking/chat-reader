@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Download, FolderTree, HardDrive, Library, LoaderCircle, MessagesSquare, RefreshCw, Search, Trash2, Wifi, WifiOff, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, FolderTree, HardDrive, Library, LoaderCircle, MessagesSquare, PanelLeftClose, RefreshCw, Search, Settings, Trash2, Wifi, WifiOff, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ConversationReader } from "../conversations/conversation-reader";
@@ -11,10 +11,13 @@ import { offlineReaderDataSource } from "../../lib/reader-data-source";
 import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
 import { getOfflineShellStatus, prepareOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../../lib/offline-shell";
 import type { OfflineCatalogResponse } from "../../lib/types";
+import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
+import { PreferencesPanel } from "../../components/preferences-panel";
 
 type DownloadState = { key: string; progress: number; label: string } | null;
 type LibraryProjectGroup = { id: string | null; name: string; conversations: OfflineConversationRecord[]; total: number };
 const APP_TITLE = "chat-reader";
+const LAST_LIBRARY_CONVERSATION_KEY = "chat-reader:last-library-conversation";
 
 export function LibraryShell() {
   const router = useRouter();
@@ -27,6 +30,7 @@ export function LibraryShell() {
   const [error, setError] = useState<string | null>(null);
   const [storage, setStorage] = useState<{ persisted: boolean; quota: number | null; usage: number | null } | null>(null);
   const [tab, setTab] = useState<"conversations" | "projects">("conversations");
+  const [desktopSidebarExpanded, setDesktopSidebarExpanded] = useState(true);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OfflineSearchDocument[]>([]);
   const refreshStartedRef = useRef(false);
@@ -110,7 +114,10 @@ export function LibraryShell() {
       }),
     ];
     await initializeOfflineSearch([...documents, ...privateDocuments]);
-    if (!selectedId && fallback[0]) setSelectedId(fallback[0].id);
+    if (!selectedId && fallback[0]) {
+      const rememberedId = window.localStorage.getItem(LAST_LIBRARY_CONVERSATION_KEY);
+      setSelectedId(fallback.find((item) => item.id === rememberedId)?.id ?? fallback[0].id);
+    }
     const estimate: StorageEstimate | undefined = await navigator.storage?.estimate?.().catch(() => undefined);
     const persisted = await navigator.storage?.persisted?.().catch(() => false);
     setStorage({ persisted: persisted ?? false, quota: estimate?.quota ?? null, usage: estimate?.usage ?? null });
@@ -126,6 +133,14 @@ export function LibraryShell() {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     };
+  }, []);
+  useEffect(() => {
+    setDesktopSidebarExpanded(window.localStorage.getItem("chat-reader:reader-sidebar-expanded") !== "false");
+  }, []);
+
+  const setLibrarySidebarExpanded = useCallback((expanded: boolean) => {
+    setDesktopSidebarExpanded(expanded);
+    window.localStorage.setItem("chat-reader:reader-sidebar-expanded", String(expanded));
   }, []);
 
   const runDownload = useCallback(async (
@@ -191,11 +206,14 @@ export function LibraryShell() {
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  function openConversation(conversationId: string, messageId?: string | null) {
+  function openConversation(conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) {
     setSelectedId(conversationId);
+    window.localStorage.setItem(LAST_LIBRARY_CONVERSATION_KEY, conversationId);
     setMobileOpen(false);
     const params = new URLSearchParams({ conversationId });
     if (messageId) params.set("messageId", messageId);
+    if (blockIndex !== null && blockIndex !== undefined) params.set("blockIndex", String(blockIndex));
+    if (characterOffset !== null && characterOffset !== undefined) params.set("characterOffset", String(characterOffset));
     router.replace(`/library?${params.toString()}`);
   }
 
@@ -203,6 +221,7 @@ export function LibraryShell() {
     await removeOfflineConversations(ids);
     if (selectedId && ids.includes(selectedId)) {
       setSelectedId(null);
+      window.localStorage.removeItem(LAST_LIBRARY_CONVERSATION_KEY);
       router.replace("/library");
     }
     await reloadLocal();
@@ -243,6 +262,7 @@ export function LibraryShell() {
       offlineShellStatus={offlineShellStatus}
       error={error ?? (catalogQuery.isError ? catalogQuery.error.message : null)}
       onClose={() => setMobileOpen(false)}
+      onCollapse={() => setLibrarySidebarExpanded(false)}
       onOpen={openConversation}
       onDownload={(scope, id) => { setError(null); void runDownload(scope, id).catch((reason: Error) => { setError(reason.message); setDownload(null); }); }}
       onRetryShell={() => { setError(null); void prepareOfflineShell({ force: true }).catch((reason: Error) => setError(reason.message)); }}
@@ -250,7 +270,7 @@ export function LibraryShell() {
     />
   );
   const readerContent = selectedId && selectedConversation ? (
-    <ConversationReader key={`${selectedId}:${searchParams.get("messageId") ?? ""}:${searchParams.get("blockIndex") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={() => setMobileOpen(true)} />
+    <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams.get("messageId") ?? ""}:${searchParams.get("blockIndex") ?? ""}:${searchParams.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={() => setMobileOpen(true)} />
   ) : requestedCatalogConversation ? (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Library className="h-10 w-10 text-accent" /><h1 className="mt-4 max-w-xl text-xl font-semibold">{requestedCatalogConversation.display_title}</h1><p className="mt-2 max-w-sm text-sm text-secondary">该对话尚未下载到离线资料库。联网后可从左侧下载，下载完成后会在这里离线阅读。</p><button type="button" disabled={!online || Boolean(download)} onClick={() => { setError(null); void runDownload("conversation", requestedCatalogConversation.id).catch((reason: Error) => { setError(reason.message); setDownload(null); }); }} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />下载离线副本</button><button type="button" onClick={() => setMobileOpen(true)} className="mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary md:hidden">打开资料库</button></div>
   ) : selectedId ? (
@@ -261,8 +281,15 @@ export function LibraryShell() {
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <aside className="hidden h-full w-[clamp(17rem,22vw,22rem)] shrink-0 border-r border-ui bg-sidebar md:block">{sidebar}</aside>
-      {mobileOpen ? <div className="fixed inset-0 z-[80] md:hidden"><button type="button" className="absolute inset-0 bg-black/35" aria-label="关闭资料库" onClick={() => setMobileOpen(false)} /><aside className="absolute inset-y-0 left-0 w-[88vw] max-w-[22rem] border-r border-ui bg-sidebar shadow-2xl">{sidebar}</aside></div> : null}
+      <ReaderSidebarFrame
+        desktopExpanded={desktopSidebarExpanded}
+        onDesktopExpand={() => setLibrarySidebarExpanded(true)}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+        railExtra={<Library className="mt-4 h-4 w-4 text-accent" aria-hidden="true" />}
+      >
+        {sidebar}
+      </ReaderSidebarFrame>
       <section className="min-w-0 flex-1">
         {readerContent}
       </section>
@@ -276,7 +303,7 @@ function formatLibraryConversationTitle(conversation: { display_title: string; p
   return project ? `${project} / ${title}` : title;
 }
 
-function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTab, groupedProjects, query, setQuery, searchResults, download, storage, offlineShellStatus, error, onClose, onOpen, onDownload, onRetryShell, onRemove }: {
+function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTab, groupedProjects, query, setQuery, searchResults, download, storage, offlineShellStatus, error, onClose, onCollapse, onOpen, onDownload, onRetryShell, onRemove }: {
   online: boolean;
   catalog?: OfflineCatalogResponse;
   conversations: OfflineConversationRecord[];
@@ -292,13 +319,15 @@ function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTa
   offlineShellStatus: OfflineShellStatus;
   error: string | null;
   onClose: () => void;
-  onOpen: (conversationId: string, messageId?: string | null) => void;
+  onCollapse: () => void;
+  onOpen: (conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) => void;
   onDownload: (scope: "conversation" | "project" | "all", id?: string) => void;
   onRetryShell: () => void;
   onRemove: (ids: string[]) => void;
 }) {
+  const [showPreferences, setShowPreferences] = useState(false);
   return <div className="flex h-full min-h-0 flex-col">
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-xs font-bold text-white">CR</span><div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">离线资料库</h1><p className="flex items-center gap-1 text-xs text-secondary">{online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{online ? "已联网" : "离线阅读"}</p></div><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary md:hidden" aria-label="关闭"><X className="h-5 w-5" /></button></header>
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-xs font-bold text-white">CR</span><div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">离线资料库</h1><p className="flex items-center gap-1 text-xs text-secondary">{online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{online ? "已联网" : "离线阅读"}</p></div><button type="button" onClick={onCollapse} className="hidden h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-surface md:flex" aria-label="收起侧栏" title="收起侧栏"><PanelLeftClose className="h-5 w-5" /></button><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary md:hidden" aria-label="关闭"><X className="h-5 w-5" /></button></header>
     <div className="shrink-0 space-y-3 border-b border-ui p-3">
       <label className="flex min-h-10 items-center gap-2 rounded-md border border-ui bg-surface px-3"><Search className="h-4 w-4 text-secondary" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="搜索本地正文、代码与批注" /></label>
       <div className="grid grid-cols-2 rounded-md bg-subtle p-1"><button type="button" onClick={() => setTab("conversations")} className={`min-h-9 rounded px-2 text-sm ${tab === "conversations" ? "bg-surface font-medium shadow-sm" : "text-secondary"}`}><MessagesSquare className="mr-1 inline h-4 w-4" />对话</button><button type="button" onClick={() => setTab("projects")} className={`min-h-9 rounded px-2 text-sm ${tab === "projects" ? "bg-surface font-medium shadow-sm" : "text-secondary"}`}><FolderTree className="mr-1 inline h-4 w-4" />项目</button></div>
@@ -311,7 +340,7 @@ function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTa
       {query ? <SearchResultList items={searchResults} conversations={conversations} onOpen={onOpen} /> : tab === "conversations" ? <ConversationRows conversations={conversations} selectedId={selectedId} catalog={catalog} onOpen={onOpen} onDownload={onDownload} onRemove={onRemove} /> : <ProjectRows projects={groupedProjects} catalog={catalog} onOpen={onOpen} onDownload={onDownload} onRemove={onRemove} />}
       {!conversations.length && !query ? <p className="px-3 py-8 text-center text-sm text-secondary">尚未下载资料</p> : null}
     </div>
-    <footer className="shrink-0 border-t border-ui px-4 py-3 text-xs text-secondary"><p className="flex items-center gap-2"><HardDrive className="h-4 w-4" />{storage?.usage !== null && storage?.usage !== undefined ? `${formatBytes(storage.usage)} / ${formatBytes(storage.quota ?? 0)}` : "浏览器本地存储"}</p><p className="mt-1">{storage?.persisted ? "已启用持久化存储" : "存储可能被浏览器清理；清除站点数据会删除本地资料"}</p>{online && selectedId ? <a href={`/conversations/${selectedId}`} className="mt-2 inline-flex font-medium text-accent hover:underline">前往服务器创建 .cr 备份</a> : null}</footer>
+    <footer className="shrink-0 border-t border-ui px-3 py-3 text-xs text-secondary"><button type="button" onClick={() => setShowPreferences((value) => !value)} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-secondary hover:bg-surface"><Settings className="h-4 w-4" />外观与语言</button>{showPreferences ? <div className="mt-2 rounded-lg border border-ui bg-raised p-3"><PreferencesPanel /></div> : null}<div className="px-1 pt-2"><p className="flex items-center gap-2"><HardDrive className="h-4 w-4" />{storage?.usage !== null && storage?.usage !== undefined ? `${formatBytes(storage.usage)} / ${formatBytes(storage.quota ?? 0)}` : "浏览器本地存储"}</p><p className="mt-1">{storage?.persisted ? "已启用持久化存储" : "存储可能被浏览器清理；清除站点数据会删除本地资料"}</p>{online && selectedId ? <a href={`/conversations/${selectedId}`} className="mt-2 inline-flex font-medium text-accent hover:underline">前往服务器创建 .cr 备份</a> : null}</div></footer>
   </div>;
 }
 
@@ -354,9 +383,9 @@ function ProjectRows({ projects, catalog, onOpen, onDownload, onRemove }: { proj
   })}</div>;
 }
 
-function SearchResultList({ items, conversations, onOpen }: { items: OfflineSearchDocument[]; conversations: OfflineConversationRecord[]; onOpen: (conversationId: string, messageId?: string | null) => void }) {
+function SearchResultList({ items, conversations, onOpen }: { items: OfflineSearchDocument[]; conversations: OfflineConversationRecord[]; onOpen: (conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) => void }) {
   const titles = new Map(conversations.map((item) => [item.id, item.display_title]));
-  return <div className="space-y-1">{items.map((item) => <button key={item.id} type="button" onClick={() => onOpen(item.conversation_id, item.message_id)} className="w-full rounded-md px-3 py-2 text-left hover:bg-surface"><p className="truncate text-sm font-medium">{item.title || titles.get(item.conversation_id) || "对话"}</p><p className="mt-1 line-clamp-3 text-xs leading-5 text-secondary">{item.plain_text.slice(0, 240)}</p></button>)}{!items.length ? <p className="px-3 py-8 text-center text-sm text-secondary">无本地结果</p> : null}</div>;
+  return <div className="space-y-1">{items.map((item) => <button key={item.id} type="button" onClick={() => onOpen(item.conversation_id, item.message_id, metadataNumber(item.metadata, "block_index"), metadataNumber(item.metadata, "character_offset"))} className="w-full rounded-md px-3 py-2 text-left hover:bg-surface"><p className="truncate text-sm font-medium">{item.title || titles.get(item.conversation_id) || "对话"}</p><p className="mt-1 line-clamp-3 text-xs leading-5 text-secondary">{item.plain_text.slice(0, 240)}</p></button>)}{!items.length ? <p className="px-3 py-8 text-center text-sm text-secondary">无本地结果</p> : null}</div>;
 }
 
 function estimateScope(catalog: OfflineCatalogResponse, scope: "conversation" | "project" | "all", id?: string): number {
@@ -379,3 +408,11 @@ function formatDate(value: string | null): string {
 }
 
 function delay(milliseconds: number): Promise<void> { return new Promise((resolve) => window.setTimeout(resolve, milliseconds)); }
+
+function metadataNumber(metadata: Record<string, unknown>, key: string): number | null {
+  const value = metadata[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}

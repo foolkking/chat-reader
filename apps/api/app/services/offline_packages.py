@@ -484,7 +484,7 @@ def _search_payload(document: SearchDocument) -> dict[str, Any]:
         "search_text": document.search_text,
         "order_key": document.order_key,
         "turn_index": document.turn_index,
-        "metadata": {},
+        "metadata": document.metadata_ or {},
     }
 
 

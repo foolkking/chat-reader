@@ -9,7 +9,7 @@ import {
   saveReadingPositionKeepalive,
   splitConversation,
 } from "../../lib/api";
-import { remoteReaderDataSource, type ReaderDataSource } from "../../lib/reader-data-source";
+import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
 import type { ConversationDetail, LoadedMessageWindow, MessageListItem, MessageWindowResponse, NavigateTarget, NavigationResult, NeighborhoodExpansionState, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollDirection, TocItem } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
 import { ProjectSidebar } from "../projects/project-sidebar";
@@ -88,7 +88,9 @@ export function ConversationReader({
     error: null,
   });
   const [initialPaintReady, setInitialPaintReady] = useState(false);
-  const annotationRepository = libraryMode ? offlineAnnotationRepository : remoteAnnotationRepository;
+  const isOffline = dataSource.mode === "offline";
+  const canManageCanonical = dataSource.capabilities.canonicalManagement;
+  const annotationRepository = isOffline ? offlineAnnotationRepository : remoteAnnotationRepository;
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadPreviousSentinelRef = useRef<HTMLDivElement | null>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -107,6 +109,7 @@ export function ConversationReader({
   const navigationLockUntilRef = useRef(0);
   const restoreAttemptedRef = useRef(false);
   const restoreInProgressRef = useRef(false);
+  const readingRestoreTokenRef = useRef(0);
   const saveTimerRef = useRef<number | null>(null);
   const lastSavedSignatureRef = useRef("");
   const messagesRef = useRef<MessageListItem[]>([]);
@@ -164,7 +167,7 @@ export function ConversationReader({
   const canLoadInitialWindow = Boolean(targetMessageId) || positionQuery.isSuccess || positionQuery.isError;
 
   const windowQuery = useQuery({
-    queryKey: ["message-window", conversationId, "initial", initialAnchorMessageId],
+    queryKey: ["message-window", dataSource.mode, conversationId, conversationQuery.data?.offline_revision ?? "initial", initialAnchorMessageId],
     queryFn: () =>
       dataSource.getMessageWindow(conversationId, {
         includeBlocks: false,
@@ -174,7 +177,7 @@ export function ConversationReader({
         anchorBefore: ANCHOR_BEFORE,
         contentMode: "preview",
       }),
-    enabled: canLoadInitialWindow,
+    enabled: canLoadInitialWindow && conversationQuery.isSuccess,
   });
 
   useEffect(() => {
@@ -261,6 +264,7 @@ export function ConversationReader({
     setInitialPaintReady(false);
     restoreAttemptedRef.current = false;
     restoreInProgressRef.current = false;
+    readingRestoreTokenRef.current += 1;
     lastSavedSignatureRef.current = "";
   }, [conversationId, targetMessageId]);
 
@@ -353,7 +357,7 @@ export function ConversationReader({
       loadingPreviousRef.current = false;
       setEdgeLoading((currentLoading) => currentLoading === "previous" ? null : currentLoading);
     }
-  }, [applyLoadedWindow, conversationId]);
+  }, [applyLoadedWindow, conversationId, dataSource]);
 
   const loadNextWindow = useCallback(async () => {
     const root = scrollContainerRef.current;
@@ -392,7 +396,7 @@ export function ConversationReader({
       loadingNextRef.current = false;
       setEdgeLoading((currentLoading) => currentLoading === "next" ? null : currentLoading);
     }
-  }, [applyLoadedWindow, conversationId]);
+  }, [applyLoadedWindow, conversationId, dataSource]);
 
   useEffect(() => {
     loadPreviousActionRef.current = () => void loadPreviousWindow();
@@ -400,7 +404,10 @@ export function ConversationReader({
   }, [loadNextWindow, loadPreviousWindow]);
 
   const navigateToTarget = useCallback(
-    async ({ messageId, blockIndex, characterOffset, endCharacterOffset, quote, alignmentOffset, allowMessageFallback }: NavigateTarget): Promise<NavigationResult> => {
+    async (target: NavigateTarget): Promise<NavigationResult> => {
+      const { messageId, blockIndex, characterOffset, endCharacterOffset, quote, prefix, suffix, alignmentOffset, allowMessageFallback } = target;
+      const targetFirst = target.source === "annotation" || target.preferTocPipeline || characterOffset !== undefined;
+      const resolvedAlignmentOffset = alignmentOffset ?? (targetFirst ? ACTIVE_READING_OFFSET : 12);
       neighborhoodExpansionRef.current = {
         active: false,
         generation: neighborhoodExpansionRef.current.generation + 1,
@@ -409,6 +416,10 @@ export function ConversationReader({
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
       navigationInProgressRef.current = true;
+      if (targetFirst) {
+        restoreAttemptedRef.current = true;
+        readingRestoreTokenRef.current += 1;
+      }
       setNavigationStatus("loading");
       const generation = windowGenerationRef.current + 1;
       windowGenerationRef.current = generation;
@@ -422,10 +433,34 @@ export function ConversationReader({
       setActiveMessageId(messageId);
       setActiveBlockId(blockId);
       setTargetHighlightId(blockId ?? messageIdDom);
+      setNavigationStage(scrollContainerRef.current, targetFirst ? "loading-target-context" : "loading-window");
 
       try {
         let targetPage: MessageWindowResponse | null = null;
-        if (!document.getElementById(messageIdDom)) {
+        let knownMessage: MessageListItem | undefined;
+        let targetBlocks: RenderBlockRead[] | null = null;
+
+        if (targetFirst) {
+          let targetContext: ReaderTargetContext;
+          try {
+            targetContext = await dataSource.getTargetContext(conversationId, target);
+          } catch {
+            if (navigationTokenRef.current === token) setNavigationStatus("failed");
+            return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-context-failed" };
+          }
+          if (navigationTokenRef.current !== token) {
+            return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
+          }
+          targetPage = targetContext.messageWindow;
+          knownMessage = targetContext.targetMessage;
+          targetBlocks = targetContext.targetBlocks;
+          setNavigationStage(scrollContainerRef.current, "target-context-ready");
+          const sourceKey = readerCacheIdentity(dataSource, conversationQuery.data);
+          for (const mode of ["rail", "sheet"] as const) {
+            queryClient.setQueryData(["conversation-index", sourceKey, conversationId, messageId, mode], targetContext.dialogueIndex);
+            queryClient.setQueryData(["toc", sourceKey, conversationId, messageId, mode], targetContext.toc);
+          }
+        } else if (!document.getElementById(messageIdDom)) {
           const page = await dataSource.getMessageWindow(conversationId, {
             includeBlocks: false,
             limit: PAGE_SIZE,
@@ -439,22 +474,23 @@ export function ConversationReader({
           targetPage = page;
         }
 
-        const knownMessage = targetPage?.items.find((message) => message.id === messageId) ??
-          loadedWindowRef.current.items.find((message) => message.id === messageId) ??
-          (await dataSource.getMessageWindow(conversationId, {
-            includeBlocks: false,
-            limit: 1,
-            anchorMessageId: messageId,
-            anchorBefore: 0,
-            contentMode: "preview",
-          })).items.find((message) => message.id === messageId);
+        knownMessage = knownMessage ?? targetPage?.items.find((message) => message.id === messageId) ??
+          loadedWindowRef.current.items.find((message) => message.id === messageId);
+        if (!knownMessage) {
+          knownMessage = (await dataSource.getMessageWindow(conversationId, {
+              includeBlocks: false,
+              limit: 1,
+              anchorMessageId: messageId,
+              anchorBefore: 0,
+              contentMode: "preview",
+            })).items.find((message) => message.id === messageId);
+        }
         if (!knownMessage) {
           setNavigationStatus("failed");
           return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-not-mounted" };
         }
 
-        let targetBlocks: RenderBlockRead[] | null = null;
-        if (blockIndex !== undefined) {
+        if (!targetFirst && blockIndex !== undefined) {
           const cachedBlocks = blockCacheRef.current[messageId] ?? [];
           const contextStart = Math.max(0, blockIndex - 20);
           const contextEnd = Math.min(Math.max(knownMessage.block_count - 1, 0), blockIndex + 20);
@@ -494,6 +530,7 @@ export function ConversationReader({
           setBlockCache(nextBlockCache);
           setExpandedHeavyMessageIds((current) => blockIndex === undefined ? current : new Set(current).add(messageId));
           applyLoadedWindow(replaceLoadedWindow(targetPage, generation));
+          setNavigationStage(scrollContainerRef.current, "target-window-committed");
         } else if (targetBlocks) {
           blockCacheRef.current = nextBlockCache;
           setBlockCache(nextBlockCache);
@@ -502,18 +539,30 @@ export function ConversationReader({
           setExpandedHeavyMessageIds((current) => new Set(current).add(messageId));
         }
 
-        const result = await navigateMountedTarget({
+        const targetBlockAvailable = blockIndex === undefined ||
+          messageHasInlineBlock(knownMessage, blockIndex) ||
+          Boolean(nextBlockCache[messageId]?.some((block) => block.block_index === blockIndex));
+        if (!targetBlockAvailable) setTargetHighlightId(messageIdDom);
+        const resolvedTargetId = blockId && targetBlockAvailable ? blockId : messageIdDom;
+        setNavigationStage(scrollContainerRef.current, `aligning:${resolvedTargetId}`);
+        const mountedResult = await navigateMountedTarget({
           root: scrollContainerRef.current,
-          targetId: blockId ?? messageIdDom,
-          fallbackId: blockId ? messageIdDom : undefined,
+          targetId: resolvedTargetId,
+          fallbackId: resolvedTargetId === blockId ? messageIdDom : undefined,
           tokenIsCurrent: () => navigationTokenRef.current === token,
-          offset: alignmentOffset ?? 12,
-          characterOffset: blockId ? characterOffset : undefined,
-          endCharacterOffset: blockId ? endCharacterOffset : undefined,
-          quote: blockId ? quote : null,
+          offset: resolvedAlignmentOffset,
+          characterOffset: resolvedTargetId === blockId ? characterOffset : undefined,
+          endCharacterOffset: resolvedTargetId === blockId ? endCharacterOffset : undefined,
+          quote: resolvedTargetId === blockId ? quote : null,
+          prefix: resolvedTargetId === blockId ? prefix : null,
+          suffix: resolvedTargetId === blockId ? suffix : null,
           timeoutMs: 8000,
           allowFallback: allowMessageFallback ?? Boolean(quote || characterOffset !== undefined),
         });
+        const result: NavigationResult = mountedResult.ok && blockId && !targetBlockAvailable
+          ? { ...mountedResult, fallback: true, reason: "block-not-found" }
+          : mountedResult;
+        setNavigationStage(scrollContainerRef.current, result.ok ? "resolved" : `failed:${result.reason ?? "unknown"}`);
         if (result.ok) {
           setNavigationStatus(result.fallback ? "stale" : "idle");
           setActiveMessageId(messageId);
@@ -521,14 +570,13 @@ export function ConversationReader({
           if (characterOffset === undefined) {
             await restoreScrollAnchor({
               root: scrollContainerRef.current,
-              anchor: { targetId: result.targetId, offset: alignmentOffset ?? 12 },
+              anchor: { targetId: result.targetId, offset: resolvedAlignmentOffset },
               tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
             });
           }
           window.setTimeout(() => {
             if (navigationTokenRef.current === token) {
               setTargetHighlightId(null);
-              setActiveBlockId(null);
               setNavigationStatus("idle");
             }
           }, 2000);
@@ -537,13 +585,17 @@ export function ConversationReader({
         }
         return result;
       } catch {
+        setNavigationStage(scrollContainerRef.current, "failed:load-failed");
         setNavigationStatus("failed");
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "load-failed" };
       } finally {
-        if (navigationTokenRef.current === token) navigationInProgressRef.current = false;
+        if (navigationTokenRef.current === token) {
+          navigationInProgressRef.current = false;
+          navigationLockUntilRef.current = Date.now() + 1200;
+        }
       }
     },
-    [applyLoadedWindow, conversationId, dataSource],
+    [applyLoadedWindow, conversationId, conversationQuery.data, dataSource, queryClient],
   );
 
   useEffect(() => {
@@ -626,6 +678,8 @@ export function ConversationReader({
       return;
     }
     restoreInProgressRef.current = true;
+    const restoreToken = readingRestoreTokenRef.current + 1;
+    readingRestoreTokenRef.current = restoreToken;
     const anchor = position.anchor_data ?? {};
     const headingBlockIndex = numberOrNull(anchor.heading_block_index);
     const blockIndex = position.block_index;
@@ -639,6 +693,7 @@ export function ConversationReader({
     );
     void (async () => {
       for (const candidate of candidates) {
+        if (readingRestoreTokenRef.current !== restoreToken) return;
         const alignmentOffset = candidate === undefined
           ? ACTIVE_READING_OFFSET
           : ACTIVE_READING_OFFSET - (isBlockRelative ? position.scroll_offset : 0);
@@ -648,12 +703,13 @@ export function ConversationReader({
           alignmentOffset,
           source: "message-action",
         });
+        if (readingRestoreTokenRef.current !== restoreToken) return;
         if (result.ok) {
           return;
         }
       }
     })().finally(() => {
-      restoreInProgressRef.current = false;
+      if (readingRestoreTokenRef.current === restoreToken) restoreInProgressRef.current = false;
     });
   }, [navigateToTarget, positionQuery.data, positionQuery.isError, positionQuery.isSuccess, targetMessageId, windowQuery.isSuccess]);
 
@@ -777,7 +833,7 @@ export function ConversationReader({
     }
 
     const persist = (keepalive = false) => {
-      if (!restoreAttemptedRef.current || restoreInProgressRef.current) {
+      if (!restoreAttemptedRef.current || restoreInProgressRef.current || navigationInProgressRef.current) {
         return;
       }
       const payload = captureReadingPosition(root, messagesRef.current);
@@ -826,7 +882,7 @@ export function ConversationReader({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pagehide", onPageHide);
     };
-  }, [conversationId, initialPaintReady]);
+  }, [conversationId, dataSource, initialPaintReady]);
 
   const conversation = conversationQuery.data;
   const loadingProgress = initialPaintReady
@@ -868,9 +924,9 @@ export function ConversationReader({
     setLoadedWindow(emptyWindow);
     initialWindowAppliedRef.current = false;
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["message-window", conversationId] }),
-      queryClient.invalidateQueries({ queryKey: ["toc", conversationId] }),
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] }),
+      queryClient.invalidateQueries({ queryKey: ["message-window", dataSource.mode, conversationId] }),
+      queryClient.invalidateQueries({ queryKey: ["toc", readerSourceKey, conversationId] }),
+      queryClient.invalidateQueries({ queryKey: ["conversation", dataSource.mode, conversationId] }),
     ]);
   }
 
@@ -1153,7 +1209,7 @@ export function ConversationReader({
   }
 
   if (conversationQuery.isLoading) {
-    return <ReaderLoadingShell progress={loadingProgress} />;
+    return <ReaderLoadingShell progress={loadingProgress} embedded={libraryMode} />;
   }
 
   if (conversationQuery.isError) {
@@ -1163,15 +1219,16 @@ export function ConversationReader({
   if (!conversation) {
     return <ReaderState title={t("conversationUnavailable")} detail={t("noConversationPayload")} />;
   }
+  const readerSourceKey = readerCacheIdentity(dataSource, conversation);
 
   const headerActions: ReaderHeaderAction[] = [
     {
       id: "search",
       label: t("search"),
       icon: Search,
-      onSelect: () => libraryMode ? onOpenLibrary?.() : openUtilityPanel("search"),
+      onSelect: () => openUtilityPanel("search"),
     },
-    ...(!libraryMode ? [{
+    ...(dataSource.capabilities.share ? [{
       id: "offline-library",
       label: "Offline library",
       icon: Library,
@@ -1204,25 +1261,25 @@ export function ConversationReader({
       icon: MessageSquareText,
       onSelect: () => setAnnotationsOpen(true),
     },
-    ...(!libraryMode ? [{
+    ...(dataSource.capabilities.share ? [{
       id: "share",
       label: t("share"),
       icon: Share2,
       onSelect: () => openUtilityPanel("share"),
     } as ReaderHeaderAction] : []),
-    ...(!libraryMode ? [{
+    ...(dataSource.capabilities.export ? [{
       id: "export",
       label: t("export"),
       icon: Download,
       onSelect: () => openUtilityPanel("export"),
     } as ReaderHeaderAction] : []),
-    ...(!libraryMode && selectedIds.length >= 2 ? [{
+    ...(canManageCanonical && selectedIds.length >= 2 ? [{
       id: "merge-selected",
       label: t("mergeSelected"),
       icon: Merge,
       onSelect: () => void mergeSelectedMessages(),
     }] : []),
-    ...(!libraryMode && selectedOrderedIds.length > 0 ? [{
+    ...(canManageCanonical && selectedOrderedIds.length > 0 ? [{
       id: "split-selected",
       label: t("splitToNewConversation"),
       icon: Scissors,
@@ -1241,14 +1298,14 @@ export function ConversationReader({
   );
 
   const navigationContent = navigationTab === "dialogue" ? (
-    <ConversationIndex conversationId={conversationId} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={async (item) => {
+    <ConversationIndex conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
       const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
       if (result.ok) setUtilityPanel(null);
     }} />
   ) : (
-    <ConversationToc conversationId={conversationId} activeMessageId={activeMessageId} activeItems={activeTocItems} activeBlockId={activeBlockId} observerKey={tocObserverKey} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
+    <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} activeItems={activeTocItems} activeBlockId={activeBlockId} observerKey={tocObserverKey} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
       const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, source: "section-toc" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
@@ -1258,7 +1315,7 @@ export function ConversationReader({
 
   return (
     <main className={`flex overflow-hidden bg-page text-primary ${libraryMode ? "h-full w-full" : "h-screen w-screen"}`}>
-      {!libraryMode ? <ProjectSidebar
+      {!isOffline ? <ProjectSidebar
         currentProjectId={projectContextId}
         readerMode
         mobileOpenSignal={mobileSidebarOpenSignal}
@@ -1292,7 +1349,7 @@ export function ConversationReader({
           <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
             <button
               type="button"
-              onClick={() => libraryMode ? onOpenLibrary?.() : setMobileSidebarOpenSignal((value) => value + 1)}
+              onClick={() => isOffline ? onOpenLibrary?.() : setMobileSidebarOpenSignal((value) => value + 1)}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
               aria-label={t("openSidebar")}
               title={t("openSidebar")}
@@ -1335,6 +1392,7 @@ export function ConversationReader({
           <ResponsiveReaderFrame
             index={<ConversationIndex
                   conversationId={conversationId}
+                  sourceKey={readerSourceKey}
                   activeMessageId={activeMessageId}
                   ready={canLoadInitialWindow}
                   loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)}
@@ -1369,10 +1427,10 @@ export function ConversationReader({
                       key={message.id}
                       message={message}
                       onChanged={refreshReader}
-                      readOnly={libraryMode}
+                      readOnly={!canManageCanonical}
                       highlightTargetId={targetHighlightId}
                       selected={selectedMessageIds.has(message.id)}
-                      onSelectedChange={libraryMode ? undefined : (selected) => {
+                      onSelectedChange={!canManageCanonical ? undefined : (selected) => {
                         setSelectedMessageIds((current) => {
                           const next = new Set(current);
                           if (selected) {
@@ -1419,6 +1477,7 @@ export function ConversationReader({
             toc={<div className="h-full">
                 <ConversationToc
                   conversationId={conversationId}
+                  sourceKey={readerSourceKey}
                   activeMessageId={activeMessageId}
                   activeItems={activeTocItems}
                   activeBlockId={activeBlockId}
@@ -1446,7 +1505,7 @@ export function ConversationReader({
         {navigationContent}
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "search"} onOpenChange={(open) => { if (!open) setUtilityPanel(null); }} title={t("search")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("search")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <ConversationSearchPanel conversationId={conversation.id} onNavigate={({ messageId, blockIndex }) => navigateToTarget({ messageId, blockIndex, source: "search" })} onClose={() => setUtilityPanel(null)} showHeader={false} />
+        <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setUtilityPanel(null)} showHeader={false} />
       </MobileReaderSheet>
       {utilityPanel === "navigation" ? (
         <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
@@ -1471,7 +1530,7 @@ export function ConversationReader({
           <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => { setShowShare(false); setShowExport(false); setShowSearch(false); }} />
           <ResizableDockPanel storageKey="chat-reader:reader-utility-panel-width" defaultSize={480} minSize={384} maxSize={() => Math.min(860, window.innerWidth * 0.6)} side="left" className="relative z-10 border-l border-ui bg-raised shadow-2xl">
             <div className="flex h-full w-full">
-              {showSearch ? <ConversationSearchPanel conversationId={conversation.id} onNavigate={({ messageId, blockIndex }) => navigateToTarget({ messageId, blockIndex, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+              {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
                 {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
               </ReaderPanelShell>}
@@ -1716,6 +1775,14 @@ function formatConversationTitle(conversation: Pick<ConversationDetail, "title" 
   return project ? `${project} / ${title}` : title;
 }
 
+function readerCacheIdentity(dataSource: ReaderDataSource, conversation?: Pick<ConversationDetail, "offline_revision" | "render_version">): string {
+  return `${dataSource.mode}:${conversation?.offline_revision ?? "unknown"}:${conversation?.render_version ?? "unknown"}`;
+}
+
+function setNavigationStage(root: HTMLElement | null, stage: string): void {
+  if (root) root.dataset.navigationStage = stage;
+}
+
 function buildReaderUrl(basePath: string, location: { conversationId: string; messageId?: string; blockIndex?: number; characterOffset?: number }): string {
   const params = new URLSearchParams();
   if (basePath === "/library") params.set("conversationId", location.conversationId);
@@ -1786,10 +1853,10 @@ function ReaderState({
   );
 }
 
-function ReaderLoadingShell({ progress }: { progress: number }) {
+function ReaderLoadingShell({ progress, embedded = false }: { progress: number; embedded?: boolean }) {
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar />
+    <main className={`flex overflow-hidden bg-page text-primary ${embedded ? "h-full w-full" : "h-screen w-screen"}`}>
+      {!embedded ? <ProjectSidebar /> : null}
       <section className="relative min-w-0 flex-1 overflow-hidden">
         <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-subtle">
           <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${progress}%` }} />

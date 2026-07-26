@@ -8,24 +8,36 @@ import { PanelRightOpen, PinOff } from "lucide-react";
 import { getConversationToc } from "../../lib/api";
 import type { TocItem } from "../../lib/types";
 
-export function ConversationToc({ conversationId, activeMessageId, activeItems = [], observerKey, activeBlockId, items, mode = "panel", loadPage, onNavigate }: { conversationId: string; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; items?: TocItem[]; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
+export function ConversationToc({ conversationId, sourceKey = "remote", activeMessageId, activeItems = [], observerKey, activeBlockId, items, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; items?: TocItem[]; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
   const t = useTranslations();
   const { sectionTocMode, setSectionTocMode } = usePreferences();
   const [observedHeadingId, setObservedHeadingId] = useState<string | null>(null);
   const [cachedItems, setCachedItems] = useState<Record<string, TocItem[]>>({});
+  const [lastActiveMessageId, setLastActiveMessageId] = useState<string | null>(activeMessageId ?? null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
-  const tocQuery = useQuery({ queryKey: ["toc", conversationId, activeMessageId, mode, observerKey ?? "initial"], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: activeMessageId ?? undefined, limit: 200 }), enabled: items === undefined && Boolean(activeMessageId), staleTime: 30_000 });
   useEffect(() => {
-    if (!activeMessageId || !tocQuery.data) return;
-    setCachedItems((current) => ({ ...current, [activeMessageId]: tocQuery.data.items }));
-  }, [activeMessageId, tocQuery.data]);
+    setCachedItems({});
+    setObservedHeadingId(null);
+    setLastActiveMessageId(activeMessageId ?? null);
+  }, [conversationId, sourceKey]);
+  useEffect(() => { if (activeMessageId) setLastActiveMessageId(activeMessageId); }, [activeMessageId]);
+  const effectiveMessageId = activeMessageId ?? lastActiveMessageId;
+  const tocQuery = useQuery({ queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: effectiveMessageId ?? undefined, limit: 200 }), enabled: items === undefined && Boolean(effectiveMessageId), staleTime: 30_000, placeholderData: (previous) => previous });
+  useEffect(() => {
+    if (!effectiveMessageId || !tocQuery.data) return;
+    const matching = tocQuery.data.items.filter((item) => item.message_id === effectiveMessageId);
+    if (matching.length) setCachedItems((current) => ({ ...current, [effectiveMessageId]: matching }));
+  }, [effectiveMessageId, tocQuery.data]);
   const visibleItems = useMemo(() => {
-    if (!activeMessageId) return [];
-    const apiItems = items ?? tocQuery.data?.items ?? cachedItems[activeMessageId] ?? [];
-    const currentApiItems = apiItems.filter((item) => item.message_id === activeMessageId);
-    return currentApiItems.length ? currentApiItems : activeItems.filter((item) => item.message_id === activeMessageId);
-  }, [activeItems, activeMessageId, cachedItems, items, tocQuery.data?.items]);
-  const activeHeadingId = activeBlockId ?? observedHeadingId;
+    if (!effectiveMessageId) return [];
+    const cached = cachedItems[effectiveMessageId] ?? [];
+    const apiItems = items ?? tocQuery.data?.items ?? cached;
+    const currentApiItems = apiItems.filter((item) => item.message_id === effectiveMessageId);
+    if (currentApiItems.length) return currentApiItems;
+    const currentCachedItems = cached.filter((item) => item.message_id === effectiveMessageId);
+    return currentCachedItems.length ? currentCachedItems : activeItems.filter((item) => item.message_id === effectiveMessageId);
+  }, [activeItems, cachedItems, effectiveMessageId, items, tocQuery.data?.items]);
+  const activeHeadingId = resolveActiveHeadingId(visibleItems, activeBlockId) ?? observedHeadingId;
 
   useEffect(() => {
     if (!visibleItems.length) { setObservedHeadingId(null); return; }
@@ -36,9 +48,9 @@ export function ConversationToc({ conversationId, activeMessageId, activeItems =
   useEffect(() => { activeRowRef.current?.scrollIntoView({ block: "nearest" }); }, [activeHeadingId, visibleItems]);
 
   if (mode === "panel" && sectionTocMode === "rail") return <TocRail items={visibleItems} activeHeadingId={activeHeadingId} onExpand={() => void setSectionTocMode("visible")} onNavigate={onNavigate} />;
-  if (items === undefined && tocQuery.isLoading && activeItems.length === 0) return <TocShell mode={mode} label={t("sectionToc")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
-  if (items === undefined && tocQuery.isError && activeItems.length === 0) return <TocShell mode={mode} label={t("connectionFailed")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
-  if (!activeMessageId || visibleItems.length === 0) return <TocShell mode={mode} label={t("currentNoSections")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
+  if (items === undefined && tocQuery.isFetching && visibleItems.length === 0) return <TocShell mode={mode} label={t("sectionToc")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
+  if (items === undefined && tocQuery.isError && visibleItems.length === 0) return <TocShell mode={mode} label={t("connectionFailed")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
+  if (!effectiveMessageId || visibleItems.length === 0) return <TocShell mode={mode} label={t("currentNoSections")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
 
   const body = <TocButtonList items={visibleItems} activeHeadingId={activeHeadingId} activeRowRef={activeRowRef} onNavigate={onNavigate} />;
   return <TocFrame mode={mode} title={t("sectionToc")} count={visibleItems.length} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined}>{body}</TocFrame>;
@@ -61,3 +73,13 @@ function TocShell({ label, mode, onCollapse }: { label: string; mode: "panel" | 
   return <TocFrame mode={mode} title={t("sectionToc")} onCollapse={onCollapse}><p className="px-1 py-2 text-sm leading-6 text-secondary">{label}</p></TocFrame>;
 }
 function blockDomId(item: TocItem): string { return `block-${item.message_id}-${item.block_index}`; }
+
+function resolveActiveHeadingId(items: TocItem[], activeBlockId?: string | null): string | null {
+  if (!activeBlockId) return null;
+  const exact = items.find((item) => blockDomId(item) === activeBlockId);
+  if (exact) return activeBlockId;
+  const blockIndex = Number.parseInt(activeBlockId.split("-").at(-1) ?? "", 10);
+  if (!Number.isFinite(blockIndex)) return null;
+  const nearest = items.filter((item) => item.block_index <= blockIndex).at(-1);
+  return nearest ? blockDomId(nearest) : null;
+}

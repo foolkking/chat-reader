@@ -359,6 +359,7 @@ export type SearchResultItem = {
   role: string | null;
   order_key: string | null;
   block_index: number | null;
+  character_offset?: number | null;
   snippet: string;
   rank: number;
   source_profile: string | null;
@@ -451,23 +452,27 @@ export type ConversationTransformResponse = {
 
 export type NavigateTarget = {
   messageId: string;
+  messageVersionId?: string | null;
   blockIndex?: number;
   characterOffset?: number;
   endCharacterOffset?: number;
   quote?: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
+  anchorStatus?: AnnotationAnchorStatus;
   annotationId?: string;
   preferTocPipeline?: boolean;
   closePanelAfterResolved?: boolean;
   allowMessageFallback?: boolean;
   alignmentOffset?: number;
-  source?: "dialogue-index" | "section-toc" | "search" | "message-action";
+  source?: "dialogue-index" | "section-toc" | "search" | "annotation" | "message-action";
 };
 
 export type NavigationResult = {
   ok: boolean;
   targetId: string;
   fallback?: boolean;
-  reason?: "cancelled" | "target-not-mounted" | "target-not-aligned" | "load-failed" | "stale-anchor";
+  reason?: "cancelled" | "target-context-failed" | "target-not-mounted" | "block-not-found" | "target-not-aligned" | "load-failed" | "stale-anchor" | "message-fallback";
 };
 
 export type NavigationState = {
@@ -596,6 +601,7 @@ export type SharedConversationBootstrap = {
 
 export type AnnotationType = "highlight" | "underline" | "strikethrough" | "comment" | "bookmark";
 export type AnnotationColor = "yellow" | "green" | "blue" | "pink";
+export type AnnotationAnchorStatus = "active" | "relocated" | "stale";
 
 export type AnnotationRead = {
   id: string;
@@ -612,7 +618,7 @@ export type AnnotationRead = {
   prefix: string | null;
   suffix: string | null;
   comment_markdown: string;
-  anchor_status: "active" | "relocated" | "stale";
+  anchor_status: AnnotationAnchorStatus;
   revision: number;
   is_deleted: boolean;
   conflict_of_id: string | null;

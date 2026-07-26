@@ -3,13 +3,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { searchConversations } from "../../lib/api";
 import type { NavigationResult } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
+import { remoteReaderDataSource, type ReaderDataSource } from "../../lib/reader-data-source";
 
-export function ConversationSearchPanel({ conversationId, onNavigate, onClose, showHeader = true }: {
+export function ConversationSearchPanel({ conversationId, dataSource = remoteReaderDataSource, sourceKey = "remote", onNavigate, onClose, showHeader = true }: {
   conversationId: string;
-  onNavigate: (target: { messageId: string; blockIndex?: number }) => Promise<NavigationResult>;
+  dataSource?: ReaderDataSource;
+  sourceKey?: string;
+  onNavigate: (target: { messageId: string; blockIndex?: number; characterOffset?: number }) => Promise<NavigationResult>;
   onClose: () => void;
   showHeader?: boolean;
 }) {
@@ -27,10 +29,9 @@ export function ConversationSearchPanel({ conversationId, onNavigate, onClose, s
     return () => window.clearTimeout(timer);
   }, [query]);
   const results = useQuery({
-    queryKey: ["conversation-search", conversationId, debounced, documentType, role],
-    queryFn: () => searchConversations({
-      q: debounced,
-      conversationId,
+    queryKey: ["conversation-search", sourceKey, conversationId, debounced, documentType, role],
+    queryFn: () => dataSource.searchConversation(conversationId, {
+      query: debounced,
       documentType: documentType === "all" ? undefined : documentType,
       role: role === "all" ? undefined : role,
       limit: 50,
@@ -41,7 +42,8 @@ export function ConversationSearchPanel({ conversationId, onNavigate, onClose, s
   const activate = async (index: number) => {
     const item = items[index];
     if (!item?.message_id) return;
-    await onNavigate({ messageId: item.message_id, blockIndex: item.block_index ?? undefined });
+    const result = await onNavigate({ messageId: item.message_id, blockIndex: item.block_index ?? undefined, characterOffset: item.character_offset ?? undefined });
+    if (result.ok) onClose();
   };
   return (
     <div className="flex h-full min-h-0 flex-col bg-raised">

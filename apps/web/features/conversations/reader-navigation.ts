@@ -9,6 +9,8 @@ type NavigateMountedTargetOptions = {
   characterOffset?: number;
   endCharacterOffset?: number;
   quote?: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
   timeoutMs?: number;
   allowFallback?: boolean;
 };
@@ -31,6 +33,8 @@ export async function navigateMountedTarget({
   characterOffset,
   endCharacterOffset,
   quote,
+  prefix,
+  suffix,
   timeoutMs = 6000,
   allowFallback = false,
 }: NavigateMountedTargetOptions): Promise<NavigationResult> {
@@ -63,6 +67,8 @@ export async function navigateMountedTarget({
       characterOffset: resolvedCharacterOffset,
       endCharacterOffset: resolvedEndCharacterOffset,
       quote: resolvedQuote,
+      prefix,
+      suffix,
     });
     usedTextAnchor = Boolean(textRect);
     textAnchorMissing = Boolean((resolvedCharacterOffset !== undefined || resolvedQuote) && !textRect);
@@ -72,6 +78,8 @@ export async function navigateMountedTarget({
       characterOffset: resolvedCharacterOffset,
       endCharacterOffset: resolvedEndCharacterOffset,
       quote: resolvedQuote,
+      prefix,
+      suffix,
     }) ?? (usedTextAnchor ? null : undefined);
     if (isAligned(root, target, offset, settledRect)) {
       await new Promise<void>((resolve) => window.setTimeout(resolve, 400));
@@ -79,9 +87,24 @@ export async function navigateMountedTarget({
         characterOffset: resolvedCharacterOffset,
         endCharacterOffset: resolvedEndCharacterOffset,
         quote: resolvedQuote,
+        prefix,
+        suffix,
       }) ?? (usedTextAnchor ? null : undefined);
       if (isAligned(root, target, offset, finalRect)) {
-        return { ok: true, targetId: target.id, fallback: textAnchorMissing, reason: textAnchorMissing ? "stale-anchor" : undefined };
+        const stable = await stabilizeTargetAlignment({
+          root,
+          target,
+          offset,
+          characterOffset: resolvedCharacterOffset,
+          endCharacterOffset: resolvedEndCharacterOffset,
+          quote: resolvedQuote,
+          prefix,
+          suffix,
+          tokenIsCurrent,
+        });
+        if (stable) {
+          return { ok: true, targetId: target.id, fallback: textAnchorMissing, reason: textAnchorMissing ? "stale-anchor" : undefined };
+        }
       }
     }
   }
@@ -221,10 +244,7 @@ function scrollToAlignedPosition(root: HTMLElement | null, target: HTMLElement, 
   const targetRect = textRect ?? target.getBoundingClientRect();
   if (root) {
     const rootRect = root.getBoundingClientRect();
-    root.scrollTo({
-      top: root.scrollTop + targetRect.top - rootRect.top - offset,
-      behavior: "auto",
-    });
+    root.scrollTop = Math.max(0, root.scrollTop + targetRect.top - rootRect.top - offset);
     return;
   }
   window.scrollTo({
@@ -234,13 +254,24 @@ function scrollToAlignedPosition(root: HTMLElement | null, target: HTMLElement, 
 }
 
 async function waitForLayoutSettle(): Promise<void> {
-  await nextFrame();
-  await nextFrame();
+  await nextFrameOrTimeout();
+  await nextFrameOrTimeout();
   await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
 }
 
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+function nextFrameOrTimeout(timeoutMs = 80): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      window.cancelAnimationFrame(frameId);
+      resolve();
+    };
+    const frameId = window.requestAnimationFrame(finish);
+    const timeoutId = window.setTimeout(finish, timeoutMs);
+  });
 }
 
 function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number, textRect?: DOMRect | null): boolean {
@@ -250,8 +281,57 @@ function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number
   return Math.abs(targetRect.top - expectedTop) <= 24;
 }
 
-function textAnchorRect(target: HTMLElement, options: { characterOffset?: number; endCharacterOffset?: number; quote?: string | null }): DOMRect | null {
-  const quoteRect = quoteRangeRect(target, options.quote);
+async function stabilizeTargetAlignment({
+  root,
+  target,
+  offset,
+  characterOffset,
+  endCharacterOffset,
+  quote,
+  prefix,
+  suffix,
+  tokenIsCurrent,
+}: {
+  root: HTMLElement | null;
+  target: HTMLElement;
+  offset: number;
+  characterOffset?: number;
+  endCharacterOffset?: number;
+  quote?: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
+  tokenIsCurrent: () => boolean;
+}): Promise<boolean> {
+  const startedAt = window.performance.now();
+  let lastResizeAt = startedAt;
+  const observedLayout = target.closest<HTMLElement>(".reader-content-inner") ?? target.parentElement;
+  const observer = new ResizeObserver(() => {
+    lastResizeAt = window.performance.now();
+  });
+  if (observedLayout) observer.observe(observedLayout);
+
+  try {
+    while (window.performance.now() - startedAt < 2400) {
+      if (!tokenIsCurrent() || !target.isConnected) return false;
+      const textRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
+      scrollToAlignedPosition(root, target, offset, textRect ?? undefined);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 80));
+      const settledRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
+      const now = window.performance.now();
+      if (now - startedAt >= 640 && now - lastResizeAt >= 240 && isAligned(root, target, offset, settledRect ?? undefined)) {
+        return true;
+      }
+    }
+    const finalRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
+    scrollToAlignedPosition(root, target, offset, finalRect ?? undefined);
+    return tokenIsCurrent() && isAligned(root, target, offset, finalRect ?? undefined);
+  } finally {
+    observer.disconnect();
+  }
+}
+
+function textAnchorRect(target: HTMLElement, options: { characterOffset?: number; endCharacterOffset?: number; quote?: string | null; prefix?: string | null; suffix?: string | null }): DOMRect | null {
+  const quoteRect = quoteRangeRect(target, options.quote, options.prefix, options.suffix);
   if (quoteRect) return quoteRect;
   return textOffsetRect(target, options.characterOffset, options.endCharacterOffset);
 }
@@ -266,7 +346,7 @@ function textOffsetRect(target: HTMLElement, characterOffset?: number, endCharac
   return rangeRectFromOffsets(textNodes, characterOffset, endCharacterOffset ?? characterOffset + 1);
 }
 
-function quoteRangeRect(target: HTMLElement, quote?: string | null): DOMRect | null {
+function quoteRangeRect(target: HTMLElement, quote?: string | null, prefix?: string | null, suffix?: string | null): DOMRect | null {
   const normalizedQuote = normalizeText(quote ?? "");
   if (!normalizedQuote) return null;
   const textNodes: Text[] = [];
@@ -277,7 +357,7 @@ function quoteRangeRect(target: HTMLElement, quote?: string | null): DOMRect | n
     textNodes.push(node);
     combined += node.textContent ?? "";
   }
-  const exactIndex = combined.indexOf(quote ?? "");
+  const exactIndex = bestQuoteIndex(combined, quote ?? "", prefix, suffix);
   if (exactIndex >= 0) {
     return rangeRectFromOffsets(textNodes, exactIndex, exactIndex + (quote ?? "").length);
   }
@@ -285,6 +365,27 @@ function quoteRangeRect(target: HTMLElement, quote?: string | null): DOMRect | n
   const normalizedIndex = collapsed.text.indexOf(normalizedQuote);
   if (normalizedIndex < 0) return null;
   return rangeRectFromOffsets(textNodes, collapsed.map[normalizedIndex] ?? 0, collapsed.map[Math.max(normalizedIndex + normalizedQuote.length - 1, normalizedIndex)] + 1);
+}
+
+function bestQuoteIndex(combined: string, quote: string, prefix?: string | null, suffix?: string | null): number {
+  if (!quote) return -1;
+  let bestIndex = -1;
+  let bestScore = -1;
+  for (let index = combined.indexOf(quote); index >= 0; index = combined.indexOf(quote, index + 1)) {
+    let score = 0;
+    const before = normalizeText(combined.slice(Math.max(0, index - (prefix?.length ?? 0) - 24), index));
+    const after = normalizeText(combined.slice(index + quote.length, index + quote.length + (suffix?.length ?? 0) + 24));
+    const normalizedPrefix = normalizeText(prefix ?? "");
+    const normalizedSuffix = normalizeText(suffix ?? "");
+    if (normalizedPrefix && before.endsWith(normalizedPrefix)) score += 2;
+    if (normalizedSuffix && after.startsWith(normalizedSuffix)) score += 2;
+    if (!normalizedPrefix && !normalizedSuffix) score = 1;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  }
+  return bestIndex;
 }
 
 function rangeRectFromOffsets(textNodes: Text[], startOffset: number, endOffset: number): DOMRect | null {

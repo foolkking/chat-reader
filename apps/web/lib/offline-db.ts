@@ -123,6 +123,16 @@ export async function importOfflinePackage(packageId: string, response: Response
     "rw",
     [offlineDb.conversations, offlineDb.messages, offlineDb.blocks, offlineDb.headings, offlineDb.searchDocuments, offlineDb.annotations, offlineDb.notebooks, offlineDb.readingPositions, offlineDb.packages, offlineDb.outbox],
     async () => {
+      const existingConversations = new Map(
+        (await offlineDb.conversations.bulkGet(conversationIds))
+          .filter((item): item is OfflineConversationRecord => Boolean(item))
+          .map((item) => [item.id, item]),
+      );
+      const existingPositions = new Map(
+        (await offlineDb.readingPositions.bulkGet(conversationIds))
+          .filter((item): item is ReadingPositionRead => Boolean(item))
+          .map((item) => [item.conversation_id, item]),
+      );
       const pendingOperations = await offlineDb.outbox.where("conversation_id").anyOf(conversationIds).toArray();
       const pendingAnnotationIds = new Set(
         pendingOperations.filter((item) => item.entity_type === "annotation").map((item) => item.entity_id),
@@ -151,6 +161,7 @@ export async function importOfflinePackage(packageId: string, response: Response
           }
         }
         const conversation = normalizeOfflineConversation(raw, now);
+        conversation.last_read_at = existingConversations.get(raw.id)?.last_read_at ?? conversation.last_read_at;
         await offlineDb.conversations.put(conversation);
         if (messages.length) await offlineDb.messages.bulkPut(messages);
         if (blocks.length) await offlineDb.blocks.bulkPut(blocks);
@@ -158,7 +169,9 @@ export async function importOfflinePackage(packageId: string, response: Response
         if (raw.search_documents?.length) await offlineDb.searchDocuments.bulkPut(raw.search_documents.map((item) => ({ ...item, conversation_id: raw.id })));
         if (raw.annotations?.length) await offlineDb.annotations.bulkPut(raw.annotations);
         if (raw.notebook) await offlineDb.notebooks.put(raw.notebook);
-        if (raw.reading_position) await offlineDb.readingPositions.put(raw.reading_position);
+        if (raw.reading_position && isNewerReadingPosition(raw.reading_position, existingPositions.get(raw.id))) {
+          await offlineDb.readingPositions.put(raw.reading_position);
+        }
       }
       const localAnnotations = pendingAnnotations.filter((item): item is AnnotationRead => Boolean(item));
       const localNotebooks = pendingNotebooks.filter((item): item is NotebookRead => Boolean(item));
@@ -235,4 +248,13 @@ function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: st
     sort_time: typeof raw.updated_at === "string" ? raw.updated_at : null,
     downloaded_at: downloadedAt,
   };
+}
+
+function isNewerReadingPosition(incoming: ReadingPositionRead, current?: ReadingPositionRead): boolean {
+  if (!current) return true;
+  const incomingTimestamp = Date.parse(incoming.updated_at);
+  const currentTimestamp = Date.parse(current.updated_at);
+  if (!Number.isFinite(incomingTimestamp)) return false;
+  if (!Number.isFinite(currentTimestamp)) return true;
+  return incomingTimestamp > currentTimestamp;
 }

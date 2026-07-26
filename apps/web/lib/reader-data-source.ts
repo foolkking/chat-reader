@@ -7,15 +7,20 @@ import {
   getReadingPosition,
   recordRecentConversation,
   saveReadingPosition,
+  searchConversations,
 } from "./api";
 import { offlineDb } from "./offline-db";
+import { searchOffline } from "./offline-search";
 import type {
   ConversationDetail,
   DialogueIndexResponse,
   MessageWindowResponse,
+  NavigateTarget,
   ReadingPositionInput,
   ReadingPositionResponse,
   RenderBlockRead,
+  SearchResponse,
+  TocItem,
   TocResponse,
 } from "./types";
 
@@ -29,13 +34,36 @@ export type MessageWindowOptions = {
   contentMode?: "full" | "preview";
 };
 
+export type ReaderSearchOptions = {
+  query: string;
+  documentType?: string;
+  role?: string;
+  limit?: number;
+};
+
+export type ReaderTargetContext = {
+  messageWindow: MessageWindowResponse;
+  targetMessage: MessageWindowResponse["items"][number];
+  targetBlocks: RenderBlockRead[];
+  dialogueIndex: DialogueIndexResponse;
+  toc: TocResponse;
+  nearestHeading: TocItem | null;
+};
+
 export interface ReaderDataSource {
   readonly mode: "remote" | "offline";
+  readonly capabilities: {
+    canonicalManagement: boolean;
+    share: boolean;
+    export: boolean;
+  };
   getConversation(conversationId: string): Promise<ConversationDetail>;
   getMessageWindow(conversationId: string, options?: MessageWindowOptions): Promise<MessageWindowResponse>;
   getDialogueIndex(conversationId: string, options?: { offset?: number; limit?: number; anchorMessageId?: string }): Promise<DialogueIndexResponse>;
   getMessageBlocks(messageId: string, options?: { start?: number; limit?: number }): Promise<RenderBlockRead[]>;
   getToc(conversationId: string, options?: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }): Promise<TocResponse>;
+  getTargetContext(conversationId: string, target: NavigateTarget): Promise<ReaderTargetContext>;
+  searchConversation(conversationId: string, options: ReaderSearchOptions): Promise<SearchResponse>;
   getReadingPosition(conversationId: string): Promise<ReadingPositionResponse>;
   saveReadingPosition(conversationId: string, input: ReadingPositionInput): Promise<void>;
   recordRecent(conversationId: string, projectId?: string | null): Promise<void>;
@@ -43,11 +71,24 @@ export interface ReaderDataSource {
 
 export const remoteReaderDataSource: ReaderDataSource = {
   mode: "remote",
+  capabilities: { canonicalManagement: true, share: true, export: true },
   getConversation,
   getMessageWindow: getConversationMessageWindow,
   getDialogueIndex: getConversationDialogueIndex,
   getMessageBlocks,
   getToc: getConversationToc,
+  getTargetContext(conversationId, target) {
+    return loadTargetContext(remoteReaderDataSource, conversationId, target);
+  },
+  searchConversation(conversationId, options) {
+    return searchConversations({
+      q: options.query,
+      conversationId,
+      documentType: options.documentType,
+      role: options.role,
+      limit: options.limit ?? 50,
+    });
+  },
   getReadingPosition,
   async saveReadingPosition(conversationId, input) { await saveReadingPosition(conversationId, input); },
   async recordRecent(conversationId, projectId) { await recordRecentConversation(conversationId, { project_id: projectId ?? null }); },
@@ -55,6 +96,7 @@ export const remoteReaderDataSource: ReaderDataSource = {
 
 export const offlineReaderDataSource: ReaderDataSource = {
   mode: "offline",
+  capabilities: { canonicalManagement: false, share: false, export: false },
   async getConversation(conversationId) {
     const conversation = await offlineDb.conversations.get(conversationId);
     if (!conversation) throw new Error("Conversation is not downloaded.");
@@ -119,6 +161,38 @@ export const offlineReaderDataSource: ReaderDataSource = {
     const page = items.slice(offset, offset + limit);
     return { conversation_id: conversationId, items: page, limit, offset, total: items.length, has_more: offset + page.length < items.length };
   },
+  getTargetContext(conversationId, target) {
+    return loadTargetContext(offlineReaderDataSource, conversationId, target);
+  },
+  async searchConversation(conversationId, options) {
+    const limit = options.limit ?? 50;
+    const documents = (await searchOffline(options.query, Math.max(limit * 4, 100)))
+      .filter((item) => item.conversation_id === conversationId)
+      .filter((item) => !options.documentType || item.document_type === options.documentType)
+      .filter((item) => !options.role || item.role === options.role)
+      .slice(0, limit);
+    return {
+      query: options.query,
+      items: documents.map((item, index) => ({
+        document_id: item.id,
+        document_type: item.document_type,
+        conversation_id: item.conversation_id,
+        conversation_title: item.title ?? "Conversation",
+        message_id: item.message_id,
+        role: item.role,
+        order_key: item.order_key,
+        block_index: metadataNumber(item.metadata, "block_index"),
+        character_offset: metadataNumber(item.metadata, "character_offset"),
+        snippet: item.plain_text.slice(0, 320),
+        rank: documents.length - index,
+        source_profile: "offline",
+        occurrence_count: 1,
+      })),
+      limit,
+      offset: 0,
+      total: documents.length,
+    };
+  },
   async getReadingPosition(conversationId) {
     return { conversation_id: conversationId, position: await offlineDb.readingPositions.get(conversationId) ?? null };
   },
@@ -143,4 +217,47 @@ export const offlineReaderDataSource: ReaderDataSource = {
 
 function previewText(value: string): string {
   return value.replace(/```[\s\S]*?```/g, " ").replace(/[#>*_`~()]/g, " ").replaceAll("[", " ").replaceAll("]", " ").replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
+async function loadTargetContext(
+  dataSource: ReaderDataSource,
+  conversationId: string,
+  target: NavigateTarget,
+): Promise<ReaderTargetContext> {
+  const dialogueIndex = await dataSource.getDialogueIndex(conversationId, {
+    anchorMessageId: target.messageId,
+    limit: 80,
+  });
+  if (!dialogueIndex.items.some((item) => item.message_id === target.messageId)) {
+    throw new Error("The target message is not present in the dialogue index.");
+  }
+  const blockIndex = target.blockIndex;
+  const messageWindow = await dataSource.getMessageWindow(conversationId, {
+    includeBlocks: false,
+    limit: 30,
+    anchorMessageId: target.messageId,
+    anchorBefore: 12,
+    contentMode: "preview",
+  });
+  const targetMessage = messageWindow.items.find((item) => item.id === target.messageId);
+  if (!targetMessage) throw new Error("The target message could not be loaded.");
+  const toc = await dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200 });
+  const targetBlocks = blockIndex === undefined
+    ? []
+    : await dataSource.getMessageBlocks(target.messageId, {
+        start: Math.max(0, blockIndex - 20),
+        limit: 41,
+      });
+  const nearestHeading = blockIndex === undefined
+    ? null
+    : toc.items.filter((item) => item.block_index <= blockIndex).at(-1) ?? null;
+  return { messageWindow, targetMessage, targetBlocks, dialogueIndex, toc, nearestHeading };
+}
+
+function metadataNumber(metadata: Record<string, unknown>, key: string): number | null {
+  const value = metadata[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }

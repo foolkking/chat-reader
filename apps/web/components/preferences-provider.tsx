@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getPreferences, updatePreferences } from "../lib/api";
 import { resolveLocale, translate, type ResolvedLocale, type TranslationKey } from "../lib/i18n";
 import type {
@@ -12,6 +12,7 @@ import type {
   SortDirection,
   ThemeMode,
   UserPreferenceRead,
+  UserPreferenceUpdate,
 } from "../lib/types";
 
 type PreferencesContextValue = {
@@ -35,6 +36,7 @@ type PreferencesContextValue = {
 };
 
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
+const PREFERENCES_STORAGE_KEY = "chat-reader:user-preferences";
 
 export function PreferencesProvider({
   children,
@@ -53,6 +55,8 @@ export function PreferencesProvider({
   const [conversationSortDirection, setConversationSortDirection] = useState<SortDirection>(initialPreferences.conversation_sort_direction ?? "desc");
   const [projectSortMode, setProjectSortMode] = useState<ProjectSortMode>(initialPreferences.project_sort_mode ?? "recent_read");
   const [projectSortDirection, setProjectSortDirection] = useState<SortDirection>(initialPreferences.project_sort_direction ?? "desc");
+  const preferencesRef = useRef<UserPreferenceRead>(initialPreferences);
+  const preferenceMutationSequenceRef = useRef(0);
   const [systemDark, setSystemDark] = useState(false);
   const resolvedTheme = themeMode === "system" ? (systemDark ? "dark" : "light") : themeMode;
   const resolvedLocale = localeMode === "auto" ? initialLocale : resolveLocale(localeMode);
@@ -72,8 +76,8 @@ export function PreferencesProvider({
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolvedTheme === "dark" ? "#202120" : "#f7f7f5");
   }, [resolvedLocale, resolvedTheme]);
 
-  useEffect(() => {
-    void getPreferences().then((fresh) => {
+  const applyPreferences = useCallback((fresh: UserPreferenceRead) => {
+      preferencesRef.current = fresh;
       setThemeModeState(fresh.theme_mode);
       setLocaleModeState(fresh.locale_mode);
       setReaderWidthModeState(fresh.reader_width_mode ?? "standard");
@@ -82,35 +86,81 @@ export function PreferencesProvider({
       setConversationSortDirection(fresh.conversation_sort_direction ?? "desc");
       setProjectSortMode(fresh.project_sort_mode ?? "recent_read");
       setProjectSortDirection(fresh.project_sort_direction ?? "desc");
-    }).catch(() => undefined);
+      writeCachedPreferences(fresh);
   }, []);
 
+  useEffect(() => {
+    const cached = readCachedPreferences();
+    if (cached) applyPreferences(cached);
+    void getPreferences().then(async (fresh) => {
+      if (cached && timestamp(cached.updated_at) > timestamp(fresh.updated_at)) {
+        try {
+          applyPreferences(await updatePreferences(preferenceUpdate(cached)));
+        } catch {
+          applyPreferences(cached);
+        }
+        return;
+      }
+      applyPreferences(fresh);
+    }).catch(() => undefined);
+  }, [applyPreferences]);
+
+  useEffect(() => {
+    const syncCachedPreferences = () => {
+      const cached = readCachedPreferences();
+      if (!cached) return;
+      void getPreferences().then(async (fresh) => {
+        if (timestamp(cached.updated_at) <= timestamp(fresh.updated_at)) {
+          applyPreferences(fresh);
+          return;
+        }
+        applyPreferences(await updatePreferences(preferenceUpdate(cached)));
+      }).catch(() => undefined);
+    };
+    window.addEventListener("online", syncCachedPreferences);
+    return () => window.removeEventListener("online", syncCachedPreferences);
+  }, [applyPreferences]);
+
+  const applyLocalUpdate = useCallback((input: UserPreferenceUpdate) => {
+    const next: UserPreferenceRead = {
+      ...preferencesRef.current,
+      ...input,
+      updated_at: new Date().toISOString(),
+    };
+    applyPreferences(next);
+    return next;
+  }, [applyPreferences]);
+
+  const syncPreferenceUpdate = useCallback(async (input: UserPreferenceUpdate) => {
+    const sequence = preferenceMutationSequenceRef.current + 1;
+    preferenceMutationSequenceRef.current = sequence;
+    applyLocalUpdate(input);
+    try {
+      const fresh = await updatePreferences(input);
+      if (preferenceMutationSequenceRef.current === sequence) applyPreferences(fresh);
+    } catch {
+      // Local preferences remain authoritative until connectivity returns.
+    }
+  }, [applyLocalUpdate, applyPreferences]);
+
   const setThemeMode = useCallback(async (mode: ThemeMode) => {
-    setThemeModeState(mode);
-    await updatePreferences({ theme_mode: mode });
-  }, []);
+    await syncPreferenceUpdate({ theme_mode: mode });
+  }, [syncPreferenceUpdate]);
   const setLocaleMode = useCallback(async (mode: LocaleMode) => {
-    setLocaleModeState(mode);
-    await updatePreferences({ locale_mode: mode });
-  }, []);
+    await syncPreferenceUpdate({ locale_mode: mode });
+  }, [syncPreferenceUpdate]);
   const setReaderWidthMode = useCallback(async (mode: ReaderWidthMode) => {
-    setReaderWidthModeState(mode);
-    await updatePreferences({ reader_width_mode: mode });
-  }, []);
+    await syncPreferenceUpdate({ reader_width_mode: mode });
+  }, [syncPreferenceUpdate]);
   const setSectionTocMode = useCallback(async (mode: SectionTocMode) => {
-    setSectionTocModeState(mode);
-    await updatePreferences({ section_toc_mode: mode });
-  }, []);
+    await syncPreferenceUpdate({ section_toc_mode: mode });
+  }, [syncPreferenceUpdate]);
   const setConversationSort = useCallback(async (mode: ConversationSortMode, direction: SortDirection) => {
-    setConversationSortMode(mode);
-    setConversationSortDirection(direction);
-    await updatePreferences({ conversation_sort_mode: mode, conversation_sort_direction: direction });
-  }, []);
+    await syncPreferenceUpdate({ conversation_sort_mode: mode, conversation_sort_direction: direction });
+  }, [syncPreferenceUpdate]);
   const setProjectSort = useCallback(async (mode: ProjectSortMode, direction: SortDirection) => {
-    setProjectSortMode(mode);
-    setProjectSortDirection(direction);
-    await updatePreferences({ project_sort_mode: mode, project_sort_direction: direction });
-  }, []);
+    await syncPreferenceUpdate({ project_sort_mode: mode, project_sort_direction: direction });
+  }, [syncPreferenceUpdate]);
 
   const value = useMemo<PreferencesContextValue>(() => ({
     themeMode,
@@ -143,4 +193,39 @@ export function usePreferences(): PreferencesContextValue {
 
 export function useTranslations() {
   return usePreferences().t;
+}
+
+function readCachedPreferences(): UserPreferenceRead | null {
+  try {
+    const raw = window.localStorage.getItem(PREFERENCES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) as UserPreferenceRead : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedPreferences(preferences: UserPreferenceRead): void {
+  try {
+    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+  } catch {
+    // Preferences still remain available for the current session.
+  }
+}
+
+function timestamp(value: string): number {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function preferenceUpdate(preferences: UserPreferenceRead): UserPreferenceUpdate {
+  return {
+    theme_mode: preferences.theme_mode,
+    locale_mode: preferences.locale_mode,
+    reader_width_mode: preferences.reader_width_mode,
+    section_toc_mode: preferences.section_toc_mode,
+    conversation_sort_mode: preferences.conversation_sort_mode,
+    conversation_sort_direction: preferences.conversation_sort_direction,
+    project_sort_mode: preferences.project_sort_mode,
+    project_sort_direction: preferences.project_sort_direction,
+  };
 }
