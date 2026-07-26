@@ -132,6 +132,8 @@ test("restores the offline reader frame and target-loads a distant annotation", 
   await seedOfflineFixture(page);
   await page.goto("/library?conversationId=offline-fixture");
 
+  await expect(page).toHaveTitle("离线测试对话");
+
   const restoredBlock = page.locator("#block-offline-message-20-1");
   await expect(restoredBlock).toBeVisible();
   await expect.poll(async () => readingLineDelta(page, "block-offline-message-20-1")).toBeLessThan(36);

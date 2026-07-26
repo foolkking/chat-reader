@@ -53,11 +53,13 @@ export function LibraryShell() {
   const titleConversation = selectedConversation ?? requestedCatalogConversation;
 
   useEffect(() => {
-    document.title = titleConversation ? formatLibraryConversationTitle(titleConversation) : APP_TITLE;
-    return () => {
-      document.title = APP_TITLE;
-    };
-  }, [titleConversation]);
+    // ConversationReader owns the title while an offline copy is open. Keeping
+    // this fallback out of that path prevents the parent effect from restoring
+    // the generic app title after the reader has resolved its conversation.
+    if (!selectedConversation) {
+      document.title = titleConversation ? formatLibraryConversationTitle(titleConversation) : APP_TITLE;
+    }
+  }, [selectedConversation, titleConversation]);
 
   const reloadLocal = useCallback(async () => {
     const rows = await offlineDb.conversations.orderBy("last_read_at").reverse().toArray();
