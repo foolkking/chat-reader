@@ -13,6 +13,10 @@ function getWorker(): Worker {
   return worker;
 }
 
+export function getOfflineSearchWorkerUrl(): string {
+  return new URL("./offline-search.worker.ts", import.meta.url).href;
+}
+
 export async function initializeOfflineSearch(documents: OfflineSearchDocument[]): Promise<void> {
   await request("init", { documents });
 }

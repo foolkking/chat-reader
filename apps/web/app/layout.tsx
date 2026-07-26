@@ -15,12 +15,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "chat-reader",
   description: "ChatGPT export archive reader foundation",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "chat-reader",
-  },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },

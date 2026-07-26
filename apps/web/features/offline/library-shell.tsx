@@ -1,14 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Download, FolderTree, HardDrive, Library, LoaderCircle, MessagesSquare, RefreshCw, Search, Trash2, Wifi, WifiOff, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, FolderTree, HardDrive, Library, LoaderCircle, MessagesSquare, RefreshCw, Search, Trash2, Wifi, WifiOff, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ConversationReader } from "../conversations/conversation-reader";
 import { getOfflineCatalog, getTask, queueOfflinePackage } from "../../lib/api";
 import { importOfflinePackage, offlineDb, removeOfflineConversations, requestPersistentStorage, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
 import { offlineReaderDataSource } from "../../lib/reader-data-source";
 import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
+import { getOfflineShellStatus, prepareOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../../lib/offline-shell";
 import type { OfflineCatalogResponse } from "../../lib/types";
 
 type DownloadState = { key: string; progress: number; label: string } | null;
@@ -28,6 +29,11 @@ export function LibraryShell() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OfflineSearchDocument[]>([]);
   const refreshStartedRef = useRef(false);
+  const offlineShellStatus = useSyncExternalStore(
+    subscribeOfflineShellStatus,
+    getOfflineShellStatus,
+    getOfflineShellStatus,
+  );
 
   const catalogQuery = useQuery({
     queryKey: ["offline-catalog"],
@@ -117,6 +123,12 @@ export function LibraryShell() {
     if (!navigator.onLine) {
       if (!silent) setError("当前离线，无法下载或更新资料。");
       return;
+    }
+    if (process.env.NODE_ENV === "production") {
+      const shellStatus = await prepareOfflineShell();
+      if (shellStatus.phase !== "ready") {
+        throw new Error(shellStatus.message ?? "离线启动尚未准备完成，请重试。");
+      }
     }
     const catalog = catalogQuery.data ?? await getOfflineCatalog();
     const estimate = estimateScope(catalog, scope, scopeId);
@@ -219,10 +231,12 @@ export function LibraryShell() {
       searchResults={searchResults}
       download={download}
       storage={storage}
+      offlineShellStatus={offlineShellStatus}
       error={error ?? (catalogQuery.isError ? catalogQuery.error.message : null)}
       onClose={() => setMobileOpen(false)}
       onOpen={openConversation}
       onDownload={(scope, id) => { setError(null); void runDownload(scope, id).catch((reason: Error) => { setError(reason.message); setDownload(null); }); }}
+      onRetryShell={() => { setError(null); void prepareOfflineShell({ force: true }).catch((reason: Error) => setError(reason.message)); }}
       onRemove={(ids) => void removeLocal(ids)}
     />
   );
@@ -242,7 +256,7 @@ export function LibraryShell() {
   );
 }
 
-function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTab, groupedProjects, query, setQuery, searchResults, download, storage, error, onClose, onOpen, onDownload, onRemove }: {
+function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTab, groupedProjects, query, setQuery, searchResults, download, storage, offlineShellStatus, error, onClose, onOpen, onDownload, onRetryShell, onRemove }: {
   online: boolean;
   catalog?: OfflineCatalogResponse;
   conversations: OfflineConversationRecord[];
@@ -255,10 +269,12 @@ function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTa
   searchResults: OfflineSearchDocument[];
   download: DownloadState;
   storage: { persisted: boolean; quota: number | null; usage: number | null } | null;
+  offlineShellStatus: OfflineShellStatus;
   error: string | null;
   onClose: () => void;
   onOpen: (conversationId: string, messageId?: string | null) => void;
   onDownload: (scope: "conversation" | "project" | "all", id?: string) => void;
+  onRetryShell: () => void;
   onRemove: (ids: string[]) => void;
 }) {
   return <div className="flex h-full min-h-0 flex-col">
@@ -266,7 +282,8 @@ function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTa
     <div className="shrink-0 space-y-3 border-b border-ui p-3">
       <label className="flex min-h-10 items-center gap-2 rounded-md border border-ui bg-surface px-3"><Search className="h-4 w-4 text-secondary" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="搜索本地正文、代码与批注" /></label>
       <div className="grid grid-cols-2 rounded-md bg-subtle p-1"><button type="button" onClick={() => setTab("conversations")} className={`min-h-9 rounded px-2 text-sm ${tab === "conversations" ? "bg-surface font-medium shadow-sm" : "text-secondary"}`}><MessagesSquare className="mr-1 inline h-4 w-4" />对话</button><button type="button" onClick={() => setTab("projects")} className={`min-h-9 rounded px-2 text-sm ${tab === "projects" ? "bg-surface font-medium shadow-sm" : "text-secondary"}`}><FolderTree className="mr-1 inline h-4 w-4" />项目</button></div>
-      {online && catalog ? <button type="button" disabled={Boolean(download)} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />下载全部 · {formatBytes(catalog.estimated_bytes)}</button> : null}
+      <OfflineShellIndicator status={offlineShellStatus} online={online} onRetry={onRetryShell} />
+      {online && catalog ? <button type="button" disabled={Boolean(download) || offlineShellStatus.phase === "preparing"} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />下载全部 · {formatBytes(catalog.estimated_bytes)}</button> : null}
       {download ? <div className="space-y-1" role="status"><div className="h-1.5 overflow-hidden rounded bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${download.progress}%` }} /></div><p className="flex items-center gap-1 text-xs text-secondary"><LoaderCircle className="h-3 w-3 animate-spin" />{download.label}</p></div> : null}
       {error ? <p className="rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)]">{error}</p> : null}
     </div>
@@ -276,6 +293,17 @@ function LibrarySidebar({ online, catalog, conversations, selectedId, tab, setTa
     </div>
     <footer className="shrink-0 border-t border-ui px-4 py-3 text-xs text-secondary"><p className="flex items-center gap-2"><HardDrive className="h-4 w-4" />{storage?.usage !== null && storage?.usage !== undefined ? `${formatBytes(storage.usage)} / ${formatBytes(storage.quota ?? 0)}` : "浏览器本地存储"}</p><p className="mt-1">{storage?.persisted ? "已启用持久化存储" : "存储可能被浏览器清理；清除站点数据会删除本地资料"}</p>{online && selectedId ? <a href={`/conversations/${selectedId}`} className="mt-2 inline-flex font-medium text-accent hover:underline">前往服务器创建 .cr 备份</a> : null}</footer>
   </div>;
+}
+
+function OfflineShellIndicator({ status, online, onRetry }: { status: OfflineShellStatus; online: boolean; onRetry: () => void }) {
+  if (status.phase === "ready") {
+    return <p className="flex min-h-9 items-center gap-2 rounded-md bg-[var(--callout-tip-bg)] px-3 text-xs text-[var(--callout-tip-text)]"><CheckCircle2 className="h-4 w-4 shrink-0" />可离线启动 · {status.resourceCount} 项资源</p>;
+  }
+  if (status.phase === "preparing") {
+    const progress = status.total ? `${status.completed}/${status.total}` : "";
+    return <p className="flex min-h-9 items-center gap-2 rounded-md bg-subtle px-3 text-xs text-secondary" role="status"><LoaderCircle className="h-4 w-4 shrink-0 animate-spin" />正在准备离线启动 {progress}</p>;
+  }
+  return <div className="flex min-h-9 items-center gap-2 rounded-md bg-[var(--callout-warning-bg)] px-3 py-2 text-xs text-[var(--callout-warning-text)]"><AlertTriangle className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1">{status.message ?? "离线启动尚未就绪"}</span>{status.phase === "error" && online ? <button type="button" onClick={onRetry} className="flex h-7 w-7 shrink-0 items-center justify-center rounded hover:bg-surface" aria-label="重试准备离线启动" title="重试"><RefreshCw className="h-3.5 w-3.5" /></button> : null}</div>;
 }
 
 function ConversationRows({ conversations, selectedId, catalog, onOpen, onDownload, onRemove }: { conversations: OfflineConversationRecord[]; selectedId: string | null; catalog?: OfflineCatalogResponse; onOpen: (id: string) => void; onDownload: (scope: "conversation", id: string) => void; onRemove: (ids: string[]) => void }) {

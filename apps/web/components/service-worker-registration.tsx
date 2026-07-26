@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  markOfflineShellUnsupported,
+  prepareOfflineShell,
+  registerLibraryServiceWorker,
+} from "../lib/offline-shell";
 
 export function ServiceWorkerRegistration() {
   useEffect(() => {
     if (!window.isSecureContext || !("serviceWorker" in navigator)) {
+      if (window.location.pathname.startsWith("/library")) {
+        markOfflineShellUnsupported("当前浏览器或连接不支持安全的离线启动。");
+      }
       return;
     }
     if (process.env.NODE_ENV !== "production") {
@@ -12,30 +20,21 @@ export function ServiceWorkerRegistration() {
         Promise.all(registrations.map((registration) => registration.unregister())),
       );
       if ("caches" in window) {
-        void caches.delete("chat-reader-shell-v1");
-        void caches.delete("chat-reader-static-v2");
-        void caches.delete("chat-reader-library-v3");
-        void caches.delete("chat-reader-library-v4");
-        void caches.delete("chat-reader-library-v5");
+        void caches.keys().then((keys) => Promise.all(
+          keys.filter((key) => key.startsWith("chat-reader-")).map((key) => caches.delete(key)),
+        ));
+      }
+      if (window.location.pathname.startsWith("/library")) {
+        markOfflineShellUnsupported("开发模式不会启用离线启动缓存。");
       }
       return;
     }
     const register = () => {
-      void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
-        const libraryScope = new URL("/library", window.location.origin).href;
-        await Promise.all(registrations.map(async (registration) => {
-          const normalizedScope = registration.scope.replace(/\/+$/, "");
-          if (normalizedScope === libraryScope.replace(/\/+$/, "")) return;
-          await registration.unregister();
-        }));
-        const registration = await navigator.serviceWorker.register("/library-sw.js", {
-          scope: "/library",
-          updateViaCache: "none",
+      void registerLibraryServiceWorker()
+        .then(() => window.location.pathname.startsWith("/library") ? prepareOfflineShell() : undefined)
+        .catch(() => {
+          // The online reader and any previous complete offline revision remain usable.
         });
-        await registration.update();
-      }).catch(() => {
-        // The reader remains fully usable without the optional offline shell.
-      });
     };
     if (document.readyState === "complete") {
       register();
