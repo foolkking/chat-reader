@@ -6,6 +6,7 @@ const SHELL_CACHE_PREFIX = "chat-reader-library-shell-";
 const LEGACY_CACHE_PATTERN = /^(chat-reader-shell-|chat-reader-static-|chat-reader-library-v\d+$)/;
 const MAX_ASSETS = 1000;
 const FETCH_CONCURRENCY = 6;
+const PROTOCOL_VERSION = 1;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -44,9 +45,9 @@ self.addEventListener("fetch", (event) => {
 
 async function sendStatus(port) {
   try {
-    port.postMessage({ type: "RESULT", ok: true, status: await inspectActiveShell() });
+    port.postMessage({ type: "RESULT", ok: true, protocolVersion: PROTOCOL_VERSION, status: await inspectActiveShell() });
   } catch (error) {
-    port.postMessage({ type: "RESULT", ok: false, error: errorMessage(error) });
+    port.postMessage({ type: "RESULT", ok: false, protocolVersion: PROTOCOL_VERSION, error: errorMessage(error) });
   }
 }
 
@@ -73,7 +74,7 @@ async function prepareLibraryShell(data, port) {
     if (active?.revision === requestedRevision) {
       const status = await inspectActiveShell();
       if (status.ready) {
-        port.postMessage({ type: "RESULT", ok: true, status });
+        port.postMessage({ type: "RESULT", ok: true, protocolVersion: PROTOCOL_VERSION, status });
         return;
       }
     }
@@ -114,13 +115,13 @@ async function prepareLibraryShell(data, port) {
       headers: { "Content-Type": "application/json" },
     }));
     await cleanupSupersededCaches(targetCacheName);
-    port.postMessage({ type: "RESULT", ok: true, status: await inspectActiveShell() });
+    port.postMessage({ type: "RESULT", ok: true, protocolVersion: PROTOCOL_VERSION, status: await inspectActiveShell() });
   } catch (error) {
     const active = await readActiveRecord().catch(() => null);
     if (targetCacheName && targetCacheName !== active?.cacheName) {
       await caches.delete(targetCacheName).catch(() => false);
     }
-    port.postMessage({ type: "RESULT", ok: false, error: errorMessage(error) });
+    port.postMessage({ type: "RESULT", ok: false, protocolVersion: PROTOCOL_VERSION, error: errorMessage(error) });
   }
 }
 

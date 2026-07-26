@@ -12,6 +12,43 @@ test("only the library advertises the installable PWA", async ({ browser }) => {
   await context.close();
 });
 
+test("upgrades an active legacy library worker before preparing the shell", async ({ page, context }) => {
+  await context.route("**/legacy-library-sw.js", async (route) => {
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `
+        self.addEventListener("install", (event) => event.waitUntil(self.skipWaiting()));
+        self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+      `,
+    });
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.register("/legacy-library-sw.js", { scope: "/library" });
+    const worker = registration.installing ?? registration.waiting ?? registration.active;
+    if (!worker) throw new Error("Legacy library worker did not install.");
+    if (worker.state !== "activated") {
+      await new Promise<void>((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error("Legacy worker activation timed out.")), 15_000);
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "activated") {
+            window.clearTimeout(timer);
+            resolve();
+          }
+        });
+      });
+    }
+  });
+
+  await page.goto("/library");
+  await expect(page.getByText(/^可离线启动/).first()).toBeVisible();
+  const registration = await page.evaluate(async () => {
+    const current = await navigator.serviceWorker.getRegistration("/library");
+    return { scriptURL: current?.active?.scriptURL ?? null };
+  });
+  expect(registration.scriptURL).toBe("http://127.0.0.1:3107/library-sw.js");
+});
+
 test("keeps the active revision after a failed update and cold-starts offline", async ({ page, context }) => {
   await page.goto("/library");
   await expect(page.getByText(/^可离线启动/).first()).toBeVisible();

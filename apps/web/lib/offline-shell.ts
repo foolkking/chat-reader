@@ -15,6 +15,7 @@ export type OfflineShellStatus = {
 type WorkerStatusResponse = {
   type: "RESULT";
   ok: boolean;
+  protocolVersion?: number;
   status?: {
     ready: boolean;
     revision: string | null;
@@ -23,6 +24,10 @@ type WorkerStatusResponse = {
   };
   error?: string;
 };
+
+const WORKER_PROTOCOL_VERSION = 1;
+const WORKER_HANDSHAKE_TIMEOUT = 3_000;
+const WORKER_ACTIVATION_TIMEOUT = 15_000;
 
 type WorkerProgressResponse = {
   type: "PROGRESS";
@@ -94,16 +99,68 @@ async function registerLibraryServiceWorkerInternal(): Promise<ServiceWorkerRegi
     if (registration.scope.replace(/\/+$/, "") === libraryScope) return;
     await registration.unregister();
   }));
-  const registration = await navigator.serviceWorker.register("/library-sw.js", {
+  let registration = await navigator.serviceWorker.register("/library-sw.js", {
     scope: "/library",
     updateViaCache: "none",
   });
   await registration.update();
-  if (registration.active) return registration;
-  await navigator.serviceWorker.ready;
-  const readyRegistration = await navigator.serviceWorker.getRegistration("/library");
-  if (!readyRegistration?.active) throw new Error("离线启动服务尚未激活，请重试。");
-  return readyRegistration;
+  let active = await activatePendingWorker(registration);
+  if (active && await supportsLibraryShellProtocol(active)) return registration;
+
+  // An upgraded page can still observe the previous active worker while the
+  // replacement is installing. Re-register only this scope if it cannot speak
+  // the current protocol; Cache Storage and IndexedDB remain intact.
+  await registration.unregister();
+  registration = await navigator.serviceWorker.register("/library-sw.js", {
+    scope: "/library",
+    updateViaCache: "none",
+  });
+  active = await activatePendingWorker(registration);
+  if (!active || !await supportsLibraryShellProtocol(active)) {
+    throw new Error("离线启动服务尚未激活，请重试。");
+  }
+  return registration;
+}
+
+async function activatePendingWorker(registration: ServiceWorkerRegistration): Promise<ServiceWorker | null> {
+  const candidate = registration.installing ?? registration.waiting;
+  if (!candidate) return registration.active;
+  if (candidate.state !== "activated") {
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        candidate.removeEventListener("statechange", handleStateChange);
+        reject(new Error("Service Worker activation timed out."));
+      }, WORKER_ACTIVATION_TIMEOUT);
+      const handleStateChange = () => {
+        if (candidate.state === "activated") {
+          window.clearTimeout(timer);
+          candidate.removeEventListener("statechange", handleStateChange);
+          resolve();
+        } else if (candidate.state === "redundant") {
+          window.clearTimeout(timer);
+          candidate.removeEventListener("statechange", handleStateChange);
+          reject(new Error("Service Worker update became redundant."));
+        }
+      };
+      candidate.addEventListener("statechange", handleStateChange);
+      handleStateChange();
+    });
+  }
+  return candidate.state === "activated" ? candidate : registration.active;
+}
+
+async function supportsLibraryShellProtocol(serviceWorker: ServiceWorker): Promise<boolean> {
+  try {
+    const result = await postMessage(
+      serviceWorker,
+      { type: "GET_LIBRARY_SHELL_STATUS" },
+      undefined,
+      WORKER_HANDSHAKE_TIMEOUT,
+    );
+    return result.ok && result.protocolVersion === WORKER_PROTOCOL_VERSION;
+  } catch {
+    return false;
+  }
 }
 
 async function prepareOfflineShellInternal(force: boolean): Promise<OfflineShellStatus> {
@@ -206,13 +263,14 @@ function postMessage(
   serviceWorker: ServiceWorker,
   message: Record<string, unknown>,
   onProgress?: (progress: WorkerProgressResponse) => void,
+  timeout = 60_000,
 ): Promise<WorkerStatusResponse> {
   return new Promise((resolve, reject) => {
     const channel = new MessageChannel();
     const timer = window.setTimeout(() => {
       channel.port1.close();
       reject(new Error("离线启动资源准备超时，请检查连接后重试。"));
-    }, 60_000);
+    }, timeout);
     channel.port1.onmessage = (event: MessageEvent<WorkerStatusResponse | WorkerProgressResponse>) => {
       if (event.data.type === "PROGRESS") {
         onProgress?.(event.data);
