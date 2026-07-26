@@ -380,7 +380,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       x={contextAnnotation.x}
       y={contextAnnotation.y}
       onClose={() => setContextAnnotation(null)}
-      onNavigate={() => { setContextAnnotation(null); void navigateFromAnnotation({ messageId: contextAnnotation.annotation.message_id ?? "", blockIndex: contextAnnotation.annotation.start_block_index ?? undefined, characterOffset: contextAnnotation.annotation.start_offset ?? undefined, source: "message-action" }); }}
+      onNavigate={() => { setContextAnnotation(null); void navigateFromAnnotation(annotationNavigateTarget(contextAnnotation.annotation)); }}
       onDelete={() => void deleteAnnotations(new Set([contextAnnotation.annotation.id]))}
       onStyle={(type, color) => void updateAnnotationStyle(contextAnnotation.annotation, type, color)}
       onAddToNotebook={() => void addAnnotationToNotebook(contextAnnotation.annotation)}
@@ -423,7 +423,7 @@ function AnnotationList({ items, editable, messages, focusedAnnotationId, select
     return <article id={`annotation-${annotation.id}`} key={annotation.id} className={`rounded-sm border-b border-ui pb-4 last:border-0 ${focusedAnnotationId === annotation.id ? "bg-[var(--accent-soft)] ring-2 ring-[var(--focus)]" : ""}`}>
       <div className="flex items-start gap-1">
         {selectionMode ? <button type="button" onClick={() => onToggleSelected(annotation.id)} className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={selected ? "取消选择批注" : "选择批注"}>{selected ? <CheckSquare2 className="h-4 w-4 text-accent" /> : <Square className="h-4 w-4" />}</button> : null}
-        <button type="button" onClick={() => selectionMode ? onToggleSelected(annotation.id) : void onNavigate({ messageId: annotation.message_id ?? "", blockIndex, characterOffset: blockIndex === undefined ? undefined : annotation.start_offset ?? undefined, source: "message-action" })} className="min-w-0 flex-1 px-1 text-left">
+        <button type="button" onClick={() => selectionMode ? onToggleSelected(annotation.id) : void onNavigate(annotationNavigateTarget(annotation, blockIndex))} className="min-w-0 flex-1 px-1 text-left">
          <div className="flex flex-wrap items-center gap-2 text-xs text-secondary"><span className={`h-2.5 w-2.5 rounded-full ${colorClass(annotation.color)}`} /><span>{label}</span><span className="rounded bg-subtle px-1.5 py-0.5">{annotationTypeLabel(annotation.annotation_type)}</span>{sectionTitle ? <span className="min-w-0 truncate">{sectionTitle}</span> : null}{annotation.anchor_status === "stale" ? <span className="text-[var(--danger)]">原文已更改</span> : null}{annotation.conflict_of_id ? <span className="text-amber-600">冲突副本</span> : null}</div>
           <blockquote className="mt-2 border-l-2 border-[var(--accent)] pl-3 text-sm leading-6 text-primary">{annotation.quote || "整条消息书签"}</blockquote>
         </button>
@@ -460,6 +460,22 @@ function annotationTypeLabel(type: AnnotationType): string {
   return type === "highlight" ? "Highlight" : type === "underline" ? "Underline" : type === "strikethrough" ? "Strike" : type === "comment" ? "Comment" : "Bookmark";
 }
 
+function annotationNavigateTarget(annotation: AnnotationRead, explicitBlockIndex?: number): NavigateTarget {
+  const stale = annotation.anchor_status === "stale";
+  const blockIndex = stale ? undefined : explicitBlockIndex ?? annotation.start_block_index ?? undefined;
+  return {
+    messageId: annotation.message_id ?? "",
+    blockIndex,
+    characterOffset: blockIndex === undefined ? undefined : annotation.start_offset ?? undefined,
+    endCharacterOffset: blockIndex === undefined ? undefined : annotation.end_offset ?? undefined,
+    quote: blockIndex === undefined ? null : annotation.quote,
+    annotationId: annotation.id,
+    preferTocPipeline: true,
+    allowMessageFallback: true,
+    source: "message-action",
+  };
+}
+
 function NotebookView({ notebook, conflicts, annotations, editable, onSave, onNavigate }: { notebook: NotebookRead | null; conflicts: NotebookRead[]; annotations: AnnotationRead[]; editable: boolean; onSave: (blocks: NotebookBlock[]) => Promise<void>; onNavigate: (target: NavigateTarget) => void | Promise<unknown> }) {
   const [blocks, setBlocks] = useState<NotebookBlock[]>(notebook?.blocks ?? []);
   const dragIndex = useRef<number | null>(null);
@@ -475,7 +491,7 @@ function NotebookView({ notebook, conflicts, annotations, editable, onSave, onNa
       const annotation = block.annotation_id ? annotations.find((item) => item.id === block.annotation_id) : null;
       return <div key={block.id} draggable={editable} onDragStart={() => { dragIndex.current = index; }} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragIndex.current === null || dragIndex.current === index) return; const next = [...blocks]; const [moved] = next.splice(dragIndex.current, 1); next.splice(index, 0, moved); dragIndex.current = null; void persist(next); }} className="group flex gap-2 border-b border-ui pb-3 last:border-0">
         {editable ? <GripVertical className="mt-2 h-4 w-4 shrink-0 cursor-grab text-secondary" /> : null}
-        <div className="min-w-0 flex-1">{block.type === "markdown" ? editable ? <textarea defaultValue={block.markdown ?? ""} onBlur={(event) => { const next = blocks.map((item) => item.id === block.id ? { ...item, markdown: event.target.value } : item); void persist(next); }} className="min-h-24 w-full resize-y rounded-md border border-ui bg-page px-3 py-2 text-sm outline-none" /> : <MarkdownRenderer text={block.markdown ?? ""} /> : annotation ? <button type="button" onClick={() => void onNavigate({ messageId: annotation.message_id ?? "", blockIndex: annotation.anchor_status === "stale" ? undefined : annotation.start_block_index ?? undefined, characterOffset: annotation.anchor_status === "stale" ? undefined : annotation.start_offset ?? undefined, source: "message-action" })} className="w-full border-l-2 border-[var(--accent)] pl-3 text-left text-sm leading-6">{annotation.quote || "整条消息书签"}</button> : <p className="text-sm text-[var(--danger)]">引用的批注不可用</p>}</div>
+        <div className="min-w-0 flex-1">{block.type === "markdown" ? editable ? <textarea defaultValue={block.markdown ?? ""} onBlur={(event) => { const next = blocks.map((item) => item.id === block.id ? { ...item, markdown: event.target.value } : item); void persist(next); }} className="min-h-24 w-full resize-y rounded-md border border-ui bg-page px-3 py-2 text-sm outline-none" /> : <MarkdownRenderer text={block.markdown ?? ""} /> : annotation ? <button type="button" onClick={() => void onNavigate(annotationNavigateTarget(annotation))} className="w-full border-l-2 border-[var(--accent)] pl-3 text-left text-sm leading-6">{annotation.quote || "整条消息书签"}</button> : <p className="text-sm text-[var(--danger)]">引用的批注不可用</p>}</div>
       </div>;
     })}
     {editable ? <button type="button" onClick={() => void persist([...blocks, { id: crypto.randomUUID(), type: "markdown", markdown: "" }])} className="flex min-h-9 items-center gap-2 rounded-md border border-ui px-3 text-sm hover:bg-subtle"><Plus className="h-4 w-4" />插入说明</button> : null}

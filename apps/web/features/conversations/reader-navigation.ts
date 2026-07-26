@@ -7,6 +7,8 @@ type NavigateMountedTargetOptions = {
   tokenIsCurrent?: () => boolean;
   offset?: number;
   characterOffset?: number;
+  endCharacterOffset?: number;
+  quote?: string | null;
   timeoutMs?: number;
   allowFallback?: boolean;
 };
@@ -27,6 +29,8 @@ export async function navigateMountedTarget({
   tokenIsCurrent = () => true,
   offset = 12,
   characterOffset,
+  endCharacterOffset,
+  quote,
   timeoutMs = 6000,
   allowFallback = false,
 }: NavigateMountedTargetOptions): Promise<NavigationResult> {
@@ -46,18 +50,47 @@ export async function navigateMountedTarget({
     return { ok: false, targetId, reason: "target-not-mounted" };
   }
   const resolvedCharacterOffset = target.id === targetId ? characterOffset : undefined;
+  const resolvedEndCharacterOffset = target.id === targetId ? endCharacterOffset : undefined;
+  const resolvedQuote = target.id === targetId ? quote : null;
+  let usedTextAnchor = false;
+  let textAnchorMissing = Boolean(resolvedCharacterOffset !== undefined || resolvedQuote);
 
   for (let attempt = 0; attempt < 6; attempt += 1) {
     if (!tokenIsCurrent()) {
       return { ok: false, targetId, reason: "cancelled" };
     }
-    scrollToAlignedPosition(root, target, offset, resolvedCharacterOffset);
+    const textRect = textAnchorRect(target, {
+      characterOffset: resolvedCharacterOffset,
+      endCharacterOffset: resolvedEndCharacterOffset,
+      quote: resolvedQuote,
+    });
+    usedTextAnchor = Boolean(textRect);
+    textAnchorMissing = Boolean((resolvedCharacterOffset !== undefined || resolvedQuote) && !textRect);
+    scrollToAlignedPosition(root, target, offset, textRect);
     await waitForLayoutSettle();
-    if (isAligned(root, target, offset, resolvedCharacterOffset)) {
+    const settledRect = textAnchorRect(target, {
+      characterOffset: resolvedCharacterOffset,
+      endCharacterOffset: resolvedEndCharacterOffset,
+      quote: resolvedQuote,
+    }) ?? (usedTextAnchor ? null : undefined);
+    if (isAligned(root, target, offset, settledRect)) {
       await new Promise<void>((resolve) => window.setTimeout(resolve, 400));
-      if (isAligned(root, target, offset, resolvedCharacterOffset)) {
-        return { ok: true, targetId: target.id };
+      const finalRect = textAnchorRect(target, {
+        characterOffset: resolvedCharacterOffset,
+        endCharacterOffset: resolvedEndCharacterOffset,
+        quote: resolvedQuote,
+      }) ?? (usedTextAnchor ? null : undefined);
+      if (isAligned(root, target, offset, finalRect)) {
+        return { ok: true, targetId: target.id, fallback: textAnchorMissing, reason: textAnchorMissing ? "stale-anchor" : undefined };
       }
+    }
+  }
+
+  if (!usedTextAnchor && (resolvedCharacterOffset !== undefined || resolvedQuote)) {
+    scrollToAlignedPosition(root, target, offset);
+    await waitForLayoutSettle();
+    if (isAligned(root, target, offset)) {
+      return { ok: true, targetId: target.id, fallback: true, reason: "stale-anchor" };
     }
   }
 
@@ -184,8 +217,8 @@ async function waitForTarget(
   });
 }
 
-function scrollToAlignedPosition(root: HTMLElement | null, target: HTMLElement, offset: number, characterOffset?: number) {
-  const targetRect = textOffsetRect(target, characterOffset) ?? target.getBoundingClientRect();
+function scrollToAlignedPosition(root: HTMLElement | null, target: HTMLElement, offset: number, textRect?: DOMRect | null) {
+  const targetRect = textRect ?? target.getBoundingClientRect();
   if (root) {
     const rootRect = root.getBoundingClientRect();
     root.scrollTo({
@@ -210,28 +243,106 @@ function nextFrame(): Promise<void> {
   return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
 }
 
-function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number, characterOffset?: number): boolean {
+function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number, textRect?: DOMRect | null): boolean {
   const rootTop = root?.getBoundingClientRect().top ?? 0;
   const expectedTop = rootTop + offset;
-  const targetRect = textOffsetRect(target, characterOffset) ?? target.getBoundingClientRect();
+  const targetRect = textRect ?? target.getBoundingClientRect();
   return Math.abs(targetRect.top - expectedTop) <= 24;
 }
 
-function textOffsetRect(target: HTMLElement, characterOffset?: number): DOMRect | null {
+function textAnchorRect(target: HTMLElement, options: { characterOffset?: number; endCharacterOffset?: number; quote?: string | null }): DOMRect | null {
+  const quoteRect = quoteRangeRect(target, options.quote);
+  if (quoteRect) return quoteRect;
+  return textOffsetRect(target, options.characterOffset, options.endCharacterOffset);
+}
+
+function textOffsetRect(target: HTMLElement, characterOffset?: number, endCharacterOffset?: number): DOMRect | null {
   if (characterOffset === undefined) return null;
+  const textNodes: Text[] = [];
   const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
-  let remaining = Math.max(0, characterOffset);
   while (walker.nextNode()) {
-    const node = walker.currentNode;
-    const length = node.textContent?.length ?? 0;
-    if (remaining <= length) {
-      const range = document.createRange();
-      range.setStart(node, remaining);
-      range.setEnd(node, Math.min(length, remaining + 1));
-      const rect = range.getBoundingClientRect();
-      return rect.width || rect.height ? rect : null;
-    }
-    remaining -= length;
+    textNodes.push(walker.currentNode as Text);
   }
-  return null;
+  return rangeRectFromOffsets(textNodes, characterOffset, endCharacterOffset ?? characterOffset + 1);
+}
+
+function quoteRangeRect(target: HTMLElement, quote?: string | null): DOMRect | null {
+  const normalizedQuote = normalizeText(quote ?? "");
+  if (!normalizedQuote) return null;
+  const textNodes: Text[] = [];
+  const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+  let combined = "";
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    textNodes.push(node);
+    combined += node.textContent ?? "";
+  }
+  const exactIndex = combined.indexOf(quote ?? "");
+  if (exactIndex >= 0) {
+    return rangeRectFromOffsets(textNodes, exactIndex, exactIndex + (quote ?? "").length);
+  }
+  const collapsed = collapseWhitespaceWithMap(combined);
+  const normalizedIndex = collapsed.text.indexOf(normalizedQuote);
+  if (normalizedIndex < 0) return null;
+  return rangeRectFromOffsets(textNodes, collapsed.map[normalizedIndex] ?? 0, collapsed.map[Math.max(normalizedIndex + normalizedQuote.length - 1, normalizedIndex)] + 1);
+}
+
+function rangeRectFromOffsets(textNodes: Text[], startOffset: number, endOffset: number): DOMRect | null {
+  const totalLength = textNodes.reduce((total, node) => total + (node.textContent?.length ?? 0), 0);
+  if (totalLength === 0) return null;
+  const clampedStart = Math.min(Math.max(0, startOffset), totalLength - 1);
+  const clampedEnd = Math.min(totalLength, Math.max(clampedStart + 1, endOffset));
+  let cursor = 0;
+  let startNode: Text | null = null;
+  let endNode: Text | null = null;
+  let startLocal = 0;
+  let endLocal = 0;
+  for (const node of textNodes) {
+    const length = node.textContent?.length ?? 0;
+    if (!startNode && clampedStart < cursor + length) {
+      startNode = node;
+      startLocal = clampedStart - cursor;
+    }
+    if (startNode && clampedEnd <= cursor + length) {
+      endNode = node;
+      endLocal = clampedEnd - cursor;
+      break;
+    }
+    cursor += length;
+  }
+  if (!startNode || !endNode) return null;
+  const range = document.createRange();
+  range.setStart(startNode, startLocal);
+  range.setEnd(endNode, endLocal);
+  return firstUsefulRect(range);
+}
+
+function firstUsefulRect(range: Range): DOMRect {
+  const rects = Array.from(range.getClientRects()).filter((rect) => rect.width || rect.height);
+  return rects[0] ?? range.getBoundingClientRect();
+}
+
+function normalizeText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function collapseWhitespaceWithMap(value: string): { text: string; map: number[] } {
+  let text = "";
+  const map: number[] = [];
+  let pendingSpace = false;
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if (/\s/.test(char)) {
+      pendingSpace = text.length > 0;
+      continue;
+    }
+    if (pendingSpace) {
+      text += " ";
+      map.push(index);
+      pendingSpace = false;
+    }
+    text += char;
+    map.push(index);
+  }
+  return { text, map };
 }

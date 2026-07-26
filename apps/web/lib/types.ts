@@ -453,6 +453,12 @@ export type NavigateTarget = {
   messageId: string;
   blockIndex?: number;
   characterOffset?: number;
+  endCharacterOffset?: number;
+  quote?: string | null;
+  annotationId?: string;
+  preferTocPipeline?: boolean;
+  closePanelAfterResolved?: boolean;
+  allowMessageFallback?: boolean;
   alignmentOffset?: number;
   source?: "dialogue-index" | "section-toc" | "search" | "message-action";
 };

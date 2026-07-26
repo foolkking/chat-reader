@@ -3,14 +3,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Layers3, ListTree, Merge, MessageSquareText, Scissors, Search, Share2, X } from "lucide-react";
+import { Download, Globe2, Layers3, Library, ListTree, Merge, MessageSquareText, Scissors, Search, Share2, X } from "lucide-react";
 import {
   mergeMessages,
   saveReadingPositionKeepalive,
   splitConversation,
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource } from "../../lib/reader-data-source";
-import type { LoadedMessageWindow, MessageListItem, MessageWindowResponse, NavigateTarget, NavigationResult, NeighborhoodExpansionState, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollDirection, TocItem } from "../../lib/types";
+import type { ConversationDetail, LoadedMessageWindow, MessageListItem, MessageWindowResponse, NavigateTarget, NavigationResult, NeighborhoodExpansionState, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollDirection, TocItem } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
 import { ProjectSidebar } from "../projects/project-sidebar";
 import { SharePanel } from "../sharing/share-panel";
@@ -36,6 +36,7 @@ const PAGE_SIZE = 30;
 const BLOCK_PAGE_SIZE = 20;
 const ACTIVE_READING_OFFSET = 120;
 const ANCHOR_BEFORE = 12;
+const APP_TITLE = "chat-reader";
 
 export function ConversationReader({
   conversationId,
@@ -55,6 +56,7 @@ export function ConversationReader({
   const queryClient = useQueryClient();
   const targetMessageId = searchParams.get("messageId");
   const targetBlockIndex = numberOrNull(searchParams.get("blockIndex"));
+  const targetCharacterOffset = numberOrNull(searchParams.get("characterOffset"));
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
   const messages = loadedWindow.items;
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
@@ -71,6 +73,7 @@ export function ConversationReader({
     pending: false,
     error: null,
   });
+  const [browserOnline, setBrowserOnline] = useState(true);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
@@ -119,10 +122,30 @@ export function ConversationReader({
     resetKey: conversationId,
   });
 
+  useEffect(() => {
+    setBrowserOnline(typeof navigator === "undefined" ? true : navigator.onLine);
+    const onOnline = () => setBrowserOnline(true);
+    const onOffline = () => setBrowserOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
   const conversationQuery = useQuery({
     queryKey: ["conversation", dataSource.mode, conversationId],
     queryFn: () => dataSource.getConversation(conversationId),
   });
+
+  useEffect(() => {
+    const conversation = conversationQuery.data;
+    document.title = conversation ? formatConversationTitle(conversation) : APP_TITLE;
+    return () => {
+      document.title = APP_TITLE;
+    };
+  }, [conversationQuery.data]);
 
   useEffect(() => {
     void dataSource.recordRecent(conversationId, projectContextId ?? null).then(() => {
@@ -377,7 +400,7 @@ export function ConversationReader({
   }, [loadNextWindow, loadPreviousWindow]);
 
   const navigateToTarget = useCallback(
-    async ({ messageId, blockIndex, characterOffset, alignmentOffset }: NavigateTarget): Promise<NavigationResult> => {
+    async ({ messageId, blockIndex, characterOffset, endCharacterOffset, quote, alignmentOffset, allowMessageFallback }: NavigateTarget): Promise<NavigationResult> => {
       neighborhoodExpansionRef.current = {
         active: false,
         generation: neighborhoodExpansionRef.current.generation + 1,
@@ -486,8 +509,10 @@ export function ConversationReader({
           tokenIsCurrent: () => navigationTokenRef.current === token,
           offset: alignmentOffset ?? 12,
           characterOffset: blockId ? characterOffset : undefined,
+          endCharacterOffset: blockId ? endCharacterOffset : undefined,
+          quote: blockId ? quote : null,
           timeoutMs: 8000,
-          allowFallback: false,
+          allowFallback: allowMessageFallback ?? Boolean(quote || characterOffset !== undefined),
         });
         if (result.ok) {
           setNavigationStatus(result.fallback ? "stale" : "idle");
@@ -571,11 +596,16 @@ export function ConversationReader({
     if (!messageId) {
       return;
     }
-    void navigateToTarget({ messageId, blockIndex: targetBlockIndex ?? undefined, source: "search" }).finally(() => {
+    void navigateToTarget({
+      messageId,
+      blockIndex: targetBlockIndex ?? undefined,
+      characterOffset: targetCharacterOffset ?? undefined,
+      source: "search",
+    }).finally(() => {
       restoreAttemptedRef.current = true;
       setPendingTargetMessageId(null);
     });
-  }, [navigateToTarget, pendingTargetMessageId, targetBlockIndex, targetMessageId]);
+  }, [navigateToTarget, pendingTargetMessageId, targetBlockIndex, targetCharacterOffset, targetMessageId]);
 
   useEffect(() => {
     if (!targetMessageId && positionQuery.isError && windowQuery.isSuccess) {
@@ -820,6 +850,16 @@ export function ConversationReader({
     () => `${activeMessageId ?? "none"}:${messages.length}:${Object.keys(blockCache).length}:${expandedHeavyMessageIds.size}`,
     [activeMessageId, blockCache, expandedHeavyMessageIds.size, messages.length],
   );
+  function currentReaderLocation(): { conversationId: string; messageId?: string; blockIndex?: number; characterOffset?: number } {
+    const root = scrollContainerRef.current;
+    const position = root ? captureReadingPosition(root, messagesRef.current) : null;
+    const messageId = position?.message_id ?? resolveActiveMessageId(root) ?? activeMessageId ?? undefined;
+    const activeBlockParts = activeBlockId?.split("-") ?? [];
+    const activeBlockIndex = activeBlockParts.length ? numberOrNull(activeBlockParts[activeBlockParts.length - 1]) ?? undefined : undefined;
+    const blockIndex = position?.block_index ?? activeBlockIndex;
+    const offset = messageId && blockIndex !== undefined ? estimateCharacterOffsetAtReadingLine(root, messageId, blockIndex) : undefined;
+    return { conversationId, messageId, blockIndex, characterOffset: offset };
+  }
 
   async function refreshReader() {
     windowGenerationRef.current += 1;
@@ -1131,6 +1171,23 @@ export function ConversationReader({
       icon: Search,
       onSelect: () => libraryMode ? onOpenLibrary?.() : openUtilityPanel("search"),
     },
+    ...(!libraryMode ? [{
+      id: "offline-library",
+      label: "Offline library",
+      icon: Library,
+      onSelect: () => {
+        window.location.href = buildReaderUrl("/library", currentReaderLocation());
+      },
+    } as ReaderHeaderAction] : [{
+      id: "online-reader",
+      label: browserOnline ? "Online reader" : "Online reader requires network",
+      icon: Globe2,
+      disabled: !browserOnline,
+      onSelect: () => {
+        if (!browserOnline) return;
+        window.location.href = buildReaderUrl(`/conversations/${conversationId}`, currentReaderLocation());
+      },
+    } as ReaderHeaderAction]),
     {
       id: "expand-nearby",
       label: neighborhoodExpansion.active
@@ -1651,6 +1708,56 @@ function numberOrNull(value: unknown): number | null {
   }
   const number = Number.parseInt(value, 10);
   return Number.isFinite(number) ? number : null;
+}
+
+function formatConversationTitle(conversation: Pick<ConversationDetail, "title" | "display_title" | "project_name">): string {
+  const title = (conversation.display_title || conversation.title || APP_TITLE).trim() || APP_TITLE;
+  const project = conversation.project_name?.trim();
+  return project ? `${project} / ${title}` : title;
+}
+
+function buildReaderUrl(basePath: string, location: { conversationId: string; messageId?: string; blockIndex?: number; characterOffset?: number }): string {
+  const params = new URLSearchParams();
+  if (basePath === "/library") params.set("conversationId", location.conversationId);
+  if (location.messageId) params.set("messageId", location.messageId);
+  if (location.blockIndex !== undefined) params.set("blockIndex", String(location.blockIndex));
+  if (location.characterOffset !== undefined) params.set("characterOffset", String(location.characterOffset));
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
+function estimateCharacterOffsetAtReadingLine(root: HTMLElement | null, messageId: string, blockIndex: number): number | undefined {
+  const block = document.getElementById(`block-${messageId}-${blockIndex}`);
+  if (!block) return undefined;
+  const rootTop = root?.getBoundingClientRect().top ?? 0;
+  const readingLine = rootTop + ACTIVE_READING_OFFSET;
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+  let total = 0;
+  let closest: { offset: number; distance: number } | null = null;
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    const text = node.textContent ?? "";
+    const length = text.length;
+    if (length === 0) continue;
+    const range = document.createRange();
+    range.setStart(node, 0);
+    range.setEnd(node, Math.min(1, length));
+    const firstRect = range.getBoundingClientRect();
+    range.setStart(node, Math.max(0, length - 1));
+    range.setEnd(node, length);
+    const lastRect = range.getBoundingClientRect();
+    const candidates = [
+      { offset: total, rect: firstRect },
+      { offset: total + length - 1, rect: lastRect },
+    ];
+    for (const candidate of candidates) {
+      if (!candidate.rect.width && !candidate.rect.height) continue;
+      const distance = Math.abs(candidate.rect.top - readingLine);
+      if (!closest || distance < closest.distance) closest = { offset: candidate.offset, distance };
+    }
+    total += length;
+  }
+  return closest?.offset;
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {
