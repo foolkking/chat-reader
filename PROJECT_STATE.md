@@ -1,5 +1,7 @@
 # 项目当前状态
 
+> 历史快照提示：本文更新于 2026-07-21，记录的 migration head `0013` 及批注/离线缺口已经过期。2026-07-26 核验的当前事实基线见 [docs/system/README.md](docs/system/README.md)，已知差异见 [docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md](docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md)。
+
 更新日期：2026-07-21。
 
 本文是后续开发者和 AI 的当前实现快照。功能事实以代码、Alembic migration 和自动化测试为最终依据。

@@ -1,0 +1,32 @@
+
+> web@0.0.0 dev E:\1project\chat-reader\apps\web
+> next dev "-H" "127.0.0.1" "-p" "3000"
+
+  ▲ Next.js 14.2.23
+  - Local:        http://127.0.0.1:3000
+  - Network:      http://127.0.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 9.7s
+ ○ Compiling / ...
+ ✓ Compiled / in 42.6s (7185 modules)
+ GET / 200 in 43495ms
+ GET / 200 in 29ms
+ ○ Compiling /conversations/[conversationId] ...
+ ✓ Compiled /conversations/[conversationId] in 2.2s (7153 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 3091ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.5s (7142 modules)
+ GET / 404 in 2787ms
+ GET /_next/static/css/app/layout.css?v=1784250456039 404 in 61ms
+ GET /_next/static/chunks/main-app.js?v=1784250456039 404 in 35ms
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 748ms (3436 modules)
+ GET /manifest.webmanifest 200 in 1572ms
+ GET / 200 in 492ms
+ GET /_next/static/css/app/layout.css?v=1784253728651 404 in 30ms
+ GET /_next/static/chunks/main-app.js?v=1784253728651 404 in 54ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 31ms
+ GET /_next/static/chunks/app/page.js 404 in 51ms
+ GET /_next/static/chunks/app/layout.js 404 in 44ms
+[?25h

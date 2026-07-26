@@ -1,0 +1,81 @@
+
+> web@0.0.0 dev E:\1project\chat-reader\apps\web
+> next dev "-H" "127.0.0.1" "-p" "3017"
+
+  ▲ Next.js 14.2.23
+  - Local:        http://127.0.0.1:3017
+  - Network:      http://127.0.0.1:3017
+
+ ✓ Starting...
+ ✓ Ready in 9.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 54.3s (7206 modules)
+ GET / 200 in 55220ms
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 10.5s (3427 modules)
+ GET /manifest.webmanifest 200 in 11780ms
+ GET / 200 in 567ms
+ GET /manifest.webmanifest 200 in 37ms
+ ○ Compiling /conversations/[conversationId] ...
+ ✓ Compiled /conversations/[conversationId] in 2.3s (7246 modules)
+ GET /?_rsc=r3yhw 200 in 159ms
+ GET /?_rsc=r3yhw 200 in 41ms
+ GET /manifest.webmanifest 200 in 22ms
+ GET /manifest.webmanifest 200 in 12ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 3283ms
+ GET /manifest.webmanifest 200 in 27ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 130ms
+ GET /manifest.webmanifest 200 in 29ms
+ ✓ Compiled in 3.9s (7212 modules)
+ GET /?_rsc=r3yhw 200 in 399ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 403ms
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 888ms (3469 modules)
+ GET /manifest.webmanifest 200 in 2161ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 831ms
+ GET /manifest.webmanifest 200 in 33ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 158ms
+ GET /manifest.webmanifest 200 in 23ms
+ ✓ Compiled in 2.9s (7212 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 1945ms
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 1236ms (3469 modules)
+ GET /manifest.webmanifest 200 in 2135ms
+ ✓ Compiled in 2.5s (7246 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 267ms
+ GET /manifest.webmanifest 200 in 44ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 637ms
+ GET /manifest.webmanifest 200 in 39ms
+ ✓ Compiled in 4s (7246 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 262ms
+ GET /manifest.webmanifest 200 in 61ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 339ms
+ GET /manifest.webmanifest 200 in 25ms
+ ✓ Compiled in 1252ms (7246 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 195ms
+ GET /manifest.webmanifest 200 in 43ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 375ms
+ GET /manifest.webmanifest 200 in 29ms
+ ✓ Compiled in 1337ms (7246 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 209ms
+ GET /manifest.webmanifest 200 in 64ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 203ms
+ GET /manifest.webmanifest 200 in 19ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 99ms
+ GET /manifest.webmanifest 200 in 35ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 167ms
+ GET /manifest.webmanifest 200 in 37ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 84ms
+ GET /manifest.webmanifest 200 in 28ms
+ ✓ Compiled in 2.4s (7212 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 411ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 87ms
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 900ms (3469 modules)
+ GET /manifest.webmanifest 200 in 2104ms
+ ✓ Compiled in 1003ms (7246 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 179ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67?_rsc=22gbp 200 in 94ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 252ms
+ GET /manifest.webmanifest 200 in 66ms
+[?25h

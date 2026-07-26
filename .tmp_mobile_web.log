@@ -1,0 +1,18 @@
+
+> chat-reader@0.0.0 dev:web E:\1project\chat-reader
+> corepack pnpm --filter web dev -H 0.0.0.0 -p 3000
+
+
+> web@0.0.0 dev E:\1project\chat-reader\apps\web
+> next dev "-H" "0.0.0.0" "-p" "3000"
+
+  ▲ Next.js 14.2.23
+  - Local:        http://localhost:3000
+  - Network:      http://0.0.0.0:3000
+
+ ✓ Starting...
+ ✓ Ready in 3.7s
+ ○ Compiling / ...
+ ✓ Compiled / in 14.9s (6999 modules)
+ GET / 200 in 16128ms
+ GET / 200 in 91ms

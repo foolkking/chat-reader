@@ -1,5 +1,7 @@
 # 产品说明
 
+> 时效提示：本文早于 2026-07-26 的批注、精选笔记和完整 `/library` 离线资料库实现。产品背景仍可参考；当前能力与限制以 [system/FEATURE_INVENTORY.md](system/FEATURE_INVENTORY.md) 和 [system/SYSTEM_OVERVIEW.md](system/SYSTEM_OVERVIEW.md) 为准。
+
 ## 定位
 
 `chat-reader` 是 AI 对话资料库，不是聊天生成客户端。它将导出的会话转换为可长期管理的内部格式，使用户可以阅读、搜索、编辑、组织、分享和再次导出。

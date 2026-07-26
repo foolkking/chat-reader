@@ -1,0 +1,74 @@
+
+> chat-reader@0.0.0 dev:web E:\1project\chat-reader
+> corepack pnpm --filter web dev -H 0.0.0.0 -p 3000
+
+
+> web@0.0.0 dev E:\1project\chat-reader\apps\web
+> next dev "-H" "0.0.0.0" "-p" "3000"
+
+  ▲ Next.js 14.2.23
+  - Local:        http://localhost:3000
+  - Network:      http://0.0.0.0:3000
+
+ ✓ Starting...
+ ✓ Ready in 3.4s
+ ○ Compiling /conversations/[conversationId] ...
+ ✓ Compiled /conversations/[conversationId] in 19.5s (7108 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 20731ms
+ ○ Compiling /archived ...
+ ✓ Compiled /archived in 2.5s (7047 modules)
+ GET /archived 200 in 3205ms
+ ✓ Compiled in 1335ms (3700 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 139ms
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 49ms
+ ✓ Compiled in 1508ms (3700 modules)
+ ✓ Compiled in 1047ms (3700 modules)
+ ✓ Compiled in 8.2s (7049 modules)
+ ✓ Compiled in 1590ms (7049 modules)
+ ✓ Compiled in 743ms (3701 modules)
+ ✓ Compiled in 839ms (3701 modules)
+ ✓ Compiled in 689ms (3701 modules)
+ ✓ Compiled in 2.5s (7038 modules)
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /archived. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /archived. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /archived. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ○ Compiling /offline ...
+ ✓ Compiled /offline in 2.4s (7079 modules)
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /icons/icon-192.png. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /icons/icon-192.png. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /icons/icon-512.png. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /icons/icon-512.png. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /offline 200 in 2290ms
+ GET /icons/icon-512.png 404 in 2260ms
+ GET /icons/icon-192.png 404 in 2263ms
+ GET /offline 200 in 2583ms
+ GET /icons/icon-512.png 404 in 2246ms
+ GET /manifest.webmanifest 200 in 2728ms
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /offline. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /offline. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /icons/icon-192.png 404 in 2750ms
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /icons/icon-192.png. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /icons/icon-512.png. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /icons/icon-192.png 404 in 31ms
+ GET /icons/icon-512.png 404 in 38ms
+ ✓ Compiled in 1199ms (3703 modules)
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[?25h

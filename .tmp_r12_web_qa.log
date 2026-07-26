@@ -1,0 +1,23 @@
+
+> web@0.0.0 dev E:\1project\chat-reader\apps\web
+> next dev "-H" "127.0.0.1" "-p" "3000"
+
+  ▲ Next.js 14.2.23
+  - Local:        http://127.0.0.1:3000
+  - Network:      http://127.0.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 4.4s
+ ○ Compiling / ...
+ ✓ Compiled / in 22.5s (7185 modules)
+ GET / 200 in 23035ms
+ ○ Compiling /conversations/[conversationId] ...
+ ✓ Compiled /conversations/[conversationId] in 2.2s (7153 modules)
+ GET /conversations/fb82cbed-2861-49b6-80b5-dce5443f6c67 200 in 3132ms
+ GET / 200 in 93ms
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 1246ms (3435 modules)
+ GET /manifest.webmanifest 200 in 2169ms
+ GET /manifest.webmanifest 200 in 21ms
+ GET /manifest.webmanifest 200 in 13ms
+[?25h

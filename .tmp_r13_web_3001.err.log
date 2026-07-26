@@ -1,0 +1,7 @@
+[Error: EPERM: operation not permitted, open 'E:\1project\chat-reader\apps\web\.next\trace'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'E:\\1project\\chat-reader\\apps\\web\\.next\\trace'
+}
+ ⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
