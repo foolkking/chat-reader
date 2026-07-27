@@ -90,5 +90,12 @@
 | 面向用户的图片/附件上传 | 待验证后续规划；当前未发现入口 | 导入文件选择不是消息附件上传；代码可渲染导入内容中的图片/附件 |
 | 音频/视频播放器 | 待验证 | 当前 renderer 搜索未发现专用实现 |
 | 系统级管理后台、用户管理、审计日志 UI | 不适用（当前构建） | 页面/API/model 搜索未发现 |
-| `/recent` 直接菜单入口 | 部分实现/隐藏 | 页面和 API 存在，当前 `ProjectSidebar` 未发现链接 |
+| `/recent` 直接菜单入口 | 已确认 | 页面、API 与 `ProjectSidebar` 正式入口均存在 |
 
+## 第二轮完成项（2026-07-27）
+
+- 全局搜索按 conversation/content/annotation 分组；批注结果包含类型、颜色、annotation id 与 block/offset 定位。
+- 当前对话搜索只使用当前 conversation 的正文与批注结果。
+- 批注创建、更新、软删除、冲突副本和锚点重定位同步 SearchDocument；`python -m scripts.backfill_annotation_search` 提供幂等回填统计。
+- Reader 消息统一左对齐；批注默认为浮窗，桌面固定时覆盖左侧导航并可恢复，移动端提供轻量选择创建。
+- `/library` 保留既有 Dexie/Service Worker 协议；没有升级 schema 或清理已有离线数据。

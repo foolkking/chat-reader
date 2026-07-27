@@ -12,6 +12,7 @@ from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
 from app.services.database.bulk_insert import insert_rows
 from app.services.toc.toc_builder import rebuild_headings_for_all, rebuild_headings_for_conversation
+from app.services.search.annotation_indexer import sync_annotations_for_conversation
 
 
 @dataclass(frozen=True)
@@ -162,6 +163,8 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         insert_rows(db, SearchDocument, document_rows)
 
     db.flush()
+    _refresh_postgres_tsv(db, conversation.id)
+    sync_annotations_for_conversation(db, conversation.id)
     _refresh_postgres_tsv(db, conversation.id)
     return SearchIndexResult(conversation_count=1, indexed_count=indexed_count, heading_count=0)
 

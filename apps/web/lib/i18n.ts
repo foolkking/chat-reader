@@ -1,7 +1,7 @@
 export type ResolvedLocale = "zh-CN" | "en-US";
 
 const zh = {
-  conversations: "对话", allConversations: "全部对话", search: "搜索", archived: "已归档", projects: "项目", importData: "导入数据",
+  conversations: "对话", allConversations: "全部对话", search: "搜索", recent: "最近", archived: "已归档", projects: "项目", importData: "导入数据", quickNavigation: "快捷导航", offlineLibrary: "离线资料库",
   appearanceLanguage: "外观与语言", theme: "主题", language: "语言", readerWidth: "正文宽度", compact: "窄", standard: "标准", wide: "宽",
   light: "浅色", dark: "深色", system: "跟随系统", automatic: "自动", chinese: "简体中文", english: "English", close: "关闭", retry: "重试",
   connectionFailed: "无法连接服务器", connectionHint: "请检查网络连接后重试。", dialogueIndex: "对话索引", sectionToc: "章节目录", aroundCurrent: "围绕当前",
@@ -33,7 +33,7 @@ const zh = {
 } as const;
 
 const en: Record<keyof typeof zh, string> = {
-  conversations: "Conversations", allConversations: "All conversations", search: "Search", archived: "Archived", projects: "Projects", importData: "Import data",
+  conversations: "Conversations", allConversations: "All conversations", search: "Search", recent: "Recent", archived: "Archived", projects: "Projects", importData: "Import data", quickNavigation: "Quick navigation", offlineLibrary: "Offline library",
   appearanceLanguage: "Appearance & language", theme: "Theme", language: "Language", readerWidth: "Reading width", compact: "Narrow", standard: "Standard", wide: "Wide",
   light: "Light", dark: "Dark", system: "System", automatic: "Automatic", chinese: "Simplified Chinese", english: "English", close: "Close", retry: "Retry",
   connectionFailed: "Unable to connect to the server", connectionHint: "Check your connection and try again.", dialogueIndex: "Dialogue index", sectionToc: "Section contents", aroundCurrent: "Around current",

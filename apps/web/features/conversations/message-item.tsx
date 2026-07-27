@@ -170,18 +170,19 @@ export function MessageItem({
       data-order-key={message.order_key}
       className={`reader-message group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:rounded-2xl ${
         highlightTargetId === `message-${message.id}` ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""
-      } ${isUser ? "sm:justify-end" : "sm:justify-start"}`}
+      } sm:justify-start`}
     >
-      <div className={`${isUser && !wideUserMessage ? "w-full sm:ml-auto sm:max-w-[70%]" : "w-full max-w-full flex-1"} min-w-0`}>
+      <div className="min-w-0 w-full max-w-full flex-1">
         {isUser ? (
-          <div className="mb-2 flex items-center justify-end gap-2 pr-10">
-            <span className="text-xs font-semibold text-secondary">{t("you")}</span>
+          <div className="mb-2 flex items-center gap-2 pr-10">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[10px] font-semibold text-accent">U</span>
+            <span className="text-xs font-semibold text-secondary">{t("you")} · #{message.ordinal ?? message.order_key}</span>
           </div>
         ) : null}
         {!isUser ? (
           <div className="mb-2 flex items-center gap-2 pr-10">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--text)] text-[10px] font-semibold text-[var(--surface)]">CR</span>
-            <span className="text-xs font-semibold text-secondary">ChatGPT</span>
+            <span className="text-xs font-semibold text-secondary">Assistant · #{message.ordinal ?? message.order_key}</span>
             <span className="hidden font-mono text-[11px] text-secondary group-hover:inline">{message.order_key}</span>
           </div>
         ) : null}
@@ -189,7 +190,7 @@ export function MessageItem({
         <div
           className={
             isUser
-              ? `message-user w-full min-w-0 text-[17px] leading-[1.75] text-primary ${wideUserMessage ? "message-user-rich rounded-xl border border-ui bg-subtle px-4 py-4 sm:px-5" : "rounded-lg border border-ui bg-subtle px-3 py-3 sm:rounded-[22px] sm:border-0 sm:px-4 sm:shadow-sm"}`
+              ? `message-user w-full min-w-0 rounded-lg border-l-2 border-[var(--accent)] bg-subtle px-4 py-4 text-[17px] leading-[1.75] text-primary sm:px-5 ${wideUserMessage ? "message-user-rich" : ""}`
               : isAssistant
                 ? "text-[17px] leading-[1.75] text-primary"
                 : "rounded-2xl border border-ui bg-surface px-4 py-3 text-[17px] leading-[1.75] text-primary"

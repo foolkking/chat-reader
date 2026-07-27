@@ -364,6 +364,9 @@ export type SearchResultItem = {
   rank: number;
   source_profile: string | null;
   occurrence_count: number;
+  annotation_id?: string | null;
+  annotation_type?: string | null;
+  annotation_color?: string | null;
 };
 
 export type SearchResponse = {

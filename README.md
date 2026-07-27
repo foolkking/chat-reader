@@ -2,6 +2,8 @@
 
 `chat-reader` 是面向 ChatGPT 导出内容的长期阅读与管理系统。它把 JSON 和 Markdown 导入为稳定的 canonical 数据，提供适合长对话的阅读、搜索、目录、编辑、Project、分享和导出能力，而不是一个在线聊天机器人。
 
+2026-07-27 的最终改造增加了正式 `/recent` 导航、Cmd/Ctrl+K、左对齐 Reader、批注浮窗/固定模式，以及包含批注的在线和离线搜索。部署与批注索引回填步骤见 [`docs/execution/DEPLOYMENT_CHECKLIST.md`](docs/execution/DEPLOYMENT_CHECKLIST.md)。
+
 ## 主要能力
 
 - 预览并导入 ChatGPT Exporter JSON/Markdown 组合和官方 conversations JSON。

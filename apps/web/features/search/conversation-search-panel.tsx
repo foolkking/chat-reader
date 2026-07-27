@@ -58,9 +58,9 @@ export function ConversationSearchPanel({ conversationId, dataSource = remoteRea
           if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((value) => Math.max(0, value - 1)); }
           if (event.key === "Enter") { event.preventDefault(); void activate(activeIndex); }
           if (event.key === "Escape") { event.preventDefault(); onClose(); }
-        }} className="h-11 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none placeholder:text-secondary focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" placeholder={zh ? "搜索标题、正文、章节或代码" : "Search text, sections, or code"} />
+        }} className="h-11 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none placeholder:text-secondary focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" placeholder={zh ? "搜索当前对话正文或批注" : "Search this conversation and its annotations"} />
         <div className="mt-3 flex flex-wrap gap-2">
-          {[{ value: "all", zh: "全部", en: "All" }, { value: "message", zh: "正文", en: "Messages" }, { value: "heading", zh: "章节", en: "Sections" }, { value: "code", zh: "代码", en: "Code" }].map((item) => <button key={item.value} type="button" onClick={() => setDocumentType(item.value)} className={`min-h-8 rounded-md px-2.5 text-xs ${documentType === item.value ? "bg-accent text-white" : "bg-subtle text-secondary"}`}>{zh ? item.zh : item.en}</button>)}
+          {[{ value: "all", zh: "全部", en: "All" }, { value: "message", zh: "正文", en: "Messages" }, { value: "heading", zh: "章节", en: "Sections" }, { value: "code", zh: "代码", en: "Code" }, { value: "annotation", zh: "批注", en: "Annotations" }].map((item) => <button key={item.value} type="button" onClick={() => setDocumentType(item.value)} className={`min-h-8 rounded-md px-2.5 text-xs ${documentType === item.value ? "bg-accent text-white" : "bg-subtle text-secondary"}`}>{zh ? item.zh : item.en}</button>)}
           <span className="mx-1 h-8 w-px bg-[var(--border)]" />
           {[{ value: "all", zh: "全部角色", en: "All roles" }, { value: "user", zh: "用户", en: "User" }, { value: "assistant", zh: "ChatGPT", en: "ChatGPT" }].map((item) => <button key={item.value} type="button" onClick={() => setRole(item.value)} className={`min-h-8 rounded-md px-2.5 text-xs ${role === item.value ? "bg-accent text-white" : "bg-subtle text-secondary"}`}>{zh ? item.zh : item.en}</button>)}
         </div>
@@ -69,7 +69,7 @@ export function ConversationSearchPanel({ conversationId, dataSource = remoteRea
         {!debounced ? <p className="p-3 text-sm text-secondary">{zh ? "输入关键词搜索当前对话。" : "Enter a keyword to search this conversation."}</p> : null}
         {results.isFetching ? <p role="status" className="p-3 text-sm text-secondary">{zh ? "正在搜索…" : "Searching…"}</p> : null}
         {!results.isFetching && debounced && items.length === 0 ? <p className="p-3 text-sm text-secondary">{zh ? "没有找到结果。" : "No results found."}</p> : null}
-        {items.map((item, index) => <button key={item.document_id} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => void activate(index)} className={`block w-full rounded-lg px-3 py-3 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}><span className="line-clamp-3 text-sm leading-6 text-primary">{item.snippet}</span><span className="mt-1 block text-xs text-secondary">{item.document_type}{item.role ? ` · ${item.role}` : ""}</span></button>)}
+        {items.map((item, index) => <button key={item.document_id} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => void activate(index)} className={`block w-full rounded-lg px-3 py-3 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}><span className="line-clamp-3 text-sm leading-6 text-primary">{item.snippet}</span><span className="mt-1 block text-xs text-secondary">{item.document_type === "annotation" ? (zh ? "批注" : "Annotation") : item.document_type}{item.annotation_type ? ` · ${item.annotation_type}` : item.role ? ` · ${item.role}` : ""}{item.annotation_color ? ` · ${item.annotation_color}` : ""}</span></button>)}
       </div>
     </div>
   );

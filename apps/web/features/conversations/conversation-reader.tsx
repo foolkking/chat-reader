@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Globe2, Layers3, Library, ListTree, Merge, MessageSquareText, Scissors, Search, Share2, X } from "lucide-react";
+import { Download, Focus, Globe2, Layers3, Library, ListTree, Merge, MessageSquareText, Scissors, Search, Share2, X } from "lucide-react";
 import {
   mergeMessages,
   saveReadingPositionKeepalive,
@@ -64,6 +64,7 @@ export function ConversationReader({
   const [showExport, setShowExport] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [annotationsOpen, setAnnotationsOpen] = useState(searchParams.get("annotations") === "open");
+  const [focusMode, setFocusMode] = useState(false);
   const [desktopActionsExpanded, setDesktopActionsExpanded] = useState(false);
   const [mobileActionsExpanded, setMobileActionsExpanded] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<ReaderUtilityPanel>(null);
@@ -107,6 +108,14 @@ export function ConversationReader({
   const loadNextActionRef = useRef<() => void>(() => undefined);
   const navigationTokenRef = useRef(0);
   const navigationLockUntilRef = useRef(0);
+
+  useEffect(() => {
+    setFocusMode(window.localStorage.getItem("chat-reader:reader-focus-mode") === "true");
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("chat-reader:reader-focus-mode", String(focusMode));
+  }, [focusMode]);
   const restoreAttemptedRef = useRef(false);
   const restoreInProgressRef = useRef(false);
   const readingRestoreTokenRef = useRef(0);
@@ -963,6 +972,7 @@ export function ConversationReader({
   const openUtilityPanel = useCallback((panel: Exclude<ReaderUtilityPanel, null | "navigation">) => {
     setDesktopActionsExpanded(false);
     setMobileActionsExpanded(false);
+    setAnnotationsOpen(false);
     if (window.innerWidth < 768) {
       setShowShare(false);
       setShowExport(false);
@@ -1261,6 +1271,12 @@ export function ConversationReader({
       icon: MessageSquareText,
       onSelect: () => setAnnotationsOpen(true),
     },
+    {
+      id: "focus-mode",
+      label: focusMode ? "退出专注模式" : "专注模式",
+      icon: Focus,
+      onSelect: () => setFocusMode((value) => !value),
+    },
     ...(dataSource.capabilities.share ? [{
       id: "share",
       label: t("share"),
@@ -1286,6 +1302,9 @@ export function ConversationReader({
       onSelect: () => void splitSelectedConversationRange(),
     }] : []),
   ];
+  const desktopPrimaryActionIds = new Set(["search", "annotations", "share"]);
+  const desktopPrimaryActions = headerActions.filter((action) => desktopPrimaryActionIds.has(action.id));
+  const desktopSecondaryActions = headerActions.filter((action) => !desktopPrimaryActionIds.has(action.id));
 
   const navigationTabs = (
     <div className="flex items-center gap-2">
@@ -1338,10 +1357,16 @@ export function ConversationReader({
                 </div>
             </div>
             <button type="button" onClick={() => openNavigation("dialogue")} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
+            <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
+              {desktopPrimaryActions.map((action) => {
+                const Icon = action.icon;
+                return <button key={action.id} type="button" onClick={action.onSelect} disabled={action.disabled} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50" aria-label={action.label} title={action.label}><Icon className="h-[1.125rem] w-[1.125rem]" /></button>;
+              })}
+            </div>
             <ReaderHeaderActionRail
               expanded={desktopActionsExpanded}
               onExpandedChange={setDesktopActionsExpanded}
-              actions={headerActions}
+              actions={desktopSecondaryActions}
               triggerLabel={t("messageActions")}
               closeLabel={t("collapseActions")}
             />
@@ -1374,7 +1399,7 @@ export function ConversationReader({
             <ReaderHeaderActionRail
               expanded={mobileActionsExpanded}
               onExpandedChange={setMobileActionsExpanded}
-              actions={headerActions.slice(0, 4)}
+              actions={headerActions}
               triggerLabel={t("more")}
               closeLabel={t("collapseActions")}
               compact
@@ -1390,6 +1415,7 @@ export function ConversationReader({
 
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
           <ResponsiveReaderFrame
+            focusMode={focusMode}
             index={<ConversationIndex
                   conversationId={conversationId}
                   sourceKey={readerSourceKey}
@@ -1542,6 +1568,7 @@ export function ConversationReader({
         conversationId={conversation.id}
         messages={messages}
         activeMessageId={activeMessageId}
+        initialAnnotationId={searchParams.get("annotationId")}
         repository={annotationRepository}
         open={annotationsOpen}
         onOpenChange={setAnnotationsOpen}

@@ -8,10 +8,12 @@ export function ResponsiveReaderFrame({
   index,
   content,
   toc,
+  focusMode = false,
 }: {
   index: React.ReactNode;
   content: React.ReactNode;
   toc: React.ReactNode;
+  focusMode?: boolean;
 }) {
   const { readerWidthMode, sectionTocMode } = usePreferences();
   const tocSize = useResizablePane({
@@ -25,6 +27,7 @@ export function ResponsiveReaderFrame({
       className="reader-frame min-h-full w-full py-[clamp(1rem,2vw,2rem)]"
       data-reader-width={readerWidthMode}
       data-section-toc={sectionTocMode}
+      data-focus-mode={focusMode ? "on" : "off"}
       style={{ "--reader-toc-width": `${tocSize.size}px` } as CSSProperties}
     >
       <aside className="reader-index-column">{index}</aside>

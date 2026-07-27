@@ -40,6 +40,11 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
     const params = new URLSearchParams();
     if (item.message_id) params.set("messageId", item.message_id);
     if (item.block_index !== null) params.set("blockIndex", String(item.block_index));
+    if (item.character_offset != null) params.set("characterOffset", String(item.character_offset));
+    if (item.document_type === "annotation") {
+      params.set("annotations", "open");
+      if (item.annotation_id) params.set("annotationId", item.annotation_id);
+    }
     onNavigate?.();
     router.push(`/conversations/${item.conversation_id}${params.size ? `?${params}` : ""}`);
   };
@@ -64,6 +69,7 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
         className="h-10 w-full rounded-lg border border-ui bg-surface pl-9 pr-9 text-sm text-primary outline-none placeholder:text-secondary focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
         placeholder={labels.placeholder}
         aria-label={labels.placeholder}
+        data-testid="sidebar-global-search"
       />
       {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="Clear"><X className="h-3.5 w-3.5" /></button> : null}
       {debounced ? (

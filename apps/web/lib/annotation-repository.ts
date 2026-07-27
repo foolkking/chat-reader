@@ -8,7 +8,7 @@ import {
   updateConversationAnnotation,
   updateConversationNotebook,
 } from "./api";
-import { offlineDb, queueOfflineOperation } from "./offline-db";
+import { offlineDb, queueOfflineOperation, syncOfflineAnnotationSearch } from "./offline-db";
 import type {
   AnnotationCreateInput,
   AnnotationRead,
@@ -81,6 +81,7 @@ export const offlineAnnotationRepository: AnnotationRepository = {
       updated_at: now,
     };
     await offlineDb.annotations.put(annotation);
+    await syncOfflineAnnotationSearch(annotation);
     await queueOfflineOperation({
       operation_id: crypto.randomUUID(),
       entity_type: "annotation",
@@ -100,6 +101,7 @@ export const offlineAnnotationRepository: AnnotationRepository = {
       updated_at: new Date().toISOString(),
     };
     await offlineDb.annotations.put(updated);
+    await syncOfflineAnnotationSearch(updated);
     await queueOfflineOperation({
       operation_id: crypto.randomUUID(),
       entity_type: "annotation",
@@ -119,6 +121,7 @@ export const offlineAnnotationRepository: AnnotationRepository = {
       updated_at: new Date().toISOString(),
     };
     await offlineDb.annotations.put(deleted);
+    await syncOfflineAnnotationSearch(deleted);
     await queueOfflineOperation({
       operation_id: crypto.randomUUID(),
       entity_type: "annotation",
@@ -196,6 +199,7 @@ export async function flushAnnotationOutbox(): Promise<{ synced: number; conflic
     const annotations = await getConversationAnnotations(conversationId);
     await offlineDb.annotations.where("conversation_id").equals(conversationId).delete();
     if (annotations.length) await offlineDb.annotations.bulkPut(annotations);
+    for (const annotation of annotations) await syncOfflineAnnotationSearch(annotation);
     const [notebook, notebookConflicts] = await Promise.all([
       getConversationNotebook(conversationId),
       getConversationNotebookConflicts(conversationId),

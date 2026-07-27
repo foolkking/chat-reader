@@ -6,7 +6,7 @@
 
 - Python `>=3.11`，FastAPI `>=0.115,<1`，Uvicorn，SQLAlchemy 2，Alembic，Pydantic Settings，psycopg 3，python-multipart。后端没有独立 lock 文件，因此不宣称精确安装版本。
 - 入口 `apps/api/app/main.py`，API metadata version `0.12.0`。
-- 分层：`routes/` 负责 HTTP/schema，`services/` 负责 import、canonical、editing、reader、search、share、export、offline、annotation 等业务，`models/` 负责数据库实体。
+- 分层：`api/routes/`（路径 `apps/api/app/api/routes/`）负责 HTTP/schema，`services/` 负责 import、canonical、editing、reader、search、share、export、offline、annotation 等业务，`models/` 负责数据库实体。
 - CORS origins 可配置；生产浏览器通常使用 Next 同源 rewrite。
 - 没有 auth middleware、SSE、WebSocket、Redis、AI model client、限流或计费中间件。
 
@@ -95,5 +95,8 @@ Library catalog -> POST package scope
 - 没有自定义全局错误 envelope；业务多使用 FastAPI `HTTPException`，响应通常为 `detail`，validation 使用 FastAPI 422 结构。
 - import/background worker 使用 Python logging；Uvicorn/Compose 提供进程和访问日志。仓库未发现 Sentry/OpenTelemetry 等外部监控。
 - durable job 表承载 import、export archive、offline package 等任务；worker 按排队时间轮询，并有 stale/retry 逻辑。
-- 未发现应用级限流、配额/余额或会员校验；浏览器离线“quota”仅指 Storage API 容量。
 
+## 2026-07-27 批注搜索索引
+
+`services/search/annotation_indexer.py` 使用 annotation UUID 派生稳定 UUID5 SearchDocument id。annotation create/update/delete、冲突副本与锚点重定位同步索引；搜索 API 返回 `annotation_id/type/color` 与 `block_index/character_offset`。`python -m scripts.backfill_annotation_search` 可重复回填并统计 scanned/created/updated/skipped/deleted/errors。没有新增表或 Alembic migration；发布时必须重建并重启 API 与 worker。
+- 未发现应用级限流、配额/余额或会员校验；浏览器离线“quota”仅指 Storage API 容量。

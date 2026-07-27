@@ -27,10 +27,14 @@ class SearchResult:
     role: str | None
     order_key: str | None
     block_index: int | None
+    character_offset: int | None
     snippet: str
     rank: float
     source_profile: str | None
     occurrence_count: int = 1
+    annotation_id: uuid.UUID | None = None
+    annotation_type: str | None = None
+    annotation_color: str | None = None
 
 
 @dataclass(frozen=True)
@@ -235,10 +239,14 @@ def search(
             role=document.role,
             order_key=document.order_key,
             block_index=_document_block_index(document),
+            character_offset=_document_character_offset(document),
             snippet=_snippet(document.search_text, normalized_query),
             rank=rank,
             source_profile=document.source_profile,
             occurrence_count=occurrence_count,
+            annotation_id=_annotation_fields(document)[0],
+            annotation_type=_annotation_fields(document)[1],
+            annotation_color=_annotation_fields(document)[2],
         )
         for document_id, _, _, _, conversation_title, rank, occurrence_count in page_rows
         if (document := documents.get(document_id)) is not None
@@ -255,11 +263,30 @@ def _status_filter(status_scope: str):
 
 
 def _document_block_index(document: SearchDocument) -> int | None:
-    raw = document.metadata_.get("block_index") if isinstance(document.metadata_, dict) else None
+    metadata = document.metadata_ if isinstance(document.metadata_, dict) else {}
+    raw = metadata.get("block_index", metadata.get("start_block_index"))
     try:
         return int(raw) if raw is not None else None
     except (TypeError, ValueError):
         return None
+
+
+def _document_character_offset(document: SearchDocument) -> int | None:
+    metadata = document.metadata_ if isinstance(document.metadata_, dict) else {}
+    raw = metadata.get("character_offset", metadata.get("start_offset"))
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _annotation_fields(document: SearchDocument) -> tuple[uuid.UUID | None, str | None, str | None]:
+    metadata = document.metadata_ if isinstance(document.metadata_, dict) else {}
+    try:
+        annotation_id = uuid.UUID(str(metadata["annotation_id"])) if metadata.get("annotation_id") else None
+    except (ValueError, TypeError):
+        annotation_id = None
+    return annotation_id, metadata.get("annotation_type"), metadata.get("annotation_color")
 
 
 def _snippet(text: str, query: str) -> str:

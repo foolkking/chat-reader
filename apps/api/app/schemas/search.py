@@ -14,10 +14,14 @@ class SearchResultItem(BaseModel):
     role: str | None
     order_key: str | None
     block_index: int | None = None
+    character_offset: int | None = None
     snippet: str
     rank: float
     source_profile: str | None
     occurrence_count: int = 1
+    annotation_id: UUID | None = None
+    annotation_type: str | None = None
+    annotation_color: str | None = None
 
 
 class SearchResponse(BaseModel):

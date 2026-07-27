@@ -4,7 +4,7 @@
 
 ## PostgreSQL
 
-生产使用 PostgreSQL 16。当前 SQLAlchemy metadata 有 21 张业务表；迁移链从 `0001` 到 `20260724_0015`，生产与源码都在 `0015 (head)`。
+生产使用 PostgreSQL 16。当前 SQLAlchemy metadata 有 **22 张业务表**（22 个 `__tablename__` 声明）；加上 Alembic 版本表 `alembic_version` 共 23 张。迁移链从 `0001` 到 `20260724_0015`，生产与源码都在 `0015 (head)`。
 
 | 表 | 主要用途 | 关键关系/兼容事实 |
 | --- | --- | --- |
@@ -29,6 +29,7 @@
 | `conversation_annotations` | 类型/颜色/comment/anchor/status/revision/conflict | FK conversation/message/version/self conflict |
 | `conversation_notebooks` | Markdown/reference blocks、revision/conflict | FK conversation/self conflict |
 | `annotation_sync_receipts` | 离线操作幂等回执 | operation UUID/subject |
+| `conversation_events` | 对话级操作事件与审计 | FK conversation；可扩展事件类型 |
 
 模型证据：`apps/api/app/models/*.py`；schema 演进证据：`apps/api/alembic/versions/*.py`。本次没有读取或记录真实表行内容。
 
@@ -106,3 +107,6 @@ localStorage 键表见 `FRONTEND_ARCHITECTURE.md`，包括偏好、各 pane 尺�
 
 真实会话/消息/批注、文件内容、路径、ID、Share token、数据库 URL 和环境变量值不进入本目录文档。后续需要展示 schema 示例时只能使用合成数据。
 
+## 2026-07-27 兼容性核验
+
+本次没有修改 PostgreSQL schema、Alembic head、`.cr` 或 offline package。Dexie 仍为 version 1，stores 与索引定义不变；annotation 类型搜索记录只扩展既有 `searchDocuments` 的记录内容。packages、annotations、notebooks、readingPositions、outbox、settings 及现有本地数据不执行清理或重建。

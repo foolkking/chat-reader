@@ -49,3 +49,6 @@
 
 根 `README.md` 仍是快速启动入口；`docs/product.md`、`docs/architecture.md`、`docs/api-reference.md`、`PROJECT_STATE.md` 保留历史和专题说明。若其描述与本目录冲突，以带当前核验日期和证据的事实基线为准；已知过期点登记在 `KNOWN_ISSUES_AND_UNCERTAINTIES.md`。
 
+## 2026-07-27 执行核验
+
+第二轮本地执行已完成，代码核验 HEAD 为 `175fae3914ad65a9682fa13303b64064507d498c`。Reader、导航、批注搜索与离线索引事实见本目录；命令与截图证据见 `docs/execution/`。生产环境未执行写操作。

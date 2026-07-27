@@ -69,10 +69,13 @@ RootLayout
 
 ## 主题、国际化与响应式
 
-- 主题：light/dark/system；CSS variables 定义 page/surface/text/border/focus 等 token。
+- 主题：light/dark/system；全部设计 token 集中在 `apps/web/app/globals.css` 的 `:root`（53 个 light 变量）和 `[data-theme="dark"]`（53 个 dark 值）中。
+- 设计 token 体系（globals.css）：`--page`、`--sidebar`、`--surface`、`--subtle`、`--border` 背景层级；`--text`、`--text-secondary` 文字层级；`--accent`、`--accent-soft` 强调色；`--focus`、`--danger` 语义色；含 markdown-*、callout-*、code-* 等富内容 token。
+- `tailwind.config.ts` 的 `theme.extend` 为空对象（无自定义 Tailwind token），所有自定义值通过 CSS 变量 + `.bg-*/.text-*` 工具类使用；`html[data-theme="dark"]` 覆写规则处理库硬编码色值。
 - 语言：auto/zh/en，由本地偏好立即生效并在线同步；没有独立翻译平台依赖。
 - 阅读宽度：compact/standard/wide。
 - Desktop breakpoint 下显示可折叠/可调左侧栏、visible/rail 章节 TOC、可调 dock 和可拖缩批注窗口。
+- Reader 布局网格由 `globals.css` 中的以下 CSS 类控制：`.reader-frame`（container-type 基础容器）、`.reader-layout-grid`（grid 容器）、`.reader-content-column`（居中消息正文，max-width 受 data-reader-width 控制）、`.reader-toc-column`（右侧章节 TOC sticky，≥62rem container 触发）、`.reader-index-column`（左侧对话 TOC rail sticky，≥1280px 触发）。两个 TOC 列均属于正文区域，非独立侧栏。
 - Mobile 使用 Vaul/自定义 Bottom Sheet，不显示 desktop rail/separator；批注只读/搜索/导航。
 - 可调宽 helper 使用 pointer capture、clamp、双击默认值、`role=separator` 与 localStorage。
 
@@ -105,5 +108,8 @@ RootLayout
 - API 错误由 request helper 转为 Error，再由页面 inline state 或 InteractionDialog 展示；没有统一遥测 SDK。
 - React Query 提供 retry/cache；关键导航另有 token cancellation、明确阶段结果和 fallback。
 - PWA 自动化位于 `apps/web/e2e/library-offline.spec.ts`；脚本 `test:pwa` 构建后运行 Playwright。
-- 本阶段未执行 build/lint/test，只盘点现有配置和覆盖。
+- 2026-07-27 最终执行已完成 `lint`、`typecheck`、production build 与 Playwright；结果见 `docs/execution/TEST_RESULTS.md`。
 
+## 2026-07-27 前端结构更新
+
+全局设计 token 继续位于 `app/globals.css`。Reader frame 通过 `data-focus-mode` 隐藏辅助栏而不销毁 TOC；annotation workspace 使用 floating/docked 两态，docked 覆盖左侧导航。在线与离线 Reader 仍共享 ReaderDataSource。离线批注搜索记录写入既有 `searchDocuments` store，Dexie version/stores 不变。

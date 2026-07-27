@@ -43,10 +43,11 @@ const TEXT_TYPES: Array<{ value: Exclude<AnnotationType, "bookmark">; label: str
   { value: "comment", label: "Comment", icon: MessageSquareText },
 ];
 
-export function AnnotationWorkspace({ conversationId, messages, activeMessageId, repository, open, onOpenChange, onNavigate }: {
+export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, repository, open, onOpenChange, onNavigate }: {
   conversationId: string;
   messages: MessageListItem[];
   activeMessageId: string | null;
+  initialAnnotationId?: string | null;
   repository: AnnotationRepository;
   open: boolean;
   onOpenChange: (value: boolean) => void;
@@ -70,13 +71,18 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const [focusedAnnotationId, setFocusedAnnotationId] = useState<string | null>(null);
   const [navigationFeedback, setNavigationFeedback] = useState<{ status: "idle" | "loading" | "failed" | "stale"; target: NavigateTarget | null }>({ status: "idle", target: null });
   const [contextAnnotation, setContextAnnotation] = useState<{ annotation: AnnotationRead; x: number; y: number } | null>(null);
-  const [lockedMessageId, setLockedMessageId] = useState<string | null>(null);
   const [panelPinned, setPanelPinned] = useState(false);
   const [desktop, setDesktop] = useState(false);
   const [panel, setPanel] = useState<PanelState>({ x: 0, y: 72, width: 400, height: 620 });
   const panelRef = useRef(panel);
   const dragRef = useRef<{ type: DragType; startX: number; startY: number; panel: PanelState } | null>(null);
-  const focusedMessageId = panelPinned ? lockedMessageId : activeMessageId;
+  const focusedMessageId = activeMessageId;
+
+  useEffect(() => {
+    if (!initialAnnotationId) return;
+    setFocusedAnnotationId(initialAnnotationId);
+    setView("all");
+  }, [initialAnnotationId]);
 
   const reload = useCallback(async () => {
     const [annotationRows, notebookRow, conflictRows] = await Promise.all([
@@ -96,6 +102,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       setDesktop(media.matches);
       if (!media.matches) return;
       const stored = readStoredPanel();
+      setPanelPinned(window.localStorage.getItem("chat-reader:annotation-workspace-mode") === "docked");
       const current = stored ?? panelRef.current;
       const next = clampPanel({
         ...current,
@@ -110,7 +117,6 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   }, []);
 
   useEffect(() => {
-    if (!desktop) return;
     const captureKeyboardSelection = () => {
       window.setTimeout(() => {
         const next = captureSelection(messages);
@@ -122,6 +128,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
         const next = captureSelection(messages);
         setSelection(next);
         if (next) return;
+        if (!desktop) return;
         const annotation = annotationAtPoint(event, annotations);
         if (!annotation) return;
         setFocusedAnnotationId(annotation.id);
@@ -134,11 +141,22 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
         });
       }, 0);
     };
+    let selectionTimer = 0;
+    const captureNativeSelection = () => {
+      window.clearTimeout(selectionTimer);
+      selectionTimer = window.setTimeout(() => {
+        const next = captureSelection(messages);
+        if (next) setSelection(next);
+      }, 120);
+    };
     document.addEventListener("mouseup", capturePointerSelection);
     document.addEventListener("keyup", captureKeyboardSelection);
+    document.addEventListener("selectionchange", captureNativeSelection);
     return () => {
+      window.clearTimeout(selectionTimer);
       document.removeEventListener("mouseup", capturePointerSelection);
       document.removeEventListener("keyup", captureKeyboardSelection);
+      document.removeEventListener("selectionchange", captureNativeSelection);
     };
   }, [annotations, desktop, messages, onOpenChange]);
 
@@ -376,7 +394,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   }
 
   return <>
-    {selection && desktop ? <div className="fixed z-[120] flex max-w-[min(92vw,34rem)] flex-wrap items-center gap-1 rounded-md border border-ui bg-raised p-1.5 shadow-xl" style={{ left: clamp(selection.rect.left + selection.rect.width / 2 - 170, 8, window.innerWidth - 360), top: Math.max(8, selection.rect.top - 88) }} role="toolbar" aria-label="Create annotation">
+    {selection ? <div className={`fixed z-[120] flex max-w-[min(92vw,34rem)] flex-wrap items-center gap-1 rounded-md border border-ui bg-raised p-1.5 shadow-xl ${desktop ? "" : "inset-x-2 bottom-[calc(.5rem+var(--safe-bottom))] justify-center"}`} style={desktop ? { left: clamp(selection.rect.left + selection.rect.width / 2 - 170, 8, window.innerWidth - 360), top: Math.max(8, selection.rect.top - 88) } : undefined} role="toolbar" aria-label="Create annotation">
       {TEXT_TYPES.map((type) => { const Icon = type.icon; return <button key={type.value} type="button" onClick={() => setSelectionType(type.value)} className={`inline-flex h-8 items-center gap-1 rounded px-2 text-xs ${selectionType === type.value ? "bg-[var(--accent-soft)] text-accent" : "text-secondary hover:bg-subtle"}`} aria-label={type.label} title={type.label}><Icon className="h-3.5 w-3.5" />{type.label}</button>; })}
       <span className="mx-1 h-5 w-px bg-[var(--border)]" />
       {COLORS.map((color) => <button key={color.value} type="button" onClick={() => void createTextAnnotation(selectionType, color.value)} className={`h-7 w-7 rounded ${color.className} ring-offset-2 hover:ring-2 hover:ring-[var(--focus)]`} aria-label={`Create ${selectionType} ${color.label}`} title={`Create ${selectionType} ${color.label}`} />)}
@@ -393,8 +411,8 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       onAddToNotebook={() => void addAnnotationToNotebook(contextAnnotation.annotation)}
       onSelect={() => { setSelectionMode(true); setSelectedAnnotationIds((current) => new Set(current).add(contextAnnotation.annotation.id)); setContextAnnotation(null); }}
     /> : null}
-    {open ? <section className="fixed inset-x-2 bottom-2 top-16 z-[110] flex min-h-0 flex-col overflow-hidden rounded-md border border-ui bg-raised shadow-2xl md:inset-auto" style={desktop ? { left: panel.x, top: panel.y, width: panel.width, height: panel.height } : undefined} aria-label="批注">
-      <header className="flex h-12 shrink-0 touch-none items-center gap-2 border-b border-ui px-3" onPointerDown={(event) => { if ((event.target as HTMLElement).closest("button")) return; beginPanelDrag("move", event); }}><MessageSquareText className="h-4 w-4 text-accent" /><h2 className="min-w-0 flex-1 truncate text-sm font-semibold">批注</h2>{desktop ? <button type="button" onClick={() => { const next = !panelPinned; setPanelPinned(next); setLockedMessageId(next ? activeMessageId : null); }} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={panelPinned ? "取消固定当前消息" : "固定当前消息"} title={panelPinned ? "取消固定当前消息" : "固定当前消息"}>{panelPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}</button> : null}<button type="button" onClick={() => onOpenChange(false)} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="关闭"><X className="h-4 w-4" /></button></header>
+    {open ? <section className={`fixed z-[110] flex min-h-0 flex-col overflow-hidden border border-ui bg-raised shadow-2xl ${panelPinned && desktop ? "inset-y-0 left-0 w-[min(22rem,32vw)] rounded-none" : "inset-x-2 bottom-2 top-16 rounded-md md:inset-auto"}`} style={desktop && !panelPinned ? { left: panel.x, top: panel.y, width: panel.width, height: panel.height } : undefined} aria-label="批注" data-annotation-mode={panelPinned ? "docked" : "floating"}>
+      <header className="flex h-12 shrink-0 touch-none items-center gap-2 border-b border-ui px-3" onPointerDown={(event) => { if (panelPinned || (event.target as HTMLElement).closest("button")) return; beginPanelDrag("move", event); }}><MessageSquareText className="h-4 w-4 text-accent" /><h2 className="min-w-0 flex-1 truncate text-sm font-semibold">批注</h2>{desktop ? <button type="button" onClick={() => { const next = !panelPinned; setPanelPinned(next); window.localStorage.setItem("chat-reader:annotation-workspace-mode", next ? "docked" : "floating"); }} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={panelPinned ? "恢复导航栏并拆为浮窗" : "固定到左侧栏"} title={panelPinned ? "恢复导航栏并拆为浮窗" : "固定到左侧栏"}>{panelPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}</button> : null}<button type="button" onClick={() => onOpenChange(false)} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="关闭"><X className="h-4 w-4" /></button></header>
       <div className="grid shrink-0 grid-cols-3 border-b border-ui bg-subtle p-1">{(["current", "all", "notebook"] as const).map((item) => <button key={item} type="button" onClick={() => setView(item)} className={`min-h-9 rounded px-2 text-xs font-medium ${view === item ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{item === "current" ? "当前消息" : item === "all" ? "全部批注" : "精选笔记"}</button>)}</div>
       {navigationFeedback.status !== "idle" ? <div className={`flex shrink-0 items-center gap-2 border-b border-ui px-3 py-2 text-xs ${navigationFeedback.status === "failed" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : navigationFeedback.status === "stale" ? "bg-amber-50 text-amber-800" : "bg-subtle text-accent"}`} role="status"><span className="min-w-0 flex-1">{navigationFeedback.status === "loading" ? "正在按对话与章节位置加载批注原文…" : navigationFeedback.status === "stale" ? "原文已更改，已定位到最近的段落或消息。" : "无法定位批注原文，当前正文保持不变。"}</span>{navigationFeedback.status === "failed" && navigationFeedback.target ? <button type="button" onClick={() => void navigateFromAnnotation(navigationFeedback.target as NavigateTarget)} className="shrink-0 font-semibold underline">重试</button> : null}</div> : null}
       {view !== "notebook" ? <div className="mx-3 mt-3 flex shrink-0 flex-wrap items-center gap-2"><label className="flex min-h-9 min-w-[12rem] flex-1 items-center gap-2 rounded-md border border-ui bg-page px-2"><Search className="h-4 w-4 text-secondary" /><input value={annotationQuery} onChange={(event) => setAnnotationQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="搜索批注" /></label><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">All types</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}<option value="bookmark">Bookmark</option></select><select value={colorFilter} onChange={(event) => setColorFilter(event.target.value as AnnotationColor | "all")} className="min-h-9 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">All colors</option>{COLORS.map((color) => <option key={color.value} value={color.value}>{color.label}</option>)}</select><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as AnnotationRead["anchor_status"] | "all")} className="min-h-9 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">All status</option><option value="active">Active</option><option value="relocated">Relocated</option><option value="stale">Changed</option></select>{desktop ? <button type="button" onClick={() => { setSelectionMode((current) => !current); setSelectedAnnotationIds(new Set()); }} className={`min-h-9 shrink-0 rounded-md border px-3 text-xs font-medium ${selectionMode ? "border-[var(--accent)] bg-[var(--accent-soft)] text-accent" : "border-ui text-secondary hover:bg-subtle"}`}>{selectionMode ? "Done" : "Manage"}</button> : null}</div> : null}

@@ -1,5 +1,15 @@
 # 项目当前状态
 
+> 最后更新：2026-07-27。第二轮改造已在本地完成并验证；执行起点 HEAD 为 `175fae3914ad65a9682fa13303b64064507d498c`，生产未部署。详细结果见 `docs/execution/README.md`。
+
+## 2026-07-27 当前快照
+
+- 首页为资料总览，`/recent` 已进入主导航，Cmd/Ctrl+K 聚焦全局搜索。
+- Reader 消息统一左对齐，保留对话/章节双 TOC，支持 focus mode 与批注 floating/docked（覆盖左栏）两态。
+- 全局及当前对话搜索包含批注；后端 SearchDocument CRUD 同步和幂等回填入口已实现。
+- `/library` 继续使用 Dexie version 1 与原 offline package/SW 原子 revision 流程；无清库或 migration。
+- 已验证命令：Web lint/typecheck/build、API 146 tests、PWA/Reader Playwright。生产部署前需同时重建 API、worker、Web 并运行批注索引回填。
+
 > 历史快照提示：本文更新于 2026-07-21，记录的 migration head `0013` 及批注/离线缺口已经过期。2026-07-26 核验的当前事实基线见 [docs/system/README.md](docs/system/README.md)，已知差异见 [docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md](docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md)。
 
 更新日期：2026-07-21。

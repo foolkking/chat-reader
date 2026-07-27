@@ -9,10 +9,11 @@ export function ShortcutManager() {
     const handler = (event: KeyboardEvent) => {
       if (isEditable(event.target)) return;
       const isFind = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f";
+      const isGlobalSearch = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
       const isSlash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey;
-      if (!isFind && !isSlash) return;
+      if (!isFind && !isSlash && !isGlobalSearch) return;
       event.preventDefault();
-      window.dispatchEvent(new Event(pathname.startsWith("/conversations/") ? "chat-reader:open-reader-search" : "chat-reader:focus-global-search"));
+      window.dispatchEvent(new Event(isGlobalSearch ? "chat-reader:focus-global-search" : pathname.startsWith("/conversations/") ? "chat-reader:open-reader-search" : "chat-reader:focus-global-search"));
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);

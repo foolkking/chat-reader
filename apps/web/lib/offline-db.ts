@@ -219,6 +219,35 @@ export async function queueOfflineOperation(operation: AnnotationSyncOperation):
   if (typeof window !== "undefined") window.dispatchEvent(new Event("chat-reader:outbox"));
 }
 
+export async function syncOfflineAnnotationSearch(annotation: AnnotationRead): Promise<void> {
+  const existing = await offlineDb.searchDocuments.where("document_type").equals("annotation").filter((item) => item.metadata?.annotation_id === annotation.id).toArray();
+  if (existing.length) await offlineDb.searchDocuments.bulkDelete(existing.map((item) => item.id));
+  if (annotation.is_deleted) return;
+  const plainText = [annotation.comment_markdown, annotation.quote].filter(Boolean).join(" ").trim();
+  if (!plainText) return;
+  const conversation = await offlineDb.conversations.get(annotation.conversation_id);
+  await offlineDb.searchDocuments.put({
+    id: `local-annotation:${annotation.id}`,
+    conversation_id: annotation.conversation_id,
+    message_id: annotation.message_id,
+    document_type: "annotation",
+    role: null,
+    title: conversation?.display_title ?? conversation?.title ?? "Conversation",
+    plain_text: plainText,
+    search_text: plainText,
+    order_key: typeof annotation.metadata.message_order_key === "string" ? annotation.metadata.message_order_key : null,
+    turn_index: null,
+    metadata: {
+      annotation_id: annotation.id,
+      annotation_type: annotation.annotation_type,
+      annotation_color: annotation.color,
+      block_index: annotation.start_block_index,
+      character_offset: annotation.start_offset,
+      anchor_status: annotation.anchor_status,
+    },
+  });
+}
+
 function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: string): OfflineConversationRecord {
   return {
     id: String(raw.id),

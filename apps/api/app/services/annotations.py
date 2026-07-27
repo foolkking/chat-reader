@@ -24,6 +24,7 @@ from app.schemas.annotation import (
     SyncOperationResult,
 )
 from app.services.preferences import DEFAULT_SUBJECT_KEY
+from app.services.search.annotation_indexer import sync_annotation_document
 
 
 class AnnotationError(ValueError):
@@ -73,6 +74,7 @@ def create_annotation(
     db.add(annotation)
     _touch_conversation(conversation)
     db.flush()
+    sync_annotation_document(db, annotation)
     return annotation
 
 
@@ -93,6 +95,7 @@ def update_annotation(
     annotation.metadata_ = _annotation_metadata(db, annotation.conversation_id, _annotation_create_from_model(annotation))
     _touch_conversation(_conversation(db, annotation.conversation_id))
     db.flush()
+    sync_annotation_document(db, annotation)
     return annotation
 
 
@@ -105,6 +108,7 @@ def delete_annotation(db: Session, annotation_id: uuid.UUID, base_revision: int)
     annotation.updated_at = utc_now()
     _touch_conversation(_conversation(db, annotation.conversation_id))
     db.flush()
+    sync_annotation_document(db, annotation)
     return annotation
 
 
@@ -263,6 +267,7 @@ def relocate_annotations_for_new_version(
             annotation.anchor_status = "active"
             annotation.revision += 1
             annotation.updated_at = now
+            sync_annotation_document(db, annotation)
             continue
         match = _relocate_quote(
             block_texts,
@@ -283,6 +288,7 @@ def relocate_annotations_for_new_version(
             annotation.metadata_ = _annotation_metadata(db, annotation.conversation_id, _annotation_create_from_model(annotation))
         annotation.revision += 1
         annotation.updated_at = now
+        sync_annotation_document(db, annotation)
     db.flush()
 
 
@@ -397,6 +403,7 @@ def _annotation_from_payload(
     db.add(annotation)
     _touch_conversation(_conversation(db, conversation_id))
     db.flush()
+    sync_annotation_document(db, annotation)
     return annotation
 
 
@@ -430,6 +437,7 @@ def _clone_annotation(
     )
     db.add(clone)
     db.flush()
+    sync_annotation_document(db, clone)
     return clone
 
 

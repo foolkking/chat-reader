@@ -70,3 +70,6 @@ PostgreSQL + 文件型导入/导出/离线包存储
 - 公开分享页在有效生产 token 下的完整视觉状态。
 - 缓存清空、浏览器配额耗尽和完全离线冷启动的真实设备结果；代码与自动化场景存在，本次未执行破坏性或网络隔离测试。
 
+## 第二轮实施状态（2026-07-27）
+
+首页、`/recent`、Cmd/Ctrl+K 搜索、Reader focus/双 TOC、批注浮窗与固定覆盖左侧栏、移动 Reader、`/library` 均已在本地构建和 Playwright fixture 中核验。批注已进入 SearchDocument，API 与 worker 需要随发布重建。数据库结构、Dexie version 1、offline package 和 Share token 语义未改变。

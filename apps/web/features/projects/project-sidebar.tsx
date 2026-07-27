@@ -14,11 +14,11 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Folder, GripVertical, Import, MoreHorizontal, PanelLeftClose, Pencil, Plus, Settings } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Clock3, Folder, GripVertical, Import, MoreHorizontal, PanelLeftClose, Pencil, Plus, Settings } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createProject,
   getConversations,
@@ -68,6 +68,7 @@ export function ProjectSidebar({
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | null>(null);
+  const pendingGlobalSearchFocusRef = useRef(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
@@ -112,6 +113,37 @@ export function ProjectSidebar({
     if (!readerMode || currentProjectId) return;
     setDesktopExpanded(window.localStorage.getItem("chat-reader:reader-sidebar-expanded") === "true");
   }, [currentProjectId, readerMode]);
+
+  useEffect(() => {
+    if (!readerMode) return;
+    const openGlobalSearch = () => {
+      const existingInput = document.querySelector<HTMLInputElement>('[data-testid="sidebar-global-search"]');
+      if (existingInput) {
+        existingInput.focus();
+        return;
+      }
+      pendingGlobalSearchFocusRef.current = true;
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        setShowMobileDrawer(true);
+      } else {
+        setDesktopExpanded(true);
+        window.localStorage.setItem("chat-reader:reader-sidebar-expanded", "true");
+      }
+    };
+    window.addEventListener("chat-reader:focus-global-search", openGlobalSearch);
+    return () => window.removeEventListener("chat-reader:focus-global-search", openGlobalSearch);
+  }, [readerMode]);
+
+  useEffect(() => {
+    if (!pendingGlobalSearchFocusRef.current || (!desktopExpanded && !showMobileDrawer)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLInputElement>('[data-testid="sidebar-global-search"]');
+      if (!input) return;
+      pendingGlobalSearchFocusRef.current = false;
+      input.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [desktopExpanded, showMobileDrawer]);
 
   function setReaderSidebarExpanded(expanded: boolean) {
     setDesktopExpanded(expanded);
@@ -247,7 +279,8 @@ function SidebarContent(props: SidebarContentProps) {
         <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><Import className="h-4 w-4" /> {t("importData")}</button>
         <SidebarSearch onNavigate={props.closeMobile} />
         <ImportTaskMonitor placement="sidebar" />
-        <nav className="space-y-1">
+        <nav className="grid grid-cols-2 gap-1" aria-label={t("quickNavigation")}>
+          <NavLink href="/recent" label={t("recent")} active={props.pathname === "/recent"} icon={<Clock3 className="h-4 w-4" />} onClick={props.closeMobile} />
           <NavLink href="/archived" label={t("archived")} active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
         </nav>
 

@@ -80,3 +80,6 @@ Chat Reader
 
 正文安全链接可打开外部 URL；代码通过 Markdown 渲染与 sanitize 规则处理。仓库未发现独立帮助中心、支付、账号或管理站点链接。
 
+## 2026-07-27 路由更新
+
+`/recent` 已为正式侧栏入口。`/search` 支持 annotation 分组及带 `messageId/blockIndex/characterOffset/annotations/annotationId` 的 Reader 定位。`/library` 继续为独立离线 scope。截图证据位于 `docs/execution/screenshots/`。

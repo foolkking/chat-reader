@@ -78,3 +78,6 @@ Chat Reader 是 ChatGPT 导出资料的长期阅读与管理系统，不是在�
 
 证据位于 `docs/evidence/README.md`；维护规则位于 `docs/system/DOCUMENT_MAINTENANCE.md`。新证据必须带日期、版本、状态和脱敏说明，不能无证据覆盖已确认事实。
 
+## 2026-07-27 执行后上下文
+
+`/recent` 已进入导航；Reader 统一左对齐并保留双 TOC，支持持久化 focus mode；批注默认浮窗且桌面可固定覆盖左栏。批注进入全局/当前对话搜索，索引由 CRUD 同步并可用 `python -m scripts.backfill_annotation_search` 幂等回填。Dexie schema、offline package、`.cr` 和 Share token 语义未变。生产尚未部署，执行与测试证据见 `docs/execution/`。

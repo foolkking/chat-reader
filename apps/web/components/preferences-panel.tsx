@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { Library } from "lucide-react";
 import { usePreferences, useTranslations } from "./preferences-provider";
 
 export function PreferencesPanel() {
@@ -28,6 +30,10 @@ export function PreferencesPanel() {
           </Segment>
         ))}
       </SettingGroup>
+      <Link href="/library" className="btn-secondary flex min-h-10 items-center justify-center gap-2 px-3 text-sm font-medium">
+        <Library className="h-4 w-4" aria-hidden="true" />
+        {t("offlineLibrary")}
+      </Link>
     </section>
   );
 }

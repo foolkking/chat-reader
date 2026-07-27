@@ -67,18 +67,23 @@ export function SearchPage() {
     const target = new URLSearchParams();
     if (item.message_id) target.set("messageId", item.message_id);
     if (item.block_index !== null) target.set("blockIndex", String(item.block_index));
+    if (item.character_offset != null) target.set("characterOffset", String(item.character_offset));
+    if (item.document_type === "annotation") {
+      target.set("annotations", "open");
+      if (item.annotation_id) target.set("annotationId", item.annotation_id);
+    }
     router.push(`/conversations/${item.conversation_id}${target.size ? `?${target}` : ""}`);
   };
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
       <ProjectSidebar />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex min-h-14 items-center border-b border-ui bg-surface px-4 pl-16 md:px-[2vw] md:pl-[2vw]"><div><h1 className="text-base font-semibold">{zh ? "搜索" : "Search"}</h1><p className="text-xs text-secondary">{zh ? "搜索对话标题、消息正文、章节和代码" : "Search titles, messages, sections, and code"}</p></div></header>
+        <header className="flex min-h-14 items-center border-b border-ui bg-surface px-4 pl-16 md:px-[2vw] md:pl-[2vw]"><div><h1 className="text-base font-semibold">{zh ? "搜索" : "Search"}</h1><p className="text-xs text-secondary">{zh ? "搜索对话、正文、章节、代码和批注" : "Search conversations, messages, sections, code, and annotations"}</p></div></header>
         <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
           <SearchBox initialQuery={query} onSearch={(value) => update({ q: value })} hasResults={items.length > 0} onMoveSelection={(delta) => setActiveIndex((value) => Math.max(0, Math.min(items.length - 1, value + delta)))} onOpenSelection={openSelected} />
           <div className="grid gap-3 rounded-xl border border-ui bg-surface p-4 md:grid-cols-2 lg:grid-cols-4">
             <Filter label={zh ? "范围" : "Status"} value={statusScope} onChange={(value) => update({ status_scope: value })} options={[["active", zh ? "未归档" : "Active"], ["archived", zh ? "已归档" : "Archived"], ["all", zh ? "全部" : "All"]]} />
-            <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"]]} />
+            <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"], ["annotation", zh ? "批注" : "Annotations"]]} />
             <Filter label={zh ? "角色" : "Role"} value={role} onChange={(value) => update({ role: value })} options={[["all", zh ? "全部" : "All"], ["user", zh ? "用户" : "User"], ["assistant", "ChatGPT"]]} />
             <Filter label={zh ? "项目" : "Project"} value={projectId} onChange={(value) => update({ project_id: value })} options={[["all", zh ? "全部项目" : "All projects"], ...(projects.data ?? []).filter((project) => !project.is_default).map((project) => [project.id, project.name] as [string, string])]} />
             <label className="text-xs font-medium text-secondary">{zh ? "开始日期" : "From"}<input type="date" value={dateFrom} onChange={(event) => update({ date_from: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
