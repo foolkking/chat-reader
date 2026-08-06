@@ -870,7 +870,7 @@ def _replace_version_content(
             collapsed_by_default=block.collapsed_by_default,
             render_priority=block.render_priority,
         ))
-    _sync_version_attachment_links(db, version.id, block_drafts, replace_existing=True)
+    _sync_version_attachment_links(db, version.id, block_drafts, source_text=text, replace_existing=True)
     db.flush()
     relocate_annotations_for_new_version(
         db,
@@ -940,7 +940,7 @@ def _create_version(
             )
         )
 
-    _sync_version_attachment_links(db, version.id, block_drafts, replace_existing=False)
+    _sync_version_attachment_links(db, version.id, block_drafts, source_text=text, replace_existing=False)
 
     relocate_annotations_for_new_version(
         db,
@@ -965,6 +965,7 @@ def _sync_version_attachment_links(
     version_id: uuid.UUID,
     block_drafts,
     *,
+    source_text: str,
     replace_existing: bool,
 ) -> None:
     if replace_existing:
@@ -978,7 +979,8 @@ def _sync_version_attachment_links(
         try:
             attachment_id = uuid.UUID(str(block.data.get("attachmentId") or ""))
         except ValueError as exc:
-            raise MessageEditError("Markdown contains an invalid attachment reference.", 422) from exc
+            line_number = _attachment_reference_line(source_text, str(block.data.get("attachmentId") or ""))
+            raise MessageEditError(f"Line {line_number} contains an invalid attachment reference.", 422) from exc
         references.append((index, attachment_id, block))
     if not references:
         return
@@ -1004,7 +1006,12 @@ def _sync_version_attachment_links(
         if scan_status_allows_use(asset.scan_status)
     }
     if available != attachment_ids:
-        raise MessageEditError("Markdown references an unavailable attachment.", 422)
+        unavailable_id = next(iter(attachment_ids - available))
+        line_number = _attachment_reference_line(source_text, str(unavailable_id))
+        raise MessageEditError(
+            f"Line {line_number} references an unavailable attachment or an attachment from another conversation.",
+            422,
+        )
     for display_order, attachment_id, block in references:
         data = block.data
         db.add(
@@ -1022,6 +1029,14 @@ def _sync_version_attachment_links(
                 caption=str(data.get("caption") or "") or None,
             )
         )
+
+
+def _attachment_reference_line(source_text: str, attachment_id: str) -> int:
+    needle = f"cr-asset://{attachment_id}"
+    return next(
+        (line_number for line_number, line in enumerate(source_text.splitlines(), 1) if needle in line),
+        1,
+    )
 
 
 def _create_message_with_version(

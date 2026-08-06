@@ -172,6 +172,48 @@ def test_upload_rolls_back_when_base_version_is_stale(client, tmp_path: Path, mo
         generator.close()
 
 
+def test_message_save_rejects_unresolved_upload_references_with_line_number(
+    client, tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+
+    conversation_id, message = _conversation_with_message(client)
+    session = _create_session(client, conversation_id, message)
+    item = _upload(client, session["id"], "pending.txt", b"pending\n")
+
+    missing_item = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "display_text": f"First line.\n\n[Attachment](cr-upload://{item['id']})",
+            "base_version_id": message["current_version"]["id"],
+            "upload_item_ids": [],
+        },
+    )
+    assert missing_item.status_code == 422
+    assert "Line 3" in missing_item.json()["detail"]
+
+    draft_marker = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "display_text": "First line.\n\n[Uploading](cr-upload://draft-local-token)",
+            "base_version_id": message["current_version"]["id"],
+            "upload_item_ids": [],
+        },
+    )
+    assert draft_marker.status_code == 422
+    assert "Line 3" in draft_marker.json()["detail"]
+    assert "invalid attachment upload reference" in draft_marker.json()["detail"]
+
+    session_state = client.get(f"/api/attachment-upload-sessions/{session['id']}").json()
+    assert session_state["status"] == "open"
+    assert session_state["items"][0]["validation_status"] == "ready"
+    assert client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"] == []
+
+
 def test_hard_delete_preserves_asset_object_shared_by_another_conversation(
     client, tmp_path: Path, monkeypatch
 ) -> None:

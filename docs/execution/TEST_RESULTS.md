@@ -250,7 +250,8 @@ No production conversation text, identifiers, credentials, Share tokens, or cook
 | Check | Result | Evidence |
 |---|---|---|
 | Web lint / typecheck / build | Pass | ESLint 0 warnings, `tsc --noEmit`, Next.js production build |
-| Full API suite | Pass | 203/203 with the real attachment fixture enabled |
+| Full API suite | Pass | 203 passed with one fixture-gated skip in the default command; the real attachment fixture module separately passed 9/9 with the fixture path enabled |
+| Source editor attachment workflow | Pass | 4/4 online Playwright: file selection, exact drop, clipboard paste, fenced-code decision, independent upload drafts, save/Reader rendering and preserve-as-unplaced close |
 | Migration | Pass | local and King single head `20260805_0020` |
 | PWA default matrix | Partial | 8 passed; 16 online/fixture scenarios conditionally skipped and not counted as pass |
 | King attachment Reader | Pass | 20 blocks; loaded view showed 3 images and 6 text previews; image opened through a direct-body full-viewport dialog |
@@ -272,6 +273,7 @@ The acceptance fixture and DnD conversation were deleted after verification. The
 | Production source/image alignment | Pass | Loaded application source and images use `fba64b6`; the later docs-only evidence commit does not alter runtime files |
 | Migration and service health | Pass | Alembic `20260805_0020 (head)`; API/Web/PostgreSQL healthy, worker running; public health and capabilities returned expected values |
 | Disabled scanner policy | Pass | Production reports provider disabled, unscanned allowed, status `scanner_disabled`, basic preview enabled and complex preview disabled; no scanner container is running |
+| Source editor attachment flow | Pass | Local production Web/API E2E: file selection, exact-position drop, clipboard paste, fenced-code choice, independent upload drafts, save, Reader rendering and preserve-as-unplaced close all passed (4/4) |
 | SVG inline DOM | Pass | Production Chrome found one `IMG` and no inline SVG/script/object/embed/iframe in the attachment block |
 | SVG full-page dialog | Pass | Direct `body` child, full viewport, `aria-modal=true`, one content `IMG`, no inline active document nodes, focus entry/trap, Esc and backdrop close, scroll/focus restoration, no new tab |
 | Acceptance cleanup | Pass | Temporary conversation hard-deleted and local bundle removed after verification |

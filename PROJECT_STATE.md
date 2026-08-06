@@ -37,7 +37,7 @@
 | 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
 | 部署 | Compose：postgres、migrate、api、import-worker、web |
 | Git 基线 | 发布应用与镜像源提交为 `fba64b6c5d304805979c44d07d974606f49e007e`；生产验收后另有 docs-only 证据提交，不改变运行镜像 |
-| 最近完整验证 | 2026-08-06；Web lint/typecheck/build、API 203 passed；PWA 基线 8 passed / 16 conditional skipped；真实附件/SVG/Share、上传及长 Reader 专项 Playwright 通过；用户确认生产 Chrome 上传、Share 与 `.cr v4` 空实例恢复通过；生产 Chrome SVG 正文/全页面弹窗与可访问性通过 |
+| 最近完整验证 | 2026-08-06；Web lint/typecheck/build、API 203 passed；PWA 基线 8 passed / 19 conditional skipped；真实附件/SVG/Share、上传（含源码拖放/粘贴）及长 Reader 专项 Playwright 通过；用户确认生产 Chrome 上传、Share 与 `.cr v4` 空实例恢复通过；生产 Chrome SVG 正文/全页面弹窗与可访问性通过 |
 
 ## 当前目的与边界
 
@@ -98,6 +98,7 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 | `apps/api/app/services/offline_packages.py` | 离线 catalog/package 增量协议 |
 | `apps/web/features/conversations/conversation-reader.tsx` | Reader 窗口、导航和位置持久化 |
 | `apps/web/features/editing/edit-message-form.tsx` | 动态 CodeMirror Markdown 源码编辑器与保存模式 |
+| `apps/web/features/editing/source-attachment-drop.ts` | 源码文件拖放/粘贴、落点解析和草稿 marker 命令 |
 | `apps/web/features/editing/source-editor-workspace.tsx` | 浮动源码会话、滚动跟随、脏状态锁定与局部保存 |
 | `apps/web/components/floating-workspace-panel.tsx` | 可复用的桌面拖动/缩放/复位与移动端全宽工作面板 |
 | `apps/web/features/editing/conversation-split-workspace.tsx` | 三种非破坏式对话拆分计划、预览与执行 |
@@ -117,9 +118,9 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 | `corepack pnpm run lint` | 通过，0 warnings |
 | `corepack pnpm run typecheck` | 通过 |
 | `corepack pnpm --filter web build` | 通过，9 个页面路由 |
-| `corepack pnpm run test:api` | 通过，203 tests；真实附件 fixture 已启用，无 skip |
-| `corepack pnpm --filter web test:pwa` | 基线 8 passed；16 个需要在线 API/专项 fixture 的场景按条件 skipped，不计为 PASS |
-| 附件在线 Playwright | 通过：真实 Bundle/SVG/Share、普通上传/版本和附件静态契约；SVG 正文/弹窗均为 IMG，焦点与滚动锁恢复通过 |
+| `corepack pnpm run test:api` | 通过，203 passed；默认命令 1 个真实 fixture 条件 skip，注入桌面 fixture 后对应模块 9/9 passed |
+| `corepack pnpm --filter web test:pwa` | 基线 8 passed；19 个需要在线 API/专项 fixture 的场景按条件 skipped，不计为 PASS |
+| 附件在线 Playwright | 通过：真实 Bundle/SVG/Share；源码文件选择、精确拖放、剪贴板粘贴、围栏选择和保留未放置文件 4/4；SVG 正文/弹窗均为 IMG，焦点与滚动锁恢复通过 |
 | `E2E_LONG_READER=1 ... reader-restoration.spec.ts` | 通过，4 tests；含虚拟目标、TOC、布局变化、批注恢复与边缘锚点 |
 | 本地 Chrome production Reader | 通过；目标误差 4px，继续滚动后刷新恢复到同一 block |
 
@@ -190,3 +191,10 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - `format=markdown_bundle` 与 `format=canjson_bundle` 通过后台任务生成当前版本附件包；正文入口分别为 `conversation.md`/`conversation.canjsonl`，物理对象使用 `assets/objects/<sha-prefix>/<sha256>`。manifest 分开记录对话/附件完整性和所选二级内容；当前不执行内容秘密扫描，`excluded_object_count` 仅保留兼容字段并为 0。
 - 附件派生任务当前提供受限 `text_extract`：最多读取 2 MiB，复用 AssetObject 去重，完成后把文件名和提取文本写入现有 `search_documents` 的 `attachment` 文档类型。
 - 复杂 Office/压缩包预览默认关闭；只有同时配置 `COMPLEX_ATTACHMENT_PREVIEW_ENABLED=true` 与独立 `ATTACHMENT_PREVIEW_ORIGIN` 才会进入 sandbox adapter，否则强制下载回退。主站不以内联方式执行主动内容。
+
+## 2026-08-06 源码附件拖放与粘贴补充
+
+- Markdown 源码编辑器的文件选择、真实文件拖放和剪贴板文件粘贴共用同一上传暂存控制器。拖放使用 CodeMirror `posAtCoords` 定位实际光标，编辑器显示插入光标；多文件按 DataTransfer 顺序插入独立临时行。
+- 临时源码只使用编辑器草稿态 `cr-upload://<draft-token>`，顶部/底部草稿区显示每个文件的上传进度、失败重试和移除。上传成功后原位替换为 UploadItem UUID，消息 API 保存时在事务内提升为对话级 Attachment 并写入 MessageVersion occurrence；最终 canonical 内容不会保留 draft token 或 `cr-upload://`。
+- 代码围栏内的拖放不会静默写入：默认提示插入到围栏后，也可选择仍作为普通文本或取消；已有 Markdown 链接内的落点移动到完整链接之后，避免破坏链接语法。保存前存在上传中/失败/未解析草稿会阻止提交。
+- 关闭带未保存附件的源码工作区时可选择保留到“当前对话文件”（无 occurrence）或删除暂存项；已移除的草稿不再参与保留。服务端拒绝漏传 UploadItem、非法 draft token 和残留 `cr-upload://`，并返回源码行号。

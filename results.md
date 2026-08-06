@@ -16,11 +16,11 @@
 | Web lint | PASS | `corepack pnpm run lint`; zero warnings |
 | Web typecheck | PASS | `corepack pnpm run typecheck` |
 | Web production build | PASS | Next.js build; 9 application routes |
-| API suite | PASS | 203 passed; real attachment fixture enabled; no skipped test |
+| API suite | PASS | 203 passed, 1 fixture-gated skip in the default command; the real attachment fixture module was rerun with `CHAT_READER_E2E_FIXTURE_DIR` and passed 9/9 |
 | Alembic | PASS | single head `20260805_0020` |
-| PWA baseline | PARTIAL_PASS | 8 passed; 16 online/fixture scenarios conditionally skipped by the default command |
+| PWA baseline | PARTIAL_PASS | 8 passed; 19 online/fixture scenarios conditionally skipped by the default command |
 | Attachment/SVG/Share Playwright | PASS | real Bundle fixture: SVG is an `IMG` in Reader and the body-level dialog; focus, scroll lock, Share access and revoke behavior passed |
-| Attachment upload Playwright | PASS | file selection, upload session, conversation attachment, message version, Reader refresh/version behavior passed |
+| Attachment upload Playwright | PASS | 4/4: file selection, exact-position drop, clipboard paste, fenced-code choice, independent drafts, message save, Reader rendering and preserve-as-unplaced close behavior |
 | Long Reader Playwright | PASS | 4/4 target mounting, TOC, layout-anchor and annotation restoration scenarios passed |
 | Attachment export options | PASS | streaming and background ZIP tests cover description, annotations, notebook and source refs |
 | Message version rendering | PASS | API regression proves selecting a version returns its persisted render blocks immediately |

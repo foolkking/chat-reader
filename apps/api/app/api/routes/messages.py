@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -35,6 +36,7 @@ from app.services.assets.asset_store import get_asset_store
 from app.services.assets.upload_service import AttachmentUploadError, finalize_upload_items
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
+UPLOAD_REFERENCE_RE = re.compile(r"cr-upload://(?P<id>[^\s)]+)")
 
 
 @router.post("/merge", response_model=MessageMergeResponse)
@@ -140,6 +142,11 @@ def update_message(
     promoted_storage_keys: list[str] = []
     try:
         source_text = payload.display_text
+        upload_references = _upload_references(source_text)
+        missing_upload_items = {item_id for _, item_id in upload_references} - set(payload.upload_item_ids)
+        if missing_upload_items:
+            line_number = next(line for line, item_id in upload_references if item_id in missing_upload_items)
+            raise MessageEditError(f"Line {line_number} references an upload item that was not included in this save.", 422)
         if payload.upload_item_ids:
             message = db.query(Message).filter(Message.id == message_id).with_for_update().one_or_none()
             if message is None or message.is_deleted:
@@ -165,6 +172,9 @@ def update_message(
                     f"cr-upload://{item_id}",
                     f"cr-asset://{attachment.id}",
                 )
+        if "cr-upload://" in source_text:
+            line_number = next(index for index, line in enumerate(source_text.splitlines(), 1) if "cr-upload://" in line)
+            raise MessageEditError(f"Line {line_number} contains an unresolved attachment upload.", 422)
         result = edit_message(
             db=db,
             message_id=message_id,
@@ -345,6 +355,21 @@ def _edit_response(
         message=get_message(message.id, db),
         warnings=warnings,
     )
+
+
+def _upload_references(text: str) -> list[tuple[int, uuid.UUID]]:
+    references: list[tuple[int, uuid.UUID]] = []
+    for line_number, line in enumerate(text.splitlines(), 1):
+        for match in UPLOAD_REFERENCE_RE.finditer(line):
+            try:
+                item_id = uuid.UUID(match.group("id"))
+            except ValueError as exc:
+                raise MessageEditError(
+                    f"Line {line_number} contains an invalid attachment upload reference.",
+                    422,
+                ) from exc
+            references.append((line_number, item_id))
+    return references
 
 
 def _version_read(version: MessageVersion) -> MessageVersionRead:

@@ -46,7 +46,7 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
       mimeType: "image/png",
       buffer: tinyPng,
     });
-    await expect(page.getByText(/待保存附件 1 个|1 attachment\(s\) pending save/)).toBeVisible();
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 1 个|1 attachment\(s\) pending save/)).toBeVisible();
     await page.getByTestId("source-editor-create-version").click();
     await expect(page.getByTestId("source-editor-create-version")).toContainText(/v3/);
     await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
@@ -88,6 +88,106 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
     await expect(message.getByTestId("attachment-block")).toHaveCount(1);
     await message.getByRole("button", { name: /Next version|下一版/ }).click();
     await expect(message.getByTestId("attachment-block")).toHaveCount(2);
+  } finally {
+    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
+    expect(cleanup.ok()).toBeTruthy();
+  }
+});
+
+test("drops and pastes files at the source cursor with independent upload drafts", async ({ page }) => {
+  const { conversationId, messageId } = await createConversation(page.request);
+  try {
+    await page.goto(`/conversations/${conversationId}`);
+    await openSourceEditor(page, messageId);
+    const editor = page.getByTestId("source-editor-codemirror").locator(".cm-content");
+    await editor.click({ position: { x: 48, y: 20 } });
+
+    await page.evaluate(() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["dropped attachment\n"], "dropped.txt", { type: "text/plain" }));
+      const content = document.querySelector("[data-testid='source-editor-codemirror'] .cm-content");
+      if (!content) throw new Error("CodeMirror content not found");
+      content.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: 48, clientY: 20 }));
+    });
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/正在上传：dropped\.txt|Uploading: dropped\.txt/).first()).toBeVisible();
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 1 个|1 attachment\(s\) pending save/)).toBeVisible();
+
+    await page.evaluate(() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["pasted attachment\n"], "pasted.txt", { type: "text/plain" }));
+      const content = document.querySelector("[data-testid='source-editor-codemirror'] .cm-content");
+      if (!content) throw new Error("CodeMirror content not found");
+      content.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: transfer }));
+    });
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 2 个|2 attachment\(s\) pending save/)).toBeVisible();
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+    await page.getByTestId("source-editor-create-version").click();
+    await expect(page.getByTestId("source-editor-create-version")).toContainText(/v3/);
+    const attachments = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+    expect((await attachments.json()).items).toHaveLength(2);
+    await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
+    await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(2);
+  } finally {
+    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
+    expect(cleanup.ok()).toBeTruthy();
+  }
+});
+
+test("asks before placing a dropped attachment inside a fenced code block", async ({ page }) => {
+  const { conversationId, messageId } = await createConversation(page.request);
+  try {
+    await page.goto(`/conversations/${conversationId}`);
+    await openSourceEditor(page, messageId);
+    const editor = page.getByTestId("source-editor-codemirror").locator(".cm-content");
+    await editor.click();
+    await page.keyboard.press("Control+A");
+    await page.keyboard.insertText("Before\n\n```ts\nconst value = 1;\n```\n\nAfter");
+    const codeLine = page.getByTestId("source-editor-codemirror").locator(".cm-line").filter({ hasText: "const value = 1;" });
+    const box = await codeLine.boundingBox();
+    expect(box).not.toBeNull();
+    await page.evaluate(({ x, y }) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["code evidence\n"], "code-evidence.txt", { type: "text/plain" }));
+      const content = document.querySelector("[data-testid='source-editor-codemirror'] .cm-content");
+      if (!content) throw new Error("CodeMirror content not found");
+      content.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: x, clientY: y }));
+    }, { x: box!.x + 20, y: box!.y + box!.height / 2 });
+
+    await expect(page.getByTestId("source-editor-code-drop-choice")).toBeVisible();
+    await page.getByRole("button", { name: /Insert after code block|插入到代码块之后/ }).click();
+    await expect(page.getByTestId("source-editor-code-drop-choice")).toHaveCount(0);
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/code-evidence\.txt/).first()).toBeVisible();
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+    await page.getByTestId("source-editor-create-version").click();
+    await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
+    await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(1);
+  } finally {
+    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
+    expect(cleanup.ok()).toBeTruthy();
+  }
+});
+
+test("keeps completed unsaved uploads as unplaced conversation files on close", async ({ page }) => {
+  const { conversationId, messageId } = await createConversation(page.request);
+  try {
+    await page.goto(`/conversations/${conversationId}`);
+    await openSourceEditor(page, messageId);
+    await page.getByTestId("source-editor-attachment-input").setInputFiles({
+      name: "keep-unplaced.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("keep this file in the conversation\n"),
+    });
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+    await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
+    await page.getByRole("button", { name: /Keep files and close|保留文件并关闭/ }).click();
+    await expect(page.getByTestId("source-editor-codemirror")).toHaveCount(0);
+
+    await expect.poll(async () => {
+      const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+      const items = (await response.json()).items as Array<{ is_used: boolean }>;
+      return { count: items.length, used: items[0]?.is_used };
+    }).toEqual({ count: 1, used: false });
+    await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(0);
   } finally {
     const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
     expect(cleanup.ok()).toBeTruthy();

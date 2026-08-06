@@ -5,10 +5,11 @@ import { File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll,
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
-import { createAttachmentUploadSession, deleteAttachmentUploadItem, editMessage, getConversationAttachments, uploadAttachmentItem } from "../../lib/api";
+import { createAttachmentUploadSession, deleteAttachmentUploadItem, editMessage, finalizeConversationAttachments, getConversationAttachments, uploadAttachmentItem } from "../../lib/api";
 import type { AttachmentRead, MessageListItem } from "../../lib/types";
 import { EditMessageForm } from "./edit-message-form";
 import { blockIndexForSourceOffset, normalizedMessageBlocks } from "./message-source-position";
+import type { AttachmentDraft, AttachmentDraftCallbacks } from "./source-attachment-drop";
 
 export type SourceEditorTarget = {
   message: MessageListItem;
@@ -16,6 +17,15 @@ export type SourceEditorTarget = {
 };
 
 const FORM_ID = "reader-source-editor-form";
+
+type UploadJob = {
+  token: string;
+  file: File;
+  itemId?: string;
+  cancel?: () => void;
+  callbacks: AttachmentDraftCallbacks;
+  cancelled?: boolean;
+};
 
 export function SourceEditorWorkspace({
   target,
@@ -47,36 +57,105 @@ export function SourceEditorWorkspace({
   const queryClient = useQueryClient();
   const cursorOffsetRef = useRef(target.cursorOffset);
   const message = target.message;
-  const [uploadSessionId, setUploadSessionId] = useState<string | null>(null);
-  const [uploadItemIds, setUploadItemIds] = useState<string[]>([]);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [, setUploadSessionId] = useState<string | null>(null);
+  const [, setUploadItemIds] = useState<string[]>([]);
+  const uploadSessionIdRef = useRef<string | null>(null);
+  const uploadItemIdsRef = useRef<string[]>([]);
+  const uploadSessionPromiseRef = useRef<Promise<string> | null>(null);
+  const uploadJobsRef = useRef(new Map<string, UploadJob>());
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
   const text = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
   const versionNumber = message.current_version?.version_number ?? 1;
   const effectiveAttachmentInsertion = localAttachmentInsertion ?? pendingAttachmentInsertion;
 
-  async function uploadFiles(files: File[]) {
-    if (!files.length) return;
-    setUploadError(null);
-    try {
-      const session = uploadSessionId
-        ? { id: uploadSessionId }
-        : await createAttachmentUploadSession(message.conversation_id, { targetMessageId: message.id, baseMessageVersionId: message.current_version?.id });
-      setUploadSessionId(session.id);
-      for (const file of files) {
-        setUploading(file.name);
-        const item = await uploadAttachmentItem(session.id, file).promise;
-        setUploadItemIds((current) => [...current, item.id]);
-        setLocalAttachmentInsertion({ referenceUri: `cr-upload://${item.id}`, displayName: item.client_filename, image: (item.detected_mime_type ?? item.declared_mime_type ?? "").startsWith("image/"), placement: "inline" });
-        await new Promise((resolve) => window.setTimeout(resolve, 0));
-      }
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Attachment upload failed.");
-    } finally {
-      setUploading(null);
+  async function ensureUploadSession(): Promise<string> {
+    if (uploadSessionIdRef.current) return uploadSessionIdRef.current;
+    if (!uploadSessionPromiseRef.current) {
+      uploadSessionPromiseRef.current = createAttachmentUploadSession(message.conversation_id, {
+        targetMessageId: message.id,
+        baseMessageVersionId: message.current_version?.id,
+      }).then((session) => {
+        uploadSessionIdRef.current = session.id;
+        setUploadSessionId(session.id);
+        return session.id;
+      }).finally(() => { uploadSessionPromiseRef.current = null; });
     }
+    return uploadSessionPromiseRef.current;
+  }
+
+  async function startUploadJob(job: UploadJob): Promise<void> {
+    try {
+      const sessionId = await ensureUploadSession();
+      if (job.cancelled) return;
+      const request = uploadAttachmentItem(sessionId, job.file, (progress) => job.callbacks.onProgress(job.token, progress));
+      job.cancel = request.cancel;
+      const item = await request.promise;
+      if (job.cancelled) return;
+      job.itemId = item.id;
+      uploadItemIdsRef.current = uploadItemIdsRef.current.includes(item.id) ? uploadItemIdsRef.current : [...uploadItemIdsRef.current, item.id];
+      setUploadItemIds((current) => current.includes(item.id) ? current : [...current, item.id]);
+      job.callbacks.onComplete(job.token, item);
+    } catch (error) {
+      if (job.cancelled || (error instanceof DOMException && error.name === "AbortError")) return;
+      job.callbacks.onError(job.token, error instanceof Error ? error.message : "Attachment upload failed.");
+    }
+  }
+
+  function handleAttachmentFiles(files: File[], _position: number, callbacks: AttachmentDraftCallbacks): AttachmentDraft[] {
+    const drafts = files.map((file) => ({
+      token: `draft-${crypto.randomUUID()}`,
+      displayName: file.name || "attachment.bin",
+      image: (file.type || "").startsWith("image/"),
+    }));
+    drafts.forEach((draft, index) => {
+      const job: UploadJob = { token: draft.token, file: files[index], callbacks };
+      uploadJobsRef.current.set(job.token, job);
+      void startUploadJob(job);
+    });
+    return drafts;
+  }
+
+  function retryAttachment(token: string): void {
+    const job = uploadJobsRef.current.get(token);
+    if (!job) return;
+    job.cancelled = false;
+    void startUploadJob(job);
+  }
+
+  function removeAttachment(token: string): void {
+    const job = uploadJobsRef.current.get(token);
+    if (!job) return;
+    job.cancelled = true;
+    job.cancel?.();
+    if (job.itemId && uploadSessionIdRef.current) {
+      uploadItemIdsRef.current = uploadItemIdsRef.current.filter((id) => id !== job.itemId);
+      setUploadItemIds((current) => current.filter((id) => id !== job.itemId));
+      void deleteAttachmentUploadItem(uploadSessionIdRef.current, job.itemId).catch(() => undefined);
+    }
+    uploadJobsRef.current.delete(token);
+  }
+
+  async function handleAttachmentCancel(preserve: boolean, itemIds: string[]): Promise<void> {
+    for (const job of uploadJobsRef.current.values()) {
+      job.cancelled = true;
+      job.cancel?.();
+    }
+    const readyIds = itemIds.filter((itemId) => uploadItemIdsRef.current.includes(itemId));
+    if (uploadSessionIdRef.current && readyIds.length) {
+      if (preserve) {
+        await finalizeConversationAttachments(message.conversation_id, readyIds);
+      } else {
+        await Promise.all(readyIds.map((itemId) => deleteAttachmentUploadItem(uploadSessionIdRef.current!, itemId).catch(() => undefined)));
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: ["conversation-attachments", message.conversation_id] });
+    setUploadItemIds([]);
+    uploadItemIdsRef.current = [];
+    uploadSessionIdRef.current = null;
+    setUploadSessionId(null);
+    uploadJobsRef.current.clear();
+    onClose();
   }
 
   useEffect(() => {
@@ -119,12 +198,11 @@ export function SourceEditorWorkspace({
       <div className="flex h-full min-h-0 flex-col">
         <div className="flex min-h-10 shrink-0 items-center justify-between border-b border-ui bg-surface px-2">
           <div className="flex min-w-0 items-center gap-1">
-            <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle"><Upload className="h-4 w-4" />{zh ? "添加附件" : "Add attachment"}<input type="file" multiple className="hidden" data-testid="source-editor-attachment-input" onChange={(event) => { const files = Array.from(event.currentTarget.files ?? []); event.currentTarget.value = ""; void uploadFiles(files); }} /></label>
+            <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle"><Upload className="h-4 w-4" />{zh ? "添加附件" : "Add attachment"}</label>
             <button type="button" onClick={() => setAttachmentPickerOpen(true)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle"><Paperclip className="h-4 w-4" />{zh ? "选择当前对话文件" : "Choose conversation file"}</button>
           </div>
           <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle" title={zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}><LocateFixed className="h-4 w-4" />{zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}</button>
         </div>
-        {uploading || uploadError || uploadItemIds.length ? <div className="shrink-0 border-b border-ui bg-subtle px-3 py-2 text-xs">{uploading ? <p className="text-secondary">{zh ? `正在上传 ${uploading}...` : `Uploading ${uploading}...`}</p> : null}{uploadError ? <p className="text-[var(--danger)]">{uploadError}</p> : null}{uploadItemIds.length ? <div className="mt-1 flex flex-wrap items-center gap-2"><span className="text-secondary">{zh ? `待保存附件 ${uploadItemIds.length} 个` : `${uploadItemIds.length} attachment(s) pending save`}</span><button type="button" className="inline-flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface" title={zh ? "清空待保存附件" : "Clear pending attachments"} onClick={() => { for (const itemId of uploadItemIds) if (uploadSessionId) void deleteAttachmentUploadItem(uploadSessionId, itemId); setUploadItemIds([]); setLocalAttachmentInsertion(null); }}><X className="h-3.5 w-3.5" /></button></div> : null}</div> : null}
         <div className="min-h-0 flex-1">
           <EditMessageForm
             key={`${message.id}:${message.current_version?.id ?? "initial"}`}
@@ -139,19 +217,26 @@ export function SourceEditorWorkspace({
             onCursorOffsetChange={(offset) => { cursorOffsetRef.current = offset; }}
             onDirtyChange={onDirtyChange}
             onCancel={() => onClose()}
+            onAttachmentFiles={handleAttachmentFiles}
+            onAttachmentRetry={retryAttachment}
+            onAttachmentRemove={removeAttachment}
+            onAttachmentCancel={handleAttachmentCancel}
             onSave={async (nextText, reason, saveMode) => {
               const response = await editMessage(message.id, {
                 displayText: nextText,
                 editReason: reason,
                 baseVersionId: message.current_version?.id,
                 saveMode,
-                uploadItemIds,
+                uploadItemIds: uploadItemIdsRef.current,
               });
               await queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] });
               await onMessageChanged(response.message);
               onTargetUpdated({ message: response.message, cursorOffset: cursorOffsetRef.current });
               setUploadItemIds([]);
+              uploadItemIdsRef.current = [];
+              uploadSessionIdRef.current = null;
               setUploadSessionId(null);
+              uploadJobsRef.current.clear();
             }}
           />
         </div>
@@ -165,7 +250,7 @@ export function SourceEditorWorkspace({
               setLocalAttachmentInsertion({
                 referenceUri: `cr-asset://${attachment.id}`,
                 displayName: attachment.display_name,
-                image: mime.startsWith("image/") && mime !== "image/svg+xml",
+                image: mime.startsWith("image/"),
                 placement,
               });
               setAttachmentPickerOpen(false);

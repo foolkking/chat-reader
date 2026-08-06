@@ -27,6 +27,7 @@
 | `apps/api/tests/test_merge_history_and_cancellation.py` | Current | Version/block/annotation copy, rollback, cancellation and retry regressions. |
 | `apps/web/components/floating-workspace-panel.tsx` | Current | Shared geometry plus source-editor left-overlay placement and direct resize updates. |
 | `apps/web/features/editing/edit-message-form.tsx` | Current | CodeMirror source editor with light/dark theme compartment. |
+| `apps/web/features/editing/source-attachment-drop.ts` | Current | CodeMirror file drop/paste detection, safe insertion-position resolution and draft marker commands. |
 
 最后审计：2026-08-04
 

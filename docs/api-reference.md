@@ -199,6 +199,8 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 | GET | `/api/shared/{token}/attachments/{id}` | Share 范围内的附件 metadata |
 | GET/HEAD | `/api/shared/{token}/attachments/{id}/content` | Share 范围内的附件内容与 Range |
 
+源码编辑器上传时，草稿中的 `cr-upload://` 只在客户端暂存。保存消息必须同时提交对应 `upload_item_ids`；API 会在事务内提升 Attachment、重写为 `cr-asset://` 并创建 occurrence。漏传、非法或残留上传引用返回 422，并在错误 detail 中给出 Markdown 行号。
+
 ## Offline Library
 
 | Method | Path | 说明 |
