@@ -17,6 +17,10 @@ def get_conversation_toc(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=200, ge=1, le=500),
     max_level: int | None = Query(default=None, ge=1, le=6),
+    role: str | None = Query(default=None, max_length=40),
+    q: str | None = Query(default=None, max_length=200),
+    start_order_key: str | None = Query(default=None, max_length=100),
+    end_order_key: str | None = Query(default=None, max_length=100),
     db: Session = Depends(get_db),
 ) -> TocResponse:
     try:
@@ -27,6 +31,10 @@ def get_conversation_toc(
             offset=offset,
             limit=limit,
             max_level=max_level,
+            role=role,
+            query_text=q,
+            start_order_key=start_order_key,
+            end_order_key=end_order_key,
         )
     except TocServiceError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

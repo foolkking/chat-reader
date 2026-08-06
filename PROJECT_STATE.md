@@ -1,92 +1,192 @@
-# 项目当前状态
+# Project State
 
-> 最后更新：2026-07-27。第二轮改造已在本地完成并验证；执行起点 HEAD 为 `175fae3914ad65a9682fa13303b64064507d498c`，生产未部署。详细结果见 `docs/execution/README.md`。
+## 2026-08-04 Current Implementation Addendum
 
-## 2026-07-27 当前快照
+- Conversation merge now clones the canonical message/version/render-block/source-ref/annotation graph with bounded batch inserts. It does not reparse Markdown; headings and search are built from canonical projections after ID remapping. Source conversations remain unchanged and notebooks are intentionally excluded.
+- `POST /api/tasks/{job_id}/cancel` supports queued cancellation, processing `cancelling`, idempotent repeated cancellation, transactional rollback, and the `cancelled` terminal state. Automatic stale recovery stops after three attempts; explicit retry resets `attempt_count`.
+- `BackgroundTaskRead` exposes `cancellable` and `attempt_count`. Production `import-worker` has a default `640m` memory limit through `IMPORT_WORKER_MEMORY_LIMIT`.
+- Reader source editing is a fixed left overlay at desktop widths (1024px+), with right-edge-only resize and direct DOM width updates. The main reader temporarily yields `panel width - sidebar width`; closing clears the offset. CodeMirror uses `theme="none"` plus a theme compartment for runtime light/dark reconfiguration.
+- Same-message source follow is RAF-coalesced and imperative; the wheel handler no longer increments top-level React state. Search, annotation, and source workspaces use toggle and mutual-exclusion semantics.
+- New regression coverage: `apps/api/tests/test_merge_history_and_cancellation.py`.
+- Final local validation: 182 API tests, lint, typecheck, production Web build, the PWA matrix, and the focused Reader layout flow pass. The ten paired merge fixtures produce 398 effective messages, 13 non-blocking trailing-empty notices, zero ambiguity, 51,866 copied render blocks, and 11,028 remapped headings; isolated merge time was 7.26 seconds with 132.9 MiB peak process RSS.
 
-- 首页为资料总览，`/recent` 已进入主导航，Cmd/Ctrl+K 聚焦全局搜索。
-- Reader 消息统一左对齐，保留对话/章节双 TOC，支持 focus mode 与批注 floating/docked（覆盖左栏）两态。
-- 全局及当前对话搜索包含批注；后端 SearchDocument CRUD 同步和幂等回填入口已实现。
-- `/library` 继续使用 Dexie version 1 与原 offline package/SW 原子 revision 流程；无清库或 migration。
-- 已验证命令：Web lint/typecheck/build、API 146 tests、PWA/Reader Playwright。生产部署前需同时重建 API、worker、Web 并运行批注索引回填。
+最后更新：2026-08-04
 
-> 历史快照提示：本文更新于 2026-07-21，记录的 migration head `0013` 及批注/离线缺口已经过期。2026-07-26 核验的当前事实基线见 [docs/system/README.md](docs/system/README.md)，已知差异见 [docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md](docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md)。
+## 2026-08-05 Attachment and Sidebar Addendum
 
-更新日期：2026-07-21。
+- Alembic 当前单一 head 为 `20260805_0020`。附件采用 `AssetObject -> conversation-owned Attachment -> MessageVersion occurrence` 三层模型；`message_version_attachments` 保留物理表名，但每行有独立 ID、`occurrence_key` 和 `placement`，允许同一附件多次出现。上传先进入 `attachment_upload_sessions/items`，只有显式提交或保存消息时才原子提升为 canonical 数据。
+- `.crbundle` preview/commit 校验 ZIP 路径、大小、SHA-256、MIME、扫描状态和引用，并兼容 `chat-reader-import-bundle v1`。Reader/Share 使用权限受控 metadata/content 与单 Range 接口；“当前对话文件”抽屉和 Markdown 源码编辑器支持普通上传、未放置文件、已有文件复用及光标/消息尾部插入。
+- 对话导出 UI 只暴露 CanJSON、Markdown 和“包含附件”。结果固定为 `.canjsonl`、`.context.zip`、`.md` 或可移植 Markdown ZIP；系统级 `.cr v4` 位于“数据与备份”，包含附件且第一版只允许恢复到空实例。旧对话级 `.cr` 仅保留导入兼容。
+- Context Package 导出前只校验对象状态、大小与 SHA-256 完整性；当前产品策略不执行附件内容秘密扫描或敏感文件排除。未扫描对象仍明确标记 `scanner_disabled`，不能解释为 clean/safe。过期未提交 Bundle preview 会释放 staging 对象；`apps/api/scripts/gc_assets.py` 默认 dry-run、执行时按 30 天无引用/无 lease 保留 tombstone 后删除物理文件。
+- Scanner Provider 抽象保留；当前 King 单用户部署固定使用 `DisabledScanner`、`ATTACHMENT_SCANNER=disabled` 和 `ALLOW_UNSCANNED_ATTACHMENTS=true`。当前部署主动关闭附件恶意软件扫描和内容安全审查。附件以 `scanner_disabled`/`unscanned` 未扫描状态正常使用。这是当前单用户部署的已接受策略，不代表文件已经通过安全检测。
+- Project/Conversation 菜单已分离；Conversation 支持 archive/unarchive、不可恢复硬删除和单事务 placement，不存在 Trash/restore 产品流程。拖拽按 active 类型过滤 Droppable，统一 `DropIntent` 驱动指示线、optimistic cache 与 placement API。
+- 真实附件 fixture 自动化基线为 1 conversation、8 messages、20 attachments、19 resolved、1 missing、18 physical objects、21 occurrences、1 unplaced；测试只通过环境变量读取并在临时目录打包，不修改源目录。
 
-本文是后续开发者和 AI 的当前实现快照。功能事实以代码、Alembic migration 和自动化测试为最终依据。
+最后更新：2026-08-06
 
-## 当前基线
+## 项目快照
 
-- Web：Next.js 14 App Router，浏览器使用相对 `/api/*`，Next.js 服务端通过 `API_INTERNAL_URL` 转发到 FastAPI。
-- API：FastAPI + SQLAlchemy 2，数据库为 PostgreSQL，当前 migration head 为 `20260721_0013`。
-- 最近聚焦后端测试、前端 typecheck 和 lint 已通过；最终完整测试基线以本次提交验证结果为准。
-- 生产部署文件已包含 PostgreSQL、migration、API、单并发 task worker、Web、Nginx 示例和数据库备份脚本。
+| 字段 | 当前状态 |
+| --- | --- |
+| 项目类型 | Monorepo；Web 应用 + 后端服务 + 后台 worker |
+| 主要语言 | TypeScript/React；Python 3.11+ |
+| 包管理 | Corepack + pnpm 9.15.4；Python setuptools |
+| Web | Next.js 14 App Router；9 个页面路由 |
+| API | FastAPI 0.12.0；本地 OpenAPI 99 paths / 117 operations |
+| 数据库 | PostgreSQL 16；29 张业务表；源码与本地 Alembic 单一 head `20260805_0020` |
+| 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
+| 部署 | Compose：postgres、migrate、api、import-worker、web |
+| Git 基线 | HEAD `bf64b9e4cd80b98ec00ebe6da090b5bd8b673547`；当前功能与文档改动尚在工作树 |
+| 最近完整验证 | 2026-08-06；Web lint/typecheck/build、API 203 passed；PWA 基线 8 passed / 16 conditional skipped；真实附件/SVG/Share、上传及长 Reader 专项 Playwright 通过；用户确认生产 Chrome 上传、Share 与 `.cr v4` 空实例恢复通过 |
 
-## 已实现
+## 当前目的与边界
 
-### 导入与 canonical 数据
+- 导入并长期阅读、搜索、批注、整理、分享和导出已经线性化、标准化的 AI 对话资料。
+- 新导入接受兼容 JSON（Markdown 可选校验，CanJSON v1/v2 自动识别）、附件 `.crbundle` 和旧 `.cr` 兼容归档；不接收未经 Adapter 标准化的 OpenAI 官方图结构/ZIP、CSV、TXT 或 Markdown 单文件提交。
+- 主要身份是固定主体 `local:default`；Share 访客仅凭 token 访问授权范围。
+- 没有应用内认证、多用户 ACL、在线 AI 生成、标签或语义搜索；复杂 Office 预览仍退化为下载。
+- 公网访问控制、TLS、证书与限流属于反向代理/基础设施边界。
 
-- 导入预览、warning、raw source artifact 保存、持久化队列、阶段进度、失败重试和自动发布。
-- ChatGPT Exporter JSON、Markdown 及组合导入。
-- 官方 conversations JSON primary path 导入；源节点引用仍被保留，但 UI 不展示分支切换。
-- 消息、不可变 MessageVersion、RenderBlock、Heading 和 SearchDocument 持久化。
-- PostgreSQL COPY 批量写入；import commit 快速返回 `202`，worker 使用 heartbeat 和 stale recovery。
-- exporter 带属性的 fenced code、长 fence 和 tilde fence 可正确生成 code blocks。
-- assistant 开头明显的 exporter thinking summary 在导入时清理；历史内容有前端折叠兜底。
-- 历史会话可排队执行 `conversation_auto_clean`，通过新版本删除导出的搜索/思考前缀并重建 TOC/Search。
-- `.cr` 快速归档支持后台导出、校验预览、重复检测和 canonical round-trip 导入。
+## 仓库地图
 
-### 阅读与导航
+```text
+apps/web/          Next.js UI、Reader、Library、Service Worker、Playwright
+apps/api/          FastAPI、SQLAlchemy、Alembic、worker、pytest
+packages/          导入解析与渲染共享包
+schemas/           导入/归档 schema
+deploy/            反向代理示例和备份脚本
+docs/system/       当前系统事实
+docs/planning/     2026-07-27 改造计划历史档案
+docs/execution/    2026-07-27 至 2026-07-29 实施与发布证据
+docs/evidence/     2026-07-26 基线截图和只读请求记录
+```
 
-- user/assistant Markdown 安全渲染，支持 GFM、浅色 Shiki、KaTeX、Mermaid 和 callout；代码块支持复制、换行和长内容展开。
-- 首屏使用 30 条 preview window；heavy message blocks 在视口附近自动加载并分页追加。
-- 对话索引使用独立轻量 API；active-message TOC 使用按消息过滤和分页 API。
-- 左侧对话索引按 `U#`、`A#` 编号，右侧 TOC 默认绑定 active message。
-- 未挂载 message/block 可通过 anchor window 加载后定位；移动 sheet 和只读分享页复用可靠导航。
-- 移动端消息使用全宽阅读布局，代码、表格和图表在自身容器滚动。
+## 当前架构
 
-### 管理、搜索和分享
+- 浏览器请求同源 `/api/*`；Next.js 在服务端通过 `API_INTERNAL_URL` 转发到 FastAPI。
+- 导入先 preview 到带校验和与过期时间的 durable ImportDraft JSONL，再由 PostgreSQL durable queue 和单并发 worker 流式读取同一 Draft 完成 canonical commit。
+- `MessageVersion` 第一版永久不可覆盖/删除；第二版及以后只有显式 `replace_current` 才可原地覆盖，其他编辑继续创建新版本，覆盖与删除均写审计事件。当前版本关联有序 `RenderBlock`、`Heading` 和 `SearchDocument`。
+- `MessageVersion` 记录 normalizer/Markdown parser/block builder/search document 版本；正文权威语义为现有 `display_text` 列的 `display_markdown` 服务别名。
+- SearchDocument 覆盖 conversation、message、heading、code 和 annotation；全文与 trigram 子串共同检索。
+- source、export、offline 和 attachment objects 分别写入受控目录/Compose named volume；数据库只存相对 storage key。
 
-- Project 创建/重命名/归档、展开子会话、拖放移动和 Project 内置顶。
-- Conversation 使用单 Project 归属：未归类会话只在 history，进入 Project 后不重复；归档保留关系，恢复回原位置。
-- 会话重命名、全局置顶、归档、软删除和批量操作。
-- 消息拆分/合并；会话拆分和按可拖动顺序进行非破坏式后台合并。
-- import 与 conversation merge 共用 PostgreSQL 持久化任务队列、全局进度条、heartbeat、失败重试和完成后自动刷新。
-- 消息编辑、版本历史和通过新版本恢复。
-- PostgreSQL full-text、trigram substring 混合搜索，支持 conversation/project/status/date/document type/role 过滤；heading/code 结果包含 block 定位，重复消息按 content hash 折叠。
-- 分享链接创建、列表、标题/描述/有效期更新、撤销和只读访问。
-- `.cr` 后台快速归档、Markdown 和 Canonical JSON 导出。
-- 阅读位置、最近打开和 PWA-ready 壳。
-- Conversation/Project 最近阅读时间、置顶优先的多字段排序、跨浏览器排序偏好和自定义拖动顺序。
-- Sidebar 全局即时搜索、Reader 当前会话搜索，以及搜索与阅读键盘快捷键。
-- 阅读位置支持 message/block/heading 内偏移、停滚保存和跨浏览器自动续接；首屏直接加载保存位置附近窗口。
-- Share 使用 token 约束的 message/index/TOC/block 分页，匿名访客进度仅保存在当前浏览器。
+## Reader 与界面状态
 
-## 明确未实现
+- user 消息开启一个阅读轮次，后续 assistant/tool/system 消息归入该轮次。
+- 在线与 Share 的 `reader-turn` 接口一次返回目标轮次全部正文 blocks 和相邻 anchor；Offline 从 Dexie 组装同一合同。
+- 初始/位置恢复窗口最多水合 5 个真实轮次，确保短消息目标有足够上下文对齐阅读线；边缘滑动完成后通常裁剪为 3 个完整轮次。用户进入首/末已加载轮次或接近边缘时预取相邻轮次，响应先按 `turn_key` 合并，再在锚点恢复后按整轮裁剪。合并和裁剪期间固定阅读线上的真实 message/block；只有到达会话真实末尾才保留底部阅读留白。
+- `block_count > 160` 或 `char_count > 50000` 的单条消息使用 TanStack Virtual 动态 blocks 虚拟化，正文数据仍完整；目标 block 在导航完成前强制保持挂载。虚拟行使用普通文档流和实测空白补偿，字号、Markdown 间距或正文宽度变化会使布局签名失效并重测，估算偏差不能再造成正文叠放。
+- 阅读线为滚动根顶部 120px；ReadingPosition v2 保存 block/version/order/ratio/字符偏移，并兼容读取 v1。
+- 桌面侧栏同时显示 Project 树与未归类对话；支持拖放和 Linear 式批量选择。桌面隐藏“最近”入口，移动端保留继续阅读入口和 `/recent`。
+- 批注支持浮窗、左侧 dock 和全屏阅读；全部批注与精选笔记可连续阅读或逐条回顾。
+- 外观设置提供 Markdown 间距、15-22px 正文字号、正文宽度、主题、语言和默认专注模式。
+- `/library` 与在线侧栏、TOC 和 Reader 语义对齐；更新只传输新增或 revision 变化的 conversation。
+- 消息工具栏位于正文上方的信息栏。在线 Reader 的桌面顶栏固定为“编辑、搜索、批注、专注、更多”，移动端固定为“导航、编辑、更多”；Share 和 Offline Reader 不显示编辑入口。
+- Markdown 源码编辑器是非模态浮动工作区，不替换正文或改变消息高度；桌面可拖动、四边缩放、复位并保存尺寸，移动端使用顶栏下方全宽面板。只有真实 wheel/touch/pointer/阅读键输入会驱动源码单向跟随阅读线；同消息同步源码位置，干净状态跨消息切换，脏状态锁定并要求保存或放弃。保存后局部更新消息与派生数据，工作区保持打开，并用真实 DOM 锚点补偿正文位置。
+- 附件预览通过 React portal 挂载到 `document.body`，覆盖完整视口并使用共享计数锁定背景滚动。弹窗具备 dialog 语义、初始焦点、Tab 焦点循环、Esc/背景关闭与触发器焦点恢复。图片（含 SVG 图片上下文）在正文和弹窗中最终均为 `<img>`，不内联 SVG XML、不以独立文档打开；文本/Markdown/JSON/CSV/代码和浏览器原生音视频可直接轻量展示。
+- 对话导出主选项仍为 CanJSON/Markdown 与“包含附件”；折叠的二级内容选项控制对话简介、批注、笔记和 CanJSON 来源引用。普通文件与附件 ZIP 复用同一组后端 `ExportOptions`。
+- 单消息版本使用持久化左右切换器；第一版受保护，后续版本可永久删除，删除当前版本会回退到编号更小的最近可用版本。统一“拆分对话”工作区支持连续区间、边界双份和离散消息三种非破坏式复制。
 
-- 认证、多用户、角色权限和租户隔离。
-- TanStack Virtual 等真正的消息虚拟滚动；当前是窗口加载和 DOM 增量渲染。
-- HTML/PDF/Project 打包导出。
-- Tag、Bookmark、笔记系统和语义/向量搜索。
-- 批量 blocks read API 和真正多 worker 调度；当前 worker 固定单并发处理 import、merge、`.cr` export 与 auto-clean。
-- 全局操作反馈仍以各功能内状态为主，尚未统一成应用级 Toast 队列。
-- 在线聊天、SSE streaming、重新生成、工具调用持久化和回答分支 UI。
-- 私有会话离线缓存；service worker 不缓存 `/api/*` 或会话正文。
+## 重要文件
 
-## 关键约束
+| 路径 | 职责 |
+| --- | --- |
+| `apps/api/app/main.py` | FastAPI 入口与路由注册 |
+| `apps/api/app/services/reader_turns.py` | 完整轮次分组与批量水合 |
+| `apps/api/app/services/import_pipeline/draft_store.py` | ImportDraft JSONL、校验和、受控相对路径与过期清理 |
+| `apps/api/app/services/exporting/export_service.py` | Markdown v2 与 CanJSON v2 流式投影 |
+| `apps/api/app/services/offline_packages.py` | 离线 catalog/package 增量协议 |
+| `apps/web/features/conversations/conversation-reader.tsx` | Reader 窗口、导航和位置持久化 |
+| `apps/web/features/editing/edit-message-form.tsx` | 动态 CodeMirror Markdown 源码编辑器与保存模式 |
+| `apps/web/features/editing/source-editor-workspace.tsx` | 浮动源码会话、滚动跟随、脏状态锁定与局部保存 |
+| `apps/web/components/floating-workspace-panel.tsx` | 可复用的桌面拖动/缩放/复位与移动端全宽工作面板 |
+| `apps/web/features/editing/conversation-split-workspace.tsx` | 三种非破坏式对话拆分计划、预览与执行 |
+| `apps/web/features/conversations/reader-navigation.ts` | 目标解析与布局稳定 |
+| `apps/web/features/conversations/assistant-message-renderer.tsx` | 极长消息 block 虚拟化与目标固定 |
+| `apps/web/lib/reader-data-source.ts` | 在线/离线 ReaderDataSource 合同 |
+| `apps/web/features/annotations/annotation-workspace.tsx` | 批注浮窗、dock、展开阅读和管理 |
+| `apps/web/features/offline/library-shell.tsx` | Library 壳、同步和本地信息架构 |
+| `docker-compose.production.yml` | 生产服务、volume、healthcheck 和网络 |
 
-- 前端只渲染 canonical 当前版本和 RenderBlock，不渲染 raw source artifact。
-- 不使用 `dangerouslySetInnerHTML` 执行导入内容；原始 HTML 被禁用或清理。
-- 编辑和恢复创建新 MessageVersion，不覆盖历史版本。
-- 会话级 merge/split 复制当前 canonical 内容，源会话保持不变。
-- 生产环境必须设置强数据库密码、准确的 `PUBLIC_WEB_BASE_URL`，并在公网入口增加 HTTPS 和访问控制。
+## 已验证命令
 
-## 下一优先级
+以下是 2026-08-05 本轮实现后的本地记录；生产结果在发布完成后追加到 `results.md` 和执行档案。
 
-1. 认证与多用户数据隔离。
-2. 大规模会话的真正虚拟滚动和性能预算回归。
-3. 附件、citation、tool result 的后端结构化持久化。
-4. HTML 导出、备份恢复演练和生产监控。
+| 命令/检查 | 最后记录 |
+| --- | --- |
+| `corepack pnpm run lint` | 通过，0 warnings |
+| `corepack pnpm run typecheck` | 通过 |
+| `corepack pnpm --filter web build` | 通过，9 个页面路由 |
+| `corepack pnpm run test:api` | 通过，203 tests；真实附件 fixture 已启用，无 skip |
+| `corepack pnpm --filter web test:pwa` | 基线 8 passed；16 个需要在线 API/专项 fixture 的场景按条件 skipped，不计为 PASS |
+| 附件在线 Playwright | 通过：真实 Bundle/SVG/Share、普通上传/版本和附件静态契约；SVG 正文/弹窗均为 IMG，焦点与滚动锁恢复通过 |
+| `E2E_LONG_READER=1 ... reader-restoration.spec.ts` | 通过，4 tests；含虚拟目标、TOC、布局变化、批注恢复与边缘锚点 |
+| 本地 Chrome production Reader | 通过；目标误差 4px，继续滚动后刷新恢复到同一 block |
 
-文档导航见 [docs/index.md](docs/index.md)。
+## 当前风险与待验证
+
+| 风险 | 当前控制/状态 |
+| --- | --- |
+| 应用没有认证 | 必须由反向代理限制公网访问 |
+| King 扫描器关闭 | `DisabledScanner`；附件显示 `scanner_disabled`/`unscanned`/“未扫描”并可正常使用，不显示 clean/safe；这是已接受部署策略，不代表经过安全检测 |
+| 复杂 Office/OCR/CAD/压缩包预览 | `NOT_IMPLEMENTED`；只提供受控下载，不阻塞基础附件链路 |
+| 单轮可能包含极大正文 | 数据仍完整进入内存；blocks DOM 仅在极长消息阈值下虚拟化，需继续监测内存与动态测量 |
+| 真实设备存储配额与缓存清理 | 自动化覆盖主要失败态；不同浏览器仍需实机验证 |
+| 生产 Share 附件链路 | `PASS`；用户确认允许范围预览/下载、越权拒绝和撤销失效，文档不保存真实 token |
+| 生产 TLS/证书配置 | 仓库外管理，本文无法验证完整配置 |
+| King 原机 Web 构建 | 约 2 GiB 主机即使暂停 worker 仍发生 OOM，PostgreSQL checkpointer 被杀后 WAL 恢复；本轮恢复后 dump 已用 `pg_restore -l` 校验。后续必须在 CI/独立构建机生成 Linux 镜像并传输，禁止在 King 原机执行 Next production build |
+| 工作树未提交 | 不要把 HEAD commit 当作全部当前实现；发布证据以 `docs/execution/` 为准 |
+
+## 文档地图
+
+| 文档 | 用途 |
+| --- | --- |
+| `README.md` | 人类入口和快速开始 |
+| `AGENTS.md` | 最小开发/智能体约束 |
+| `docs/index.md` | 全部文档导航 |
+| `docs/product.md` | 当前产品能力与边界 |
+| `docs/architecture.md` | 架构和关键数据流 |
+| `docs/api-reference.md` | 业务 API 参考 |
+| `docs/system/README.md` | 当前系统事实索引 |
+| `docs/documentation-inventory.md` | 每个 Markdown 的生命周期与所有权 |
+
+## 后续工作准则
+
+1. 先核验当前代码与 migration，再修改任何“当前事实”文档。
+2. 功能变更后运行与风险匹配的测试，并把新结果追加到新的执行记录，不覆盖旧证据。
+3. 部署前备份 PostgreSQL 和三个 artifact volume，按 `postgres -> migrate -> api/worker -> web` 依赖验证。
+
+## 不要假设
+
+- 不要把 `docs/planning/` 的已完成计划当成当前规范；后续用户覆盖和代码事实优先。
+- 不要把 message-window/blocks 兼容接口当成 Reader 主加载路径。
+- 不要假设本地 Alembic head 已自动部署；应分别执行 `alembic heads` 与生产 `alembic current`。
+- 不要将导入目录中的 Markdown 当作项目文档，也不要将私密正文写入证据。
+
+## 2026-08-02 Reader 排版与定位补充
+
+- Markdown 三档间距由统一变量驱动，普通块与虚拟块共用同一 `BlockSlot`；消息间距和正文宽度不随间距档位改变。
+- 有序列表保留源 `start`，标题支持安全行内 Markdown，TOC 使用同一纯文本清洗规则。
+- 极长消息仍完整获取 blocks，仅在 DOM 层虚拟化；虚拟行采用普通文档流和实测空白补偿，不允许估算高度让正文相互覆盖。
+- 字号、Markdown 间距或正文宽度切换会先捕获阅读线上的真实 block，暂停虚拟器自动补偿，再恢复该锚点。
+- 批注高亮通过 Reader 级 block registry 跟随虚拟 block 挂载；定位事务持有目标 block lease，只有 Reader 导航事务可以写最终滚动位置。
+
+## 2026-08-04 导入与连续阅读补充
+
+- 形式 1 导入先分别过滤 JSON/Markdown 尾部空白消息，再按非空消息顺序校验 role/timestamp；JSON 保持 metadata、role、time 和源索引权威，配对状态为 exact/normalized/by_order 时 canonical `display_markdown` 取 Markdown，JSON-only 导入仍取 JSON。
+- JSON+Markdown 配对会枚举全部 `Prompt`/`Response` 标题候选，再用非空 JSON 消息的角色、规范化时间、顺序和正文相似度选择唯一最佳完整路径；未选标题保留在相邻 Markdown 正文内。完整路径缺失、同分或顺序冲突仍回退到保守解析并阻止提交；Markdown-only 兼容路径和未闭合围栏恢复保持不变。导入 parser/Markdown parser 版本为 v4，当前导出器带官网 URL 的 `metadata.powered_by` 形式受支持。
+- Import Preview 返回受限长度且保留换行的首条 user Markdown；同步 commit 或 worker 完成后 Web 清除旧预览并进入新 Reader。历史有效配对可用 `python -m scripts.backfill_exporter_markdown` dry-run，再以 `--apply` 创建可审计的系统修复版本；后续编辑过的 current version 不覆盖。
+- 在线、Offline 和 Share Reader 的边缘加载统一采用完整轮次合并、真实 block lease 和锚点恢复；继续向同一方向滚动不会把正在完成的边缘事务误判为取消。
+
+## 2026-08-04 消息编辑、版本与拆分补充
+
+- 收藏、选择、源码编辑和单消息版本控件位于消息信息栏，桌面 hover/focus 显示，移动端通过消息操作菜单使用；控件不再覆盖 Markdown 标题。
+- Markdown 编辑器按需加载 CodeMirror 6，支持源码高亮、行号、查找、折行和独立内部滚动；正式 light/dark theme extension 覆盖正文、行号、活动行、选区、搜索、tooltip 和 Markdown token，主题重配置不丢失文本、光标或撤销栈。
+- `PATCH /api/messages/{id}` 的 `save_mode` 默认为 `create_version`；`replace_current` 仅允许第二版及以后。版本选择直接持久化 `current_version_id`，版本删除保护第一版并在删除当前版本时自动回退。
+- Reader 不再提供按字符拆分单条消息的入口；旧 API 仍兼容。新的对话拆分 plan/execute 支持 `range_copy`、`boundary_copy` 和 `discrete_copy`，均重建新会话派生数据且不修改来源会话。
+
+## 2026-08-05 附件导出与派生补充
+
+- `format=markdown_bundle` 与 `format=canjson_bundle` 通过后台任务生成当前版本附件包；正文入口分别为 `conversation.md`/`conversation.canjsonl`，物理对象使用 `assets/objects/<sha-prefix>/<sha256>`。manifest 分开记录对话/附件完整性和所选二级内容；当前不执行内容秘密扫描，`excluded_object_count` 仅保留兼容字段并为 0。
+- 附件派生任务当前提供受限 `text_extract`：最多读取 2 MiB，复用 AssetObject 去重，完成后把文件名和提取文本写入现有 `search_documents` 的 `attachment` 文档类型。
+- 复杂 Office/压缩包预览默认关闭；只有同时配置 `COMPLEX_ATTACHMENT_PREVIEW_ENABLED=true` 与独立 `ATTACHMENT_PREVIEW_ORIGIN` 才会进入 sandbox adapter，否则强制下载回退。主站不以内联方式执行主动内容。

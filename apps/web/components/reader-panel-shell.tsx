@@ -18,7 +18,7 @@ export function ReaderPanelShell({
   compact?: boolean;
 }) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col bg-raised text-primary" aria-label={title}>
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-raised text-primary" aria-label={title}>
       <header className={`flex shrink-0 items-start gap-3 border-b border-ui ${compact ? "px-1 pb-3" : "px-5 py-4"}`}>
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold text-primary">{title}</h2>
@@ -34,7 +34,7 @@ export function ReaderPanelShell({
           <X className="h-4 w-4" />
         </button>
       </header>
-      <div className={`reader-aux-scroll min-h-0 flex-1 overflow-y-auto ${compact ? "pt-3" : "p-5"}`}>
+      <div className={`reader-aux-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto ${compact ? "pt-3" : "p-5"}`}>
         {children}
       </div>
     </section>

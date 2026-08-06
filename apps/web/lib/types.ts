@@ -9,13 +9,14 @@ export type LocaleMode = "auto" | "zh-CN" | "en-US";
 export type ResolvedTheme = "light" | "dark";
 export type ResolvedLocale = "zh-CN" | "en-US";
 export type ReaderWidthMode = "compact" | "standard" | "wide";
+export type ReaderDensityMode = "compact" | "comfortable" | "large";
 export type SectionTocMode = "visible" | "rail";
 export type SortDirection = "asc" | "desc";
 export type ConversationSortMode = "recent_read" | "updated" | "created" | "imported" | "title" | "message_count" | "custom";
 export type ProjectSortMode = "recent_read" | "updated" | "created" | "title" | "conversation_count" | "custom";
 export type DialogueIndexPanelState = "rail" | "preview" | "pinned";
 export type ReaderSidebarState = "collapsed" | "expanded";
-export type ReaderUtilityPanel = null | "navigation" | "search" | "share" | "export";
+export type ReaderUtilityPanel = null | "navigation" | "search" | "share" | "export" | "files";
 export type HeaderActionRailState = "collapsed" | "expanded";
 
 export type NeighborhoodExpansionState = {
@@ -29,6 +30,8 @@ export type UserPreferenceRead = {
   theme_mode: ThemeMode;
   locale_mode: LocaleMode;
   reader_width_mode: ReaderWidthMode;
+  reader_density_mode: ReaderDensityMode;
+  reader_font_size_px: number;
   section_toc_mode: SectionTocMode;
   conversation_sort_mode: ConversationSortMode;
   conversation_sort_direction: SortDirection;
@@ -39,7 +42,7 @@ export type UserPreferenceRead = {
 };
 
 export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead,
-  "theme_mode" | "locale_mode" | "reader_width_mode" | "section_toc_mode" | "conversation_sort_mode" |
+  "theme_mode" | "locale_mode" | "reader_width_mode" | "reader_density_mode" | "reader_font_size_px" | "section_toc_mode" | "conversation_sort_mode" |
   "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction"
 >>;
 
@@ -63,6 +66,7 @@ export type ConversationListItem = {
   is_global_pinned: boolean;
   global_pinned_at: string | null;
   last_read_at: string | null;
+  reading_progress?: number | null;
   manual_sort_order: number;
 };
 
@@ -83,6 +87,33 @@ export type ConversationUpdateInput = {
 
 export type ConversationManagementResponse = ConversationDetail;
 
+export type ConversationPlacementInput = {
+  target_project_id: string | null;
+  target_section?: "pinned" | "normal";
+  before_conversation_id?: string | null;
+  after_conversation_id?: string | null;
+  expected_offline_revision?: number;
+};
+
+export type ConversationPlacementResponse = {
+  conversation: ConversationListItem;
+  placement: {
+    project_id: string | null;
+    target_section: "pinned" | "normal";
+    sort_order: number;
+    is_pinned: boolean;
+    offline_revision: number;
+  };
+  source_project_count: number;
+  target_project_count: number;
+  unclassified_count: number;
+};
+
+export type ProjectPlacementInput = {
+  before_project_id?: string | null;
+  after_project_id?: string | null;
+};
+
 export type RenderBlockRead = {
   id?: string;
   block_index: number;
@@ -92,6 +123,83 @@ export type RenderBlockRead = {
   char_count?: number;
   collapsed_by_default?: boolean;
   render_priority?: number;
+};
+
+export type AttachmentRead = {
+  id: string;
+  conversation_id: string;
+  asset_object: {
+    id: string;
+    sha256: string;
+    byte_size: number;
+    detected_mime_type: string;
+    detected_extension?: string | null;
+    scan_status: string;
+    status: string;
+  } | null;
+  original_filename: string;
+  display_name: string;
+  declared_mime_type?: string | null;
+  detected_mime_type?: string | null;
+  status: string;
+  scan_status: string;
+  source_type: string;
+  source_attachment_id?: string | null;
+  metadata: Record<string, unknown>;
+  resolution_status: string;
+  created_at: string;
+  occurrence_count?: number;
+  message_count?: number;
+  is_used?: boolean;
+  occurrences?: Array<{
+    message_id: string;
+    message_version_id: string;
+    is_current_version: boolean;
+    occurrence_key: string;
+    placement: string;
+    block_index?: number | null;
+  }>;
+  content_url?: string | null;
+  download_url?: string | null;
+};
+
+export type AttachmentListRead = { items: AttachmentRead[] };
+
+export type AttachmentUploadItemRead = {
+  id: string;
+  client_filename: string;
+  declared_mime_type?: string | null;
+  detected_mime_type?: string | null;
+  byte_size: number;
+  sha256?: string | null;
+  validation_status: string;
+  scan_status: string;
+  error_code?: string | null;
+  created_at: string;
+};
+
+export type AttachmentUploadSessionRead = {
+  id: string;
+  conversation_id: string;
+  target_message_id?: string | null;
+  base_message_version_id?: string | null;
+  status: string;
+  expires_at: string;
+  created_at: string;
+  items: AttachmentUploadItemRead[];
+};
+
+export type CapabilitiesRead = {
+  attachments: {
+    upload_enabled: boolean;
+    scanner_provider: string;
+    scanner_enabled: boolean;
+    allow_unscanned_attachments: boolean;
+    unscanned_status: string;
+    basic_preview_enabled: boolean;
+    complex_preview_enabled: boolean;
+    max_file_size_bytes: number;
+  };
 };
 
 export type MessageVersionRead = {
@@ -154,7 +262,6 @@ export type ImportPreviewFile = {
   byte_size: number;
   mime_guess: string | null;
   file_extension: string | null;
-  raw_storage_uri: string;
   warnings: string[];
 };
 
@@ -163,6 +270,10 @@ export type MessagePreview = {
   order_key: string;
   plain_text_preview: string;
   display_text_preview: string;
+  source_json_index?: number | null;
+  source_markdown_index?: number | null;
+  created_at?: string | null;
+  alignment_status: "exact" | "normalized" | "by_order" | "json_only" | "markdown_only" | "ambiguous" | string;
   warnings: string[];
 };
 
@@ -177,12 +288,14 @@ export type ConversationPreview = {
   empty_message_count: number;
   cleaned_thinking_summary_count: number;
   first_user_message?: string | null;
+  first_user_message_markdown?: string | null;
   node_count?: number | null;
   message_node_count?: number | null;
   primary_path_length?: number | null;
   branch_count?: number;
   branch_node_count?: number;
   has_branches?: boolean;
+  alignment_summary?: Record<string, number>;
   warnings: string[];
   messages: MessagePreview[];
 };
@@ -200,6 +313,16 @@ export type ImportPreviewResponse = {
   duplicate_conversation_id?: string | null;
   compatibility?: string | null;
 };
+
+export type BundlePreviewAccepted = {
+  import_id: string;
+  task_id: string;
+  status: "queued" | string;
+  status_url: string;
+  preview_url: string;
+};
+
+export type ImportDuplicatePolicy = "clone" | "reject" | "replace" | "merge_if_same_hash";
 
 export type CommitImportResponse = {
   import_id: string;
@@ -226,7 +349,7 @@ export type ActiveImportTask = ImportStatusResponse;
 export type BackgroundTaskRead = {
   job_id: string;
   job_type: "import" | "conversation_merge" | string;
-  status: "queued" | "processing" | "committed" | "failed" | string;
+  status: "queued" | "processing" | "cancelling" | "cancelled" | "committed" | "failed" | string;
   phase: string;
   progress: number;
   processed_items: number;
@@ -248,6 +371,8 @@ export type BackgroundTaskRead = {
   started_at: string | null;
   heartbeat_at: string | null;
   completed_at: string | null;
+  cancellable: boolean;
+  attempt_count: number;
 };
 
 export type ProjectRead = {
@@ -312,11 +437,16 @@ export type ReadingPositionInput = {
 };
 
 export type ReadingAnchor = {
-  position_mode: "block-relative-v1";
+  position_mode: "block-relative-v1" | "block-relative-v2";
   order_key: string;
   ordinal: number | null;
   heading_block_index: number | null;
   current_version_id: string | null;
+  block_id?: string | null;
+  version_id?: string | null;
+  block_offset?: number | null;
+  character_offset?: number | null;
+  scroll_ratio?: number | null;
 };
 
 export type ReadingRestoreState = {
@@ -412,11 +542,23 @@ export type MessageWindowResponse = {
   has_more: boolean;
 };
 
+export type ReaderTurnResponse = {
+  conversation_id: string;
+  turn_key: string;
+  start_offset: number;
+  end_offset: number;
+  total_messages: number;
+  items: MessageListItem[];
+  previous_anchor_message_id: string | null;
+  next_anchor_message_id: string | null;
+};
+
 export type WindowGeneration = number;
 export type ScrollDirection = "up" | "down" | null;
 
 export type LoadedMessageWindow = {
   items: MessageListItem[];
+  turns: ReaderTurnResponse[];
   startOffset: number;
   endOffset: number;
   total: number;
@@ -507,6 +649,8 @@ export type MessageVersionHistoryItem = {
   based_on_version_id?: string | null;
   content_hash: string;
   is_current: boolean;
+  is_initial: boolean;
+  can_delete: boolean;
 };
 
 export type MessageVersionHistoryResponse = {
@@ -514,6 +658,28 @@ export type MessageVersionHistoryResponse = {
   current_version_id: string | null;
   items: MessageVersionHistoryItem[];
 };
+
+export type MessageVersionDeleteResponse = {
+  message_id: string;
+  deleted_version_id: string;
+  current_version_id: string;
+  message: MessageListItem;
+  warnings: string[];
+};
+
+export type ConversationSplitMode = "range_copy" | "boundary_copy" | "discrete_copy";
+export type ConversationSplitWorkspaceInput = {
+  mode: ConversationSplitMode;
+  startMessageId?: string;
+  endMessageId?: string;
+  boundaryMessageId?: string;
+  messageIds?: string[];
+  titles?: string[];
+  projectId?: string;
+};
+export type ConversationSplitGroupPreview = { message_ids: string[]; message_count: number; suggested_title: string };
+export type ConversationSplitWorkspacePreview = { mode: ConversationSplitMode; groups: ConversationSplitGroupPreview[] };
+export type ConversationSplitWorkspaceResponse = { mode: ConversationSplitMode; conversations: ConversationTransformResponse[] };
 
 export type ConversationEventRead = {
   id: string;
@@ -604,7 +770,7 @@ export type SharedConversationBootstrap = {
 
 export type AnnotationType = "highlight" | "underline" | "strikethrough" | "comment" | "bookmark";
 export type AnnotationColor = "yellow" | "green" | "blue" | "pink";
-export type AnnotationAnchorStatus = "active" | "relocated" | "stale";
+export type AnnotationAnchorStatus = "valid" | "remapped" | "orphaned" | "needs_review";
 
 export type AnnotationRead = {
   id: string;

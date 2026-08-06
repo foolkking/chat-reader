@@ -36,33 +36,45 @@ def test_update_conversation_renames_archives_and_writes_events(client: TestClie
     assert "conversation_restored" in event_types
 
 
-def test_delete_conversation_soft_deletes_and_hides_from_list(client: TestClient) -> None:
+def test_delete_conversation_is_permanent_and_hides_from_list(client: TestClient) -> None:
     conversation_id = _commit_conversation(client, "Delete Management")
 
     deleted = client.delete(f"/api/conversations/{conversation_id}")
     assert deleted.status_code == 204
 
     missing = client.get(f"/api/conversations/{conversation_id}")
-    assert missing.status_code == 200
-    assert missing.json()["status"] == "deleted"
+    assert missing.status_code == 404
 
     conversations = client.get("/api/conversations")
     assert conversations.status_code == 200
     assert conversation_id not in {item["id"] for item in conversations.json()}
 
-    restored = client.patch(f"/api/conversations/{conversation_id}", json={"status": "active"})
-    assert restored.status_code == 200
-    assert restored.json()["status"] == "active"
+    assert client.patch(f"/api/conversations/{conversation_id}", json={"status": "active"}).status_code == 404
+    assert client.post(f"/api/conversations/{conversation_id}/restore").status_code == 404
 
-    conversations = client.get("/api/conversations")
-    assert conversations.status_code == 200
-    assert conversation_id in {item["id"] for item in conversations.json()}
 
-    events = client.get(f"/api/conversations/{conversation_id}/events")
-    assert events.status_code == 200
-    event_types = {item["event_type"] for item in events.json()["items"]}
-    assert "conversation_deleted" in event_types
-    assert "conversation_restored" in event_types
+def test_explicit_archive_and_permanent_delete_filter_all_views(client: TestClient) -> None:
+    conversation_id = _commit_conversation(client, "Explicit lifecycle")
+    assert client.post(f"/api/conversations/{conversation_id}/recent", json={}).status_code == 200
+
+    archived = client.post(f"/api/conversations/{conversation_id}/archive")
+    assert archived.status_code == 200
+    assert archived.json()["status"] == "archived"
+    assert conversation_id not in {item["conversation_id"] for item in client.get("/api/recent-items").json()}
+    assert conversation_id in {
+        item["id"] for item in client.get("/api/conversations", params={"status_scope": "archived"}).json()
+    }
+
+    unarchived = client.post(f"/api/conversations/{conversation_id}/unarchive")
+    assert unarchived.status_code == 200
+    assert unarchived.json()["status"] == "active"
+
+    assert client.delete(f"/api/conversations/{conversation_id}").status_code == 204
+    deleted = client.get("/api/conversations", params={"status_scope": "deleted"})
+    assert deleted.status_code == 422
+    assert conversation_id not in {item["id"] for item in client.get("/api/conversations").json()}
+
+    assert client.post(f"/api/conversations/{conversation_id}/restore").status_code == 404
 
 
 def test_conversation_project_membership_compat_routes(client: TestClient) -> None:

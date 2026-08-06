@@ -1,115 +1,116 @@
 # 前端架构
 
-最后核验日期：2026-07-26
+## Source workspace performance boundary (2026-08-04)
 
-## 技术栈（锁文件版本）
+- `ConversationReader` owns only the active source message and dirty/cross-message state. Same-message cursor follow is dispatched imperatively once per animation frame with an offset threshold; wheel input no longer increments a React state counter.
+- `FloatingWorkspacePanel` has a source-specific `left-overlay` placement. Its first desktop frame already has `clamp(560px, 32vw, 720px)` width; pointer movement mutates panel width directly, while React state and localStorage update on pointer-up. The Reader captures its unshifted left edge once per editor session and uses that stable baseline for width changes.
+- `EditMessageForm` passes `theme="none"` to `@uiw/react-codemirror`. A CodeMirror `Compartment` reconfigures the complete theme extension so document, selection, undo history, and unsaved source survive runtime theme changes.
+
+最后核验：2026-08-05
+
+## 技术与目录
 
 | 类别 | 实现 |
 | --- | --- |
-| 框架/路由 | Next.js 14.2.23 App Router，React/ReactDOM 18.3.1 |
-| 语言/构建 | TypeScript 5.9.3，pnpm 9.15.4，Next build |
-| 样式 | Tailwind CSS 3.4.19 + `app/globals.css` CSS variables；无通用成品 UI kit |
-| 服务端状态 | TanStack Query 5.101.2 |
-| 本地状态 | React state/context；Zustand 5.0.14 用于局部 store |
-| 图标/交互 | Lucide React 1.24.0，Vaul 1.1.2，dnd-kit 6.3.1/10.0 |
-| Markdown | react-markdown 10.1.0，remark-gfm/breaks/math，rehype-sanitize/katex |
-| 富内容 | Shiki 4.3.1，KaTeX 0.17.0，Mermaid 11.16.0 |
-| 离线 | Dexie 4.4.4，FlexSearch 0.8.212，fflate 0.8.3，Service Worker/Cache API |
-| 测试/规范 | Playwright 1.62.0，ESLint 9.39.4；现有 PWA E2E 文件 1 个 |
-
-版本证据：`pnpm-lock.yaml`；`package.json` 中范围仅用于依赖声明。
-
-## 目录与路由
+| 框架 | Next.js 14.2.23 App Router、React 18.3.1、TypeScript |
+| 服务端状态 | TanStack Query |
+| 长消息虚拟化 | TanStack Virtual（动态测量 RenderBlock） |
+| 本地状态 | React context/state；局部 Zustand |
+| 样式 | Tailwind CSS 3 + `app/globals.css` CSS variables |
+| 交互 | Lucide、Vaul、dnd-kit |
+| Markdown | react-markdown、remark/rehype、Shiki、KaTeX、Mermaid |
+| 离线 | Dexie、FlexSearch、fflate、Service Worker/Cache API |
+| 测试 | ESLint、TypeScript、Playwright 1.62.0 |
 
 ```text
 apps/web/
-├── app/                 Next route segments、layout/loading、CSS
-├── components/          全局壳、侧栏框架、可调面板、对话框、providers
-├── features/            annotations/conversations/editing/exporting/import/
-│                        offline/projects/reading/search/sharing/toc
-├── lib/                 API、types、ReaderDataSource、Dexie、offline repository
-├── public/              manifest、library/root service workers、icons
-└── e2e/                 library-offline.spec.ts
+├── app/          route segments、root providers、loading、globals.css
+├── components/   全局壳、可调框架、drawer/sheet/dialog、preferences
+├── features/     annotations/conversations/editing/exporting/import/
+│                 offline/projects/reading/search/sharing/toc
+├── lib/          API、types、ReaderDataSource、Dexie、offline repository
+├── public/       manifest、Service Workers、icons
+└── e2e/          reader-layout、reader-restoration、library-offline
 ```
 
-页面清单见 `PAGE_AND_ROUTE_MAP.md`。根 `layout.tsx` 组合 Query、Preferences、InteractionDialog、ImportDialog、ShortcutManager、OfflineSyncManager 和 ServiceWorkerRegistration providers。
+页面列表见 [PAGE_AND_ROUTE_MAP.md](PAGE_AND_ROUTE_MAP.md)。根 layout 提供 Query、Preferences、InteractionDialog、ImportDialog、Shortcut、OfflineSync 和 ServiceWorkerRegistration。
 
-## 数据请求与状态
+## 数据与状态边界
 
-- `lib/api.ts`/feature request functions 使用同源 `/api/*`；`next.config.mjs` rewrite 到 `API_INTERNAL_URL`。
-- TanStack Query 管理远程列表、详情、TOC、阅读位置等；mutation 后按 query key 失效/更新。
-- `ReaderDataSource` 统一 remote/offline Reader：remote 组合现有 API；offline 读取 Dexie。`capabilities` 控制 canonical 管理、share/export 等入口。
-- Reader target context 使用 data source identity/revision、conversation/message/block/offset/quote，避免在线与离线或旧 revision query 混用。
-- 全局偏好由 `PreferencesProvider` 先读 localStorage，再在线同步 `/api/preferences`。
+- API client 始终使用相对 `/api/*`；`next.config.mjs` 通过 `API_INTERNAL_URL` rewrite。
+- TanStack Query 管理在线列表、详情、TOC、位置和 mutation invalidation。
+- `ReaderDataSource` 统一 remote/offline 合同；`capabilities` 控制编辑、Share、Export 等入口。
+- PreferencesProvider 先从 localStorage cache 启动，再与 `/api/preferences` 同步跨浏览器偏好。
+- Reader target 包含 source identity/revision、conversation/message/block/offset/quote，防止在线、离线和旧 revision 混用。
+- 选择控制器统一 Project、未归类和归档列表的桌面/移动批量状态。
 
 ## 主要组件关系
 
 ```text
-RootLayout
-└── providers
-    ├── AppShell
-    │   ├── ProjectSidebar -> Conversation/Project lists
-    │   └── routed list/detail content
-    ├── ConversationReader
-    │   ├── ReaderSidebarFrame(ProjectSidebar or LibrarySidebar)
-    │   ├── Message window -> MessageItem -> Markdown/Code/Mermaid
-    │   ├── ConversationIndex + ConversationToc
-    │   ├── Search/Share/Export dock panels
-    │   └── AnnotationWorkspace
-    └── LibraryShell -> OfflineReaderDataSource -> ConversationReader
+RootLayout + providers
+├── AppShell
+│   ├── ProjectSidebar
+│   └── routed list content
+├── ConversationReader
+│   ├── ReaderSidebarFrame
+│   ├── complete-turn window -> MessageItem -> Markdown renderers
+│   ├── ConversationIndex + ConversationToc
+│   ├── ReaderUtilityDrawer(search/share/export)
+│   ├── ConversationFilesPanel -> upload sessions / attachment picker
+│   ├── SourceEditorWorkspace -> FloatingWorkspacePanel -> CodeMirror
+│   └── AnnotationWorkspace(floating/docked/expanded)
+└── LibraryShell -> OfflineReaderDataSource -> ConversationReader
 ```
 
-## 阅读渲染
+## Reader 与渲染
 
-- Markdown pipeline 支持 GFM、soft line breaks、math、sanitize 和 KaTeX；链接通过安全组件处理。
-- Shiki 按语言动态加载并配合 light/dark theme；失败回退为纯代码文本。
-- Mermaid 动态 import，渲染失败保留 source/error；不会阻断普通正文。
-- Message renderer 支持 canonical text/block 以及导入内容中的 image/attachment parts；未发现音视频专用播放器。
-- callout、reasoning `<details>`、引用、列表、表格和代码复制为自定义 components。
+- 在线/Share 读取 `reader-turn`；Offline 从 Dexie 组装同一 response。完整轮次水合后才加入 DOM。
+- 初始/位置恢复窗口最多 5 轮，用真实相邻正文为短消息目标提供阅读线对齐空间；边缘滑动 settled 后通常裁剪为 3 轮。用户进入首/末已加载轮次或接近 sentinel 时预取，返回轮次先按 `turn_key` 合并，锚点恢复后再按整轮裁剪。边缘事务持有阅读 block lease，继续同方向滚动不会取消事务，反向滚动才取消。
+- 上下边缘都保留已加载正文直到新轮次挂载完成；加载中不伪造大块空白，只有 `has_more=false` 的真实会话末尾保留底部阅读留白。
+- 普通消息完整挂载；仅 `block_count > 160` 或 `char_count > 50000` 的单条消息使用动态块虚拟化，overscan 为目标上下各 8 blocks，正文数据仍全部水合。
+- 虚拟导航会先固定目标 block 到 range extractor，再挂载、测量和校正到 120px 阅读线；事务 settled/failed/cancelled 后才释放固定，避免测量过程中目标卸载。
+- 单一 RAF sampler 根据 120px 阅读线决定活动位置；程序 scroll 不建立用户意图。
+- ReadingPosition 写入 block-relative-v2，恢复按 block id、block/message index、order key、scroll ratio 逐级降级；导航或测量未稳定时不保存。
+- Markdown 禁止 raw HTML 执行；链接协议受控。Shiki/Mermaid 失败回退为可读文本，代码/表格/图表在自身容器滚动。
+- `reader_density_mode` 作用于 Markdown block 的垂直节奏；`reader_font_size_px` 通过相对字号保持 heading/code/table 层级。
 
-## 主题、国际化与响应式
+## 响应式与工具面板
 
-- 主题：light/dark/system；全部设计 token 集中在 `apps/web/app/globals.css` 的 `:root`（53 个 light 变量）和 `[data-theme="dark"]`（53 个 dark 值）中。
-- 设计 token 体系（globals.css）：`--page`、`--sidebar`、`--surface`、`--subtle`、`--border` 背景层级；`--text`、`--text-secondary` 文字层级；`--accent`、`--accent-soft` 强调色；`--focus`、`--danger` 语义色；含 markdown-*、callout-*、code-* 等富内容 token。
-- `tailwind.config.ts` 的 `theme.extend` 为空对象（无自定义 Tailwind token），所有自定义值通过 CSS 变量 + `.bg-*/.text-*` 工具类使用；`html[data-theme="dark"]` 覆写规则处理库硬编码色值。
-- 语言：auto/zh/en，由本地偏好立即生效并在线同步；没有独立翻译平台依赖。
-- 阅读宽度：compact/standard/wide。
-- Desktop breakpoint 下显示可折叠/可调左侧栏、visible/rail 章节 TOC、可调 dock 和可拖缩批注窗口。
-- Reader 布局网格由 `globals.css` 中的以下 CSS 类控制：`.reader-frame`（container-type 基础容器）、`.reader-layout-grid`（grid 容器）、`.reader-content-column`（居中消息正文，max-width 受 data-reader-width 控制）、`.reader-toc-column`（右侧章节 TOC sticky，≥62rem container 触发）、`.reader-index-column`（左侧对话 TOC rail sticky，≥1280px 触发）。两个 TOC 列均属于正文区域，非独立侧栏。
-- Mobile 使用 Vaul/自定义 Bottom Sheet，不显示 desktop rail/separator；批注只读/搜索/导航。
-- 可调宽 helper 使用 pointer capture、clamp、双击默认值、`role=separator` 与 localStorage。
+- 桌面侧栏、章节 TOC 和 utility drawer 可调宽并 clamp；批注浮窗可拖动/缩放/重置。源码工作区固定覆盖桌面左侧且占满视口高度，只允许拖动右边缘调整宽度；正文以打开前的稳定左边界向右让位，关闭后恢复原布局。移动端固定为顶栏下方全宽面板。
+- 搜索、Share、Export 共用 `ReaderUtilityDrawer` 的宽度、Esc、焦点恢复和视口纠偏。
+- 源码、搜索、批注等工作区互斥显示但保留已挂载状态。源码编辑不替换 `MessageItem` 正文；Reader 只在最近真实滚动输入且没有导航/恢复/边缘事务时，将活动 block 单向映射到源码。脏状态跨消息锁定，保存通过局部消息替换和 DOM 锚点补偿完成。
+- 专注模式隐藏主侧栏、对话索引、章节 TOC、离线提示和普通工具；退出恢复原锚点/面板状态。
+- 移动端使用 Vaul/自定义 Sheet；无 desktop separator/rail。首页保留继续阅读，桌面隐藏。
 
-## 浏览器持久化键
+## 浏览器持久化
 
-| Key | 用途 |
+| Key/存储 | 用途 |
 | --- | --- |
-| `chat-reader:user-preferences` | 主题、语言、阅读宽度等缓存 |
-| `chat-reader:reader-sidebar-expanded` | Reader 侧栏折叠 |
-| `chat-reader:sidebar-width` | 在线/离线共享左侧栏宽度 |
-| `chat-reader:section-toc-width` | 章节 TOC 宽度 |
-| `chat-reader:reader-navigation-width` | Reader 导航 dock 宽度 |
-| `chat-reader:reader-utility-panel-width` | search/share/export dock 宽度 |
-| `chat-reader:annotation-workspace-panel` | 批注窗口位置和尺寸 |
-| `chat-reader:last-library-conversation` | 资料库最近对话 |
-| `chat-reader:share-position:<hash>` | Share 页局部阅读位置；键使用 token 派生 hash |
+| `chat-reader:user-preferences` | 服务器偏好的启动缓存 |
+| `chat-reader:reader-default-focus` | 默认专注；旧 focus key 仅迁移一次 |
+| `chat-reader:reader-sidebar-expanded`、`sidebar-width` | 侧栏状态/宽度 |
+| `chat-reader:section-toc-width`、`reader-navigation-width` | 导航 pane 宽度 |
+| `chat-reader:reader-utility-panel-width` | 搜索/Share/Export drawer 宽度 |
+| `chat-reader:annotation-workspace-mode/panel` | 批注形态、位置和尺寸 |
+| `chat-reader:source-editor-panel` | 源码工作区持久化宽度 |
+| `chat-reader:last-library-conversation` | 最近离线对话 |
+| `chat-reader:share-position:<hash>` | Share 访客本地位置 |
+| Dexie | 离线 conversation/messages/blocks/search/annotations/positions/outbox |
+| Cache API | Library active/staging shell revisions |
 
-另有 IndexedDB 和 Cache API，详见 `DATA_AND_STORAGE.md`。代码未发现认证 Cookie 管理。
+`chat-reader:*` 中部分值是窗口间事件名，不一定是持久化 key。代码未发现认证 Cookie 管理。
 
-## PWA 与 Service Worker
+## PWA
 
-- Manifest 的 `start_url` 和 `scope` 都是 `/library`。
-- `/library-sw.js` 只拦截同源 GET 的 library navigation 和允许的静态壳资源；普通 `/`、管理页和 API 不被其 fallback。
-- library navigation 最多进行两次 2 秒网络请求，中间等待 350ms；响应小于 500 直接返回，持续 5xx/异常才读 active `/library` shell。
-- shell 通过 staging cache 完整写入并校验 JS/CSS/worker 后原子激活；失败保留旧 revision。
-- `/sw.js` 仅注销旧 root-scope worker并清理 legacy cache；页面注册器在非 library 路径继续清理错误 scope。
+- manifest `scope/start_url` 都是 `/library`；`library-sw.js` 不控制普通管理页面或 API。
+- 壳资源先写 staging cache，完整校验后原子切换 active revision；失败保留旧壳。
+- `/sw.js` 负责注销旧 root-scope worker 和清理 legacy cache。
+- 离线数据更新与壳更新独立：前者是 v3 conversation delta（兼容读 v1/v2/v3），后者是 Cache API revision。Dexie v2 保存附件 metadata/occurrence，小型或全量对象按 `asset_mode` 进入 Cache Storage。
 
-## 错误处理与测试
+## 附件 UI
 
-- API 错误由 request helper 转为 Error，再由页面 inline state 或 InteractionDialog 展示；没有统一遥测 SDK。
-- React Query 提供 retry/cache；关键导航另有 token cancellation、明确阶段结果和 fallback。
-- PWA 自动化位于 `apps/web/e2e/library-offline.spec.ts`；脚本 `test:pwa` 构建后运行 Playwright。
-- 2026-07-27 最终执行已完成 `lint`、`typecheck`、production build 与 Playwright；结果见 `docs/execution/TEST_RESULTS.md`。
-
-## 2026-07-27 前端结构更新
-
-全局设计 token 继续位于 `app/globals.css`。Reader frame 通过 `data-focus-mode` 隐藏辅助栏而不销毁 TOC；annotation workspace 使用 floating/docked 两态，docked 覆盖左侧导航。在线与离线 Reader 仍共享 ReaderDataSource。离线批注搜索记录写入既有 `searchDocuments` store，Dexie version/stores 不变。
+- Reader“更多”中的“当前对话文件”使用右侧抽屉，按已使用、未使用、缺失分组，支持搜索、上传、预览、下载、重命名、定位、插入和移除未引用文件。
+- Markdown 源码工作区提供上传与选择已有文件；系统生成 `cr-asset://`/`cr-upload://` 引用并在光标或消息末尾插入，用户无需手写内部协议。若光标位于已有的独立附件行内，插入点移动到该行末尾，避免破坏原引用。
+- `AttachmentPreviewDialog` 通过 React portal 直接挂载到 `document.body`，覆盖完整视口，不受 Reader/侧栏 transform 或 overflow 约束。共享计数管理 body scroll lock；打开后焦点进入关闭按钮，Tab 被限制在弹窗内，Esc/背景点击关闭，卸载后恢复原滚动位置和触发器焦点。
+- `PreviewAdapterRegistry` 选择图片、文本、PDF、原生音视频或下载回退。所有 `image/*`（含 `image/svg+xml`）在正文和全页弹窗中最终都由普通 `<img src="受控内容 URL">` 渲染；不插入 SVG XML/React 节点，不使用 object/embed，不通过新标签页打开原始 SVG 文档。文本/Markdown/JSON/CSV/代码和原生音视频直接轻量展示；HTML 以转义文本查看，Office/ZIP 下载降级。
+- 对话导出面板将格式与附件作为一级选项；简介、批注、笔记和 CanJSON 来源引用位于折叠的二级选项。普通导出与附件 ZIP 使用同一组参数。

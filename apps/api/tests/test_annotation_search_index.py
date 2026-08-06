@@ -8,7 +8,7 @@ from app.models.annotation import ConversationAnnotation
 from app.models.conversation import Conversation
 from app.models.import_record import utc_now
 from app.models.search_document import SearchDocument
-from app.services.search.annotation_indexer import annotation_document_id, backfill_annotation_documents
+from app.services.search.annotation_indexer import annotation_document_id, backfill_annotation_documents, sync_annotation_document
 from test_import_preview_api import client  # noqa: F401
 from test_offline_annotations_api import _message_context
 
@@ -56,9 +56,42 @@ def test_annotation_search_create_update_delete_and_conversation_scope(client: T
     assert client.get("/api/search", params={"q": "updated annotation phrase"}).json()["total"] == 1
     assert client.get("/api/search", params={"q": "unique annotation needle"}).json()["total"] == 0
 
-    deleted = client.delete(f"/api/annotations/{annotation['id']}", params={"base_revision": updated.json()["revision"]})
+    cleared = client.patch(
+        f"/api/annotations/{annotation['id']}",
+        json={"base_revision": updated.json()["revision"], "comment_markdown": ""},
+    )
+    assert cleared.status_code == 200
+    assert client.get("/api/search", params={"q": "updated annotation phrase"}).json()["total"] == 0
+
+    deleted = client.delete(f"/api/annotations/{annotation['id']}", params={"base_revision": cleared.json()["revision"]})
     assert deleted.status_code == 204
     assert client.get("/api/search", params={"q": "updated annotation phrase"}).json()["total"] == 0
+
+
+def test_annotation_index_removes_historical_empty_document(client: TestClient) -> None:
+    conversation_id, message, version = _message_context(client)
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        annotation = ConversationAnnotation(
+            id=uuid.uuid4(),
+            conversation_id=uuid.UUID(conversation_id),
+            message_id=uuid.UUID(message["id"]),
+            message_version_id=uuid.UUID(version["id"]),
+            annotation_type="comment",
+            color="yellow",
+            quote="historical quote",
+            comment_markdown="historical comment",
+        )
+        db.add(annotation)
+        db.flush()
+        assert sync_annotation_document(db, annotation) == "created"
+        annotation.quote = ""
+        annotation.comment_markdown = ""
+        assert sync_annotation_document(db, annotation) == "deleted"
+        assert db.get(SearchDocument, annotation_document_id(annotation.id)) is None
+    finally:
+        db.rollback()
+        db.close()
 
 
 def test_annotation_backfill_is_idempotent_and_preserves_other_documents(client: TestClient) -> None:

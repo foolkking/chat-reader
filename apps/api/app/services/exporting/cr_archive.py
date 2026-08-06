@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.conversation import Conversation
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
+from app.models.attachment import Attachment, AssetObject, MessageVersionAttachment
 from app.models.conversation_event import ConversationEvent
 from app.models.export_artifact import ExportArtifact
 from app.models.heading import Heading
@@ -28,9 +29,11 @@ from app.models.source_message_ref import SourceMessageRef
 from app.services.database.bulk_insert import insert_rows
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
 from app.services.search.search_indexer import _refresh_postgres_tsv
+from app.services.assets.asset_store import get_asset_store
+from app.services.assets.scanner import AssetScanError, scan_attachment, scan_status_allows_use
 
 ARCHIVE_FORMAT = "chat-reader-archive"
-ARCHIVE_VERSION = 2
+ARCHIVE_VERSION = 3
 ARCHIVE_MIME = "application/vnd.chat-reader.archive+zip"
 ARCHIVE_NAMESPACE = uuid.UUID("12f7e0d6-8ef6-46bd-a4bb-843ed437a14c")
 JSONL_ENTRIES = (
@@ -42,6 +45,7 @@ JSONL_ENTRIES = (
     "source_refs.jsonl",
     "events.jsonl",
 )
+ATTACHMENT_JSONL_ENTRIES = ("attachments.jsonl", "attachment_refs.jsonl")
 MAX_ARCHIVE_ENTRIES = 32
 MAX_COMPRESSION_RATIO = 200
 ProgressCallback = Callable[[str, int, int, int], None]
@@ -113,6 +117,24 @@ def create_cr_archive(
         "source_refs": db.query(SourceMessageRef).filter(SourceMessageRef.message_id.in_(message_ids)).count() if message_ids else 0,
         "events": db.query(ConversationEvent).filter(ConversationEvent.conversation_id == conversation.id).count(),
     }
+    attachment_rows = (
+        db.query(Attachment)
+        .join(MessageVersionAttachment, MessageVersionAttachment.attachment_id == Attachment.id)
+        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+        .join(Message, Message.id == MessageVersion.message_id)
+        .filter(Message.conversation_id == conversation.id, Attachment.deleted_at.is_(None))
+        .distinct()
+        .all()
+    )
+    attachment_ids = [row.id for row in attachment_rows]
+    asset_ids = [row.asset_object_id for row in attachment_rows if row.asset_object_id]
+    counts.update({
+        "attachments": len(attachment_rows),
+        "asset_objects": len(set(asset_ids)),
+        "attachment_refs": db.query(MessageVersionAttachment).filter(
+            MessageVersionAttachment.attachment_id.in_(attachment_ids)
+        ).count() if attachment_ids else 0,
+    })
     total_records = max(sum(counts.values()), 1)
     processed = 0
     checksums: dict[str, dict[str, Any]] = {}
@@ -154,6 +176,31 @@ def create_cr_archive(
             processed += written
             _report(progress_callback, "exporting", min(90, 5 + round(85 * processed / total_records)), processed, total_records)
 
+        if ARCHIVE_VERSION >= 3:
+            checksums["attachments.jsonl"], written = _write_jsonl(
+                archive, "attachments.jsonl", _attachment_archive_rows(db, attachment_rows)
+            )
+            counts["attachments"] = len(attachment_rows)
+            checksums["attachment_refs.jsonl"], written = _write_jsonl(
+                archive,
+                "attachment_refs.jsonl",
+                (_attachment_ref_payload(row) for row in db.query(MessageVersionAttachment).filter(
+                    MessageVersionAttachment.attachment_id.in_(attachment_ids)
+                ).order_by(MessageVersionAttachment.message_version_id, MessageVersionAttachment.display_order).yield_per(500)),
+            )
+            counts["attachment_refs"] = written
+            for asset in db.query(AssetObject).filter(AssetObject.id.in_(set(asset_ids))).all() if asset_ids else ():
+                if asset.status != "available" or not scan_status_allows_use(asset.scan_status):
+                    raise CrArchiveError("Conversation contains an unavailable attachment object.")
+                asset_path = get_asset_store().resolve_key(asset.storage_key)
+                entry_name = f"assets/objects/{asset.id}"
+                archive.write(asset_path, entry_name)
+                checksums[entry_name] = {
+                    "sha256": _sha256_file(asset_path),
+                    "bytes": asset.byte_size,
+                    "records": 1,
+                }
+
         if include_annotations:
             annotation_rows = db.query(ConversationAnnotation).filter(
                 ConversationAnnotation.conversation_id == conversation.id,
@@ -187,6 +234,8 @@ def create_cr_archive(
                 "description": include_description,
                 "annotations": include_annotations,
                 "notebook": include_notebook,
+                "attachments": bool(attachment_rows),
+                "derivatives": False,
             },
         }
         _write_json(archive, "manifest.json", manifest)
@@ -218,21 +267,31 @@ def import_cr_archive(
 ) -> tuple[Conversation, int]:
     path = _artifact_path(artifact)
     options = artifact.parsed_summary.get("commit_options", {}) if isinstance(artifact.parsed_summary, dict) else {}
-    duplicate_policy = str(options.get("duplicate_policy") or "reject")
+    duplicate_policy = str(options.get("duplicate_policy") or "clone")
+    if duplicate_policy == "copy":
+        duplicate_policy = "clone"
     duplicate_id = options.get("duplicate_conversation_id")
-    if duplicate_id and duplicate_policy != "copy":
-        raise CrArchiveError("Archive already exists. Choose import as copy to continue.")
 
     with _open_validated_zip(path) as archive:
         manifest = _read_json_entry(archive, "manifest.json")
         _validate_manifest(archive, manifest)
         source_conversation = _read_json_entry(archive, "conversation.json")
+        existing = db.get(Conversation, uuid.UUID(str(duplicate_id))) if duplicate_id else None
+        if existing is not None and duplicate_policy == "reject":
+            raise CrArchiveError("Archive already exists and duplicate policy is reject.")
+        if existing is not None and duplicate_policy == "merge_if_same_hash":
+            if existing.content_hash != source_conversation.get("content_hash"):
+                raise CrArchiveError("Archive content hash differs from the existing conversation.")
+            return existing, existing.message_count
         summary = manifest.get("summary") if isinstance(manifest.get("summary"), dict) else {}
         total = max(sum(int(summary.get(key) or 0) for key in ("messages", "versions", "blocks", "headings", "search_documents")), 1)
-        target_id = uuid.uuid4()
+        target_id = existing.id if existing is not None and duplicate_policy == "replace" else uuid.uuid4()
+        if existing is not None and duplicate_policy == "replace":
+            db.delete(existing)
+            db.flush()
         title = str(source_conversation.get("title") or "Imported conversation")
         display_title = str(source_conversation.get("display_title") or title)
-        if duplicate_id and duplicate_policy == "copy":
+        if existing is not None and duplicate_policy == "clone":
             display_title = f"{display_title}（副本）"
             title = display_title
 
@@ -241,7 +300,7 @@ def import_cr_archive(
             title=title,
             display_title=display_title,
             source_type="chat_reader_archive",
-            source_profile="chat_reader_archive_v1",
+            source_profile="chat_reader_cr_v2",
             external_source_id=str(source_conversation.get("id") or "") or None,
             status="importing",
             created_at=_parse_dt(source_conversation.get("created_at")),
@@ -252,7 +311,7 @@ def import_cr_archive(
             first_user_message=source_conversation.get("first_user_message"),
             description_markdown=source_conversation.get("description_markdown"),
             summary=source_conversation.get("summary"),
-            parser_version="chat-reader-archive-v1",
+            parser_version="chat-reader-cr-v2",
             render_version=int(manifest.get("render_version") or 1),
             content_hash=source_conversation.get("content_hash"),
             sort_time=_parse_dt(source_conversation.get("sort_time")),
@@ -304,7 +363,9 @@ def import_cr_archive(
             processed += len(message_rows)
 
         processed = _import_versions(db, archive, target_id, processed, total, progress_callback)
-        processed = _import_blocks(db, archive, target_id, processed, total, progress_callback)
+        attachment_id_map = _import_attachments(db, archive, manifest, import_record, target_id)
+        processed = _import_blocks(db, archive, target_id, processed, total, progress_callback, attachment_id_map)
+        _import_attachment_refs(db, archive, target_id, attachment_id_map)
         _import_headings(db, archive, target_id)
         _report(progress_callback, "headings", 82, processed, total)
         _import_search_documents(db, archive, target_id)
@@ -340,6 +401,10 @@ def _import_versions(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID
                 "created_by": row.get("created_by") or "import",
                 "based_on_version_id": _mapped_id(target_id, "version", uuid.UUID(based_on)) if based_on else None,
                 "content_hash": row["content_hash"],
+                "normalizer_version": row.get("normalizer_version") or "legacy-v1",
+                "markdown_parser_version": row.get("markdown_parser_version") or "legacy-v1",
+                "block_builder_version": row.get("block_builder_version") or "legacy-v1",
+                "search_document_version": row.get("search_document_version") or "legacy-v1",
             }
         )
         if len(rows) >= 500:
@@ -353,7 +418,15 @@ def _import_versions(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID
     return processed
 
 
-def _import_blocks(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID, processed: int, total: int, callback: ProgressCallback | None) -> int:
+def _import_blocks(
+    db: Session,
+    archive: zipfile.ZipFile,
+    target_id: uuid.UUID,
+    processed: int,
+    total: int,
+    callback: ProgressCallback | None,
+    attachment_id_map: dict[uuid.UUID, uuid.UUID] | None = None,
+) -> int:
     rows: list[dict[str, Any]] = []
     for row in _read_jsonl(archive, "blocks.jsonl"):
         rows.append(
@@ -363,7 +436,7 @@ def _import_blocks(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID, 
                 "block_index": int(row["block_index"]),
                 "block_type": row["block_type"],
                 "plain_text": row.get("plain_text"),
-                "data": row.get("data") or {},
+                "data": _rewrite_attachment_data(row.get("data") or {}, attachment_id_map or {}),
                 "sanitized_html": None,
                 "char_count": int(row.get("char_count") or 0),
                 "estimated_height": row.get("estimated_height"),
@@ -381,6 +454,133 @@ def _import_blocks(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID, 
         insert_rows(db, RenderBlock, rows)
         processed += len(rows)
     return processed
+
+
+def _import_attachments(
+    db: Session,
+    archive: zipfile.ZipFile,
+    manifest: dict[str, Any],
+    import_record: ImportRecord,
+    target_id: uuid.UUID,
+) -> dict[uuid.UUID, uuid.UUID]:
+    if manifest.get("version") != ARCHIVE_VERSION or "attachments.jsonl" not in archive.namelist():
+        return {}
+    rows = list(_read_jsonl(archive, "attachments.jsonl"))
+    object_rows = {uuid.UUID(str(row["id"])): row for row in rows if row.get("record_type") == "asset_object"}
+    attachment_rows = [row for row in rows if row.get("record_type") == "attachment"]
+    store = get_asset_store()
+    object_map: dict[uuid.UUID, uuid.UUID] = {}
+    for source_id, row in object_rows.items():
+        path = str(row.get("path") or f"assets/objects/{source_id}")
+        if path not in archive.namelist():
+            raise CrArchiveError(f"Archive asset object {path} is missing.")
+        with archive.open(path) as source:
+            staged = store.stage(source, max_bytes=get_settings().bundle_max_object_bytes, quarantine=True)
+        if staged.sha256 != str(row.get("sha256") or "") or staged.byte_size != int(row.get("byte_size") or -1):
+            staged.path.unlink(missing_ok=True)
+            raise CrArchiveError("Archive asset object checksum failed.")
+        try:
+            scan = scan_attachment(staged.path)
+        except AssetScanError as exc:
+            staged.path.unlink(missing_ok=True)
+            raise CrArchiveError(str(exc)) from exc
+        if not scan.allowed_by_policy:
+            staged.path.unlink(missing_ok=True)
+            raise CrArchiveError("Archive asset object was rejected by the scanner.")
+        existing = db.query(AssetObject).filter(
+            AssetObject.sha256 == staged.sha256,
+            AssetObject.byte_size == staged.byte_size,
+        ).one_or_none()
+        if existing is not None:
+            staged.path.unlink(missing_ok=True)
+            object_map[source_id] = existing.id
+            continue
+        key = store.object_key()
+        store.promote(staged.path, key)
+        detected_mime = str(row.get("detected_mime_type") or "application/octet-stream")
+        asset = AssetObject(
+            id=uuid.uuid4(),
+            sha256=staged.sha256,
+            byte_size=staged.byte_size,
+            detected_mime_type=detected_mime,
+            detected_extension=row.get("detected_extension"),
+            storage_backend=store.backend,
+            storage_key=key,
+            scan_status=scan.status,
+            status="available",
+        )
+        db.add(asset)
+        db.flush()
+        object_map[source_id] = asset.id
+
+    attachment_map: dict[uuid.UUID, uuid.UUID] = {}
+    for row in attachment_rows:
+        source_id = uuid.UUID(str(row["id"]))
+        object_id = object_map.get(uuid.UUID(str(row["asset_object_id"])))
+        if object_id is None:
+            raise CrArchiveError("Archive attachment references an unknown asset object.")
+        attachment_id = uuid.uuid4()
+        db.add(Attachment(
+            id=attachment_id,
+            conversation_id=target_id,
+            asset_object_id=object_id,
+            import_id=import_record.id,
+            original_filename=Path(str(row.get("original_filename") or "attachment.bin")).name[:500],
+            display_name=str(row.get("display_name") or row.get("original_filename") or "Attachment")[:500],
+            declared_mime_type=row.get("declared_mime_type"),
+            detected_mime_type=row.get("detected_mime_type"),
+            status="available",
+            scan_status=(db.get(AssetObject, object_id).scan_status if db.get(AssetObject, object_id) else "unscanned"),
+            source_type="chat_reader_archive",
+            source_attachment_id=str(row.get("source_attachment_id") or source_id),
+            metadata_=row.get("metadata") or {},
+            resolution_status="resolved",
+        ))
+        attachment_map[source_id] = attachment_id
+    db.flush()
+    return attachment_map
+
+
+def _import_attachment_refs(
+    db: Session,
+    archive: zipfile.ZipFile,
+    target_id: uuid.UUID,
+    attachment_id_map: dict[uuid.UUID, uuid.UUID],
+) -> None:
+    if not attachment_id_map or "attachment_refs.jsonl" not in archive.namelist():
+        return
+    rows = []
+    for row in _read_jsonl(archive, "attachment_refs.jsonl"):
+        source_attachment_id = uuid.UUID(str(row["attachment_id"]))
+        mapped_attachment_id = attachment_id_map.get(source_attachment_id)
+        if mapped_attachment_id is None:
+            raise CrArchiveError("Archive attachment reference points to an unknown attachment.")
+        rows.append(MessageVersionAttachment(
+            id=uuid.uuid4(),
+            message_version_id=_mapped_id(target_id, "version", uuid.UUID(str(row["message_version_id"]))),
+            attachment_id=mapped_attachment_id,
+            occurrence_key=str(row.get("occurrence_key") or uuid.uuid4().hex),
+            placement=str(row.get("placement") or "inline"),
+            relation_type=row.get("relation_type") or "file",
+            display_order=int(row.get("display_order") or 0),
+            block_index=row.get("block_index"),
+            display_mode=row.get("display_mode") or "card",
+            alt_text=row.get("alt_text"),
+            caption=row.get("caption"),
+        ))
+    if rows:
+        db.add_all(rows)
+
+
+def _rewrite_attachment_data(data: dict[str, Any], attachment_id_map: dict[uuid.UUID, uuid.UUID]) -> dict[str, Any]:
+    rewritten = dict(data)
+    raw_id = rewritten.get("attachmentId")
+    if raw_id:
+        try:
+            rewritten["attachmentId"] = str(attachment_id_map.get(uuid.UUID(str(raw_id)), uuid.UUID(str(raw_id))))
+        except ValueError:
+            raise CrArchiveError("Archive contains an invalid attachment reference.")
+    return rewritten
 
 
 def _import_headings(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) -> None:
@@ -584,7 +784,9 @@ def _import_optional_reader_metadata(db: Session, archive: zipfile.ZipFile, targ
                     prefix=row.get("prefix"),
                     suffix=row.get("suffix"),
                     comment_markdown=row.get("comment_markdown") or "",
-                    anchor_status=row.get("anchor_status") or "active",
+                    anchor_status={"active": "valid", "relocated": "remapped", "stale": "needs_review"}.get(
+                        row.get("anchor_status") or "valid", row.get("anchor_status") or "valid"
+                    ),
                     revision=int(row.get("revision") or 1),
                     metadata_=row.get("metadata") or {},
                     created_at=_parse_dt(row.get("created_at")) or datetime.now(timezone.utc),
@@ -622,10 +824,63 @@ def _message_payload(row: Message) -> dict[str, Any]:
     )}
 
 
+def _attachment_ref_payload(row: MessageVersionAttachment) -> dict[str, Any]:
+    return {
+        "attachment_id": str(row.attachment_id),
+        "message_version_id": str(row.message_version_id),
+        "relation_type": row.relation_type,
+        "display_order": row.display_order,
+        "block_index": row.block_index,
+        "display_mode": row.display_mode,
+        "alt_text": row.alt_text,
+        "caption": row.caption,
+    }
+
+
+def _attachment_archive_rows(db: Session, rows: list[Attachment]):
+    asset_ids = {row.asset_object_id for row in rows if row.asset_object_id}
+    assets = db.query(AssetObject).filter(AssetObject.id.in_(asset_ids)).all() if asset_ids else []
+    for asset in assets:
+        yield {
+            "record_type": "asset_object",
+            "id": str(asset.id),
+            "path": f"assets/objects/{asset.id}",
+            "sha256": asset.sha256,
+            "byte_size": asset.byte_size,
+            "detected_mime_type": asset.detected_mime_type,
+            "detected_extension": asset.detected_extension,
+        }
+    for row in rows:
+        yield {
+            "record_type": "attachment",
+            "id": str(row.id),
+            "asset_object_id": str(row.asset_object_id) if row.asset_object_id else None,
+            "original_filename": row.original_filename,
+            "display_name": row.display_name,
+            "declared_mime_type": row.declared_mime_type,
+            "source_attachment_id": row.source_attachment_id,
+            "metadata": row.metadata_ or {},
+        }
+
+
+def _attachment_payload(row: Attachment) -> dict[str, Any]:
+    return {
+        "record_type": "attachment",
+        "id": str(row.id),
+        "asset_object_id": str(row.asset_object_id) if row.asset_object_id else None,
+        "original_filename": row.original_filename,
+        "display_name": row.display_name,
+        "declared_mime_type": row.declared_mime_type,
+        "source_attachment_id": row.source_attachment_id,
+        "metadata": row.metadata_ or {},
+    }
+
+
 def _version_payload(row: MessageVersion) -> dict[str, Any]:
     return {key: _json_value(getattr(row, key)) for key in (
         "id", "message_id", "version_number", "plain_text", "display_text", "edit_type", "edit_reason",
-        "created_at", "created_by", "based_on_version_id", "content_hash",
+        "created_at", "created_by", "based_on_version_id", "content_hash", "normalizer_version",
+        "markdown_parser_version", "block_builder_version", "search_document_version",
     )}
 
 
@@ -724,7 +979,7 @@ def _open_validated_zip(path: Path) -> zipfile.ZipFile:
     except zipfile.BadZipFile as exc:
         raise CrArchiveError("Invalid .cr archive.") from exc
     infos = archive.infolist()
-    if len(infos) > MAX_ARCHIVE_ENTRIES:
+    if len(infos) > max(MAX_ARCHIVE_ENTRIES, get_settings().bundle_max_entries * 2):
         archive.close()
         raise CrArchiveError("Archive contains too many entries.")
     for info in infos:
@@ -739,9 +994,11 @@ def _open_validated_zip(path: Path) -> zipfile.ZipFile:
 
 
 def _validate_manifest(archive: zipfile.ZipFile, manifest: dict[str, Any]) -> None:
-    if manifest.get("format") != ARCHIVE_FORMAT or manifest.get("version") not in {1, ARCHIVE_VERSION}:
+    if manifest.get("format") != ARCHIVE_FORMAT or manifest.get("version") not in {1, 2, ARCHIVE_VERSION}:
         raise CrArchiveError("Unsupported .cr archive version.")
     required = {"manifest.json", "conversation.json", *JSONL_ENTRIES}
+    if manifest.get("version") == ARCHIVE_VERSION:
+        required.update(ATTACHMENT_JSONL_ENTRIES)
     if not required.issubset(set(archive.namelist())):
         raise CrArchiveError("Archive is missing required entries.")
     entries = manifest.get("entries") if isinstance(manifest.get("entries"), dict) else {}
@@ -758,6 +1015,14 @@ def _validate_manifest(archive: zipfile.ZipFile, manifest: dict[str, Any]) -> No
         expected = entries.get(name, {}).get("sha256") if isinstance(entries.get(name), dict) else None
         if not expected or hashlib.sha256(archive.read(name)).hexdigest() != expected:
             raise CrArchiveError(f"Archive checksum failed for {name}.")
+    if manifest.get("version") == ARCHIVE_VERSION:
+        for name, entry in entries.items():
+            if name in {"manifest.json", "conversation.json", *JSONL_ENTRIES, "annotations.jsonl", "notebook.json"}:
+                continue
+            if name not in archive.namelist() or not isinstance(entry, dict) or not entry.get("sha256"):
+                raise CrArchiveError(f"Archive checksum is missing for {name}.")
+            if hashlib.sha256(archive.read(name)).hexdigest() != entry["sha256"]:
+                raise CrArchiveError(f"Archive checksum failed for {name}.")
 
 
 def _manifest_fingerprint(manifest: dict[str, Any]) -> str:

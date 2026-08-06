@@ -16,6 +16,7 @@ from app.schemas.project import (
     ProjectConversationOrderUpdate,
     ProjectCreate,
     ProjectOrderUpdate,
+    ProjectPlacementRequest,
     ProjectRead,
     ProjectUpdate,
 )
@@ -25,6 +26,7 @@ from app.services.projects.project_service import (
     create_project,
     list_project_conversations,
     list_projects,
+    place_project,
     project_counts,
     record_project_recent,
     remove_conversation_from_project,
@@ -76,6 +78,26 @@ def update_project_route(project_id: uuid.UUID, payload: ProjectUpdate, db: Sess
     except ProjectServiceError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return _project_read(project, db)
+
+
+@router.put("/{project_id}/placement", response_model=ProjectRead)
+def place_project_route(
+    project_id: uuid.UUID,
+    payload: ProjectPlacementRequest,
+    db: Session = Depends(get_db),
+) -> ProjectRead:
+    try:
+        project = place_project(
+            db,
+            project_id=project_id,
+            before_project_id=payload.before_project_id,
+            after_project_id=payload.after_project_id,
+        )
+        db.commit()
+    except ProjectServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     return _project_read(project, db)
 
 

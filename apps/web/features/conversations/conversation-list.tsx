@@ -15,19 +15,21 @@ import {
   getProjects,
   mergeConversations,
   moveConversationToProject,
-  restoreConversation,
+  unarchiveConversation,
   updateConversationOrder,
 } from "../../lib/api";
 import type { ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
-import type { UndoAction } from "./conversation-action-menu";
+import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
 import { MergeOrderList } from "./merge-order-list";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { downloadConversationBundle } from "../../lib/bulk-export";
-import { SelectionToolbar } from "../../components/selection-toolbar";
+import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
+import { useLinearSelection } from "../../components/use-linear-selection";
+import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
 
 export function ConversationList({
   onImportClick,
@@ -46,10 +48,11 @@ export function ConversationList({
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [batchNotice, setBatchNotice] = useState<string | null>(null);
   const conversationsQuery = useQuery({
     queryKey: ["conversations", mode, conversationSortMode, conversationSortDirection],
     queryFn: () => getConversations({
-      includeArchived: mode === "archived",
+      statusScope: mode,
       scope: "all",
       sort: conversationSortMode,
       direction: conversationSortDirection,
@@ -74,6 +77,20 @@ export function ConversationList({
     staleTime: 30_000,
   });
   const isArchivedMode = mode === "archived";
+  const conversations = (conversationsQuery.data ?? []).filter((conversation) => conversation.status === mode);
+  const linearSelection = useLinearSelection({
+    ids: conversations.map((conversation) => conversation.id),
+    selectedIds: selectedConversationIds,
+    onChange: applySelection,
+    disabled: bulkBusy !== null || isMerging,
+    selectionMode,
+    onActivate: () => setSelectionMode(true),
+    onExit: exitSelectionMode,
+  });
+
+  useEffect(() => {
+    if (selectedConversationIds.size > 0) setSelectionMode(true);
+  }, [selectedConversationIds.size]);
 
   function clearSelection() {
     setSelectedConversationIds(new Set());
@@ -85,18 +102,6 @@ export function ConversationList({
     clearSelection();
     setSelectionMode(false);
   }
-
-  useEffect(() => {
-    if (!selectionMode) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || bulkBusy !== null || isMerging) return;
-      setSelectedConversationIds(new Set());
-      setMergeOrderIds([]);
-      setSelectionMode(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bulkBusy, isMerging, selectionMode]);
 
   async function handleSortEnd(event: DragEndEvent) {
     if (conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
@@ -140,15 +145,18 @@ export function ConversationList({
     );
   }
 
-  const conversations = (conversationsQuery.data ?? []).filter((conversation) =>
-    isArchivedMode ? conversation.status === "archived" : conversation.status !== "archived",
-  );
-
   function applySelection(ids: Iterable<string>) {
     const requested = new Set(ids);
     const orderedIds = conversations.filter((conversation) => requested.has(conversation.id)).map((conversation) => conversation.id);
     setSelectedConversationIds(new Set(orderedIds));
     setMergeOrderIds(orderedIds);
+  }
+
+  function applyBatchResult(result: BatchSelectionResult) {
+    applySelection(result.failedIds);
+    setBatchNotice(resolvedLocale === "zh-CN"
+      ? `已完成 ${result.succeededIds.length} 项，失败 ${result.failedIds.length} 项${result.failedIds.length ? "；失败项已保留选择" : ""}`
+      : `${result.succeededIds.length} completed, ${result.failedIds.length} failed${result.failedIds.length ? "; failed items remain selected" : ""}`);
   }
 
   function toggleConversationSelection(conversationId: string, selected: boolean) {
@@ -217,8 +225,23 @@ export function ConversationList({
           </h2>
           <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `共 ${conversations.length} 个` : `${conversations.length} total`}</p>
         </div>
-        {selectedConversationIds.size > 0 ? (
-          <BulkActions
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <ConversationSortMenu />
+          {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} onClick={() => setSelectionMode(true)} /> : null}
+        </div>
+      </div>
+      {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
+      {selectionMode ? <SelectionToolbar
+        selectedCount={selectedConversationIds.size}
+        totalCount={conversations.length}
+        busy={bulkBusy !== null || isMerging}
+        locale={resolvedLocale}
+        onSelectAll={linearSelection.selectAll}
+        onInvert={linearSelection.invert}
+        onClear={clearSelection}
+        onDone={exitSelectionMode}
+      >
+        <BulkActions
             mode={mode}
             selectedConversations={mergeOrderIds
               .map((id) => conversations.find((conversation) => conversation.id === id))
@@ -232,9 +255,8 @@ export function ConversationList({
             onMove={async (ids, projectId) => {
               setBulkBusy("move");
               try {
-                await Promise.all(ids.map((id) => moveConversationToProject(id, projectId)));
-                setSelectedConversationIds(new Set());
-                setMergeOrderIds([]);
+                const result = await runBatchSelection(ids, (id) => moveConversationToProject(id, projectId));
+                applyBatchResult(result);
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
@@ -267,16 +289,15 @@ export function ConversationList({
             onArchive={async (ids) => {
               setBulkBusy("archive");
               try {
-                await Promise.all(ids.map((id) => archiveConversation(id)));
+                const result = await runBatchSelection(ids, archiveConversation);
+                applyBatchResult(result);
                 setUndo({
-                  label: `已归档 ${ids.length} 个会话`,
+                  label: `已归档 ${result.succeededIds.length} 个会话`,
                   action: async () => {
-                    await Promise.all(ids.map((id) => restoreConversation(id)));
+                    await runBatchSelection(result.succeededIds, unarchiveConversation);
                     await refreshLists();
                   },
                 });
-                setSelectedConversationIds(new Set());
-                setMergeOrderIds([]);
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
@@ -285,72 +306,52 @@ export function ConversationList({
             onRestore={async (ids) => {
               setBulkBusy("restore");
               try {
-                await Promise.all(ids.map((id) => restoreConversation(id)));
+                const result = await runBatchSelection(ids, unarchiveConversation);
+                applyBatchResult(result);
                 setUndo({
-                  label: `已恢复 ${ids.length} 个会话`,
+                  label: `已恢复 ${result.succeededIds.length} 个会话`,
                   action: async () => {
-                    await Promise.all(ids.map((id) => archiveConversation(id)));
+                    await runBatchSelection(result.succeededIds, archiveConversation);
                     await refreshLists();
                   },
                 });
-                setSelectedConversationIds(new Set());
-                setMergeOrderIds([]);
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
               }
             }}
             onDelete={async (ids) => {
-              if (!(await dialog.confirm({ title: resolvedLocale === "zh-CN" ? `删除 ${ids.length} 个对话？` : `Delete ${ids.length} conversations?`, description: resolvedLocale === "zh-CN" ? "此操作完成后可立即撤销。" : "You can undo immediately afterward.", confirmLabel: resolvedLocale === "zh-CN" ? "删除" : "Delete", danger: true }))) {
+              if (!(await dialog.confirm({ title: resolvedLocale === "zh-CN" ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: resolvedLocale === "zh-CN" ? "这些对话及其历史版本会立即删除，无法在系统内恢复。" : "These conversations and their version histories are deleted immediately and cannot be restored in the app.", confirmLabel: resolvedLocale === "zh-CN" ? "永久删除" : "Delete permanently", danger: true }))) {
                 return;
               }
               setBulkBusy("delete");
               try {
-                await Promise.all(ids.map((id) => deleteConversation(id)));
-                setUndo({
-                  label: `已删除 ${ids.length} 个会话`,
-                  action: async () => {
-                    await Promise.all(ids.map((id) => restoreConversation(id)));
-                    await refreshLists();
-                  },
-                });
-                setSelectedConversationIds(new Set());
-                setMergeOrderIds([]);
+                const result = await runBatchSelection(ids, deleteConversation);
+                applyBatchResult(result);
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
               }
             }}
           />
-        ) : !selectionMode ? (
-          <div className="flex items-center gap-2"><ConversationSortMenu /><button type="button" onClick={() => setSelectionMode(true)} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-surface">{resolvedLocale === "zh-CN" ? "选择对话" : "Select conversations"}</button></div>
-        ) : null}
-      </div>
-      {selectionMode ? <SelectionToolbar
-        selectedCount={selectedConversationIds.size}
-        totalCount={conversations.length}
-        busy={bulkBusy !== null || isMerging}
-        locale={resolvedLocale}
-        onSelectAll={() => applySelection(conversations.map((conversation) => conversation.id))}
-        onInvert={() => applySelection(conversations.filter((conversation) => !selectedConversationIds.has(conversation.id)).map((conversation) => conversation.id))}
-        onClear={() => clearSelection()}
-        onDone={exitSelectionMode}
-      /> : null}
+      </SelectionToolbar> : null}
       <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation) => (
           <SortableConversationRow id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode} key={conversation.id}><article
+            {...linearSelection.itemHandlers(conversation.id)}
             className={`group border-b border-ui px-4 py-3 transition last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}
           >
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
               <div className="flex min-w-0 gap-3">
-                {selectionMode ? <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-ui bg-surface">
+                <label className={`mt-1 h-7 w-7 shrink-0 items-center justify-center rounded-md border border-ui bg-surface transition-opacity ${linearSelection.checkboxClass(conversation.id)}`}>
                   <input
                     type="checkbox"
                     checked={selectedConversationIds.has(conversation.id)}
-                    onChange={(event) => toggleConversationSelection(conversation.id, event.target.checked)}
+                    onClick={(event) => { setSelectionMode(true); linearSelection.toggle(conversation.id, { selected: !selectedConversationIds.has(conversation.id), range: event.shiftKey }); }}
+                    onChange={() => undefined}
                     aria-label={`${resolvedLocale === "zh-CN" ? "选择" : "Select"} ${conversation.display_title || conversation.title}`}
                   />
-                </label> : null}
+                </label>
                 <div className="min-w-0">
                   {selectionMode ? <button type="button" className="block w-full text-left" onClick={() => toggleConversationSelection(conversation.id, !selectedConversationIds.has(conversation.id))}>
                     <h3 className="truncate text-base font-semibold text-primary">
@@ -370,6 +371,7 @@ export function ConversationList({
                     <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
                       {conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)}
                     </p>
+                    {typeof conversation.reading_progress === "number" ? <ReadingProgress value={conversation.reading_progress} locale={resolvedLocale} /> : null}
                   </>}
                 </div>
               </div>
@@ -378,6 +380,7 @@ export function ConversationList({
                   <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)} aria-label={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}</p>
                   <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                 </div>
+                {!selectionMode ? <ConversationActionMenu conversation={conversation} onChanged={refreshLists} onUndo={setUndo} /> : null}
               </div>
             </div>
           </article></SortableConversationRow>
@@ -385,6 +388,11 @@ export function ConversationList({
       </div></SortableContext></DndContext>
     </section>
   );
+}
+
+function ReadingProgress({ value, locale }: { value: number; locale: "zh-CN" | "en-US" }) {
+  const normalized = Math.max(0, Math.min(100, value));
+  return <div className="mt-2 flex items-center gap-2"><div className="h-1.5 min-w-20 flex-1 overflow-hidden rounded-full bg-subtle" role="progressbar" aria-label={locale === "zh-CN" ? "阅读进度" : "Reading progress"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(normalized)}><span className="block h-full rounded-full bg-accent" style={{ width: `${normalized}%` }} /></div><span className="text-[11px] text-secondary">{Math.round(normalized)}%</span></div>;
 }
 
 function SortableConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
@@ -439,26 +447,29 @@ function BulkActions({
   const isArchivedMode = mode === "archived";
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => {
+    if (selectedIds.length === 0) setMoreOpen(false);
+  }, [selectedIds.length]);
   return (
-    <div className="w-full rounded-xl border border-ui bg-surface p-3 sm:max-w-xl">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-auto text-sm text-secondary">{zh ? `已选择 ${selectedIds.length} 个` : `${selectedIds.length} selected`}</span>
-        {!isArchivedMode ? <select
+    <>
+      <div className="flex flex-wrap items-center gap-2 border-l border-ui pl-2">
+        {mode === "active" ? <select
           defaultValue=""
-          disabled={bulkBusy !== null}
+          disabled={bulkBusy !== null || selectedIds.length === 0}
           onChange={(event) => { const value = event.target.value; if (value) void onMove(selectedIds, value === "__none" ? null : value); event.target.value = ""; }}
-          className="min-h-9 rounded-lg border border-ui bg-surface px-2 text-sm text-primary"
+          className="min-h-9 max-w-full rounded-lg border border-ui bg-surface px-2 text-sm text-primary"
           aria-label={zh ? "移动到项目" : "Move to project"}
         >
           <option value="" disabled>{zh ? "移动到项目" : "Move to project"}</option>
           <option value="__none">{zh ? "移出项目" : "Remove from project"}</option>
           {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
         </select> : null}
-        <button type="button" disabled={bulkBusy !== null} onClick={() => void onExport(selectedConversations)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{bulkBusy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
+        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0} onClick={() => void onExport(selectedConversations)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{bulkBusy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
         {isArchivedMode ? (
           <button
             type="button"
-            disabled={bulkBusy !== null}
+            disabled={bulkBusy !== null || selectedIds.length === 0}
             onClick={() => void onRestore(selectedIds)}
             className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
           >
@@ -467,24 +478,19 @@ function BulkActions({
         ) : (
           <button
             type="button"
-            disabled={bulkBusy !== null}
+            disabled={bulkBusy !== null || selectedIds.length === 0}
             onClick={() => void onArchive(selectedIds)}
             className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
           >
             {zh ? "归档" : "Archive"}
           </button>
         )}
-        <button
-          type="button"
-          disabled={bulkBusy !== null}
-          onClick={() => void onDelete(selectedIds)}
-          className="min-h-9 rounded-lg border border-[var(--danger)] bg-surface px-3 text-sm font-medium text-[var(--danger)] disabled:cursor-wait disabled:opacity-60"
-        >
-          {zh ? "删除" : "Delete"}
-        </button>
+        <button type="button" disabled={selectedIds.length === 0} onClick={() => setMoreOpen((value) => !value)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40" aria-expanded={moreOpen}>{zh ? "更多" : "More"}</button>
       </div>
-      {!isArchivedMode && selectedIds.length >= 2 ? (
-        <div className="mt-3 rounded-xl bg-subtle p-3">
+      {moreOpen ? <div className="fixed inset-x-2 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[160] max-h-[min(70dvh,36rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-3 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-[calc(100%+.5rem)] sm:w-[min(30rem,calc(100vw-1rem))]">
+        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0} onClick={() => void onDelete(selectedIds)} className="mb-2 min-h-9 w-full rounded-lg px-3 text-left text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60">{zh ? "删除所选" : "Delete selected"}</button>
+        {mode === "active" && selectedIds.length >= 2 ? (
+        <div className="rounded-lg bg-subtle p-3">
           <label className="text-xs font-semibold uppercase tracking-normal text-secondary">
             {zh ? "合并标题" : "Merge title"}
             <input
@@ -503,9 +509,9 @@ function BulkActions({
           >
             {isMerging ? (zh ? "正在合并…" : "Merging…") : (zh ? `按此顺序合并 ${selectedIds.length} 个对话` : `Merge ${selectedIds.length} in this order`)}
           </button>
-        </div>
-      ) : null}
-    </div>
+        </div>) : null}
+      </div> : null}
+    </>
   );
 }
 

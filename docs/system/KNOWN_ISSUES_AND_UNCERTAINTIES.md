@@ -1,137 +1,27 @@
-# 已知问题与不确定性
+# 已知风险与不确定性
 
-最后核验日期：2026-07-26
+最后核验：2026-08-06
 
-本页只记录现象、差异和证据，不提供改进设计。
+已解决问题和实施过程保留在 [execution/](../execution/README.md)，本页只维护当前仍成立的风险。
 
-## KI-001：旧产品文档未覆盖现有批注和离线资料
+| ID | 风险/不确定性 | 影响 | 当前控制/验证方式 |
+| --- | --- | --- | --- |
+| KI-001 | 应用没有认证或多用户 ACL | 公网管理 API 可能被未授权访问 | 反向代理/VPN/访问网关必须限制；代码层若引入 auth 需整体设计 |
+| KI-002 | 单个阅读轮次可包含极大正文 | 完整正文数据仍占内存，动态 block 测量也有成本 | >160 blocks 或 >50000 chars 时虚拟化 DOM；直达 URL、批注、下滑刷新 fixture 持续回归 |
+| KI-003 | 有效生产 Share 访客页未在文档中保存可复用 token | 生产访客视觉/范围无法由文档直接重放 | 使用隔离测试 token 复验，绝不记录真实 token |
+| KI-004 | 浏览器 quota、持久化许可和 cache eviction 因设备而异 | 离线更新/冷启动可能失败 | 原子 staging/transaction、旧数据保留；补充真实设备矩阵 |
+| KI-005 | 生产 TLS、证书、访问控制和完整代理配置在仓库外 | 仓库无法证明安全和续期状态 | 运维侧单独审计；仓库只维护 HTTP 示例 |
+| KI-006 | 仓库没有集中式监控/APM/告警 | worker 卡死或磁盘/错误趋势可能晚发现 | health、job heartbeat、容器日志；生产应外接监控 |
+| KI-007 | 当前工作树包含未提交功能与文档改动 | Git HEAD 不能代表完整部署源 | 发布使用显式 manifest/哈希并记录 dirty 状态；提交前审查 diff |
+| KI-008 | 生产 OpenAPI 未经同源 `/api/openapi.json` 暴露 | 外部调试和 schema 发现不便 | 受控环境用 `app.openapi()`；不将 404 解释为 API 缺失 |
+| KI-009 | 单个超大 conversation 的 preview/commit 仍会形成完整 Draft 对象 | 峰值 Python 内存仍随单 conversation 增长 | CanJSON 逐行解析和 Draft 流式落盘已降低重复峰值；10,000-message 压测仍需持续记录 |
+| KI-010 | 流式导出事件在响应完全消费前写入 | 客户端中断下载时审计事件仍可能显示已导出 | 当前视为“请求已开始”事件；若需严格完成语义，应在异步 artifact 任务中记录完成事件 |
+| KI-011 | King 单用户部署主动关闭附件恶意软件扫描和内容安全审查 | `scanner_disabled`/`unscanned` 文件没有经过安全检测 | 这是用户接受的部署策略；UI 明确显示“未扫描”，附件功能正常使用，数据完整性校验继续执行 |
+| KI-012 | Office/OCR/CAD/复杂压缩包预览未实现 | 用户只能下载原文件，无法站内查看复杂内容 | 明确 `NOT_IMPLEMENTED`，不在主服务器运行重型转换；基础上传、插入、Range 和浏览器预览不受阻 |
+| KI-013 | King 原机 Web 构建会触发 OOM | PostgreSQL checkpointer 可能被杀并进入 WAL 恢复 | 禁止在 King 编译 Next 镜像；改用 CI/独立 Linux 构建机和 registry 或 `docker save/load`。本轮恢复后 dump 已校验 |
 
-**编号：** KI-001
-**类别：** 文档与代码不一致
-**现象：** `docs/product.md` 与 `PROJECT_STATE.md` 的部分段落仍描述“没有完整笔记/批注”或“不离线缓存私有对话”，当前代码和生产已有批注、精选笔记、离线包和 `/library` Reader。
-**出现位置：** 上述旧文档。
-**复现步骤：** 对照旧文档、`features/annotations`, `features/offline`, backend annotation/offline routes 和 `PAGE-008/010/011`。
-**实际结果：** 旧描述落后于当前实现。
-**预期结果来源：** 文档应反映当前 commit 的维护规则。
-**证据：** 源码与生产截图。
-**影响范围：** 后续智能体和开发人员理解系统边界。
-**确认程度：** 已确认。
-**相关代码：** `apps/web/features/annotations`, `apps/web/features/offline`, annotation/offline routes。
-**是否阻塞后续 UX 调研：** 否；应以本目录事实基线为准。
-**备注：** 旧文档保留历史语境，索引已说明时效。
+## 验证边界
 
-## KI-002：旧状态文档的 migration head 过期
-
-**编号：** KI-002
-**类别：** 文档与代码不一致
-**现象：** `PROJECT_STATE.md` 记录 migration head `0013`；源码和生产为 `20260724_0015 (head)`。
-**出现位置：** `PROJECT_STATE.md`、Alembic versions、生产容器。
-**复现步骤：** 查看旧文档；列出 migrations；生产执行只读 `alembic current`。
-**实际结果：** 文档版本落后两个 migration。
-**预期结果来源：** Alembic head 与生产只读结果。
-**证据：** `apps/api/alembic/versions/20260724_0015_annotation_types.py`, `PROD-RUNTIME-001`。
-**影响范围：** 部署、schema 调试。
-**确认程度：** 已确认。
-**相关代码：** migrations。
-**是否阻塞后续 UX 调研：** 否。
-**备注：** 本事实文档记录当前 head。
-
-## KI-003：最近页面存在但主侧栏未发现直接入口
-
-**编号：** KI-003
-**类别：** 功能状态不明/隐藏
-**现象：** `/recent` 页面与 `/api/recent-items` 存在，生产 URL 返回 200；当前 `ProjectSidebar` 未发现指向 `/recent` 的导航项。
-**出现位置：** 在线管理壳。
-**复现步骤：** 搜索 sidebar 菜单和链接；直接 GET `/recent`。
-**实际结果：** 直接路由可访问，常规侧栏入口未发现。
-**预期结果来源：** 无明确产品规则；仅记录入口状态。
-**证据：** `apps/web/app/recent/page.tsx`, `features/reading/recent-items.tsx`, HTTP-001。
-**影响范围：** 页面地图和后续截图覆盖。
-**确认程度：** 部分确认。
-**相关代码：** `project-sidebar.tsx`。
-**是否阻塞后续 UX 调研：** 否；可直接 URL 核验。
-**备注：** 不推断是有意隐藏还是遗漏。
-
-## KI-004：公开 Share 页未用有效生产 token 完整核验
-
-**编号：** KI-004
-**类别：** 安全边界导致无法核验
-**现象：** Share 创建/管理面板、已有记录结构和 token-limited 前后端代码可确认，但本次不复制或记录真实 token，未打开有效生产 Share reader。
-**出现位置：** `/share/[token]`。
-**复现步骤：** 本次只打开 creator 面板，未读取 token。
-**实际结果：** 创建端和代码链路确认，访客视觉/网络请求仅部分确认。
-**预期结果来源：** share routes/service 和 public reader。
-**证据：** `PAGE-009`, `features/sharing/share-readonly-reader.tsx`, `/api/shared/{token}/*`。
-**影响范围：** Share 访客 UX 调研。
-**确认程度：** 部分确认。
-**相关代码：** sharing frontend/backend。
-**是否阻塞后续 UX 调研：** 仅阻塞有效 Share 页面实操。
-**备注：** 后续需使用合成/测试 token，不能把生产 token 写入证据。
-
-## KI-005：真实离线冷启动和失败注入未在本阶段执行
-
-**编号：** KI-005
-**类别：** 环境问题导致无法核验
-**现象：** PWA 壳、原子 cache、Dexie、离线包和 Playwright 场景存在；本次没有切断网络、清空 cache、耗尽 quota 或故意破坏 staging asset。
-**出现位置：** `/library`。
-**复现步骤：** 只在线打开 library/reader 并检查 SW/manifest/代码。
-**实际结果：** 在线入口和本地副本可用；完全离线冷启动仍是代码/自动化确认。
-**预期结果来源：** `library-sw.js`, offline E2E。
-**证据：** `PAGE-010/011/016`, `apps/web/e2e/library-offline.spec.ts`。
-**影响范围：** PWA 真实设备与网络异常调研。
-**确认程度：** 部分确认。
-**相关代码：** SW/offline DB/library shell。
-**是否阻塞后续 UX 调研：** 阻塞离线失败态的现场截图，不阻塞在线页面审计。
-**备注：** 本阶段禁止影响生产或清理浏览器数据。
-
-## KI-006：写链路未对生产数据执行
-
-**编号：** KI-006
-**类别：** 待验证问题
-**现象：** 导入、编辑、删除、批量操作和同步入口/API/测试存在；为避免影响生产资料，本次只打开入口和读取状态。
-**出现位置：** import、canonical editing、bulk management、offline sync。
-**复现步骤：** 查看 `PAGE-002/STATE-001/STATE-002` 与代码，不提交 mutation。
-**实际结果：** UI/代码链路确认，当前生产部署上的成功/失败反馈未完整走通。
-**预期结果来源：** routes/services/tests。
-**证据：** 功能清单相应行。
-**影响范围：** 可写流程的端到端 UX。
-**确认程度：** 部分确认。
-**相关代码：** import/editing/annotations/projects/conversations。
-**是否阻塞后续 UX 调研：** 需要隔离测试数据后才能完整核验。
-**备注：** 不能以未执行生产写操作推断功能失效。
-
-## KI-007：生产 TLS/Nginx 完整配置不在仓库
-
-**编号：** KI-007
-**类别：** 实现状态不明确
-**现象：** 公网 HTTPS 和 Nginx 响应可确认；仓库 `deploy/nginx-chat-reader.conf` 仅为 HTTP 示例，无法从仓库确认真实证书、续期和全部规则。
-**出现位置：** 生产反向代理。
-**复现步骤：** 对照公网响应和 repo deploy 文件。
-**实际结果：** 运行结果确认，配置来源部分确认。
-**预期结果来源：** 现有部署结构。
-**证据：** HTTP-001, `deploy/nginx-chat-reader.conf`。
-**影响范围：** 部署维护和故障排查。
-**确认程度：** 部分确认。
-**相关代码：** deploy config。
-**是否阻塞后续 UX 调研：** 否。
-**备注：** 未读取仓库外生产敏感配置。
-
-## KI-008：生产 OpenAPI schema 未经同源 `/api` 暴露
-
-**编号：** KI-008
-**类别：** 已确认现象
-**现象：** `/api/openapi.json` 返回 404；FastAPI 本地 `app.openapi()` 正常生成 67 paths/79 operations。
-**出现位置：** 生产 API 文档入口。
-**复现步骤：** GET 生产 `/api/openapi.json`；本地调用 `app.openapi()`。
-**实际结果：** API 正常工作，但该 schema URL 不公开。
-**预期结果来源：** 无证据要求生产必须公开，仅记录差异。
-**证据：** HTTP-001, API-001。
-**影响范围：** 外部调试/接口发现。
-**确认程度：** 已确认。
-**相关代码：** `main.py`, `next.config.mjs`。
-**是否阻塞后续 UX 调研：** 否。
-**备注：** 不将 404 解释为业务 API 不存在。
-
-## 代码与线上差异汇总
-
-截至 2026-07-26 核验时，本地和生产 Git commit 相同。2026-07-27 第二轮代码尚未生产部署，因此新的 Reader/搜索/批注索引行为仅有本地自动化与截图证据；生产回填、真实 Share token 和真实设备离线验证仍需在获授权部署后执行。
+- 2026-07-29 的生产健康、migration、Reader 和离线 TOC 结论是发布时快照，不保证之后未变化。
+- 导入、删除、冲突、Share token 和数据恢复等破坏性/敏感流程应使用隔离数据，不能在唯一生产资料上试验。
+- 文档不保存真实会话数量、标题、正文、批注内容、ID、token 或凭据；需要诊断时使用脱敏标识。

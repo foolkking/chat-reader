@@ -55,6 +55,8 @@ async function loadInitialPreferences(): Promise<UserPreferenceRead> {
     theme_mode: "light",
     locale_mode: "auto",
     reader_width_mode: "standard",
+    reader_density_mode: "comfortable",
+    reader_font_size_px: 17,
     section_toc_mode: "visible",
     conversation_sort_mode: "recent_read",
     conversation_sort_direction: "desc",

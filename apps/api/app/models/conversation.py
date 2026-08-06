@@ -46,6 +46,8 @@ class Conversation(Base):
         uselist=False,
     )
     recent_item = relationship("RecentItem", back_populates="conversation", cascade="all, delete-orphan", uselist=False)
+    attachments = relationship("Attachment", cascade="all, delete-orphan")
+    attachment_upload_sessions = relationship("AttachmentUploadSession", cascade="all, delete-orphan")
 
 
 Index("idx_conversations_source_type", Conversation.source_type)

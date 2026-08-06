@@ -7,6 +7,7 @@ import type {
   ConversationSortMode,
   LocaleMode,
   ProjectSortMode,
+  ReaderDensityMode,
   ReaderWidthMode,
   SectionTocMode,
   SortDirection,
@@ -19,6 +20,8 @@ type PreferencesContextValue = {
   themeMode: ThemeMode;
   localeMode: LocaleMode;
   readerWidthMode: ReaderWidthMode;
+  readerDensityMode: ReaderDensityMode;
+  readerFontSizePx: number;
   sectionTocMode: SectionTocMode;
   conversationSortMode: ConversationSortMode;
   conversationSortDirection: SortDirection;
@@ -29,6 +32,8 @@ type PreferencesContextValue = {
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setLocaleMode: (mode: LocaleMode) => Promise<void>;
   setReaderWidthMode: (mode: ReaderWidthMode) => Promise<void>;
+  setReaderDensityMode: (mode: ReaderDensityMode) => Promise<void>;
+  setReaderFontSizePx: (size: number) => Promise<void>;
   setSectionTocMode: (mode: SectionTocMode) => Promise<void>;
   setConversationSort: (mode: ConversationSortMode, direction: SortDirection) => Promise<void>;
   setProjectSort: (mode: ProjectSortMode, direction: SortDirection) => Promise<void>;
@@ -37,6 +42,8 @@ type PreferencesContextValue = {
 
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 const PREFERENCES_STORAGE_KEY = "chat-reader:user-preferences";
+const READER_LAYOUT_WILL_CHANGE_EVENT = "chat-reader:reader-layout-will-change";
+const READER_LAYOUT_DID_CHANGE_EVENT = "chat-reader:reader-layout-did-change";
 
 export function PreferencesProvider({
   children,
@@ -50,6 +57,8 @@ export function PreferencesProvider({
   const [themeMode, setThemeModeState] = useState<ThemeMode>(initialPreferences.theme_mode);
   const [localeMode, setLocaleModeState] = useState<LocaleMode>(initialPreferences.locale_mode);
   const [readerWidthMode, setReaderWidthModeState] = useState<ReaderWidthMode>(initialPreferences.reader_width_mode ?? "standard");
+  const [readerDensityMode, setReaderDensityModeState] = useState<ReaderDensityMode>(initialPreferences.reader_density_mode ?? "comfortable");
+  const [readerFontSizePx, setReaderFontSizePxState] = useState(initialPreferences.reader_font_size_px ?? 17);
   const [sectionTocMode, setSectionTocModeState] = useState<SectionTocMode>(initialPreferences.section_toc_mode ?? "visible");
   const [conversationSortMode, setConversationSortMode] = useState<ConversationSortMode>(initialPreferences.conversation_sort_mode ?? "recent_read");
   const [conversationSortDirection, setConversationSortDirection] = useState<SortDirection>(initialPreferences.conversation_sort_direction ?? "desc");
@@ -81,6 +90,8 @@ export function PreferencesProvider({
       setThemeModeState(fresh.theme_mode);
       setLocaleModeState(fresh.locale_mode);
       setReaderWidthModeState(fresh.reader_width_mode ?? "standard");
+      setReaderDensityModeState(fresh.reader_density_mode ?? "comfortable");
+      setReaderFontSizePxState(fresh.reader_font_size_px ?? 17);
       setSectionTocModeState(fresh.section_toc_mode ?? "visible");
       setConversationSortMode(fresh.conversation_sort_mode ?? "recent_read");
       setConversationSortDirection(fresh.conversation_sort_direction ?? "desc");
@@ -143,6 +154,18 @@ export function PreferencesProvider({
     }
   }, [applyLocalUpdate, applyPreferences]);
 
+  const syncReaderLayoutPreference = useCallback((input: UserPreferenceUpdate) => {
+    const transitionId = `${Date.now()}:${Math.random()}`;
+    window.dispatchEvent(new CustomEvent(READER_LAYOUT_WILL_CHANGE_EVENT, { detail: transitionId }));
+    const update = syncPreferenceUpdate(input);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent(READER_LAYOUT_DID_CHANGE_EVENT, { detail: transitionId }));
+      });
+    });
+    return update;
+  }, [syncPreferenceUpdate]);
+
   const setThemeMode = useCallback(async (mode: ThemeMode) => {
     await syncPreferenceUpdate({ theme_mode: mode });
   }, [syncPreferenceUpdate]);
@@ -150,8 +173,14 @@ export function PreferencesProvider({
     await syncPreferenceUpdate({ locale_mode: mode });
   }, [syncPreferenceUpdate]);
   const setReaderWidthMode = useCallback(async (mode: ReaderWidthMode) => {
-    await syncPreferenceUpdate({ reader_width_mode: mode });
-  }, [syncPreferenceUpdate]);
+    await syncReaderLayoutPreference({ reader_width_mode: mode });
+  }, [syncReaderLayoutPreference]);
+  const setReaderDensityMode = useCallback(async (mode: ReaderDensityMode) => {
+    await syncReaderLayoutPreference({ reader_density_mode: mode });
+  }, [syncReaderLayoutPreference]);
+  const setReaderFontSizePx = useCallback(async (size: number) => {
+    await syncReaderLayoutPreference({ reader_font_size_px: Math.max(15, Math.min(22, Math.round(size))) });
+  }, [syncReaderLayoutPreference]);
   const setSectionTocMode = useCallback(async (mode: SectionTocMode) => {
     await syncPreferenceUpdate({ section_toc_mode: mode });
   }, [syncPreferenceUpdate]);
@@ -166,6 +195,8 @@ export function PreferencesProvider({
     themeMode,
     localeMode,
     readerWidthMode,
+    readerDensityMode,
+    readerFontSizePx,
     sectionTocMode,
     conversationSortMode,
     conversationSortDirection,
@@ -176,11 +207,13 @@ export function PreferencesProvider({
     setThemeMode,
     setLocaleMode,
     setReaderWidthMode,
+    setReaderDensityMode,
+    setReaderFontSizePx,
     setSectionTocMode,
     setConversationSort,
     setProjectSort,
     t: (key, values) => translate(resolvedLocale, key, values),
-  }), [conversationSortDirection, conversationSortMode, localeMode, projectSortDirection, projectSortMode, readerWidthMode, resolvedLocale, resolvedTheme, sectionTocMode, setConversationSort, setLocaleMode, setProjectSort, setReaderWidthMode, setSectionTocMode, setThemeMode, themeMode]);
+  }), [conversationSortDirection, conversationSortMode, localeMode, projectSortDirection, projectSortMode, readerDensityMode, readerFontSizePx, readerWidthMode, resolvedLocale, resolvedTheme, sectionTocMode, setConversationSort, setLocaleMode, setProjectSort, setReaderDensityMode, setReaderFontSizePx, setReaderWidthMode, setSectionTocMode, setThemeMode, themeMode]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }
@@ -222,6 +255,8 @@ function preferenceUpdate(preferences: UserPreferenceRead): UserPreferenceUpdate
     theme_mode: preferences.theme_mode,
     locale_mode: preferences.locale_mode,
     reader_width_mode: preferences.reader_width_mode,
+    reader_density_mode: preferences.reader_density_mode ?? "comfortable",
+    reader_font_size_px: preferences.reader_font_size_px ?? 17,
     section_toc_mode: preferences.section_toc_mode,
     conversation_sort_mode: preferences.conversation_sort_mode,
     conversation_sort_direction: preferences.conversation_sort_direction,

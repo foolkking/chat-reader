@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.models.conversation import Conversation
+from app.models.attachment import AssetObject, Attachment
 from app.models.conversation_event import ConversationEvent
 from app.models.message import Message
 from app.models.message_version import MessageVersion
@@ -18,6 +19,9 @@ from app.schemas.conversation import (
     ConversationDetail,
     ConversationListItem,
     ConversationOrderUpdate,
+    ConversationPlacementRead,
+    ConversationPlacementRequest,
+    ConversationPlacementResponse,
     ConversationUpdate,
 )
 from app.schemas.editing import (
@@ -25,6 +29,10 @@ from app.schemas.editing import (
     ConversationEventRead,
     ConversationMergeRequest,
     ConversationSplitRequest,
+    ConversationSplitGroupPreview,
+    ConversationSplitWorkspacePreview,
+    ConversationSplitWorkspaceRequest,
+    ConversationSplitWorkspaceResponse,
     ConversationTransformResponse,
 )
 from app.schemas.message import (
@@ -33,6 +41,7 @@ from app.schemas.message import (
     MessageListItem,
     MessageVersionRead,
     RenderBlockRead,
+    ReaderTurnResponse,
 )
 from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
@@ -40,17 +49,25 @@ from app.schemas.task import BackgroundTaskRead, ConversationProjectMoveRequest
 from app.models.import_record import utc_now
 from app.services.editing.message_edit_service import (
     MessageEditError,
+    execute_conversation_split,
+    plan_conversation_split,
     split_conversation,
 )
 from app.services.background_jobs import queue_conversation_merge
 from app.services.projects.project_service import (
     ProjectServiceError,
     add_conversation_to_project,
+    ensure_default_project,
     move_conversation_to_project,
+    place_conversation,
+    project_counts,
     remove_conversation_from_project,
 )
 from app.services.reader_preview import dialogue_preview
+from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn
 from app.api.routes.tasks import background_job_read
+from app.services.assets.asset_store import get_asset_store
+from app.services.assets.lifecycle import asset_object_has_live_references
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -62,6 +79,7 @@ def list_conversations(
     source_type: str | None = None,
     source_profile: str | None = None,
     include_archived: bool = False,
+    status_scope: str | None = Query(default=None, pattern="^(active|archived|all)$"),
     scope: str = Query(default="all", pattern="^(all|history)$"),
     sort: str = Query(
         default="recent_read",
@@ -74,13 +92,20 @@ def list_conversations(
         db.query(Conversation)
         .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
         .options(selectinload(Conversation.recent_item))
-        .filter(
-        Conversation.deleted_at.is_(None),
-        Conversation.status.in_(("active", "archived")),
-        )
     )
-    if not include_archived:
-        query = query.filter(Conversation.status != "archived")
+    if status_scope == "active":
+        query = query.filter(Conversation.status == "active", Conversation.deleted_at.is_(None))
+    elif status_scope == "archived":
+        query = query.filter(Conversation.status == "archived", Conversation.deleted_at.is_(None))
+    elif status_scope == "all":
+        query = query.filter(Conversation.status.in_(("active", "archived")), Conversation.deleted_at.is_(None))
+    else:
+        query = query.filter(
+            Conversation.deleted_at.is_(None),
+            Conversation.status.in_(("active", "archived")),
+        )
+        if not include_archived:
+            query = query.filter(Conversation.status != "archived")
     if scope == "history":
         query = (
             query.outerjoin(ProjectConversation, ProjectConversation.conversation_id == Conversation.id)
@@ -161,9 +186,7 @@ def update_conversation(
     db: Session = Depends(get_db),
 ) -> ConversationDetail:
     conversation = db.get(Conversation, conversation_id)
-    if conversation is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
-    if conversation.deleted_at is not None and payload.status != "active":
+    if conversation is None or conversation.deleted_at is not None or conversation.status == "deleted":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
 
     event_payload: dict[str, object] = {}
@@ -202,22 +225,27 @@ def update_conversation(
     if payload.status is not None:
         if payload.status not in {"active", "archived"}:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid conversation status.")
-        previous_status = conversation.status
-        conversation.status = payload.status
-        if payload.status == "active":
-            conversation.deleted_at = None
-        conversation.updated_at = utc_now()
-        conversation.offline_revision += 1
-        event_type = "conversation_archived" if payload.status == "archived" else "conversation_restored"
-        _add_conversation_event(
-            db,
-            conversation.id,
-            event_type,
-            {"previous_status": previous_status, "status": payload.status},
-        )
+        _set_conversation_status(db, conversation, payload.status)
 
     if event_payload:
         _add_conversation_event(db, conversation.id, "conversation_renamed", event_payload)
+    db.commit()
+    return _conversation_detail(conversation)
+
+
+@router.post("/{conversation_id}/archive", response_model=ConversationDetail)
+def archive_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ConversationDetail:
+    conversation = _managed_conversation_or_404(db, conversation_id)
+    _set_conversation_status(db, conversation, "archived")
+    db.commit()
+    return _conversation_detail(conversation)
+
+
+@router.post("/{conversation_id}/unarchive", response_model=ConversationDetail)
+def unarchive_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ConversationDetail:
+    conversation = _managed_conversation_or_404(db, conversation_id)
+    _set_conversation_status(db, conversation, "active")
+    _ensure_active_project_membership(db, conversation)
     db.commit()
     return _conversation_detail(conversation)
 
@@ -227,11 +255,74 @@ def delete_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
-    conversation.deleted_at = utc_now()
-    conversation.status = "deleted"
-    conversation.updated_at = utc_now()
-    _add_conversation_event(db, conversation.id, "conversation_deleted", {"conversation_id": str(conversation.id)})
+    asset_ids = {
+        row[0]
+        for row in db.query(Attachment.asset_object_id).filter(
+            Attachment.conversation_id == conversation.id,
+            Attachment.asset_object_id.is_not(None),
+        ).all()
+    }
+    db.delete(conversation)
+    db.flush()
+    removable_keys: list[str] = []
+    for asset_id in asset_ids:
+        if asset_object_has_live_references(db, asset_id):
+            continue
+        asset = db.get(AssetObject, asset_id)
+        if asset is not None:
+            removable_keys.append(asset.storage_key)
+            db.delete(asset)
     db.commit()
+    for storage_key in removable_keys:
+        try:
+            get_asset_store().delete_key(storage_key)
+        except Exception:
+            # Database deletion is authoritative; periodic asset GC removes leftover bytes.
+            pass
+
+
+@router.put("/{conversation_id}/placement", response_model=ConversationPlacementResponse)
+def place_conversation_route(
+    conversation_id: uuid.UUID,
+    payload: ConversationPlacementRequest,
+    db: Session = Depends(get_db),
+) -> ConversationPlacementResponse:
+    try:
+        result = place_conversation(
+            db,
+            conversation_id=conversation_id,
+            target_project_id=payload.target_project_id,
+            target_section=payload.target_section,
+            before_conversation_id=payload.before_conversation_id,
+            after_conversation_id=payload.after_conversation_id,
+            expected_offline_revision=payload.expected_offline_revision,
+        )
+        default_project = ensure_default_project(db)
+        source_count = project_counts(db, result.source_project_id).conversation_count if result.source_project_id else 0
+        target_count = project_counts(db, result.target_project_id).conversation_count
+        unclassified_count = project_counts(db, default_project.id).conversation_count
+        conversation = result.relation.conversation
+        db.commit()
+    except ProjectServiceError as exc:
+        db.rollback()
+        message = str(exc)
+        code = status.HTTP_409_CONFLICT if "revision conflict" in message.lower() else status.HTTP_422_UNPROCESSABLE_ENTITY
+        raise HTTPException(status_code=code, detail=message) from exc
+    target_project = result.relation.project
+    public_project_id = None if target_project.is_default else target_project.id
+    return ConversationPlacementResponse(
+        conversation=_conversation_item(conversation),
+        placement=ConversationPlacementRead(
+            project_id=public_project_id,
+            target_section="pinned" if result.relation.is_pinned else "normal",
+            sort_order=result.relation.sort_order,
+            is_pinned=result.relation.is_pinned,
+            offline_revision=conversation.offline_revision,
+        ),
+        source_project_count=source_count,
+        target_project_count=target_count,
+        unclassified_count=unclassified_count,
+    )
 
 
 @router.post("/{conversation_id}/split", response_model=ConversationTransformResponse)
@@ -258,6 +349,73 @@ def split_conversation_endpoint(
         title=result.conversation.title,
         display_title=result.conversation.display_title,
         message_count=result.message_count,
+    )
+
+
+@router.post("/{conversation_id}/split-workspace/preview", response_model=ConversationSplitWorkspacePreview)
+def preview_split_workspace(
+    conversation_id: uuid.UUID,
+    payload: ConversationSplitWorkspaceRequest,
+    db: Session = Depends(get_db),
+) -> ConversationSplitWorkspacePreview:
+    try:
+        groups = plan_conversation_split(
+            db,
+            conversation_id=conversation_id,
+            mode=payload.mode,
+            start_message_id=payload.start_message_id,
+            end_message_id=payload.end_message_id,
+            boundary_message_id=payload.boundary_message_id,
+            message_ids=payload.message_ids,
+        )
+    except MessageEditError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ConversationSplitWorkspacePreview(
+        mode=payload.mode,
+        groups=[ConversationSplitGroupPreview(
+            message_ids=[message.id for message in group.messages],
+            message_count=len(group.messages),
+            suggested_title=group.suggested_title,
+        ) for group in groups],
+    )
+
+
+@router.post("/{conversation_id}/split-workspace", response_model=ConversationSplitWorkspaceResponse)
+def execute_split_workspace(
+    conversation_id: uuid.UUID,
+    payload: ConversationSplitWorkspaceRequest,
+    db: Session = Depends(get_db),
+) -> ConversationSplitWorkspaceResponse:
+    try:
+        groups = plan_conversation_split(
+            db,
+            conversation_id=conversation_id,
+            mode=payload.mode,
+            start_message_id=payload.start_message_id,
+            end_message_id=payload.end_message_id,
+            boundary_message_id=payload.boundary_message_id,
+            message_ids=payload.message_ids,
+        )
+        results = execute_conversation_split(
+            db,
+            conversation_id=conversation_id,
+            mode=payload.mode,
+            groups=groups,
+            titles=payload.titles,
+            project_id=payload.project_id,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return ConversationSplitWorkspaceResponse(
+        mode=payload.mode,
+        conversations=[ConversationTransformResponse(
+            conversation_id=result.conversation.id,
+            title=result.conversation.title,
+            display_title=result.conversation.display_title,
+            message_count=result.message_count,
+        ) for result in results],
     )
 
 
@@ -610,8 +768,33 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         is_global_pinned=conversation.is_global_pinned,
         global_pinned_at=conversation.global_pinned_at,
         last_read_at=conversation.recent_item.last_opened_at if conversation.recent_item else None,
+        reading_progress=_reading_progress(conversation.recent_item.context) if conversation.recent_item else None,
         manual_sort_order=conversation.manual_sort_order,
     )
+
+
+@router.get("/{conversation_id}/reader-turn", response_model=ReaderTurnResponse)
+def get_reader_turn(
+    conversation_id: uuid.UUID,
+    anchor_message_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+) -> ReaderTurnResponse:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    try:
+        return load_reader_turn(db, conversation_id, anchor_message_id)
+    except ReaderTurnHydrationError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+def _reading_progress(context: dict | None) -> float | None:
+    raw = (context or {}).get("progress")
+    if not isinstance(raw, (int, float)):
+        return None
+    return max(0.0, min(100.0, float(raw)))
 
 
 def _conversation_sort_order(sort: str, direction: str) -> tuple:
@@ -661,6 +844,54 @@ def _add_conversation_event(
             payload=payload,
             created_by="user",
         )
+    )
+
+
+def _managed_conversation_or_404(db: Session, conversation_id: uuid.UUID) -> Conversation:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None or conversation.status == "deleted":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    return conversation
+
+
+def _set_conversation_status(
+    db: Session,
+    conversation: Conversation,
+    next_status: str,
+) -> None:
+    if next_status not in {"active", "archived"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid conversation status.")
+    if conversation.status == "deleted" or conversation.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    if conversation.status == next_status and (next_status != "active" or conversation.deleted_at is None):
+        return
+    previous_status = conversation.status
+    conversation.status = next_status
+    if next_status == "active":
+        conversation.deleted_at = None
+    conversation.updated_at = utc_now()
+    conversation.offline_revision += 1
+    _add_conversation_event(
+        db,
+        conversation.id,
+        "conversation_archived" if next_status == "archived" else "conversation_restored",
+        {"previous_status": previous_status, "status": next_status},
+    )
+
+
+def _ensure_active_project_membership(db: Session, conversation: Conversation) -> None:
+    relation = (
+        db.query(ProjectConversation)
+        .filter(ProjectConversation.conversation_id == conversation.id)
+        .one_or_none()
+    )
+    if relation is not None and relation.project is not None and not relation.project.is_archived:
+        return
+    move_conversation_to_project(
+        db,
+        conversation_id=conversation.id,
+        project_id=None,
+        added_by="system",
     )
 
 

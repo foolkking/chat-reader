@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 ThemeMode = Literal["light", "dark", "system"]
@@ -9,6 +9,7 @@ LocaleMode = Literal["auto", "zh-CN", "en-US"]
 ResolvedTheme = Literal["light", "dark"]
 ResolvedLocale = Literal["zh-CN", "en-US"]
 ReaderWidthMode = Literal["compact", "standard", "wide"]
+ReaderDensityMode = Literal["compact", "comfortable", "large"]
 SectionTocMode = Literal["visible", "rail"]
 ConversationSortMode = Literal[
     "recent_read", "updated", "created", "imported", "title", "message_count", "custom"
@@ -21,6 +22,8 @@ class UserPreferenceRead(BaseModel):
     theme_mode: ThemeMode
     locale_mode: LocaleMode
     reader_width_mode: ReaderWidthMode
+    reader_density_mode: ReaderDensityMode
+    reader_font_size_px: int = Field(ge=15, le=22)
     section_toc_mode: SectionTocMode
     conversation_sort_mode: ConversationSortMode
     conversation_sort_direction: SortDirection
@@ -34,6 +37,8 @@ class UserPreferenceUpdate(BaseModel):
     theme_mode: ThemeMode | None = None
     locale_mode: LocaleMode | None = None
     reader_width_mode: ReaderWidthMode | None = None
+    reader_density_mode: ReaderDensityMode | None = None
+    reader_font_size_px: int | None = Field(default=None, ge=15, le=22)
     section_toc_mode: SectionTocMode | None = None
     conversation_sort_mode: ConversationSortMode | None = None
     conversation_sort_direction: SortDirection | None = None

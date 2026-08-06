@@ -8,7 +8,7 @@ import {
   updateConversationAnnotation,
   updateConversationNotebook,
 } from "./api";
-import { offlineDb, queueOfflineOperation, syncOfflineAnnotationSearch } from "./offline-db";
+import { clearOfflineAnnotationSearch, offlineDb, queueOfflineOperation, syncOfflineAnnotationSearch } from "./offline-db";
 import type {
   AnnotationCreateInput,
   AnnotationRead,
@@ -30,10 +30,14 @@ export interface AnnotationRepository {
 
 export const remoteAnnotationRepository: AnnotationRepository = {
   mode: "remote",
-  list: getConversationAnnotations,
-  create: createConversationAnnotation,
+  async list(conversationId) {
+    return (await getConversationAnnotations(conversationId)).map(normalizeAnnotationStatus);
+  },
+  async create(conversationId, input) {
+    return normalizeAnnotationStatus(await createConversationAnnotation(conversationId, input));
+  },
   update(annotation, input) {
-    return updateConversationAnnotation(annotation.id, { ...input, base_revision: annotation.revision });
+    return updateConversationAnnotation(annotation.id, { ...input, base_revision: annotation.revision }).then(normalizeAnnotationStatus);
   },
   delete(annotation) {
     return deleteConversationAnnotation(annotation.id, annotation.revision);
@@ -53,7 +57,8 @@ export const remoteAnnotationRepository: AnnotationRepository = {
 export const offlineAnnotationRepository: AnnotationRepository = {
   mode: "offline",
   async list(conversationId) {
-    return offlineDb.annotations.where("conversation_id").equals(conversationId).filter((item) => !item.is_deleted).sortBy("created_at");
+    return (await offlineDb.annotations.where("conversation_id").equals(conversationId).filter((item) => !item.is_deleted).sortBy("created_at"))
+      .map(normalizeAnnotationStatus);
   },
   async create(conversationId, input) {
     const now = new Date().toISOString();
@@ -72,7 +77,7 @@ export const offlineAnnotationRepository: AnnotationRepository = {
       prefix: input.prefix ?? null,
       suffix: input.suffix ?? null,
       comment_markdown: input.comment_markdown ?? "",
-      anchor_status: input.anchor_status ?? "active",
+      anchor_status: input.anchor_status ?? "valid",
       revision: 1,
       is_deleted: false,
       conflict_of_id: null,
@@ -199,6 +204,7 @@ export async function flushAnnotationOutbox(): Promise<{ synced: number; conflic
     const annotations = await getConversationAnnotations(conversationId);
     await offlineDb.annotations.where("conversation_id").equals(conversationId).delete();
     if (annotations.length) await offlineDb.annotations.bulkPut(annotations);
+    await clearOfflineAnnotationSearch(conversationId);
     for (const annotation of annotations) await syncOfflineAnnotationSearch(annotation);
     const [notebook, notebookConflicts] = await Promise.all([
       getConversationNotebook(conversationId),
@@ -227,4 +233,16 @@ function annotationPayload(annotation: AnnotationRead): Record<string, unknown> 
     anchor_status: annotation.anchor_status,
     metadata: annotation.metadata,
   };
+}
+
+function normalizeAnnotationStatus(annotation: AnnotationRead): AnnotationRead {
+  const legacyStatus = annotation.anchor_status as string;
+  const anchorStatus = legacyStatus === "active"
+    ? "valid"
+    : legacyStatus === "relocated"
+      ? "remapped"
+      : legacyStatus === "stale"
+        ? "needs_review"
+        : annotation.anchor_status;
+  return anchorStatus === annotation.anchor_status ? annotation : { ...annotation, anchor_status: anchorStatus };
 }

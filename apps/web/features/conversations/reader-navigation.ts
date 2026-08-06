@@ -1,4 +1,5 @@
 import type { NavigationResult, ScrollAnchorSnapshot } from "../../lib/types";
+import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
 
 type NavigateMountedTargetOptions = {
   root: HTMLElement | null;
@@ -24,6 +25,30 @@ type RestoreScrollAnchorOptions = {
   timeoutMs?: number;
 };
 
+export function resolveActiveBlockDomId(
+  root: HTMLElement | null,
+  messageId: string,
+  readingOffset: number,
+): string | null {
+  const article = document.getElementById(`message-${messageId}`);
+  if (!article) return null;
+  const readingLine = (root?.getBoundingClientRect().top ?? 0) + readingOffset;
+  const blocks = Array.from(article.querySelectorAll<HTMLElement>("[data-block-index]"));
+  let nearest: { id: string; distance: number } | null = null;
+
+  for (const block of blocks) {
+    if (!block.id) continue;
+    const rect = block.getBoundingClientRect();
+    if (rect.top <= readingLine && rect.bottom >= readingLine) return block.id;
+    const distance = rect.bottom < readingLine
+      ? readingLine - rect.bottom
+      : rect.top - readingLine;
+    if (!nearest || distance < nearest.distance) nearest = { id: block.id, distance };
+  }
+
+  return nearest?.id ?? null;
+}
+
 export async function navigateMountedTarget({
   root,
   targetId,
@@ -46,78 +71,69 @@ export async function navigateMountedTarget({
     if (allowFallback && fallbackId) {
       const fallback = document.getElementById(fallbackId);
       if (fallback) {
-        scrollToAlignedPosition(root, fallback, offset);
-        await waitForLayoutSettle();
-        return { ok: true, targetId: fallback.id, fallback: true, reason: "stale-anchor" };
+        const fallbackAlignment = await stabilizeTargetAlignment({
+          root,
+          target: fallback,
+          offset,
+          tokenIsCurrent,
+          timeoutMs,
+        });
+        return fallbackAlignment.stable
+          ? { ok: true, targetId: fallback.id, fallback: true, reason: "stale-anchor" }
+          : { ok: false, targetId: fallback.id, reason: "target-not-aligned" };
       }
     }
     return { ok: false, targetId, reason: "target-not-mounted" };
   }
+  await settleTargetMedia(target, Math.min(timeoutMs, 5000), tokenIsCurrent);
+  if (!tokenIsCurrent()) {
+    return { ok: false, targetId, reason: "cancelled" };
+  }
   const resolvedCharacterOffset = target.id === targetId ? characterOffset : undefined;
   const resolvedEndCharacterOffset = target.id === targetId ? endCharacterOffset : undefined;
   const resolvedQuote = target.id === targetId ? quote : null;
-  let usedTextAnchor = false;
-  let textAnchorMissing = Boolean(resolvedCharacterOffset !== undefined || resolvedQuote);
-
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    if (!tokenIsCurrent()) {
-      return { ok: false, targetId, reason: "cancelled" };
-    }
-    const textRect = textAnchorRect(target, {
-      characterOffset: resolvedCharacterOffset,
-      endCharacterOffset: resolvedEndCharacterOffset,
-      quote: resolvedQuote,
-      prefix,
-      suffix,
-    });
-    usedTextAnchor = Boolean(textRect);
-    textAnchorMissing = Boolean((resolvedCharacterOffset !== undefined || resolvedQuote) && !textRect);
-    scrollToAlignedPosition(root, target, offset, textRect);
-    await waitForLayoutSettle();
-    const settledRect = textAnchorRect(target, {
-      characterOffset: resolvedCharacterOffset,
-      endCharacterOffset: resolvedEndCharacterOffset,
-      quote: resolvedQuote,
-      prefix,
-      suffix,
-    }) ?? (usedTextAnchor ? null : undefined);
-    if (isAligned(root, target, offset, settledRect)) {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 400));
-      const finalRect = textAnchorRect(target, {
-        characterOffset: resolvedCharacterOffset,
-        endCharacterOffset: resolvedEndCharacterOffset,
-        quote: resolvedQuote,
-        prefix,
-        suffix,
-      }) ?? (usedTextAnchor ? null : undefined);
-      if (isAligned(root, target, offset, finalRect)) {
-        const stable = await stabilizeTargetAlignment({
-          root,
-          target,
-          offset,
-          characterOffset: resolvedCharacterOffset,
-          endCharacterOffset: resolvedEndCharacterOffset,
-          quote: resolvedQuote,
-          prefix,
-          suffix,
-          tokenIsCurrent,
-        });
-        if (stable) {
-          return { ok: true, targetId: target.id, fallback: textAnchorMissing, reason: textAnchorMissing ? "stale-anchor" : undefined };
-        }
-      }
-    }
+  const alignment = await stabilizeTargetAlignment({
+    root,
+    target,
+    offset,
+    characterOffset: resolvedCharacterOffset,
+    endCharacterOffset: resolvedEndCharacterOffset,
+    quote: resolvedQuote,
+    prefix,
+    suffix,
+    tokenIsCurrent,
+    timeoutMs,
+  });
+  if (!alignment.stable) {
+    return {
+      ok: false,
+      targetId: target.id,
+      reason: tokenIsCurrent() ? "target-not-aligned" : "cancelled",
+    };
   }
+  return {
+    ok: true,
+    targetId: target.id,
+    fallback: alignment.textAnchorMissing,
+    reason: alignment.textAnchorMissing ? "stale-anchor" : undefined,
+  };
+}
 
-  if (!usedTextAnchor && (resolvedCharacterOffset !== undefined || resolvedQuote)) {
-    scrollToAlignedPosition(root, target, offset);
-    await waitForLayoutSettle();
-    if (isAligned(root, target, offset)) {
-      return { ok: true, targetId: target.id, fallback: true, reason: "stale-anchor" };
-    }
-  }
-
-  return { ok: false, targetId: target.id, reason: "target-not-aligned" };
+async function settleTargetMedia(target: HTMLElement, timeoutMs: number, tokenIsCurrent: () => boolean): Promise<void> {
+  const scope = target.closest<HTMLElement>("article[data-message-id]") ?? target;
+  const images = Array.from(scope.querySelectorAll<HTMLImageElement>("img"));
+  if (images.length === 0) return;
+  for (const image of images) image.loading = "eager";
+  const deadline = window.performance.now() + timeoutMs;
+  await Promise.all(images.map(async (image) => {
+    if (!tokenIsCurrent()) return;
+    const remaining = Math.max(0, deadline - window.performance.now());
+    if (remaining === 0) return;
+    await Promise.race([
+      image.decode?.().catch(() => undefined) ?? Promise.resolve(),
+      new Promise<void>((resolve) => window.setTimeout(resolve, remaining)),
+    ]);
+  }));
 }
 
 export function captureScrollAnchor(
@@ -131,13 +147,24 @@ export function captureScrollAnchor(
   const article = articles.find((item) => {
     const rect = item.getBoundingClientRect();
     return rect.top <= readingLine && rect.bottom >= readingLine;
-  }) ?? articles.find((item) => item.getBoundingClientRect().bottom > readingLine);
+  }) ?? articles.find((item) => item.getBoundingClientRect().bottom > readingLine) ?? articles.at(-1);
   if (!article) return null;
   const blocks = Array.from(article.querySelectorAll<HTMLElement>("[data-block-index]"));
   const block = blocks.find((item) => {
     const rect = item.getBoundingClientRect();
     return rect.top <= readingLine && rect.bottom >= readingLine;
-  });
+  }) ?? blocks.reduce<HTMLElement | null>((nearest, item) => {
+    if (!nearest) return item;
+    const itemRect = item.getBoundingClientRect();
+    const nearestRect = nearest.getBoundingClientRect();
+    const itemDistance = itemRect.bottom < readingLine
+      ? readingLine - itemRect.bottom
+      : itemRect.top - readingLine;
+    const nearestDistance = nearestRect.bottom < readingLine
+      ? readingLine - nearestRect.bottom
+      : nearestRect.top - readingLine;
+    return itemDistance < nearestDistance ? item : nearest;
+  }, null);
   const target = block ?? article;
   if (!target.id) return null;
   return {
@@ -203,6 +230,44 @@ export async function restoreScrollAnchor({
   });
 }
 
+export function estimateCharacterOffsetAtReadingLine(
+  root: HTMLElement | null,
+  messageId: string,
+  blockIndex: number,
+  readingLineOffset: number,
+): number | undefined {
+  const block = document.getElementById(`block-${messageId}-${blockIndex}`);
+  if (!block) return undefined;
+  const rootTop = root?.getBoundingClientRect().top ?? 0;
+  const readingLine = rootTop + readingLineOffset;
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+  let total = 0;
+  let closest: { offset: number; distance: number } | null = null;
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    const text = node.textContent ?? "";
+    const length = text.length;
+    if (length === 0) continue;
+    const range = document.createRange();
+    range.setStart(node, 0);
+    range.setEnd(node, Math.min(1, length));
+    const firstRect = range.getBoundingClientRect();
+    range.setStart(node, Math.max(0, length - 1));
+    range.setEnd(node, length);
+    const lastRect = range.getBoundingClientRect();
+    for (const candidate of [
+      { offset: total, rect: firstRect },
+      { offset: total + length - 1, rect: lastRect },
+    ]) {
+      if (!candidate.rect.width && !candidate.rect.height) continue;
+      const distance = Math.abs(candidate.rect.top - readingLine);
+      if (!closest || distance < closest.distance) closest = { offset: candidate.offset, distance };
+    }
+    total += length;
+  }
+  return closest?.offset;
+}
+
 async function waitForTarget(
   targetId: string,
   timeoutMs: number,
@@ -253,26 +318,11 @@ function scrollToAlignedPosition(root: HTMLElement | null, target: HTMLElement, 
   });
 }
 
-async function waitForLayoutSettle(): Promise<void> {
-  await nextFrameOrTimeout();
-  await nextFrameOrTimeout();
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
-}
-
-function nextFrameOrTimeout(timeoutMs = 80): Promise<void> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeoutId);
-      window.cancelAnimationFrame(frameId);
-      resolve();
-    };
-    const frameId = window.requestAnimationFrame(finish);
-    const timeoutId = window.setTimeout(finish, timeoutMs);
-  });
-}
+type TargetAlignmentResult = {
+  stable: boolean;
+  usedTextAnchor: boolean;
+  textAnchorMissing: boolean;
+};
 
 function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number, textRect?: DOMRect | null): boolean {
   const rootTop = root?.getBoundingClientRect().top ?? 0;
@@ -291,6 +341,7 @@ async function stabilizeTargetAlignment({
   prefix,
   suffix,
   tokenIsCurrent,
+  timeoutMs,
 }: {
   root: HTMLElement | null;
   target: HTMLElement;
@@ -301,149 +352,87 @@ async function stabilizeTargetAlignment({
   prefix?: string | null;
   suffix?: string | null;
   tokenIsCurrent: () => boolean;
-}): Promise<boolean> {
+  timeoutMs: number;
+}): Promise<TargetAlignmentResult> {
   const startedAt = window.performance.now();
   let lastResizeAt = startedAt;
+  let alignedSince: number | null = null;
+  let alignedFrames = 0;
+  let usedTextAnchor = false;
+  const wantsTextAnchor = Boolean(characterOffset !== undefined || quote);
   const observedLayout = target.closest<HTMLElement>(".reader-content-inner") ?? target.parentElement;
   const observer = new ResizeObserver(() => {
     lastResizeAt = window.performance.now();
+    alignedSince = null;
+    alignedFrames = 0;
   });
   if (observedLayout) observer.observe(observedLayout);
 
-  try {
-    while (window.performance.now() - startedAt < 2400) {
-      if (!tokenIsCurrent() || !target.isConnected) return false;
-      const textRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
-      scrollToAlignedPosition(root, target, offset, textRect ?? undefined);
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 80));
-      const settledRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
+  return new Promise((resolve) => {
+    let frame = 0;
+    let finished = false;
+    const finish = (result: TargetAlignmentResult) => {
+      if (finished) return;
+      finished = true;
+      if (frame) window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      resolve(result);
+    };
+    const check = () => {
+      frame = 0;
       const now = window.performance.now();
-      if (now - startedAt >= 640 && now - lastResizeAt >= 240 && isAligned(root, target, offset, settledRect ?? undefined)) {
-        return true;
+      if (!tokenIsCurrent()) {
+        finish({ stable: false, usedTextAnchor, textAnchorMissing: wantsTextAnchor && !usedTextAnchor });
+        return;
       }
-    }
-    const finalRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
-    scrollToAlignedPosition(root, target, offset, finalRect ?? undefined);
-    return tokenIsCurrent() && isAligned(root, target, offset, finalRect ?? undefined);
-  } finally {
-    observer.disconnect();
-  }
+      if (!target.isConnected) {
+        finish({ stable: false, usedTextAnchor, textAnchorMissing: wantsTextAnchor && !usedTextAnchor });
+        return;
+      }
+
+      const textRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
+      if (textRect) usedTextAnchor = true;
+      const alignmentRect = textRect ?? undefined;
+      const targetRect = target.getBoundingClientRect();
+      const measured = Number.isFinite(targetRect.height) && targetRect.height > 0 &&
+        (!wantsTextAnchor || !textRect || Boolean(textRect.width || textRect.height));
+      const aligned = measured && isAligned(root, target, offset, alignmentRect);
+      if (aligned) {
+        if (alignedSince === null) alignedSince = now;
+        alignedFrames += 1;
+        // A real Range must remain within the 24px tolerance for three
+        // consecutive animation frames and for at least 240ms. The latter
+        // filters out the first frame before virtual rows/images finish
+        // changing their geometry.
+        if (alignedFrames >= 3 && now - alignedSince >= 240 && now - lastResizeAt >= 240) {
+          finish({ stable: true, usedTextAnchor, textAnchorMissing: wantsTextAnchor && !usedTextAnchor });
+          return;
+        }
+      } else {
+        alignedSince = null;
+        alignedFrames = 0;
+        if (measured) {
+          scrollToAlignedPosition(root, target, offset, alignmentRect);
+        }
+      }
+
+      if (now - startedAt >= timeoutMs) {
+        finish({ stable: false, usedTextAnchor, textAnchorMissing: wantsTextAnchor && !usedTextAnchor });
+        return;
+      }
+      frame = window.requestAnimationFrame(check);
+    };
+    frame = window.requestAnimationFrame(check);
+  });
 }
 
 function textAnchorRect(target: HTMLElement, options: { characterOffset?: number; endCharacterOffset?: number; quote?: string | null; prefix?: string | null; suffix?: string | null }): DOMRect | null {
-  const quoteRect = quoteRangeRect(target, options.quote, options.prefix, options.suffix);
-  if (quoteRect) return quoteRect;
-  return textOffsetRect(target, options.characterOffset, options.endCharacterOffset);
-}
-
-function textOffsetRect(target: HTMLElement, characterOffset?: number, endCharacterOffset?: number): DOMRect | null {
-  if (characterOffset === undefined) return null;
-  const textNodes: Text[] = [];
-  const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
-  while (walker.nextNode()) {
-    textNodes.push(walker.currentNode as Text);
-  }
-  return rangeRectFromOffsets(textNodes, characterOffset, endCharacterOffset ?? characterOffset + 1);
-}
-
-function quoteRangeRect(target: HTMLElement, quote?: string | null, prefix?: string | null, suffix?: string | null): DOMRect | null {
-  const normalizedQuote = normalizeText(quote ?? "");
-  if (!normalizedQuote) return null;
-  const textNodes: Text[] = [];
-  const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
-  let combined = "";
-  while (walker.nextNode()) {
-    const node = walker.currentNode as Text;
-    textNodes.push(node);
-    combined += node.textContent ?? "";
-  }
-  const exactIndex = bestQuoteIndex(combined, quote ?? "", prefix, suffix);
-  if (exactIndex >= 0) {
-    return rangeRectFromOffsets(textNodes, exactIndex, exactIndex + (quote ?? "").length);
-  }
-  const collapsed = collapseWhitespaceWithMap(combined);
-  const normalizedIndex = collapsed.text.indexOf(normalizedQuote);
-  if (normalizedIndex < 0) return null;
-  return rangeRectFromOffsets(textNodes, collapsed.map[normalizedIndex] ?? 0, collapsed.map[Math.max(normalizedIndex + normalizedQuote.length - 1, normalizedIndex)] + 1);
-}
-
-function bestQuoteIndex(combined: string, quote: string, prefix?: string | null, suffix?: string | null): number {
-  if (!quote) return -1;
-  let bestIndex = -1;
-  let bestScore = -1;
-  for (let index = combined.indexOf(quote); index >= 0; index = combined.indexOf(quote, index + 1)) {
-    let score = 0;
-    const before = normalizeText(combined.slice(Math.max(0, index - (prefix?.length ?? 0) - 24), index));
-    const after = normalizeText(combined.slice(index + quote.length, index + quote.length + (suffix?.length ?? 0) + 24));
-    const normalizedPrefix = normalizeText(prefix ?? "");
-    const normalizedSuffix = normalizeText(suffix ?? "");
-    if (normalizedPrefix && before.endsWith(normalizedPrefix)) score += 2;
-    if (normalizedSuffix && after.startsWith(normalizedSuffix)) score += 2;
-    if (!normalizedPrefix && !normalizedSuffix) score = 1;
-    if (score > bestScore) {
-      bestScore = score;
-      bestIndex = index;
-    }
-  }
-  return bestIndex;
-}
-
-function rangeRectFromOffsets(textNodes: Text[], startOffset: number, endOffset: number): DOMRect | null {
-  const totalLength = textNodes.reduce((total, node) => total + (node.textContent?.length ?? 0), 0);
-  if (totalLength === 0) return null;
-  const clampedStart = Math.min(Math.max(0, startOffset), totalLength - 1);
-  const clampedEnd = Math.min(totalLength, Math.max(clampedStart + 1, endOffset));
-  let cursor = 0;
-  let startNode: Text | null = null;
-  let endNode: Text | null = null;
-  let startLocal = 0;
-  let endLocal = 0;
-  for (const node of textNodes) {
-    const length = node.textContent?.length ?? 0;
-    if (!startNode && clampedStart < cursor + length) {
-      startNode = node;
-      startLocal = clampedStart - cursor;
-    }
-    if (startNode && clampedEnd <= cursor + length) {
-      endNode = node;
-      endLocal = clampedEnd - cursor;
-      break;
-    }
-    cursor += length;
-  }
-  if (!startNode || !endNode) return null;
-  const range = document.createRange();
-  range.setStart(startNode, startLocal);
-  range.setEnd(endNode, endLocal);
-  return firstUsefulRect(range);
-}
-
-function firstUsefulRect(range: Range): DOMRect {
-  const rects = Array.from(range.getClientRects()).filter((rect) => rect.width || rect.height);
-  return rects[0] ?? range.getBoundingClientRect();
-}
-
-function normalizeText(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function collapseWhitespaceWithMap(value: string): { text: string; map: number[] } {
-  let text = "";
-  const map: number[] = [];
-  let pendingSpace = false;
-  for (let index = 0; index < value.length; index += 1) {
-    const char = value[index];
-    if (/\s/.test(char)) {
-      pendingSpace = text.length > 0;
-      continue;
-    }
-    if (pendingSpace) {
-      text += " ";
-      map.push(index);
-      pendingSpace = false;
-    }
-    text += char;
-    map.push(index);
-  }
-  return { text, map };
+  const range = resolveTextAnchorRange(target, {
+    quote: options.quote,
+    prefix: options.prefix,
+    suffix: options.suffix,
+    startOffset: options.characterOffset,
+    endOffset: options.endCharacterOffset,
+  });
+  return range ? firstVisibleRangeRect(range) : null;
 }

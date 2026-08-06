@@ -1,4 +1,7 @@
+import hashlib
+import os
 import uuid
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,6 +15,7 @@ from app.models.import_record import ImportRecord
 from app.models.conversation import Conversation
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import (
+    BundlePreviewAccepted,
     ConversationPreview,
     ImportPreviewFile,
     ImportPreviewResponse,
@@ -31,24 +35,103 @@ from app.services.import_queue import (
     primary_filename,
     queue_import,
 )
-from app.services.import_pipeline.canonical_draft import preview_text
+from app.services.import_pipeline.canonical_draft import CanonicalDraftConversation, preview_markdown, preview_text
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
 from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
-from app.services.import_pipeline.official_json_parser import OfficialJsonParseError, parse_official_json
-from app.services.import_pipeline.official_normalizer import build_official_conversation_preview
+from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v1, parse_canjson_v2
+from app.services.import_pipeline.draft_store import attach_import_draft
+from app.services.import_pipeline.draft_store import ImportDraftError, read_import_draft
 from app.services.import_pipeline.source_detector import detect_source_profile
 from app.services.storage.local_storage import save_import_file
+from app.services.storage.local_storage import sanitize_filename
 from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
+from app.services.background_jobs import queue_bundle_preview
+from app.services.assets.lifecycle import delete_asset_files, release_import_assets
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 
-ALLOWED_EXTENSIONS = {".cr", ".json", ".md", ".markdown", ".txt", ".csv"}
+ALLOWED_EXTENSIONS = {
+    ".cr",
+    ".json",
+    ".md",
+    ".markdown",
+    ".jsonl",
+    ".gz",
+    ".canonical.json",
+    ".canonical.jsonl",
+    ".canonical.jsonl.gz",
+}
 PREVIEW_MESSAGE_LIMIT = 20
 PREVIEW_CONVERSATION_LIMIT = 20
 
 
 UploadedPreviewFile = tuple[str, bytes, SourceDetectionResult]
+
+
+@router.post(
+    "/bundles/preview",
+    response_model=BundlePreviewAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def preview_attachment_bundle(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> BundlePreviewAccepted:
+    filename = file.filename or "conversation.crbundle"
+    if not filename.casefold().endswith(".crbundle"):
+        raise HTTPException(status_code=422, detail="Attachment bundles must use the .crbundle extension.")
+    import_id = uuid.uuid4()
+    destination: Path | None = None
+    try:
+        destination, digest, byte_size = await _save_streamed_bundle(import_id, filename, file)
+        record = ImportRecord(
+            id=import_id,
+            source_profile="chat_reader_bundle_v1",
+            source_fingerprint=digest,
+            status="validating",
+            phase="queued",
+            progress=0,
+            alignment_status="not_applicable",
+            warnings=[],
+            file_count=1,
+            total_bytes=byte_size,
+            json_filename=filename,
+            queued_at=datetime.now(timezone.utc),
+        )
+        db.add(record)
+        db.flush()
+        artifact = SourceArtifact(
+            id=uuid.uuid4(),
+            import_id=import_id,
+            source_type="chat_reader_bundle",
+            source_profile="chat_reader_bundle_v1",
+            filename=filename,
+            safe_filename=destination.name,
+            sha256=digest,
+            byte_size=byte_size,
+            mime_guess="application/vnd.chat-reader.bundle+zip",
+            file_extension=".crbundle",
+            raw_storage_uri=f"storage/imports/{import_id}/{destination.name}",
+            parsed_summary={},
+        )
+        db.add(artifact)
+        job = queue_bundle_preview(db, import_id=import_id, filename=filename)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        _cleanup_import_directory(import_id)
+        raise
+    except Exception as exc:
+        db.rollback()
+        _cleanup_import_directory(import_id)
+        raise HTTPException(status_code=500, detail="Bundle preview could not be queued.") from exc
+    return BundlePreviewAccepted(
+        import_id=import_id,
+        task_id=job.id,
+        status_url=f"/api/tasks/{job.id}",
+        preview_url=f"/api/imports/{import_id}/preview",
+    )
 
 
 @router.post("/preview", response_model=ImportPreviewResponse)
@@ -69,9 +152,11 @@ async def preview_import(
     uploaded_files: list[UploadedPreviewFile] = []
     conversation_preview: ConversationPreview | None = None
     conversation_previews: list[ConversationPreview] = []
+    drafts = []
     archive_summary: dict | None = None
     archive_artifact: SourceArtifact | None = None
     duplicate_conversation_id: uuid.UUID | None = None
+    preview_saved = False
 
     try:
         for upload in files:
@@ -81,8 +166,11 @@ async def preview_import(
 
             if extension not in ALLOWED_EXTENSIONS:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Unsupported file extension: {extension or '(none)'}",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={
+                        "code": "unsupported_source_profile",
+                        "message": f"Unsupported file extension: {extension or '(none)'}",
+                    },
                 )
             if not content:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
@@ -93,7 +181,19 @@ async def preview_import(
                 )
 
             detection = detect_source_profile(filename, content)
+            if detection.source_profile == SourceProfile.unknown:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"code": "unsupported_source_profile", "message": detection.reason, "warnings": detection.warnings},
+                )
             uploaded_files.append((filename, content, detection))
+
+        _validate_upload_set(uploaded_files)
+        if not any(item[2].source_profile == SourceProfile.chat_reader_cr_v2 for item in uploaded_files):
+            drafts = _build_supported_drafts(uploaded_files)
+            conversation_preview = _preview_from_draft(drafts[0]) if drafts else None
+
+        for filename, content, detection in uploaded_files:
             stored_file = save_import_file(import_id, filename, content)
             artifact = SourceArtifact(
                 id=uuid.uuid4(),
@@ -110,7 +210,7 @@ async def preview_import(
                 parsed_summary={},
             )
             db.add(artifact)
-            if detection.source_profile == SourceProfile.chat_reader_archive_v1:
+            if detection.source_profile == SourceProfile.chat_reader_cr_v2:
                 try:
                     archive_path = Path(settings.import_storage_dir) / str(import_id) / stored_file.safe_filename
                     archive_summary = inspect_cr_archive(archive_path)
@@ -129,7 +229,6 @@ async def preview_import(
                     byte_size=detection.size_bytes,
                     mime_guess=detection.mime_guess,
                     file_extension=detection.file_extension,
-                    raw_storage_uri=stored_file.raw_storage_uri,
                     warnings=detection.warnings,
                 )
             )
@@ -137,12 +236,11 @@ async def preview_import(
             total_bytes += detection.size_bytes
             source_profiles.append(detection.source_profile.value)
 
-        conversation_preview = _build_exporter_conversation_preview(uploaded_files)
         if archive_summary is not None:
             conversation_preview = ConversationPreview(
                 title=archive_summary["title"],
                 source_type="chat_reader_archive",
-                source_profile="chat_reader_archive_v1",
+                source_profile="chat_reader_cr_v2",
                 alignment_status="archive_ready",
                 message_count=archive_summary["message_count"],
                 prompt_count=0,
@@ -153,9 +251,6 @@ async def preview_import(
                 warnings=[],
                 messages=[],
             )
-        if conversation_preview is None:
-            conversation_previews = _build_official_conversation_previews(uploaded_files, import_warnings)
-            conversation_preview = conversation_previews[0] if conversation_previews else None
         if conversation_preview is not None:
             import_warnings.extend(conversation_preview.warnings)
             source_profiles = [conversation_preview.source_profile]
@@ -190,13 +285,20 @@ async def preview_import(
             warnings=import_warnings,
             file_count=len(preview_files),
             total_bytes=total_bytes,
-            json_filename=_first_filename_for_extension(preview_files, ".json"),
+            json_filename=_first_filename_for_extension(preview_files, ".json")
+            or _first_filename_for_extension(preview_files, ".canonical.json")
+            or _first_filename_for_extension(preview_files, ".jsonl")
+            or _first_filename_for_extension(preview_files, ".canonical.jsonl")
+            or _first_filename_for_extension(preview_files, ".gz")
+            or _first_filename_for_extension(preview_files, ".canonical.jsonl.gz"),
             md_filename=_first_filename_for_extension(preview_files, ".md")
             or _first_filename_for_extension(preview_files, ".markdown"),
-            csv_filename=_first_filename_for_extension(preview_files, ".csv"),
         )
         db.add(import_record)
+        if drafts:
+            attach_import_draft(import_record, drafts)
         db.commit()
+        preview_saved = True
 
     except HTTPException:
         db.rollback()
@@ -207,7 +309,11 @@ async def preview_import(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Import preview could not be saved.",
         ) from exc
+    finally:
+        if not preview_saved:
+            _cleanup_import_directory(import_id)
 
+    can_commit = conversation_preview is not None and conversation_preview.alignment_status not in {"conflict_detected", "failed"}
     return ImportPreviewResponse(
         import_id=import_id,
         status="previewed",
@@ -215,10 +321,8 @@ async def preview_import(
         warnings=import_warnings,
         conversation_preview=conversation_preview,
         conversation_previews=conversation_previews,
-        can_commit=conversation_preview is not None or bool(conversation_previews),
-        commit_endpoint=f"/api/imports/{import_id}/commit"
-        if conversation_preview is not None or conversation_previews
-        else None,
+        can_commit=can_commit,
+        commit_endpoint=f"/api/imports/{import_id}/commit" if can_commit else None,
         archive_summary=archive_summary,
         duplicate_conversation_id=duplicate_conversation_id,
         compatibility="compatible" if archive_summary is not None else None,
@@ -246,16 +350,75 @@ def list_source_artifacts(import_id: uuid.UUID, db: Session = Depends(get_db)) -
             byte_size=artifact.byte_size,
             mime_guess=artifact.mime_guess,
             file_extension=artifact.file_extension,
-            raw_storage_uri=artifact.raw_storage_uri,
         )
         for artifact in artifacts
     ]
+
+
+@router.get("/{import_id:uuid}/preview", response_model=ImportPreviewResponse)
+def get_saved_import_preview(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportPreviewResponse:
+    record = _get_import_or_404(import_id, db)
+    if record.source_profile != "chat_reader_bundle_v1":
+        raise HTTPException(status_code=409, detail="This import does not expose a durable bundle preview.")
+    if record.status != "previewed":
+        raise HTTPException(status_code=409, detail=f"Bundle preview is not ready ({record.status}).")
+    artifacts = db.query(SourceArtifact).filter(SourceArtifact.import_id == import_id).all()
+    try:
+        drafts = read_import_draft(record)
+    except ImportDraftError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    conversation_preview = _preview_from_draft(drafts[0]) if drafts else None
+    files = [
+        ImportPreviewFile(
+            artifact_id=artifact.id,
+            filename=artifact.filename,
+            source_profile=SourceProfile.chat_reader_bundle_v1,
+            confidence=1,
+            sha256=artifact.sha256,
+            byte_size=artifact.byte_size,
+            mime_guess=artifact.mime_guess,
+            file_extension=artifact.file_extension or ".crbundle",
+            warnings=[],
+        )
+        for artifact in artifacts
+    ]
+    return ImportPreviewResponse(
+        import_id=record.id,
+        status=record.status,
+        files=files,
+        warnings=record.warnings or [],
+        conversation_preview=conversation_preview,
+        can_commit=conversation_preview is not None and record.alignment_status == "exact",
+        commit_endpoint=f"/api/imports/{record.id}/commit",
+        archive_summary=artifacts[0].parsed_summary if artifacts else None,
+        compatibility="compatible",
+    )
 
 
 @router.get("/{import_id}/warnings", response_model=ImportWarningsResponse)
 def get_import_warnings(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportWarningsResponse:
     import_record = _get_import_or_404(import_id, db)
     return ImportWarningsResponse(import_id=import_record.id, warnings=import_record.warnings)
+
+
+@router.get("/{import_id:uuid}", response_model=ImportStatusResponse)
+def get_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportStatusResponse:
+    return _import_status(_get_import_or_404(import_id, db), db)
+
+
+@router.delete("/{import_id:uuid}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_expired_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
+    record = _get_import_or_404(import_id, db)
+    now = datetime.now(timezone.utc)
+    expires_at = record.draft_expires_at
+    if record.status != "previewed" or expires_at is None or (expires_at if expires_at.tzinfo else expires_at.replace(tzinfo=timezone.utc)) > now:
+        raise HTTPException(status_code=409, detail="Only expired, uncommitted import previews can be deleted.")
+    storage_keys = release_import_assets(db, import_id)
+    db.delete(record)
+    db.commit()
+    delete_asset_files(storage_keys)
+    _cleanup_import_directory(import_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/active", response_model=list[ImportStatusResponse])
@@ -286,22 +449,33 @@ def commit_import(
     if import_record.status == "committed":
         response.status_code = status.HTTP_200_OK
         return _commit_response(import_record, db)
+    if import_record.alignment_status in {"conflict_detected", "failed"}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Import preview contains unresolved JSON/Markdown alignment conflicts.",
+        )
 
     archive_artifact = (
         db.query(SourceArtifact)
-        .filter(SourceArtifact.import_id == import_id, SourceArtifact.source_profile == "chat_reader_archive_v1")
+        .filter(
+            SourceArtifact.import_id == import_id,
+            SourceArtifact.source_profile.in_(("chat_reader_cr_v2", "chat_reader_archive_v1")),
+        )
         .first()
     )
     if archive_artifact is not None:
         summary = dict(archive_artifact.parsed_summary or {})
         duplicate_id = summary.get("duplicate_conversation_id")
-        if duplicate_id and options.duplicate_policy != "copy":
+        duplicate_policy = "clone" if options.duplicate_policy == "copy" else options.duplicate_policy
+        if duplicate_policy not in {"clone", "reject", "replace", "merge_if_same_hash"}:
+            raise HTTPException(status_code=422, detail="Unsupported archive duplicate policy.")
+        if duplicate_id and duplicate_policy == "reject":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={"message": "Archive already exists.", "conversation_id": duplicate_id},
             )
         summary["commit_options"] = {
-            "duplicate_policy": options.duplicate_policy,
+            "duplicate_policy": duplicate_policy,
             "duplicate_conversation_id": duplicate_id,
             "project_id": str(options.project_id) if options.project_id else None,
             "create_archive_project": options.create_archive_project,
@@ -381,9 +555,54 @@ def _message_count(db: Session, conversation_ids: list[uuid.UUID]) -> int:
 
 
 def _extension(filename: str) -> str:
-    if "." not in filename:
-        return ""
-    return "." + filename.rsplit(".", 1)[-1].lower()
+    lowered = Path(filename).name.lower()
+    for suffix in (".canonical.jsonl.gz", ".canonical.jsonl", ".canonical.json"):
+        if lowered.endswith(suffix):
+            return suffix
+    return Path(lowered).suffix
+
+
+def _cleanup_import_directory(import_id: uuid.UUID) -> None:
+    root = Path(get_settings().import_storage_dir).resolve()
+    directory = (root / str(import_id)).resolve()
+    if directory.parent != root or directory.name != str(import_id):
+        return
+    if directory.is_dir():
+        shutil.rmtree(directory)
+
+
+async def _save_streamed_bundle(
+    import_id: uuid.UUID,
+    filename: str,
+    upload: UploadFile,
+) -> tuple[Path, str, int]:
+    settings = get_settings()
+    root = Path(settings.import_storage_dir).resolve()
+    directory = (root / str(import_id)).resolve()
+    if not directory.is_relative_to(root):
+        raise HTTPException(status_code=400, detail="Invalid import storage path.")
+    directory.mkdir(parents=True, exist_ok=True)
+    destination = directory / sanitize_filename(filename)
+    digest = hashlib.sha256()
+    byte_size = 0
+    limit = settings.bundle_max_compressed_bytes
+    try:
+        with destination.open("xb") as target:
+            while chunk := await upload.read(1024 * 1024):
+                byte_size += len(chunk)
+                if byte_size > limit:
+                    raise HTTPException(status_code=413, detail="Bundle exceeds the compressed size limit.")
+                digest.update(chunk)
+                target.write(chunk)
+            target.flush()
+            os.fsync(target.fileno())
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+    if byte_size == 0:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Uploaded bundle is empty.")
+    return destination, digest.hexdigest(), byte_size
 
 
 def _combined_source_profile(source_profiles: list[str]) -> str:
@@ -408,7 +627,36 @@ def _first_filename_for_extension(files: list[ImportPreviewFile], extension: str
     return None
 
 
-def _build_exporter_conversation_preview(files: list[UploadedPreviewFile]) -> ConversationPreview | None:
+def _validate_upload_set(files: list[UploadedPreviewFile]) -> None:
+    profiles = [item[2].source_profile for item in files]
+    if profiles.count(SourceProfile.chat_reader_cr_v2):
+        if len(files) != 1:
+            raise HTTPException(status_code=422, detail={"code": "invalid_import_form", "message": ".cr must be imported by itself."})
+        return
+    canjson_profiles = {SourceProfile.chat_reader_canjson_v1, SourceProfile.chat_reader_canjson_v2}
+    if any(profile in canjson_profiles for profile in profiles):
+        if len(files) != 1:
+            raise HTTPException(status_code=422, detail={"code": "invalid_import_form", "message": "CanJSON compatibility files must be imported by themselves."})
+        return
+    if SourceProfile.chatgpt_exporter_json not in profiles:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "json_required", "message": "Standardized JSON is required; Markdown is an optional validation companion."},
+        )
+    if profiles.count(SourceProfile.chatgpt_exporter_json) != 1 or profiles.count(SourceProfile.chatgpt_exporter_markdown) > 1 or len(files) > 2:
+        raise HTTPException(status_code=422, detail={"code": "invalid_import_form", "message": "Upload one JSON file and optionally one Markdown file."})
+
+
+def _build_supported_drafts(files: list[UploadedPreviewFile]) -> list[CanonicalDraftConversation]:
+    canjson = next((item for item in files if item[2].source_profile in {SourceProfile.chat_reader_canjson_v1, SourceProfile.chat_reader_canjson_v2}), None)
+    if canjson is not None:
+        try:
+            if canjson[2].source_profile == SourceProfile.chat_reader_canjson_v1:
+                return [parse_canjson_v1(canjson[1]).conversation]
+            return [parse_canjson_v2(canjson[1], compressed=canjson[0].lower().endswith(".gz")).conversation]
+        except CanJsonParseError as exc:
+            raise HTTPException(status_code=422, detail={"code": "invalid_canjson", "message": str(exc)}) from exc
+
     exporter_json = next(
         ((filename, content) for filename, content, detection in files if detection.source_profile == SourceProfile.chatgpt_exporter_json),
         None,
@@ -422,28 +670,29 @@ def _build_exporter_conversation_preview(files: list[UploadedPreviewFile]) -> Co
         None,
     )
 
-    if exporter_json is None and exporter_markdown is None:
-        return None
-
-    warnings: list[str] = []
-    json_result = None
+    if exporter_json is None:
+        return []
     markdown_result = None
-
-    if exporter_json is not None:
-        try:
-            json_result = parse_exporter_json(exporter_json[1])
-        except ExporterJsonParseError as exc:
-            warnings.append(f"{exporter_json[0]} could not be parsed as ChatGPT Exporter JSON: {exc}")
+    try:
+        json_result = parse_exporter_json(exporter_json[1])
+    except ExporterJsonParseError as exc:
+        raise HTTPException(status_code=422, detail={"code": "invalid_exporter_json", "message": str(exc)}) from exc
 
     if exporter_markdown is not None:
-        markdown_result = parse_exporter_markdown(exporter_markdown[1])
+        markdown_result = parse_exporter_markdown(exporter_markdown[1], json_result.messages)
 
     alignment = align_exporter_sources(json_result, markdown_result)
     if alignment.conversation is None:
-        return None
+        raise HTTPException(status_code=422, detail={"code": "alignment_failed", "message": "A canonical draft could not be built."})
+    return [alignment.conversation]
 
-    conversation = alignment.conversation
-    combined_warnings = warnings + conversation.warnings
+
+def _preview_from_draft(conversation: CanonicalDraftConversation) -> ConversationPreview:
+    summary: dict[str, int] = {}
+    for message in conversation.messages:
+        summary[message.alignment_status] = summary.get(message.alignment_status, 0) + 1
+    first_user = next((message for message in conversation.messages if message.role == "user"), None)
+
     return ConversationPreview(
         title=conversation.title,
         source_type=conversation.source_type,
@@ -455,7 +704,8 @@ def _build_exporter_conversation_preview(files: list[UploadedPreviewFile]) -> Co
         empty_message_count=conversation.empty_message_count,
         cleaned_thinking_summary_count=conversation.cleaned_thinking_summary_count,
         first_user_message=preview_text(conversation.first_user_message or ""),
-        warnings=combined_warnings,
+        first_user_message_markdown=preview_markdown(first_user.display_text) if first_user is not None else None,
+        warnings=conversation.warnings,
         messages=[
             MessagePreview(
                 role=message.role,
@@ -465,40 +715,9 @@ def _build_exporter_conversation_preview(files: list[UploadedPreviewFile]) -> Co
                 source_json_index=message.source_json_index,
                 source_markdown_index=message.source_markdown_index,
                 warnings=message.warnings,
+                alignment_status=message.alignment_status,
             )
             for message in conversation.messages[:PREVIEW_MESSAGE_LIMIT]
         ],
+        alignment_summary=summary,
     )
-
-
-def _build_official_conversation_previews(
-    files: list[UploadedPreviewFile],
-    import_warnings: list[str],
-) -> list[ConversationPreview]:
-    official_file = next(
-        (
-            (filename, content, detection)
-            for filename, content, detection in files
-            if detection.source_profile in {SourceProfile.official_conversations_json, SourceProfile.official_conversation_json}
-        ),
-        None,
-    )
-    if official_file is None:
-        return []
-
-    filename, content, detection = official_file
-    try:
-        parse_result = parse_official_json(content)
-    except OfficialJsonParseError as exc:
-        import_warnings.append(f"{filename} could not be parsed as official conversations JSON: {exc}")
-        return []
-
-    source_profile = detection.source_profile.value
-    previews = [
-        build_official_conversation_preview(conversation, source_profile)
-        for conversation in parse_result.conversations[:PREVIEW_CONVERSATION_LIMIT]
-    ]
-    import_warnings.extend(parse_result.warnings)
-    if parse_result.conversation_count > PREVIEW_CONVERSATION_LIMIT:
-        import_warnings.append(f"Conversation previews capped at {PREVIEW_CONVERSATION_LIMIT}.")
-    return previews

@@ -227,7 +227,7 @@ def test_annotation_anchor_relocates_and_marks_stale_after_message_edits(client:
     )
     assert relocated.status_code == 200
     annotation = client.get(f"/api/conversations/{conversation_id}/annotations").json()[0]
-    assert annotation["anchor_status"] == "relocated"
+    assert annotation["anchor_status"] == "remapped"
     assert annotation["message_version_id"] == relocated.json()["current_version_id"]
     assert annotation["start_offset"] == 7
 
@@ -237,7 +237,7 @@ def test_annotation_anchor_relocates_and_marks_stale_after_message_edits(client:
     )
     assert removed.status_code == 200
     annotation = client.get(f"/api/conversations/{conversation_id}/annotations").json()[0]
-    assert annotation["anchor_status"] == "stale"
+    assert annotation["anchor_status"] == "orphaned"
     assert annotation["message_version_id"] != removed.json()["current_version_id"]
 
 
@@ -268,7 +268,7 @@ def test_cr_v2_optional_private_entries_round_trip(client: TestClient) -> None:
     assert archive.status_code == 200
     with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
         manifest = json.loads(bundle.read("manifest.json"))
-        assert manifest["version"] == 2
+        assert manifest["version"] == 3
         assert {"annotations.jsonl", "notebook.json"}.issubset(bundle.namelist())
         assert json.loads(bundle.read("conversation.json"))["description_markdown"] == "private description"
 
@@ -288,7 +288,7 @@ def test_cr_v2_optional_private_entries_round_trip(client: TestClient) -> None:
 def test_offline_catalog_and_package_are_downloadable(client: TestClient, monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OFFLINE_STORAGE_DIR", str(tmp_path / "offline"))
     get_settings.cache_clear()
-    conversation_id, _, _ = _message_context(client)
+    conversation_id, message, version = _message_context(client)
 
     catalog = client.get("/api/offline/catalog")
     assert catalog.status_code == 200
@@ -320,10 +320,64 @@ def test_offline_catalog_and_package_are_downloadable(client: TestClient, monkey
     with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
         payload = json.loads(bundle.read("package.json"))
     assert payload["format"] == "chat-reader-offline-package"
-    assert payload["version"] == 1
+    assert payload["version"] == 3
+    assert payload["asset_mode"] == "all"
+    assert payload["update_mode"] == "conversation-delta"
     assert len(payload["conversations"]) == 1
     packaged_conversation = payload["conversations"][0]
     assert packaged_conversation["id"] == conversation_id
     assert packaged_conversation["messages"]
     assert packaged_conversation["messages"][0]["current_version"]
     assert packaged_conversation["messages"][0]["render_blocks"]
+
+    unchanged = client.post(
+        "/api/offline/packages",
+        json={
+            "scope": "conversation",
+            "conversation_id": conversation_id,
+            "known_revisions": {conversation_id: item["revision"]},
+        },
+        headers={"Idempotency-Key": "offline-test-package-unchanged"},
+    )
+    assert unchanged.status_code == 202
+    assert unchanged.json()["estimated_bytes"] == 0
+    _run_job(unchanged.json()["job_id"])
+    unchanged_archive = client.get(f"/api/offline/packages/{unchanged.json()['package_id']}/download")
+    with zipfile.ZipFile(io.BytesIO(unchanged_archive.content)) as bundle:
+        unchanged_payload = json.loads(bundle.read("package.json"))
+    assert unchanged_payload["version"] == 3
+    assert unchanged_payload["conversations"] == []
+    assert unchanged_payload["base_revisions"] == {conversation_id: item["revision"]}
+
+    annotation = client.post(
+        f"/api/conversations/{conversation_id}/annotations",
+        json={
+            "message_id": message["id"],
+            "message_version_id": version["id"],
+            "annotation_type": "highlight",
+            "color": "yellow",
+            "start_block_index": 0,
+            "start_offset": 0,
+            "end_block_index": 0,
+            "end_offset": 1,
+            "quote": "h",
+        },
+    )
+    assert annotation.status_code == 201
+    changed = client.post(
+        "/api/offline/packages",
+        json={
+            "scope": "conversation",
+            "conversation_id": conversation_id,
+            "known_revisions": {conversation_id: item["revision"]},
+        },
+        headers={"Idempotency-Key": "offline-test-package-changed"},
+    )
+    assert changed.status_code == 202
+    assert changed.json()["estimated_bytes"] > 0
+    _run_job(changed.json()["job_id"])
+    changed_archive = client.get(f"/api/offline/packages/{changed.json()['package_id']}/download")
+    with zipfile.ZipFile(io.BytesIO(changed_archive.content)) as bundle:
+        changed_payload = json.loads(bundle.read("package.json"))
+    assert len(changed_payload["conversations"]) == 1
+    assert changed_payload["conversations"][0]["offline_revision"] > item["revision"]

@@ -16,17 +16,23 @@ from app.schemas.editing import (
     MessageSplitResponse,
     MessageVersionHistoryItem,
     MessageVersionHistoryResponse,
+    MessageVersionDeleteResponse,
     MessageVersionRestoreRequest,
+    MessageVersionSelectRequest,
 )
 from app.schemas.message import MessageDetail, MessageVersionRead, RenderBlockRead
 from app.services.editing.message_edit_service import (
     MessageEditError,
     edit_message,
+    delete_message_version,
     list_message_versions,
     merge_messages,
     restore_message_version,
+    select_message_version,
     split_message,
 )
+from app.services.assets.asset_store import get_asset_store
+from app.services.assets.upload_service import AttachmentUploadError, finalize_upload_items
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 
@@ -62,6 +68,14 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
     version = db.get(MessageVersion, message.current_version_id) if message.current_version_id else None
+    blocks = (
+        db.query(RenderBlock)
+        .filter(RenderBlock.message_version_id == message.current_version_id)
+        .order_by(RenderBlock.block_index.asc())
+        .all()
+        if message.current_version_id
+        else []
+    )
     return MessageDetail(
         id=message.id,
         conversation_id=message.conversation_id,
@@ -70,7 +84,7 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
         turn_index=message.turn_index,
         created_at=message.created_at,
         current_version=_version_read(version) if version else None,
-        render_blocks=[],
+        render_blocks=[_block_read(block) for block in blocks],
         block_count=message.block_count,
         char_count=message.char_count,
         is_heavy=message.is_heavy,
@@ -123,18 +137,58 @@ def update_message(
     payload: MessageEditRequest,
     db: Session = Depends(get_db),
 ) -> MessageEditResponse:
+    promoted_storage_keys: list[str] = []
     try:
+        source_text = payload.display_text
+        if payload.upload_item_ids:
+            message = db.query(Message).filter(Message.id == message_id).with_for_update().one_or_none()
+            if message is None or message.is_deleted:
+                raise MessageEditError("Message not found.", 404)
+            if payload.base_version_id is None or message.current_version_id != payload.base_version_id:
+                raise MessageEditError("The message has changed since editing began.", 409)
+            finalized = finalize_upload_items(
+                db,
+                conversation_id=message.conversation_id,
+                item_ids=payload.upload_item_ids,
+            )
+            promoted_storage_keys = finalized.promoted_storage_keys
+            attachment_by_item = {
+                attachment.source_attachment_id: attachment
+                for attachment in finalized.attachments
+                if attachment.source_attachment_id
+            }
+            for item_id in payload.upload_item_ids:
+                attachment = attachment_by_item.get(str(item_id))
+                if attachment is None:
+                    raise MessageEditError("Uploaded attachment could not be finalized.", 422)
+                source_text = source_text.replace(
+                    f"cr-upload://{item_id}",
+                    f"cr-asset://{attachment.id}",
+                )
         result = edit_message(
             db=db,
             message_id=message_id,
-            new_text=payload.display_text,
+            new_text=source_text,
             edit_reason=payload.edit_reason,
             base_version_id=payload.base_version_id,
+            save_mode=payload.save_mode,
         )
         db.commit()
     except MessageEditError as exc:
         db.rollback()
+        for storage_key in promoted_storage_keys:
+            get_asset_store().delete_key(storage_key)
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except AttachmentUploadError as exc:
+        db.rollback()
+        for storage_key in promoted_storage_keys:
+            get_asset_store().delete_key(storage_key)
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except Exception:
+        db.rollback()
+        for storage_key in promoted_storage_keys:
+            get_asset_store().delete_key(storage_key)
+        raise
     message = db.get(Message, result.message.id)
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
@@ -174,9 +228,51 @@ def get_message_versions(
                 based_on_version_id=version.based_on_version_id,
                 content_hash=version.content_hash,
                 is_current=message is not None and version.id == message.current_version_id,
+                is_initial=version.version_number == 1,
+                can_delete=version.version_number > 1,
             )
             for version in versions
         ],
+    )
+
+
+@router.put("/{message_id}/current-version", response_model=MessageEditResponse)
+def select_message_version_endpoint(
+    message_id: uuid.UUID,
+    payload: MessageVersionSelectRequest,
+    db: Session = Depends(get_db),
+) -> MessageEditResponse:
+    try:
+        result = select_message_version(db, message_id, payload.version_id)
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    message = db.get(Message, result.message.id)
+    assert message is not None
+    return _edit_response(message, result.previous_version_id, result.current_version.id, result.current_version.version_number, result.warnings, db)
+
+
+@router.delete("/{message_id}/versions/{version_id}", response_model=MessageVersionDeleteResponse)
+def delete_message_version_endpoint(
+    message_id: uuid.UUID,
+    version_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> MessageVersionDeleteResponse:
+    try:
+        result = delete_message_version(db, message_id, version_id)
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    message = db.get(Message, result.message.id)
+    assert message is not None
+    return MessageVersionDeleteResponse(
+        message_id=message.id,
+        deleted_version_id=result.deleted_version_id,
+        current_version_id=result.current_version.id,
+        message=get_message(message.id, db),
+        warnings=result.warnings,
     )
 
 

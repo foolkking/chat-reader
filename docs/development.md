@@ -1,103 +1,97 @@
 # 本地开发
 
+最后核验：2026-08-05
+
 ## 依赖
 
-- Node.js 20+ 与 Corepack。
+- Node.js 20、Corepack 和 pnpm 9.15.4。
 - Python 3.11+。
-- PostgreSQL 16（其他受支持版本需要自行验证）。
-- Docker Desktop 可用于只启动数据库或完整容器环境。
-
-## 环境变量
-
-从 [`.env.example`](../.env.example) 创建 `.env`。主要变量：
-
-| 变量 | 用途 |
-| --- | --- |
-| `DATABASE_URL` | FastAPI 使用的 SQLAlchemy PostgreSQL URL |
-| `API_INTERNAL_URL` | Next.js 服务端 rewrite 的 FastAPI 地址 |
-| `CORS_ORIGINS` | 直接访问 FastAPI 时允许的 Web origins |
-| `PUBLIC_WEB_BASE_URL` | 分享链接使用的公开 Web 根地址 |
-| `MAX_IMPORT_FILE_SIZE_MB` | 单个导入文件上限 |
-| `IMPORT_STORAGE_DIR` | raw import artifact 存储目录 |
-| `IMPORT_WORKER_POLL_SECONDS` | worker 无任务时的轮询间隔 |
-| `IMPORT_STALE_AFTER_SECONDS` | heartbeat 超时后重新排队的秒数 |
-
-不要把 `API_INTERNAL_URL` 改成浏览器端 public 变量。浏览器只请求同源 `/api/*`。
+- PostgreSQL 16 或兼容版本。运行时没有 SQLite fallback；pytest 使用隔离 fixture。
+- Chrome（Playwright 配置使用 `channel: chrome`）。
 
 ## 安装
 
 ```powershell
+Copy-Item .env.example .env
 corepack pnpm install
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .\apps\api
 ```
 
-## 数据库和 Migration
-
-可以使用仓库开发 compose 启动 PostgreSQL：
-
-```powershell
-docker compose up -d postgres
-```
-
-应用 migration：
+创建 `.env` 指定的数据库后运行：
 
 ```powershell
 Set-Location apps/api
-alembic upgrade head
-alembic current
+python -m alembic upgrade head
+python -m alembic heads
 Set-Location ../..
 ```
 
-创建 migration 前先核对 SQLAlchemy model 与现有 migration，不要通过 `create_all` 绕过 Alembic。
+`alembic heads` 应只有一个结果。当前源码 head 是 `20260805_0020`。
+
+## 环境变量
+
+| 变量 | 用途 | 默认/备注 |
+| --- | --- | --- |
+| `DATABASE_URL` | API、worker、migration 的 PostgreSQL URL | 本地默认 `localhost:5432` |
+| `API_INTERNAL_URL` | Next.js 服务端 API upstream | `http://127.0.0.1:8000` |
+| `CORS_ORIGINS` | 直接跨域请求 API 时允许的 origin | 同源 Web 通常不依赖它 |
+| `PUBLIC_WEB_BASE_URL` | Share 等公开 URL 的 base | 本地 `http://localhost:3000` |
+| `MAX_IMPORT_FILE_SIZE_MB` | 导入大小上限 | 50 |
+| `IMPORT_STORAGE_DIR` | source artifact 目录 | `storage/imports` |
+| `EXPORT_STORAGE_DIR` | export artifact 目录 | `storage/exports` |
+| `OFFLINE_STORAGE_DIR` | offline package 目录 | `storage/offline` |
+| `ASSET_STORAGE_DIR`, `ASSET_STORAGE_BACKEND` | 附件对象、暂存与本地/S3 backend | 默认 local |
+| `ATTACHMENT_SCANNER`, `ALLOW_UNSCANNED_ATTACHMENTS` | disabled/clamav/remote 与未扫描对象策略 | 轻量开发默认 disabled/true |
+| `CHAT_READER_E2E_FIXTURE_DIR` | 真实附件 fixture 根目录，只供测试读取 | 不写死到业务代码 |
+| `IMPORT_COMMIT_INLINE` | 测试/调试时内联 commit | 默认关闭 |
+| `IMPORT_WORKER_POLL_SECONDS` | worker 轮询间隔 | 1 秒 |
+| `IMPORT_STALE_AFTER_SECONDS` | stale job 判定 | 300 秒 |
+
+不要把真实凭据或生产 URL 提交到仓库；示例只维护变量名和无敏感默认值。
 
 ## 启动
 
-在三个终端中分别运行：
+分别打开三个终端：
 
 ```powershell
 corepack pnpm run dev:api
-corepack pnpm run dev:web
 corepack pnpm run dev:worker
+corepack pnpm run dev:web
 ```
 
-Web 监听 `0.0.0.0:3000`，API 监听 `0.0.0.0:8000`。`0.0.0.0` 仅是监听地址，不能作为浏览器请求地址。localhost 和 LAN 浏览器均通过 Web 的 `/api/*` 代理访问业务接口。
+- Web：`http://localhost:3000`
+- FastAPI 直接健康检查：`http://localhost:8000/health`
+- 推荐同源健康检查：`http://localhost:3000/api/health`
 
-没有 worker 时 preview 和排队仍可成功，但任务会停留在 `queued`，不会生成 conversation。
-
-辅助脚本：
-
-```powershell
-.\scripts\start-local.ps1
-.\scripts\check-local.ps1
-.\scripts\qa-local.ps1
-```
+局域网设备只访问 Web 3000 端口；不要让远端浏览器直接拼接 `localhost:8000`。
 
 ## 检查与测试
 
-```powershell
-corepack pnpm --filter web typecheck
-corepack pnpm --filter web lint
-corepack pnpm --filter web build
-Set-Location apps/api
-alembic current
-pytest
-```
+| 命令 | 用途 |
+| --- | --- |
+| `corepack pnpm run lint` | Web ESLint，禁止 warnings |
+| `corepack pnpm run typecheck` | TypeScript `tsc --noEmit` |
+| `corepack pnpm run test:api` | API 全量 pytest |
+| `corepack pnpm --filter web build` | Next.js production build |
+| `corepack pnpm --filter web test:pwa` | build 后运行全部 Playwright 配置 |
+| `cd apps/web; npx playwright test e2e/reader-layout.spec.ts` | Reader/UI 专项 |
+| `cd apps/web; npx playwright test e2e/library-offline.spec.ts` | Library/PWA 专项 |
+| `cd apps/web; $env:E2E_LONG_READER='1'; npx playwright test e2e/reader-restoration.spec.ts` | 长对话恢复专项 |
 
-提交前还应执行：
+真实附件 fixture 测试只读环境变量指定的展开目录，并在测试临时目录打包；不得修改源目录，也不得把正文、绝对路径或附件内容写入文档/截图。运行完整 API 时设置 `CHAT_READER_E2E_FIXTURE_DIR`，否则该单项会明确 skip，不能记为 PASS。在线 Playwright 分别通过 `E2E_ATTACHMENT_FIXTURE`、`E2E_ATTACHMENT_UPLOAD`、`E2E_DND_FLOW` 和 `E2E_IMPORT_FLOW` 启用。
 
-```powershell
-git diff --check
-rg "dangerouslySetInnerHTML" apps/web
-```
+Playwright 默认从 `http://127.0.0.1:3107` 启动 production server，需要已有 Web build 和对应测试 API/fixture。设置 `PLAYWRIGHT_REUSE_EXISTING_SERVER=1` 可复用已经启动的隔离服务；长 Reader fixture 应覆盖 1000+ blocks、远距离目标和刷新恢复。不要把生产私密会话作为可提交 fixture。
 
-第二条命令预期无结果。构建可能更新 `apps/web/tsconfig.tsbuildinfo`，不要把无关缓存变化提交。
+## 数据与 migration 规则
 
-## 测试数据
+- 生产和本地业务数据都应使用 PostgreSQL；测试数据库必须隔离。
+- 新 migration 必须填写正确 `down_revision`，保持单一 head，并更新 model/schema/tests。
+- 不要手工修改生产表替代 migration，不要删除 production volume 解决 schema 问题。
+- `apps/api/storage/imports/` 可能包含用户导入资料；不作为临时目录清理。
+- `.cr`、offline package 与 Dexie 是不同协议。修改任何一个都要单独验证兼容性。
 
-测试应优先使用 `apps/api/tests` 中的 fixture。`examples/` 和 `apps/api/storage/` 可能包含本地导入样例或用户数据，不属于项目文档，也不应默认提交。
+## 文档同步
 
-## 修改文档
-
-新增或修改行为时同步更新 [产品说明](product.md)、[架构](architecture.md) 或 [API 参考](api-reference.md)。不要恢复阶段 prompt、施工日志或重复的设计总稿。
+变更路由、环境变量、migration、Reader 数据合同、离线协议或部署拓扑时，同步更新 [Project State](../PROJECT_STATE.md)、对应专题文档和 [Markdown 台账](documentation-inventory.md)。

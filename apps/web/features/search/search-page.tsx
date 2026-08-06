@@ -9,6 +9,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import { ProjectSidebar } from "../projects/project-sidebar";
 import { SearchBox } from "./search-box";
 import { SearchResults } from "./search-results";
+import { MobilePageHeader } from "../../components/mobile-page-header";
 
 const PAGE_SIZE = 50;
 
@@ -17,6 +18,7 @@ export function SearchPage() {
   const params = useSearchParams();
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
+  const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
   const query = params.get("q") ?? "";
   const documentType = params.get("document_type") ?? "all";
   const role = params.get("role") ?? "all";
@@ -76,9 +78,9 @@ export function SearchPage() {
   };
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar />
+      <ProjectSidebar mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex min-h-14 items-center border-b border-ui bg-surface px-4 pl-16 md:px-[2vw] md:pl-[2vw]"><div><h1 className="text-base font-semibold">{zh ? "搜索" : "Search"}</h1><p className="text-xs text-secondary">{zh ? "搜索对话、正文、章节、代码和批注" : "Search conversations, messages, sections, code, and annotations"}</p></div></header>
+        <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码和批注" : "Search conversations, messages, sections, code, and annotations"} onOpenSidebar={() => setMobileSidebarOpenSignal((value) => value + 1)} />
         <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
           <SearchBox initialQuery={query} onSearch={(value) => update({ q: value })} hasResults={items.length > 0} onMoveSelection={(delta) => setActiveIndex((value) => Math.max(0, Math.min(items.length - 1, value + delta)))} onOpenSelection={openSelected} />
           <div className="grid gap-3 rounded-xl border border-ui bg-surface p-4 md:grid-cols-2 lg:grid-cols-4">

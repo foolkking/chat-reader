@@ -19,6 +19,8 @@ class BackgroundTaskRead(BaseModel):
     started_at: datetime | None = None
     heartbeat_at: datetime | None = None
     completed_at: datetime | None = None
+    cancellable: bool = False
+    attempt_count: int = 0
 
 
 class ConversationProjectMoveRequest(BaseModel):

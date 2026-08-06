@@ -59,11 +59,45 @@ PWA service worker 只在 secure context 注册。普通 LAN HTTP 作为响应�
 - 确认 `IMPORT_STORAGE_DIR` 或 Docker `import-storage` 可写且磁盘有空间。
 - 先查看 preview warnings，再 commit。
 - JSON/Markdown 数量不一致时，检查是否选择了不匹配的会话文件。
-- CSV/TXT 不是当前完整 canonical import 的稳定承诺。
+- 兼容 JSON 必须存在，Markdown只能作为可选一致性校验；`.cr` 使用完整归档入口。
+- 官方 OpenAI 图/ZIP、CSV、TXT 和 Markdown 单文件按产品边界返回 `422 unsupported_source_profile`。
 
 ## 长会话或 TOC 跳转问题
 
-确认 `message-window` anchor 请求成功，以及目标 heavy message 的 `/api/messages/{id}/blocks` 已返回。浏览器 console 中不应有旧导航请求覆盖新导航的错误。若只有特定导入失败，记录 conversation id、message id 和 block index，不要上传 raw 私密内容。
+确认 `/api/conversations/{id}/reader-turn?anchor_message_id=...` 返回目标所在完整轮次，且每条消息满足 `render_blocks.length === block_count`。检查 Reader 稳定 DOM 是否不超过 3 个轮次，以及滚动容器的 `data-navigation-stage` 是否最终为 `settled`。若只有特定导入失败，记录脱敏后的 conversation/message/block 标识，不要上传 raw 私密正文。
+
+刷新恢复失败时同时检查 reading-position payload 是否为 `anchor_data.position_mode=block-relative-v2`（旧数据可为 v1），以及保存发生前导航和 ResizeObserver 是否已稳定。极长消息若目标 block 在测量时反复卸载，检查 virtual range 是否在事务期间固定目标 index。`pagehide` 只应发送最后缓存的稳定位置，不应现场重新读取正在变化的 DOM。
+
+## CanJSON 下载失败
+
+先直接检查 `/api/conversations/{id}/exports/canjson` 是否返回 `200`、`Content-Type: application/x-ndjson` 和安全的 `Content-Disposition` 文件名。若响应可完整读取但 Chrome 下载仍失败，检查浏览器下载目录的磁盘配额；磁盘写满属于客户端保存失败，不应误判为服务端导出失败。gzip 模式应返回 `.canonical.jsonl.gz`。
+
+## Library 重复下载或增量摘要不正确
+
+- 确认 `/api/offline/catalog` 中 conversation `revision` 与 Dexie 中保存的 `offline_revision` 可比较。
+- package 请求必须提交 `known_revisions`；相同 revision 应得到 `estimated_bytes=0` 和可安全导入的空增量。
+- 变化 conversation 应在一个 Dexie transaction 中替换，未变化 conversation 不应被重写。
+- 如果下载后界面仍显示旧内容，检查 package job 完成状态、SHA-256、导入事务和自动更新去重 key，而不是删除整个 IndexedDB。
+
+Dexie 当前为 version 2，并兼容读取既有 v1 数据；Offline package 当前写 v3、读 v1/v2/v3。不要用升级/清库处理普通 revision 不一致。Offline package 与系统归档 `.cr` 是不同协议。
+
+## 附件显示“未扫描”或无法使用
+
+先检查运行时能力，而不是仅检查环境文件：
+
+```bash
+curl -fsS http://127.0.0.1:3000/api/capabilities
+```
+
+King 的预期状态是 `scanner_provider=disabled`、`scanner_enabled=false`、`allow_unscanned_attachments=true` 和 `unscanned_status=scanner_disabled`。这不是 clean/safe。若策略不允许未扫描对象，上传可以完成暂存，但 canonical 提交应被拒绝。
+
+确认 `ASSET_STORAGE_DIR` 位于 Web Root 外且 API/worker 使用同一 volume。附件对象只能通过鉴权 API 读取；不要把存储目录映射为静态站点。HTML、SVG、Office 和压缩包在未配置隔离预览时下载降级是预期行为。
+
+S3-compatible 后端需要安装 API 的 `s3` 可选依赖，并配置 bucket、endpoint、region 和 prefix；缺少 `boto3` 时服务会给出明确配置错误，不应静默回退到本地路径。
+
+## Markdown 间距或字号切换无效
+
+检查 `/api/preferences` 是否返回 `reader_density_mode` 和 `reader_font_size_px`，以及页面根节点是否应用对应 CSS data attribute/variable。间距应影响 paragraph、heading、list、blockquote、table、code、KaTeX/Mermaid 容器和相邻 render blocks，而不只是消息外层 margin。字号允许 15-22px，默认 17px。
 
 ## Markdown、Mermaid 或代码块显示异常
 

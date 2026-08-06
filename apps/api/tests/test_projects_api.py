@@ -144,5 +144,79 @@ def test_activity_sorting_and_custom_orders(client: TestClient) -> None:
     assert [item["id"] for item in project_custom] == [beta_id, alpha_id]
 
 
+def test_atomic_conversation_placement_reorders_moves_and_detects_stale_revision(client: TestClient) -> None:
+    first_id = _commit_conversation(client, "Placement first")
+    second_id = _commit_conversation(client, "Placement second")
+    source_project = client.post("/api/projects", json={"name": "Placement source"}).json()
+    target_project = client.post("/api/projects", json={"name": "Placement target"}).json()
+
+    first_revision = client.get(f"/api/conversations/{first_id}").json()["offline_revision"]
+    first_move = client.put(
+        f"/api/conversations/{first_id}/placement",
+        json={
+            "target_project_id": source_project["id"],
+            "target_section": "normal",
+            "expected_offline_revision": first_revision,
+        },
+    )
+    assert first_move.status_code == 200, first_move.text
+    assert first_move.json()["placement"]["project_id"] == source_project["id"]
+
+    second_revision = client.get(f"/api/conversations/{second_id}").json()["offline_revision"]
+    second_move = client.put(
+        f"/api/conversations/{second_id}/placement",
+        json={
+            "target_project_id": source_project["id"],
+            "target_section": "normal",
+            "before_conversation_id": first_id,
+            "expected_offline_revision": second_revision,
+        },
+    )
+    assert second_move.status_code == 200, second_move.text
+    custom = client.get(
+        f"/api/projects/{source_project['id']}/conversations",
+        params={"sort": "custom", "direction": "asc"},
+    ).json()
+    assert [item["id"] for item in custom] == [second_id, first_id]
+
+    stale = client.put(
+        f"/api/conversations/{first_id}/placement",
+        json={
+            "target_project_id": target_project["id"],
+            "target_section": "normal",
+            "expected_offline_revision": first_revision,
+        },
+    )
+    assert stale.status_code == 409
+
+    current_revision = client.get(f"/api/conversations/{first_id}").json()["offline_revision"]
+    cross_project = client.put(
+        f"/api/conversations/{first_id}/placement",
+        json={
+            "target_project_id": target_project["id"],
+            "target_section": "normal",
+            "expected_offline_revision": current_revision,
+        },
+    )
+    assert cross_project.status_code == 200, cross_project.text
+    assert cross_project.json()["source_project_count"] == 1
+    assert cross_project.json()["target_project_count"] == 1
+
+    history_revision = cross_project.json()["placement"]["offline_revision"]
+    history = client.put(
+        f"/api/conversations/{first_id}/placement",
+        json={
+            "target_project_id": None,
+            "target_section": "normal",
+            "expected_offline_revision": history_revision,
+        },
+    )
+    assert history.status_code == 200, history.text
+    assert history.json()["placement"]["project_id"] is None
+    assert first_id in {
+        item["id"] for item in client.get("/api/conversations", params={"scope": "history"}).json()
+    }
+
+
 def project_id_path(project_id: str) -> str:
     return f"/api/projects/{project_id}"

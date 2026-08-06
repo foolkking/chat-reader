@@ -7,24 +7,33 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
+from app.models.attachment import Attachment, AssetObject, MessageVersionAttachment
 from app.models.conversation_event import ConversationEvent
+from app.models.heading import Heading
 from app.models.import_record import utc_now
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.project import Project
 from app.models.render_block import RenderBlock
+from app.models.search_document import SearchDocument
 from app.models.source_message_ref import SourceMessageRef
 from app.services.canonical.block_builder import build_basic_render_blocks
-from app.services.import_pipeline.canonical_draft import PARSER_VERSION
-from app.services.import_pipeline.canonical_draft import content_hash
+from app.services.import_pipeline.canonical_draft import (
+    BLOCK_BUILDER_VERSION,
+    MARKDOWN_PARSER_VERSION,
+    NORMALIZER_VERSION,
+    PARSER_VERSION,
+    SEARCH_DOCUMENT_VERSION,
+    content_hash,
+)
 from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
 from app.services.search.search_indexer import (
     rebuild_search_and_toc_for_conversation,
-    rebuild_search_documents_for_conversation,
 )
-from app.services.toc.toc_builder import rebuild_headings_for_conversation
 from app.services.annotations import relocate_annotations_for_new_version
+from app.services.editing.conversation_merge_service import copy_conversation_history
+from app.services.assets.scanner import scan_status_allows_use
 
 MAX_EDIT_TEXT_LENGTH = 200_000
 MergeProgressCallback = Callable[[str, int, int, int], None]
@@ -66,6 +75,20 @@ class ConversationTransformResult:
 
 
 @dataclass(frozen=True)
+class ConversationSplitGroup:
+    messages: list[Message]
+    suggested_title: str
+
+
+@dataclass(frozen=True)
+class MessageVersionDeleteResult:
+    message: Message
+    deleted_version_id: uuid.UUID
+    current_version: MessageVersion
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class ConversationAutoCleanResult:
     conversation: Conversation
     scanned_messages: int
@@ -78,6 +101,7 @@ def edit_message(
     new_text: str,
     edit_reason: str | None = None,
     base_version_id: uuid.UUID | None = None,
+    save_mode: str = "create_version",
 ) -> MessageEditResult:
     message = _get_editable_message(db, message_id)
     current_version = _get_current_version(db, message)
@@ -87,6 +111,43 @@ def edit_message(
         raise MessageEditError("Base version does not match current version.", HTTPStatus.CONFLICT)
     if clean_text == current_version.display_text:
         raise MessageEditError("No changes to save.")
+
+    if save_mode not in {"create_version", "replace_current"}:
+        raise MessageEditError("Unsupported save mode.")
+    if save_mode == "replace_current":
+        if current_version.version_number == 1:
+            raise MessageEditError("The initial version cannot be replaced.")
+        previous_hash = current_version.content_hash
+        _replace_version_content(
+            db=db,
+            message=message,
+            version=current_version,
+            text=clean_text,
+            edit_reason=edit_reason or "replace current version",
+        )
+        _write_event(
+            db=db,
+            message=message,
+            event_type="message_version_replaced",
+            target_version_id=current_version.id,
+            created_by="user",
+            payload={
+                "message_id": str(message.id),
+                "version_id": str(current_version.id),
+                "version_number": current_version.version_number,
+                "previous_content_hash": previous_hash,
+                "content_hash": current_version.content_hash,
+                "edit_reason": current_version.edit_reason,
+            },
+        )
+        _refresh_conversation_stats(db, message.conversation_id)
+        rebuild_search_and_toc_for_conversation(db, message.conversation_id)
+        db.flush()
+        return MessageEditResult(
+            message=message,
+            previous_version_id=current_version.id,
+            current_version=current_version,
+        )
 
     new_version = _create_version(
         db=db,
@@ -113,12 +174,36 @@ def edit_message(
             "content_hash": new_version.content_hash,
         },
     )
+    _refresh_conversation_stats(db, message.conversation_id)
     rebuild_search_and_toc_for_conversation(db, message.conversation_id)
     db.flush()
     return MessageEditResult(
         message=message,
         previous_version_id=current_version.id,
         current_version=new_version,
+    )
+
+
+def create_system_message_version(
+    db: Session,
+    *,
+    message: Message,
+    text: str,
+    plain_text: str,
+    edit_type: str,
+    edit_reason: str,
+) -> MessageVersion:
+    """Create a version for a deterministic system repair while preserving history."""
+    current_version = _get_current_version(db, message)
+    return _create_version(
+        db=db,
+        message=message,
+        text=_validate_text(text),
+        plain_text=plain_text,
+        edit_type=edit_type,
+        edit_reason=edit_reason,
+        created_by="system",
+        based_on_version_id=current_version.id,
     )
 
 
@@ -349,20 +434,13 @@ def merge_conversations(
         source_profile="merged",
         status="processing",
     )
-    source_messages = [
-        message
-        for conversation in conversations
-        for message in _active_messages(db, conversation.id)
-    ]
-    _report_merge(progress_callback, "creating", 10, 0, len(source_messages))
-    copied_count = _copy_messages_to_conversation(
-        db=db,
+    copy_result = copy_conversation_history(
+        db,
         target=new_conversation,
-        source_messages=source_messages,
-        source_operation="conversation_merge",
+        sources=conversations,
         progress_callback=progress_callback,
     )
-    _refresh_conversation_stats(db, new_conversation.id)
+    copied_count = copy_result.message_count
     _attach_conversation_to_project(db, new_conversation.id, project_id)
     db.add(
         ConversationEvent(
@@ -373,6 +451,11 @@ def merge_conversations(
                 "source_conversation_ids": [str(conversation.id) for conversation in conversations],
                 "order_policy": "request_order",
                 "message_count": copied_count,
+                "version_count": copy_result.version_count,
+                "block_count": copy_result.block_count,
+                "annotation_count": copy_result.annotation_count,
+                "heading_count": copy_result.heading_count,
+                "attachment_count": copy_result.attachment_count,
             },
             created_by="user",
         )
@@ -387,11 +470,6 @@ def merge_conversations(
                 created_by="user",
             )
         )
-    _report_merge(progress_callback, "headings", 80, copied_count, copied_count)
-    rebuild_headings_for_conversation(db, new_conversation.id)
-    _report_merge(progress_callback, "search", 88, copied_count, copied_count)
-    rebuild_search_documents_for_conversation(db, new_conversation.id)
-    _report_merge(progress_callback, "publishing", 98, copied_count, copied_count)
     new_conversation.status = "active"
     db.flush()
     return ConversationTransformResult(conversation=new_conversation, message_count=copied_count)
@@ -458,6 +536,106 @@ def split_conversation(
     return ConversationTransformResult(conversation=new_conversation, message_count=copied_count)
 
 
+def plan_conversation_split(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    mode: str,
+    start_message_id: uuid.UUID | None = None,
+    end_message_id: uuid.UUID | None = None,
+    boundary_message_id: uuid.UUID | None = None,
+    message_ids: list[uuid.UUID] | None = None,
+) -> list[ConversationSplitGroup]:
+    source = _get_active_conversation(db, conversation_id)
+    messages = _active_messages(db, source.id)
+    if not messages:
+        raise MessageEditError("Conversation has no messages.")
+    if mode == "range_copy":
+        if start_message_id is None:
+            raise MessageEditError("A range start message is required.")
+        start_index = _message_index(messages, start_message_id)
+        end_index = _message_index(messages, end_message_id) if end_message_id else len(messages) - 1
+        if start_index > end_index:
+            raise MessageEditError("Start message must come before end message.")
+        return [ConversationSplitGroup(messages[start_index : end_index + 1], f"{source.display_title} excerpt")]
+    if mode == "boundary_copy":
+        if boundary_message_id is None:
+            raise MessageEditError("A boundary message is required.")
+        boundary_index = _message_index(messages, boundary_message_id)
+        if boundary_index >= len(messages) - 1:
+            raise MessageEditError("The boundary must leave messages on both sides.")
+        return [
+            ConversationSplitGroup(messages[: boundary_index + 1], f"{source.display_title} part 1"),
+            ConversationSplitGroup(messages[boundary_index + 1 :], f"{source.display_title} part 2"),
+        ]
+    if mode == "discrete_copy":
+        requested = message_ids or []
+        if not requested:
+            raise MessageEditError("At least one message must be selected.")
+        if len(set(requested)) != len(requested):
+            raise MessageEditError("Duplicate message ids are not allowed.")
+        requested_set = set(requested)
+        selected = [message for message in messages if message.id in requested_set]
+        if len(selected) != len(requested):
+            raise MessageEditError("Every selected message must belong to the conversation.")
+        return [ConversationSplitGroup(selected, f"{source.display_title} selection")]
+    raise MessageEditError("Unsupported conversation split mode.")
+
+
+def execute_conversation_split(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    mode: str,
+    groups: list[ConversationSplitGroup],
+    titles: list[str] | None = None,
+    project_id: uuid.UUID | None = None,
+) -> list[ConversationTransformResult]:
+    source = _get_active_conversation(db, conversation_id)
+    requested_titles = titles or []
+    results: list[ConversationTransformResult] = []
+    for index, group in enumerate(groups):
+        title = (requested_titles[index] if index < len(requested_titles) else group.suggested_title).strip()
+        if not title:
+            raise MessageEditError("Conversation title cannot be empty.")
+        target = _create_empty_conversation(
+            db=db,
+            title=title,
+            source_type="split",
+            source_profile=mode,
+        )
+        copied_count = _copy_messages_to_conversation(
+            db=db,
+            target=target,
+            source_messages=group.messages,
+            source_operation=f"conversation_{mode}",
+        )
+        _refresh_conversation_stats(db, target.id)
+        _attach_conversation_to_project(db, target.id, project_id)
+        db.add(ConversationEvent(
+            id=uuid.uuid4(),
+            conversation_id=target.id,
+            event_type="conversation_created_from_split",
+            payload={"source_conversation_id": str(source.id), "mode": mode, "message_count": copied_count},
+            created_by="user",
+        ))
+        rebuild_search_and_toc_for_conversation(db, target.id)
+        results.append(ConversationTransformResult(target, copied_count))
+    db.add(ConversationEvent(
+        id=uuid.uuid4(),
+        conversation_id=source.id,
+        event_type="conversation_split",
+        payload={
+            "mode": mode,
+            "target_conversation_ids": [str(result.conversation.id) for result in results],
+            "message_counts": [result.message_count for result in results],
+        },
+        created_by="user",
+    ))
+    db.flush()
+    return results
+
+
 def list_message_versions(db: Session, message_id: uuid.UUID) -> list[MessageVersion]:
     message = db.get(Message, message_id)
     if message is None:
@@ -468,6 +646,88 @@ def list_message_versions(db: Session, message_id: uuid.UUID) -> list[MessageVer
         .order_by(MessageVersion.version_number.desc())
         .all()
     )
+
+
+def select_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.UUID) -> MessageEditResult:
+    message = _get_editable_message(db, message_id)
+    current = _get_current_version(db, message)
+    selected = db.get(MessageVersion, version_id)
+    if selected is None or selected.message_id != message.id:
+        raise MessageEditError("Message version not found.", HTTPStatus.NOT_FOUND)
+    if selected.id == current.id:
+        return MessageEditResult(message, current.id, current)
+    message.current_version_id = selected.id
+    _sync_message_from_version(db, message, selected)
+    relocate_annotations_for_new_version(
+        db,
+        message=message,
+        version=selected,
+        block_texts=[block.plain_text or "" for block in _version_blocks(db, selected.id)],
+    )
+    _write_event(
+        db=db,
+        message=message,
+        event_type="message_version_selected",
+        target_version_id=selected.id,
+        created_by="user",
+        payload={"previous_version_id": str(current.id), "selected_version_id": str(selected.id)},
+    )
+    _refresh_conversation_stats(db, message.conversation_id)
+    rebuild_search_and_toc_for_conversation(db, message.conversation_id)
+    db.flush()
+    return MessageEditResult(message, current.id, selected)
+
+
+def delete_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.UUID) -> MessageVersionDeleteResult:
+    message = _get_editable_message(db, message_id)
+    target = db.get(MessageVersion, version_id)
+    if target is None or target.message_id != message.id:
+        raise MessageEditError("Message version not found.", HTTPStatus.NOT_FOUND)
+    if target.version_number == 1:
+        raise MessageEditError("The initial version cannot be deleted.")
+    warnings: list[str] = []
+    current = _get_current_version(db, message)
+    if current.id == target.id:
+        fallback = (
+            db.query(MessageVersion)
+            .filter(MessageVersion.message_id == message.id, MessageVersion.version_number < target.version_number)
+            .order_by(MessageVersion.version_number.desc())
+            .first()
+        )
+        if fallback is None:
+            raise MessageEditError("No earlier version is available.")
+        message.current_version_id = fallback.id
+        _sync_message_from_version(db, message, fallback)
+        current = fallback
+    relocate_annotations_for_new_version(
+        db,
+        message=message,
+        version=current,
+        block_texts=[block.plain_text or "" for block in _version_blocks(db, current.id)],
+    )
+    db.query(MessageVersion).filter(MessageVersion.based_on_version_id == target.id).update(
+        {MessageVersion.based_on_version_id: None}, synchronize_session=False
+    )
+    db.query(Heading).filter(Heading.message_version_id == target.id).delete(synchronize_session=False)
+    db.query(SearchDocument).filter(SearchDocument.message_version_id == target.id).delete(synchronize_session=False)
+    _write_event(
+        db=db,
+        message=message,
+        event_type="message_version_deleted",
+        target_version_id=None,
+        created_by="user",
+        payload={
+            "deleted_version_id": str(target.id),
+            "deleted_version_number": target.version_number,
+            "selected_version_id": str(current.id),
+        },
+    )
+    deleted_id = target.id
+    db.delete(target)
+    _refresh_conversation_stats(db, message.conversation_id)
+    rebuild_search_and_toc_for_conversation(db, message.conversation_id)
+    db.flush()
+    return MessageVersionDeleteResult(message, deleted_id, current, warnings)
 
 
 def restore_message_version(
@@ -512,6 +772,7 @@ def restore_message_version(
             "edit_reason": reason,
         },
     )
+    _refresh_conversation_stats(db, message.conversation_id)
     rebuild_search_and_toc_for_conversation(db, message.conversation_id)
     db.flush()
     return MessageEditResult(
@@ -548,6 +809,78 @@ def _validate_text(text: str) -> str:
     return clean_text
 
 
+def _version_blocks(db: Session, version_id: uuid.UUID) -> list[RenderBlock]:
+    return (
+        db.query(RenderBlock)
+        .filter(RenderBlock.message_version_id == version_id)
+        .order_by(RenderBlock.block_index.asc())
+        .all()
+    )
+
+
+def _sync_message_from_version(db: Session, message: Message, version: MessageVersion) -> None:
+    blocks = _version_blocks(db, version.id)
+    message.content_hash = version.content_hash
+    message.block_count = len(blocks)
+    message.char_count = len(version.display_text)
+    message.is_heavy = len(version.display_text) > 12000 or len(blocks) > 80
+    conversation = db.get(Conversation, message.conversation_id)
+    if conversation is not None:
+        conversation.offline_revision += 1
+
+
+def _replace_version_content(
+    db: Session,
+    *,
+    message: Message,
+    version: MessageVersion,
+    text: str,
+    edit_reason: str,
+) -> None:
+    block_drafts = build_basic_render_blocks(text)
+    db.query(RenderBlock).filter(RenderBlock.message_version_id == version.id).delete(synchronize_session=False)
+    version.plain_text = text
+    version.display_text = text
+    version.blocks = [
+        {
+            "block_index": index,
+            "block_type": block.block_type,
+            "plain_text": block.plain_text,
+            "data": block.data,
+            "char_count": block.char_count,
+        }
+        for index, block in enumerate(block_drafts)
+    ]
+    version.edit_type = "manual_replace"
+    version.edit_reason = edit_reason
+    version.content_hash = content_hash(text, message.role)
+    version.normalizer_version = NORMALIZER_VERSION
+    version.markdown_parser_version = MARKDOWN_PARSER_VERSION
+    version.block_builder_version = BLOCK_BUILDER_VERSION
+    version.search_document_version = SEARCH_DOCUMENT_VERSION
+    for index, block in enumerate(block_drafts):
+        db.add(RenderBlock(
+            id=uuid.uuid4(),
+            message_version_id=version.id,
+            block_index=index,
+            block_type=block.block_type,
+            plain_text=block.plain_text,
+            data=block.data,
+            char_count=block.char_count,
+            collapsed_by_default=block.collapsed_by_default,
+            render_priority=block.render_priority,
+        ))
+    _sync_version_attachment_links(db, version.id, block_drafts, replace_existing=True)
+    db.flush()
+    relocate_annotations_for_new_version(
+        db,
+        message=message,
+        version=version,
+        block_texts=[block.plain_text for block in block_drafts],
+    )
+    _sync_message_from_version(db, message, version)
+
+
 def _create_version(
     db: Session,
     message: Message,
@@ -571,7 +904,7 @@ def _create_version(
         }
         for index, block in enumerate(block_drafts)
     ]
-    new_hash = content_hash(text)
+    new_hash = content_hash(text, message.role)
     version = MessageVersion(
         id=uuid.uuid4(),
         message_id=message.id,
@@ -584,6 +917,10 @@ def _create_version(
         created_by=created_by,
         based_on_version_id=based_on_version_id,
         content_hash=new_hash,
+        normalizer_version=NORMALIZER_VERSION,
+        markdown_parser_version=MARKDOWN_PARSER_VERSION,
+        block_builder_version=BLOCK_BUILDER_VERSION,
+        search_document_version=SEARCH_DOCUMENT_VERSION,
     )
     db.add(version)
     db.flush()
@@ -603,6 +940,8 @@ def _create_version(
             )
         )
 
+    _sync_version_attachment_links(db, version.id, block_drafts, replace_existing=False)
+
     relocate_annotations_for_new_version(
         db,
         message=message,
@@ -621,6 +960,70 @@ def _create_version(
     return version
 
 
+def _sync_version_attachment_links(
+    db: Session,
+    version_id: uuid.UUID,
+    block_drafts,
+    *,
+    replace_existing: bool,
+) -> None:
+    if replace_existing:
+        db.query(MessageVersionAttachment).filter(
+            MessageVersionAttachment.message_version_id == version_id
+        ).delete(synchronize_session=False)
+    references: list[tuple[int, uuid.UUID, object]] = []
+    for index, block in enumerate(block_drafts):
+        if block.block_type not in {"image", "attachment"} or not isinstance(block.data, dict):
+            continue
+        try:
+            attachment_id = uuid.UUID(str(block.data.get("attachmentId") or ""))
+        except ValueError as exc:
+            raise MessageEditError("Markdown contains an invalid attachment reference.", 422) from exc
+        references.append((index, attachment_id, block))
+    if not references:
+        return
+    attachment_ids = {item[1] for item in references}
+    available_rows = (
+        db.query(Attachment, AssetObject)
+        .join(AssetObject, AssetObject.id == Attachment.asset_object_id)
+        .filter(
+            Attachment.id.in_(attachment_ids),
+            Attachment.conversation_id == db.query(Message.conversation_id).join(
+                MessageVersion, MessageVersion.message_id == Message.id
+            ).filter(MessageVersion.id == version_id).scalar_subquery(),
+            Attachment.deleted_at.is_(None),
+            Attachment.resolution_status == "resolved",
+            Attachment.status == "available",
+            AssetObject.status == "available",
+        )
+        .all()
+    )
+    available = {
+        attachment.id
+        for attachment, asset in available_rows
+        if scan_status_allows_use(asset.scan_status)
+    }
+    if available != attachment_ids:
+        raise MessageEditError("Markdown references an unavailable attachment.", 422)
+    for display_order, attachment_id, block in references:
+        data = block.data
+        db.add(
+            MessageVersionAttachment(
+                id=uuid.uuid4(),
+                message_version_id=version_id,
+                attachment_id=attachment_id,
+                occurrence_key=str(data.get("occurrenceKey") or f"block-{display_order}-{uuid.uuid4().hex[:8]}")[:255],
+                placement=str(data.get("placement") or "inline")[:50],
+                relation_type=str(data.get("relationType") or ("inline" if block.block_type == "image" else "file")),
+                display_order=display_order,
+                block_index=display_order,
+                display_mode=str(data.get("displayMode") or ("inline" if block.block_type == "image" else "card")),
+                alt_text=str(data.get("alt") or "") or None,
+                caption=str(data.get("caption") or "") or None,
+            )
+        )
+
+
 def _create_message_with_version(
     db: Session,
     conversation_id: uuid.UUID,
@@ -636,7 +1039,7 @@ def _create_message_with_version(
     based_on_version_id: uuid.UUID | None,
 ) -> tuple[Message, MessageVersion]:
     clean_text = _validate_text(text)
-    new_hash = content_hash(clean_text)
+    new_hash = content_hash(clean_text, role)
     message = Message(
         id=uuid.uuid4(),
         conversation_id=conversation_id,
@@ -724,6 +1127,10 @@ def _refresh_conversation_stats(db: Session, conversation_id: uuid.UUID) -> None
     db.flush()
 
 
+def refresh_conversation_stats(db: Session, conversation_id: uuid.UUID) -> None:
+    _refresh_conversation_stats(db, conversation_id)
+
+
 def _get_active_conversation(db: Session, conversation_id: uuid.UUID) -> Conversation:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
@@ -762,14 +1169,20 @@ def _copy_messages_to_conversation(
     source_operation: str,
     progress_callback: MergeProgressCallback | None = None,
 ) -> int:
+    source_versions = [_get_current_version(db, message) for message in source_messages]
+    attachment_id_map = _clone_split_attachments(
+        db,
+        target=target,
+        source_version_ids=[version.id for version in source_versions],
+        source_operation=source_operation,
+    )
     count = 0
-    for index, source_message in enumerate(source_messages, start=1):
-        version = _get_current_version(db, source_message)
-        copied_message, _ = _create_message_with_version(
+    for index, (source_message, version) in enumerate(zip(source_messages, source_versions, strict=True), start=1):
+        copied_message, copied_version = _create_message_with_version(
             db=db,
             conversation_id=target.id,
             role=source_message.role,
-            text=version.display_text,
+            text=_rewrite_split_attachment_text(version.display_text, attachment_id_map),
             order_key=f"{index:06d}",
             turn_index=source_message.turn_index,
             created_at=source_message.created_at,
@@ -778,6 +1191,12 @@ def _copy_messages_to_conversation(
             created_by="user",
             source_type=source_operation,
             based_on_version_id=version.id,
+        )
+        _copy_split_attachment_occurrences(
+            db,
+            source_version_id=version.id,
+            target_version_id=copied_version.id,
+            attachment_id_map=attachment_id_map,
         )
         db.add(
             SourceMessageRef(
@@ -802,6 +1221,99 @@ def _copy_messages_to_conversation(
     return count
 
 
+def _clone_split_attachments(
+    db: Session,
+    *,
+    target: Conversation,
+    source_version_ids: list[uuid.UUID],
+    source_operation: str,
+) -> dict[uuid.UUID, uuid.UUID]:
+    source_attachment_ids = [
+        row[0]
+        for row in db.query(MessageVersionAttachment.attachment_id)
+        .filter(MessageVersionAttachment.message_version_id.in_(source_version_ids))
+        .distinct()
+        .all()
+    ]
+    if not source_attachment_ids:
+        return {}
+    attachments = (
+        db.query(Attachment)
+        .filter(Attachment.id.in_(source_attachment_ids), Attachment.deleted_at.is_(None))
+        .order_by(Attachment.created_at, Attachment.id)
+        .all()
+    )
+    if len(attachments) != len(source_attachment_ids):
+        raise MessageEditError("One or more source attachments are unavailable.", 409)
+    attachment_id_map: dict[uuid.UUID, uuid.UUID] = {}
+    for source in attachments:
+        target_id = uuid.uuid4()
+        attachment_id_map[source.id] = target_id
+        db.add(Attachment(
+            id=target_id,
+            conversation_id=target.id,
+            asset_object_id=source.asset_object_id,
+            import_id=source.import_id,
+            original_filename=source.original_filename,
+            display_name=source.display_name,
+            declared_mime_type=source.declared_mime_type,
+            detected_mime_type=source.detected_mime_type,
+            status=source.status,
+            scan_status=source.scan_status,
+            source_type=source_operation,
+            source_attachment_id=str(source.id),
+            metadata_={**(source.metadata_ or {}), "copied_from_source_type": source.source_type},
+            resolution_status=source.resolution_status,
+            created_at=source.created_at,
+        ))
+    db.flush()
+    return attachment_id_map
+
+
+def _copy_split_attachment_occurrences(
+    db: Session,
+    *,
+    source_version_id: uuid.UUID,
+    target_version_id: uuid.UUID,
+    attachment_id_map: dict[uuid.UUID, uuid.UUID],
+) -> None:
+    if not attachment_id_map:
+        return
+    source_rows = (
+        db.query(MessageVersionAttachment)
+        .filter(MessageVersionAttachment.message_version_id == source_version_id)
+        .order_by(MessageVersionAttachment.display_order, MessageVersionAttachment.id)
+        .all()
+    )
+    db.query(MessageVersionAttachment).filter(
+        MessageVersionAttachment.message_version_id == target_version_id
+    ).delete(synchronize_session=False)
+    for row in source_rows:
+        target_attachment_id = attachment_id_map.get(row.attachment_id)
+        if target_attachment_id is None:
+            raise MessageEditError("A source attachment occurrence cannot be mapped.", 409)
+        db.add(MessageVersionAttachment(
+            id=uuid.uuid4(),
+            message_version_id=target_version_id,
+            attachment_id=target_attachment_id,
+            occurrence_key=row.occurrence_key,
+            placement=row.placement,
+            relation_type=row.relation_type,
+            display_order=row.display_order,
+            block_index=row.block_index,
+            display_mode=row.display_mode,
+            alt_text=row.alt_text,
+            caption=row.caption,
+        ))
+
+
+def _rewrite_split_attachment_text(value: str, attachment_id_map: dict[uuid.UUID, uuid.UUID]) -> str:
+    rewritten = value
+    for source_id, target_id in attachment_id_map.items():
+        rewritten = rewritten.replace(f"cr-asset://{source_id}", f"cr-asset://{target_id}")
+    return rewritten
+
+
 def _report_merge(
     callback: MergeProgressCallback | None,
     phase: str,
@@ -821,7 +1333,7 @@ def _attach_conversation_to_project(
     if project_id is not None and db.get(Project, project_id) is None:
         raise MessageEditError("Project not found.", HTTPStatus.NOT_FOUND)
     target_project_id = project_id if project_id is not None else ensure_default_project(db).id
-    add_conversation_to_project(db, target_project_id, conversation_id, added_by="user")
+    add_conversation_to_project(db, target_project_id, conversation_id, added_by="system")
 
 
 def _next_version_number(db: Session, message_id: uuid.UUID) -> int:

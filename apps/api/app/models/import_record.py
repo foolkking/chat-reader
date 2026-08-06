@@ -42,6 +42,10 @@ class ImportRecord(Base):
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    draft_storage_uri: Mapped[str | None] = mapped_column(Text, nullable=True)
+    draft_sha256: Mapped[str | None] = mapped_column(String, nullable=True)
+    draft_summary: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    draft_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(

@@ -2,36 +2,68 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.export_artifact import ExportArtifact
 from app.schemas.task import BackgroundTaskRead
-from app.services.background_jobs import queue_conversation_auto_clean, queue_conversation_export
+from app.schemas.export import ExportRequest
+from app.services.background_jobs import queue_conversation_auto_clean, queue_conversation_derived_rebuild, queue_conversation_export
 from app.services.editing.message_edit_service import MessageEditError
 from app.api.routes.tasks import background_job_read
 from app.services.exporting.cr_archive import ARCHIVE_MIME
+from app.services.exporting.attachment_bundle import BUNDLE_MIME, CANJSON_BUNDLE_FORMAT, MARKDOWN_BUNDLE_FORMAT
+from app.services.exporting.context_package import CONTEXT_PACKAGE_FORMAT, CONTEXT_PACKAGE_MIME
+from app.services.exporting.export_service import (
+    ExportError,
+    content_disposition,
+    export_conversation_canjson_v2,
+    export_conversation_markdown_v2,
+)
 
 router = APIRouter(tags=["exports"])
 
 
 @router.post(
     "/api/conversations/{conversation_id}/exports",
-    response_model=BackgroundTaskRead,
+    response_model=None,
     status_code=status.HTTP_202_ACCEPTED,
 )
 def queue_archive_export(
     conversation_id: uuid.UUID,
+    payload: ExportRequest | None = Body(default=None),
     include_description: bool = False,
     include_annotations: bool = False,
     include_notebook: bool = False,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
-) -> BackgroundTaskRead:
+) -> BackgroundTaskRead | StreamingResponse:
+    if payload is not None and payload.format in {"markdown_v2", "canjson_v2"}:
+        try:
+            options = payload.to_options()
+            result = (
+                export_conversation_markdown_v2(db, conversation_id, options)
+                if payload.format == "markdown_v2"
+                else export_conversation_canjson_v2(db, conversation_id, options)
+            )
+            db.commit()
+            return StreamingResponse(
+                result.content,
+                media_type=result.media_type,
+                headers={"Content-Disposition": content_disposition(result.filename)},
+                status_code=status.HTTP_200_OK,
+            )
+        except ExportError as exc:
+            db.rollback()
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     try:
+        if payload is not None:
+            include_description = payload.include_description
+            include_annotations = payload.annotation_scope == "all"
+            include_notebook = payload.notebook_scope == "current"
         job = queue_conversation_export(
             db,
             conversation_id=conversation_id,
@@ -39,6 +71,11 @@ def queue_archive_export(
             include_description=include_description,
             include_annotations=include_annotations,
             include_notebook=include_notebook,
+            include_metadata=payload.include_metadata if payload is not None else True,
+            include_source_refs=payload.include_source_refs if payload is not None else True,
+            export_format=payload.format if payload is not None else "cr_v2",
+            context_scope=payload.context_scope if payload is not None else "full_conversation",
+            start_message_id=payload.start_message_id if payload is not None else None,
         )
         db.commit()
     except MessageEditError as exc:
@@ -70,6 +107,29 @@ def queue_archive_auto_clean(
     return background_job_read(job)
 
 
+@router.post(
+    "/api/conversations/{conversation_id}/derived-rebuild",
+    response_model=BackgroundTaskRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def queue_derived_rebuild(
+    conversation_id: uuid.UUID,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+) -> BackgroundTaskRead:
+    try:
+        job = queue_conversation_derived_rebuild(
+            db,
+            conversation_id=conversation_id,
+            idempotency_key=idempotency_key,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return background_job_read(job)
+
+
 @router.get("/api/exports/{artifact_id}/download")
 def download_archive(artifact_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse:
     artifact = db.get(ExportArtifact, artifact_id)
@@ -86,4 +146,11 @@ def download_archive(artifact_id: uuid.UUID, db: Session = Depends(get_db)) -> F
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export file is missing.")
     artifact.download_count += 1
     db.commit()
-    return FileResponse(path, media_type=ARCHIVE_MIME, filename=artifact.filename)
+    media_type = (
+        CONTEXT_PACKAGE_MIME
+        if artifact.format == CONTEXT_PACKAGE_FORMAT
+        else BUNDLE_MIME
+        if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT}
+        else ARCHIVE_MIME
+    )
+    return FileResponse(path, media_type=media_type, filename=artifact.filename)

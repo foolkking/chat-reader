@@ -35,6 +35,8 @@ class OfflinePackageCreate(BaseModel):
     scope: Literal["conversation", "project", "all"]
     conversation_id: UUID | None = None
     project_id: UUID | None = None
+    known_revisions: dict[UUID, int] = Field(default_factory=dict)
+    include_assets: Literal["none", "small", "all"] = "all"
 
     @model_validator(mode="after")
     def validate_scope_id(self) -> "OfflinePackageCreate":
@@ -42,6 +44,10 @@ class OfflinePackageCreate(BaseModel):
             raise ValueError("conversation_id is required for conversation scope.")
         if self.scope == "project" and self.project_id is None:
             raise ValueError("project_id is required for project scope.")
+        if len(self.known_revisions) > 10_000:
+            raise ValueError("known_revisions contains too many conversations.")
+        if any(revision < 0 for revision in self.known_revisions.values()):
+            raise ValueError("known_revisions values must be non-negative.")
         return self
 
 

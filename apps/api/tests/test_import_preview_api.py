@@ -60,14 +60,14 @@ def test_preview_exporter_json_and_read_artifacts(client: TestClient) -> None:
     assert file_payload["artifact_id"]
     assert file_payload["source_profile"] == "chatgpt_exporter_json"
     assert file_payload["sha256"]
-    assert file_payload["raw_storage_uri"]
+    assert "raw_storage_uri" not in file_payload
 
     artifacts_response = client.get(f"/api/imports/{payload['import_id']}/source-artifacts")
     assert artifacts_response.status_code == 200
     artifacts = artifacts_response.json()
     assert len(artifacts) == 1
     assert artifacts[0]["artifact_id"] == file_payload["artifact_id"]
-    assert artifacts[0]["raw_storage_uri"] == file_payload["raw_storage_uri"]
+    assert "raw_storage_uri" not in artifacts[0]
 
     warnings_response = client.get(f"/api/imports/{payload['import_id']}/warnings")
     assert warnings_response.status_code == 200
@@ -77,14 +77,20 @@ def test_preview_exporter_json_and_read_artifacts(client: TestClient) -> None:
 def test_preview_saves_raw_file(client: TestClient, tmp_path: Path) -> None:
     response = client.post(
         "/api/imports/preview",
-        files={"files": ("../unsafe.json", b'{"messages":[{"content":"hello"}]}', "application/json")},
+        files={
+            "files": (
+                "../unsafe.json",
+                b'{"metadata":{},"messages":[{"role":"Prompt","say":"hello"}]}',
+                "application/json",
+            )
+        },
     )
 
     assert response.status_code == 200
     payload = response.json()
     stored_files = list((tmp_path / "storage" / "imports").glob(f"{payload['import_id']}/*"))
-    assert len(stored_files) == 1
-    assert stored_files[0].name == "unsafe.json"
+    assert {path.name for path in stored_files} == {"unsafe.json", "canonical-draft.jsonl"}
+    assert all(path.parent.name == payload["import_id"] for path in stored_files)
 
 
 def test_preview_empty_file_returns_400(client: TestClient) -> None:
@@ -96,10 +102,24 @@ def test_preview_empty_file_returns_400(client: TestClient) -> None:
     assert response.status_code == 400
 
 
-def test_preview_unsupported_extension_returns_400(client: TestClient) -> None:
+@pytest.mark.parametrize(
+    ("filename", "content", "mime_type"),
+    [
+        ("payload.exe", b"data", "application/octet-stream"),
+        ("export.csv", b"role,content\nuser,hello\n", "text/csv"),
+        ("notes.txt", b"plain transcript", "text/plain"),
+    ],
+)
+def test_preview_removed_or_unsupported_profiles_return_422(
+    client: TestClient,
+    filename: str,
+    content: bytes,
+    mime_type: str,
+) -> None:
     response = client.post(
         "/api/imports/preview",
-        files={"files": ("payload.exe", b"data", "application/octet-stream")},
+        files={"files": (filename, content, mime_type)},
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "unsupported_source_profile"

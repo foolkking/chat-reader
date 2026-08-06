@@ -27,6 +27,12 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       OFFLINE_STORAGE_DIR: /workspace/apps/api/storage/offline
+      ASSET_STORAGE_DIR: /workspace/apps/api/storage/assets
+      ASSET_STORAGE_BACKEND: ${ASSET_STORAGE_BACKEND:-local}
+      ATTACHMENT_SCANNER: ${ATTACHMENT_SCANNER:-disabled}
+      ALLOW_UNSCANNED_ATTACHMENTS: ${ALLOW_UNSCANNED_ATTACHMENTS:-true}
+      ASSET_SCAN_REQUIRED: ${ASSET_SCAN_REQUIRED:-false}
+      CLAMAV_HOST: chat-reader-clamav
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -46,11 +52,25 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
       IMPORT_STORAGE_DIR: /workspace/apps/api/storage/imports
       OFFLINE_STORAGE_DIR: /workspace/apps/api/storage/offline
+      ASSET_STORAGE_DIR: /workspace/apps/api/storage/assets
+      ASSET_STORAGE_BACKEND: ${ASSET_STORAGE_BACKEND:-local}
+      ATTACHMENT_SCANNER: ${ATTACHMENT_SCANNER:-disabled}
+      ALLOW_UNSCANNED_ATTACHMENTS: ${ALLOW_UNSCANNED_ATTACHMENTS:-true}
+      ASSET_SCAN_REQUIRED: ${ASSET_SCAN_REQUIRED:-false}
+      CLAMAV_HOST: chat-reader-clamav
     volumes:
       - .:/workspace
     depends_on:
       chat-reader-postgres:
         condition: service_healthy
+
+  chat-reader-clamav:
+    image: clamav/clamav:stable
+    container_name: chat-reader-clamav
+    restart: unless-stopped
+    profiles: ["scanner"]
+    expose:
+      - "3310"
 
   chat-reader-web:
     image: node:20-alpine

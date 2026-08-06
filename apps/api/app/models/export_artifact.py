@@ -18,11 +18,12 @@ class ExportArtifact(Base):
         nullable=False,
         unique=True,
     )
-    conversation_id: Mapped[uuid.UUID] = mapped_column(
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("conversations.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
+    scope_type: Mapped[str] = mapped_column(String, nullable=False, default="conversation")
     format: Mapped[str] = mapped_column(String, nullable=False)
     filename: Mapped[str] = mapped_column(String, nullable=False)
     storage_uri: Mapped[str] = mapped_column(Text, nullable=False)

@@ -1,98 +1,141 @@
 # 生产部署
 
-当前生产路径使用 `docker-compose.production.yml`：PostgreSQL、一次性 migration、FastAPI、单并发 task worker 和 Next.js 五个服务。Compose 服务名仍为 `import-worker`，但它同时处理 import、conversation merge、`.cr` export 和 historical auto-clean。只有 Web 端口对宿主机暴露。
+## Merge worker resource control
 
-生产 healthcheck 使用低频配置，避免小内存主机频繁创建 Docker exec：PostgreSQL 每 30 秒，API/Web 每 60 秒。容器日志启用 10 MiB、3 文件轮转。Web 远程构建固定为单 CPU worker，Node heap 上限为 640 MiB；1 GiB 以下服务器应顺序构建，并在构建 Web 前停止现有 API、worker、Web 和 PostgreSQL 容器。
+- Default worker limit: `IMPORT_WORKER_MEMORY_LIMIT=640m` through Compose interpolation.
+- Deploy incrementally after PostgreSQL/business-volume backup. Never run `docker compose down -v` and never overwrite server `.env.production`.
+- Before replacing a runaway legacy merge, cancel the exact active merge task, restart only `import-worker`, verify rollback/no active merge, then deploy the optimized worker.
 
-## 服务器准备
+最后核验：2026-08-05
 
-- Linux 服务器、Docker Engine 和 Docker Compose plugin。
-- 域名指向服务器。
-- Nginx 或 Caddy 负责 HTTPS。
-- 防火墙只开放 SSH、80 和 443；不要公开 PostgreSQL 5432 或 FastAPI 8000。
+本页描述可复用的部署程序。特定发布的镜像、哈希和 Chrome 结果保留在 [execution/DEPLOYMENT_CHECKLIST.md](execution/DEPLOYMENT_CHECKLIST.md)，不应复制为永久配置。
+
+## 拓扑与前提
+
+```text
+Internet HTTPS
+  -> reverse proxy
+  -> Next.js Web :3000
+       -> /api/* -> FastAPI :8000
+  -> PostgreSQL 16
+  -> single import/background worker
+```
+
+生产 Compose 文件为 `docker-compose.production.yml`，服务包括 `postgres`、`migrate`、`api`、`import-worker` 和 `web`。只对宿主机暴露 Web；API 和 PostgreSQL 位于内部 network。
+
+服务器需要 Docker Compose、足够磁盘、可用 swap/内存、`.env.production` 和外部 HTTPS 反向代理。至少配置强 `POSTGRES_PASSWORD`、正确的 `PUBLIC_WEB_BASE_URL`、`WEB_BIND_ADDRESS` 与 `WEB_PORT`。
+
+## 数据持久化
+
+| Volume | 内容 | 回退时处理 |
+| --- | --- | --- |
+| `postgres-data` | canonical 数据、偏好、任务、批注等 | 不删除；先 dump 再迁移 |
+| `import-storage` | 原始 source artifacts | 独立备份 |
+| `export-storage` | 临时导出 artifact | 可过期清理，但发布时不要覆盖 |
+| `offline-storage` | 离线 package artifacts | 独立备份 |
+| `asset-storage` | 附件对象、暂存和派生物 | 独立备份；不得删除 |
+
+禁止执行 `docker compose down -v`。镜像回退不等于数据回退；数据库 downgrade 必须单独审批和演练。
 
 ## 首次部署
 
 ```bash
-git clone <repository-url> chat-reader
-cd chat-reader
 cp .env.production.example .env.production
-```
-
-至少修改：
-
-```env
-POSTGRES_PASSWORD=<long-random-password>
-PUBLIC_WEB_BASE_URL=https://chat.example.com
-WEB_BIND_ADDRESS=127.0.0.1
-WEB_PORT=3000
-```
-
-启动：
-
-```bash
+# 编辑 .env.production，填入强密码、公开 URL 和绑定地址
 docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
-docker compose --env-file .env.production -f docker-compose.production.yml ps
-docker compose --env-file .env.production -f docker-compose.production.yml logs -f migrate api import-worker web
-```
-
-`migrate` 必须成功完成后 API 才会启动。验证真实业务链路：
-
-```bash
+docker compose --env-file .env.production -f docker-compose.production.yml ps -a
 curl -fsS http://127.0.0.1:3000/api/health
-curl -fsS http://127.0.0.1:3000/api/conversations
 ```
 
-## Nginx 与 HTTPS
+将反向代理 upstream 指向 `127.0.0.1:<WEB_PORT>`，由代理处理 TLS、HTTP 到 HTTPS、请求体上限和访问控制。仓库中的 `deploy/nginx-chat-reader.conf` 只是 HTTP 示例，不是生产证书配置。
 
-复制 `deploy/nginx-chat-reader.conf`，替换 `server_name`，启用站点后使用 Certbot 或等价工具配置 TLS。反向代理只指向 `127.0.0.1:3000`，API 继续通过 Next.js 同源 rewrite 到 Docker 内的 `http://api:8000`。
+## 发布前检查
 
-Nginx 的 `client_max_body_size` 应大于 `MAX_IMPORT_FILE_SIZE_MB`。commit 只负责快速排队，不再需要数分钟的 proxy timeout。
+1. 记录当前 commit、dirty worktree、Compose 状态、镜像 ID、磁盘、内存和 swap。
+2. 使用显式上传清单；排除 `.env*`、storage、数据库、备份、日志、缓存、临时目录和 `tsbuildinfo`。
+3. 运行本地 lint、typecheck、API pytest、相关 Playwright 和 production build。
+4. 生成 PostgreSQL dump，并用 `pg_restore --list` 验证可读性。
+5. 独立备份 import/offline storage；为当前 API、worker 和 Web 镜像添加回滚标签。
 
-生产环境没有内置认证。面向公网时必须在应用前增加可信的身份认证或至少反向代理访问控制，尤其应限制 import、reindex、编辑、删除和 share 管理接口。
+附件发布还必须备份 `asset-storage`，并确认 `ATTACHMENT_SCANNER` 策略。约 2 GiB 的 King 主机固定使用 `disabled`，不启动 `scanner` profile；`ALLOW_UNSCANNED_ATTACHMENTS=true` 只允许单用户继续使用，所有对象仍显示 `scanner_disabled`。未来本地 ClamAV 需要资源充足节点与 `--profile scanner`，更推荐配置独立 `RemoteScanner`。
 
-## 数据持久化
-
-- `postgres-data`：数据库。
-- `import-storage`：raw import artifacts。
-- `export-storage`：临时 `.cr` 归档；数据库中的 artifact 默认 24 小时过期。
-
-升级或重建容器时不要删除 volumes。`docker compose down -v` 会永久删除数据，不应在生产环境使用。
-
-## 备份
-
-仓库提供 `deploy/backup.sh`：
+数据库备份脚本：
 
 ```bash
 chmod +x deploy/backup.sh
 ./deploy/backup.sh
+pg_restore --list backups/chat-reader-<timestamp>.dump >/dev/null
 ```
 
-脚本使用 `pg_dump -Fc` 写入 `./backups`。应把备份复制到服务器外，并定期验证恢复：
+## 低内存 King 发布
+
+King 不再承担 Web 镜像编译。2026-08-06 的发布证明，即使暂停 worker，原机 `next build` 仍可能杀死 PostgreSQL checkpointer。必须在 CI 或独立 Linux 构建机完成镜像，再通过 registry 或 `docker save/load` 交付：
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.production.yml exec -T postgres \
-  pg_restore --list < backups/chat-reader-YYYYMMDDTHHMMSSZ.dump
+COMPOSE='docker compose --env-file .env.production -f docker-compose.production.yml'
+$COMPOSE up -d postgres
+# 在独立构建机生成并推送/传输 web、api、import-worker 镜像
+$COMPOSE pull api import-worker web  # 使用 registry 时
+$COMPOSE run --rm migrate
+$COMPOSE up -d --no-deps api import-worker
+$COMPOSE up -d --no-deps web
+$COMPOSE ps -a
 ```
 
-raw artifact 和 export artifact volume 需要单独做 volume/file backup；数据库 dump 不包含这些文件。`.cr` export 是临时下载，不应代替数据库与 import storage 的正式备份。
+如果使用 `docker save/load`，先在 King `docker load`，再执行同样的 migrate 和 `up -d --no-deps`。不得以增加 swap 或暂停 PostgreSQL 来换取原机 Web 构建。
 
-## 升级
+本轮附件 migration 后还需验证：
 
-1. 先备份数据库和 import storage。
-2. 拉取目标版本并检查 `.env.production.example` 变化。
-3. 执行 `docker compose ... up -d --build`。
-4. 确认 migrate completed、API/Web healthy，且 `import-worker` 正在运行。
-5. 验证 `/api/health`、会话列表、reader、search、import 和 share。
+```bash
+$COMPOSE exec -T api python -m alembic current
+$COMPOSE exec -T api python -m scripts.purge_legacy_deleted_conversations
+curl -fsS http://127.0.0.1:3000/api/capabilities
+```
 
-回滚应用镜像前要确认数据库 migration 是否向后兼容。不要直接降级数据库；先从经过验证的备份恢复到隔离环境。
+遗留 deleted conversation 清理脚本默认 dry-run；只有 PostgreSQL 和业务 volume 备份已验证后才使用 `--execute`。不可恢复删除没有产品级恢复入口。
+
+如果 shell 不支持变量形式，逐条写出相同 Compose 前缀。出现 OOM、Docker daemon 重启或数据库恢复事件时，停止发布结论，先检查 PostgreSQL、migration、日志并重新生成和校验数据库 dump；不要把容器重新启动等同于成功。
+
+## 发布后验证
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml ps -a
+docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=200 migrate api import-worker web
+curl -fsS http://127.0.0.1:3000/api/health
+```
+
+配对 Markdown 正文合同升级后，先在 API 容器运行只读统计，再在备份确认可用后创建修复版本：
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml exec -T api python -m scripts.backfill_exporter_markdown
+docker compose --env-file .env.production -f docker-compose.production.yml exec -T api python -m scripts.backfill_exporter_markdown --apply
+```
+
+命令幂等且不修改 schema；它只处理原始 JSON/Markdown 仍可验证、current version 仍由 import 创建的配对消息，手动或系统后续编辑跳过。
+
+至少确认：
+
+- PostgreSQL/API/Web healthy，worker running，migrate exited 0。
+- 生产 `alembic current` 与源码单一 head 一致。
+- `/api/health`、首页、Reader 和 `/library` 返回正常。
+- 本次新增 API、Reader 跳转/刷新恢复、Share/Export、离线增量和移动端关键路径按风险复验。
+- `/api/capabilities` 必须报告 scanner `disabled`、未扫描可用、基础预览开启、复杂预览关闭；附件 UI 不得显示 clean/safe。
+- 日志没有新增 error、exception、traceback、fatal、panic 或持续重启。
+
+生产 OpenAPI 不保证通过 `/api/openapi.json` 暴露；接口存在性可从容器内 `app.openapi()` 或测试环境核验。
+
+## 回退
+
+1. 停止继续发布，保留失败日志和当前镜像 ID。
+2. 将 API/worker/Web 指回发布前回滚标签；不要删除 volume。
+3. 若 migration 向后兼容，通常保留新增列；确需 downgrade 时先在备份副本验证。
+4. 恢复后重新检查 health、migration、worker 和关键只读路径。
+5. 数据异常时使用已验证 dump 在隔离环境演练，不直接覆盖唯一生产数据库。
 
 ## 运行维护
 
-```bash
-docker compose --env-file .env.production -f docker-compose.production.yml ps
-docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=200 api import-worker web postgres
-docker compose --env-file .env.production -f docker-compose.production.yml restart api import-worker web
-```
-
-建议监控磁盘、PostgreSQL volume、容器 health、5xx、后台任务失败率和备份时间。密钥、真实域名配置和备份文件不得提交到 Git。
+- 定期执行并异地保存 PostgreSQL dump；另外备份 import/offline volumes。
+- 配置 Docker 日志轮转；Compose 已限制 json-file 大小和文件数。
+- 监控磁盘、内存、swap、PostgreSQL health、worker 存活和 failed jobs。
+- 定期验证恢复流程，而不仅是验证备份文件存在。
+- 应用没有内置认证，公开域名必须长期由代理/VPN/访问网关保护。

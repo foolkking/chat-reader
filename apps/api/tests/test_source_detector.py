@@ -1,14 +1,31 @@
+import gzip
 import json
+
+import pytest
 
 from app.schemas.import_schema import SourceProfile
 from app.services.import_pipeline.source_detector import detect_source_profile
+
+
+def _canjson_v2() -> bytes:
+    records = [
+        {
+            "record_type": "manifest",
+            "format": "chat-reader-canonical-jsonl",
+            "version": 2,
+            "conversation": {"id": "source-conversation", "title": "Fixture"},
+            "selection": {"message_count": 0},
+        },
+        {"record_type": "end", "record_count": 2, "message_count": 0},
+    ]
+    return b"".join(json.dumps(record).encode() + b"\n" for record in records)
 
 
 def test_detect_chatgpt_exporter_json() -> None:
     content = json.dumps(
         {
             "metadata": {"powered_by": "ChatGPT Exporter"},
-            "messages": [{"role": "user", "content": "hello"}],
+            "messages": [{"role": "Prompt", "say": "hello", "time": None}],
         }
     ).encode()
 
@@ -36,46 +53,62 @@ Hi
     assert result.source_profile == SourceProfile.chatgpt_exporter_markdown
 
 
-def test_detect_official_conversations_json() -> None:
-    content = json.dumps(
-        [
-            {
-                "title": "Official",
-                "current_node": "node-1",
-                "mapping": {"node-1": {"id": "node-1"}},
-            }
-        ]
-    ).encode()
-
-    result = detect_source_profile("conversations.json", content)
-
-    assert result.source_profile == SourceProfile.official_conversations_json
-
-
-def test_detect_official_single_conversation_json() -> None:
+def test_detect_canjson_v1() -> None:
     content = json.dumps(
         {
-            "title": "Official",
-            "current_node": "node-1",
-            "mapping": {"node-1": {"id": "node-1"}},
+            "format": "chat-reader-canonical-export",
+            "version": 1,
+            "conversation": {"title": "Fixture"},
+            "messages": [],
         }
     ).encode()
 
-    result = detect_source_profile("conversation.json", content)
+    result = detect_source_profile("fixture.canonical.json", content)
 
-    assert result.source_profile == SourceProfile.official_conversation_json
-
-
-def test_detect_csv() -> None:
-    result = detect_source_profile("export.csv", b"role,content\nuser,hello\nassistant,hi\n")
-
-    assert result.source_profile == SourceProfile.csv
+    assert result.source_profile == SourceProfile.chat_reader_canjson_v1
+    assert result.confidence == 1.0
 
 
-def test_detect_plain_text() -> None:
-    result = detect_source_profile("notes.txt", b"plain transcript")
+@pytest.mark.parametrize(
+    ("filename", "content"),
+    [
+        ("fixture.canonical.jsonl", _canjson_v2()),
+        ("fixture.canonical.jsonl.gz", gzip.compress(_canjson_v2())),
+    ],
+)
+def test_detect_canjson_v2(filename: str, content: bytes) -> None:
+    result = detect_source_profile(filename, content)
 
-    assert result.source_profile == SourceProfile.plain_text
+    assert result.source_profile == SourceProfile.chat_reader_canjson_v2
+    assert result.confidence == 1.0
+
+
+@pytest.mark.parametrize(
+    ("filename", "content", "warning_fragment"),
+    [
+        (
+            "conversations.json",
+            json.dumps(
+                [
+                    {
+                        "title": "Official",
+                        "current_node": "node-1",
+                        "mapping": {"node-1": {"id": "node-1"}},
+                    }
+                ]
+            ).encode(),
+            "no longer supported",
+        ),
+        ("export.csv", b"role,content\nuser,hello\nassistant,hi\n", None),
+        ("notes.txt", b"plain transcript", None),
+    ],
+)
+def test_removed_profiles_are_unknown(filename: str, content: bytes, warning_fragment: str | None) -> None:
+    result = detect_source_profile(filename, content)
+
+    assert result.source_profile == SourceProfile.unknown
+    if warning_fragment:
+        assert any(warning_fragment in warning for warning in result.warnings)
 
 
 def test_invalid_json_returns_unknown_with_warning() -> None:

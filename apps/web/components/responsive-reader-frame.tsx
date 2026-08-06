@@ -15,7 +15,7 @@ export function ResponsiveReaderFrame({
   toc: React.ReactNode;
   focusMode?: boolean;
 }) {
-  const { readerWidthMode, sectionTocMode } = usePreferences();
+  const { readerDensityMode, readerFontSizePx, readerWidthMode, sectionTocMode } = usePreferences();
   const tocSize = useResizablePane({
     storageKey: "chat-reader:section-toc-width",
     defaultSize: 240,
@@ -26,9 +26,10 @@ export function ResponsiveReaderFrame({
     <div
       className="reader-frame min-h-full w-full py-[clamp(1rem,2vw,2rem)]"
       data-reader-width={readerWidthMode}
+      data-reader-density={readerDensityMode}
       data-section-toc={sectionTocMode}
       data-focus-mode={focusMode ? "on" : "off"}
-      style={{ "--reader-toc-width": `${tocSize.size}px` } as CSSProperties}
+      style={{ "--reader-toc-width": `${tocSize.size}px`, "--reader-font-size": `${readerFontSizePx}px` } as CSSProperties}
     >
       <aside className="reader-index-column">{index}</aside>
       <aside className="reader-toc-column min-w-0">

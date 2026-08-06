@@ -12,11 +12,15 @@ COPY scripts ./scripts
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install --upgrade pip && pip install .
 
 RUN addgroup --system chatreader \
     && adduser --system --ingroup chatreader chatreader \
-    && mkdir -p /data/imports /data/exports /data/offline \
+    && mkdir -p /data/imports /data/exports /data/offline /data/assets \
     && chown -R chatreader:chatreader /app /data
 
 USER chatreader

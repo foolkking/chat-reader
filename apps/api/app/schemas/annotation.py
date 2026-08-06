@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 AnnotationType = Literal["highlight", "underline", "strikethrough", "comment", "bookmark"]
 AnnotationColor = Literal["yellow", "green", "blue", "pink"]
+AnnotationAnchorStatus = Literal["valid", "remapped", "orphaned", "needs_review"]
+AnnotationAnchorStatusInput = Literal["valid", "remapped", "orphaned", "needs_review", "active", "relocated", "stale"]
 
 TEXT_ANNOTATION_TYPES = {"highlight", "underline", "strikethrough", "comment"}
 
@@ -25,11 +27,12 @@ class AnnotationCreate(BaseModel):
     prefix: str | None = Field(default=None, max_length=500)
     suffix: str | None = Field(default=None, max_length=500)
     comment_markdown: str = Field(default="", max_length=20_000)
-    anchor_status: Literal["active", "relocated", "stale"] = "active"
+    anchor_status: AnnotationAnchorStatusInput = "valid"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_anchor(self) -> "AnnotationCreate":
+        self.anchor_status = _normalize_anchor_status(self.anchor_status)
         if self.annotation_type in TEXT_ANNOTATION_TYPES:
             required = (self.message_id, self.message_version_id, self.start_block_index, self.end_block_index)
             if any(value is None for value in required) or not (self.quote or "").strip():
@@ -44,7 +47,7 @@ class AnnotationUpdate(BaseModel):
     annotation_type: AnnotationType | None = None
     color: AnnotationColor | None = None
     comment_markdown: str | None = Field(default=None, max_length=20_000)
-    anchor_status: Literal["active", "relocated", "stale"] | None = None
+    anchor_status: AnnotationAnchorStatusInput | None = None
     message_version_id: UUID | None = None
     start_block_index: int | None = Field(default=None, ge=0)
     start_offset: int | None = Field(default=None, ge=0)
@@ -62,6 +65,11 @@ class AnnotationUpdate(BaseModel):
             raise ValueError("annotation_type cannot be null when provided.")
         return value
 
+    @field_validator("anchor_status")
+    @classmethod
+    def normalize_anchor_status(cls, value: AnnotationAnchorStatusInput | None) -> AnnotationAnchorStatusInput | None:
+        return _normalize_anchor_status(value) if value is not None else None
+
 
 class AnnotationRead(BaseModel):
     id: UUID
@@ -78,7 +86,7 @@ class AnnotationRead(BaseModel):
     prefix: str | None
     suffix: str | None
     comment_markdown: str
-    anchor_status: Literal["active", "relocated", "stale"]
+    anchor_status: AnnotationAnchorStatus
     revision: int
     is_deleted: bool
     conflict_of_id: UUID | None
@@ -146,3 +154,7 @@ class SyncOperationResult(BaseModel):
 
 class AnnotationSyncResponse(BaseModel):
     results: list[SyncOperationResult]
+
+
+def _normalize_anchor_status(value: str) -> AnnotationAnchorStatus:
+    return {"active": "valid", "relocated": "remapped", "stale": "needs_review"}.get(value, value)  # type: ignore[return-value]

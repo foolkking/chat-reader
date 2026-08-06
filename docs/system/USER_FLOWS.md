@@ -1,170 +1,118 @@
 # 当前用户流程
 
-最后核验日期：2026-07-26
+## Reader source workspace and merge cancellation (current)
 
-以下只描述当前实现。生产核验没有执行导入、编辑、删除、同步等写操作；这些步骤由代码、API 和测试交叉确认。
+1. Desktop Reader keeps `Edit`, `Search`, `Annotations`, `Focus`, and `More` in that order. Search/annotations/source are mutually exclusive; clicking an open source or annotation action closes it. Share, export, merge, and split remain in `More`.
+2. Markdown source opens as a fixed left workspace at 1024px+, covering sidebars while retaining their state. The Reader captures its original main-column edge before opening and yields exactly enough space to keep the main column beyond the workspace. Only the right edge resizes; closing restores the original layout and reading anchor.
+3. Smaller widths use a full-width panel. Light/dark CodeMirror themes reconfigure without replacing document, cursor, undo history, or unsaved content. Clean reader scrolling follows through RAF; dirty content locks its message until save/discard/return.
+4. A merge copies canonical data in bounded batches. The monitor exposes `取消合并` and `正在取消`; cancellation rolls the target transaction back. Successful publication happens once and leaves sources unchanged.
 
-## 流程 1：首次进入在线系统
+最后核验：2026-08-05
 
-**流程名称：** 进入在线资料管理页
-**触发条件：** 浏览器可访问生产域名。
-**用户目标：** 查看已有资料或开始导入。
-**起始页面：** `/`。
-**操作步骤：** 打开域名；系统请求 preferences、projects、`scope=all` conversations 和 active tasks；显示“对话/项目”侧栏及列表。
-**系统反馈：** 查询期间显示加载状态；有数据时显示列表，无数据时显示相应空状态。
-**涉及页面/组件：** `AppShell`, `ProjectSidebar`, conversation list。
-**涉及接口：** `GET /api/preferences`, `/api/projects`, `/api/conversations`, `/api/tasks/active`。
-**成功状态：** 可打开对话、Project、搜索、归档、导入或设置。
-**失败状态/异常处理：** 单项请求显示错误/重试；直接 `/offline` 显示网络重试页。
-**权限要求：** 无登录；固定主体 `local:default`。
-**已确认限制：** 没有注册/登录步骤。
-**证据：** `PAGE-001/012/013`、对应组件和 API。
+## 1. 导入资料
 
-## 流程 2：导入对话
+```text
+选择兼容 JSON（可选 Markdown 校验）或 .cr
+-> preview/格式识别/warnings/ImportDraft -> 显式 commit
+-> durable job -> worker canonicalize -> 发布 conversation
+```
 
-**流程名称：** 文件预览并导入 canonical 数据
-**触发条件：** 在线；持有支持的文件。
-**用户目标：** 把外部导出资料加入 Chat Reader。
-**起始页面：** `/`。
-**操作步骤：** 打开“导入数据” -> 选择一个或多个文件 -> 上传预览 -> 查看检测 profile、warnings 和会话摘要 -> 显式提交。
-**系统反馈：** 预览先保存 source artifact；commit 创建 import/background job；任务监控显示状态。
-**涉及页面/组件：** `ImportDialog`, `features/import/*`, `TaskMonitor`。
-**涉及接口：** `POST /api/imports/preview`, `POST /api/imports/{id}/commit`, status/warnings/source-artifacts, task APIs。
-**成功状态：** canonical conversation/messages/versions/blocks/headings/search documents 原子写入并可打开。
-**失败状态/异常处理：** 文件大小、格式、解析、commit 或 worker 错误进入 warning/failed 状态，可查询或重试任务。
-**权限要求：** 在线管理面。
-**已确认限制：** 默认上限 50MB（可配置）；本次未上传生产文件。
-**证据：** `PAGE-002`, `routes/imports.py`, `services/import_pipeline/*`。
+- preview 不写 canonical；JSON 决定 metadata/role/time 与配对有效性，有效配对的 Markdown 决定显示正文。Markdown 配对冲突时必须修复或移除后才能 commit。
+- CanJSON v1/v2 由 JSON 控件自动识别；官方 OpenAI 图/ZIP、CSV、TXT 和 Markdown 单文件不是普通导入入口。
+- preview 使用 `first_user_message_markdown` 通过系统 Markdown renderer 展示结构；commit 成功后清除旧预览并进入 Reader，队列导入轮询到 committed 后执行同一跳转。Reader 不直接读取 raw artifact。
 
-## 流程 3：组织与批量管理对话
+## 2. 组织与批量管理
 
-**流程名称：** Project 归类和选择管理
-**触发条件：** 已有会话。
-**用户目标：** 排序、移动、归档、删除、导出或合并资料。
-**起始页面：** `/`、`/projects/[id]` 或 `/archived`。
-**操作步骤：** 在对话/Project 视图筛选上下文 -> 开启选择模式 -> 全选/反选/清空 -> 执行移动、移出、归档/恢复、删除、导出；至少两条时可有序合并。单项操作从侧栏行菜单进入。
-**系统反馈：** 工具条显示选中数量；mutation 后刷新列表 query。
-**涉及页面/组件：** list components, `SelectionToolbar`, `ProjectSidebar`。
-**涉及接口：** conversation/project order、move、pin、merge、PATCH/DELETE APIs。
-**成功状态：** 对话状态或 Project 关系更新。
-**失败状态/异常处理：** interaction dialog 显示请求错误；列表保持可重试。
-**权限要求：** 在线 canonical 管理。
-**已确认限制：** 离线和 Share 不允许。
-**证据：** `PAGE-004/005`, `STATE-001`, 相关路由代码。
+```text
+Project/未归类/归档列表 -> checkbox/Shift/键盘/移动长按
+-> 底部上下文栏 -> 移动、归档/恢复、导出、合并或删除
+```
 
-## 流程 4：阅读长对话并恢复位置
+- 桌面对话可拖入折叠 Project 或拖回未归类区。
+- 合并先确认顺序，删除二次确认；部分失败保留失败项选择。
+- Project 与 Conversation 使用独立三点菜单；归档保留 Project 关系，取消归档后回到原位置。删除需要显示标题并二次确认，随后立即事务性硬删除，不进入 Trash，也没有 restore；当前 Reader 被归档后进入 `/archived`，被删除后跳到下一个可用对话或安全空状态。
 
-**流程名称：** 窗口化长对话阅读
-**触发条件：** 打开有效 conversation。
-**用户目标：** 连续阅读并在下次返回原位置。
-**起始页面：** `/conversations/[id]` 或 `/library?conversationId=...`。
-**操作步骤：** Reader 加载初始/目标消息窗口 -> 需要时懒加载 heavy blocks -> 边缘滚动加载相邻窗口 -> active observer 更新 U/A 与章节 -> debounce 保存 message/block/offset。
-**系统反馈：** 顶栏进度、正文、对话 TOC、章节 TOC 同步；刷新按 URL 目标或保存位置恢复。
-**涉及页面/组件：** `ConversationReader`, `MessageItem`, `ConversationIndex`, `ConversationToc`。
-**涉及接口：** conversation detail, message-window, blocks, dialogue-index, toc, reading-position, recent。
-**成功状态：** 当前 block 位于阅读区域，位置被保存。
-**失败状态/异常处理：** 数据失败显示不可用/重试；无效 ID 见 `STATE-005`。
-**权限要求：** 在线无登录；离线需已下载。
-**已确认限制：** 离线位置只存本浏览器。
-**证据：** `PAGE-007/011/014/016`, Reader 源码。
+## 附件上传、插入与导出
 
-## 流程 5：搜索并定位正文
+1. “当前对话文件”或 Markdown 源码编辑器创建上传 session，文件流式写入暂存区并返回 MIME、hash、大小和扫描状态。
+2. 当前部署扫描器关闭时显示 `scanner_disabled`；策略允许继续使用不代表文件安全。
+3. 文件抽屉提交后成为当前对话 Attachment，可保持未放置，也可从编辑器在光标处或消息末尾插入。
+4. 保存消息时以 base version 做并发校验，并在同一事务创建 MessageVersion、Occurrence、RenderBlock 和派生索引。删除正文引用不会删除对话级 Attachment。
+5. 对话导出只选择 CanJSON/Markdown 与“包含附件”：分别得到 `.canjsonl`/`.context.zip` 或 `.md`/可移植 Markdown ZIP。系统 `.cr v4` 从设置的数据与备份导出，并只恢复到空实例。
+- 拖拽使用 Pointer/Touch/Keyboard sensors：未归类、Project、项目内插入槽是不同 drop target；跨项目移动只更新单一关系，移回未归类不删除会话，失败按 revision 回滚 optimistic cache。
 
-**流程名称：** 全局或当前对话搜索
-**触发条件：** 输入查询；离线需本地索引。
-**用户目标：** 找到标题、正文、章节、代码或用户元数据中的内容。
-**起始页面：** `/search`、Reader search 面板或 `/library`。
-**操作步骤：** 输入 q/筛选 -> 获取结果 -> 点击结果 -> 带 conversation/message/block/offset 进入统一导航。
-**系统反馈：** 结果摘要、类型和上下文；无结果显示空状态。
-**涉及页面/组件：** search page/panel, offline search worker, Reader navigation。
-**涉及接口：** `GET /api/search`；离线无远程 API。
-**成功状态：** 目标窗口加载并定位到 block/offset。
-**失败状态/异常处理：** 搜索错误可重试；定位可回退 block/message。
-**权限要求：** 无登录；只检索可见数据。
-**已确认限制：** 离线范围是已下载 searchDocuments。
-**证据：** `PAGE-006`, search/Reader 源码。
+## 3. 阅读长对话并恢复位置
 
-## 流程 6：编辑消息和恢复版本
+```text
+conversation + reading position 并行加载
+-> 读取包含目标 message 的完整 reader-turn
+-> 原子挂载 -> 对齐 120px 阅读线 -> 预取相邻轮次
+-> 稳定 1 秒后保存 message/block/offset
+```
 
-**流程名称：** canonical 正文版本管理
-**触发条件：** 在线 Reader 中打开消息管理。
-**用户目标：** 修订正文或恢复历史版本。
-**起始页面：** `/conversations/[id]`。
-**操作步骤：** 消息菜单选择编辑 -> 提交 Markdown -> 新建不可变 MessageVersion 并更新 current version；或查看 versions 并恢复指定版本。
-**系统反馈：** Reader query 更新，blocks/headings/search 重建；相关 annotation 尝试重定位。
-**涉及页面/组件：** `features/editing/*`, message menu。
-**涉及接口：** PATCH message, GET versions, POST restore。
-**成功状态：** 新 current version 可读，历史保留。
-**失败状态/异常处理：** 服务校验错误显示在交互对话框；原版本不被覆盖。
-**权限要求：** 在线管理；离线/Share 禁止。
-**已确认限制：** 本次未修改生产正文。
-**证据：** editing service/routes/tests。
+- 边缘切换捕获真实锚点，轮次完成水合后 prepend/replace，再补偿位置。
+- 刷新直接从保存轮次恢复，不先挂载普通 30 条窗口。
+- 用户 wheel/touch/pointer/阅读键输入可取消程序导航。
 
-## 流程 7：创建和管理批注/精选笔记
+## 4. 搜索、TOC 或批注定位
 
-**流程名称：** 桌面批注管理
-**触发条件：** 桌面 Reader 中选择正文或使用消息菜单。
-**用户目标：** 标记文字、评论、书签并汇总笔记。
-**起始页面：** 在线或离线 Reader。
-**操作步骤：** 选文本 -> 选类型与颜色（comment 同时编辑评论），或书签消息 -> 打开工作区筛选/定位/编辑 -> 管理模式全选/反选/批量样式/加入笔记/删除 -> 笔记中排序 reference。
-**系统反馈：** CSS Highlight/消息边缘标记；导航显示 loading/stale/failed；离线写入 outbox。
-**涉及页面/组件：** `AnnotationWorkspace`, selection/context actions, notebook editor。
-**涉及接口：** annotation CRUD/sync, notebook GET/PUT/conflicts。
-**成功状态：** revision 更新；离线恢复网络后同步。
-**失败状态/异常处理：** revision 冲突保留“冲突副本”；stale 回退 block/message。
-**权限要求：** 移动端只能查看、搜索、跳转。
-**已确认限制：** 本次只验证管理 UI，未更改生产批注。
-**证据：** `PAGE-008`, `STATE-002`, annotation service/repository。
+```text
+选择结果 -> 取消旧导航 -> 加载目标完整轮次
+-> quote/offset/block/message 解析 -> 等待媒体/布局稳定
+-> 复校 -> 继续预取
+```
 
-## 流程 8：分享或导出
+全局搜索、当前对话搜索、对话索引、章节 TOC、最近位置和批注复用同一事务；失败时保留当前正文并允许重试。
 
-**流程名称：** 受限分享与文件导出
-**触发条件：** 在线 Reader。
-**用户目标：** 只读分享或备份资料。
-**起始页面：** `/conversations/[id]`。
-**操作步骤：** Share 选择 full/selected、有效期、主题/语言、include flags、allow export -> 创建/复制/延期/重生/撤销；Export 选择 `.cr`/Markdown/Canonical JSON 和范围/options -> 直接或后台生成下载。
-**系统反馈：** Share 列表显示状态；archive job 显示进度；下载 artifact。
-**涉及页面/组件：** share/export panels, public reader。
-**涉及接口：** shares/shared/export/artifact APIs。
-**成功状态：** token URL 或文件产生。
-**失败状态/异常处理：** 过期/撤销 token 不可读；job 可查状态。
-**权限要求：** 创建端在线；访客只持 token。
-**已确认限制：** description/annotations/notebook 默认不包含；本次未复制 token 或下载生产内容。
-**证据：** `PAGE-009`, share/export code/tests。
+## 5. 编辑、版本与会话变换
 
-## 流程 9：下载并离线冷启动
+- 消息信息栏在正文上方提供收藏、选择、源码编辑和版本控件；桌面 hover/键盘聚焦显示，移动端进入底部操作菜单，不覆盖 Markdown 标题。
+- 桌面顶栏常驻顺序为“编辑、搜索、批注、专注、更多”，分享、导出、合并和拆分进入“更多”；移动端常驻“导航、编辑、更多”，搜索、批注和专注位于更多面板首组。
+- 从长消息当前阅读块打开非模态 CodeMirror 浮动源码工作区后，原正文保持挂载且高度不变。桌面浮窗可拖动、四边缩放、复位并持久化尺寸；移动端使用顶栏下方全宽面板。
+- 真实正文滚动在同消息内只调整源码位置；进入下一消息时，干净编辑器自动切换，脏编辑器锁定原消息并显示返回原文、保存后切换和放弃后切换。搜索定位、位置恢复和 Reader 导航等程序化滚动不触发切换；源码滚动也不反向推动正文，只能显式“在正文中定位”。
+- 保存后只局部替换当前消息并重建 blocks/TOC/search/摘要/offline revision，浮窗保持打开；保存前后的真实 DOM 锚点补偿阅读位置。切换其他工作区或专注模式前必须先处理未保存修改。
+- 默认保存创建新 MessageVersion；当前为第二版或更高时可显式覆盖当前版本。第一版永久不可覆盖/删除，未保存关闭提供保存、放弃和继续编辑。
+- 左右箭头立即持久化当前单消息版本，刷新和换设备后继续显示；删除当前历史版本时自动回退到较早的最近可用版本，删除/覆盖均保留不含被删正文的审计事件。
+- Reader 不显示按字符拆分单消息入口；“拆分对话”工作区先展示完整轻量时间线和结果预览，再执行连续区间、边界双份或离散消息复制。三种模式均创建新 conversation，来源保持不变。
 
-**流程名称：** 准备 PWA 壳与离线资料
-**触发条件：** 至少一次在线打开 `/library`。
-**用户目标：** 断网后仍能启动和阅读。
-**起始页面：** `/library` 或在线 Reader“离线资料库”。
-**操作步骤：** hydration 收集实际静态资产 -> `PREPARE_LIBRARY_SHELL` 写 staging cache 并校验 -> 原子切 active revision -> 请求持久化/检查配额 -> 选择 conversation/project/all -> 后台生成包 -> 下载并事务导入 Dexie。
-**系统反馈：** 壳状态、进度、估算、占用、最后更新、错误/重试。
-**涉及页面/组件：** `LibraryShell`, service worker registration, offline DB/repository。
-**涉及接口：** offline catalog/packages/download。
-**成功状态：** 断网 `/library?...` 从 active shell 启动并读取 IndexedDB。
-**失败状态/异常处理：** staging/配额/导入失败保留旧 active shell 和旧数据；没有完整壳时返回 503 文本。
-**权限要求：** 浏览器支持 SW/Cache/IndexedDB；首次在线。
-**已确认限制：** 本次验证线上入口与本地副本，未切断网络冷启。
-**证据：** `PAGE-010/011/016`, `public/library-sw.js`, `e2e/library-offline.spec.ts`。
+## 6. 批注与精选笔记
 
-## 流程 10：移动端导航与错误恢复
+```text
+选中文字/书签消息 -> 类型与颜色 -> 保存 annotation
+-> 工作区筛选、定位、批量样式/删除/加入精选
+-> 连续阅读或逐条回顾
+```
 
-**流程名称：** 窄屏阅读导航
-**触发条件：** 390x844 视口打开首页或 Reader。
-**用户目标：** 使用侧栏、TOC 和 actions，不依赖桌面 rail。
-**起始页面：** `/`、online/offline Reader。
-**操作步骤：** 打开侧栏 Bottom Sheet -> 选对话 -> 展开右上 actions -> 打开阅读导航 -> 切换对话/章节 TOC -> 点击目标后返回正文。错误时使用重试或返回列表。
-**系统反馈：** 移动端无 desktop separator/rail；actions trigger/X 固定；成功定位后 sheet 关闭。
-**涉及页面/组件：** mobile sheets, header action rail, Reader TOC。
-**涉及接口：** 与桌面 Reader 相同。
-**成功状态：** 正文无横向溢出，导航状态保持。
-**失败状态/异常处理：** 定位失败保留面板并允许重试；网络页提供重试。
-**权限要求：** 无账号；批注移动端只读。
-**已确认限制：** 当前生产往返切换 TOC 未复现“暂无 TOC”。
-**证据：** `PAGE-012` 至 `PAGE-016`, `STATE-003/004`。
+- stale anchor 按 block/message 降级并提示。
+- 精选笔记可插入 Markdown、引用批注和排序；移除引用不删除原批注。
+- 离线操作进入 outbox，联网后幂等同步；revision 冲突保留副本。
 
-## 不适用流程
+## 7. Share 与导出
 
-注册/登录/退出、创建空白聊天、发送消息、停止或重新生成、上传聊天附件、购买会员和管理员审核在当前系统中不适用；事实依据见 `FEATURE_INVENTORY.md` 与 `USER_ROLES_AND_PERMISSIONS.md`。
+- Share 选择 full/selected、expiry、private flags 和 allow export；创建后可复制、更新或撤销。
+- 访客只读取 `/api/shared/{token}/*` 授权范围。
+- Markdown v2/CanJSON v2 可流式导出；`.cr` 通过后台 job 生成临时 artifact。CanJSON v1 只保留 Legacy 兼容。
+- `format=context_package` 通过同一后台 job 生成 `<title>.context.zip`；只包含 manifest、当前版本 `conversation.canjsonl` 和 content-addressed available assets，支持完整对话/当前阅读范围两种 scope。历史版本、blocks、TOC 和 search 仍仅属于 `.cr`。
+- `.crbundle` 是附件导入输入；图片、文本、Markdown、JSON、CSV、代码、原生媒体和 PDF 可在线预览，Office/ZIP 下载降级，Share 再做 token 与消息范围校验。当前不执行附件内容秘密扫描；未扫描状态会保留到 Reader、Share 和导出。
+- 对话导出一级选项为 CanJSON/Markdown 和“包含附件”；二级选项可包含简介、批注、笔记和来源引用，ZIP manifest 记录实际选择。
 
+## 8. 离线资料库
+
+```text
+首次在线打开 /library -> staging/校验/激活 PWA 壳
+-> catalog 与本地 revisions 比对 -> 请求 v3 增量包（none/small/all attachments）
+-> 校验并在 Dexie transaction 中导入 -> 离线阅读/搜索
+```
+
+- 无变化时显示“离线资料已是最新”；后续 revision 变化可再次自动更新。
+- staging、下载或导入失败时保留旧 active shell 和旧数据。
+- canonical 管理离线禁用；批注/笔记可离线编辑并同步。
+- Dexie v2 保存附件 metadata；清洁小/全部附件保存到 Cache Storage，移除本地会话会同时清理对应 Blob。
+
+## 9. 移动端
+
+- 首页保留继续阅读卡片和 `/recent` 入口；桌面不显示它们。
+- Reader 顶栏为返回、标题、导航和更多；工具使用 Bottom Sheet。
+- 移动端优先阅读与单项管理，消息操作菜单可打开 Markdown 源码编辑与版本控件；复杂批量和 Project 管理以桌面为主。
+
+注册、登录、发送消息、停止生成、选择模型、会员购买和管理员审核不属于当前流程。

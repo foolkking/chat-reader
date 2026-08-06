@@ -45,54 +45,51 @@ def test_exporter_json_full_flow(client: TestClient) -> None:
     assert client.get(f"/api/conversations/{conversation_id}/export?format=canonical_json").status_code == 200
 
 
-def test_exporter_markdown_and_combo_flows(client: TestClient) -> None:
-    markdown = """# MD Flow
+def test_exporter_json_with_optional_markdown_validation_flow(client: TestClient) -> None:
+    markdown = """# Combo Flow
 
 Created: 2026-07-01 10:00:00
 Updated: 2026-07-01 10:10:00
 Exported: 2026-07-01 10:20:00
-Link: https://chatgpt.com/c/md-flow
+Link: https://chatgpt.com/c/combo-flow
 
 ## Prompt:
 2026-07-01 10:00:00
 
-markdown flow question
+combo question
 
 ## Response:
 2026-07-01 10:01:00
+
+### Rendered Markdown
+
+- safe list item
 
 ```python
 print("safe")
 ```
 """
-    md_conversation_id = _preview_commit(
-        client,
-        {"files": ("flow.md", markdown.encode(), "text/markdown")},
-    )
-    md_messages = client.get(f"/api/conversations/{md_conversation_id}/message-window?include_blocks=true").json()["items"]
-    assert md_messages[1]["render_blocks"][0]["block_type"] == "code"
-
     combo_json = {
         "metadata": {"title": "Combo Flow", "powered_by": "ChatGPT Exporter"},
         "messages": [
             {"role": "Prompt", "say": "combo question", "time": "2026-07-01 10:00:00"},
-            {"role": "Response", "say": "json response", "time": "2026-07-01 10:01:00"},
+            {"role": "Response", "say": "JSON fallback body", "time": "2026-07-01 10:01:00"},
         ],
     }
-    combo_md = markdown.replace("MD Flow", "Combo Flow").replace("markdown flow question", "combo question").replace('print("safe")', "# combo markdown display")
     combo_id = _preview_commit(
         client,
         [
             ("files", ("combo.json", json.dumps(combo_json).encode(), "application/json")),
-            ("files", ("combo.md", combo_md.encode(), "text/markdown")),
+            ("files", ("combo.md", markdown.encode(), "text/markdown")),
         ],
     )
     combo_messages = client.get(f"/api/conversations/{combo_id}/message-window?include_blocks=true").json()["items"]
     assert combo_messages[0]["role"] == "user"
-    assert "combo markdown display" in combo_messages[1]["current_version"]["display_text"]
+    assert combo_messages[1]["current_version"]["display_text"].startswith("### Rendered Markdown")
+    assert [block["block_type"] for block in combo_messages[1]["render_blocks"]] == ["heading", "paragraph", "code"]
 
 
-def test_official_conversations_primary_path_regression(client: TestClient) -> None:
+def test_official_conversations_are_rejected_from_the_main_import_flow(client: TestClient) -> None:
     official = [
         {
             "id": "official-flow",
@@ -121,12 +118,10 @@ def test_official_conversations_primary_path_regression(client: TestClient) -> N
             },
         }
     ]
-    conversation_id = _preview_commit(
-        client,
-        {"files": ("conversations.json", json.dumps(official).encode(), "application/json")},
+    response = client.post(
+        "/api/imports/preview",
+        files={"files": ("conversations.json", json.dumps(official).encode(), "application/json")},
     )
-    messages = client.get(f"/api/conversations/{conversation_id}/message-window?include_blocks=true").json()["items"]
-    body = json.dumps(messages)
-    assert len(messages) == 2
-    assert "official primary answer" in body
-    assert "branch should not show" not in body
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "unsupported_source_profile"

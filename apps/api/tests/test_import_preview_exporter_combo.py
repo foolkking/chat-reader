@@ -9,12 +9,11 @@ def _json_file(message_count: int = 2) -> bytes:
     messages = []
     for index in range(message_count):
         role = "Prompt" if index % 2 == 0 else "Response"
-        say = f"内容 {index}"
-        messages.append({"role": role, "say": say, "time": f"2026-07-01 10:{index:02d}:00"})
+        messages.append({"role": role, "say": f"Content {index}", "time": f"2026-07-01 10:{index:02d}:00"})
     return json.dumps(
         {
             "metadata": {
-                "title": "社交训练",
+                "title": "Pairing fixture",
                 "dates": {
                     "created": "2026-07-01 10:00:00",
                     "updated": "2026-07-01 10:10:00",
@@ -24,13 +23,12 @@ def _json_file(message_count: int = 2) -> bytes:
                 "powered_by": "ChatGPT Exporter",
             },
             "messages": messages,
-        },
-        ensure_ascii=False,
+        }
     ).encode()
 
 
 def _markdown_file() -> bytes:
-    return """# 社交训练
+    return b"""# Pairing fixture
 
 Created: 2026-07-01 10:00:00
 Updated: 2026-07-01 10:10:00
@@ -40,16 +38,13 @@ Link: https://chatgpt.com/c/test-conversation-id
 ## Prompt:
 2026-07-01 10:00:00
 
-内容 0
+Content 0
 
 ## Response:
 2026-07-01 10:01:00
 
-> 考虑提出的生活建议
-> 思考了 13s
-
-内容 1
-""".encode()
+Content 1
+"""
 
 
 def test_preview_exporter_json_returns_conversation_preview(client: TestClient) -> None:
@@ -65,20 +60,17 @@ def test_preview_exporter_json_returns_conversation_preview(client: TestClient) 
     assert preview["message_count"] == 2
 
 
-def test_preview_exporter_markdown_returns_conversation_preview(client: TestClient) -> None:
+def test_preview_exporter_markdown_without_json_is_rejected(client: TestClient) -> None:
     response = client.post(
         "/api/imports/preview",
         files={"files": ("export.md", _markdown_file(), "text/markdown")},
     )
 
-    assert response.status_code == 200
-    preview = response.json()["conversation_preview"]
-    assert preview["source_profile"] == "chatgpt_exporter_markdown"
-    assert preview["alignment_status"] == "markdown_only"
-    assert preview["cleaned_thinking_summary_count"] == 1
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "json_required"
 
 
-def test_preview_exporter_combo_returns_cleaned_combo_preview(client: TestClient) -> None:
+def test_preview_exporter_combo_exposes_markdown_display_preview(client: TestClient) -> None:
     response = client.post(
         "/api/imports/preview",
         files=[
@@ -93,8 +85,28 @@ def test_preview_exporter_combo_returns_cleaned_combo_preview(client: TestClient
     preview = payload["conversation_preview"]
     assert preview["source_profile"] == "chatgpt_exporter_combo"
     assert preview["alignment_status"] == "exact_match"
-    assert preview["cleaned_thinking_summary_count"] == 1
-    assert "思考了 13s" not in preview["messages"][1]["display_text_preview"]
+    assert preview["cleaned_thinking_summary_count"] == 0
+    assert preview["alignment_summary"] == {"exact": 2}
+    assert preview["messages"][1]["display_text_preview"] == "Content 1"
+    assert preview["first_user_message_markdown"] == "Content 0"
+
+
+def test_preview_pairing_conflict_disables_commit(client: TestClient) -> None:
+    response = client.post(
+        "/api/imports/preview",
+        files=[
+            ("files", ("export.json", _json_file(message_count=1), "application/json")),
+            ("files", ("export.md", _markdown_file(), "text/markdown")),
+        ],
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["conversation_preview"]["alignment_status"] == "conflict_detected"
+    assert payload["can_commit"] is False
+    assert payload["commit_endpoint"] is None
+    commit = client.post(f"/api/imports/{payload['import_id']}/commit")
+    assert commit.status_code == 409
 
 
 def test_preview_messages_are_capped(client: TestClient) -> None:
@@ -107,3 +119,29 @@ def test_preview_messages_are_capped(client: TestClient) -> None:
     preview = response.json()["conversation_preview"]
     assert preview["message_count"] == 25
     assert len(preview["messages"]) == 20
+
+
+def test_preview_preserves_first_user_markdown_structure(client: TestClient) -> None:
+    markdown = b"""# Pairing fixture
+
+## Prompt:
+2026-07-01 10:00:00
+
+### Preview heading
+
+- preview list item
+
+## Response:
+2026-07-01 10:01:00
+"""
+    response = client.post(
+        "/api/imports/preview",
+        files=[
+            ("files", ("export.json", _json_file(message_count=1), "application/json")),
+            ("files", ("export.md", markdown, "text/markdown")),
+        ],
+    )
+
+    assert response.status_code == 200
+    preview = response.json()["conversation_preview"]
+    assert preview["first_user_message_markdown"] == "### Preview heading\n\n- preview list item"

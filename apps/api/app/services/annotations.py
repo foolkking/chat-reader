@@ -218,7 +218,9 @@ def annotation_read(annotation: ConversationAnnotation) -> AnnotationRead:
         prefix=annotation.prefix,
         suffix=annotation.suffix,
         comment_markdown=annotation.comment_markdown,
-        anchor_status=annotation.anchor_status,
+        anchor_status={"active": "valid", "relocated": "remapped", "stale": "needs_review"}.get(
+            annotation.anchor_status, annotation.anchor_status
+        ),
         revision=annotation.revision,
         is_deleted=annotation.is_deleted,
         conflict_of_id=annotation.conflict_of_id,
@@ -264,7 +266,7 @@ def relocate_annotations_for_new_version(
     for annotation in annotations:
         if annotation.annotation_type == "bookmark":
             annotation.message_version_id = version.id
-            annotation.anchor_status = "active"
+            annotation.anchor_status = "valid"
             annotation.revision += 1
             annotation.updated_at = now
             sync_annotation_document(db, annotation)
@@ -276,7 +278,7 @@ def relocate_annotations_for_new_version(
             annotation.suffix or "",
         )
         if match is None:
-            annotation.anchor_status = "stale"
+            annotation.anchor_status = "orphaned"
         else:
             start_block, start_offset, end_block, end_offset = match
             annotation.message_version_id = version.id
@@ -284,7 +286,7 @@ def relocate_annotations_for_new_version(
             annotation.start_offset = start_offset
             annotation.end_block_index = end_block
             annotation.end_offset = end_offset
-            annotation.anchor_status = "relocated"
+            annotation.anchor_status = "remapped"
             annotation.metadata_ = _annotation_metadata(db, annotation.conversation_id, _annotation_create_from_model(annotation))
         annotation.revision += 1
         annotation.updated_at = now

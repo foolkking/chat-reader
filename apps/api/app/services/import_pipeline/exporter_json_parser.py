@@ -55,7 +55,8 @@ def parse_exporter_json(content: bytes | str) -> ExporterJsonParseResult:
         metadata = {}
         warnings.append("metadata is missing or not an object.")
 
-    if metadata.get("powered_by") != "ChatGPT Exporter":
+    powered_by = str(metadata.get("powered_by") or "")
+    if not _is_supported_powered_by(powered_by):
         warnings.append("metadata.powered_by is not ChatGPT Exporter.")
 
     raw_messages = payload.get("messages")
@@ -92,7 +93,7 @@ def parse_exporter_json(content: bytes | str) -> ExporterJsonParseResult:
                 text=text,
                 time=str(raw_message.get("time")) if raw_message.get("time") is not None else None,
                 index=index,
-                content_hash=content_hash(text),
+                content_hash=content_hash(text, role),
                 is_empty=is_empty,
             )
         )
@@ -137,3 +138,13 @@ def _map_role(source_role: str) -> str:
 
 def _optional_str(value: Any) -> str | None:
     return str(value) if value is not None else None
+
+
+def _is_supported_powered_by(value: str) -> bool:
+    return value == "ChatGPT Exporter" or bool(
+        re.fullmatch(
+            r"ChatGPT Exporter\s*\(https://(?:www\.)?chatgptexporter\.com/?\)",
+            value,
+            re.IGNORECASE,
+        )
+    )

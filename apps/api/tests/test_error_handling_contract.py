@@ -4,12 +4,13 @@ from test_import_preview_api import client  # noqa: F401
 from test_message_editing_api import assistant_message, commit_edit_sample
 
 
-def test_user_input_errors_return_400(client: TestClient) -> None:
+def test_user_input_errors_return_contract_statuses(client: TestClient) -> None:
     unsupported = client.post(
         "/api/imports/preview",
         files={"files": ("payload.exe", b"data", "application/octet-stream")},
     )
-    assert unsupported.status_code == 400
+    assert unsupported.status_code == 422
+    assert unsupported.json()["detail"]["code"] == "unsupported_source_profile"
 
     empty_search = client.get("/api/search?q=")
     assert empty_search.status_code == 400

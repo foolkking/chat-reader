@@ -1,25 +1,57 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, RefreshCw } from "lucide-react";
+import { Ban, CheckCircle2, RefreshCw, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { getActiveTasks, getTask, retryTask } from "../../lib/api";
+import { cancelTask, getActiveTasks, getTask, retryTask } from "../../lib/api";
 import type { BackgroundTaskRead } from "../../lib/types";
 
 export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobile" }) {
   const queryClient = useQueryClient();
   const previousTasks = useRef<BackgroundTaskRead[]>([]);
   const [completedTask, setCompletedTask] = useState<BackgroundTaskRead | null>(null);
+  const [dismissedTaskIds, setDismissedTaskIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem("chat-reader-dismissed-task-ids") ?? "[]") as string[];
+      setDismissedTaskIds(new Set(stored));
+    } catch {
+      setDismissedTaskIds(new Set());
+    }
+  }, []);
+  const dismissTask = (taskId: string) => {
+    setDismissedTaskIds((current) => {
+      const next = new Set(current);
+      next.add(taskId);
+      window.localStorage.setItem("chat-reader-dismissed-task-ids", JSON.stringify([...next].slice(-100)));
+      return next;
+    });
+  };
   const tasksQuery = useQuery({
     queryKey: ["active-tasks"],
     queryFn: getActiveTasks,
     refetchInterval: (query) =>
-      query.state.data?.some((task) => task.status === "queued" || task.status === "processing") ? 1500 : false,
+      query.state.data?.some((task) => ["queued", "processing", "cancelling"].includes(task.status)) ? 1500 : false,
   });
   const retryMutation = useMutation({
     mutationFn: retryTask,
     onSuccess: (task) => {
+      queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
+        task,
+        ...current.filter((item) => item.job_id !== task.job_id),
+      ]);
+    },
+  });
+  const cancelMutation = useMutation({
+    mutationFn: cancelTask,
+    onSuccess: (task) => {
+      if (task.status === "cancelled") {
+        setCompletedTask(task);
+        void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
+        window.setTimeout(() => setCompletedTask((value) => value?.job_id === task.job_id ? null : value), 6000);
+        return;
+      }
       queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
         task,
         ...current.filter((item) => item.job_id !== task.job_id),
@@ -31,30 +63,30 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
     const current = tasksQuery.data ?? [];
     const currentIds = new Set(current.map((task) => task.job_id));
     const finished = previousTasks.current.filter(
-      (task) => (task.status === "queued" || task.status === "processing") && !currentIds.has(task.job_id),
+      (task) => ["queued", "processing", "cancelling"].includes(task.status) && !currentIds.has(task.job_id),
     );
     previousTasks.current = current;
     for (const task of finished) {
       void getTask(task.job_id).then((result) => {
-        if (result.status !== "committed") return;
+        if (!["committed", "cancelled"].includes(result.status)) return;
         setCompletedTask(result);
         void invalidateReaderQueries(queryClient);
         window.setTimeout(
           () => setCompletedTask((value) => (value?.job_id === result.job_id ? null : value)),
-          10000,
+          result.status === "cancelled" ? 6000 : 10000,
         );
       });
     }
   }, [queryClient, tasksQuery.data]);
 
-  const tasks = tasksQuery.data ?? [];
+  const tasks = (tasksQuery.data ?? []).filter((task) => !dismissedTaskIds.has(task.job_id));
   const visibleTask = tasks.find((task) => task.status === "processing") ?? tasks[0] ?? completedTask;
   if (!visibleTask) return null;
 
   if (placement === "mobile") {
     return (
       <div className="fixed inset-x-3 bottom-3 z-40 rounded-xl border border-[#d8dee9] bg-white p-3 shadow-xl md:hidden">
-        <TaskContent task={visibleTask} compact />
+        <TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} />
       </div>
     );
   }
@@ -63,14 +95,14 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
     <div className="mb-3 space-y-2">
       {tasks.map((task) => (
         <div key={task.job_id} className="rounded-xl border border-[#d8dee9] bg-white p-3 shadow-sm">
-          <TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} />
+          <TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={task.status === "failed" ? () => dismissTask(task.job_id) : undefined} />
         </div>
       ))}
       {completedTask ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+        <div className={`rounded-xl border p-3 text-xs ${completedTask.status === "cancelled" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
           <p className="flex items-center gap-1.5 font-medium">
-            <CheckCircle2 className="h-4 w-4" />
-            {completedLabel(completedTask.job_type)}
+            {completedTask.status === "cancelled" ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+            {completedTask.status === "cancelled" ? "合并已取消" : completedLabel(completedTask.job_type)}
           </p>
           {taskConversationId(completedTask) ? (
             <Link className="mt-1 inline-block underline" href={`/conversations/${taskConversationId(completedTask)}`}>
@@ -84,7 +116,7 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
   );
 }
 
-function TaskContent({ task, compact = false, onRetry }: { task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void }) {
+function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {
   const failed = task.status === "failed";
   const committed = task.status === "committed";
   const conversationId = taskConversationId(task);
@@ -92,7 +124,10 @@ function TaskContent({ task, compact = false, onRetry }: { task: BackgroundTaskR
     <div className="min-w-0 text-xs text-[#475569]" data-testid={`task-${task.job_type}-${task.status}`}>
       <div className="flex items-center justify-between gap-3">
         <p className="truncate font-medium text-[#111827]">{task.label || taskTypeLabel(task)}</p>
-        <span className="shrink-0">{committed ? "100%" : `${task.progress}%`}</span>
+        <div className="flex shrink-0 items-center gap-1">
+          <span>{committed ? "100%" : `${task.progress}%`}</span>
+          {onDismiss ? <button type="button" onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#f1f5f9]" aria-label="关闭任务提示" title="关闭任务提示"><X className="h-4 w-4" /></button> : null}
+        </div>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e5e7eb]">
         <div
@@ -114,6 +149,12 @@ function TaskContent({ task, compact = false, onRetry }: { task: BackgroundTaskR
           ) : null}
         </div>
       ) : null}
+      {task.status === "cancelling" ? <p className="mt-2 font-medium text-amber-700">正在取消并回滚…</p> : null}
+      {task.cancellable && task.status !== "cancelling" && onCancel ? (
+        <button type="button" onClick={onCancel} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
+          <Ban className="h-3.5 w-3.5" />取消合并
+        </button>
+      ) : null}
       {compact && committed && conversationId ? (
         <Link className="mt-1 inline-block font-medium text-[#0f766e] underline" href={`/conversations/${conversationId}`}>
           打开会话
@@ -124,10 +165,17 @@ function TaskContent({ task, compact = false, onRetry }: { task: BackgroundTaskR
 }
 
 function phaseLabel(task: BackgroundTaskRead): string {
+  if (task.status === "cancelling") return "正在取消";
+  if (task.status === "cancelled") return "已取消";
   if (task.status === "queued") return "等待处理";
   if (task.status === "failed") return "处理失败";
   if (task.status === "committed") return "处理完成";
   const labels: Record<string, string> = {
+    messages: "复制消息",
+    source_refs: "复制来源引用",
+    versions: "复制完整版本",
+    blocks: "复制渲染块",
+    annotations: "复制批注",
     parsing: "解析与对齐",
     persisting: "保存消息与 blocks",
     validating: "校验来源与顺序",

@@ -1,9 +1,22 @@
 import type { RenderBlockRead } from "../../lib/types";
-import { MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./markdown-renderer";
+import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./markdown-renderer";
+import { AttachmentBlock } from "../attachments/attachment-block";
 
 const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 
 export function BlockRenderer({ block, isAssistant = true }: { block: RenderBlockRead; isAssistant?: boolean }) {
+  if (block.block_type === "image" || block.block_type === "attachment") {
+    const attachmentId = readString(block.data.attachmentId);
+    if (!attachmentId) return null;
+    return (
+      <AttachmentBlock
+        attachmentId={attachmentId}
+        displayMode={readString(block.data.displayMode) ?? (block.block_type === "image" ? "inline" : "card")}
+        alt={readString(block.data.alt) ?? undefined}
+        caption={readString(block.data.caption) ?? undefined}
+      />
+    );
+  }
   const text = stripLeadingTimestamp(block.plain_text ?? readText(block));
 
   if (!text.trim()) {
@@ -17,18 +30,19 @@ export function BlockRenderer({ block, isAssistant = true }: { block: RenderBloc
   if (block.block_type === "heading") {
     const level = normalizeHeadingLevel(block.data.level);
     const title = stripLeadingTimestamp(readString(block.data.title) ?? text);
-    const baseClass = "whitespace-pre-wrap break-words font-semibold tracking-normal text-primary";
+    const baseClass = "reader-heading whitespace-pre-wrap break-words font-semibold tracking-normal text-primary";
+    const content = <InlineHeadingMarkdown text={title} />;
 
     if (level === 1) {
-      return <h1 className={`${baseClass} border-b border-ui pb-2 text-2xl leading-9`}>{title}</h1>;
+      return <h1 className={`${baseClass} reader-heading-1 border-b border-ui pb-2`}>{content}</h1>;
     }
     if (level === 2) {
-      return <h2 className={`${baseClass} text-xl leading-8`}>{title}</h2>;
+      return <h2 className={`${baseClass} reader-heading-2`}>{content}</h2>;
     }
     if (level === 3) {
-      return <h3 className={`${baseClass} text-lg leading-7`}>{title}</h3>;
+      return <h3 className={`${baseClass} reader-heading-3`}>{content}</h3>;
     }
-    return <h4 className={`${baseClass} text-base leading-7`}>{title}</h4>;
+    return <h4 className={`${baseClass} reader-heading-4`}>{content}</h4>;
   }
 
   if (block.block_type === "code") {

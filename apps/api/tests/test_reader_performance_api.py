@@ -1,7 +1,11 @@
 import json
+import uuid
 
 from fastapi.testclient import TestClient
 
+from app.core.database import get_db
+from app.main import app
+from app.models.message import Message
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -40,6 +44,77 @@ def test_message_window_paginates_and_includes_current_page_blocks(client: TestC
     second_page = client.get(f"/api/conversations/{conversation_id}/message-window?limit=2&offset=2")
     assert second_page.status_code == 200
     assert second_page.json()["has_more"] is False
+
+
+def test_reader_turn_returns_a_complete_turn_and_all_blocks(client: TestClient) -> None:
+    long_text = "# Deep answer\n\n" + ("A long line with **formatting**.\n\n" * 700)
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "reader-turn.json",
+                json.dumps(
+                    {
+                        "metadata": {"title": "Reader turns", "powered_by": "ChatGPT Exporter"},
+                        "messages": [
+                            {"role": "Prompt", "say": "first"},
+                            {"role": "Response", "say": "first answer"},
+                            {"role": "Prompt", "say": "second"},
+                            {"role": "Response", "say": long_text},
+                        ],
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
+    )
+    conversation_id = client.post(f"/api/imports/{preview.json()['import_id']}/commit").json()["conversation_ids"][0]
+    messages = client.get(f"/api/conversations/{conversation_id}/messages", params={"limit": 20}).json()
+
+    response = client.get(
+        f"/api/conversations/{conversation_id}/reader-turn",
+        params={"anchor_message_id": messages[-1]["id"]},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["start_offset"] == 2
+    assert payload["end_offset"] == 4
+    assert payload["total_messages"] == 4
+    assert [item["id"] for item in payload["items"]] == [messages[2]["id"], messages[3]["id"]]
+    assert payload["previous_anchor_message_id"] == messages[0]["id"]
+    assert payload["next_anchor_message_id"] is None
+    assert all(item["content_truncated"] is False for item in payload["items"])
+    assert all(len(item["render_blocks"]) == item["block_count"] for item in payload["items"])
+
+
+def test_reader_turn_rejects_an_incomplete_block_set(client: TestClient) -> None:
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "incomplete-reader-turn.json",
+                json.dumps(
+                    {
+                        "metadata": {"title": "Incomplete turn", "powered_by": "ChatGPT Exporter"},
+                        "messages": [{"role": "Prompt", "say": "question"}],
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
+    )
+    conversation_id = client.post(f"/api/imports/{preview.json()['import_id']}/commit").json()["conversation_ids"][0]
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        message = db.query(Message).filter(Message.conversation_id == uuid.UUID(conversation_id)).one()
+        message.block_count += 1
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(f"/api/conversations/{conversation_id}/reader-turn")
+    assert response.status_code == 409
+    assert "hydration is incomplete" in response.json()["detail"]
 
 
 def test_message_blocks_endpoint_sorts_and_caps_limit(client: TestClient) -> None:

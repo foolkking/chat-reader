@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.message import DialogueIndexResponse, RenderBlockRead
+from app.schemas.message import DialogueIndexResponse, ReaderTurnResponse, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
 from app.schemas.annotation import AnnotationRead, NotebookRead
 from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUpdate, SharedConversationBootstrap
@@ -16,6 +16,7 @@ from app.services.sharing.share_service import (
     get_shared_conversation_by_token,
     get_shared_message_blocks,
     get_shared_message_window,
+    get_shared_reader_turn,
     get_shared_annotations,
     get_shared_notebook,
     get_shared_toc,
@@ -123,6 +124,18 @@ def get_shared_messages(
             anchor_message_id=anchor_message_id,
             anchor_before=min(anchor_before if anchor_before is not None else 12, limit - 1),
         )
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/shared/{token}/reader-turn", response_model=ReaderTurnResponse)
+def get_shared_reader_turn_route(
+    token: str,
+    anchor_message_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+) -> ReaderTurnResponse:
+    try:
+        return get_shared_reader_turn(db, token, anchor_message_id=anchor_message_id)
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 

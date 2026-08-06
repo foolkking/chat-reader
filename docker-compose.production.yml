@@ -40,6 +40,32 @@ services:
       IMPORT_STORAGE_DIR: /data/imports
       EXPORT_STORAGE_DIR: /data/exports
       OFFLINE_STORAGE_DIR: /data/offline
+      ASSET_STORAGE_DIR: /data/assets
+      ASSET_STORAGE_BACKEND: ${ASSET_STORAGE_BACKEND:-local}
+      ASSET_S3_BUCKET: ${ASSET_S3_BUCKET:-}
+      ASSET_S3_ENDPOINT_URL: ${ASSET_S3_ENDPOINT_URL:-}
+      ASSET_S3_REGION: ${ASSET_S3_REGION:-}
+      ASSET_S3_PREFIX: ${ASSET_S3_PREFIX:-attachments}
+      ATTACHMENT_SCANNER: ${ATTACHMENT_SCANNER:-disabled}
+      ALLOW_UNSCANNED_ATTACHMENTS: ${ALLOW_UNSCANNED_ATTACHMENTS:-true}
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+      CLAMAV_TIMEOUT_SECONDS: ${CLAMAV_TIMEOUT_SECONDS:-30}
+      REMOTE_SCANNER_URL: ${REMOTE_SCANNER_URL:-}
+      REMOTE_SCANNER_TOKEN: ${REMOTE_SCANNER_TOKEN:-}
+      REMOTE_SCANNER_TIMEOUT_SECONDS: ${REMOTE_SCANNER_TIMEOUT_SECONDS:-60}
+      ASSET_SCAN_REQUIRED: ${ASSET_SCAN_REQUIRED:-false}
+      ATTACHMENT_UPLOAD_ENABLED: ${ATTACHMENT_UPLOAD_ENABLED:-true}
+      ATTACHMENT_UPLOAD_TTL_HOURS: ${ATTACHMENT_UPLOAD_TTL_HOURS:-24}
+      BUNDLE_MAX_COMPRESSED_BYTES: ${BUNDLE_MAX_COMPRESSED_BYTES:-536870912}
+      BUNDLE_MAX_EXPANDED_BYTES: ${BUNDLE_MAX_EXPANDED_BYTES:-2147483648}
+      BUNDLE_MAX_OBJECT_BYTES: ${BUNDLE_MAX_OBJECT_BYTES:-268435456}
+      BUNDLE_MAX_ENTRIES: ${BUNDLE_MAX_ENTRIES:-5000}
+      BUNDLE_MAX_OBJECTS: ${BUNDLE_MAX_OBJECTS:-2000}
+      BUNDLE_MAX_COMPRESSION_RATIO: ${BUNDLE_MAX_COMPRESSION_RATIO:-100}
+      BUNDLE_MAX_PATH_DEPTH: ${BUNDLE_MAX_PATH_DEPTH:-4}
+      COMPLEX_ATTACHMENT_PREVIEW_ENABLED: ${COMPLEX_ATTACHMENT_PREVIEW_ENABLED:-false}
+      ATTACHMENT_PREVIEW_ORIGIN: ${ATTACHMENT_PREVIEW_ORIGIN:-}
       WEB_CONCURRENCY: ${API_WORKERS:-1}
     depends_on:
       postgres:
@@ -57,6 +83,7 @@ services:
       - import-storage:/data/imports
       - export-storage:/data/exports
       - offline-storage:/data/offline
+      - asset-storage:/data/assets
     expose:
       - "8000"
     healthcheck:
@@ -85,16 +112,30 @@ services:
       context: ./apps/api
     restart: unless-stopped
     command: ["python", "-m", "app.workers.import_worker"]
+    mem_limit: ${IMPORT_WORKER_MEMORY_LIMIT:-640m}
     environment: *api-environment
     volumes:
       - import-storage:/data/imports
       - export-storage:/data/exports
       - offline-storage:/data/offline
+      - asset-storage:/data/assets
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    networks:
+      - backend
+    logging: *default-logging
+
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    profiles: ["scanner"]
+    expose:
+      - "3310"
+    volumes:
+      - clamav-data:/var/lib/clamav
     networks:
       - backend
     logging: *default-logging
@@ -105,6 +146,8 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         API_INTERNAL_URL: http://api:8000
+        COMPLEX_ATTACHMENT_PREVIEW_ENABLED: ${COMPLEX_ATTACHMENT_PREVIEW_ENABLED:-false}
+        ATTACHMENT_PREVIEW_ORIGIN: ${ATTACHMENT_PREVIEW_ORIGIN:-}
     restart: unless-stopped
     environment:
       API_INTERNAL_URL: http://api:8000
@@ -132,3 +175,5 @@ volumes:
   import-storage:
   export-storage:
   offline-storage:
+  asset-storage:
+  clamav-data:

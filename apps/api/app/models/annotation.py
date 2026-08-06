@@ -33,7 +33,7 @@ class ConversationAnnotation(Base):
     prefix: Mapped[str | None] = mapped_column(Text, nullable=True)
     suffix: Mapped[str | None] = mapped_column(Text, nullable=True)
     comment_markdown: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    anchor_status: Mapped[str] = mapped_column(Text, nullable=False, default="active")
+    anchor_status: Mapped[str] = mapped_column(Text, nullable=False, default="valid")
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     conflict_of_id: Mapped[uuid.UUID | None] = mapped_column(

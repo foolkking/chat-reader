@@ -1,54 +1,60 @@
 # 文档维护规则
 
-最后核验日期：2026-07-26
+最后核验：2026-07-29
+
+完整文件分类见 [Markdown 文档台账](../documentation-inventory.md)。
+
+## 真值与生命周期
+
+1. 当前代码、配置、migration 和测试是第一真值。
+2. `PROJECT_STATE.md` 是紧凑当前快照；`docs/system/` 是详细当前事实。
+3. 根 README/AGENTS 只做入口和规则，不复制架构历史。
+4. `planning/`、`execution/`、`evidence/` 按日期封存；可加索引说明，不回写旧结论伪装当前事实。
+5. `apps/api/storage/imports/**/*.md` 和 `examples/**/*.md` 是数据/fixture，不属于文档系统。
 
 ## 事实等级
 
-- `已确认`：代码、页面、请求、配置或 schema 中至少一个直接证据；高风险事实应交叉验证。
-- `部分确认`：只验证部分链路，例如代码完整但未在生产执行写操作。
-- `推测`：有结构依据但缺少直接声明，必须写明依据。
-- `待验证`：证据不足或受账号、数据、环境限制。
-- `不适用`：经过页面、路由、API、模型和配置搜索确认当前边界不涉及。
-- `已废弃`：有迁移、删除记录、明确注释或替代实现证明不再使用。
+- `已确认`：当前代码/配置/migration/test 直接证明。
+- `生产快照`：带日期、版本和方法的线上证据。
+- `部分确认`：只完成一部分链路或自动化验证。
+- `待验证`：证据不足；明确写验证方法。
+- `不适用`：当前产品边界明确排除。
 
-“未发现”不能改写成“不存在”。建议和设计结论不得进入事实段落。
+“未发现”不能改写成“绝不存在”；设计建议不能混入事实段落。
 
-## 变更触发矩阵
+## 更新触发
 
 | 变更 | 必须更新 |
 | --- | --- |
-| 页面或 overlay | `PAGE_AND_ROUTE_MAP`, `FEATURE_INVENTORY`, UX handoff，必要时截图索引 |
-| 功能 | `FEATURE_INVENTORY`、对应 flow/architecture/data 文档 |
-| API | `BACKEND_AND_API`、OpenAPI 证据；影响流程时更新 `USER_FLOWS` |
-| 表/字段/migration/cache/store | `DATA_AND_STORAGE`，必要时部署文档 |
-| 身份/角色/ACL/Share 权限 | 权限、API、feature、agent context |
-| 部署/域名/代理/环境变量 | 部署、概览、runtime 证据 |
-| 第三方服务 | 外部依赖、数据流、失败表现 |
-| 问题状态 | Known Issues；保留编号和历史证据 |
+| 产品边界/核心能力 | `PROJECT_STATE`, `product`, `FEATURE_INVENTORY` |
+| 页面、面板、移动入口 | `PAGE_AND_ROUTE_MAP`, `USER_FLOWS` |
+| API/schema | `api-reference`, `BACKEND_AND_API` |
+| 表、migration、Dexie、协议 | `PROJECT_STATE`, `DATA_AND_STORAGE`, deployment docs |
+| 环境变量/Compose/代理 | `development`, `deployment`, `DEPLOYMENT_AND_ENVIRONMENT` |
+| 身份/Share/离线权限 | roles、API、feature 文档 |
+| 新风险或解决风险 | `KNOWN_ISSUES...`；解决过程进入新的 execution record |
+| 新增/移动 Markdown | `docs/index` 和 `documentation-inventory` |
 
-## 核验与证据
+## 写作与证据
 
-每份事实文档顶部记录核验日期；生产事实记录 Git commit，不只写“当前”。截图/请求记录必须有日期、URL 模板、视口/方法、身份、前置条件和脱敏状态。生产数量、耗时、大小只作为时间点快照。
+- 每份事实文档标注最后核验日期；生产结论同时标注证据日期，不只写“当前”。
+- 命令必须来自 package scripts、Makefile、Compose 或已验证操作；不发明参数。
+- 详细信息只保留一个权威位置，其他文档使用相对链接。
+- 截图/请求记录写明 URL 模板、视口/方法、身份、前置条件和脱敏状态。
+- 数量、耗时、镜像 ID 和像素误差属于时间点证据，不写成产品规格。
 
-当前事实进入 `docs/system`；高密度摘要进入 agent context；UX 范围进入 handoff；设计建议应另建 design/ADR 文档。过期旧文档保留时加时效提示并链接当前基线，不静默删除。
+## 安全
 
-## 防止覆盖事实
+禁止持久化密码、Cookie、token、API key、私钥、完整 DB URL、真实用户正文、私人标题/ID、未脱敏环境 dump 或服务器绝对路径。使用 `<PROJECT_ROOT>`、`<PUBLIC_URL>`、`<CONVERSATION_ID>` 等占位符。
 
-1. 修改前先读索引和相关证据。
-2. 只有新证据才能改变 `已确认`；版本/日期不同则保留历史快照。
-3. 生产与代码不一致时用差异模板，不自行认定一方正确。
-4. 不从单一截图推断后端能力，不从未挂载组件推断线上可用。
-5. 敏感信息禁止进入文档：密码、Cookie、token、key、私钥、DB URL、真实用户数据、聊天正文和 artifact 路径。
-
-## 发布差异模板
+## 差异记录模板
 
 ```text
-差异编号：
-核验日期与代码 commit：
+核验日期/代码状态：
 代码侧事实：
-线上侧事实：
+生产侧快照：
 原文档描述：
 当前确认程度：
 证据：
-后续验证方式：
+下一次验证方式：
 ```

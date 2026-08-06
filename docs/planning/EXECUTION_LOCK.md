@@ -4,6 +4,8 @@
 **事实基线 commit：** e752e9ddf25595c3f373977a1803956354ca71b0
 **优先级：** 本文件为最高优先级约束。与其他文档冲突时以本文件为准。
 
+> **最终覆盖（2026-07-28）：** 用户在本锁之后明确批准完整轮次 Reader、单层侧栏和离线 conversation 增量更新。因此 D-007 的互斥标签、旧 Reader lazy window，以及下文 offline package“不改”不再是当前执行约束。数据库、Dexie schema、`.cr` 与 Share token 锁仍有效；离线包写 v2、读 v1/v2。
+
 ---
 
 ## 1. 文件优先级（冲突时）

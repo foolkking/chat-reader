@@ -10,7 +10,9 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
+from app.models.attachment import Attachment, AssetDerivative, AssetObject, MessageVersionAttachment
 from app.services.database.bulk_insert import insert_rows
+from app.services.assets.asset_store import get_asset_store
 from app.services.toc.toc_builder import rebuild_headings_for_all, rebuild_headings_for_conversation
 from app.services.search.annotation_indexer import sync_annotations_for_conversation
 
@@ -62,28 +64,28 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         )
         indexed_count += 1
 
-    for message, version in _message_version_rows(db, conversation.id):
-        canonical_body = version.display_text.strip() or version.plain_text.strip()
-        search_text = f"{message.role} {canonical_body}".strip()
+    for row in _message_version_rows(db, conversation.id):
+        canonical_body = row.display_text.strip() or row.plain_text.strip()
+        search_text = f"{row.role} {canonical_body}".strip()
         if not search_text:
             continue
         document_rows.append(
             {
                 "id": uuid.uuid4(),
                 "conversation_id": conversation.id,
-                "message_id": message.id,
-                "message_version_id": version.id,
+                "message_id": row.message_id,
+                "message_version_id": row.message_version_id,
                 "document_type": "message",
-                "role": message.role,
+                "role": row.role,
                 "title": conversation.display_title,
-                "plain_text": version.plain_text,
+                "plain_text": row.plain_text,
                 "search_text": search_text,
                 "source_type": conversation.source_type,
                 "source_profile": conversation.source_profile,
-                "order_key": message.order_key,
-                "turn_index": message.turn_index,
-                "created_at": message.created_at,
-                "metadata_": {"char_count": message.char_count, "block_count": message.block_count},
+                "order_key": row.order_key,
+                "turn_index": row.turn_index,
+                "created_at": row.created_at,
+                "metadata_": {"char_count": row.char_count, "block_count": row.block_count},
             }
         )
         indexed_count += 1
@@ -119,7 +121,17 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
             document_rows.clear()
 
     code_rows = (
-        db.query(Message, MessageVersion, RenderBlock)
+        db.query(
+            Message.id.label("message_id"),
+            Message.role,
+            Message.order_key,
+            Message.turn_index,
+            Message.created_at,
+            MessageVersion.id.label("message_version_id"),
+            RenderBlock.block_index,
+            RenderBlock.plain_text,
+            RenderBlock.data,
+        )
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
         .join(RenderBlock, RenderBlock.message_version_id == MessageVersion.id)
         .filter(
@@ -130,28 +142,99 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         .order_by(Message.order_key.asc(), RenderBlock.block_index.asc())
         .yield_per(500)
     )
-    for message, version, block in code_rows:
-        code_text = (block.plain_text or str(block.data.get("text") or "")).strip()
+    for row in code_rows:
+        block_data = row.data if isinstance(row.data, dict) else {}
+        code_text = (row.plain_text or str(block_data.get("text") or "")).strip()
         if not code_text:
             continue
-        language = str(block.data.get("language") or "text")
+        language = str(block_data.get("language") or "text")
         document_rows.append(
             {
                 "id": uuid.uuid4(),
                 "conversation_id": conversation.id,
-                "message_id": message.id,
-                "message_version_id": version.id,
+                "message_id": row.message_id,
+                "message_version_id": row.message_version_id,
                 "document_type": "code",
-                "role": message.role,
+                "role": row.role,
                 "title": conversation.display_title,
                 "plain_text": code_text,
                 "search_text": f"{language} {code_text}",
                 "source_type": conversation.source_type,
                 "source_profile": conversation.source_profile,
+                "order_key": row.order_key,
+                "turn_index": row.turn_index,
+                "created_at": row.created_at,
+                "metadata_": {"block_index": row.block_index, "language": language},
+            }
+        )
+        indexed_count += 1
+        if len(document_rows) >= 500:
+            insert_rows(db, SearchDocument, document_rows)
+            document_rows.clear()
+
+    attachment_rows = (
+        db.query(MessageVersionAttachment, Attachment, AssetObject, Message)
+        .join(Attachment, Attachment.id == MessageVersionAttachment.attachment_id)
+        .join(AssetObject, AssetObject.id == Attachment.asset_object_id)
+        .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
+        .filter(
+            Message.conversation_id == conversation.id,
+            Message.is_deleted.is_(False),
+            Attachment.deleted_at.is_(None),
+        )
+        .order_by(Message.order_key.asc(), MessageVersionAttachment.display_order.asc())
+        .all()
+    )
+    derivative_by_source = {
+        row.source_asset_object_id: row
+        for row in db.query(AssetDerivative).filter(
+            AssetDerivative.source_asset_object_id.in_({asset.id for _, _, asset, _ in attachment_rows}),
+            AssetDerivative.derivative_type == "text_extract",
+            AssetDerivative.status == "ready",
+        ).order_by(AssetDerivative.created_at.desc()).all()
+    } if attachment_rows else {}
+    derivative_assets = {
+        item.id: item
+        for item in db.query(AssetObject).filter(
+            AssetObject.id.in_({row.derivative_asset_object_id for row in derivative_by_source.values()})
+        ).all()
+    } if derivative_by_source else {}
+    for link, attachment, asset, message in attachment_rows:
+        extracted = ""
+        derivative = derivative_by_source.get(asset.id)
+        derivative_asset = derivative_assets.get(derivative.derivative_asset_object_id) if derivative else None
+        if derivative_asset is not None and derivative_asset.status == "available":
+            try:
+                with get_asset_store().resolve_key(derivative_asset.storage_key).open("rb") as source:
+                    extracted = source.read(256 * 1024).decode("utf-8", errors="replace")
+            except (OSError, ValueError):
+                extracted = ""
+        search_text = " ".join(
+            value for value in [attachment.display_name, attachment.original_filename, extracted] if value
+        ).strip()
+        if not search_text:
+            continue
+        document_rows.append(
+            {
+                "id": uuid.uuid4(),
+                "conversation_id": conversation.id,
+                "message_id": message.id,
+                "message_version_id": link.message_version_id,
+                "document_type": "attachment",
+                "role": message.role,
+                "title": attachment.display_name,
+                "plain_text": extracted or attachment.display_name,
+                "search_text": search_text,
+                "source_type": conversation.source_type,
+                "source_profile": conversation.source_profile,
                 "order_key": message.order_key,
                 "turn_index": message.turn_index,
                 "created_at": message.created_at,
-                "metadata_": {"block_index": block.block_index, "language": language},
+                "metadata_": {
+                    "attachment_id": str(attachment.id),
+                    "mime_type": asset.detected_mime_type,
+                    "derivative_type": "text_extract" if extracted else None,
+                },
             }
         )
         indexed_count += 1
@@ -163,7 +246,6 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         insert_rows(db, SearchDocument, document_rows)
 
     db.flush()
-    _refresh_postgres_tsv(db, conversation.id)
     sync_annotations_for_conversation(db, conversation.id)
     _refresh_postgres_tsv(db, conversation.id)
     return SearchIndexResult(conversation_count=1, indexed_count=indexed_count, heading_count=0)
@@ -195,13 +277,24 @@ def rebuild_search_and_toc_for_conversation(db: Session, conversation_id: uuid.U
     )
 
 
-def _message_version_rows(db: Session, conversation_id: uuid.UUID) -> list[tuple[Message, MessageVersion]]:
+def _message_version_rows(db: Session, conversation_id: uuid.UUID):
     return (
-        db.query(Message, MessageVersion)
+        db.query(
+            Message.id.label("message_id"),
+            Message.role,
+            Message.order_key,
+            Message.turn_index,
+            Message.created_at,
+            Message.char_count,
+            Message.block_count,
+            MessageVersion.id.label("message_version_id"),
+            MessageVersion.plain_text,
+            MessageVersion.display_text,
+        )
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
         .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
         .order_by(Message.order_key.asc())
-        .all()
+        .yield_per(500)
     )
 
 

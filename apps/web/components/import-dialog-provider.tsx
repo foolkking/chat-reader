@@ -35,7 +35,7 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
                 <X className="h-4 w-4" />
               </button>
             </header>
-            <div className="p-5"><ImportPanel /></div>
+            <div className="p-5"><ImportPanel onImportCommitted={closeImportDialog} /></div>
           </section>
         </div>
       ) : null}

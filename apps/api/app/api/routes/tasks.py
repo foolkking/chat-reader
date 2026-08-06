@@ -7,7 +7,11 @@ from app.core.database import get_db
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from app.schemas.task import BackgroundTaskRead
-from app.services.background_jobs import ACTIVE_JOB_STATUSES, retry_background_job
+from app.services.background_jobs import (
+    ACTIVE_JOB_STATUSES,
+    request_background_job_cancellation,
+    retry_background_job,
+)
 from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_for_import, primary_filename, queue_import
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -61,6 +65,24 @@ def retry_task(job_id: uuid.UUID, db: Session = Depends(get_db)) -> BackgroundTa
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
 
 
+@router.post("/{job_id}/cancel", response_model=BackgroundTaskRead)
+def cancel_task(job_id: uuid.UUID, db: Session = Depends(get_db)) -> BackgroundTaskRead:
+    job = db.get(BackgroundJob, job_id)
+    if job is None:
+        record = db.get(ImportRecord, job_id)
+        if record is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Import tasks cannot be cancelled here.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+    try:
+        request_background_job_cancellation(job)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        status_code = getattr(exc, "status_code", status.HTTP_409_CONFLICT)
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    return _job_task(job)
+
+
 def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
     return _job_task(job)
 
@@ -82,6 +104,8 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         started_at=job.started_at,
         heartbeat_at=job.heartbeat_at,
         completed_at=job.completed_at,
+        cancellable=job.job_type == "conversation_merge" and job.status in {"queued", "processing", "cancelling"},
+        attempt_count=job.attempt_count,
     )
 
 
@@ -90,6 +114,7 @@ def _job_label(job_type: str) -> str:
         "conversation_merge": "合并对话",
         "conversation_export": "导出归档",
         "conversation_auto_clean": "清理对话内容",
+        "conversation_derived_rebuild": "重建派生数据",
         "offline_package": "生成离线资料库",
     }.get(job_type, "后台任务")
 
@@ -111,4 +136,6 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
         started_at=record.started_at,
         heartbeat_at=record.heartbeat_at,
         completed_at=record.completed_at,
+        cancellable=False,
+        attempt_count=record.attempt_count,
     )

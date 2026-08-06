@@ -91,6 +91,10 @@ def upsert_reading_position(
         db,
         conversation_id,
         last_message_id=message_id,
+        context={
+            "block_index": block_index,
+            **({"progress": anchor_data["progress"]} if isinstance(anchor_data.get("progress"), (int, float)) else {}),
+        },
         increment_open_count=False,
     )
     return position
@@ -148,7 +152,7 @@ def _touch_recent_item(
         if last_message_id is not None:
             recent.last_message_id = last_message_id
         if context is not None:
-            recent.context = context
+            recent.context = {**(recent.context or {}), **context}
         if increment_open_count:
             recent.open_count += 1
         recent.last_opened_at = utc_now()
@@ -157,7 +161,14 @@ def _touch_recent_item(
 
 
 def list_recent_items(db: Session, limit: int) -> list[RecentItem]:
-    return db.query(RecentItem).order_by(RecentItem.last_opened_at.desc()).limit(limit).all()
+    return (
+        db.query(RecentItem)
+        .join(Conversation, Conversation.id == RecentItem.conversation_id)
+        .filter(Conversation.status == "active", Conversation.deleted_at.is_(None))
+        .order_by(RecentItem.last_opened_at.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 def _ensure_conversation(db: Session, conversation_id: uuid.UUID) -> Conversation:

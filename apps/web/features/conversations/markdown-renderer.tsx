@@ -6,10 +6,11 @@ import {
   type CodeHeaderProps,
   type SyntaxHighlighterProps,
 } from "@assistant-ui/react-markdown";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { Components } from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import rehypeSanitize from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
@@ -101,34 +102,21 @@ const markdownComponents: Components & {
   SyntaxHighlighter?: React.ComponentType<SyntaxHighlighterProps>;
 } = {
   a({ href, children }) {
-    const safeHref = typeof href === "string" && isSafeHref(href) ? href : undefined;
-    if (!safeHref) {
-      return <span className="text-secondary">{children}</span>;
-    }
-    return (
-      <a
-        href={safeHref}
-        target={safeHref.startsWith("#") || safeHref.startsWith("/") ? undefined : "_blank"}
-        rel={safeHref.startsWith("#") || safeHref.startsWith("/") ? undefined : "noreferrer"}
-        className="font-medium text-[var(--link)] underline decoration-[var(--link-decoration)] underline-offset-2 hover:text-[var(--link-hover)]"
-      >
-        {children}
-      </a>
-    );
+    return <SafeMarkdownLink href={href}>{children}</SafeMarkdownLink>;
   },
   blockquote({ node, children }) {
     const rawText = collectNodeText(node);
     const callout = parseCallout(rawText);
     if (callout) {
       return (
-        <div className={`markdown-callout my-4 border-l-4 px-4 py-3 ${calloutClassName(callout.type)}`}>
+        <div className={`markdown-callout border-l-4 px-4 py-3 ${calloutClassName(callout.type)}`}>
           <div className="mb-2 text-xs font-semibold uppercase tracking-normal">{callout.label}</div>
-          <AssistantMarkdownPart text={callout.body} className="text-sm" />
+          <AssistantMarkdownPart text={callout.body} className="text-[0.9em]" />
         </div>
       );
     }
     return (
-      <blockquote className="my-4 border-l-2 border-[var(--quote-border)] py-0.5 pl-4 text-[var(--quote-text)]">
+      <blockquote className="border-l-2 border-[var(--quote-border)] py-0.5 pl-4 text-[var(--quote-text)]">
         {children}
       </blockquote>
     );
@@ -139,24 +127,24 @@ const markdownComponents: Components & {
     return <code className="rounded-md border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1.5 py-0.5 font-mono text-[0.9em] text-[var(--inline-code-text)]">{children}</code>;
   },
   h1({ children }) {
-    return <h1 className="mt-8 border-b border-ui pb-2 text-2xl font-semibold leading-9 text-primary first:mt-0">{children}</h1>;
+    return <h1 className="reader-heading reader-heading-1 border-b border-ui pb-2 font-semibold text-primary">{children}</h1>;
   },
   h2({ children }) {
-    return <h2 className="mt-7 text-xl font-semibold leading-8 text-primary first:mt-0">{children}</h2>;
+    return <h2 className="reader-heading reader-heading-2 font-semibold text-primary">{children}</h2>;
   },
   h3({ children }) {
-    return <h3 className="mt-6 text-lg font-semibold leading-7 text-primary first:mt-0">{children}</h3>;
+    return <h3 className="reader-heading reader-heading-3 font-semibold text-primary">{children}</h3>;
   },
   h4({ children }) {
-    return <h4 className="mt-4 text-base font-semibold leading-7 text-primary first:mt-0">{children}</h4>;
+    return <h4 className="reader-heading reader-heading-4 font-semibold text-primary">{children}</h4>;
   },
   hr() {
-    return <hr className="my-8 border-ui" />;
+    return <hr className="border-ui" />;
   },
   img({ alt, src }) {
     const safeSrc = typeof src === "string" && isSafeHref(src) ? src : undefined;
     return (
-      <span className="my-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-xs text-secondary">
+      <span className="inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-[0.75em] text-secondary">
         图片附件
         {alt ? <span className="truncate">{alt}</span> : null}
         {safeSrc ? (
@@ -181,21 +169,21 @@ const markdownComponents: Components & {
     );
   },
   li({ children, className }) {
-    return <li className={`my-1 pl-1 marker:text-secondary ${className ?? ""}`}>{children}</li>;
+    return <li className={`pl-[0.375em] marker:text-secondary ${className ?? ""}`}>{children}</li>;
   },
-  ol({ children }) {
-    return <ol className="my-4 list-decimal space-y-1 pl-7">{children}</ol>;
+  ol({ children, start }) {
+    return <ol start={start} className="list-decimal pl-[1.625em]">{children}</ol>;
   },
   p({ children }) {
-    return <p className="my-3.5 break-words leading-[1.8] first:mt-0 last:mb-0">{children}</p>;
+    return <p className="break-words">{children}</p>;
   },
   pre({ children }) {
-    return <pre className="max-w-full overflow-x-auto rounded-lg border border-ui bg-[var(--code-bg)] p-4 text-sm leading-6 text-primary">{children}</pre>;
+    return <pre className="max-w-full overflow-x-auto rounded-lg border border-ui bg-[var(--code-bg)] p-4 text-[0.875em] leading-[1.65] text-primary">{children}</pre>;
   },
   table({ children }) {
     return (
-      <div className="markdown-table my-5 max-w-full overflow-x-auto rounded-lg border border-ui bg-surface">
-        <table className="w-max min-w-full border-collapse text-sm">{children}</table>
+      <div className="markdown-table max-w-full overflow-x-auto rounded-lg border border-ui bg-surface">
+        <table className="w-max min-w-full border-collapse text-[0.875em]">{children}</table>
       </div>
     );
   },
@@ -212,7 +200,19 @@ const markdownComponents: Components & {
     return <thead className="border-b border-ui">{children}</thead>;
   },
   ul({ children }) {
-    return <ul className="my-4 list-disc space-y-1 pl-7">{children}</ul>;
+    return <ul className="list-disc pl-[1.625em]">{children}</ul>;
+  },
+};
+
+const inlineMarkdownComponents: Components = {
+  a({ href, children }) {
+    return <SafeMarkdownLink href={href}>{children}</SafeMarkdownLink>;
+  },
+  code({ children }) {
+    return <code className="rounded border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1 py-0.5 font-mono text-[0.88em] text-[var(--inline-code-text)]">{children}</code>;
+  },
+  p({ children }) {
+    return <>{children}</>;
   },
 };
 
@@ -227,7 +227,7 @@ export function MarkdownRenderer({
 }) {
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
   return (
-    <div className={`aui-chat-markdown max-w-full break-words text-[17px] leading-[1.75] text-primary ${className}`}>
+    <div className={`aui-chat-markdown max-w-full break-words text-primary ${className}`}>
       {parts.map((part, index) => (
         <CanonicalPartRenderer key={`${part.type}-${index}`} part={part} />
       ))}
@@ -235,13 +235,50 @@ export function MarkdownRenderer({
   );
 }
 
+export function InlineHeadingMarkdown({ text }: { text: string }) {
+  const inlineText = text.replace(/\s*\r?\n\s*/g, " ").trim();
+  return (
+    <ReactMarkdown
+      allowedElements={["a", "strong", "em", "del", "code", "p"]}
+      components={inlineMarkdownComponents}
+      rehypePlugins={[rehypeSanitize]}
+      remarkPlugins={[remarkGfm]}
+      skipHtml
+      unwrapDisallowed
+    >
+      {inlineText}
+    </ReactMarkdown>
+  );
+}
+
+export function markdownHeadingLabel(markdown: string): string {
+  let text = markdown.replace(/\s*\r?\n\s*/g, " ").trim();
+  for (let pass = 0; pass < 3; pass += 1) {
+    text = text
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/`+([^`]+?)`+/g, "$1")
+      .replace(/\*\*([^*]+?)\*\*/g, "$1")
+      .replace(/__([^_]+?)__/g, "$1")
+      .replace(/~~([^~]+?)~~/g, "$1")
+      .replace(/(^|\s)\*([^*]+?)\*(?=\s|$|[.,!?;:])/g, "$1$2")
+      .replace(/(^|\s)_([^_]+?)_(?=\s|$|[.,!?;:])/g, "$1$2");
+  }
+  return text
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\\([\\`*_[\]{}()#+\-.!~>])/g, "$1")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function ThinkingDisclosure({ label, text }: { label: string; text: string }) {
   return (
-    <details className="my-3 rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]">
+    <details className="reader-thinking rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]">
       <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-primary">
         {label}
       </summary>
-      {text.trim() ? <AssistantMarkdownPart text={text} className="mt-3 text-sm" /> : null}
+      {text.trim() ? <AssistantMarkdownPart text={text} className="reader-thinking-content text-[0.875em]" /> : null}
     </details>
   );
 }
@@ -318,6 +355,24 @@ function EmptyCodeHeader(_: CodeHeaderProps) {
   return null;
 }
 
+function SafeMarkdownLink({ href, children }: { href?: string; children: ReactNode }) {
+  const safeHref = typeof href === "string" && isSafeHref(href) ? href : undefined;
+  if (!safeHref) {
+    return <span className="text-secondary">{children}</span>;
+  }
+  const local = safeHref.startsWith("#") || safeHref.startsWith("/");
+  return (
+    <a
+      href={safeHref}
+      target={local ? undefined : "_blank"}
+      rel={local ? undefined : "noreferrer"}
+      className="font-medium text-[var(--link)] underline decoration-[var(--link-decoration)] underline-offset-2 hover:text-[var(--link-hover)]"
+    >
+      {children}
+    </a>
+  );
+}
+
 function MermaidCodeHeader(_: CodeHeaderProps) {
   return null;
 }
@@ -385,7 +440,7 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
   }, [code, language, resolvedTheme, shouldHighlight]);
 
   return (
-    <section ref={containerRef} className="my-5 max-w-full overflow-hidden rounded-lg border border-ui bg-[var(--code-bg)]">
+    <section ref={containerRef} className="reader-code-block max-w-full overflow-hidden rounded-lg border border-ui bg-[var(--code-bg)]">
       <div className="flex min-h-10 items-center justify-between gap-3 border-b border-ui bg-subtle px-3 text-xs text-secondary">
         <span className="min-w-0 truncate font-mono">{language || "text"}</span>
         <div className="flex items-center gap-1">
@@ -395,7 +450,7 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
         </div>
       </div>
       <div className={`relative ${longCode && !expanded ? "max-h-[30rem] overflow-hidden" : ""}`}>
-        <pre className={`max-w-full overflow-x-auto bg-[var(--code-bg)] p-4 text-[15px] leading-7 text-primary ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
+        <pre className={`max-w-full overflow-x-auto bg-[var(--code-bg)] p-4 text-[0.875em] leading-[1.65] text-primary ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
           <code>
             {tokens && !failed
               ? tokens.map((line, lineIndex) => (
@@ -519,21 +574,21 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
 
   if (error) {
     return (
-      <div className="space-y-2 rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4">
+      <div className="reader-mermaid-error rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4">
         <p className="text-xs text-[var(--callout-warning-text)]">Mermaid 渲染失败，已回退为源码。</p>
-        <pre className="max-w-full overflow-x-auto rounded border border-ui bg-surface p-3 text-sm leading-6 text-primary">
+        <pre className="max-w-full overflow-x-auto rounded border border-ui bg-surface p-3 text-[0.875em] leading-[1.65] text-primary">
           <code>{code}</code>
         </pre>
       </div>
     );
   }
 
-  return <div className="rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4 text-sm text-secondary">正在渲染 Mermaid 图表…</div>;
+  return <div className="rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4 text-[0.875em] text-secondary">正在渲染 Mermaid 图表…</div>;
 }
 
 function CitationPart({ part }: { part: CanonicalSourcePart }) {
   return (
-    <div className="my-3 rounded-xl border border-ui bg-surface px-4 py-3 text-sm">
+    <div className="rounded-xl border border-ui bg-surface px-4 py-3 text-[0.875em]">
       <div className="font-semibold text-primary">{part.title}</div>
       {part.snippet ? <p className="mt-1 leading-6 text-secondary">{part.snippet}</p> : null}
       {part.url && isSafeHref(part.url) ? (
@@ -547,7 +602,7 @@ function CitationPart({ part }: { part: CanonicalSourcePart }) {
 
 function ToolPart({ part }: { part: CanonicalToolPart }) {
   return (
-    <div className="my-3 rounded-xl border border-ui bg-[var(--attachment-bg)] px-4 py-3 text-sm text-secondary">
+    <div className="rounded-xl border border-ui bg-[var(--attachment-bg)] px-4 py-3 text-[0.875em] text-secondary">
       <div className="font-semibold text-primary">工具结果 · {part.name}</div>
       {part.status ? <div className="mt-1 text-xs text-secondary">{part.status}</div> : null}
       {part.result !== undefined ? (
@@ -560,7 +615,7 @@ function ToolPart({ part }: { part: CanonicalToolPart }) {
 function AttachmentPart({ name, detail, url }: { name: string; detail?: string; url?: string }) {
   const safeUrl = url && isSafeHref(url) ? url : undefined;
   return (
-    <div className="my-3 flex max-w-full items-center justify-between gap-3 rounded-xl border border-dashed border-ui bg-[var(--attachment-bg)] px-4 py-3 text-sm text-secondary">
+    <div className="flex max-w-full items-center justify-between gap-3 rounded-xl border border-dashed border-ui bg-[var(--attachment-bg)] px-4 py-3 text-[0.875em] text-secondary">
       <div className="min-w-0">
         <div className="truncate font-medium text-primary">{name}</div>
         {detail ? <div className="text-xs text-secondary">{detail}</div> : null}

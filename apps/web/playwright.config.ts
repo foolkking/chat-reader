@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 90_000,
@@ -17,6 +19,6 @@ export default defineConfig({
     command: "corepack pnpm exec next start -p 3107",
     url: "http://127.0.0.1:3107/library",
     timeout: 180_000,
-    reuseExistingServer: false,
+    reuseExistingServer,
   },
 });

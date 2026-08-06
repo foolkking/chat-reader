@@ -17,11 +17,11 @@ import {
   moveConversationToProject,
   removeConversationFromProject,
   recordRecentProject,
-  restoreConversation,
+  unarchiveConversation,
   updateProjectConversationOrder,
 } from "../../lib/api";
 import type { ProjectConversationRead, ProjectRead } from "../../lib/types";
-import type { UndoAction } from "../conversations/conversation-action-menu";
+import { ConversationActionMenu, type UndoAction } from "../conversations/conversation-action-menu";
 import { MergeOrderList } from "../conversations/merge-order-list";
 import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
 import { ProjectSidebar } from "./project-sidebar";
@@ -30,7 +30,10 @@ import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { downloadConversationBundle } from "../../lib/bulk-export";
-import { SelectionToolbar } from "../../components/selection-toolbar";
+import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
+import { useLinearSelection } from "../../components/use-linear-selection";
+import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
+import { MobilePageHeader } from "../../components/mobile-page-header";
 
 export function ProjectConversationList({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
@@ -42,6 +45,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [undo, setUndo] = useState<UndoAction | null>(null);
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
+  const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
   const projectsQuery = useQuery({
     queryKey: ["projects", projectSortMode, projectSortDirection],
     queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
@@ -53,10 +58,25 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const project = projectsQuery.data?.find((item) => item.id === projectId);
   const zh = resolvedLocale === "zh-CN";
   const conversations = conversationsQuery.data ?? [];
+  const linearSelection = useLinearSelection({
+    ids: conversations.map((conversation) => conversation.id),
+    selectedIds: selectedConversationIds,
+    onChange: applySelection,
+    disabled: bulkBusy !== null,
+    selectionMode,
+    onActivate: () => setSelectionMode(true),
+    onExit: exitSelectionMode,
+  });
 
   function clearSelection() {
     setSelectedConversationIds(new Set());
     setMergeOrderIds([]);
+  }
+
+  function exitSelectionMode() {
+    if (bulkBusy !== null) return;
+    clearSelection();
+    setSelectionMode(false);
   }
 
   function applySelection(ids: Iterable<string>) {
@@ -64,6 +84,13 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
     const orderedIds = conversations.filter((conversation) => requested.has(conversation.id)).map((conversation) => conversation.id);
     setSelectedConversationIds(new Set(orderedIds));
     setMergeOrderIds(orderedIds);
+  }
+
+  function applyBatchResult(result: BatchSelectionResult) {
+    applySelection(result.failedIds);
+    setBatchNotice(zh
+      ? `已完成 ${result.succeededIds.length} 项，失败 ${result.failedIds.length} 项${result.failedIds.length ? "；失败项已保留选择" : ""}`
+      : `${result.succeededIds.length} completed, ${result.failedIds.length} failed${result.failedIds.length ? "; failed items remain selected" : ""}`);
   }
 
   function toggleConversationSelection(conversationId: string, selected: boolean) {
@@ -95,16 +122,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   useEffect(() => {
-    if (!selectionMode) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || bulkBusy !== null) return;
-      setSelectedConversationIds(new Set());
-      setMergeOrderIds([]);
-      setSelectionMode(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bulkBusy, selectionMode]);
+    if (selectedConversationIds.size > 0) setSelectionMode(true);
+  }, [selectedConversationIds.size]);
 
   async function refreshProject() {
     await Promise.all([
@@ -117,29 +136,20 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar currentProjectId={projectId} />
+      <ProjectSidebar currentProjectId={projectId} mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex min-h-14 items-center justify-between gap-3 border-b border-ui bg-surface/95 px-4 pl-16 backdrop-blur md:px-6 md:pl-6">
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold">{project?.name ?? (zh ? "项目" : "Project")}</h1>
-            <p className="text-xs text-secondary">
-              {zh ? `${project?.conversation_count ?? 0} 个对话 · ${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}
-            </p>
-          </div>
-          {!selectionMode ? <div className="flex shrink-0 gap-2">
-            <ConversationSortMenu />
-            <button
-              type="button"
-              onClick={() => {
-                setSelectionMode(true);
-                clearSelection();
-              }}
-              className="min-h-10 rounded-lg px-3 text-sm font-medium text-secondary hover:bg-subtle"
-            >
-              {zh ? "选择对话" : "Select conversations"}
-            </button>
-          </div> : null}
-        </header>
+        <MobilePageHeader
+          title={project?.name ?? (zh ? "项目" : "Project")}
+          description={zh ? `${project?.conversation_count ?? 0} 个对话 · ${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}
+          onOpenSidebar={() => setMobileSidebarOpenSignal((value) => value + 1)}
+          className="md:px-6"
+          actions={
+            <>
+            <div className="hidden sm:block"><ConversationSortMenu /></div>
+            {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} onClick={() => setSelectionMode(true)} /> : null}
+            </>
+          }
+        />
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mx-auto max-w-5xl space-y-5 px-4 py-8 md:px-6">
@@ -151,23 +161,18 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 }}
               />
             ) : null}
+            {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
 
             {selectionMode ? <SelectionToolbar
               selectedCount={selectedConversationIds.size}
               totalCount={conversations.length}
               busy={bulkBusy !== null}
               locale={resolvedLocale}
-              onSelectAll={() => applySelection(conversations.map((conversation) => conversation.id))}
-              onInvert={() => applySelection(conversations.filter((conversation) => !selectedConversationIds.has(conversation.id)).map((conversation) => conversation.id))}
+              onSelectAll={linearSelection.selectAll}
+              onInvert={linearSelection.invert}
               onClear={clearSelection}
-              onDone={() => {
-                if (bulkBusy !== null) return;
-                clearSelection();
-                setSelectionMode(false);
-              }}
-            /> : null}
-
-            {selectedConversationIds.size > 0 ? (
+              onDone={exitSelectionMode}
+            >
               <ProjectBulkActions
                 selectedConversations={mergeOrderIds
                   .map((id) => conversationsQuery.data?.find((conversation) => conversation.id === id))
@@ -180,9 +185,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 onMove={async (ids, targetProjectId) => {
                   setBulkBusy("move");
                   try {
-                    await Promise.all(ids.map((id) => moveConversationToProject(id, targetProjectId)));
-                    setSelectedConversationIds(new Set());
-                    setMergeOrderIds([]);
+                    const result = await runBatchSelection(ids, (id) => moveConversationToProject(id, targetProjectId));
+                    applyBatchResult(result);
                     await refreshProject();
                   } finally {
                     setBulkBusy(null);
@@ -199,9 +203,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 onRemove={async (ids) => {
                   setBulkBusy("remove");
                   try {
-                    await Promise.all(ids.map((id) => removeConversationFromProject(projectId, id)));
-                    setSelectedConversationIds(new Set());
-                    setMergeOrderIds([]);
+                    const result = await runBatchSelection(ids, (id) => removeConversationFromProject(projectId, id));
+                    applyBatchResult(result);
                     await refreshProject();
                   } finally {
                     setBulkBusy(null);
@@ -227,44 +230,35 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 onArchive={async (ids) => {
                   setBulkBusy("archive");
                   try {
-                    await Promise.all(ids.map((id) => archiveConversation(id)));
+                    const result = await runBatchSelection(ids, archiveConversation);
+                    applyBatchResult(result);
                     setUndo({
-                      label: `已归档 ${ids.length} 个会话`,
+                      label: `已归档 ${result.succeededIds.length} 个会话`,
                       action: async () => {
-                        await Promise.all(ids.map((id) => restoreConversation(id)));
+                        await runBatchSelection(result.succeededIds, unarchiveConversation);
                         await refreshProject();
                       },
                     });
-                    setSelectedConversationIds(new Set());
-                    setMergeOrderIds([]);
                     await refreshProject();
                   } finally {
                     setBulkBusy(null);
                   }
                 }}
                 onDelete={async (ids) => {
-                  if (!(await dialog.confirm({ title: zh ? `删除 ${ids.length} 个对话？` : `Delete ${ids.length} conversations?`, description: zh ? "此操作完成后可立即撤销。" : "You can undo immediately afterward.", confirmLabel: zh ? "删除" : "Delete", danger: true }))) {
+                  if (!(await dialog.confirm({ title: zh ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: zh ? "这些对话及其历史版本会立即删除，无法在系统内恢复。" : "These conversations and their version histories are deleted immediately and cannot be restored in the app.", confirmLabel: zh ? "永久删除" : "Delete permanently", danger: true }))) {
                     return;
                   }
                   setBulkBusy("delete");
                   try {
-                    await Promise.all(ids.map((id) => deleteConversation(id)));
-                    setUndo({
-                      label: `已删除 ${ids.length} 个会话`,
-                      action: async () => {
-                        await Promise.all(ids.map((id) => restoreConversation(id)));
-                        await refreshProject();
-                      },
-                    });
-                    setSelectedConversationIds(new Set());
-                    setMergeOrderIds([]);
+                    const result = await runBatchSelection(ids, deleteConversation);
+                    applyBatchResult(result);
                     await refreshProject();
                   } finally {
                     setBulkBusy(null);
                   }
                 }}
               />
-            ) : null}
+            </SelectionToolbar> : null}
 
             {conversationsQuery.isLoading ? <StateBlock label={resolvedLocale === "zh-CN" ? "正在加载项目对话…" : "Loading project conversations…"} /> : null}
             {conversationsQuery.isError ? <StateBlock label={conversationsQuery.error.message} /> : null}
@@ -275,17 +269,18 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
               <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
                 {conversationsQuery.data.map((conversation) => (
-                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article className={`border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}>
+                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article {...linearSelection.itemHandlers(conversation.id)} className={`group border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}>
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
                       <div className="flex min-w-0 gap-3">
-                        {selectionMode ? <label className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-ui bg-surface">
+                        <label className={`mt-1 h-7 w-7 shrink-0 items-center justify-center rounded-md border border-ui bg-surface transition-opacity ${linearSelection.checkboxClass(conversation.id)}`}>
                           <input
                             type="checkbox"
                             checked={selectedConversationIds.has(conversation.id)}
-                            onChange={(event) => toggleConversationSelection(conversation.id, event.target.checked)}
+                            onClick={(event) => linearSelection.toggle(conversation.id, { selected: !selectedConversationIds.has(conversation.id), range: event.shiftKey })}
+                            onChange={() => undefined}
                             aria-label={`${zh ? "选择" : "Select"} ${conversation.display_title || conversation.title}`}
                           />
-                        </label> : null}
+                        </label>
                         <div className="min-w-0">
                           {selectionMode ? <button type="button" className="block w-full text-left" onClick={() => toggleConversationSelection(conversation.id, !selectedConversationIds.has(conversation.id))}>
                             <h2 className="truncate text-base font-semibold text-primary">
@@ -305,6 +300,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                             <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
                               {conversation.description_markdown || previewConversationText(conversation.first_user_message)}
                             </p>
+                            {typeof conversation.reading_progress === "number" ? <ReadingProgress value={conversation.reading_progress} zh={zh} /> : null}
                           </>}
                         </div>
                       </div>
@@ -313,6 +309,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                           <p className="text-xs text-secondary" title={fullActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}</p>
                           <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                         </div>
+                        {!selectionMode ? <ConversationActionMenu conversation={conversation} projectId={projectId} projectPinned={conversation.project_relation.is_pinned} onChanged={refreshProject} onUndo={setUndo} /> : null}
                       </div>
                     </div>
                   </article></SortableProjectConversationRow>
@@ -324,6 +321,11 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
       </section>
     </main>
   );
+}
+
+function ReadingProgress({ value, zh }: { value: number; zh: boolean }) {
+  const normalized = Math.max(0, Math.min(100, value));
+  return <div className="mt-2 flex items-center gap-2"><div className="h-1.5 min-w-20 flex-1 overflow-hidden rounded-full bg-subtle" role="progressbar" aria-label={zh ? "阅读进度" : "Reading progress"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(normalized)}><span className="block h-full rounded-full bg-accent" style={{ width: `${normalized}%` }} /></div><span className="text-[11px] text-secondary">{Math.round(normalized)}%</span></div>;
 }
 
 function SortableProjectConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
@@ -368,25 +370,28 @@ function ProjectBulkActions({
   const selectedIds = selectedConversations.map((conversation) => conversation.id);
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => {
+    if (selectedIds.length === 0) setMoreOpen(false);
+  }, [selectedIds.length]);
   return (
-    <div className="rounded-xl border border-ui bg-surface p-3">
+    <>
       <div className="flex flex-wrap justify-end gap-2">
-        <span className="mr-auto text-sm text-secondary">{zh ? `已选择 ${selectedIds.length} 个` : `${selectedIds.length} selected`}</span>
         <select
           defaultValue=""
-          disabled={busy !== null}
+          disabled={busy !== null || selectedIds.length === 0}
           onChange={(event) => { const value = event.target.value; if (value) void onMove(selectedIds, value === "__none" ? null : value); event.target.value = ""; }}
-          className="min-h-9 rounded-lg border border-ui bg-surface px-2 text-sm text-primary"
+          className="min-h-9 max-w-full rounded-lg border border-ui bg-surface px-2 text-sm text-primary"
           aria-label={zh ? "移动到项目" : "Move to project"}
         >
           <option value="" disabled>{zh ? "移动到项目" : "Move to project"}</option>
           <option value="__none">{zh ? "移出项目" : "Remove from project"}</option>
           {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
-        <button type="button" disabled={busy !== null} onClick={() => void onExport(selectedConversations)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{busy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
+        <button type="button" disabled={busy !== null || selectedIds.length === 0} onClick={() => void onExport(selectedConversations)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{busy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
         <button
           type="button"
-          disabled={busy !== null}
+          disabled={busy !== null || selectedIds.length === 0}
           onClick={() => void onRemove(selectedIds)}
           className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
         >
@@ -394,23 +399,18 @@ function ProjectBulkActions({
         </button>
         <button
           type="button"
-          disabled={busy !== null}
+          disabled={busy !== null || selectedIds.length === 0}
           onClick={() => void onArchive(selectedIds)}
           className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
         >
           {zh ? "归档" : "Archive"}
         </button>
-        <button
-          type="button"
-          disabled={busy !== null}
-          onClick={() => void onDelete(selectedIds)}
-          className="min-h-9 rounded-lg border border-[var(--danger)] bg-surface px-3 text-sm font-medium text-[var(--danger)] disabled:cursor-wait disabled:opacity-60"
-        >
-          {zh ? "删除" : "Delete"}
-        </button>
+        <button type="button" disabled={selectedIds.length === 0} onClick={() => setMoreOpen((value) => !value)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40" aria-expanded={moreOpen}>{zh ? "更多" : "More"}</button>
       </div>
-      {selectedIds.length >= 2 ? (
-        <div className="mt-3 rounded-xl bg-subtle p-3">
+      {moreOpen ? <div className="fixed inset-x-2 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[160] max-h-[min(70dvh,36rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-3 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-[calc(100%+.5rem)] sm:w-[min(30rem,calc(100vw-1rem))]">
+        <button type="button" disabled={busy !== null || selectedIds.length === 0} onClick={() => void onDelete(selectedIds)} className="mb-2 min-h-9 w-full rounded-lg px-3 text-left text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60">{zh ? "删除所选" : "Delete selected"}</button>
+        {selectedIds.length >= 2 ? (
+        <div className="rounded-lg bg-subtle p-3">
           <label className="text-xs font-semibold uppercase tracking-normal text-secondary">
             {zh ? "合并标题" : "Merge title"}
             <input
@@ -429,9 +429,9 @@ function ProjectBulkActions({
           >
             {busy === "merge" ? (zh ? "正在合并…" : "Merging…") : (zh ? `按此顺序合并 ${selectedIds.length} 个对话` : `Merge ${selectedIds.length} in this order`)}
           </button>
-        </div>
-      ) : null}
-    </div>
+        </div>) : null}
+      </div> : null}
+    </>
   );
 }
 

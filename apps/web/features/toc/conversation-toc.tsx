@@ -1,23 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useTranslations } from "../../components/preferences-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import { PanelRightOpen, PinOff } from "lucide-react";
 import { getConversationToc } from "../../lib/api";
 import type { TocItem } from "../../lib/types";
+import { markdownHeadingLabel } from "../conversations/markdown-renderer";
 
-export function ConversationToc({ conversationId, sourceKey = "remote", activeMessageId, activeItems = [], observerKey, activeBlockId, items, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; items?: TocItem[]; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
+export function ConversationToc({ conversationId, sourceKey = "remote", activeMessageId, activeItems = [], activeBlockId, items, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; items?: TocItem[]; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
   const t = useTranslations();
   const { sectionTocMode, setSectionTocMode } = usePreferences();
-  const [observedHeadingId, setObservedHeadingId] = useState<string | null>(null);
   const [cachedItems, setCachedItems] = useState<Record<string, TocItem[]>>({});
   const [lastActiveMessageId, setLastActiveMessageId] = useState<string | null>(activeMessageId ?? null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     setCachedItems({});
-    setObservedHeadingId(null);
     setLastActiveMessageId(activeMessageId ?? null);
   }, [conversationId, sourceKey]);
   useEffect(() => { if (activeMessageId) setLastActiveMessageId(activeMessageId); }, [activeMessageId]);
@@ -37,15 +37,21 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
     const currentCachedItems = cached.filter((item) => item.message_id === effectiveMessageId);
     return currentCachedItems.length ? currentCachedItems : activeItems.filter((item) => item.message_id === effectiveMessageId);
   }, [activeItems, cachedItems, effectiveMessageId, items, tocQuery.data?.items]);
-  const activeHeadingId = resolveActiveHeadingId(visibleItems, activeBlockId) ?? observedHeadingId;
+  const activeHeadingId = resolveActiveHeadingId(visibleItems, activeBlockId);
 
-  useEffect(() => {
-    if (!visibleItems.length) { setObservedHeadingId(null); return; }
-    const observer = new IntersectionObserver((entries) => { const first = entries.filter((entry) => entry.isIntersecting).sort((left, right) => Math.abs(left.boundingClientRect.top) - Math.abs(right.boundingClientRect.top))[0]; if (first?.target.id) setObservedHeadingId(first.target.id); }, { rootMargin: "-96px 0px -60% 0px", threshold: [0, 0.2, 0.8] });
-    for (const item of visibleItems) { const target = document.getElementById(blockDomId(item)); if (target) observer.observe(target); }
-    return () => observer.disconnect();
-  }, [observerKey, visibleItems]);
-  useEffect(() => { activeRowRef.current?.scrollIntoView({ block: "nearest" }); }, [activeHeadingId, visibleItems]);
+  useLayoutEffect(() => {
+    const row = activeRowRef.current;
+    const container = scrollContainerRef.current;
+    if (!row || !container || container.clientHeight === 0) return;
+    const rowRect = row.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const inset = 8;
+    if (rowRect.top < containerRect.top + inset) {
+      container.scrollTop -= containerRect.top + inset - rowRect.top;
+    } else if (rowRect.bottom > containerRect.bottom - inset) {
+      container.scrollTop += rowRect.bottom - (containerRect.bottom - inset);
+    }
+  }, [activeHeadingId, visibleItems]);
 
   if (mode === "panel" && sectionTocMode === "rail") return <TocRail items={visibleItems} activeHeadingId={activeHeadingId} onExpand={() => void setSectionTocMode("visible")} onNavigate={onNavigate} />;
   if (items === undefined && tocQuery.isFetching && visibleItems.length === 0) return <TocShell mode={mode} label={t("sectionToc")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
@@ -53,19 +59,19 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
   if (!effectiveMessageId || visibleItems.length === 0) return <TocShell mode={mode} label={t("currentNoSections")} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined} />;
 
   const body = <TocButtonList items={visibleItems} activeHeadingId={activeHeadingId} activeRowRef={activeRowRef} onNavigate={onNavigate} />;
-  return <TocFrame mode={mode} title={t("sectionToc")} count={visibleItems.length} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined}>{body}</TocFrame>;
+  return <TocFrame mode={mode} title={t("sectionToc")} count={visibleItems.length} scrollContainerRef={scrollContainerRef} onCollapse={mode === "panel" ? () => void setSectionTocMode("rail") : undefined}>{body}</TocFrame>;
 }
 
 function TocRail({ items, activeHeadingId, onExpand, onNavigate }: { items: TocItem[]; activeHeadingId: string | null; onExpand: () => void; onNavigate?: (item: TocItem) => void | Promise<void> }) {
-  return <aside className="flex h-full w-full flex-col items-center border-l border-ui bg-raised py-2" aria-label="章节刻度"><button type="button" onClick={onExpand} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="展开章节目录" title="展开章节目录"><PanelRightOpen className="h-4 w-4" /></button><div className="my-2 h-px w-5 bg-[var(--border)]" /><nav className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden">{items.slice(0, 80).map((item) => { const active = blockDomId(item) === activeHeadingId; return <button key={item.id} type="button" onClick={() => void onNavigate?.(item)} className={`block rounded-full transition-[width,height,background-color] ${active ? "h-2.5 w-5 bg-amber-500" : item.level <= 2 ? "h-1.5 w-4 bg-indigo-500" : "h-1 w-2.5 bg-indigo-200"}`} aria-label={item.text} title={item.text} />; })}</nav></aside>;
+  return <aside className="flex h-full w-full flex-col items-center border-l border-ui bg-raised py-2" aria-label="章节刻度"><button type="button" onClick={onExpand} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="展开章节目录" title="展开章节目录"><PanelRightOpen className="h-4 w-4" /></button><div className="my-2 h-px w-5 bg-[var(--border)]" /><nav className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden">{items.slice(0, 80).map((item) => { const active = blockDomId(item) === activeHeadingId; const label = markdownHeadingLabel(item.text) || item.text; return <button key={item.id} type="button" onClick={() => void onNavigate?.(item)} className={`block rounded-full transition-[width,height,background-color] ${active ? "h-2.5 w-5 bg-amber-500" : item.level <= 2 ? "h-1.5 w-4 bg-indigo-500" : "h-1 w-2.5 bg-indigo-200"}`} aria-label={label} title={label} />; })}</nav></aside>;
 }
 
 function TocButtonList({ items, activeHeadingId, activeRowRef, onNavigate }: { items: TocItem[]; activeHeadingId: string | null; activeRowRef: MutableRefObject<HTMLButtonElement | null>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
-  return <nav className="space-y-0.5">{items.map((item) => { const active = blockDomId(item) === activeHeadingId; return <button key={item.id} ref={active ? activeRowRef : undefined} type="button" onClick={() => void onNavigate?.(item)} className={`flex min-h-9 w-full min-w-0 items-start gap-2 rounded-md px-1 py-1.5 text-left text-sm leading-5 hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)] ${active ? "font-semibold text-amber-600" : item.level <= 2 ? "font-medium text-primary" : "text-secondary"}`} style={{ paddingLeft: `${Math.max(0, item.level - 1) * 8 + 4}px` }}><span className={`mt-0.5 h-5 w-0.5 shrink-0 rounded-full ${active ? "bg-amber-500" : item.level <= 2 ? "bg-indigo-500" : "bg-indigo-200"}`} /><span className="line-clamp-2 min-w-0 flex-1">{item.text}</span></button>; })}</nav>;
+  return <nav className="space-y-0.5">{items.map((item) => { const blockId = blockDomId(item); const active = blockId === activeHeadingId; const label = markdownHeadingLabel(item.text) || item.text; return <button key={item.id} ref={active ? activeRowRef : undefined} type="button" data-toc-block-id={blockId} data-toc-active={active ? "true" : undefined} onClick={() => void onNavigate?.(item)} aria-label={label} title={label} className={`flex min-h-9 w-full min-w-0 items-start gap-2 rounded-md px-1 py-1.5 text-left text-sm leading-5 hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)] ${active ? "font-semibold text-amber-600" : item.level <= 2 ? "font-medium text-primary" : "text-secondary"}`} style={{ paddingLeft: `${Math.max(0, item.level - 1) * 8 + 4}px` }}><span className={`mt-0.5 h-5 w-0.5 shrink-0 rounded-full ${active ? "bg-amber-500" : item.level <= 2 ? "bg-indigo-500" : "bg-indigo-200"}`} /><span className="line-clamp-2 min-w-0 flex-1">{label}</span></button>; })}</nav>;
 }
 
-function TocFrame({ mode, title, count, children, onCollapse }: { mode: "panel" | "sheet"; title: string; count?: number; children: React.ReactNode; onCollapse?: () => void }) {
-  return <aside aria-label={title} className={`flex min-h-0 w-full flex-col overflow-hidden bg-raised ${mode === "panel" ? "h-full rounded-md border border-ui shadow-lg" : "max-h-[60vh]"}`}><div className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b border-ui bg-raised px-3 py-3"><h2 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-primary">{title}</h2>{count !== undefined ? <span className="text-[13px] text-secondary">{count}</span> : null}{onCollapse ? <button type="button" onClick={onCollapse} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="收起章节目录" title="收起章节目录"><PinOff className="h-4 w-4" /></button> : null}</div><div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2 text-[14px] leading-6">{children}</div></aside>;
+function TocFrame({ mode, title, count, children, onCollapse, scrollContainerRef }: { mode: "panel" | "sheet"; title: string; count?: number; children: React.ReactNode; onCollapse?: () => void; scrollContainerRef?: MutableRefObject<HTMLDivElement | null> }) {
+  return <aside aria-label={title} className={`flex min-h-0 w-full flex-col overflow-hidden bg-raised ${mode === "panel" ? "h-full rounded-md border border-ui shadow-lg" : "max-h-[60vh]"}`}><div className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b border-ui bg-raised px-3 py-3"><h2 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-primary">{title}</h2>{count !== undefined ? <span className="text-[13px] text-secondary">{count}</span> : null}{onCollapse ? <button type="button" onClick={onCollapse} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="收起章节目录" title="收起章节目录"><PinOff className="h-4 w-4" /></button> : null}</div><div ref={scrollContainerRef} data-section-toc-scroll="true" className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2 text-[14px] leading-6">{children}</div></aside>;
 }
 
 function TocShell({ label, mode, onCollapse }: { label: string; mode: "panel" | "sheet"; onCollapse?: () => void }) {
@@ -80,6 +86,10 @@ function resolveActiveHeadingId(items: TocItem[], activeBlockId?: string | null)
   if (exact) return activeBlockId;
   const blockIndex = Number.parseInt(activeBlockId.split("-").at(-1) ?? "", 10);
   if (!Number.isFinite(blockIndex)) return null;
-  const nearest = items.filter((item) => item.block_index <= blockIndex).at(-1);
+  const nearest = items.reduce<TocItem | null>((current, item) => (
+    item.block_index <= blockIndex && (!current || item.block_index > current.block_index)
+      ? item
+      : current
+  ), null);
   return nearest ? blockDomId(nearest) : null;
 }

@@ -3,9 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderArchive, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { SelectionToolbar } from "../../components/selection-toolbar";
+import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
+import { useLinearSelection } from "../../components/use-linear-selection";
 import { usePreferences } from "../../components/preferences-provider";
 import { getProjects, updateProject } from "../../lib/api";
+import { runBatchSelection } from "../../lib/batch-selection";
 
 export function ArchivedProjectList() {
   const queryClient = useQueryClient();
@@ -14,6 +16,7 @@ export function ArchivedProjectList() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [batchNotice, setBatchNotice] = useState<string | null>(null);
   const projectsQuery = useQuery({
     queryKey: ["projects", "archived"],
     queryFn: () => getProjects({ includeArchived: true }),
@@ -46,13 +49,31 @@ export function ArchivedProjectList() {
     const requested = new Set(ids);
     setSelectedProjectIds(new Set(archivedProjects.filter((project) => requested.has(project.id)).map((project) => project.id)));
   }
+  const linearSelection = useLinearSelection({
+    ids: archivedProjects.map((project) => project.id),
+    selectedIds: selectedProjectIds,
+    onChange: applySelection,
+    disabled: bulkBusy,
+    selectionMode,
+    onActivate: () => setSelectionMode(true),
+    onExit: exitSelectionMode,
+  });
+
+  function exitSelectionMode() {
+    if (bulkBusy) return;
+    clearSelection();
+    setSelectionMode(false);
+  }
 
   async function restoreProjects(ids: string[]) {
     if (!ids.length) return;
     setBulkBusy(true);
     try {
-      await Promise.all(ids.map((projectId) => updateProject(projectId, { is_archived: false })));
-      clearSelection();
+      const result = await runBatchSelection(ids, (projectId) => updateProject(projectId, { is_archived: false }));
+      applySelection(result.failedIds);
+      setBatchNotice(zh
+        ? `已恢复 ${result.succeededIds.length} 个项目，失败 ${result.failedIds.length} 个${result.failedIds.length ? "；失败项已保留选择" : ""}`
+        : `${result.succeededIds.length} projects restored, ${result.failedIds.length} failed${result.failedIds.length ? "; failed items remain selected" : ""}`);
       await refreshProjects();
     } finally {
       setBulkBusy(false);
@@ -60,18 +81,11 @@ export function ArchivedProjectList() {
   }
 
   useEffect(() => {
-    if (!selectionMode) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || bulkBusy) return;
-      setSelectedProjectIds(new Set());
-      setSelectionMode(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [bulkBusy, selectionMode]);
+    if (selectedProjectIds.size > 0) setSelectionMode(true);
+  }, [selectedProjectIds.size]);
 
   if (projectsQuery.isLoading) {
-    return <p className="text-sm text-[#6b7280]">Loading archived projects...</p>;
+    return <p className="text-sm text-secondary">{zh ? "正在加载已归档项目…" : "Loading archived projects…"}</p>;
   }
   if (projectsQuery.isError) {
     return <p className="text-sm text-red-700">{projectsQuery.error.message}</p>;
@@ -83,41 +97,30 @@ export function ArchivedProjectList() {
   return (
     <section aria-labelledby="archived-projects-heading">
       <div className="mb-2 flex items-end justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 id="archived-projects-heading" className="text-lg font-semibold text-primary">{zh ? "已归档项目" : "Archived projects"}</h2>
           <p className="text-sm text-secondary">{zh ? "恢复项目后，其中的对话会重新回到该项目。" : "Restore a project to return its conversations to the project."}</p>
         </div>
-        {!selectionMode ? <button type="button" onClick={() => setSelectionMode(true)} className="min-h-9 shrink-0 rounded-md px-3 text-sm font-medium text-secondary hover:bg-surface">{zh ? "选择项目" : "Select projects"}</button> : null}
+        {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} context="project" onClick={() => setSelectionMode(true)} /> : null}
       </div>
       {selectionMode ? <SelectionToolbar
         selectedCount={selectedProjectIds.size}
         totalCount={archivedProjects.length}
         busy={bulkBusy}
-        className="mb-3"
         context="project"
         locale={resolvedLocale}
-        onSelectAll={() => applySelection(archivedProjects.map((project) => project.id))}
-        onInvert={() => applySelection(archivedProjects.filter((project) => !selectedProjectIds.has(project.id)).map((project) => project.id))}
+        onSelectAll={linearSelection.selectAll}
+        onInvert={linearSelection.invert}
         onClear={clearSelection}
-        onDone={() => {
-          if (bulkBusy) return;
-          clearSelection();
-          setSelectionMode(false);
-        }}
-      /> : null}
-      {selectionMode && selectedProjectIds.size > 0 ? <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ui bg-surface p-2.5">
-        <span className="text-sm text-secondary">{zh ? `将恢复 ${selectedProjectIds.size} 个项目` : `${selectedProjectIds.size} projects will be restored`}</span>
-        <button type="button" disabled={bulkBusy} onClick={() => void restoreProjects(Array.from(selectedProjectIds))} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-ui px-3 text-sm font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-50"><RotateCcw className="h-4 w-4" />{bulkBusy ? (zh ? "正在恢复" : "Restoring") : (zh ? "恢复所选" : "Restore selected")}</button>
-      </div> : null}
+        onDone={exitSelectionMode}
+      >
+        <button type="button" disabled={bulkBusy || selectedProjectIds.size === 0} onClick={() => void restoreProjects(Array.from(selectedProjectIds))} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-ui px-3 text-sm font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-50"><RotateCcw className="h-4 w-4" />{bulkBusy ? (zh ? "正在恢复" : "Restoring") : (zh ? "恢复所选" : "Restore selected")}</button>
+      </SelectionToolbar> : null}
+      {batchNotice ? <p className="mb-2 rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
       <div className="divide-y divide-ui overflow-hidden rounded-lg border border-ui bg-surface">
         {archivedProjects.map((project) => (
-          <div key={project.id} className={`flex min-h-14 items-center gap-3 px-4 py-2.5 ${selectedProjectIds.has(project.id) ? "bg-[var(--accent-soft)]" : ""}`}>
-            {selectionMode ? <input type="checkbox" checked={selectedProjectIds.has(project.id)} onChange={(event) => {
-              const next = new Set(selectedProjectIds);
-              if (event.target.checked) next.add(project.id);
-              else next.delete(project.id);
-              applySelection(next);
-            }} aria-label={`${zh ? "选择" : "Select"} ${project.name}`} className="h-4 w-4 shrink-0 accent-[var(--accent)]" /> : null}
+          <div key={project.id} {...linearSelection.itemHandlers(project.id)} className={`group flex min-h-14 items-center gap-3 px-4 py-2.5 ${selectedProjectIds.has(project.id) ? "bg-[var(--accent-soft)]" : ""}`}>
+            <label className={`h-7 w-7 shrink-0 items-center justify-center rounded-md border border-ui bg-surface transition-opacity ${linearSelection.checkboxClass(project.id)}`}><input type="checkbox" checked={selectedProjectIds.has(project.id)} onClick={(event) => linearSelection.toggle(project.id, { selected: !selectedProjectIds.has(project.id), range: event.shiftKey })} onChange={() => undefined} aria-label={`${zh ? "选择" : "Select"} ${project.name}`} className="h-4 w-4 accent-[var(--accent)]" /></label>
             <FolderArchive className="h-4 w-4 shrink-0 text-secondary" />
             <div className="min-w-0 flex-1">
               {selectionMode ? <button type="button" onClick={() => {

@@ -41,7 +41,7 @@ test("upgrades an active legacy library worker before preparing the shell", asyn
   });
 
   await page.goto("/library");
-  await expect(page.locator("p:visible", { hasText: /^可离线启动/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
   const registration = await page.evaluate(async () => {
     const current = await navigator.serviceWorker.getRegistration("/library");
     return { scriptURL: current?.active?.scriptURL ?? null };
@@ -51,11 +51,11 @@ test("upgrades an active legacy library worker before preparing the shell", asyn
 
 test("keeps the active revision after a failed update and cold-starts offline", async ({ page, context }) => {
   await page.goto("/library");
-  await expect(page.locator("p:visible", { hasText: /^可离线启动/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
   await seedOfflineFixture(page);
   await page.reload();
   await expect(page.locator("p:visible", { hasText: /^离线测试对话$/ })).toBeVisible();
-  await page.locator('input[placeholder="搜索本地正文、代码与批注"]:visible').fill("quantumfixture");
+  await page.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]').fill("quantumfixture");
   await expect(page.locator("button:visible", { hasText: /quantumfixture 正文内容/ })).toBeVisible();
 
   const activeBefore = await readActiveRecord(page);
@@ -86,7 +86,7 @@ test("keeps the active revision after a failed update and cold-starts offline", 
 
   const activeAfter = await readActiveRecord(page);
   expect(activeAfter.revision).toBe(activeBefore.revision);
-  await expect(page.locator("p:visible", { hasText: /^可离线启动/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
 
   const scopes = await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).map((item) => item.scope));
   expect(scopes).toEqual(["http://127.0.0.1:3107/library"]);
@@ -95,9 +95,9 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   const offlinePage = await context.newPage();
   const response = await offlinePage.goto("/library?conversationId=offline-fixture", { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
-  await expect(offlinePage.locator("h1:visible", { hasText: "离线资料库" }).first()).toBeVisible();
-  await expect(offlinePage.locator("p:visible", { hasText: /^可离线启动/ })).toBeVisible();
-  await offlinePage.locator('input[placeholder="搜索本地正文、代码与批注"]:visible').fill("quantumfixture");
+  await expect(offlinePage.locator("h1:visible", { hasText: /离线资料库|Offline library/ }).first()).toBeVisible();
+  await expect(offlinePage.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
+  await offlinePage.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]').fill("quantumfixture");
   await expect(offlinePage.locator("button:visible", { hasText: /quantumfixture 正文内容/ })).toBeVisible();
 
   const normalPage = await context.newPage();
@@ -114,7 +114,7 @@ test("prepares and cold-starts the library at the mobile PWA viewport", async ({
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   await page.goto("/library");
-  await expect(page.locator("p:visible", { hasText: /^可离线启动/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
   const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
   expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
 
@@ -122,9 +122,34 @@ test("prepares and cold-starts the library at the mobile PWA viewport", async ({
   const offlinePage = await context.newPage();
   const response = await offlinePage.goto("/library", { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
-  await expect(offlinePage.locator("h1:visible", { hasText: "离线资料库" }).first()).toBeVisible();
-  await expect(offlinePage.locator("p:visible", { hasText: /^可离线启动/ })).toBeVisible();
+  await expect(offlinePage.locator("h1:visible", { hasText: /离线资料库|Offline library/ }).first()).toBeVisible();
+  await expect(offlinePage.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
   await context.close();
+});
+
+test("mirrors the unified sidebar and keeps preferences compact in library mode", async ({ page }) => {
+  await page.goto("/library");
+  await seedOfflineFixture(page);
+  await arrangeOfflineSidebarFixture(page);
+  await page.goto("/library?conversationId=offline-fixture");
+
+  await expect(page.getByRole("heading", { name: /^(项目|Projects)$/, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^(未归类|Unclassified)$/, exact: true })).toBeVisible();
+  await expect(page.getByText("离线测试对话", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("未归类离线对话", { exact: true })).toBeVisible();
+
+  const preferencesFooter = page.locator("aside footer").first();
+  const heightBefore = await preferencesFooter.evaluate((element) => element.getBoundingClientRect().height);
+  await page.getByRole("button", { name: /外观与语言|Appearance & language/ }).click();
+  await expect(page.getByRole("dialog", { name: /外观与语言|Appearance & language/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /返回在线版|Back online/ })).toHaveAttribute("href", "/conversations/offline-fixture");
+  const heightAfter = await preferencesFooter.evaluate((element) => element.getBoundingClientRect().height);
+  expect(Math.abs(heightAfter - heightBefore)).toBeLessThanOrEqual(1);
+
+  await page.getByRole("button", { name: /关闭|Close/, exact: true }).click();
+  await page.goto("/");
+  await page.getByRole("button", { name: /外观与语言|Appearance & language/ }).click();
+  await expect(page.getByRole("link", { name: /离线资料库|Offline library/ })).toHaveAttribute("href", "/library");
 });
 
 test("restores the offline reader frame and target-loads a distant annotation", async ({ page }) => {
@@ -133,6 +158,11 @@ test("restores the offline reader frame and target-loads a distant annotation", 
   await page.goto("/library?conversationId=offline-fixture");
 
   await expect(page).toHaveTitle("离线测试对话");
+
+  const dialogueIndex = page.getByRole("region", { name: /对话索引|Dialogue index/ });
+  await expect(dialogueIndex.getByRole("button", { name: /^U3 · quantumfixture paragraph 5/ })).toBeVisible();
+  await expect(dialogueIndex.getByRole("button", { name: /^A3 · quantumfixture paragraph 6/ })).toBeVisible();
+  await expect(dialogueIndex).not.toContainText("2026/07/26");
 
   const restoredBlock = page.locator("#block-offline-message-20-1");
   await expect(restoredBlock).toBeVisible();
@@ -150,20 +180,37 @@ test("restores the offline reader frame and target-loads a distant annotation", 
   const sidebarAfter = await page.locator("main > aside").first().evaluate((element) => element.getBoundingClientRect().width);
   expect(sidebarAfter).toBeGreaterThan(sidebarBefore + 40);
 
-  await page.getByRole("button", { name: "收起侧栏" }).click();
+  await page.getByRole("button", { name: /收起侧栏|Collapse sidebar/ }).click();
   await expect(page.getByRole("button", { name: "Open sidebar" })).toBeVisible();
   await page.getByRole("button", { name: "Open sidebar" }).click();
   await expect(separator).toBeVisible();
 
   await page.goto("/library?conversationId=offline-fixture&annotations=open");
-  await page.getByRole("button", { name: "全部批注" }).click();
+  await page.getByRole("button", { name: /^(全部批注|All)$/ }).click();
   await expect(page.locator("#annotation-offline-far")).toBeVisible();
   await page.locator("#annotation-offline-far button").first().click();
   await expect.poll(() => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("resolved");
   const targetBlock = page.locator("#block-offline-message-40-1");
   await expect(targetBlock).toBeVisible();
   await expect.poll(async () => readingLineDelta(page, "block-offline-message-40-1")).toBeLessThan(36);
+  await expect.poll(() => hasConnectedAnnotationHighlight(page, "target-annotation-40")).toBe(true);
   await expect(page.locator("#message-offline-message-8")).toHaveCount(0);
+  await expect.poll(
+    () => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"),
+    { timeout: 15_000 },
+  ).toBe("settled");
+
+  await expect.poll(async () => {
+    await page.locator('[data-reader-scroll-root="true"]').evaluate((root) => {
+      root.scrollTop = root.scrollHeight;
+    });
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    return page.locator("#block-offline-message-40-1").count();
+  }).toBe(0);
+  await page.locator("#annotation-offline-far button").first().click();
+  await expect.poll(() => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("resolved");
+  await expect(targetBlock).toBeVisible();
+  await expect.poll(() => hasConnectedAnnotationHighlight(page, "target-annotation-40")).toBe(true);
 
   await page.reload();
   const persistedSidebarWidth = await page.locator("main > aside").first().evaluate((element) => element.getBoundingClientRect().width);
@@ -187,6 +234,19 @@ async function readActiveRecord(page: import("@playwright/test").Page): Promise<
 }
 
 async function seedOfflineFixture(page: import("@playwright/test").Page): Promise<void> {
+  await expect.poll(() => page.evaluate(async () => {
+    const databases = await indexedDB.databases();
+    if (!databases.some((database) => database.name === "chat-reader-offline-library")) return false;
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("chat-reader-offline-library");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const requiredStores = ["conversations", "messages", "blocks", "headings", "searchDocuments", "annotations", "readingPositions"];
+    const ready = requiredStores.every((store) => database.objectStoreNames.contains(store));
+    database.close();
+    return ready;
+  })).toBe(true);
   await page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("chat-reader-offline-library");
@@ -239,6 +299,8 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
       for (let index = 1; index <= 40; index += 1) {
         const messageId = `offline-message-${index}`;
         const paragraph = index === 40 ? "prefix target-annotation-40 suffix" : `quantumfixture paragraph ${index}`;
+        const displayText = index === 6 ? `2026/07/26 00:06:00\n${paragraph}` : `Section ${index}\n${paragraph}`;
+        const contentPreview = index === 5 ? `2026/07/26 00:05:00\n${paragraph}` : index === 6 ? null : paragraph;
         transaction.objectStore("messages").put({
           id: messageId,
           conversation_id: "offline-fixture",
@@ -249,14 +311,14 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
           current_version: {
             id: `offline-version-${index}`,
             version_number: 1,
-            plain_text: `Section ${index}\n${paragraph}`,
-            display_text: `Section ${index}\n${paragraph}`,
+            plain_text: displayText,
+            display_text: displayText,
           },
-          block_count: 2,
-          char_count: paragraph.length + 10,
+          block_count: index === 40 ? 220 : 2,
+          char_count: index === 40 ? 60_000 : paragraph.length + 10,
           is_heavy: index === 40,
           ordinal: index,
-          content_preview: paragraph,
+          content_preview: contentPreview,
         });
         transaction.objectStore("blocks").put({
           key: `${messageId}:0`,
@@ -278,6 +340,21 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
           plain_text: paragraph,
           data: { text: paragraph },
         });
+        if (index === 40) {
+          for (let blockIndex = 2; blockIndex < 220; blockIndex += 1) {
+            const virtualText = `virtual paragraph ${blockIndex} `.repeat(8);
+            transaction.objectStore("blocks").put({
+              key: `${messageId}:${blockIndex}`,
+              id: `offline-block-${index}-${blockIndex}`,
+              conversation_id: "offline-fixture",
+              message_id: messageId,
+              block_index: blockIndex,
+              block_type: "paragraph",
+              plain_text: virtualText,
+              data: { text: virtualText },
+            });
+          }
+        }
         transaction.objectStore("headings").put({
           id: `offline-heading-${index}`,
           conversation_id: "offline-fixture",
@@ -318,7 +395,7 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
         prefix: "prefix ",
         suffix: " suffix",
         comment_markdown: "Distant annotation fixture",
-        anchor_status: "active",
+        anchor_status: "valid",
         revision: 1,
         is_deleted: false,
         conflict_of_id: null,
@@ -342,6 +419,56 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
     });
     database.close();
   });
+}
+
+async function arrangeOfflineSidebarFixture(page: import("@playwright/test").Page): Promise<void> {
+  await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("chat-reader-offline-library");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction("conversations", "readwrite");
+      const store = transaction.objectStore("conversations");
+      const request = store.get("offline-fixture");
+      request.onsuccess = () => {
+        const fixture = request.result as Record<string, unknown>;
+        store.put({ ...fixture, project_id: "offline-project", project_name: "离线项目" });
+        store.put({
+          ...fixture,
+          id: "offline-unclassified",
+          title: "未归类离线对话",
+          display_title: "未归类离线对话",
+          description_markdown: "用于验证未归类列表",
+          message_count: 0,
+          turn_count: 0,
+          project_id: null,
+          project_name: null,
+          last_read_at: null,
+          downloaded_at: "2026-07-25T00:00:00.000Z",
+        });
+      };
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    database.close();
+  });
+}
+
+async function hasConnectedAnnotationHighlight(page: import("@playwright/test").Page, quote: string): Promise<boolean> {
+  return page.evaluate((expectedQuote) => {
+    const registry = (CSS as unknown as { highlights?: { get: (name: string) => unknown } }).highlights;
+    const highlight = registry?.get("annotation-highlight-yellow");
+    if (highlight) {
+      return Array.from(highlight as Iterable<Range>).some((range) =>
+        range.commonAncestorContainer.isConnected && range.toString().includes(expectedQuote),
+      );
+    }
+    return Boolean(document.querySelector('[data-annotation-overlay-root] [data-annotation-type="highlight"][data-annotation-color="yellow"]'));
+  }, quote);
 }
 
 async function readingLineDelta(page: import("@playwright/test").Page, targetId: string): Promise<number> {

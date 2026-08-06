@@ -226,3 +226,58 @@ def test_message_window_anchor_returns_page_containing_far_target(client: TestCl
     assert anchored["offset"] < 95
     assert anchored["offset"] + len(anchored["items"]) > 95
     assert target["id"] in {item["id"] for item in anchored["items"]}
+
+
+def test_split_workspace_plans_and_executes_range_boundary_and_discrete_modes(client: TestClient) -> None:
+    conversation_id = _commit_messages(
+        client,
+        "Workspace Split",
+        [
+            {"role": "Prompt", "say": "Question 0"},
+            {"role": "Response", "say": "Answer 1"},
+            {"role": "Prompt", "say": "Question 2"},
+            {"role": "Response", "say": "Answer 3"},
+        ],
+    )
+    messages = _window(client, conversation_id, limit=10)["items"]
+
+    range_preview = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace/preview",
+        json={"mode": "range_copy", "start_message_id": messages[1]["id"], "end_message_id": messages[3]["id"]},
+    )
+    assert range_preview.status_code == 200
+    assert range_preview.json()["groups"][0]["message_count"] == 3
+    range_created = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace",
+        json={"mode": "range_copy", "start_message_id": messages[1]["id"], "end_message_id": messages[3]["id"], "titles": ["Range result"]},
+    )
+    assert range_created.status_code == 200
+    range_id = range_created.json()["conversations"][0]["conversation_id"]
+    assert _window(client, range_id, limit=10)["total"] == 3
+    assert _window(client, conversation_id, limit=10)["total"] == 4
+
+    boundary_preview = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace/preview",
+        json={"mode": "boundary_copy", "boundary_message_id": messages[1]["id"]},
+    )
+    assert boundary_preview.status_code == 200
+    assert [group["message_count"] for group in boundary_preview.json()["groups"]] == [2, 2]
+    boundary_created = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace",
+        json={"mode": "boundary_copy", "boundary_message_id": messages[1]["id"], "titles": ["Before", "After"]},
+    )
+    assert boundary_created.status_code == 200
+    assert [item["message_count"] for item in boundary_created.json()["conversations"]] == [2, 2]
+
+    discrete_preview = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace/preview",
+        json={"mode": "discrete_copy", "message_ids": [messages[0]["id"], messages[2]["id"]]},
+    )
+    assert discrete_preview.status_code == 200
+    assert discrete_preview.json()["groups"][0]["message_ids"] == [messages[0]["id"], messages[2]["id"]]
+    discrete_created = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace",
+        json={"mode": "discrete_copy", "message_ids": [messages[0]["id"], messages[2]["id"]], "titles": ["Discrete"]},
+    )
+    assert discrete_created.status_code == 200
+    assert _window(client, discrete_created.json()["conversations"][0]["conversation_id"], limit=10)["total"] == 2

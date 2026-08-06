@@ -18,12 +18,13 @@ from app.models.render_block import RenderBlock
 from app.models.share import Share
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.schemas.conversation import ConversationListItem
-from app.schemas.message import DialogueIndexItem, DialogueIndexResponse, MessageListItem, MessageVersionRead, RenderBlockRead
+from app.schemas.message import DialogueIndexItem, DialogueIndexResponse, MessageListItem, MessageVersionRead, ReaderTurnResponse, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
 from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareUpdate, SharedConversationBootstrap
 from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
+from app.services.reader_turns import ReaderTurnHydrationError, build_reader_turn
 
 
 class ShareError(ValueError):
@@ -155,6 +156,17 @@ def get_shared_message_window(
         has_previous=offset > 0,
         has_more=offset + len(messages) < total,
     )
+
+
+def get_shared_reader_turn(db: Session, token: str, *, anchor_message_id: uuid.UUID | None) -> ReaderTurnResponse:
+    share = _get_accessible_share(db, token)
+    messages = _share_message_query(db, share).order_by(Message.order_key.asc()).all()
+    try:
+        return build_reader_turn(db, share.conversation_id, messages, anchor_message_id)
+    except ReaderTurnHydrationError as exc:
+        raise ShareError(str(exc), HTTPStatus.CONFLICT) from exc
+    except ValueError as exc:
+        raise ShareError(str(exc), HTTPStatus.NOT_FOUND) from exc
 
 
 def get_shared_dialogue_index(
@@ -411,6 +423,10 @@ def _get_accessible_share(db: Session, token: str) -> Share:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
     _assert_share_accessible(share)
     return share
+
+
+def resolve_accessible_share(db: Session, token: str) -> Share:
+    return _get_accessible_share(db, token)
 
 
 def _selected_message_ids(share: Share) -> set[uuid.UUID]:

@@ -6,7 +6,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.database import get_db
 from app.main import app
+from app.models.conversation_event import ConversationEvent
+from app.models.message import Message
+from app.models.message_version import MessageVersion
 from app.services.background_jobs import claim_next_job, process_background_job
+from app.services.import_pipeline.canonical_draft import NORMALIZER_VERSION
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -48,7 +52,7 @@ def _run_job(job_id: str) -> None:
     process_background_job(uuid.UUID(job_id), testing_session_local)
 
 
-def test_cr_archive_export_import_round_trip_and_duplicate_detection(client: TestClient) -> None:
+def test_cr_archive_export_import_round_trip_and_duplicate_policies(client: TestClient) -> None:
     source_id = _commit_source(client)
     queued = client.post(
         f"/api/conversations/{source_id}/exports",
@@ -90,14 +94,30 @@ def test_cr_archive_export_import_round_trip_and_duplicate_detection(client: Tes
         files={"files": ("archive.cr", archive.content, "application/vnd.chat-reader.archive+zip")},
     ).json()
     assert duplicate["duplicate_conversation_id"] == imported_id
-    rejected = client.post(f"/api/imports/{duplicate['import_id']}/commit")
+    cloned = client.post(f"/api/imports/{duplicate['import_id']}/commit")
+    assert cloned.status_code == 200
+    assert cloned.json()["conversation_ids"][0] != imported_id
+
+    reject_preview = client.post(
+        "/api/imports/preview",
+        files={"files": ("archive.cr", archive.content, "application/vnd.chat-reader.archive+zip")},
+    ).json()
+    rejected = client.post(
+        f"/api/imports/{reject_preview['import_id']}/commit",
+        json={"duplicate_policy": "reject"},
+    )
     assert rejected.status_code == 409
+
+    copy_preview = client.post(
+        "/api/imports/preview",
+        files={"files": ("archive.cr", archive.content, "application/vnd.chat-reader.archive+zip")},
+    ).json()
     copied = client.post(
-        f"/api/imports/{duplicate['import_id']}/commit",
+        f"/api/imports/{copy_preview['import_id']}/commit",
         json={"duplicate_policy": "copy"},
     )
     assert copied.status_code == 200
-    assert copied.json()["conversation_ids"][0] != imported_id
+    assert copied.json()["conversation_ids"][0] not in {imported_id, cloned.json()["conversation_ids"][0]}
 
 
 def test_auto_clean_job_creates_new_version_and_preserves_history(client: TestClient) -> None:
@@ -128,3 +148,61 @@ def test_auto_clean_job_creates_new_version_and_preserves_history(client: TestCl
     versions = client.get(f"/api/messages/{assistant['id']}/versions").json()
     assert len(versions["items"]) == 3
     assert versions["items"][0]["edit_type"] == "auto_clean"
+
+
+def test_derived_rebuild_job_upgrades_legacy_versions_without_migration_rewrite(client: TestClient) -> None:
+    conversation_id = _commit_source(client)
+    override = app.dependency_overrides[get_db]
+    override_generator = override()
+    db = next(override_generator)
+    try:
+        versions = (
+            db.query(MessageVersion)
+            .join(Message, Message.id == MessageVersion.message_id)
+            .filter(Message.conversation_id == uuid.UUID(conversation_id))
+            .all()
+        )
+        for version in versions:
+            version.normalizer_version = "legacy-v1"
+            version.markdown_parser_version = "legacy-v1"
+            version.block_builder_version = "legacy-v1"
+            version.search_document_version = "legacy-v1"
+            version.content_hash = "legacy-hash"
+        db.commit()
+    finally:
+        db.close()
+        override_generator.close()
+
+    queued = client.post(
+        f"/api/conversations/{conversation_id}/derived-rebuild",
+        headers={"Idempotency-Key": "derived-rebuild-test"},
+    )
+    assert queued.status_code == 202
+    _run_job(queued.json()["job_id"])
+    task = client.get(f"/api/tasks/{queued.json()['job_id']}").json()
+    assert task["status"] == "committed"
+    assert task["result"]["rebuilt_versions"] == 2
+
+    override_generator = override()
+    db = next(override_generator)
+    try:
+        versions = (
+            db.query(MessageVersion)
+            .join(Message, Message.id == MessageVersion.message_id)
+            .filter(Message.conversation_id == uuid.UUID(conversation_id))
+            .all()
+        )
+        assert all(version.normalizer_version == NORMALIZER_VERSION for version in versions)
+        assert all(version.content_hash != "legacy-hash" for version in versions)
+        event = (
+            db.query(ConversationEvent)
+            .filter(
+                ConversationEvent.conversation_id == uuid.UUID(conversation_id),
+                ConversationEvent.event_type == "derived_data_rebuilt",
+            )
+            .one()
+        )
+        assert event.payload["rebuilt_versions"] == 2
+    finally:
+        db.close()
+        override_generator.close()

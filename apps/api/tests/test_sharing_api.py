@@ -99,6 +99,11 @@ def test_shared_readonly_response_and_access_count(client: TestClient) -> None:
     assert window.status_code == 200
     assert len(window.json()["items"]) == 1
     assert window.json()["items"][0]["id"] == selected_message_id
+    reader_turn = client.get(f"/api/shared/{token}/reader-turn", params={"anchor_message_id": selected_message_id})
+    assert reader_turn.status_code == 200
+    assert [item["id"] for item in reader_turn.json()["items"]] == [selected_message_id]
+    assert reader_turn.json()["items"][0]["content_truncated"] is False
+    assert len(reader_turn.json()["items"][0]["render_blocks"]) == reader_turn.json()["items"][0]["block_count"]
     assert "raw_storage_uri" not in str(payload)
     assert "storage/imports" not in str(payload)
 

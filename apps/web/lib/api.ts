@@ -6,16 +6,28 @@ import type {
   AnnotationSyncOperation,
   AnnotationSyncResponse,
   AnnotationUpdateInput,
+  AttachmentRead,
+  AttachmentListRead,
+  AttachmentUploadItemRead,
+  AttachmentUploadSessionRead,
+  CapabilitiesRead,
   ConversationEventListResponse,
   ConversationDetail,
   ConversationListItem,
   ConversationManagementResponse,
+  ConversationPlacementInput,
+  ConversationPlacementResponse,
   ConversationUpdateInput,
   ConversationSortMode,
   DialogueIndexResponse,
   ConversationTransformResponse,
+  ConversationSplitWorkspaceInput,
+  ConversationSplitWorkspacePreview,
+  ConversationSplitWorkspaceResponse,
   HealthResponse,
+  ImportDuplicatePolicy,
   ImportPreviewResponse,
+  BundlePreviewAccepted,
   ImportStatusResponse,
   NotebookRead,
   MessageEditResponse,
@@ -23,10 +35,13 @@ import type {
   MessageMergeResponse,
   MessageSplitResponse,
   MessageVersionHistoryResponse,
+  MessageVersionDeleteResponse,
   MessageWindowResponse,
+  ReaderTurnResponse,
   ProjectConversationRead,
   ProjectCreate,
   ProjectRead,
+  ProjectPlacementInput,
   ProjectUpdate,
   ProjectSortMode,
   ReadingPositionInput,
@@ -57,6 +72,82 @@ export async function getHealth(): Promise<HealthResponse> {
   return fetchJson<HealthResponse>("/api/health");
 }
 
+export async function getCapabilities(): Promise<CapabilitiesRead> {
+  return fetchJson<CapabilitiesRead>("/api/capabilities");
+}
+
+export async function getAttachment(attachmentId: string, shareToken?: string): Promise<AttachmentRead> {
+  const path = shareToken
+    ? `/api/shared/${encodeURIComponent(shareToken)}/attachments/${attachmentId}`
+    : `/api/attachments/${attachmentId}`;
+  return fetchJson<AttachmentRead>(path);
+}
+
+export async function getConversationAttachments(conversationId: string): Promise<AttachmentRead[]> {
+  return (await fetchJson<AttachmentListRead>(`/api/conversations/${conversationId}/attachments`)).items;
+}
+
+export async function createAttachmentUploadSession(
+  conversationId: string,
+  input: { targetMessageId?: string; baseMessageVersionId?: string } = {},
+): Promise<AttachmentUploadSessionRead> {
+  return fetchJson<AttachmentUploadSessionRead>(
+    `/api/conversations/${conversationId}/attachment-upload-sessions`,
+    jsonRequest("POST", {
+      target_message_id: input.targetMessageId,
+      base_message_version_id: input.baseMessageVersionId,
+    }),
+  );
+}
+
+export function uploadAttachmentItem(
+  sessionId: string,
+  file: File,
+  onProgress?: (progress: number) => void,
+): { promise: Promise<AttachmentUploadItemRead>; cancel: () => void } {
+  const request = new XMLHttpRequest();
+  const promise = new Promise<AttachmentUploadItemRead>((resolve, reject) => {
+    request.open("POST", `/api/attachment-upload-sessions/${sessionId}/items`);
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    });
+    request.addEventListener("load", () => {
+      let payload: unknown;
+      try { payload = request.responseText ? JSON.parse(request.responseText) : null; } catch { payload = null; }
+      if (request.status >= 200 && request.status < 300) resolve(payload as AttachmentUploadItemRead);
+      else reject(new Error(readApiError(payload, request.status)));
+    });
+    request.addEventListener("error", () => reject(new Error("Attachment upload failed.")));
+    request.addEventListener("abort", () => reject(new DOMException("Upload cancelled.", "AbortError")));
+    const body = new FormData();
+    body.append("file", file, file.name);
+    request.send(body);
+  });
+  return { promise, cancel: () => request.abort() };
+}
+
+export async function finalizeConversationAttachments(conversationId: string, uploadItemIds: string[]): Promise<AttachmentRead[]> {
+  return (await fetchJson<AttachmentListRead>(
+    `/api/conversations/${conversationId}/attachments`,
+    jsonRequest("POST", { upload_item_ids: uploadItemIds }),
+  )).items;
+}
+
+export async function deleteAttachmentUploadItem(sessionId: string, itemId: string): Promise<void> {
+  await fetchJson<void>(`/api/attachment-upload-sessions/${sessionId}/items/${itemId}`, { method: "DELETE" });
+}
+
+export async function updateConversationAttachment(conversationId: string, attachmentId: string, displayName: string): Promise<AttachmentRead> {
+  return fetchJson<AttachmentRead>(
+    `/api/conversations/${conversationId}/attachments/${attachmentId}`,
+    jsonRequest("PATCH", { display_name: displayName }),
+  );
+}
+
+export async function deleteConversationAttachment(conversationId: string, attachmentId: string): Promise<void> {
+  await fetchJson<void>(`/api/conversations/${conversationId}/attachments/${attachmentId}`, { method: "DELETE" });
+}
+
 export async function getPreferences(): Promise<UserPreferenceRead> {
   return fetchJson<UserPreferenceRead>("/api/preferences");
 }
@@ -68,6 +159,7 @@ export async function updatePreferences(input: UserPreferenceUpdate): Promise<Us
 export async function getConversations(
   input: {
     includeArchived?: boolean;
+    statusScope?: "active" | "archived" | "all";
     scope?: "all" | "history";
     sort?: ConversationSortMode;
     direction?: SortDirection;
@@ -78,6 +170,7 @@ export async function getConversations(
   if (input.includeArchived) {
     params.set("include_archived", "true");
   }
+  if (input.statusScope) params.set("status_scope", input.statusScope);
   if (input.scope) {
     params.set("scope", input.scope);
   }
@@ -142,7 +235,13 @@ export async function getOfflineCatalog(): Promise<OfflineCatalogResponse> {
 }
 
 export async function queueOfflinePackage(
-  input: { scope: "conversation" | "project" | "all"; conversation_id?: string; project_id?: string },
+  input: {
+    scope: "conversation" | "project" | "all";
+    conversation_id?: string;
+    project_id?: string;
+    known_revisions?: Record<string, number>;
+    include_assets?: "none" | "small" | "all";
+  },
 ): Promise<OfflinePackageQueued> {
   return fetchJson<OfflinePackageQueued>("/api/offline/packages", jsonRequest("POST", input));
 }
@@ -156,11 +255,11 @@ export async function deleteConversation(conversationId: string): Promise<void> 
 }
 
 export async function archiveConversation(conversationId: string): Promise<ConversationManagementResponse> {
-  return updateConversation(conversationId, { status: "archived" });
+  return fetchJson<ConversationManagementResponse>(`/api/conversations/${conversationId}/archive`, { method: "POST" });
 }
 
-export async function restoreConversation(conversationId: string): Promise<ConversationManagementResponse> {
-  return updateConversation(conversationId, { status: "active" });
+export async function unarchiveConversation(conversationId: string): Promise<ConversationManagementResponse> {
+  return fetchJson<ConversationManagementResponse>(`/api/conversations/${conversationId}/unarchive`, { method: "POST" });
 }
 
 export async function getConversationMessages(
@@ -211,6 +310,16 @@ export async function getConversationMessageWindow(
   return fetchJson<MessageWindowResponse>(
     `/api/conversations/${conversationId}/message-window?${params.toString()}`,
   );
+}
+
+export async function getConversationReaderTurn(
+  conversationId: string,
+  anchorMessageId?: string,
+): Promise<ReaderTurnResponse> {
+  const params = new URLSearchParams();
+  if (anchorMessageId) params.set("anchor_message_id", anchorMessageId);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return fetchJson<ReaderTurnResponse>(`/api/conversations/${conversationId}/reader-turn${suffix}`);
 }
 
 export async function getConversationDialogueIndex(
@@ -306,7 +415,7 @@ export async function splitConversation(
 
 export async function editMessage(
   messageId: string,
-  input: { displayText: string; editReason?: string; baseVersionId?: string },
+  input: { displayText: string; editReason?: string; baseVersionId?: string; saveMode?: "create_version" | "replace_current"; uploadItemIds?: string[] },
 ): Promise<MessageEditResponse> {
   return fetchJson<MessageEditResponse>(
     `/api/messages/${messageId}`,
@@ -314,7 +423,46 @@ export async function editMessage(
       display_text: input.displayText,
       edit_reason: input.editReason,
       base_version_id: input.baseVersionId,
+      save_mode: input.saveMode ?? "create_version",
+      upload_item_ids: input.uploadItemIds ?? [],
     }),
+  );
+}
+
+export async function selectMessageVersion(messageId: string, versionId: string): Promise<MessageEditResponse> {
+  return fetchJson<MessageEditResponse>(
+    `/api/messages/${messageId}/current-version`,
+    jsonRequest("PUT", { version_id: versionId }),
+  );
+}
+
+export async function deleteMessageVersion(messageId: string, versionId: string): Promise<MessageVersionDeleteResponse> {
+  return fetchJson<MessageVersionDeleteResponse>(`/api/messages/${messageId}/versions/${versionId}`, { method: "DELETE" });
+}
+
+function splitWorkspaceBody(input: ConversationSplitWorkspaceInput) {
+  return {
+    mode: input.mode,
+    start_message_id: input.startMessageId,
+    end_message_id: input.endMessageId,
+    boundary_message_id: input.boundaryMessageId,
+    message_ids: input.messageIds ?? [],
+    titles: input.titles ?? [],
+    project_id: input.projectId,
+  };
+}
+
+export async function previewConversationSplit(conversationId: string, input: ConversationSplitWorkspaceInput): Promise<ConversationSplitWorkspacePreview> {
+  return fetchJson<ConversationSplitWorkspacePreview>(
+    `/api/conversations/${conversationId}/split-workspace/preview`,
+    jsonRequest("POST", splitWorkspaceBody(input)),
+  );
+}
+
+export async function executeConversationSplit(conversationId: string, input: ConversationSplitWorkspaceInput): Promise<ConversationSplitWorkspaceResponse> {
+  return fetchJson<ConversationSplitWorkspaceResponse>(
+    `/api/conversations/${conversationId}/split-workspace`,
+    jsonRequest("POST", splitWorkspaceBody(input)),
   );
 }
 
@@ -345,10 +493,23 @@ export async function previewImport(files: File[]): Promise<ImportPreviewRespons
   });
 }
 
+export async function previewAttachmentBundle(file: File): Promise<BundlePreviewAccepted> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetchJson<BundlePreviewAccepted>("/api/imports/bundles/preview", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function getImportPreview(importId: string): Promise<ImportPreviewResponse> {
+  return fetchJson<ImportPreviewResponse>(`/api/imports/${importId}/preview`);
+}
+
 export async function commitImport(
   importId: string,
   options: {
-    duplicatePolicy?: "reject" | "copy";
+    duplicatePolicy?: ImportDuplicatePolicy | "copy";
     projectId?: string | null;
     createArchiveProject?: boolean;
   } = {},
@@ -357,7 +518,7 @@ export async function commitImport(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      duplicate_policy: options.duplicatePolicy ?? "reject",
+      duplicate_policy: options.duplicatePolicy ?? "clone",
       project_id: options.projectId ?? null,
       create_archive_project: options.createArchiveProject ?? false,
     }),
@@ -384,6 +545,10 @@ export async function retryTask(jobId: string): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST" });
 }
 
+export async function cancelTask(jobId: string): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/cancel`, { method: "POST" });
+}
+
 export async function getProjects(input: {
   includeArchived?: boolean;
   sort?: ProjectSortMode;
@@ -402,6 +567,10 @@ export async function createProject(input: ProjectCreate): Promise<ProjectRead> 
 
 export async function updateProject(projectId: string, input: ProjectUpdate): Promise<ProjectRead> {
   return fetchJson<ProjectRead>(`/api/projects/${projectId}`, jsonRequest("PATCH", input));
+}
+
+export async function placeProject(projectId: string, input: ProjectPlacementInput): Promise<ProjectRead> {
+  return fetchJson<ProjectRead>(`/api/projects/${projectId}/placement`, jsonRequest("PUT", input));
 }
 
 export async function getProjectConversations(
@@ -478,6 +647,16 @@ export async function moveConversationToProject(
   return fetchJson<ConversationManagementResponse>(
     `/api/conversations/${conversationId}/project`,
     jsonRequest("PUT", { project_id: projectId }),
+  );
+}
+
+export async function placeConversation(
+  conversationId: string,
+  input: ConversationPlacementInput,
+): Promise<ConversationPlacementResponse> {
+  return fetchJson<ConversationPlacementResponse>(
+    `/api/conversations/${conversationId}/placement`,
+    jsonRequest("PUT", input),
   );
 }
 
@@ -586,7 +765,7 @@ export async function reindexSearch(input: { conversationId?: string } = {}): Pr
 
 export async function getConversationToc(
   conversationId: string,
-  options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number } = {},
+  options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number; role?: string; query?: string; startOrderKey?: string; endOrderKey?: string } = {},
 ): Promise<TocResponse> {
   const params = new URLSearchParams({
     offset: String(options.offset ?? 0),
@@ -594,6 +773,10 @@ export async function getConversationToc(
   });
   if (options.messageId) params.set("message_id", options.messageId);
   if (options.maxLevel) params.set("max_level", String(options.maxLevel));
+  if (options.role) params.set("role", options.role);
+  if (options.query) params.set("q", options.query);
+  if (options.startOrderKey) params.set("start_order_key", options.startOrderKey);
+  if (options.endOrderKey) params.set("end_order_key", options.endOrderKey);
   return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc?${params.toString()}`);
 }
 
@@ -609,6 +792,70 @@ export async function queueConversationArchiveExport(
   return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports?${params.toString()}`, {
     method: "POST",
     headers: { "Idempotency-Key": `cr-export-${conversationId}-${Date.now()}` },
+  });
+}
+
+export async function queueConversationContextPackageExport(
+  conversationId: string,
+  options: { scope: "full_conversation" | "reading_scope"; startMessageId?: string | null },
+): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": `context-export-${conversationId}-${options.scope}-${Date.now()}`,
+    },
+    body: JSON.stringify({
+      format: "context_package",
+      context_scope: options.scope,
+      start_message_id: options.scope === "reading_scope" ? options.startMessageId : null,
+    }),
+  });
+}
+
+export async function queueConversationAttachmentBundleExport(
+  conversationId: string,
+  format: "markdown_bundle" | "canjson_bundle",
+  options: {
+    includeDescription?: boolean;
+    includeAnnotations?: boolean;
+    includeNotebook?: boolean;
+    includeSourceRefs?: boolean;
+  } = {},
+): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": `${format}-${conversationId}-${Date.now()}`,
+    },
+    body: JSON.stringify({
+      format,
+      include_description: options.includeDescription ?? false,
+      annotation_scope: options.includeAnnotations ? "all" : "none",
+      notebook_scope: options.includeNotebook ? "current" : "none",
+      include_source_refs: options.includeSourceRefs ?? true,
+    }),
+  });
+}
+
+export async function queueSystemArchiveExport(includeArchived: boolean): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>("/api/system/archive/exports", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": `system-archive-${includeArchived}-${Date.now()}`,
+    },
+    body: JSON.stringify({ include_archived: includeArchived }),
+  });
+}
+
+export async function restoreSystemArchive(file: File): Promise<{ status: string; restored: Record<string, number> }> {
+  const body = new FormData();
+  body.append("file", file);
+  return fetchJson<{ status: string; restored: Record<string, number> }>("/api/system/archive/restore", {
+    method: "POST",
+    body,
   });
 }
 
@@ -656,6 +903,16 @@ export async function getSharedMessageWindow(
   );
 }
 
+export async function getSharedReaderTurn(
+  token: string,
+  anchorMessageId?: string,
+): Promise<ReaderTurnResponse> {
+  const params = new URLSearchParams();
+  if (anchorMessageId) params.set("anchor_message_id", anchorMessageId);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return fetchJson<ReaderTurnResponse>(`/api/shared/${encodeURIComponent(token)}/reader-turn${suffix}`);
+}
+
 export async function getSharedDialogueIndex(
   token: string,
   options: { offset?: number; limit?: number; anchorMessageId?: string } = {},
@@ -700,16 +957,43 @@ export async function getSharedMessageBlocks(
 export function getConversationExportUrl(
   conversationId: string,
   options: {
-    format: "markdown" | "canonical_json";
+    format: "markdown_v2" | "canjson_v2" | "markdown" | "canonical_json";
     includeMetadata?: boolean;
     includeToc?: boolean;
     includeVersions?: boolean;
     includeDescription?: boolean;
     includeAnnotations?: boolean;
     includeNotebook?: boolean;
+    includeSourceRefs?: boolean;
+    tocMode?: "none" | "message_index" | "bounded_headings";
+    compression?: "none" | "gzip";
     messageIds?: string[];
   },
 ): string {
+  if (options.format === "markdown_v2") {
+    const params = new URLSearchParams({
+      include_metadata: String(options.includeMetadata ?? true),
+      include_description: String(options.includeDescription ?? false),
+      toc_mode: options.tocMode ?? (options.includeToc ? "bounded_headings" : "none"),
+      include_annotations: String(options.includeAnnotations ?? false),
+      include_notebook: String(options.includeNotebook ?? false),
+    });
+    if (options.messageIds?.length) params.set("message_ids", options.messageIds.join(","));
+    return `${API_BASE_URL}/api/conversations/${conversationId}/exports/markdown?${params.toString()}`;
+  }
+  if (options.format === "canjson_v2") {
+    const params = new URLSearchParams({
+      include_metadata: String(options.includeMetadata ?? true),
+      include_description: String(options.includeDescription ?? false),
+      include_versions: String(options.includeVersions ?? false),
+      include_annotations: String(options.includeAnnotations ?? false),
+      include_notebook: String(options.includeNotebook ?? false),
+      include_source_refs: String(options.includeSourceRefs ?? true),
+      compression: options.compression ?? "none",
+    });
+    if (options.messageIds?.length) params.set("message_ids", options.messageIds.join(","));
+    return `${API_BASE_URL}/api/conversations/${conversationId}/exports/canjson?${params.toString()}`;
+  }
   const params = new URLSearchParams({
     format: options.format,
     include_metadata: String(options.includeMetadata ?? true),
@@ -789,6 +1073,14 @@ async function getErrorMessage(response: Response, path: string): Promise<string
   }
 
   return `${path} returned ${response.status}`;
+}
+
+function readApiError(payload: unknown, statusCode: number): string {
+  if (payload && typeof payload === "object") {
+    const detail = (payload as { detail?: unknown }).detail;
+    if (typeof detail === "string") return detail;
+  }
+  return `Attachment upload returned ${statusCode}`;
 }
 
 function normalizeShareUrl<T extends ShareRead>(share: T): T {

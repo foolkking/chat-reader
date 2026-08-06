@@ -4,6 +4,8 @@
 **依据：** DECISION_LOG D-011~D-015-A
 **核心文件：** `apps/web/features/conversations/conversation-reader.tsx`（约 1500+ 行）、`message-item.tsx`、`assistant-message-renderer.tsx`、`features/toc/conversation-index.tsx`、`features/toc/conversation-toc.tsx`、`features/annotations/annotation-workspace.tsx`、`components/reader-header-action-rail.tsx`、`components/responsive-reader-frame.tsx`、`components/reader-sidebar-frame.tsx`、`app/globals.css`。
 
+> **2026-07-28 执行覆盖：** 本文后续关于 30 条 preview、heavy 占位、进入视口后加载和 block 分页的内容已由用户最终计划取代。当前 Reader 以完整 user-led turn 为单位，稳定 DOM 约 3 轮；目标轮次完整水合后才定位。
+
 ---
 
 ## 1. 布局架构（用户截图确认）

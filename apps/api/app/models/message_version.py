@@ -29,9 +29,23 @@ class MessageVersion(Base):
     created_by: Mapped[str] = mapped_column(String, nullable=False, default="import")
     based_on_version_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     content_hash: Mapped[str] = mapped_column(String, nullable=False)
+    normalizer_version: Mapped[str] = mapped_column(String, nullable=False, default="legacy-v1")
+    markdown_parser_version: Mapped[str] = mapped_column(String, nullable=False, default="legacy-v1")
+    block_builder_version: Mapped[str] = mapped_column(String, nullable=False, default="legacy-v1")
+    search_document_version: Mapped[str] = mapped_column(String, nullable=False, default="legacy-v1")
 
     message = relationship("Message", back_populates="versions")
     render_blocks = relationship("RenderBlock", back_populates="message_version", cascade="all, delete-orphan")
+    attachment_links = relationship("MessageVersionAttachment", back_populates="message_version", cascade="all, delete-orphan")
+
+    @property
+    def display_markdown(self) -> str:
+        """Semantic alias; display_text remains the single persisted body column."""
+        return self.display_text
+
+    @display_markdown.setter
+    def display_markdown(self, value: str) -> None:
+        self.display_text = value
 
 
 Index("idx_message_versions_message_id", MessageVersion.message_id)

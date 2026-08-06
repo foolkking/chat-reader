@@ -1,31 +1,27 @@
-# chat-reader
+# Chat Reader
 
-`chat-reader` 是面向 ChatGPT 导出内容的长期阅读与管理系统。它把 JSON 和 Markdown 导入为稳定的 canonical 数据，提供适合长对话的阅读、搜索、目录、编辑、Project、分享和导出能力，而不是一个在线聊天机器人。
+Chat Reader 是面向已经线性化、标准化的 AI 对话内容的长期阅读与管理系统。普通导入使用兼容 JSON（可附 Markdown 做一致性校验），完整恢复使用 `.cr`；系统提供长对话阅读、搜索、批注、Project 管理、分享、导出和离线资料库，但不解析 OpenAI 官方对话图或 ZIP。
 
-2026-07-27 的最终改造增加了正式 `/recent` 导航、Cmd/Ctrl+K、左对齐 Reader、批注浮窗/固定模式，以及包含批注的在线和离线搜索。部署与批注索引回填步骤见 [`docs/execution/DEPLOYMENT_CHECKLIST.md`](docs/execution/DEPLOYMENT_CHECKLIST.md)。
+## 核心能力
 
-## 主要能力
-
-- 预览并导入 ChatGPT Exporter JSON/Markdown 组合和官方 conversations JSON。
-- 使用 PostgreSQL 保存会话、不可变消息版本、RenderBlock、标题和搜索文档。
-- ChatGPT 风格阅读器，支持 GFM、Shiki 代码高亮、KaTeX、Mermaid、callout 和代码复制。
-- 长会话窗口加载、heavy message blocks 懒加载、对话索引和当前消息章节目录。
-- 中文、代码词、URL 和符号较多内容的全文与子串搜索。
-- Project、置顶、归档、软删除、消息/会话拆分与合并。
-- 消息编辑与版本恢复、阅读位置和最近打开记录。
-- 只读分享链接管理，以及 Markdown、Canonical JSON 导出。
-- 响应式移动阅读界面和 PWA-ready 应用壳。
+- 三类导入入口：兼容 JSON（含 CanJSON 自动识别、可选 Markdown）、附件 `.crbundle` 和旧 `.cr` 兼容归档；预览通过后才提交。
+- 对话级附件支持普通上传、当前对话文件、版本 occurrence、Reader/Share/Offline 和基础预览；轻量部署可明确使用 disabled scanner。
+- 以完整对话轮次加载长正文，支持远距离定位、连续滚动和稳定阅读位置恢复。
+- GFM、Shiki、KaTeX、Mermaid、callout、代码复制及安全链接渲染。
+- Project 与未归类对话管理、归档、批量选择、拆分/合并和版本恢复。
+- 全局/当前对话搜索、批注与精选笔记、只读 Share，以及 Markdown v2、CanJSON v2、`.cr` 三类职责明确的导出。
+- `/library` 独立 PWA：按 conversation revision 增量更新，支持离线阅读、搜索及批注同步。
 
 ## 技术栈
 
-- Web：Next.js 14、React 18、TypeScript、Tailwind CSS、TanStack Query、Zustand、assistant-ui。
-- API：FastAPI、SQLAlchemy 2、Alembic、Python 3.11。
-- 数据库：PostgreSQL 16。
-- 部署：Docker Compose；浏览器统一请求同源 `/api/*`，由 Next.js 转发给 FastAPI。
+- Web：Next.js 14、React 18、TypeScript、Tailwind CSS。
+- API：FastAPI、SQLAlchemy 2、Alembic、Python 3.11+。
+- 数据与部署：PostgreSQL 16、Dexie、Cache API、Docker Compose。
+- 包管理：Corepack + pnpm 9.15.4；Python 包使用 setuptools。
 
-## 本地启动
+## 快速开始
 
-准备 Node.js、Corepack、Python 3.11+、PostgreSQL 和 pnpm，然后：
+准备 Node.js、Corepack、Python 3.11+ 和 PostgreSQL，然后在 PowerShell 中运行：
 
 ```powershell
 Copy-Item .env.example .env
@@ -33,36 +29,37 @@ corepack pnpm install
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .\apps\api
-```
-
-创建数据库后执行 migration：
-
-```powershell
 Set-Location apps/api
 alembic upgrade head
 Set-Location ../..
 ```
 
-分别启动 API 和 Web：
+分别启动三个进程：
 
 ```powershell
 corepack pnpm run dev:api
-corepack pnpm run dev:web
 corepack pnpm run dev:worker
+corepack pnpm run dev:web
 ```
 
-打开 `http://localhost:3000`。局域网访问时仍使用 Web 的 3000 端口，业务请求通过同源 `/api/*` 代理，不需要让浏览器直接访问 8000 端口。
+打开 `http://localhost:3000`。浏览器始终请求同源 `/api/*`，由 Next.js 转发给 FastAPI。
 
-## 检查
+## 常用检查
 
-```powershell
-corepack pnpm run typecheck
-corepack pnpm run lint
-corepack pnpm run test:api
-```
+| 命令 | 用途 |
+| --- | --- |
+| `corepack pnpm run lint` | Web ESLint |
+| `corepack pnpm run typecheck` | Web TypeScript 检查 |
+| `corepack pnpm run test:api` | API pytest |
+| `corepack pnpm --filter web build` | Web production build |
+| `corepack pnpm --filter web test:pwa` | 构建并运行 Playwright/PWA |
 
-生产部署参见 [Docker 部署](docs/deployment.md)。完整文档入口见 [docs/index.md](docs/index.md)，当前实现快照见 [PROJECT_STATE.md](PROJECT_STATE.md)。
+## 文档
 
-## 当前边界
+- [当前项目快照](PROJECT_STATE.md)
+- [完整文档导航](docs/index.md)
+- [本地开发](docs/development.md)
+- [生产部署](docs/deployment.md)
+- [故障排查](docs/troubleshooting.md)
 
-当前没有认证或多用户隔离、真正的虚拟滚动、HTML/PDF 导出、标签/收藏、语义搜索、可任意扩展的通用 Job 类型和离线会话缓存。现有单并发 task worker 处理 import 与 conversation merge。部署到公网前应通过反向代理增加 HTTPS 和访问控制。
+当前没有应用内认证、多用户隔离、在线 AI 生成、完整消息/轮次虚拟列表、HTML/PDF 导出、标签系统或语义搜索。极长消息仅在 blocks 层动态虚拟化；公网部署必须由反向代理提供 HTTPS 和访问控制。

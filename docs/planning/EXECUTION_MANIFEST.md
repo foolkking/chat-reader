@@ -155,3 +155,16 @@
 ## 第二轮执行结果（2026-07-27）
 
 实际执行 HEAD：`175fae3914ad65a9682fa13303b64064507d498c`。Manifest 实际列出 63 个唯一任务 ID（原摘要“约 46”为计数差异，见 `docs/execution/DEVIATIONS.md`），均已完成或核验完成。没有创建 migration；后端搜索改造需要同时重建 API 与 import worker。详细记录见 `docs/execution/IMPLEMENTATION_LOG.md`。
+
+## 最终缺项审计（2026-07-28）
+
+重新从当前代码、API 测试、Playwright 和 Chrome 证据核对全部 63 个唯一任务 ID。旧实施日志不作为单独通过依据。按用户最新执行计划重新打开并完成：`NAV-01`、`RDR-08`、`S-03`、`S-04`、`A-03`、`A-04`、`FIN-05`。
+
+- `NAV-01`：侧栏改为项目树与未归类对话同时可见，删除互斥标签；折叠 Project 仍可接收拖放。
+- `RDR-08/S-03/S-04`：新增完整 reader-turn API，主/Share/Offline Reader 使用最多 3 个完整轮次，远距离导航和刷新恢复使用显式事务与真实 DOM 锚点。
+- `A-03/A-04`：recent 上下文和批注目标链路有 API/专项 E2E/Chrome 证据。
+- `FIN-05`：重新执行 lint、typecheck、API 150 tests、PWA、长对话专项连续 10 轮和 production build。
+- 后续用户追加的离线更新审计：确认旧实现只在触发层筛选变化 conversation，但 package/范围更新仍可能全量；现已升级为 `known_revisions` 对比的 conversation-delta v2，未变化 conversation 不打包、不重写，v1 读取兼容。
+- 最终离线一致性补充：Library 同步采用项目树 + 未归类单层侧栏，修复后续 revision 无法再次自动更新及 `last_read_at=null` 对话漏列；在线/离线共用不挤压列表的偏好弹层，入口在 Library 中反向返回在线版。
+
+审计结果：63/63 已完成或核验，0 部分完成，0 未完成。最终部署证据见 `docs/execution/`。

@@ -52,6 +52,10 @@ def sync_annotation_document(db: Session, annotation: ConversationAnnotation) ->
     quote = (annotation.quote or "").strip()
     plain_text = " ".join(part for part in (comment, quote) if part).strip()
     if not plain_text:
+        if existing is not None and existing.document_type == "annotation":
+            db.delete(existing)
+            db.flush()
+            return "deleted"
         return "skipped"
     values = {
         "id": document_id,

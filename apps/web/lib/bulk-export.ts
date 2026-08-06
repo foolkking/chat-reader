@@ -1,4 +1,4 @@
-import { strToU8, zipSync } from "fflate";
+import { zipSync } from "fflate";
 import { getConversationExportUrl } from "./api";
 
 export async function downloadConversationBundle(
@@ -6,14 +6,13 @@ export async function downloadConversationBundle(
 ): Promise<void> {
   const entries = await Promise.all(conversations.map(async (conversation, index) => {
     const response = await fetch(getConversationExportUrl(conversation.id, {
-      format: "canonical_json",
-      includeDescription: false,
+      format: "canjson_v2",
       includeAnnotations: false,
       includeNotebook: false,
     }), { credentials: "same-origin" });
     if (!response.ok) throw new Error(`Export failed (${response.status}).`);
-    const filename = `${String(index + 1).padStart(3, "0")}-${safeFilename(conversation.display_title)}.canonical.json`;
-    return [filename, strToU8(await response.text())] as const;
+    const filename = `${String(index + 1).padStart(3, "0")}-${safeFilename(conversation.display_title)}.canonical.jsonl`;
+    return [filename, new Uint8Array(await response.arrayBuffer())] as const;
   }));
   const archive = zipSync(Object.fromEntries(entries), { level: 6 });
   const buffer = archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength) as ArrayBuffer;

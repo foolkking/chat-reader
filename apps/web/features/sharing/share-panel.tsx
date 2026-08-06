@@ -9,12 +9,15 @@ import { usePreferences, useTranslations } from "../../components/preferences-pr
 export function SharePanel({
   conversationId,
   selectedMessageIds,
+  compact = false,
 }: {
   conversationId: string;
   selectedMessageIds: string[];
+  compact?: boolean;
 }) {
   const preferences = usePreferences();
   const t = useTranslations();
+  const zh = preferences.resolvedLocale === "zh-CN";
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -58,7 +61,7 @@ export function SharePanel({
       setCreatedUrl(response.share_url);
       await sharesQuery.refetch();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create share.");
+      setError(err instanceof Error ? err.message : (zh ? "无法创建分享链接。" : "Unable to create share."));
     } finally {
       setIsCreating(false);
     }
@@ -74,30 +77,30 @@ export function SharePanel({
   return (
     <section className="min-w-0 overflow-x-hidden">
       <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className={compact ? "hidden" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3"}>
           <label className="text-sm text-secondary">{t("shareTheme")}<select value={shareTheme} onChange={(event) => setShareTheme(event.target.value as "light" | "dark")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label>
           <label className="text-sm text-secondary">{t("shareLanguage")}<select value={shareLocale} onChange={(event) => setShareLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label>
         </div>
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="分享标题（可选）"
+          placeholder={zh ? "分享标题（可选）" : "Share title (optional)"}
           className="rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]"
         />
-        <textarea
+        {!compact ? <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="说明（可选）"
+          placeholder={zh ? "说明（可选）" : "Description (optional)"}
           className="min-h-20 rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]"
-        />
-        <div>
-          <p className="mb-2 text-sm text-secondary">有效期</p>
+        /> : null}
+        {!compact ? <div>
+          <p className="mb-2 text-sm text-secondary">{t("expiry")}</p>
           <div className="grid grid-cols-4 rounded-lg bg-subtle p-1">
-            {([{"label":"7 天","value":"7d"},{"label":"30 天","value":"30d"},{"label":"永久","value":"never"},{"label":"自定义","value":"custom"}] as const).map((item) => <button key={item.value} type="button" onClick={() => setExpiryMode(item.value)} className={`min-h-9 rounded-md text-xs ${expiryMode === item.value ? "bg-white font-medium shadow-sm" : "text-[#6b7280]"}`}>{item.label}</button>)}
+            {([{"label":t("sevenDays"),"value":"7d"},{"label":t("thirtyDays"),"value":"30d"},{"label":t("never"),"value":"never"},{"label":t("custom"),"value":"custom"}] as const).map((item) => <button key={item.value} type="button" onClick={() => setExpiryMode(item.value)} className={`min-h-9 rounded-md text-xs ${expiryMode === item.value ? "bg-surface font-medium shadow-sm" : "text-secondary"}`}>{item.label}</button>)}
           </div>
-        </div>
-        {expiryMode === "custom" ? <label className="text-sm text-[#374151]">
-          到期时间
+        </div> : null}
+        {!compact && expiryMode === "custom" ? <label className="text-sm text-[#374151]">
+          {zh ? "到期时间" : "Expiry date"}
           <input
             type="datetime-local"
             value={expiresAt}
@@ -105,24 +108,24 @@ export function SharePanel({
             className="mt-1 block w-full rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
           />
         </label> : null}
-        <label className="flex items-center gap-2 text-sm text-[#374151]">
+        {!compact ? <label className="flex items-center gap-2 text-sm text-[#374151]">
           <input
             type="checkbox"
             checked={useSelection}
             disabled={selectedMessageIds.length === 0}
             onChange={(event) => setUseSelection(event.target.checked)}
           />
-          仅分享所选消息（{selectedMessageIds.length}）
-        </label>
-        <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={includeToc} onChange={(event) => setIncludeToc(event.target.checked)} />包含章节目录</label>
-        <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={includeMetadata} onChange={(event) => setIncludeMetadata(event.target.checked)} />包含元数据</label>
-        <label className="flex items-center gap-2 text-sm text-[#374151]"><input type="checkbox" checked={allowExport} onChange={(event) => setAllowExport(event.target.checked)} />允许导出</label>
-        <fieldset className="grid gap-2 border-y border-ui py-3">
-          <legend className="px-1 text-xs font-semibold text-secondary">私人内容（默认不分享）</legend>
-          <PrivacyToggle label="包含 description" checked={includeDescription} onChange={setIncludeDescription} />
-          <PrivacyToggle label="包含批注" checked={includeAnnotations} onChange={setIncludeAnnotations} />
-          <PrivacyToggle label="包含精选笔记" checked={includeNotebook} onChange={setIncludeNotebook} />
-        </fieldset>
+          {zh ? `仅分享所选消息（${selectedMessageIds.length}）` : `Share selected messages only (${selectedMessageIds.length})`}
+        </label> : null}
+        {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={includeToc} onChange={(event) => setIncludeToc(event.target.checked)} />{zh ? "包含章节目录" : "Include section contents"}</label> : null}
+        {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={includeMetadata} onChange={(event) => setIncludeMetadata(event.target.checked)} />{zh ? "包含元数据" : "Include metadata"}</label> : null}
+        {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={allowExport} onChange={(event) => setAllowExport(event.target.checked)} />{zh ? "允许导出" : "Allow export"}</label> : null}
+        {!compact ? <fieldset className="grid gap-2 border-y border-ui py-3">
+          <legend className="px-1 text-xs font-semibold text-secondary">{zh ? "私人内容（默认不分享）" : "Private content (not shared by default)"}</legend>
+          <PrivacyToggle label={zh ? "包含对话说明" : "Include description"} checked={includeDescription} onChange={setIncludeDescription} />
+          <PrivacyToggle label={zh ? "包含批注" : "Include annotations"} checked={includeAnnotations} onChange={setIncludeAnnotations} />
+          <PrivacyToggle label={zh ? "包含精选笔记" : "Include notes"} checked={includeNotebook} onChange={setIncludeNotebook} />
+        </fieldset> : null}
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         <button
           type="button"
@@ -131,7 +134,7 @@ export function SharePanel({
           disabled={isCreating || (useSelection && selectedMessageIds.length === 0)}
         className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {isCreating ? "正在创建…" : "创建分享链接"}
+          {isCreating ? t("creating") : t("createShare")}
         </button>
         {createdUrl ? (
           <div className="rounded-lg border border-ui bg-subtle p-3">
@@ -151,23 +154,23 @@ export function SharePanel({
                 rel="noreferrer"
                 className="rounded-lg border border-[#d1d5db] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
               >
-                打开
+                {t("open")}
               </a>
               <button
                 type="button"
                 onClick={copyUrl}
                 className="rounded-lg border border-[#d1d5db] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
               >
-                复制链接
+                {t("copyLink")}
               </button>
             </div>
           </div>
         ) : null}
       </div>
 
-      <div className="mt-5 space-y-2">
-        <h3 className="text-xs font-semibold text-[#6b7280]">已创建的链接</h3>
-        {sharesQuery.isLoading ? <p className="text-sm text-slate-500">正在加载分享链接…</p> : null}
+      {!compact ? <div className="mt-5 space-y-2">
+        <h3 className="text-xs font-semibold text-secondary">{t("createdLinks")}</h3>
+        {sharesQuery.isLoading ? <p className="text-sm text-secondary">{zh ? "正在加载分享链接…" : "Loading share links…"}</p> : null}
         {sharesQuery.isError ? <p className="text-sm text-red-700">{sharesQuery.error.message}</p> : null}
         {(sharesQuery.data ?? []).map((share) => (
           <ShareManagementRow
@@ -178,7 +181,7 @@ export function SharePanel({
             onChanged={() => sharesQuery.refetch()}
           />
         ))}
-      </div>
+      </div> : null}
     </section>
   );
 }
@@ -195,6 +198,8 @@ function ShareManagementRow({
   onChanged: () => Promise<unknown>;
 }) {
   const t = useTranslations();
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   const [expiresAt, setExpiresAt] = useState(toDatetimeLocalValue(share.expires_at));
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -212,7 +217,7 @@ function ShareManagementRow({
       });
       await onChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update share.");
+      setError(err instanceof Error ? err.message : (zh ? "无法更新分享。" : "Unable to update share."));
     } finally {
       setBusy(null);
     }
@@ -245,7 +250,7 @@ function ShareManagementRow({
       onCreatedUrl(response.share_url);
       await onChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to regenerate share link.");
+      setError(err instanceof Error ? err.message : (zh ? "无法重新生成分享链接。" : "Unable to regenerate share link."));
     } finally {
       setBusy(null);
     }
@@ -257,15 +262,15 @@ function ShareManagementRow({
         <div className="min-w-0">
           <p className="truncate font-medium text-[#111827]">{share.title || share.token_prefix}</p>
           <p className="text-xs text-[#6b7280]">
-            {share.scope} / {share.access_count} opens
-            {share.revoked_at ? " / revoked" : ""}
+            {share.scope === "selected_messages" ? (zh ? "所选消息" : "Selected messages") : (zh ? "整个对话" : "Conversation")} · {zh ? `${share.access_count} 次打开` : `${share.access_count} opens`}
+            {share.revoked_at ? (zh ? " · 已撤销" : " · revoked") : ""}
           </p>
           {share.share_url ? (
             <a href={share.share_url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs text-[#0f766e] hover:underline">
               {share.share_url}
             </a>
           ) : (
-            <p className="mt-1 text-xs text-amber-700">URL unavailable for older shares; regenerate a managed link.</p>
+            <p className="mt-1 text-xs text-amber-700">{zh ? "旧分享没有可管理网址，请重新生成链接。" : "URL unavailable for older shares; regenerate a managed link."}</p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -277,14 +282,14 @@ function ShareManagementRow({
                 rel="noreferrer"
                 className="rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
               >
-                Open
+                {t("open")}
               </a>
               <button
                 type="button"
                 onClick={() => void copyShareUrl()}
                 className="rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
               >
-                Copy
+                {t("copyLink")}
               </button>
             </>
           ) : null}
@@ -295,7 +300,7 @@ function ShareManagementRow({
               disabled={busy !== null}
               className="rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:cursor-wait disabled:opacity-60"
             >
-              {busy === "regenerate" ? "Creating" : "Regenerate link"}
+              {busy === "regenerate" ? t("creating") : (zh ? "重新生成链接" : "Regenerate link")}
             </button>
           ) : null}
           <button
@@ -307,7 +312,7 @@ function ShareManagementRow({
                 await revokeShare(share.id);
                 await onChanged();
               } catch (err) {
-                setError(err instanceof Error ? err.message : "Unable to revoke share.");
+                setError(err instanceof Error ? err.message : (zh ? "无法撤销分享。" : "Unable to revoke share."));
               } finally {
                 setBusy(null);
               }
@@ -315,14 +320,14 @@ function ShareManagementRow({
             disabled={Boolean(share.revoked_at) || busy !== null}
             className="rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8] disabled:text-[#9ca3af]"
           >
-            {share.revoked_at ? "Revoked" : "Revoke"}
+            {share.revoked_at ? t("revoked") : t("revoke")}
           </button>
         </div>
       </div>
       <div className="mt-3 grid gap-2">
-        <div className="grid grid-cols-2 gap-2"><label className="text-xs font-medium text-secondary">{t("shareTheme")}<select value={theme} onChange={(event) => setTheme(event.target.value as "light" | "dark")} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label><label className="text-xs font-medium text-secondary">{t("shareLanguage")}<select value={locale} onChange={(event) => setLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label></div>
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2"><label className="min-w-0 text-xs font-medium text-secondary">{t("shareTheme")}<select value={theme} onChange={(event) => setTheme(event.target.value as "light" | "dark")} className="mt-1 block w-full min-w-0 rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label><label className="min-w-0 text-xs font-medium text-secondary">{t("shareLanguage")}<select value={locale} onChange={(event) => setLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 block w-full min-w-0 rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label></div>
         <label className="text-xs font-medium text-[#6b7280]">
-          Extend expiry
+          {zh ? "延长有效期" : "Extend expiry"}
           <input
             type="datetime-local"
             value={expiresAt}
@@ -337,10 +342,10 @@ function ShareManagementRow({
           disabled={busy !== null || Boolean(share.revoked_at)}
           className="min-h-9 rounded-lg bg-[#111827] px-3 text-xs font-medium text-white disabled:cursor-wait disabled:opacity-60"
         >
-          {busy === "save" ? "Saving" : "Save expiry"}
+          {busy === "save" ? t("saving") : (zh ? "保存有效期" : "Save expiry")}
         </button>
       </div>
-      {share.expires_at ? <p className="mt-1 text-xs text-[#6b7280]">Current expiry: {new Date(share.expires_at).toLocaleString()}</p> : null}
+      {share.expires_at ? <p className="mt-1 text-xs text-secondary">{zh ? "当前有效期" : "Current expiry"}：{new Date(share.expires_at).toLocaleString(resolvedLocale)}</p> : null}
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
     </div>
   );
@@ -350,7 +355,7 @@ function PrivacyToggle({ label, checked, onChange }: { label: string; checked: b
   return (
     <label className="flex min-h-9 items-center justify-between gap-3 text-sm text-primary">
       <span>{label}</span>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 shrink-0 accent-[var(--accent)]" />
     </label>
   );
 }

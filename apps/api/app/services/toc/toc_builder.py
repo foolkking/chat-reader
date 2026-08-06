@@ -34,25 +34,25 @@ def rebuild_headings_for_conversation(db: Session, conversation_id: uuid.UUID) -
     heading_count = 0
 
     heading_rows: list[dict] = []
-    for heading_index, (message, version, block) in enumerate(rows):
-        text = _heading_text(block)
+    for heading_index, row in enumerate(rows):
+        text = _heading_text(row.data, row.plain_text)
         if not text:
             continue
-        level = _heading_level(block)
+        level = _heading_level(row.data)
         slug = _unique_slug(text, heading_index, slug_counts)
         heading_rows.append(
             {
                 "id": uuid.uuid4(),
                 "conversation_id": conversation_id,
-                "message_id": message.id,
-                "message_version_id": version.id,
-                "render_block_id": block.id,
-                "block_index": block.block_index,
+                "message_id": row.message_id,
+                "message_version_id": row.message_version_id,
+                "render_block_id": row.render_block_id,
+                "block_index": row.block_index,
                 "heading_index": heading_count,
                 "level": level,
                 "text": text,
                 "slug": slug,
-                "order_key": message.order_key,
+                "order_key": row.order_key,
                 "metadata_": {},
             }
         )
@@ -80,7 +80,15 @@ def rebuild_headings_for_all(db: Session) -> TocBuildResult:
 
 def _heading_source_rows(db: Session, conversation_id: uuid.UUID):
     return (
-        db.query(Message, MessageVersion, RenderBlock)
+        db.query(
+            Message.id.label("message_id"),
+            Message.order_key,
+            MessageVersion.id.label("message_version_id"),
+            RenderBlock.id.label("render_block_id"),
+            RenderBlock.block_index,
+            RenderBlock.plain_text,
+            RenderBlock.data,
+        )
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
         .join(RenderBlock, RenderBlock.message_version_id == MessageVersion.id)
         .filter(
@@ -93,13 +101,13 @@ def _heading_source_rows(db: Session, conversation_id: uuid.UUID):
     )
 
 
-def _heading_text(block: RenderBlock) -> str:
-    title = block.data.get("title") if isinstance(block.data, dict) else None
-    return str(title or block.plain_text or "").strip()
+def _heading_text(data: dict, plain_text: str | None) -> str:
+    title = data.get("title") if isinstance(data, dict) else None
+    return str(title or plain_text or "").strip()
 
 
-def _heading_level(block: RenderBlock) -> int:
-    raw_level = block.data.get("level") if isinstance(block.data, dict) else None
+def _heading_level(data: dict) -> int:
+    raw_level = data.get("level") if isinstance(data, dict) else None
     try:
         level = int(raw_level)
     except (TypeError, ValueError):

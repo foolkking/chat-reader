@@ -2,6 +2,8 @@
 
 最后核验日期：2026-07-26
 
+> 历史封存：这是 2026-07-26、改造实施前的调研范围，不是当前 UX 待办或系统事实。当前入口见 [PROJECT_STATE.md](../../PROJECT_STATE.md) 与 [页面路由地图](../system/PAGE_AND_ROUTE_MAP.md)；2026-07-28 至 2026-07-29 的实际验收见 [执行记录](../execution/README.md)。
+
 本文件只定义下一阶段调研范围和可用事实，不包含体验结论。
 
 ## 调研对象
@@ -26,8 +28,8 @@
 
 ## 页面和证据
 
-- 页面地图：`docs/system/PAGE_AND_ROUTE_MAP.md`。
-- 21 张已脱敏现状截图：`docs/evidence/README.md`。
+- 页面地图：`docs/system/PAGE_AND_ROUTE_MAP.md`（当前版已更新，可能不同于本交接当时的页面）。
+- 21 张已脱敏现状截图：`docs/evidence/README.md`（2026-07-26 基线）。
 - 已覆盖首页、导入、偏好、Project、归档/选择、搜索空态、在线 Reader、批注/管理、Share panel、library/离线 Reader、移动首页/侧栏/Reader/actions/TOC、offline 页和 invalid reader。
 - 未截图：`/recent` 有数据态、有效 `/share/[token]`、实际导出面板、编辑/版本对话框、任务失败态、PWA quota/staging failure。
 
@@ -60,5 +62,4 @@
 5. 在可清理的浏览器 profile 中核验安装、离线冷启动、升级、quota/staging failure。
 6. 对所有可调 pane、Bottom Sheet、loading/empty/error/conflict 状态做页面级记录。
 
-调研结论应另建文档；若发现事实变化，先按 `DOCUMENT_MAINTENANCE.md` 更新事实基线和证据索引。
-
+后续调研结论应另建带日期的执行/研究记录；若发现事实变化，先按 [文档维护规则](../system/DOCUMENT_MAINTENANCE.md) 更新事实基线和证据索引。

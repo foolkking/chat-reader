@@ -1,102 +1,115 @@
 # 后端与 API
 
-最后核验日期：2026-07-26
+## Conversation merge execution (current)
 
-## 技术结构
+- Merge is an atomic background job that creates an independent target conversation. It copies all active source messages, every `MessageVersion`, every canonical `RenderBlock`, source refs, and non-deleted annotations (including conflict copies) through bounded bulk batches. ID maps preserve `based_on_version_id`, current-version pointers, block indexes, quotes, offsets, and context anchors.
+- The merge path never reparses Markdown or repeatedly loads `MessageVersion.blocks` while discovering headings/code. TOC rows are remapped from source headings; search uses lightweight projections and refreshes PostgreSQL `search_tsv` once after annotation indexing.
+- Statistics, content hash, `offline_revision`, project link, source events, and global heading slugs publish in the same transaction. Cancellation checks run at each batch and before publication, so no partial target conversation remains.
 
-- Python `>=3.11`，FastAPI `>=0.115,<1`，Uvicorn，SQLAlchemy 2，Alembic，Pydantic Settings，psycopg 3，python-multipart。后端没有独立 lock 文件，因此不宣称精确安装版本。
-- 入口 `apps/api/app/main.py`，API metadata version `0.12.0`。
-- 分层：`api/routes/`（路径 `apps/api/app/api/routes/`）负责 HTTP/schema，`services/` 负责 import、canonical、editing、reader、search、share、export、offline、annotation 等业务，`models/` 负责数据库实体。
-- CORS origins 可配置；生产浏览器通常使用 Next 同源 rewrite。
-- 没有 auth middleware、SSE、WebSocket、Redis、AI model client、限流或计费中间件。
+### Background task cancellation
 
-## API 清单
+| Endpoint/state | Contract |
+| --- | --- |
+| `POST /api/tasks/{job_id}/cancel` | Merge only; queued jobs become `cancelled`, processing jobs become `cancelling`; repeats are idempotent. |
+| `cancelling` | Worker finishes the current database call, detects the state, rolls back, then records `cancelled`. |
+| stale recovery | At most three automatic attempts; exhausted jobs become `failed`. Explicit retry resets `attempt_count`. |
 
-本地 OpenAPI 共 67 path templates / 79 operations。下表按资源合并方法；请求/响应精确 schema 以 `apps/api/app/schemas/` 和 OpenAPI 为准。
+`BackgroundTaskRead` includes `cancellable` and `attempt_count`. Production Compose limits the worker to `${IMPORT_WORKER_MEMORY_LIMIT:-640m}`.
 
-| 方法 | API | 用途 | 鉴权 | 主要输入/输出 | 前端调用 | 后端实现 | 验证 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| GET | `/api/health`, `/health` | 健康检查 | 无 | status/service/stage | 部署检查 | `routes/health.py` | 生产 200 |
-| GET | `/api/conversations` | scope/status/project/sort 列表 | 无 | list items、分页/limit 参数 | sidebar/lists | `routes/conversations.py` | 生产 200 |
-| GET/PATCH/DELETE | `/api/conversations/{id}` | 详情、标题/description/status、删除 | 无 | conversation detail/update | lists/Reader | 同上 | GET 链路已验证；写未执行 |
-| POST/PUT | `/api/conversations/merge`, `/order` | 有序合并、全局排序 | 无 | IDs/order | selection/list | conversations service | 代码/测试 |
-| PATCH/PUT | `/api/conversations/{id}/pin`, `/project` | 置顶、移动 Project | 无 | pin/project | sidebar | routes/services | 代码/测试 |
-| POST | `/api/conversations/{id}/split`, `/auto-clean`, `/recent` | 拆分、清理、记录最近 | 无 | message/cleanup context | Reader | editing/reading services | 代码/测试 |
-| GET | `/api/conversations/{id}/messages`, `/message-window` | 全量页或锚点窗口 | 无 | anchor/direction/limit | ReaderDataSource | reader routes/services | 线上 Reader 验证 |
-| GET | `/api/conversations/{id}/dialogue-index`, `/toc` | U/A 索引与 headings | 无 | anchor/page/message | TOC | toc/reader service | 线上验证 |
-| GET/PATCH | `/api/messages/{message_id}` | message detail/update | 无 | Markdown/version | editing | `routes/messages.py` | 代码/测试 |
-| GET | `/api/messages/{message_id}/blocks`, `/versions` | block range/版本列表 | 无 | start/end/version | Reader/editing | messages service | Reader 验证 |
-| POST | `/api/messages/merge`, `/{message_id}/split`, `/versions/{version_id}/restore` | 消息合并/拆分/恢复 | 无 | IDs/offset/version | editing UI | editing services | 代码/测试 |
-| GET/PUT | `/api/conversations/{id}/reading-position` | 阅读位置 | 无，固定 subject | message/block/offset/anchor | Reader | reading service | 代码/API |
-| GET/POST | `/api/recent-items`, conversation/Project recent endpoints | 最近打开 | 无，固定 subject | recent rows | recent page/Reader | reading routes | `/recent` 200 |
-| GET/POST/PATCH/DELETE | `/api/projects*` | Project CRUD、排序、对话关系/pin/recent | 无 | project/relationship/order | sidebar/project pages | `routes/projects.py` | GET 生产 200；写未执行 |
-| GET/POST | `/api/search`, `/api/search/reindex` | 检索/重建索引 | 无 | q/filter/page/results | search pages | search service/indexer | 查询已验证；reindex 未执行 |
-| POST/GET | `/api/imports/preview`, `/{id}/commit/status/warnings/source-artifacts`, `/active` | 导入两阶段流程 | 无 | multipart/import status | ImportDialog | `routes/imports.py` | 入口验证；生产未提交 |
-| GET/POST | `/api/tasks/active`, `/{job_id}`, `/{job_id}/retry` | durable job 状态/重试 | 无 | job DTO | TaskMonitor | `routes/tasks.py` | worker 状态验证 |
-| GET/POST | `/api/conversations/{id}/export`, `/exports` | 直接导出/后台 artifact | 无 | format/scope/include flags | export panel | export/archive service | 代码/测试 |
-| GET | `/api/exports/{artifact_id}/download` | 下载 artifact | 无 | file response | browser download | exports route | 代码/测试 |
-| GET/POST | `/api/conversations/{id}/shares` | 列表/创建 Share | 无 | scope/expiry/options；创建返回 token | share panel | `routes/shares.py` | 面板验证 |
-| PATCH/POST | `/api/shares/{share_id}`, `/revoke` | 延期/重生设置/撤销 | 无 | share updates | share panel | share service | 代码/面板 |
-| GET | `/api/shared/{token}` 及其 message-window/dialogue-index/toc/blocks/annotations/notebook | token 只读 Reader | URL token | 授权范围内容 | share reader | shared routes | 代码；生产 token 页面待验证 |
-| GET/POST/PATCH/DELETE | conversation annotations 与 `/api/annotations/{id}` | 批注 CRUD | 无，固定 subject | anchor/type/color/comment/revision | annotation repository | `routes/annotations.py` | 面板/代码 |
-| POST | `/api/annotations/sync` | 离线 outbox 幂等同步 | 无，固定 subject | operations/base revision | OfflineSyncManager | annotation sync service | 代码/测试 |
-| GET/PUT | conversation notebook/conflicts | 精选笔记和冲突 | 无，固定 subject | blocks/revision | AnnotationWorkspace | notebook service | 代码/测试 |
-| GET | `/api/offline/catalog` | 离线 revision、可下载对象和估算 | 无，固定 subject | catalog | LibraryShell | `routes/offline.py` | 生产 200 |
-| POST/GET | `/api/offline/packages`, `/{package_id}`, `/download` | 生成/查询/下载紧凑包 | 无，固定 subject | scope/IDs/artifact | LibraryShell | offline package service | 页面/代码 |
-| GET/PATCH | `/api/preferences` | 读取/同步偏好 | 无，固定 subject | preferences | provider | preferences route | 生产 200 |
+The ten-fixture isolated regression baseline contains 398 effective messages and 51,866 canonical render blocks. It merged in 7.26 seconds with 132.9 MiB peak process RSS; the paired import reported 13 trailing-empty messages and no blocking alignment ambiguity.
 
-生产 `/api/openapi.json` 返回 404；这只说明 schema 未通过当前同源代理公开。完整脱敏分组见 `docs/evidence/request-records/LOCAL_OPENAPI_2026-07-26.md`。
+最后核验：2026-08-04
+
+## 技术边界
+
+- Python 3.11+、FastAPI、SQLAlchemy 2、Alembic、Pydantic Settings、psycopg 3。
+- 入口：`apps/api/app/main.py`；API metadata version `0.12.0`。
+- 当前本地 OpenAPI 为 99 paths / 117 operations；附件 GET/HEAD 使用独立 operation ID。
+- route 位于 `apps/api/app/api/routes/`；业务逻辑位于 `services/`；持久化实体位于 `models/`；传输 schema 位于 `schemas/`。
+- 没有 auth middleware、Redis、SSE/WebSocket、AI provider client、应用级限流或计费中间件。
+
+完整端点表见 [API 参考](../api-reference.md)，本页不重复维护每个 Method/Path。
+
+## 资源边界
+
+| 资源组 | 责任 |
+| --- | --- |
+| imports/tasks | JSON/Markdown、`.crbundle`、旧 `.cr`、ImportDraft、preview、commit、warnings、durable job、retry/stale recovery |
+| conversations/messages | canonical 管理、完整轮次、索引、拆分/合并、版本 |
+| projects/reading/preferences | 单 Project 归属、排序、位置、最近、阅读偏好 |
+| search/toc | PostgreSQL full-text + trigram、SearchDocument、Heading |
+| annotations/notebook | CRUD、锚点 revision、离线同步、冲突副本 |
+| shares/shared | 创建/撤销与 token-scoped 只读数据，附件范围同步校验 |
+| attachments | Bundle preview/commit、AssetStore、扫描、Range content、Share content、派生对象和生命周期 |
+| exports/offline | Markdown v2/CanJSON v2 流、`.cr` artifact、Context Package、catalog 和增量 v3 package |
 
 ## 关键数据流
 
 ### 导入
 
 ```text
-本地文件 -> ImportDialog multipart preview
--> source detector/parser/aligner -> source_artifacts + imports preview
--> 用户 commit -> background_jobs
--> import worker -> canonical transaction
--> messages/versions/blocks/headings/search_documents -> 前端 query 刷新
+JSON(+optional Markdown) or .cr -> detector/parser/aligner
+-> imports + source artifact + checksummed ImportDraft JSONL
+-> explicit commit -> background_jobs -> worker reads the same Draft
+-> conversation/messages/versions/blocks/headings/search -> publish
 ```
 
-### 长对话阅读与定位
+JSON 是形式 1 的 metadata、role、time、源索引与配对冲突权威；有效配对的 Markdown 是 canonical 显示正文权威。Source detector 不在主链路接受官方 OpenAI 图/ZIP、CSV、TXT 或 Markdown 单文件；CanJSON v1/v2 由形式 1 自动识别。
+
+形式 1 会分别删除 JSON/Markdown 尾部的空白消息，再按非空消息顺序校验 role 与 timestamp。配对解析枚举全部 `Prompt`/`Response` 标题候选，以 JSON 的角色、规范化时间和顺序建立完整单调路径，再按正文相似度和长度偏差选择唯一最佳路径；未选候选作为 Markdown 正文保留。只有完整路径唯一时启用辅助分段，同分、缺失或顺序冲突仍产生 conflict 并阻止 commit。消息状态为 exact、normalized 或 by_order 时，canonical `display_markdown` 取 Markdown；JSON-only 仍取 JSON。Markdown-only 与无可靠时间序列继续使用保守兼容解析，未闭合围栏恢复保持不变。parser/Markdown parser 当前为 v4，`ChatGPT Exporter (https://www.chatgptexporter.com)` 是受支持的 `powered_by` 值。
+
+### 阅读与定位
 
 ```text
-对话/TOC/搜索/批注目标
--> ReaderDataSource 获取 dialogue anchor + centered message window
--> blocks + headings context
--> 前端原子替换窗口并挂载 DOM
--> quote/prefix/suffix 或 offset 校准
--> block/message fallback
--> 保存 reading position/recent
+anchor message -> reader_turns groups full user-led turn
+-> batch current versions + all blocks -> ReaderTurnResponse
+-> client atomic mount/stabilize/align -> save reading position
 ```
 
-### 离线包
+message-window 和 block-range 端点仍保留兼容性与其他功能，但不是主 Reader 正文加载路径。
 
-```text
-Library catalog -> POST package scope
--> background job -> ZIP artifact（当前版本/必要元数据）
--> browser download -> Dexie transaction
--> local Reader/search
--> annotation/notebook outbox -> sync API -> receipt/conflict copy
-```
+### 搜索与编辑
+
+编辑默认生成新 MessageVersion；第一版永久不可覆盖或删除，第二版及以后可通过显式 `replace_current` 原地覆盖。版本选择只更新单消息 `current_version_id`，版本删除在需要时先回退当前版本，并重定位或标记批注。上述写操作会更新 message/conversation 派生字段、offline revision、blocks、headings 和 SearchDocument，并写审计事件。MessageVersion 记录 normalizer、Markdown parser、block builder 和 search document 版本；幂等 derived rebuild 任务可升级历史派生数据和旧 hash。
+
+会话拆分保留旧连续区间接口，并增加 split-workspace preview/execute 合同：`range_copy` 复制完整连续区间，`boundary_copy` 创建边界前后两个新会话，`discrete_copy` 只复制明确 ID。三种模式均不修改来源会话，并校验空结果、重复 ID、跨会话 ID、非法边界和 Project。
 
 ### Share
 
 ```text
-创建 options/scope -> 随机 token（仅创建响应返回）
--> DB 保存 hash/prefix -> /share/[token]
--> /api/shared/{token} 校验 hash/expiry/revoked/options
--> 只读窗口/TOC/可选私有内容和导出
+create -> random token returned once -> DB stores hash/prefix
+-> /api/shared/{token}/* validates expiry/revoke/scope/options
+-> read-only reader-turn/index/toc/private includes/export permission
 ```
 
-## 错误、日志与后台处理
+### 离线
 
-- 没有自定义全局错误 envelope；业务多使用 FastAPI `HTTPException`，响应通常为 `detail`，validation 使用 FastAPI 422 结构。
-- import/background worker 使用 Python logging；Uvicorn/Compose 提供进程和访问日志。仓库未发现 Sentry/OpenTelemetry 等外部监控。
-- durable job 表承载 import、export archive、offline package 等任务；worker 按排队时间轮询，并有 stale/retry 逻辑。
+```text
+ catalog + known_revisions + asset_mode -> offline_package job
+-> v3 ZIP contains only new/changed conversations and optional attachment objects
+-> browser verifies/imports transactionally
+-> local annotation/notebook outbox -> sync receipt/conflict copy
+```
 
-## 2026-07-27 批注搜索索引
+### Attachments and Context Package
 
-`services/search/annotation_indexer.py` 使用 annotation UUID 派生稳定 UUID5 SearchDocument id。annotation create/update/delete、冲突副本与锚点重定位同步索引；搜索 API 返回 `annotation_id/type/color` 与 `block_index/character_offset`。`python -m scripts.backfill_annotation_search` 可重复回填并统计 scanned/created/updated/skipped/deleted/errors。没有新增表或 Alembic migration；发布时必须重建并重启 API 与 worker。
-- 未发现应用级限流、配额/余额或会员校验；浏览器离线“quota”仅指 Storage API 容量。
+`.crbundle` is the standard attachment-bearing import input. The Adapter accepts both the native attachment bundle schema and `chat-reader-import-bundle v1`, using CanJSONL as canonical truth and JSON/Markdown only for consistency reporting. It is validated in quarantine before commit; canonical RenderBlocks store only stable `attachmentId` values.
+
+Ordinary uploads use expiring `attachment_upload_sessions/items`. Finalizing to the conversation file area or saving a message validates the base version and conversation ownership, promotes/reuses AssetObject bytes, creates conversation-owned Attachment identities, and creates per-version occurrences in one transaction. Split/merge clone Attachment identities for the target conversation, reuse AssetObject bytes, and rewrite occurrence/block/source Markdown IDs.
+
+Owner and Share attachment content routes re-check status, scanner policy, selected-message scope and a single byte Range on every request. Offline v3 stores attachment metadata in Dexie v2 and optional policy-allowed blobs in Cache Storage while preserving `scanner_disabled`; it never relabels them clean. `text_extract` derivatives are bounded background jobs (2 MiB source read cap) and are indexed through the existing `search_documents` table with document type `attachment`.
+
+The conversation export UI maps CanJSON/Markdown plus `include attachments` to four outputs: `.canjsonl`, `.context.zip`, `.md`, and portable Markdown ZIP. Secondary options for description, annotations, notebook and CanJSON source refs are represented by one `ExportOptions` contract for streaming and background bundle exports. Metadata-only formats preserve attachment references; package manifests separate conversation completeness from asset completeness and record the included secondary content. System `.cr v4` is a full single-user archive exported from Settings, includes Attachment/AssetObject/Occurrence relationships, and restores only into an empty instance. Old conversation `.cr` remains import-compatible but is not newly exposed in conversation export UI.
+
+The current deployment policy does not inspect attachment contents for secrets or exclude files by filename/content. Export still verifies object status, byte size and SHA-256. Scanner state remains explicit (`scanner_disabled` on King), so an included object is not asserted clean or safe.
+
+## 后台任务
+
+单 worker 处理 import、conversation merge、`.cr` export、historical auto-clean 和 offline package。任务使用 PostgreSQL queue、heartbeat、stale recovery、retry 与 idempotency key；单并发是小内存部署的当前控制，不是通用并发 job framework。
+
+## 错误与可观察性
+
+- 业务错误多使用 FastAPI `HTTPException(detail=...)`；validation 使用标准 422。
+- 日志来自 Uvicorn、worker/Python logging 和 Docker json-file rotation。
+- 仓库没有 Sentry/OpenTelemetry/APM/告警配置；生产需通过容器状态、health、failed jobs 和外部监控补足。
+- 生产同源层不保证公开 OpenAPI；精确 schema 在受控环境调用 `app.openapi()`。

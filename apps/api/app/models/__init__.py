@@ -1,5 +1,14 @@
 from app.models.background_job import BackgroundJob
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
+from app.models.attachment import (
+    AssetDerivative,
+    AssetObject,
+    AssetObjectLease,
+    Attachment,
+    AttachmentUploadItem,
+    AttachmentUploadSession,
+    MessageVersionAttachment,
+)
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
 from app.models.export_artifact import ExportArtifact
@@ -22,6 +31,12 @@ from app.models.user_preference import UserPreference
 __all__ = [
     "BackgroundJob",
     "AnnotationSyncReceipt",
+    "AssetDerivative",
+    "AssetObject",
+    "AssetObjectLease",
+    "Attachment",
+    "AttachmentUploadItem",
+    "AttachmentUploadSession",
     "Conversation",
     "ConversationAnnotation",
     "ConversationNotebook",
@@ -31,6 +46,7 @@ __all__ = [
     "ImportRecord",
     "Message",
     "MessageVersion",
+    "MessageVersionAttachment",
     "OfflinePackageArtifact",
     "Project",
     "ProjectConversation",

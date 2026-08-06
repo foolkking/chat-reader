@@ -147,8 +147,8 @@ export function ResizableDockPanel({
 }) {
   const pane = useResizablePane({ storageKey, defaultSize, minSize, maxSize });
   return (
-    <div className={`relative h-full shrink-0 overflow-visible ${className}`} style={{ width: pane.size }}>
-      {children}
+    <div className={`relative h-full min-w-0 max-w-full shrink-0 overflow-visible ${className}`} style={{ width: pane.size, maxWidth: "100vw" }}>
+      <div className="h-full min-w-0 max-w-full overflow-hidden">{children}</div>
       <ResizeHandle
         side={side}
         label={side === "left" ? "Resize panel width" : "Resize sidebar width"}

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.conversation import ConversationListItem
 
@@ -64,3 +64,14 @@ class ProjectOrderUpdate(BaseModel):
 
 class ProjectConversationOrderUpdate(BaseModel):
     conversation_ids: list[UUID] = Field(min_length=1, max_length=500)
+
+
+class ProjectPlacementRequest(BaseModel):
+    before_project_id: UUID | None = None
+    after_project_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def validate_anchors(self) -> "ProjectPlacementRequest":
+        if self.before_project_id is not None and self.before_project_id == self.after_project_id:
+            raise ValueError("before_project_id and after_project_id must differ.")
+        return self

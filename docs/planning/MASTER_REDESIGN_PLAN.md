@@ -8,6 +8,8 @@
 **禁止重新规划：** 第二轮执行智能体不得重新讨论或修改本计划中已锁定的任何决策、产品定位、信息架构、视觉规范和功能边界。执行中仅负责实施、验证和交付。
 **唯一执行依据：** 本文件 + `DECISION_LOG.md`。冲突时以 `DECISION_LOG.md` 为准。
 
+> **2026-07-28 最终用户覆盖：** 后续明确要求已覆盖本计划中的 Reader preview/heavy 懒加载、侧栏互斥标签和 offline package v1 锁。当前实现以完整轮次 Reader、Project/未归类单层侧栏、offline package conversation-delta v2（兼容读 v1）为准，详见 `EXECUTION_MANIFEST.md` 最终审计和 `docs/execution/DEVIATIONS.md`。
+
 ---
 
 ## 1. 改造总目标

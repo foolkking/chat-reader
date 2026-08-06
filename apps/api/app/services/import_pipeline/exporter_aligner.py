@@ -43,17 +43,10 @@ def align_exporter_sources(
     assert json_result is not None
     assert markdown_result is not None
 
-    conflict_warnings = _conflict_warnings(json_result, markdown_result)
-    if conflict_warnings:
-        status = "conflict_detected"
-    elif _is_exact_match(json_result, markdown_result):
-        status = "exact_match"
-    elif _has_partial_role_match(json_result, markdown_result):
-        status = "partial_match"
-    else:
-        status = "failed"
-
     messages, cleaned_count, empty_count, warnings = _messages_from_combo(json_result, markdown_result)
+    conflict_warnings = _conflict_warnings(json_result, markdown_result)
+    mismatch_count = sum(message.alignment_status in {"ambiguous", "json_only", "markdown_only"} for message in messages)
+    status = "conflict_detected" if conflict_warnings or mismatch_count else "exact_match"
     warnings = conflict_warnings + warnings
     return _result(
         "json_markdown_combo",
@@ -119,28 +112,27 @@ def _messages_from_combo(
     messages: list[CanonicalDraftMessage] = []
     warnings: list[str] = list(json_result.warnings) + list(markdown_result.warnings)
     cleaned_count = 0
-    empty_count = 0
-    used_markdown: set[int] = set()
+    json_messages = [message for message in json_result.messages if not message.is_empty]
+    markdown_sections = [section for section in markdown_result.sections if not section.is_empty]
+    empty_json_messages = [message for message in json_result.messages if message.is_empty]
+    empty_markdown_sections = [section for section in markdown_result.sections if section.is_empty]
+    empty_count = len(empty_json_messages) + len(empty_markdown_sections)
+    warnings.extend(f"Filtered empty JSON message at index {message.index}." for message in empty_json_messages)
+    warnings.extend(f"Filtered empty Markdown section at index {section.index}." for section in empty_markdown_sections)
 
-    for json_message in json_result.messages:
-        markdown_section = _find_section_for_message(json_message, markdown_result.sections, used_markdown)
-        if markdown_section is not None:
-            used_markdown.add(markdown_section.index)
+    for index, json_message in enumerate(json_messages):
+        markdown_section = markdown_sections[index] if index < len(markdown_sections) else None
 
-        json_empty = json_message.is_empty
-        markdown_empty = markdown_section.is_empty if markdown_section else False
-        if json_empty and (markdown_section is None or markdown_empty):
-            empty_count += 1
-            warnings.append(f"Filtered empty aligned message at JSON index {json_message.index}.")
-            continue
-
-        display_source = "markdown" if markdown_section and not markdown_empty else "json"
-        display_text = markdown_section.markdown_text if display_source == "markdown" else json_message.text
-        cleaned = clean_thinking_summary(json_message.role, display_text)
+        alignment_status = _alignment_status(json_message, markdown_section)
+        if alignment_status in {"ambiguous", "json_only"}:
+            warnings.append(f"JSON message {json_message.index} could not be reliably paired with Markdown.")
+        use_markdown = markdown_section is not None and alignment_status in {"exact", "normalized", "by_order"}
+        source_text = markdown_section.markdown_text if use_markdown else json_message.text
+        cleaned = clean_thinking_summary(json_message.role, source_text)
         if cleaned.removed:
             cleaned_count += 1
         display_text = cleaned.text
-        plain_text = json_message.text if not json_empty else _strip_markdown_quotes(display_text)
+        plain_text = normalize_text(_strip_markdown_quotes(display_text))
 
         messages.append(
             _draft_message(
@@ -148,24 +140,25 @@ def _messages_from_combo(
                 markdown_section,
                 plain_text,
                 display_text,
-                display_source,
+                "markdown" if use_markdown else "json",
                 cleaned.warnings,
+                alignment_status,
             )
         )
 
-    for markdown_section in markdown_result.sections:
-        if markdown_section.index in used_markdown:
-            continue
-        if markdown_section.is_empty:
-            empty_count += 1
-            warnings.append(f"Filtered empty unmatched Markdown section at index {markdown_section.index}.")
-            continue
-        cleaned = clean_thinking_summary(markdown_section.role, markdown_section.markdown_text)
-        if cleaned.removed:
-            cleaned_count += 1
-        display_text = cleaned.text
-        plain_text = normalize_text(_strip_markdown_quotes(display_text))
-        messages.append(_draft_message(None, markdown_section, plain_text, display_text, "markdown", cleaned.warnings))
+    for markdown_section in markdown_sections[len(json_messages):]:
+        warnings.append(f"Markdown section {markdown_section.index} has no JSON message and blocks commit.")
+        messages.append(
+            _draft_message(
+                None,
+                markdown_section,
+                normalize_text(_strip_markdown_quotes(markdown_section.markdown_text)),
+                markdown_section.markdown_text,
+                "markdown",
+                [],
+                "markdown_only",
+            )
+        )
 
     return messages, cleaned_count, empty_count, warnings
 
@@ -230,6 +223,7 @@ def _draft_message(
     display_text: str,
     display_source: str,
     warnings: list[str],
+    alignment_status: str | None = None,
 ) -> CanonicalDraftMessage:
     role = json_message.role if json_message else (markdown_section.role if markdown_section else "unknown")
     created_at = json_message.time if json_message else (markdown_section.time if markdown_section else None)
@@ -240,12 +234,13 @@ def _draft_message(
         created_at=created_at,
         plain_text=plain_text,
         display_text=display_text,
-        content_hash=content_hash(plain_text),
+        content_hash=content_hash(display_text, role),
         source_json_index=json_message.index if json_message else None,
         source_markdown_index=markdown_section.index if markdown_section else None,
         display_source=display_source,
         edit_type="auto_clean" if warnings else "imported",
         warnings=warnings,
+        alignment_status=alignment_status or ("exact" if json_message and markdown_section else "json_only" if json_message else "markdown_only"),
     )
 
 
@@ -269,6 +264,10 @@ def _with_order(messages: list[CanonicalDraftMessage]) -> list[CanonicalDraftMes
                 display_source=message.display_source,
                 edit_type=message.edit_type,
                 warnings=message.warnings,
+                alignment_status=message.alignment_status,
+                source_message_id=message.source_message_id,
+                source_current_version_id=message.source_current_version_id,
+                versions=message.versions,
             )
         )
     return ordered
@@ -319,6 +318,26 @@ def _find_section_for_message(
         if section.index not in used_markdown and section.role == json_message.role:
             return section
     return None
+
+
+def _alignment_status(
+    json_message: ExporterJsonMessage,
+    markdown_section: ExporterMarkdownSection | None,
+) -> str:
+    if markdown_section is None:
+        return "json_only"
+    if markdown_section.role != json_message.role:
+        return "ambiguous"
+    markdown_text = _comparison_text(markdown_section.role, markdown_section.markdown_text)
+    json_text = _comparison_text(json_message.role, json_message.text)
+    if json_text == markdown_text:
+        return "exact"
+    if normalize_text(json_text) == normalize_text(markdown_text):
+        return "normalized"
+    if json_message.time and markdown_section.time:
+        if normalize_text(json_message.time) == normalize_text(markdown_section.time):
+            return "by_order"
+    return "ambiguous"
 
 
 def _content_matches(left: str, right: str) -> bool:

@@ -1,0 +1,49 @@
+name: Build release images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build API and worker image
+        run: |
+          docker build --tag chat-reader-api:${GITHUB_SHA} apps/api
+          docker tag chat-reader-api:${GITHUB_SHA} chat-reader-import-worker:${GITHUB_SHA}
+          docker tag chat-reader-api:${GITHUB_SHA} chat-reader-migrate:${GITHUB_SHA}
+
+      - name: Build Web image
+        run: |
+          docker build \
+            --file apps/web/Dockerfile \
+            --build-arg API_INTERNAL_URL=http://api:8000 \
+            --build-arg COMPLEX_ATTACHMENT_PREVIEW_ENABLED=false \
+            --tag chat-reader-web:${GITHUB_SHA} \
+            .
+
+      - name: Package images
+        run: |
+          docker save \
+            chat-reader-api:${GITHUB_SHA} \
+            chat-reader-import-worker:${GITHUB_SHA} \
+            chat-reader-migrate:${GITHUB_SHA} \
+            chat-reader-web:${GITHUB_SHA} \
+            | gzip -1 > chat-reader-images.tar.gz
+          sha256sum chat-reader-images.tar.gz > chat-reader-images.tar.gz.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chat-reader-images
+          path: |
+            chat-reader-images.tar.gz
+            chat-reader-images.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 3

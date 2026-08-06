@@ -9,12 +9,10 @@ class SourceProfile(StrEnum):
     chatgpt_exporter_json = "chatgpt_exporter_json"
     chatgpt_exporter_markdown = "chatgpt_exporter_markdown"
     chatgpt_exporter_combo = "chatgpt_exporter_combo"
-    chat_reader_archive_v1 = "chat_reader_archive_v1"
-    official_conversations_json = "official_conversations_json"
-    official_conversation_json = "official_conversation_json"
-    third_party_splitter_json = "third_party_splitter_json"
-    plain_text = "plain_text"
-    csv = "csv"
+    chat_reader_canjson_v1 = "chat_reader_canjson_v1"
+    chat_reader_canjson_v2 = "chat_reader_canjson_v2"
+    chat_reader_cr_v2 = "chat_reader_cr_v2"
+    chat_reader_bundle_v1 = "chat_reader_bundle_v1"
     unknown = "unknown"
 
 
@@ -38,7 +36,6 @@ class ImportPreviewFile(BaseModel):
     byte_size: int
     mime_guess: str | None
     file_extension: str
-    raw_storage_uri: str
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -57,6 +54,7 @@ class MessagePreview(BaseModel):
     is_primary_path: bool | None = None
     metadata_preview: dict = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
+    alignment_status: str = "json_only"
 
 
 class ConversationPreview(BaseModel):
@@ -70,6 +68,7 @@ class ConversationPreview(BaseModel):
     empty_message_count: int
     cleaned_thinking_summary_count: int
     first_user_message: str | None
+    first_user_message_markdown: str | None = None
     node_count: int | None = None
     message_node_count: int | None = None
     primary_path_length: int | None = None
@@ -78,6 +77,7 @@ class ConversationPreview(BaseModel):
     has_branches: bool = False
     warnings: list[str] = Field(default_factory=list)
     messages: list[MessagePreview] = Field(default_factory=list)
+    alignment_summary: dict[str, int] = Field(default_factory=dict)
 
 
 class ImportPreviewResponse(BaseModel):
@@ -94,8 +94,16 @@ class ImportPreviewResponse(BaseModel):
     compatibility: str | None = None
 
 
+class BundlePreviewAccepted(BaseModel):
+    import_id: UUID
+    task_id: UUID
+    status: str = "queued"
+    status_url: str
+    preview_url: str
+
+
 class ImportCommitOptions(BaseModel):
-    duplicate_policy: str = "reject"
+    duplicate_policy: str = "clone"
     project_id: UUID | None = None
     create_archive_project: bool = False
 
@@ -111,7 +119,6 @@ class SourceArtifactRead(BaseModel):
     byte_size: int
     mime_guess: str | None
     file_extension: str | None
-    raw_storage_uri: str
 
 
 class ImportWarningsResponse(BaseModel):

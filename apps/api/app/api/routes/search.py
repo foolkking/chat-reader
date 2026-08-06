@@ -19,7 +19,7 @@ from app.services.search.search_service import SearchServiceError, search
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
-DOCUMENT_TYPES = {"conversation", "message", "heading", "code", "annotation"}
+DOCUMENT_TYPES = {"conversation", "message", "heading", "code", "annotation", "attachment"}
 ROLES = {"user", "assistant", "system", "tool", "note"}
 
 

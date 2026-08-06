@@ -15,6 +15,9 @@ class RenderBlockDraft:
 
 FENCE_OPEN_RE = re.compile(r"^(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
+ASSET_LINE_RE = re.compile(
+    r'^\s*(?P<image>!)?\[(?P<label>[^\]]*)\]\(cr-asset://(?P<attachment_id>[A-Za-z0-9._:-]+)(?:\s+["\'][^"\']*["\'])?\)\s*$'
+)
 THINKING_RE = re.compile(
     r"^\s*(?:>\s*)?(?:已思考|思考了|思考)\s*"
     r"(?:(?:\d+\s*(?:h|hr|hour|小时)\s*)?"
@@ -89,6 +92,29 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
             fence_character = marker[0]
             fence_length = len(marker)
             in_code = True
+            continue
+
+        asset = ASSET_LINE_RE.match(line)
+        if asset:
+            flush_paragraph()
+            attachment_id = asset.group("attachment_id")
+            label = asset.group("label").strip()
+            is_image = bool(asset.group("image"))
+            blocks.append(
+                RenderBlockDraft(
+                    block_type="image" if is_image else "attachment",
+                    plain_text=label or None,
+                    data={
+                        "attachmentId": attachment_id,
+                        "displayMode": "inline" if is_image else "card",
+                        "relationType": "inline" if is_image else "file",
+                        "alt": label if is_image else "",
+                        "caption": "" if is_image else label,
+                    },
+                    char_count=len(label),
+                    render_priority=2 if is_image else 1,
+                )
+            )
             continue
 
         heading = HEADING_RE.match(line)

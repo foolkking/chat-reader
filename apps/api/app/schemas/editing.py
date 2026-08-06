@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -10,6 +11,8 @@ class MessageEditRequest(BaseModel):
     display_text: str
     edit_reason: str | None = None
     base_version_id: UUID | None = None
+    save_mode: Literal["create_version", "replace_current"] = "create_version"
+    upload_item_ids: list[UUID] = Field(default_factory=list)
 
 
 class MessageEditResponse(BaseModel):
@@ -34,6 +37,20 @@ class MessageVersionHistoryItem(BaseModel):
     based_on_version_id: UUID | None
     content_hash: str
     is_current: bool
+    is_initial: bool
+    can_delete: bool
+
+
+class MessageVersionSelectRequest(BaseModel):
+    version_id: UUID
+
+
+class MessageVersionDeleteResponse(BaseModel):
+    message_id: UUID
+    deleted_version_id: UUID
+    current_version_id: UUID
+    message: MessageDetail
+    warnings: list[str] = Field(default_factory=list)
 
 
 class MessageVersionHistoryResponse(BaseModel):
@@ -91,6 +108,32 @@ class ConversationTransformResponse(BaseModel):
     title: str
     display_title: str
     message_count: int
+
+
+class ConversationSplitWorkspaceRequest(BaseModel):
+    mode: Literal["range_copy", "boundary_copy", "discrete_copy"]
+    start_message_id: UUID | None = None
+    end_message_id: UUID | None = None
+    boundary_message_id: UUID | None = None
+    message_ids: list[UUID] = Field(default_factory=list)
+    titles: list[str] = Field(default_factory=list, max_length=2)
+    project_id: UUID | None = None
+
+
+class ConversationSplitGroupPreview(BaseModel):
+    message_ids: list[UUID]
+    message_count: int
+    suggested_title: str
+
+
+class ConversationSplitWorkspacePreview(BaseModel):
+    mode: str
+    groups: list[ConversationSplitGroupPreview]
+
+
+class ConversationSplitWorkspaceResponse(BaseModel):
+    mode: str
+    conversations: list[ConversationTransformResponse]
 
 
 class ConversationEventRead(BaseModel):

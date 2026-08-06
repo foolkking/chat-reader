@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.conversation import Conversation
+from app.models.attachment import Attachment, MessageVersionAttachment
+from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
 from app.models.message import Message
@@ -19,7 +21,11 @@ from app.models.source_message_ref import SourceMessageRef
 from app.services.canonical.block_builder import build_basic_render_blocks
 from app.services.database.bulk_insert import insert_rows
 from app.services.import_pipeline.canonical_draft import (
+    BLOCK_BUILDER_VERSION,
+    MARKDOWN_PARSER_VERSION,
+    NORMALIZER_VERSION,
     PARSER_VERSION,
+    SEARCH_DOCUMENT_VERSION,
     CanonicalDraftConversation,
     CanonicalDraftMessage,
     content_hash,
@@ -28,6 +34,7 @@ from app.services.import_pipeline.canonical_draft import (
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
 from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
+from app.services.import_pipeline.draft_store import ImportDraftError, read_import_draft
 from app.services.import_pipeline.official_json_parser import OfficialConversationResult, parse_official_json
 from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
 from app.services.import_pipeline.official_primary_path import resolve_primary_path
@@ -35,6 +42,7 @@ from app.services.projects.project_service import add_conversation_to_project, e
 from app.services.search.search_indexer import rebuild_search_documents_for_conversation
 from app.services.toc.toc_builder import rebuild_headings_for_conversation
 from app.services.exporting.cr_archive import CrArchiveError, import_cr_archive
+from app.services.import_pipeline.bundle_import import BundleImportError, publish_bundle_attachments
 
 
 class CommitImportError(ValueError):
@@ -74,6 +82,21 @@ class PersistableMessage:
     child_node_ids: list[str] = field(default_factory=list)
     is_primary_path: bool = True
     raw_metadata: dict = field(default_factory=dict)
+    source_current_version_id: str | None = None
+    versions: list["PersistableVersion"] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class PersistableVersion:
+    source_id: str | None
+    version_number: int
+    plain_text: str
+    display_text: str
+    content_hash: str
+    edit_type: str
+    edit_reason: str | None
+    created_at: datetime | None
+    based_on_source_version_id: str | None
 
 
 @dataclass(frozen=True)
@@ -96,6 +119,10 @@ class PersistableConversation:
     cleaned_thinking_summary_count: int
     warnings: list[str]
     messages: list[PersistableMessage]
+    annotations: list[dict] = field(default_factory=list)
+    notebooks: list[dict] = field(default_factory=list)
+    source_refs: list[dict] = field(default_factory=list)
+    attachments: list[dict] = field(default_factory=list)
 
 
 ProgressCallback = Callable[[str, int, int, int], None]
@@ -121,7 +148,10 @@ def commit_import_preview(
     if not artifacts:
         raise CommitImportError("Import has no source artifacts to commit.")
 
-    archive_artifact = next((artifact for artifact in artifacts if artifact.source_profile == "chat_reader_archive_v1"), None)
+    archive_artifact = next(
+        (artifact for artifact in artifacts if artifact.source_profile in {"chat_reader_cr_v2", "chat_reader_archive_v1"}),
+        None,
+    )
     if archive_artifact is not None:
         try:
             conversation, message_count = import_cr_archive(
@@ -148,7 +178,7 @@ def commit_import_preview(
                 id=uuid.uuid4(),
                 conversation_id=conversation.id,
                 event_type="conversation_imported",
-                payload={"import_id": str(import_id), "source_profile": "chat_reader_archive_v1"},
+                payload={"import_id": str(import_id), "source_profile": archive_artifact.source_profile},
                 created_by="system",
             )
         )
@@ -163,7 +193,13 @@ def commit_import_preview(
         )
 
     _report(progress_callback, "parsing", 3, 0, 0)
-    persistable = _build_persistable_conversations(import_id, artifacts)
+    if import_record.draft_storage_uri:
+        try:
+            persistable = [_from_exporter_draft(draft) for draft in read_import_draft(import_record)]
+        except ImportDraftError as exc:
+            raise CommitImportError(str(exc)) from exc
+    else:
+        persistable = _build_persistable_conversations(import_id, artifacts)
     if not persistable:
         raise CommitImportError("No supported canonical conversation could be built from this import.")
 
@@ -176,34 +212,36 @@ def commit_import_preview(
     default_project = ensure_default_project(db)
 
     for conversation_draft in persistable:
-        conversation = _persist_conversation(
-            import_record,
-            artifacts,
-            conversation_draft,
-            db,
-            progress_callback=progress_callback,
-            processed_before=total_messages,
-            total_messages=total_expected_messages,
-        )
-        add_conversation_to_project(db, default_project.id, conversation.id, added_by="system")
-        conversation_ids.append(conversation.id)
-        total_messages += conversation.message_count
-        all_warnings.extend(conversation_draft.warnings)
+        try:
+            with db.begin_nested():
+                conversation = _persist_conversation(
+                    import_record,
+                    artifacts,
+                    conversation_draft,
+                    db,
+                    progress_callback=progress_callback,
+                    processed_before=total_messages,
+                    total_messages=total_expected_messages,
+                )
+                add_conversation_to_project(db, default_project.id, conversation.id, added_by="system")
+                _report(progress_callback, "headings", 78, total_messages, total_expected_messages)
+                rebuild_headings_for_conversation(db, conversation.id)
+                _report(progress_callback, "search", 88, total_messages, total_expected_messages)
+                rebuild_search_documents_for_conversation(db, conversation.id)
+                conversation.status = "active"
+                db.flush()
+            conversation_ids.append(conversation.id)
+            total_messages += conversation.message_count
+            all_warnings.extend(conversation_draft.warnings)
+        except Exception as exc:
+            failure = f"Conversation {conversation_draft.title!r} failed canonical commit ({type(exc).__name__}: {str(exc)[:300]})."
+            all_warnings.append(failure)
+            if len(persistable) == 1:
+                raise CommitImportError(failure) from exc
 
-    for index, conversation_id in enumerate(conversation_ids, start=1):
-        _report(progress_callback, "headings", 75 + round(10 * (index - 1) / max(len(conversation_ids), 1)), total_messages, total_expected_messages)
-        rebuild_headings_for_conversation(db, conversation_id)
-    _report(progress_callback, "headings", 85, total_messages, total_expected_messages)
-
-    for index, conversation_id in enumerate(conversation_ids, start=1):
-        _report(progress_callback, "search", 85 + round(13 * (index - 1) / max(len(conversation_ids), 1)), total_messages, total_expected_messages)
-        rebuild_search_documents_for_conversation(db, conversation_id)
+    if not conversation_ids:
+        raise CommitImportError("No conversation could be committed from this import.")
     _report(progress_callback, "search", 98, total_messages, total_expected_messages)
-
-    for conversation_id in conversation_ids:
-        conversation = db.get(Conversation, conversation_id)
-        if conversation is not None:
-            conversation.status = "active"
 
     import_record.conversation_id = conversation_ids[0] if conversation_ids else None
     import_record.status = "committed"
@@ -241,7 +279,14 @@ def _build_exporter_conversations(import_id: uuid.UUID, artifacts: list[SourceAr
     json_artifact = next((artifact for artifact in artifacts if artifact.source_profile == "chatgpt_exporter_json"), None)
     markdown_artifact = next((artifact for artifact in artifacts if artifact.source_profile == "chatgpt_exporter_markdown"), None)
     json_result = parse_exporter_json(_read_artifact(import_id, json_artifact)) if json_artifact else None
-    markdown_result = parse_exporter_markdown(_read_artifact(import_id, markdown_artifact)) if markdown_artifact else None
+    markdown_result = (
+        parse_exporter_markdown(
+            _read_artifact(import_id, markdown_artifact),
+            json_result.messages if json_result is not None else None,
+        )
+        if markdown_artifact
+        else None
+    )
     alignment = align_exporter_sources(json_result, markdown_result)
     if alignment.conversation is None:
         return []
@@ -263,6 +308,22 @@ def _from_exporter_draft(draft: CanonicalDraftConversation) -> PersistableConver
             source_json_index=message.source_json_index,
             source_markdown_index=message.source_markdown_index,
             raw_metadata={"display_source": message.display_source},
+            source_message_id=message.source_message_id,
+            source_current_version_id=message.source_current_version_id,
+            versions=[
+                PersistableVersion(
+                    source_id=version.source_id,
+                    version_number=version.version_number,
+                    plain_text=version.plain_text,
+                    display_text=version.display_text,
+                    content_hash=version.content_hash,
+                    edit_type=version.edit_type,
+                    edit_reason=version.edit_reason,
+                    created_at=_parse_datetime(version.created_at),
+                    based_on_source_version_id=version.based_on_source_version_id,
+                )
+                for version in message.versions
+            ],
         )
         for message in draft.messages
     ]
@@ -285,6 +346,10 @@ def _from_exporter_draft(draft: CanonicalDraftConversation) -> PersistableConver
         cleaned_thinking_summary_count=draft.cleaned_thinking_summary_count,
         warnings=draft.warnings,
         messages=messages,
+        annotations=draft.annotations,
+        notebooks=draft.notebooks,
+        source_refs=draft.source_refs,
+        attachments=draft.attachments,
     )
 
 
@@ -401,14 +466,38 @@ def _persist_conversation(
     db.add(conversation)
     db.flush()
 
-    _persist_messages(
+    attachment_map = _persist_canjson_attachments(db, import_record, conversation, draft)
+    persistable_messages = _rewrite_persistable_attachment_ids(draft.messages, attachment_map)
+    identity_map = _persist_messages(
         conversation,
-        draft.messages,
+        persistable_messages,
         db,
+        preserved_source_message_ids={
+            str(ref.get("message_id"))
+            for ref in draft.source_refs
+            if isinstance(ref, dict) and ref.get("message_id")
+        },
         progress_callback=progress_callback,
         processed_before=processed_before,
         total_messages=total_messages,
     )
+    _persist_canjson_private_content(db, conversation, draft, identity_map, attachment_map)
+
+    if import_record.source_profile == "chat_reader_bundle_v1":
+        bundle_artifact = next(
+            (artifact for artifact in artifacts if artifact.source_profile == "chat_reader_bundle_v1"),
+            None,
+        )
+        if bundle_artifact is None:
+            raise BundleImportError("Bundle source artifact is missing during commit.")
+        publish_bundle_attachments(
+            db,
+            import_record=import_record,
+            artifact=bundle_artifact,
+            conversation=conversation,
+            draft=draft,
+            identity_map=identity_map,
+        )
 
     event_payload = {
         "import_id": str(import_record.id),
@@ -436,11 +525,14 @@ def _persist_messages(
     drafts: list[PersistableMessage],
     db: Session,
     *,
+    preserved_source_message_ids: set[str] | None = None,
     progress_callback: ProgressCallback | None = None,
     processed_before: int = 0,
     total_messages: int = 0,
-) -> None:
+) -> dict[str, tuple[uuid.UUID, dict[str, uuid.UUID]]]:
+    preserved_source_message_ids = preserved_source_message_ids or set()
     completed = 0
+    identity_map: dict[str, tuple[uuid.UUID, dict[str, uuid.UUID]]] = {}
     for batch in _batches(drafts, 25):
         message_rows: list[dict] = []
         version_rows: list[dict] = []
@@ -449,10 +541,33 @@ def _persist_messages(
 
         for draft in batch:
             message_id = uuid.uuid4()
-            version_id = uuid.uuid4()
-            block_drafts = build_basic_render_blocks(draft.display_text)
-            char_count = len(draft.display_text)
-            block_count = len(block_drafts)
+            version_drafts = draft.versions or [
+                PersistableVersion(
+                    source_id=draft.source_current_version_id,
+                    version_number=1,
+                    plain_text=draft.plain_text,
+                    display_text=draft.display_text,
+                    content_hash=draft.content_hash,
+                    edit_type=draft.edit_type,
+                    edit_reason=None,
+                    created_at=None,
+                    based_on_source_version_id=None,
+                )
+            ]
+            version_ids = {version.source_id or f"version-{index}": uuid.uuid4() for index, version in enumerate(version_drafts)}
+            current_source_id = draft.source_current_version_id
+            current_index = next(
+                (index for index, version in enumerate(version_drafts) if current_source_id and version.source_id == current_source_id),
+                len(version_drafts) - 1,
+            )
+            current_version_draft = version_drafts[current_index]
+            current_key = current_version_draft.source_id or f"version-{current_index}"
+            current_version_id = version_ids[current_key]
+            current_blocks = build_basic_render_blocks(current_version_draft.display_text)
+            if draft.source_message_id:
+                identity_map[draft.source_message_id] = (message_id, dict(version_ids))
+            char_count = len(current_version_draft.display_text)
+            block_count = len(current_blocks)
             message_rows.append(
                 {
                     "id": message_id,
@@ -461,69 +576,396 @@ def _persist_messages(
                     "order_key": draft.order_key,
                     "turn_index": draft.turn_index,
                     "created_at": draft.created_at,
-                    "current_version_id": version_id,
+                    "current_version_id": current_version_id,
                     "created_by": "import",
                     "source_type": "import",
-                    "content_hash": draft.content_hash,
+                    "content_hash": current_version_draft.content_hash,
                     "block_count": block_count,
                     "char_count": char_count,
                     "is_heavy": char_count > 12000 or block_count > 80,
                 }
             )
-            version_rows.append(
-                {
-                    "id": version_id,
-                    "message_id": message_id,
-                    "version_number": 1,
-                    "plain_text": draft.plain_text,
-                    "display_text": draft.display_text,
-                    "blocks": [],
-                    "edit_type": draft.edit_type,
-                    "created_by": "import",
-                    "content_hash": draft.content_hash,
-                }
-            )
-            block_rows.extend(
-                {
-                    "id": uuid.uuid4(),
-                    "message_version_id": version_id,
-                    "block_index": index,
-                    "block_type": block.block_type,
-                    "plain_text": block.plain_text,
-                    "data": block.data,
-                    "char_count": block.char_count,
-                    "collapsed_by_default": block.collapsed_by_default,
-                    "render_priority": block.render_priority,
-                }
-                for index, block in enumerate(block_drafts)
-            )
-            source_ref_rows.append(
-                {
-                    "id": uuid.uuid4(),
-                    "message_id": message_id,
-                    "source_type": conversation.source_type,
-                    "source_profile": conversation.source_profile,
-                    "source_conversation_id": draft.source_conversation_id or conversation.external_source_id,
-                    "source_node_id": draft.source_node_id,
-                    "source_message_id": draft.source_message_id,
-                    "source_json_index": draft.source_json_index,
-                    "source_markdown_index": draft.source_markdown_index,
-                    "parent_node_id": draft.parent_node_id,
-                    "child_node_ids": draft.child_node_ids,
-                    "is_primary_path": draft.is_primary_path,
-                    "raw_metadata": {"warnings": draft.warnings, **draft.raw_metadata},
-                }
-            )
+            for version_index, version in enumerate(version_drafts):
+                version_key = version.source_id or f"version-{version_index}"
+                version_id = version_ids[version_key]
+                based_on_id = version_ids.get(version.based_on_source_version_id or "")
+                version_rows.append(
+                    {
+                        "id": version_id,
+                        "message_id": message_id,
+                        "version_number": version.version_number,
+                        "plain_text": version.plain_text,
+                        "display_text": version.display_text,
+                        "blocks": [],
+                        "edit_type": version.edit_type,
+                        "edit_reason": version.edit_reason,
+                        "created_at": version.created_at or datetime.now(timezone.utc),
+                        "created_by": "import",
+                        "based_on_version_id": based_on_id,
+                        "content_hash": version.content_hash,
+                        "normalizer_version": NORMALIZER_VERSION,
+                        "markdown_parser_version": MARKDOWN_PARSER_VERSION,
+                        "block_builder_version": BLOCK_BUILDER_VERSION,
+                        "search_document_version": SEARCH_DOCUMENT_VERSION,
+                    }
+                )
+                version_blocks = build_basic_render_blocks(version.display_text)
+                block_rows.extend(
+                    {
+                        "id": uuid.uuid4(),
+                        "message_version_id": version_id,
+                        "block_index": block_index,
+                        "block_type": block.block_type,
+                        "plain_text": block.plain_text,
+                        "data": block.data,
+                        "char_count": block.char_count,
+                        "collapsed_by_default": block.collapsed_by_default,
+                        "render_priority": block.render_priority,
+                    }
+                    for block_index, block in enumerate(version_blocks)
+                )
+            if not draft.source_message_id or draft.source_message_id not in preserved_source_message_ids:
+                source_ref_rows.append(
+                    {
+                        "id": uuid.uuid4(),
+                        "message_id": message_id,
+                        "source_type": conversation.source_type,
+                        "source_profile": conversation.source_profile,
+                        "source_conversation_id": draft.source_conversation_id or conversation.external_source_id,
+                        "source_node_id": draft.source_node_id,
+                        "source_message_id": draft.source_message_id,
+                        "source_json_index": draft.source_json_index,
+                        "source_markdown_index": draft.source_markdown_index,
+                        "parent_node_id": draft.parent_node_id,
+                        "child_node_ids": draft.child_node_ids,
+                        "is_primary_path": draft.is_primary_path,
+                        "raw_metadata": {"warnings": draft.warnings, **draft.raw_metadata},
+                    }
+                )
 
         db.execute(insert(Message), message_rows)
         db.execute(insert(MessageVersion), version_rows)
         for block_batch in _batches(block_rows, 500):
             insert_rows(db, RenderBlock, block_batch)
-        db.execute(insert(SourceMessageRef), source_ref_rows)
+        if source_ref_rows:
+            db.execute(insert(SourceMessageRef), source_ref_rows)
         completed += len(batch)
         processed = processed_before + completed
         progress = 10 + round(65 * processed / max(total_messages, 1))
         _report(progress_callback, "persisting", min(progress, 75), processed, total_messages)
+    return identity_map
+
+
+def _persist_canjson_private_content(
+    db: Session,
+    conversation: Conversation,
+    draft: PersistableConversation,
+    identity_map: dict[str, tuple[uuid.UUID, dict[str, uuid.UUID]]],
+    attachment_map: dict[str, uuid.UUID],
+) -> None:
+    _persist_canjson_source_refs(db, draft, identity_map)
+    _persist_canjson_attachment_refs(db, draft, identity_map, attachment_map)
+    annotation_ids: dict[str, uuid.UUID] = {}
+    for raw in draft.annotations:
+        if not isinstance(raw, dict):
+            continue
+        source_message_id = str(raw.get("message_id") or "")
+        mapped = identity_map.get(source_message_id)
+        if mapped is None:
+            continue
+        source_annotation_id = str(raw.get("id") or uuid.uuid4())
+        annotation_id = uuid.uuid4()
+        annotation_ids[source_annotation_id] = annotation_id
+        source_version_id = str(raw.get("version_id") or raw.get("message_version_id") or "")
+        mapped_version_id = mapped[1].get(source_version_id)
+        status = str(raw.get("anchor_status") or "valid")
+        status = {"active": "valid", "relocated": "remapped", "stale": "needs_review"}.get(status, status)
+        if status not in {"valid", "remapped", "orphaned", "needs_review"}:
+            status = "needs_review"
+        db.add(
+            ConversationAnnotation(
+                id=annotation_id,
+                subject_key="local:default",
+                conversation_id=conversation.id,
+                message_id=mapped[0],
+                message_version_id=mapped_version_id,
+                annotation_type=str(raw.get("annotation_type") or "highlight"),
+                color=raw.get("color"),
+                start_block_index=raw.get("start_block_index"),
+                start_offset=raw.get("start_offset"),
+                end_block_index=raw.get("end_block_index"),
+                end_offset=raw.get("end_offset"),
+                quote=raw.get("quoted_text") or raw.get("quote"),
+                prefix=raw.get("prefix") or raw.get("before_context"),
+                suffix=raw.get("suffix") or raw.get("after_context"),
+                comment_markdown=str(raw.get("comment_markdown") or ""),
+                anchor_status=status,
+                revision=1,
+                metadata_={"source_annotation_id": source_annotation_id},
+            )
+        )
+
+    for raw in draft.notebooks:
+        if not isinstance(raw, dict):
+            continue
+        blocks = raw.get("blocks") if isinstance(raw.get("blocks"), list) else None
+        if blocks is None:
+            blocks = [{"id": str(uuid.uuid4()), "type": "markdown", "markdown": str(raw.get("content_markdown") or "")}]
+        mapped_blocks = []
+        for raw_block in blocks:
+            if not isinstance(raw_block, dict):
+                continue
+            block = dict(raw_block)
+            block["id"] = str(uuid.uuid4())
+            if block.get("annotation_id"):
+                mapped_annotation_id = annotation_ids.get(str(block["annotation_id"]))
+                if mapped_annotation_id is None:
+                    continue
+                block["annotation_id"] = str(mapped_annotation_id)
+            mapped_blocks.append(block)
+        db.add(
+            ConversationNotebook(
+                id=uuid.uuid4(),
+                subject_key="local:default",
+                conversation_id=conversation.id,
+                title=str(raw.get("title") or "Imported notes"),
+                blocks=mapped_blocks,
+                revision=1,
+            )
+        )
+
+
+def _persist_canjson_attachments(
+    db: Session,
+    import_record: ImportRecord,
+    conversation: Conversation,
+    draft: PersistableConversation,
+) -> dict[str, uuid.UUID]:
+    mapping: dict[str, uuid.UUID] = {}
+    for raw in draft.attachments:
+        if not isinstance(raw, dict) or raw.get("record_type") != "attachment":
+            continue
+        source_id = str(raw.get("id") or "").strip()
+        if not source_id or source_id in mapping:
+            raise CommitImportError("CanJSON attachment ids must be present and unique.")
+        attachment_id = uuid.uuid4()
+        mapping[source_id] = attachment_id
+        metadata = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
+        if isinstance(raw.get("asset_object"), dict):
+            metadata = {**metadata, "asset_object": raw["asset_object"]}
+        original_filename = Path(str(raw.get("original_filename") or raw.get("display_name") or "attachment.bin")).name
+        db.add(Attachment(
+            id=attachment_id,
+            conversation_id=conversation.id,
+            asset_object_id=None,
+            import_id=import_record.id,
+            original_filename=original_filename[:500] or "attachment.bin",
+            display_name=str(raw.get("display_name") or original_filename or "Attachment")[:500],
+            declared_mime_type=_optional_text(raw.get("declared_mime_type")),
+            detected_mime_type=_optional_text(raw.get("detected_mime_type")),
+            status="missing",
+            scan_status="not_available",
+            source_type="canjson",
+            source_attachment_id=source_id,
+            metadata_=metadata,
+            resolution_status="unresolved",
+        ))
+    return mapping
+
+
+def _rewrite_persistable_attachment_ids(
+    messages: list[PersistableMessage],
+    attachment_map: dict[str, uuid.UUID],
+) -> list[PersistableMessage]:
+    if not attachment_map:
+        return messages
+    from dataclasses import replace
+
+    rewritten: list[PersistableMessage] = []
+    replacements = {source_id: str(target_id) for source_id, target_id in attachment_map.items()}
+    for message in messages:
+        versions = []
+        for version in message.versions:
+            display_text = _rewrite_asset_markdown(version.display_text, replacements)
+            versions.append(replace(
+                version,
+                display_text=display_text,
+                plain_text=normalize_text(display_text),
+                content_hash=content_hash(display_text, message.role),
+            ))
+        display_text = _rewrite_asset_markdown(message.display_text, replacements)
+        current = next(
+            (version for version in versions if version.source_id == message.source_current_version_id),
+            versions[-1] if versions else None,
+        )
+        if current is not None:
+            display_text = current.display_text
+        rewritten.append(replace(
+            message,
+            display_text=display_text,
+            plain_text=normalize_text(display_text),
+            content_hash=content_hash(display_text, message.role),
+            versions=versions,
+        ))
+    return rewritten
+
+
+def _rewrite_asset_markdown(markdown: str, replacements: dict[str, str]) -> str:
+    lines: list[str] = []
+    fence: str | None = None
+    for line in markdown.splitlines(keepends=True):
+        stripped = line.strip()
+        if stripped.startswith(("```", "~~~")):
+            marker = stripped[:3]
+            fence = None if fence == marker else marker if fence is None else fence
+            lines.append(line)
+            continue
+        if fence is None:
+            for source_id, target_id in replacements.items():
+                line = line.replace(f"cr-asset://{source_id})", f"cr-asset://{target_id})")
+        lines.append(line)
+    return "".join(lines)
+
+
+def _persist_canjson_attachment_refs(
+    db: Session,
+    draft: PersistableConversation,
+    identity_map: dict[str, tuple[uuid.UUID, dict[str, uuid.UUID]]],
+    attachment_map: dict[str, uuid.UUID],
+) -> None:
+    if not attachment_map:
+        return
+    current_versions = {
+        message.source_message_id: message.source_current_version_id
+        for message in draft.messages
+        if message.source_message_id
+    }
+    seen: set[tuple[uuid.UUID, uuid.UUID, str, int]] = set()
+    for raw in draft.attachments:
+        if not isinstance(raw, dict) or raw.get("record_type") != "attachment_ref":
+            continue
+        attachment_id = attachment_map.get(str(raw.get("attachment_id") or ""))
+        source_message_id = str(raw.get("message_id") or "")
+        mapped = identity_map.get(source_message_id)
+        if attachment_id is None or mapped is None:
+            raise CommitImportError("CanJSON attachment reference is invalid.")
+        source_version_id = str(raw.get("message_version_id") or current_versions.get(source_message_id) or "")
+        version_id = mapped[1].get(source_version_id)
+        if version_id is None:
+            raise CommitImportError("CanJSON attachment reference points to an unknown version.")
+        relation_type = str(raw.get("relation_type") or "file")[:50]
+        display_order = int(raw.get("display_order") or 0)
+        identity = (version_id, attachment_id, relation_type, display_order)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        db.add(MessageVersionAttachment(
+            id=uuid.uuid4(),
+            message_version_id=version_id,
+            attachment_id=attachment_id,
+            occurrence_key=str(raw.get("occurrence_key") or uuid.uuid4().hex)[:255],
+            placement=str(raw.get("placement") or "inline")[:50],
+            relation_type=relation_type,
+            display_order=display_order,
+            block_index=raw.get("block_index"),
+            display_mode=str(raw.get("display_mode") or "card")[:50],
+            alt_text=_optional_text(raw.get("alt_text")),
+            caption=_optional_text(raw.get("caption")),
+        ))
+
+def _persist_canjson_source_refs(
+    db: Session,
+    draft: PersistableConversation,
+    identity_map: dict[str, tuple[uuid.UUID, dict[str, uuid.UUID]]],
+) -> None:
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[uuid.UUID, str, str, str | None, int | None]] = set()
+    for raw in draft.source_refs:
+        if not isinstance(raw, dict):
+            continue
+        mapped = identity_map.get(str(raw.get("message_id") or ""))
+        if mapped is None:
+            continue
+        source_type = _bounded_text(raw.get("source_type"), draft.source_type)
+        source_profile = _bounded_text(raw.get("source_profile"), draft.source_profile)
+        source_message_id = _optional_text(raw.get("source_message_id"))
+        source_index = _optional_non_negative_int(raw.get("source_index"))
+        identity = (mapped[0], source_type, source_profile, source_message_id, source_index)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        rows.append(
+            {
+                "id": uuid.uuid4(),
+                "message_id": mapped[0],
+                "source_type": source_type,
+                "source_profile": source_profile,
+                "source_conversation_id": _optional_text(raw.get("source_conversation_id")),
+                "source_message_id": source_message_id,
+                "source_json_index": source_index,
+                "source_markdown_index": None,
+                "child_node_ids": [],
+                "is_primary_path": True,
+                "raw_metadata": _sanitize_source_metadata(raw.get("source_metadata")),
+            }
+        )
+    if rows:
+        db.execute(insert(SourceMessageRef), rows)
+
+
+def _sanitize_source_metadata(value: Any, *, depth: int = 0) -> Any:
+    if depth >= 8:
+        return None
+    if isinstance(value, dict):
+        result: dict[str, Any] = {}
+        for raw_key, raw_value in list(value.items())[:100]:
+            key = str(raw_key)[:200]
+            lowered = key.casefold()
+            if any(marker in lowered for marker in ("path", "uri", "token", "secret", "password", "cookie", "dsn", "connection")):
+                continue
+            sanitized = _sanitize_source_metadata(raw_value, depth=depth + 1)
+            if sanitized is not None:
+                result[key] = sanitized
+        return result
+    if isinstance(value, list):
+        return [item for item in (_sanitize_source_metadata(item, depth=depth + 1) for item in value[:100]) if item is not None]
+    if isinstance(value, str):
+        normalized = value.strip()
+        lowered = normalized.casefold()
+        if (
+            normalized.startswith(("/", "\\\\"))
+            or (len(normalized) >= 3 and normalized[1:3] in {":\\", ":/"})
+            or "storage/imports" in lowered
+            or "postgresql://" in lowered
+            or "postgresql+" in lowered
+        ):
+            return None
+        return value[:16_384]
+    if isinstance(value, (bool, int, float)) or value is None:
+        return value
+    return str(value)[:1_024]
+
+
+def _bounded_text(value: Any, default: str) -> str:
+    normalized = str(value or default).strip()
+    return (normalized or default)[:200]
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized[:2_048] if normalized else None
+
+
+def _optional_non_negative_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
 
 
 def _batches(items: list[T], size: int) -> list[list[T]]:

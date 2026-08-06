@@ -80,3 +80,41 @@ def test_restore_rejects_version_from_another_message(client: TestClient) -> Non
         json={},
     )
     assert response.status_code == 404
+
+
+def test_select_replace_and_delete_versions_keep_initial_version_protected(client: TestClient) -> None:
+    sample = commit_edit_sample(client)
+    message = assistant_message(sample)
+    initial = message["current_version"]
+
+    created = client.patch(
+        f"/api/messages/{message['id']}",
+        json={"display_text": "Second version body"},
+    )
+    assert created.status_code == 200
+    second = created.json()["message"]["current_version"]
+
+    replaced = client.patch(
+        f"/api/messages/{message['id']}",
+        json={"display_text": "Replaced second version body", "save_mode": "replace_current", "base_version_id": second["id"]},
+    )
+    assert replaced.status_code == 200
+    assert replaced.json()["version_number"] == 2
+    history = client.get(f"/api/messages/{message['id']}/versions").json()
+    assert [item["version_number"] for item in history["items"]] == [2, 1]
+
+    selected = client.put(f"/api/messages/{message['id']}/current-version", json={"version_id": initial["id"]})
+    assert selected.status_code == 200
+    assert selected.json()["message"]["current_version"]["display_text"] == initial["display_text"]
+    assert selected.json()["message"]["render_blocks"]
+
+    selected_again = client.put(f"/api/messages/{message['id']}/current-version", json={"version_id": second["id"]})
+    assert selected_again.status_code == 200
+    assert selected_again.json()["message"]["render_blocks"]
+    deleted = client.delete(f"/api/messages/{message['id']}/versions/{second['id']}")
+    assert deleted.status_code == 200
+    assert deleted.json()["message"]["current_version"]["version_number"] == 1
+    assert client.get(f"/api/messages/{message['id']}/versions").json()["items"][0]["version_number"] == 1
+
+    protected = client.delete(f"/api/messages/{message['id']}/versions/{initial['id']}")
+    assert protected.status_code == 400

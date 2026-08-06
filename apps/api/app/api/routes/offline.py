@@ -32,17 +32,32 @@ def create_offline_package(
             scope=payload.scope,
             conversation_id=payload.conversation_id,
             project_id=payload.project_id,
+            known_revisions=payload.known_revisions,
+            include_assets=payload.include_assets,
             idempotency_key=idempotency_key,
         )
         catalog = build_catalog(db)
         if payload.scope == "conversation":
             selected = next((item for item in catalog.conversations if item.id == payload.conversation_id), None)
-            estimate = selected.estimated_bytes if selected else 0
+            estimate = (
+                selected.estimated_bytes
+                if selected and payload.known_revisions.get(selected.id) != selected.revision
+                else 0
+            )
         elif payload.scope == "project":
             selected_project = next((item for item in catalog.projects if item.id == payload.project_id), None)
-            estimate = selected_project.estimated_bytes if selected_project else 0
+            project_ids = set(selected_project.conversation_ids) if selected_project else set()
+            estimate = sum(
+                item.estimated_bytes
+                for item in catalog.conversations
+                if item.id in project_ids and payload.known_revisions.get(item.id) != item.revision
+            )
         else:
-            estimate = catalog.estimated_bytes
+            estimate = sum(
+                item.estimated_bytes
+                for item in catalog.conversations
+                if payload.known_revisions.get(item.id) != item.revision
+            )
         db.commit()
         return OfflinePackageQueued(
             package_id=uuid.UUID(str(job.payload["package_id"])),

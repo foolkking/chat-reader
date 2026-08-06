@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
+from app.models.attachment import Attachment, AssetObject, MessageVersionAttachment
 from app.models.conversation import Conversation
 from app.models.heading import Heading
 from app.models.message import Message
@@ -31,6 +32,8 @@ from app.schemas.offline import (
     OfflineCatalogResponse,
 )
 from app.services.annotations import annotation_read, notebook_read
+from app.services.assets.asset_store import get_asset_store
+from app.services.assets.scanner import allowed_scan_statuses
 
 ProgressCallback = Callable[[str, int, int, int], None]
 MessageProgressCallback = Callable[[int, int], None]
@@ -114,7 +117,24 @@ def estimate_conversation_bytes(db: Session, conversation: Conversation) -> int:
         ConversationAnnotation.conversation_id == conversation.id,
         ConversationAnnotation.is_deleted.is_(False),
     ).count() * 650
-    return max(2_048, int((body * 1.25) + blocks + headings + annotations + 1_500))
+    attachment_bytes = sum(
+        int(row[0] or 0)
+        for row in (
+            db.query(AssetObject.byte_size)
+            .join(Attachment, Attachment.asset_object_id == AssetObject.id)
+            .join(MessageVersionAttachment, MessageVersionAttachment.attachment_id == Attachment.id)
+            .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
+            .filter(
+                Message.conversation_id == conversation.id,
+                Message.is_deleted.is_(False),
+                AssetObject.status == "available",
+                AssetObject.scan_status.in_(allowed_scan_statuses()),
+            )
+            .distinct()
+            .all()
+        )
+    )
+    return max(2_048, int((body * 1.25) + blocks + headings + annotations + attachment_bytes + 1_500))
 
 
 def select_conversations(
@@ -142,6 +162,16 @@ def select_conversations(
     return conversations
 
 
+def changed_conversations(
+    conversations: Iterable[Conversation], known_revisions: dict[uuid.UUID, int]
+) -> list[Conversation]:
+    return [
+        conversation
+        for conversation in conversations
+        if known_revisions.get(conversation.id) != conversation.offline_revision
+    ]
+
+
 def build_offline_package(
     db: Session,
     *,
@@ -150,21 +180,30 @@ def build_offline_package(
     scope: str,
     conversation_id: uuid.UUID | None,
     project_id: uuid.UUID | None,
+    known_revisions: dict[uuid.UUID, int] | None = None,
+    include_assets: str = "all",
     progress_callback: ProgressCallback | None = None,
 ) -> OfflinePackageArtifact:
-    conversations = select_conversations(
+    if include_assets not in {"none", "small", "all"}:
+        raise OfflinePackageError("Unsupported offline attachment mode.")
+    selected_conversations = select_conversations(
         db, scope=scope, conversation_id=conversation_id, project_id=project_id
     )
+    base_revisions = known_revisions or {}
+    conversations = changed_conversations(selected_conversations, base_revisions)
     catalog = build_catalog(db)
     total = max(len(conversations), 1)
     package_metadata = {
         "format": "chat-reader-offline-package",
-        "version": 1,
+        "version": 3,
+        "update_mode": "conversation-delta",
+        "base_revisions": {str(key): value for key, value in base_revisions.items()},
         "catalog_revision": catalog.revision,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "scope": scope,
         "scope_id": str(conversation_id or project_id) if scope != "all" else None,
         "projects": [project.model_dump(mode="json") for project in catalog.projects],
+        "asset_mode": include_assets,
     }
 
     root = Path(get_settings().offline_storage_dir).resolve()
@@ -184,6 +223,9 @@ def build_offline_package(
                     conversations,
                     progress_callback=progress_callback,
                 )
+            for asset in _offline_asset_objects(db, conversations, include_assets):
+                path = get_asset_store().resolve_key(asset.storage_key)
+                archive.write(path, f"assets/objects/{asset.id}")
         os.replace(temporary, destination)
     finally:
         if temporary.exists():
@@ -247,7 +289,13 @@ def _write_package_payload(
             progress = min(90, round(90 * ((index - 1 + fraction) / total)))
             _report(progress_callback, "packaging", progress, index - 1, total)
 
-        _write_conversation_payload(output, db, conversation, progress_callback=report_messages)
+        _write_conversation_payload(
+            output,
+            db,
+            conversation,
+            asset_mode=str(package_metadata.get("asset_mode") or "none"),
+            progress_callback=report_messages,
+        )
         _report(progress_callback, "packaging", min(92, round(index * 90 / total)), index, total)
     output.write(b"]}")
 
@@ -257,6 +305,7 @@ def _write_conversation_payload(
     db: Session,
     conversation: Conversation,
     *,
+    asset_mode: str = "none",
     progress_callback: MessageProgressCallback | None = None,
 ) -> None:
     message_rows = (
@@ -385,7 +434,90 @@ def _write_conversation_payload(
         first=False,
     )
     _write_json_field(output, "reading_position", _reading_position_payload(position), first=False)
+    _write_json_field(output, "attachments", _offline_attachment_payloads(db, conversation.id, asset_mode), first=False)
     output.write(b"}")
+
+
+def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_mode: str) -> list[dict[str, Any]]:
+    attachments = (
+        db.query(Attachment, AssetObject)
+        .outerjoin(AssetObject, AssetObject.id == Attachment.asset_object_id)
+        .filter(
+            Attachment.conversation_id == conversation_id,
+            Attachment.deleted_at.is_(None),
+        )
+        .order_by(Attachment.created_at, Attachment.id)
+        .all()
+    )
+    payloads = []
+    for attachment, asset in attachments:
+        links = (
+            db.query(MessageVersionAttachment, Message)
+            .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
+            .filter(MessageVersionAttachment.attachment_id == attachment.id, Message.is_deleted.is_(False))
+            .order_by(Message.order_key, MessageVersionAttachment.display_order)
+            .all()
+        )
+        included = bool(
+            asset
+            and asset.status == "available"
+            and asset.scan_status in allowed_scan_statuses()
+            and (asset_mode == "all" or (asset_mode == "small" and asset.byte_size <= 10 * 1024 * 1024))
+        )
+        first_link, first_message = links[0] if links else (None, None)
+        payloads.append({
+            "id": str(attachment.id),
+            "conversation_id": str(conversation_id),
+            "message_id": str(first_message.id) if first_message else None,
+            "message_version_id": str(first_link.message_version_id) if first_link else None,
+            "display_name": attachment.display_name,
+            "original_filename": attachment.original_filename,
+            "declared_mime_type": attachment.declared_mime_type,
+            "detected_mime_type": attachment.detected_mime_type or (asset.detected_mime_type if asset else "application/octet-stream"),
+            "byte_size": asset.byte_size if asset else 0,
+            "sha256": asset.sha256 if asset else "",
+            "status": attachment.status,
+            "scan_status": attachment.scan_status,
+            "resolution_status": attachment.resolution_status,
+            "occurrences": [{
+                "message_id": str(message.id),
+                "message_version_id": str(link.message_version_id),
+                "occurrence_key": link.occurrence_key,
+                "placement": link.placement,
+                "relation_type": link.relation_type,
+                "display_order": link.display_order,
+                "block_index": link.block_index,
+                "display_mode": link.display_mode,
+                "alt_text": link.alt_text,
+                "caption": link.caption,
+            } for link, message in links],
+            "content_path": f"assets/objects/{asset.id}" if included and asset else None,
+        })
+    return payloads
+
+
+def _offline_asset_objects(
+    db: Session,
+    conversations: list[Conversation],
+    asset_mode: str,
+) -> list[AssetObject]:
+    if asset_mode == "none" or not conversations:
+        return []
+    conversation_ids = [conversation.id for conversation in conversations]
+    query = (
+        db.query(AssetObject)
+        .join(Attachment, Attachment.asset_object_id == AssetObject.id)
+        .filter(
+            Attachment.conversation_id.in_(conversation_ids),
+            Attachment.deleted_at.is_(None),
+            AssetObject.status == "available",
+            AssetObject.scan_status.in_(allowed_scan_statuses()),
+        )
+        .distinct()
+    )
+    if asset_mode == "small":
+        query = query.filter(AssetObject.byte_size <= 10 * 1024 * 1024)
+    return query.all()
 
 
 def _write_json_array(output: BinaryIO, values: Iterable[Any]) -> None:

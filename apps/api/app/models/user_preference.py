@@ -14,6 +14,8 @@ class UserPreference(Base):
     theme_mode: Mapped[str] = mapped_column(Text, nullable=False, default="light")
     locale_mode: Mapped[str] = mapped_column(Text, nullable=False, default="auto")
     reader_width_mode: Mapped[str] = mapped_column(Text, nullable=False, default="standard")
+    reader_density_mode: Mapped[str] = mapped_column(Text, nullable=False, default="comfortable")
+    reader_font_size_px: Mapped[int] = mapped_column(nullable=False, default=17)
     section_toc_mode: Mapped[str] = mapped_column(Text, nullable=False, default="visible")
     conversation_sort_mode: Mapped[str] = mapped_column(Text, nullable=False, default="recent_read")
     conversation_sort_direction: Mapped[str] = mapped_column(Text, nullable=False, default="desc")

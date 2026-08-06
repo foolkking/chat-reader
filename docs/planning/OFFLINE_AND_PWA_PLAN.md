@@ -4,6 +4,8 @@
 **依据：** DECISION_LOG D-005, D-016, D-024
 **核心文件：** `apps/web/features/offline/library-shell.tsx`、`apps/web/app/library/page.tsx` + `layout.tsx`、`apps/web/lib/offline-db.ts` + `offline-shell.ts` + `offline-search.ts` + `offline-search.worker.ts`、`apps/web/public/library-sw.js` + `sw.js` + `library/manifest.webmanifest`、`components/service-worker-registration.tsx`、后端 `apps/api/app/api/routes/offline.py` + `services/offline_packages.py` + `models/offline_package_artifact.py`。
 
+> **2026-07-28 执行覆盖：** 在线 Reader 三点菜单不再提供 Library 入口，唯一在线入口保留在“外观与语言”。按最终用户要求，离线数据更新升级为 conversation revision 增量：服务端写 package v2，浏览器继续读取 v1/v2，Dexie schema 不变。
+
 ---
 
 ## 1. `/library` 地位（D-005 情景化引导）

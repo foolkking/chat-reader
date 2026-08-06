@@ -25,6 +25,10 @@ class MessageVersionRead(BaseModel):
     created_at: datetime
     created_by: str
     content_hash: str
+    normalizer_version: str = "legacy-v1"
+    markdown_parser_version: str = "legacy-v1"
+    block_builder_version: str = "legacy-v1"
+    search_document_version: str = "legacy-v1"
 
 
 class MessageListItem(BaseModel):
@@ -42,6 +46,19 @@ class MessageListItem(BaseModel):
     ordinal: int | None = None
     content_preview: str | None = None
     content_truncated: bool = False
+
+
+class ReaderTurnResponse(BaseModel):
+    """Complete, stable reader unit; end_offset is exclusive."""
+
+    conversation_id: UUID
+    turn_key: str
+    start_offset: int
+    end_offset: int
+    total_messages: int
+    items: list[MessageListItem] = Field(default_factory=list)
+    previous_anchor_message_id: UUID | None = None
+    next_anchor_message_id: UUID | None = None
 
 
 class DialogueIndexItem(BaseModel):

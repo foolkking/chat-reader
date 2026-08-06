@@ -6,12 +6,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
+from app.models.conversation_event import ConversationEvent
 from app.models.import_record import utc_now
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.recent_item import RecentItem
 
 DEFAULT_PROJECT_NAME = "Inbox"
+PLACEMENT_GAP = 1024
 
 
 class ProjectServiceError(ValueError):
@@ -22,6 +24,14 @@ class ProjectServiceError(ValueError):
 class ProjectCounts:
     conversation_count: int
     pinned_count: int
+
+
+@dataclass(frozen=True)
+class ConversationPlacementResult:
+    relation: ProjectConversation
+    source_project_id: uuid.UUID | None
+    target_project_id: uuid.UUID
+    changed: bool
 
 
 def ensure_default_project(db: Session) -> Project:
@@ -82,7 +92,7 @@ def list_projects(
             .scalar_subquery()
         )
     assert field is not None
-    ordered_field = field.asc() if direction == "asc" else field.desc()
+    ordered_field = field.asc() if sort == "custom" or direction == "asc" else field.desc()
     return query.order_by(
         Project.is_default.desc(),
         case((field.is_(None), 1), else_=0).asc(),
@@ -171,20 +181,148 @@ def move_conversation_to_project(
     )
     if current is not None and current.project_id == project_id:
         return current
-    if current is not None:
-        db.delete(current)
+    if conversation.status != "active":
+        if added_by not in {"system", "archive"} or conversation.status not in {"importing", "processing"}:
+            raise ProjectServiceError("Conversation not found or is not active.")
+        if current is not None:
+            current.project_id = project.id
+            current.is_pinned = False
+            current.pinned_at = None
+            return current
+        relation = ProjectConversation(
+            id=uuid.uuid4(),
+            project_id=project.id,
+            conversation_id=conversation.id,
+            added_by=added_by,
+            sort_order=_append_sort_order(db, project.id, False),
+            is_pinned=False,
+        )
+        db.add(relation)
         db.flush()
-
-    relation = ProjectConversation(
-        id=uuid.uuid4(),
-        project_id=project_id,
+        return relation
+    return place_conversation(
+        db,
         conversation_id=conversation_id,
+        target_project_id=None if project.is_default else project.id,
+        target_section="normal",
+        before_conversation_id=None,
+        after_conversation_id=None,
+        expected_offline_revision=None,
         added_by=added_by,
+    ).relation
+
+
+def place_conversation(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    target_project_id: uuid.UUID | None,
+    target_section: str,
+    before_conversation_id: uuid.UUID | None,
+    after_conversation_id: uuid.UUID | None,
+    expected_offline_revision: int | None,
+    added_by: str = "user",
+) -> ConversationPlacementResult:
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id)
+        .with_for_update()
+        .one_or_none()
     )
-    db.add(relation)
+    if conversation is None or conversation.deleted_at is not None or conversation.status != "active":
+        raise ProjectServiceError("Conversation not found or is not active.")
+    if expected_offline_revision is not None and conversation.offline_revision != expected_offline_revision:
+        raise ProjectServiceError("Conversation revision conflict.")
+    if target_section not in {"pinned", "normal"}:
+        raise ProjectServiceError("Invalid target section.")
+
+    default_project = ensure_default_project(db)
+    resolved_project_id = target_project_id or default_project.id
+    project = db.get(Project, resolved_project_id)
+    if project is None or project.is_archived:
+        raise ProjectServiceError("Project not found.")
+
+    relation = (
+        db.query(ProjectConversation)
+        .filter(ProjectConversation.conversation_id == conversation_id)
+        .with_for_update()
+        .one_or_none()
+    )
+    source_project_id = relation.project_id if relation is not None else None
+    cross_project = source_project_id != resolved_project_id
+    if cross_project and target_section == "pinned":
+        raise ProjectServiceError("Cross-project moves must target the normal section.")
+    desired_pinned = target_section == "pinned"
+
+    if (
+        relation is not None
+        and not cross_project
+        and not before_conversation_id
+        and not after_conversation_id
+    ):
+        return ConversationPlacementResult(
+            relation=relation,
+            source_project_id=source_project_id,
+            target_project_id=resolved_project_id,
+            changed=False,
+        )
+    if relation is not None and not cross_project and relation.is_pinned != desired_pinned:
+        raise ProjectServiceError("Pinned state must be changed with the pin action.")
+
+    sort_order = _resolve_conversation_sort_order(
+        db,
+        project_id=resolved_project_id,
+        is_pinned=desired_pinned,
+        moving_conversation_id=conversation_id,
+        before_conversation_id=before_conversation_id,
+        after_conversation_id=after_conversation_id,
+    )
+    if relation is None:
+        relation = ProjectConversation(
+            id=uuid.uuid4(),
+            project_id=resolved_project_id,
+            conversation_id=conversation_id,
+            added_by=added_by,
+            sort_order=sort_order,
+            is_pinned=desired_pinned,
+            pinned_at=utc_now() if desired_pinned else None,
+        )
+        db.add(relation)
+    else:
+        relation.project_id = resolved_project_id
+        relation.sort_order = sort_order
+        if cross_project:
+            relation.is_pinned = False
+            relation.pinned_at = None
+            relation.added_at = utc_now()
+            relation.added_by = added_by
+
+    recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation_id).one_or_none()
+    if recent is not None:
+        recent.project_id = None if project.is_default else project.id
     conversation.offline_revision += 1
+    conversation.updated_at = utc_now()
+    db.add(
+        ConversationEvent(
+            id=uuid.uuid4(),
+            conversation_id=conversation.id,
+            event_type="project_placement_changed",
+            payload={
+                "source_project_id": str(source_project_id) if source_project_id else None,
+                "target_project_id": None if project.is_default else str(project.id),
+                "target_section": target_section,
+                "sort_order": sort_order,
+            },
+            created_by=added_by,
+        )
+    )
     db.flush()
-    return relation
+    return ConversationPlacementResult(
+        relation=relation,
+        source_project_id=source_project_id,
+        target_project_id=resolved_project_id,
+        changed=True,
+    )
 
 
 def remove_conversation_from_project(db: Session, project_id: uuid.UUID, conversation_id: uuid.UUID) -> None:
@@ -232,16 +370,24 @@ def list_project_conversations(
         "message_count": Conversation.message_count,
         "custom": ProjectConversation.sort_order,
     }[sort]
-    ordered_field = field.asc() if direction == "asc" else field.desc()
+    ordered_field = field.asc() if sort == "custom" or direction == "asc" else field.desc()
     return (
-        query.order_by(
-            ProjectConversation.is_pinned.desc(),
-            ProjectConversation.pinned_at.desc(),
-            case((field.is_(None), 1), else_=0).asc(),
-            ordered_field,
-            Conversation.sort_time.desc(),
-            Conversation.id.asc(),
-        )
+        query.order_by(*(
+            (
+                ProjectConversation.is_pinned.desc(),
+                ProjectConversation.sort_order.asc(),
+                Conversation.id.asc(),
+            )
+            if sort == "custom"
+            else (
+                ProjectConversation.is_pinned.desc(),
+                ProjectConversation.pinned_at.desc(),
+                case((field.is_(None), 1), else_=0).asc(),
+                ordered_field,
+                Conversation.sort_time.desc(),
+                Conversation.id.asc(),
+            )
+        ))
         .offset(offset)
         .limit(limit)
         .all()
@@ -308,3 +454,157 @@ def _get_relation(db: Session, project_id: uuid.UUID, conversation_id: uuid.UUID
         )
         .one_or_none()
     )
+
+
+def _append_sort_order(db: Session, project_id: uuid.UUID, is_pinned: bool) -> int:
+    current = db.query(func.max(ProjectConversation.sort_order)).filter(
+        ProjectConversation.project_id == project_id,
+        ProjectConversation.is_pinned.is_(is_pinned),
+    ).scalar()
+    return int(current or 0) + PLACEMENT_GAP
+
+
+def place_project(
+    db: Session,
+    *,
+    project_id: uuid.UUID,
+    before_project_id: uuid.UUID | None,
+    after_project_id: uuid.UUID | None,
+) -> Project:
+    project = db.query(Project).filter(Project.id == project_id).with_for_update().one_or_none()
+    if project is None or project.is_default or project.is_archived:
+        raise ProjectServiceError("Project not found or cannot be reordered.")
+    project.sort_order = _resolve_project_sort_order(
+        db,
+        moving_project_id=project.id,
+        before_project_id=before_project_id,
+        after_project_id=after_project_id,
+    )
+    project.updated_at = utc_now()
+    db.flush()
+    return project
+
+
+def _resolve_conversation_sort_order(
+    db: Session,
+    *,
+    project_id: uuid.UUID,
+    is_pinned: bool,
+    moving_conversation_id: uuid.UUID,
+    before_conversation_id: uuid.UUID | None,
+    after_conversation_id: uuid.UUID | None,
+) -> int:
+    def rows() -> list[ProjectConversation]:
+        return (
+            db.query(ProjectConversation)
+            .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
+            .filter(
+                ProjectConversation.project_id == project_id,
+                ProjectConversation.is_pinned.is_(is_pinned),
+                ProjectConversation.conversation_id != moving_conversation_id,
+                Conversation.status == "active",
+                Conversation.deleted_at.is_(None),
+            )
+            .order_by(ProjectConversation.sort_order.asc(), ProjectConversation.conversation_id.asc())
+            .with_for_update()
+            .all()
+        )
+
+    ordered = rows()
+    lower, upper = _anchor_bounds(
+        ordered,
+        before_id=before_conversation_id,
+        after_id=after_conversation_id,
+        id_getter=lambda row: row.conversation_id,
+        order_getter=lambda row: row.sort_order,
+    )
+    if lower is not None and upper is not None and upper - lower <= 1:
+        for index, row in enumerate(ordered, start=1):
+            row.sort_order = index * PLACEMENT_GAP
+        db.flush()
+        ordered = rows()
+        lower, upper = _anchor_bounds(
+            ordered,
+            before_id=before_conversation_id,
+            after_id=after_conversation_id,
+            id_getter=lambda row: row.conversation_id,
+            order_getter=lambda row: row.sort_order,
+        )
+    return _order_between(lower, upper)
+
+
+def _resolve_project_sort_order(
+    db: Session,
+    *,
+    moving_project_id: uuid.UUID,
+    before_project_id: uuid.UUID | None,
+    after_project_id: uuid.UUID | None,
+) -> int:
+    def rows() -> list[Project]:
+        return (
+            db.query(Project)
+            .filter(
+                Project.id != moving_project_id,
+                Project.is_default.is_(False),
+                Project.is_archived.is_(False),
+            )
+            .order_by(Project.sort_order.asc(), Project.id.asc())
+            .with_for_update()
+            .all()
+        )
+
+    ordered = rows()
+    lower, upper = _anchor_bounds(
+        ordered,
+        before_id=before_project_id,
+        after_id=after_project_id,
+        id_getter=lambda row: row.id,
+        order_getter=lambda row: row.sort_order,
+    )
+    if lower is not None and upper is not None and upper - lower <= 1:
+        for index, row in enumerate(ordered, start=1):
+            row.sort_order = index * PLACEMENT_GAP
+        db.flush()
+        ordered = rows()
+        lower, upper = _anchor_bounds(
+            ordered,
+            before_id=before_project_id,
+            after_id=after_project_id,
+            id_getter=lambda row: row.id,
+            order_getter=lambda row: row.sort_order,
+        )
+    return _order_between(lower, upper)
+
+
+def _anchor_bounds(rows, *, before_id, after_id, id_getter, order_getter) -> tuple[int | None, int | None]:
+    by_id = {id_getter(row): row for row in rows}
+    if before_id is not None and before_id not in by_id:
+        raise ProjectServiceError("Before anchor is not in the target section.")
+    if after_id is not None and after_id not in by_id:
+        raise ProjectServiceError("After anchor is not in the target section.")
+    before_order = order_getter(by_id[before_id]) if before_id is not None else None
+    after_order = order_getter(by_id[after_id]) if after_id is not None else None
+    if before_order is not None and after_order is not None and after_order >= before_order:
+        raise ProjectServiceError("Placement anchors are out of order.")
+    if before_order is not None and after_order is None:
+        earlier = [order_getter(row) for row in rows if order_getter(row) < before_order]
+        after_order = max(earlier, default=None)
+    if after_order is not None and before_order is None:
+        later = [order_getter(row) for row in rows if order_getter(row) > after_order]
+        before_order = min(later, default=None)
+    if before_order is None and after_order is None and rows:
+        after_order = max(order_getter(row) for row in rows)
+    return after_order, before_order
+
+
+def _order_between(lower: int | None, upper: int | None) -> int:
+    if lower is None and upper is None:
+        return PLACEMENT_GAP
+    if lower is None:
+        assert upper is not None
+        return upper - PLACEMENT_GAP
+    if upper is None:
+        return lower + PLACEMENT_GAP
+    if upper - lower <= 1:
+        raise ProjectServiceError("Unable to allocate a stable sort position.")
+    return lower + (upper - lower) // 2
