@@ -36,7 +36,7 @@
 | 数据库 | PostgreSQL 16；29 张业务表；源码与本地 Alembic 单一 head `20260805_0020` |
 | 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
 | 部署 | Compose：postgres、migrate、api、import-worker、web |
-| Git 基线 | 发布应用与镜像源提交为 `fba64b6c5d304805979c44d07d974606f49e007e`；生产验收后另有 docs-only 证据提交，不改变运行镜像 |
+| Git 基线 | 发布应用与镜像源提交为 `af17c93b344947f3d58bb7af0a77bb40a35a27fe`；生产验收后另有 docs-only 证据提交，不改变运行镜像 |
 | 最近完整验证 | 2026-08-06；Web lint/typecheck/build、API 203 passed；PWA 基线 8 passed / 19 conditional skipped；真实附件/SVG/Share、上传（含源码拖放/粘贴）及长 Reader 专项 Playwright 通过；用户确认生产 Chrome 上传、Share 与 `.cr v4` 空实例恢复通过；生产 Chrome SVG 正文/全页面弹窗与可访问性通过 |
 
 ## 当前目的与边界
@@ -136,7 +136,7 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 | 生产 Share 附件链路 | `PASS`；用户确认允许范围预览/下载、越权拒绝和撤销失效，文档不保存真实 token |
 | 生产 TLS/证书配置 | 仓库外管理，本文无法验证完整配置 |
 | King 原机 Web 构建 | 约 2 GiB 主机即使暂停 worker 仍发生 OOM，PostgreSQL checkpointer 被杀后 WAL 恢复；本轮恢复后 dump 已用 `pg_restore -l` 校验。后续必须在 CI/独立构建机生成 Linux 镜像并传输，禁止在 King 原机执行 Next production build |
-| 发布同步 | GitHub Actions 构建并打包提交 `fba64b6` 的 Linux 镜像；King 只执行拉取、校验、`docker load`、migration 与 `--no-build` 更新，原 dirty worktree 保存在服务器 Git stash 中 |
+| 发布同步 | GitHub Actions run `31083578130` 构建并打包提交 `af17c93` 的 Linux 镜像，归档 SHA-256 为 `918dc9a3121e8d83dd917839b55b778e53a9c3b8d303937624124dab9650cd17`；King 已备份并执行拉取、校验、`docker load`、migration 与 `--no-build` 更新，原 dirty worktree 保存在服务器 Git stash 中 |
 
 ## 文档地图
 

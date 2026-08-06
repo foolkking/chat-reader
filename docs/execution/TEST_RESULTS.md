@@ -265,12 +265,14 @@ No production conversation text, identifiers, credentials, Share tokens, or cook
 
 The acceptance fixture and DnD conversation were deleted after verification. The synthetic project was archived because no project hard-delete API exists. No production conversation text, identifiers, tokens, credentials, or environment values are recorded here.
 
-## 2026-08-06 SVG Dialog and External Build Closeout
+## 2026-08-06 SVG Dialog and Source Attachment Release Closeout
 
 | Check | Result | Evidence |
 |---|---|---|
-| GitHub Actions release build | Pass | Run `31064129902`; Linux API/worker/migrate/Web images for `fba64b6`; archive checksum verified locally and on King |
-| Production source/image alignment | Pass | Loaded application source and images use `fba64b6`; the later docs-only evidence commit does not alter runtime files |
+| GitHub Actions release build | Pass | Run `31083578130`; Linux API/worker/migrate/Web images for `af17c93`; archive SHA-256 verified locally and on King |
+| Production source/image alignment | Pass | Loaded application source and images use `af17c93`; the later docs-only evidence commit does not alter runtime files |
+| Production source editor paste | Pass | Synthetic PNG pasted at the CodeMirror cursor in Chrome; upload completed as `scanner_disabled`, v2 saved, Reader showed one `IMG` attachment, source panel closed, and refresh preserved the attachment |
+| Production cleanup | Pass | Synthetic acceptance conversation was hard-deleted and the public conversation endpoint returned 404 |
 | Migration and service health | Pass | Alembic `20260805_0020 (head)`; API/Web/PostgreSQL healthy, worker running; public health and capabilities returned expected values |
 | Disabled scanner policy | Pass | Production reports provider disabled, unscanned allowed, status `scanner_disabled`, basic preview enabled and complex preview disabled; no scanner container is running |
 | Source editor attachment flow | Pass | Local production Web/API E2E: file selection, exact-position drop, clipboard paste, fenced-code choice, independent upload drafts, save, Reader rendering and preserve-as-unplaced close all passed (4/4) |

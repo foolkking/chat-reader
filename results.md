@@ -45,7 +45,7 @@ The AI context package contains 18 content-addressed objects and reports partial
 
 | Area | Status | Evidence |
 | --- | --- | --- |
-| Incremental deployment | PASS | GitHub Actions run `31064129902` built the Linux images for commit `fba64b6`; King pulled the same commit, verified the artifact checksum, loaded the images, ran migration, and recreated API/worker/Web without an on-host build |
+| Incremental deployment | PASS | GitHub Actions run `31083578130` built the Linux images for commit `af17c93`; King pulled the same commit, verified artifact SHA-256 `918dc9a3121e8d83dd917839b55b778e53a9c3b8d303937624124dab9650cd17`, loaded the images, ran migration, and recreated API/worker/Web without an on-host build |
 | Migration and capabilities | PASS | production head `20260805_0020`; scanner disabled, unscanned allowed, basic preview enabled, complex preview disabled |
 | Attachment Bundle import | PASS | checksum-scoped fixture imported once; expected 1/8/20/19/1/18/21/1 statistics verified |
 | Reader attachment rendering | PASS | Chrome observed 20 attachment blocks, 3 inline images in the loaded view and 6 inline text previews after hydration |
@@ -62,7 +62,7 @@ The AI context package contains 18 content-addressed objects and reports partial
 | System `.cr v4` export | PASS | production archive generated and contents inspected; no secret/config/cache paths present |
 | System `.cr v4` restore | PASS | user-confirmed empty-instance production-equivalent restore: projects, conversations, versions, attachments/objects, annotations, notebook, source refs, placement/order, hashes, derived rebuild and Reader opening passed |
 | Acceptance data cleanup | PASS | fixture and synthetic conversations hard-deleted; synthetic project archived because the product has no project-delete endpoint |
-| GitHub/server synchronization | PASS | Application source and deployed image source resolve to `fba64b6c5d304805979c44d07d974606f49e007e`; a docs-only follow-up records final evidence, and the pre-sync server worktree remains recoverable in `stash@{0}` |
+| GitHub/server synchronization | PASS | Application source and deployed image source resolve to `af17c93b344947f3d58bb7af0a77bb40a35a27fe`; King backup `release-20260806T081207Z-af17c93` contains PostgreSQL and four business-volume archives, and the pre-sync server worktree remains recoverable in `stash@{0}` |
 
 ## Production Incident
 
