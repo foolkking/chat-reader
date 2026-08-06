@@ -169,6 +169,14 @@ Reader 的最终压力复验为长对话专项连续 10/10。边缘事务只在�
 - Deployed incrementally to King and verified the new UI with Chrome. Acceptance conversations were removed; the synthetic DnD project was archived.
 - The King Web build caused a PostgreSQL checkpointer OOM despite pausing the worker. WAL recovery completed and the post-recovery custom dump passed `pg_restore -l`; future King releases must use externally built Linux images.
 
+## 2026-08-06 External Image Delivery and SVG Closeout
+
+- Published commit `fba64b6` to GitHub and completed Actions run `31064129902` for API, worker, migrate and Web Linux images.
+- Created and validated a fresh PostgreSQL plus four-business-volume backup before deployment; preserved the previous dirty server worktree in Git stash.
+- King pulled the exact GitHub commit, loaded the verified image archive and updated services without compiling Next.js on the host or restarting PostgreSQL.
+- Production Chrome confirmed SVG uses an image context both inline and in the page-level portal. Dialog focus, Tab containment, Esc/backdrop close, body scroll lock and focus restoration passed.
+- Removed the temporary acceptance conversation and local fixture archive after verification. No production content, attachment ID or token was added to persistent documentation.
+
 ## 2026-08-02 Markdown Rhythm, Annotation, and Layout Anchor Closeout
 
 - Unified compact, comfortable, and loose Markdown rhythm through Reader CSS variables and a single `BlockSlot`; message spacing and reader width remain independent.

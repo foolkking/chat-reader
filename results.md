@@ -45,11 +45,12 @@ The AI context package contains 18 content-addressed objects and reports partial
 
 | Area | Status | Evidence |
 | --- | --- | --- |
-| Incremental deployment | PARTIAL_PASS | Final API/Web/PostgreSQL health passed, but the on-host Web build caused the OOM event documented below |
+| Incremental deployment | PASS | GitHub Actions run `31064129902` built the Linux images for commit `fba64b6`; King pulled the same commit, verified the artifact checksum, loaded the images, ran migration, and recreated API/worker/Web without an on-host build |
 | Migration and capabilities | PASS | production head `20260805_0020`; scanner disabled, unscanned allowed, basic preview enabled, complex preview disabled |
 | Attachment Bundle import | PASS | checksum-scoped fixture imported once; expected 1/8/20/19/1/18/21/1 statistics verified |
 | Reader attachment rendering | PASS | Chrome observed 20 attachment blocks, 3 inline images in the loaded view and 6 inline text previews after hydration |
 | Full-page attachment preview | PASS | Chrome verified the dialog is a direct `body` child, equals the viewport, locks body scrolling and displays the original image endpoint |
+| SVG attachment preview | PASS | Production Chrome verified inline SVG uses one `IMG`; the body-level dialog content also uses one `IMG`, with no inline SVG/script/object/embed/iframe; focus trap, Esc, backdrop close, scroll restoration and trigger focus restoration passed |
 | Export secondary options | PASS | Chrome exposed description/annotations/notebook/source-ref controls; generated manifest recorded `true/true/false/true` for the selected options |
 | Failed task dismissal | PASS | two stale failed cards were closed; reload kept them hidden in the same browser profile |
 | CanJSON/Markdown packages | PASS | context and portable Markdown ZIP counts, hashes, relative links and completeness were inspected on King |
@@ -61,6 +62,7 @@ The AI context package contains 18 content-addressed objects and reports partial
 | System `.cr v4` export | PASS | production archive generated and contents inspected; no secret/config/cache paths present |
 | System `.cr v4` restore | PASS | user-confirmed empty-instance production-equivalent restore: projects, conversations, versions, attachments/objects, annotations, notebook, source refs, placement/order, hashes, derived rebuild and Reader opening passed |
 | Acceptance data cleanup | PASS | fixture and synthetic conversations hard-deleted; synthetic project archived because the product has no project-delete endpoint |
+| GitHub/server synchronization | PASS | Application source and deployed image source resolve to `fba64b6c5d304805979c44d07d974606f49e007e`; a docs-only follow-up records final evidence, and the pre-sync server worktree remains recoverable in `stash@{0}` |
 
 ## Production Incident
 

@@ -140,4 +140,15 @@ Web 低内存构建期间 PostgreSQL 的一个后端进程于 `14:22:18Z` 被系
 - [x] Chrome 验证全页面附件弹窗、正文图片/文本预览、导出二级选项和失败任务关闭。
 - [x] 专用附件/DnD 验收对话清理；附件 GC dry-run 为 0 candidates。
 - [x] Web build 期间发生 PostgreSQL checkpointer OOM；WAL 自动恢复后生成 custom dump，并通过 `pg_restore -l`。
-- [ ] 禁止再次在 King 原机执行 Next production build；下一次发布前先建立 CI/独立 Linux 镜像交付流程。
+- [x] 禁止再次在 King 原机执行 Next production build；已建立并完成首次 CI Linux 镜像交付流程。
+
+## GitHub Actions 镜像交付收尾（2026-08-06）
+
+- [x] 应用实现提交 `fba64b6c5d304805979c44d07d974606f49e007e` 已推送 GitHub `master`；生产证据由后续 docs-only 提交补充，不重建运行镜像。
+- [x] GitHub Actions run `31064129902` 在 Linux runner 构建 API、worker、migrate 和 Web；镜像归档 SHA-256 为 `6011972e3aca0fef4d7357f83e7db2ec8caea52a0a88e2daa4dd4fd30b39bbe8`。
+- [x] 发布前备份 `/opt/chat-reader/backups/release-20260806T020247Z-fba64b6` 包含 PostgreSQL custom dump 与 import/export/offline/asset 四个业务卷；dump 通过 `pg_restore --list`，归档通过 `sha256sum -c`。
+- [x] King 原 dirty worktree 保存为 `stash@{0}`；随后 `git pull --ff-only`，source HEAD 与 GitHub 提交一致。
+- [x] King 未执行 Next build；只校验并 `docker load` 预构建镜像，运行 migration，再用 `--no-build --no-deps --force-recreate` 更新 API/worker/Web。
+- [x] PostgreSQL 未重启；API/Web/PostgreSQL healthy，worker running，Alembic `20260805_0020 (head)`，公网 health/capabilities 正常，无 ClamAV/scanner 容器。
+- [x] 生产 Chrome 使用临时验收对话确认 SVG 正文和全页面弹窗均以 `IMG` 渲染；内容区无 inline SVG/script/object/embed/iframe，Esc、背景关闭、焦点约束、滚动锁和焦点恢复通过。
+- [x] 临时验收对话已硬删除，本地临时 Bundle 已移除；本次失败格式校验提示仅在指定 Chrome profile 中关闭，未删除历史任务记录。

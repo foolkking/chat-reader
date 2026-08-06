@@ -263,3 +263,17 @@ No production conversation text, identifiers, credentials, Share tokens, or cook
 | King on-host Web build | Failed method | PostgreSQL checkpointer was OOM-killed; WAL recovery and a verified post-recovery dump completed |
 
 The acceptance fixture and DnD conversation were deleted after verification. The synthetic project was archived because no project hard-delete API exists. No production conversation text, identifiers, tokens, credentials, or environment values are recorded here.
+
+## 2026-08-06 SVG Dialog and External Build Closeout
+
+| Check | Result | Evidence |
+|---|---|---|
+| GitHub Actions release build | Pass | Run `31064129902`; Linux API/worker/migrate/Web images for `fba64b6`; archive checksum verified locally and on King |
+| Production source/image alignment | Pass | Loaded application source and images use `fba64b6`; the later docs-only evidence commit does not alter runtime files |
+| Migration and service health | Pass | Alembic `20260805_0020 (head)`; API/Web/PostgreSQL healthy, worker running; public health and capabilities returned expected values |
+| Disabled scanner policy | Pass | Production reports provider disabled, unscanned allowed, status `scanner_disabled`, basic preview enabled and complex preview disabled; no scanner container is running |
+| SVG inline DOM | Pass | Production Chrome found one `IMG` and no inline SVG/script/object/embed/iframe in the attachment block |
+| SVG full-page dialog | Pass | Direct `body` child, full viewport, `aria-modal=true`, one content `IMG`, no inline active document nodes, focus entry/trap, Esc and backdrop close, scroll/focus restoration, no new tab |
+| Acceptance cleanup | Pass | Temporary conversation hard-deleted and local bundle removed after verification |
+
+The Chrome extension did not have local-file URL access for automated chooser control in this run. The fixture was therefore staged through the same production Bundle API and the UI was verified in Chrome. This does not replace or downgrade the user's previously confirmed production file-chooser upload E2E, which remains Pass.

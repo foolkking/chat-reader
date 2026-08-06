@@ -55,7 +55,7 @@ Before an incremental production update, create and validate both the PostgreSQL
 
 - 运行时必须是 PostgreSQL；没有 SQLite fallback。
 - King 约 2 GiB 主机不得执行 Next production build。2026-08-06 即使先暂停约 418 MiB 的 worker，构建仍使 PostgreSQL checkpointer 被 OOM kill；数据库完成 WAL 恢复，随后 custom dump 已通过 `pg_restore -l`。后续必须在 CI/独立 Linux 构建机生成镜像，通过 registry 或 `docker save/load` 交付。
-- `.github/workflows/build-release-images.yml` 提供手动 Linux runner 构建：同步 GitHub 后生成 API/worker/Web 镜像归档；King 只拉取对应提交、校验并 `docker load`，再使用 `docker compose --no-build` 更新服务。该流程不得覆盖 `.env.production` 或删除 named volumes。
+- `.github/workflows/build-release-images.yml` 提供手动 Linux runner 构建：同步 GitHub 后生成 API/worker/migrate/Web 镜像归档；King 只拉取对应提交、校验并 `docker load`，再运行 migration 并使用 `docker compose --no-build` 更新服务。2026-08-06 的首次正式运行 `31064129902` 已用提交 `fba64b6` 完成该链路。该流程不得覆盖 `.env.production` 或删除 named volumes。
 - Library 离线冷启动需要先在线准备壳并下载资料。
 - 生产 OpenAPI 不通过 `/api/openapi.json` 暴露是当前代理边界，不表示业务 API 缺失。
 - 仓库 `deploy/nginx-chat-reader.conf` 是示例；真实 TLS/证书配置位于仓库外。
