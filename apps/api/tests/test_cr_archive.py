@@ -45,11 +45,16 @@ def _run_job(job_id: str) -> None:
     testing_session_local = sessionmaker(bind=fixture_db.get_bind(), autoflush=False, autocommit=False)
     fixture_db.close()
     override_generator.close()
-    with testing_session_local() as db:
-        claimed = claim_next_job(db)
-        assert claimed == uuid.UUID(job_id)
-        db.commit()
-    process_background_job(uuid.UUID(job_id), testing_session_local)
+    target_id = uuid.UUID(job_id)
+    for _ in range(10):
+        with testing_session_local() as db:
+            claimed = claim_next_job(db)
+            assert claimed is not None
+            db.commit()
+        process_background_job(claimed, testing_session_local)
+        if claimed == target_id:
+            return
+    raise AssertionError(f"Target background job was not claimed: {target_id}")
 
 
 def test_cr_archive_export_import_round_trip_and_duplicate_policies(client: TestClient) -> None:

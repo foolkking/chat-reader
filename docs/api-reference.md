@@ -190,7 +190,7 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 | POST | `/api/attachment-upload-sessions/{id}/items` | 流式上传一个暂存项；返回 MIME/hash/大小/scan 状态 |
 | GET | `/api/attachment-upload-sessions/{id}` | 查询 session 与多文件项状态 |
 | DELETE | `/api/attachment-upload-sessions/{id}/items/{item_id}` | 取消并清理暂存项 |
-| GET/POST | `/api/conversations/{id}/attachments` | 列出当前对话文件；或将暂存项提升为未放置 Attachment |
+| GET/POST | `/api/conversations/{id}/attachments` | 列出当前对话文件；或显式将已上传暂存项提升为未放置 Attachment |
 | PATCH/DELETE | `/api/conversations/{id}/attachments/{attachment_id}` | 修改显示名；或删除没有任何版本引用的对话级 Attachment |
 | GET | `/api/attachments/{id}` | Owner 附件 metadata 与受控 content/download URL |
 | GET/HEAD | `/api/attachments/{id}/content` | 权限校验、`Range: bytes=start-end`、nosniff 和主动内容隔离 |
@@ -199,7 +199,7 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 | GET | `/api/shared/{token}/attachments/{id}` | Share 范围内的附件 metadata |
 | GET/HEAD | `/api/shared/{token}/attachments/{id}/content` | Share 范围内的附件内容与 Range |
 
-源码编辑器上传时，草稿中的 `cr-upload://` 只在客户端暂存。保存消息必须同时提交对应 `upload_item_ids`；API 会在事务内提升 Attachment、重写为 `cr-asset://` 并创建 occurrence。漏传、非法或残留上传引用返回 422，并在错误 detail 中给出 Markdown 行号。
+源码编辑器上传时，文件先通过上传 session 和 Attachment finalize 接口成为当前对话 Attachment；消息保存只提交已存在的 `cr-asset://` 引用和 occurrence 声明。非空 `upload_item_ids` 返回 409/422，保存不会再次读取或移动文件。响应包含当前 message/version、render blocks、occurrences 和 conversation attachment summary；搜索、TOC、统计和摘要在 commit 后异步重建。
 
 ## Offline Library
 

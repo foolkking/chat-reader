@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -190,22 +191,42 @@ def list_conversation_attachments(
     attachments = db.query(Attachment).filter(
         Attachment.conversation_id == conversation_id,
         Attachment.deleted_at.is_(None),
+        Attachment.status != "detached",
     ).order_by(Attachment.created_at.asc(), Attachment.id.asc()).all()
+    attachment_ids = [attachment.id for attachment in attachments]
+    occurrence_rows = (
+        db.query(
+            MessageVersionAttachment,
+            Message.id,
+            Message.current_version_id,
+            Message.order_key,
+            Message.role,
+            MessageVersion.version_number,
+            func.substr(MessageVersion.plain_text, 1, 160),
+        )
+        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+        .join(Message, Message.id == MessageVersion.message_id)
+        .filter(MessageVersionAttachment.attachment_id.in_(attachment_ids))
+        .all()
+        if attachment_ids
+        else []
+    )
+    rows_by_attachment: dict[uuid.UUID, list] = {attachment_id: [] for attachment_id in attachment_ids}
+    for row in occurrence_rows:
+        rows_by_attachment.setdefault(row[0].attachment_id, []).append(row)
     items: list[AttachmentRead] = []
     for attachment in attachments:
-        rows = (
-            db.query(MessageVersionAttachment, Message.id, Message.current_version_id)
-            .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
-            .join(Message, Message.id == MessageVersion.message_id)
-            .filter(MessageVersionAttachment.attachment_id == attachment.id)
-            .all()
-        )
+        rows = rows_by_attachment.get(attachment.id, [])
         message_ids = {row[1] for row in rows}
         occurrences = [
             AttachmentOccurrenceLocationRead(
                 message_id=row[1],
                 message_version_id=row[0].message_version_id,
                 is_current_version=row[0].message_version_id == row[2],
+                message_order_key=row[3],
+                message_role=row[4],
+                version_number=row[5],
+                message_preview=row[6],
                 occurrence_key=row[0].occurrence_key,
                 placement=row[0].placement,
                 block_index=row[0].block_index,
@@ -217,7 +238,7 @@ def list_conversation_attachments(
                 update={
                     "occurrence_count": len(rows),
                     "message_count": len(message_ids),
-                    "is_used": bool(rows),
+                    "is_used": any(row[0].message_version_id == row[2] for row in rows),
                     "occurrences": occurrences,
                 }
             )

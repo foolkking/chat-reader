@@ -19,6 +19,7 @@ export function FloatingWorkspacePanel({
   onClose,
   banner,
   placement = "floating",
+  testId = "floating-source-workspace",
   children,
 }: {
   storageKey: string;
@@ -29,6 +30,7 @@ export function FloatingWorkspacePanel({
   onClose: () => void;
   banner?: ReactNode;
   placement?: "floating" | "left-overlay";
+  testId?: string;
   children: ReactNode;
 }) {
   const [geometry, setGeometry] = useState<Geometry | null>(null);
@@ -128,7 +130,7 @@ export function FloatingWorkspacePanel({
 
   return (
     <section
-      data-testid="floating-source-workspace"
+      data-testid={testId}
       aria-label={title}
       ref={panelRef}
       className={`fixed inset-x-0 bottom-0 top-14 z-[115] flex min-h-0 flex-col overflow-hidden border-t border-ui bg-surface shadow-2xl ${placement === "left-overlay" ? "lg:inset-auto lg:left-0 lg:top-0 lg:h-[100dvh] lg:w-[clamp(560px,32vw,720px)] lg:rounded-none lg:border-b-0 lg:border-l-0 lg:border-r lg:border-t" : "md:inset-auto md:rounded-lg md:border"}`}
@@ -158,7 +160,7 @@ function defaultGeometry(placement: "floating" | "left-overlay" = "floating"): G
   const height = Math.min(760, Math.max(MIN_HEIGHT, window.innerHeight - 96));
   return placement === "left-overlay"
     ? { x: 0, y: 0, width, height: window.innerHeight }
-    : { x: window.innerWidth - width - 24, y: 72, width, height };
+    : { x: Math.max(VIEWPORT_MARGIN, (window.innerWidth - width) / 2), y: Math.max(VIEWPORT_MARGIN, (window.innerHeight - height) / 2), width, height };
 }
 
 function clampGeometry(value: Geometry, placement: "floating" | "left-overlay" = "floating"): Geometry {

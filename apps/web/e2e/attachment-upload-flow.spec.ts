@@ -34,6 +34,16 @@ async function openSourceEditor(page: Page, messageId: string): Promise<void> {
   await expect(page.getByTestId("source-editor-codemirror")).toBeVisible();
 }
 
+async function replaceSourceText(page: Page, text: string): Promise<void> {
+  const editor = page.getByTestId("source-editor-codemirror").locator(".cm-content");
+  await expect(editor).toBeVisible();
+  await editor.click();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.insertText(text);
+  await expect(editor).toContainText(text);
+  await expect(editor).not.toContainText("cr-asset://");
+}
+
 test("uploads, inserts, versions, and reuses conversation attachments", async ({ page }) => {
   const { conversationId, messageId } = await createConversation(page.request);
   const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
@@ -66,8 +76,8 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
       const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
       return ((await response.json()) as { items: unknown[] }).items.length;
     }).toBe(2);
-    await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).first().click();
-    await expect(page.getByTestId("conversation-files-panel")).toHaveCount(0);
+    await page.getByTestId("conversation-files-workspace").getByRole("button", { name: /Close|关闭/ }).click();
+    await expect(page.getByTestId("conversation-files-workspace")).toHaveCount(0);
 
     await openSourceEditor(page, messageId);
     await page.getByRole("button", { name: /Choose conversation file|选择当前对话文件/ }).click();
@@ -188,6 +198,85 @@ test("keeps completed unsaved uploads as unplaced conversation files on close", 
       return { count: items.length, used: items[0]?.is_used };
     }).toEqual({ count: 1, used: false });
     await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(0);
+  } finally {
+    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
+    expect(cleanup.ok()).toBeTruthy();
+  }
+});
+
+test("drags an existing conversation file into source and confirms removed references", async ({ page }) => {
+  const { conversationId, messageId } = await createConversation(page.request);
+  try {
+    await page.goto(`/conversations/${conversationId}`);
+    await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
+    await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
+    await expect(page.getByTestId("conversation-files-workspace")).toBeVisible();
+    await page.getByTestId("conversation-files-upload-input").setInputFiles({
+      name: "existing-file.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("existing conversation attachment\n"),
+    });
+    await expect.poll(async () => {
+      const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+      const items = (await response.json()).items as Array<{ id: string; display_name: string }>;
+      return items.find((item) => item.display_name === "existing-file.txt") ?? null;
+    }).not.toBeNull();
+    const attachmentResponse = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+    const attachment = ((await attachmentResponse.json()).items as Array<{ id: string; display_name: string }>).find((item) => item.display_name === "existing-file.txt")!;
+
+    await openSourceEditor(page, messageId);
+    await expect(page.getByTestId("conversation-files-workspace")).toBeVisible();
+    await expect(page.getByTestId("source-editor-codemirror")).toBeVisible();
+    const dragHandle = page.getByRole("button", { name: /Drag into source editor to insert|拖到源码编辑器中插入/ });
+    await expect(dragHandle).toHaveAttribute("draggable", "true");
+    const editorBox = await page.getByTestId("source-editor-codemirror").locator(".cm-content").boundingBox();
+    expect(editorBox).not.toBeNull();
+    await page.evaluate(({ attachmentId, x, y }) => {
+      const transfer = new DataTransfer();
+      transfer.setData("application/x-chat-reader-attachment", JSON.stringify({
+        attachmentId,
+        displayName: "existing-file.txt",
+        mimeType: "text/plain",
+      }));
+      const content = document.querySelector("[data-testid='source-editor-codemirror'] .cm-content");
+      if (!content) throw new Error("CodeMirror content not found");
+      content.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: x, clientY: y }));
+      content.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: x, clientY: y }));
+    }, { attachmentId: attachment.id, x: editorBox!.x + 48, y: editorBox!.y + 22 });
+    await expect(page.getByTestId("source-editor-codemirror")).toContainText("existing-file.txt");
+    await page.getByTestId("source-editor-create-version").click();
+    await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(1);
+    const afterInsert = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+    expect((await afterInsert.json()).items).toHaveLength(1);
+    await page.getByTestId("conversation-files-workspace").getByRole("button", { name: /Close|关闭/ }).click();
+
+    await replaceSourceText(page, "Attachment reference removed but file retained.");
+    await page.getByTestId("source-editor-create-version").click();
+    const removalDialog = page.getByRole("dialog", { name: /Attachment references were removed|已从正文移除附件引用/ });
+    await expect(removalDialog).toBeVisible();
+    await expect(removalDialog.getByLabel(/Keep in conversation|保留在当前对话文件/)).toBeChecked();
+    await removalDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
+    await expect.poll(async () => {
+      const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+      return ((await response.json()).items as Array<{ is_used: boolean }>).map((item) => item.is_used);
+    }).toEqual([false]);
+
+    await page.getByRole("button", { name: /Choose conversation file|选择当前对话文件/ }).click();
+    await page.getByRole("button", { name: /Insert existing-file\.txt at cursor|在光标处插入 existing-file\.txt/ }).click();
+    const createButton = page.getByTestId("source-editor-create-version");
+    const createLabel = await createButton.textContent();
+    await createButton.click();
+    await expect.poll(() => createButton.textContent()).not.toBe(createLabel);
+    await replaceSourceText(page, "Attachment detached from active conversation files.");
+    await page.getByTestId("source-editor-create-version").click();
+    const detachDialog = page.getByRole("dialog", { name: /Attachment references were removed|已从正文移除附件引用/ });
+    await detachDialog.getByLabel(/Detach from conversation|同时从当前对话文件移除/).check();
+    await detachDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
+    await expect.poll(async () => {
+      const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+      return ((await response.json()).items as unknown[]).length;
+    }).toBe(0);
+    expect((await page.request.get(`/api/attachments/${attachment.id}/content`)).ok()).toBeTruthy();
   } finally {
     const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
     expect(cleanup.ok()).toBeTruthy();

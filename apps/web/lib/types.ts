@@ -155,6 +155,10 @@ export type AttachmentRead = {
     message_id: string;
     message_version_id: string;
     is_current_version: boolean;
+    message_order_key?: string | null;
+    message_role?: string | null;
+    message_preview?: string | null;
+    version_number?: number | null;
     occurrence_key: string;
     placement: string;
     block_index?: number | null;
@@ -634,6 +638,22 @@ export type MessageEditResponse = {
   current_version_id: string;
   version_number: number;
   message: MessageListItem;
+  message_version: MessageVersionRead;
+  render_blocks: RenderBlockRead[];
+  attachment_occurrences: Array<{
+    id: string;
+    message_version_id: string;
+    attachment: AttachmentRead;
+    occurrence_key: string;
+    placement: string;
+    relation_type: string;
+    display_order: number;
+    block_index?: number | null;
+    display_mode: string;
+    alt_text?: string | null;
+    caption?: string | null;
+  }>;
+  conversation_attachment_summary: { total?: number; used?: number; missing?: number };
   warnings?: string[];
 };
 

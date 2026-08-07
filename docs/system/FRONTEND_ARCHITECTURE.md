@@ -109,10 +109,11 @@ RootLayout + providers
 
 ## 附件 UI
 
-- Reader“更多”中的“当前对话文件”使用右侧抽屉，按已使用、未使用、缺失分组，支持搜索、上传、预览、下载、重命名、定位、插入和移除未引用文件。
-- Markdown 源码工作区提供上传与选择已有文件；系统生成 `cr-asset://`/`cr-upload://` 引用并在光标或消息末尾插入，用户无需手写内部协议。若光标位于已有的独立附件行内，插入点移动到该行末尾，避免破坏原引用。
+- Reader“更多”中的“当前对话文件”打开独立 `FloatingWorkspacePanel`。桌面首次居中、无遮罩、可拖动/缩放并持久化位置尺寸，可与源码编辑器同时打开；移动端使用覆盖式文件抽屉。面板按已使用、未使用、缺失分组，支持搜索、上传、预览、下载、重命名、定位、插入和移除未引用文件。
+- Markdown 源码工作区提供上传与选择已有文件；新文件先独立上传并显式提升为当前对话 Attachment，已有文件通过 `application/x-chat-reader-attachment` 只传递业务 ID，在光标或消息末尾插入 `cr-asset://` 引用。用户无需手写内部协议；若光标位于已有的独立附件行内，插入点移动到该行末尾，避免破坏原引用。
 - 源码工作区的 CodeMirror DOM 事件只接受真实 `DataTransfer.files`；拖放通过 `posAtCoords` 显示插入光标，粘贴读取剪贴板文件，二者和文件选择共用 `AttachmentDraftCallbacks`。临时标记拥有独立进度/错误/重试/移除状态，完成后通过命令式文档替换保持阅读位置和源码光标。
 - 代码围栏落点返回明确的调整意图并显示选择条；链接内部落点自动放到链接节点后。编辑器滚动和拖放位置不反向驱动 Reader，保存前任何 unresolved upload 均阻止提交。
 - `AttachmentPreviewDialog` 通过 React portal 直接挂载到 `document.body`，覆盖完整视口，不受 Reader/侧栏 transform 或 overflow 约束。共享计数管理 body scroll lock；打开后焦点进入关闭按钮，Tab 被限制在弹窗内，Esc/背景点击关闭，卸载后恢复原滚动位置和触发器焦点。
 - `PreviewAdapterRegistry` 选择图片、文本、PDF、原生音视频或下载回退。所有 `image/*`（含 `image/svg+xml`）在正文和全页弹窗中最终都由普通 `<img src="受控内容 URL">` 渲染；不插入 SVG XML/React 节点，不使用 object/embed，不通过新标签页打开原始 SVG 文档。文本/Markdown/JSON/CSV/代码和原生音视频直接轻量展示；HTML 以转义文本查看，Office/ZIP 下载降级。
 - 对话导出面板将格式与附件作为一级选项；简介、批注、笔记和 CanJSON 来源引用位于折叠的二级选项。普通导出与附件 ZIP 使用同一组参数。
+- 消息保存使用服务端返回的局部 message/version/blocks/occurrences 投影更新 TanStack Query；不重新加载整场对话，受影响消息单独重测布局，其他 MessageItem 引用保持稳定。

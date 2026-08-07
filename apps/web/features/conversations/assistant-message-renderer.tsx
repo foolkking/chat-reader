@@ -113,6 +113,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
 
   useVirtualLayoutMeasurements(
     containerRef,
+    messageId,
     "element",
     setScrollMargin,
     virtualizer.measure,
@@ -168,6 +169,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
 
   useVirtualLayoutMeasurements(
     containerRef,
+    messageId,
     "window",
     setScrollMargin,
     virtualizer.measure,
@@ -286,6 +288,7 @@ function useVirtualMessageRegistration(
  */
 function useVirtualLayoutMeasurements(
   containerRef: React.RefObject<HTMLDivElement>,
+  messageId: string,
   mode: "element" | "window",
   setScrollMargin: React.Dispatch<React.SetStateAction<number>>,
   resetMeasurements: () => void,
@@ -355,7 +358,11 @@ function useVirtualLayoutMeasurements(
       });
     }
     const onWindowResize = () => schedule();
-    const onReaderWindowLayout = () => schedule();
+    const onReaderWindowLayout = (event: Event) => {
+      const targetMessageId = (event as CustomEvent<{ messageId?: string }>).detail?.messageId;
+      if (targetMessageId && targetMessageId !== messageId) return;
+      schedule();
+    };
     window.addEventListener("resize", onWindowResize);
     window.addEventListener(READER_WINDOW_LAYOUT_EVENT, onReaderWindowLayout);
     void document.fonts?.ready.then(() => {
@@ -372,7 +379,7 @@ function useVirtualLayoutMeasurements(
       window.removeEventListener("resize", onWindowResize);
       window.removeEventListener(READER_WINDOW_LAYOUT_EVENT, onReaderWindowLayout);
     };
-  }, [containerRef, measureElement, mode, resetMeasurements, setScrollMargin]);
+  }, [containerRef, measureElement, messageId, mode, resetMeasurements, setScrollMargin]);
 }
 
 function readVirtualLayoutSignature(container: HTMLElement): string {

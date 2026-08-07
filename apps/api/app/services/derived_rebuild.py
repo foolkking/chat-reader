@@ -19,6 +19,7 @@ from app.services.import_pipeline.canonical_draft import (
     content_hash,
 )
 from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
+from app.services.editing.message_edit_service import refresh_conversation_stats
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,7 @@ def rebuild_conversation_derived_data(
     conversation_id: uuid.UUID,
     *,
     progress_callback=None,
+    rebuild_versions: bool = True,
 ) -> DerivedRebuildResult:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
@@ -48,6 +50,8 @@ def rebuild_conversation_derived_data(
             .all()
         )
     ]
+    if not rebuild_versions:
+        version_ids = []
     total = len(version_ids)
     rebuilt_versions = 0
     rebuilt_blocks = 0
@@ -94,15 +98,7 @@ def rebuild_conversation_derived_data(
         if progress_callback:
             progress_callback("rebuilding_versions", min(85, 10 + round(75 * rebuilt_versions / max(total, 1))), rebuilt_versions, total)
 
-    current_versions = (
-        db.query(MessageVersion)
-        .join(Message, Message.current_version_id == MessageVersion.id)
-        .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
-        .order_by(Message.order_key)
-        .all()
-    )
-    conversation.content_hash = content_hash("\n".join(version.plain_text for version in current_versions)) if current_versions else None
-    conversation.offline_revision += 1
+    refresh_conversation_stats(db, conversation_id)
     if progress_callback:
         progress_callback("rebuilding_indexes", 90, rebuilt_versions, total)
     rebuild_search_and_toc_for_conversation(db, conversation_id)
@@ -118,6 +114,7 @@ def rebuild_conversation_derived_data(
                 "search_document_version": SEARCH_DOCUMENT_VERSION,
                 "rebuilt_versions": rebuilt_versions,
                 "rebuilt_blocks": rebuilt_blocks,
+                "rebuild_versions": rebuild_versions,
             },
             created_by="system",
         )

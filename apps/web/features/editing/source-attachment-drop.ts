@@ -9,12 +9,15 @@ export type AttachmentDraftState = AttachmentDraft & {
 };
 export type AttachmentDraftCallbacks = {
   onProgress: (token: string, progress: number) => void;
-  onComplete: (token: string, item: { id: string }) => void;
+  onComplete: (token: string, item: { id: string; attachmentId?: string }) => void;
   onError: (token: string, message: string) => void;
 };
 
 export function sourceAttachmentDropExtension(
-  handlers: { onFiles: (files: File[], position: number, originalCodePosition?: number) => void },
+  handlers: {
+    onFiles: (files: File[], position: number, originalCodePosition?: number) => void;
+    onAttachment?: (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void;
+  },
 ) {
   const hasFiles = (event: DragEvent | ClipboardEvent) => {
     if ("dataTransfer" in event) return Boolean(event.dataTransfer?.files?.length);
@@ -22,7 +25,8 @@ export function sourceAttachmentDropExtension(
   };
   return EditorView.domEventHandlers({
     dragover(event, view) {
-      if (!hasFiles(event)) return false;
+      const custom = event.dataTransfer?.getData("application/x-chat-reader-attachment");
+      if (!hasFiles(event) && !custom) return false;
       event.preventDefault();
       const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
       if (position !== null) {
@@ -36,12 +40,24 @@ export function sourceAttachmentDropExtension(
       return false;
     },
     drop(event, view) {
-      if (!hasFiles(event)) return false;
+      const customRaw = event.dataTransfer?.getData("application/x-chat-reader-attachment");
+      if (!hasFiles(event) && !customRaw) return false;
       event.preventDefault();
       view.dom.classList.remove("cr-attachment-dragover");
-      const files = Array.from(event.dataTransfer?.files ?? []);
       const original = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.selection.main.head;
       const resolved = resolveAttachmentDropPosition(view.state.doc.toString(), original);
+      if (customRaw && handlers.onAttachment) {
+        try {
+          const attachment = JSON.parse(customRaw) as { attachmentId?: string; displayName?: string; mimeType?: string };
+          if (attachment.attachmentId && attachment.displayName && attachment.mimeType) {
+            handlers.onAttachment({ attachmentId: attachment.attachmentId, displayName: attachment.displayName, mimeType: attachment.mimeType }, resolved.position, resolved.adjustedFromCode ? original : undefined);
+            return true;
+          }
+        } catch {
+          return false;
+        }
+      }
+      const files = Array.from(event.dataTransfer?.files ?? []);
       if (files.length) handlers.onFiles(files, resolved.position, resolved.adjustedFromCode ? original : undefined);
       return true;
     },
@@ -110,7 +126,7 @@ export function insertPendingMarkers(view: EditorView, drafts: AttachmentDraft[]
   view.dispatch({ changes: { from: position, insert }, selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
 }
 
-export function replacePendingMarker(view: EditorView, token: string, itemId: string): boolean {
+export function replacePendingMarker(view: EditorView, token: string, attachmentId: string): boolean {
   const needle = `cr-upload://${token}`;
   const index = view.state.doc.toString().indexOf(needle);
   if (index < 0) return false;
@@ -120,7 +136,7 @@ export function replacePendingMarker(view: EditorView, token: string, itemId: st
     .replace("正在上传：", image ? "" : "附件：")
     .replace("正在上传: ", image ? "" : "附件：")
     .replace("Uploading: ", image ? "" : "Attachment: ")
-    .replace(needle, `cr-upload://${itemId}`);
+    .replace(needle, `cr-asset://${attachmentId}`);
   view.dispatch({ changes: { from: line.from, to: line.to, insert: value } });
   return true;
 }

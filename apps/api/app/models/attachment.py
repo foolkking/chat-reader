@@ -183,6 +183,7 @@ Index("idx_asset_objects_status_scan", AssetObject.status, AssetObject.scan_stat
 Index("idx_asset_objects_created_at", AssetObject.created_at)
 Index("idx_attachments_asset_object_id", Attachment.asset_object_id)
 Index("idx_attachments_conversation_status", Attachment.conversation_id, Attachment.status, Attachment.created_at)
+Index("idx_attachments_conversation_id_id", Attachment.conversation_id, Attachment.id)
 Index("idx_attachments_import_id", Attachment.import_id)
 Index("idx_attachments_source_attachment_id", Attachment.source_attachment_id)
 Index("idx_message_version_attachments_version", MessageVersionAttachment.message_version_id, MessageVersionAttachment.display_order)

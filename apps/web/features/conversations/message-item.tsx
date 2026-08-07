@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { BookmarkPlus, CheckSquare2, MoreHorizontal, Pencil, Square } from "lucide-react";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
@@ -9,7 +9,7 @@ import { VersionHistoryPanel } from "../editing/version-history-panel";
 import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import { AttachmentAccessProvider, type AttachmentAccess } from "../attachments/attachment-access";
 
-export function MessageItem({
+function MessageItemComponent({
   message,
   onChanged,
   readOnly = false,
@@ -142,6 +142,17 @@ export function MessageItem({
     </article>
   );
 }
+
+export const MessageItem = memo(MessageItemComponent, (previous, next) => (
+  previous.message === next.message
+  && previous.readOnly === next.readOnly
+  && previous.selected === next.selected
+  && previous.highlightTargetId === next.highlightTargetId
+  && previous.editing === next.editing
+  && previous.scrollRootMode === next.scrollRootMode
+  && previous.attachmentAccess?.kind === next.attachmentAccess?.kind
+  && (previous.attachmentAccess?.kind !== "share" || next.attachmentAccess?.kind !== "share" || previous.attachmentAccess.token === next.attachmentAccess.token)
+));
 
 function shouldUseWideUserLayout(text: string, blocks: RenderBlockRead[]): boolean {
   if (text.length > 360 || text.split(/\r?\n/).length > 5) return true;

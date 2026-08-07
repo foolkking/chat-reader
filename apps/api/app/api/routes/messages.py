@@ -1,4 +1,6 @@
 import re
+import logging
+import time
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,6 +10,7 @@ from app.core.database import get_db
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
+from app.models.attachment import Attachment, MessageVersionAttachment
 from app.schemas.editing import (
     MessageEditRequest,
     MessageEditResponse,
@@ -21,6 +24,7 @@ from app.schemas.editing import (
     MessageVersionRestoreRequest,
     MessageVersionSelectRequest,
 )
+from app.schemas.attachment import MessageVersionAttachmentRead
 from app.schemas.message import MessageDetail, MessageVersionRead, RenderBlockRead
 from app.services.editing.message_edit_service import (
     MessageEditError,
@@ -32,11 +36,13 @@ from app.services.editing.message_edit_service import (
     select_message_version,
     split_message,
 )
-from app.services.assets.asset_store import get_asset_store
-from app.services.assets.upload_service import AttachmentUploadError, finalize_upload_items
+from app.services.assets.attachment_service import attachment_read
+from app.services.background_jobs import queue_conversation_derived_rebuild
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 UPLOAD_REFERENCE_RE = re.compile(r"cr-upload://(?P<id>[^\s)]+)")
+ASSET_REFERENCE_RE = re.compile(r"cr-asset://(?P<id>[0-9a-fA-F-]{36})")
+logger = logging.getLogger(__name__)
 
 
 @router.post("/merge", response_model=MessageMergeResponse)
@@ -139,42 +145,31 @@ def update_message(
     payload: MessageEditRequest,
     db: Session = Depends(get_db),
 ) -> MessageEditResponse:
-    promoted_storage_keys: list[str] = []
+    request_started = time.perf_counter()
+    timings: dict[str, float] = {"request_parse_ms": 0.0}
     try:
-        source_text = payload.display_text
-        upload_references = _upload_references(source_text)
-        missing_upload_items = {item_id for _, item_id in upload_references} - set(payload.upload_item_ids)
-        if missing_upload_items:
-            line_number = next(line for line, item_id in upload_references if item_id in missing_upload_items)
-            raise MessageEditError(f"Line {line_number} references an upload item that was not included in this save.", 422)
         if payload.upload_item_ids:
-            message = db.query(Message).filter(Message.id == message_id).with_for_update().one_or_none()
-            if message is None or message.is_deleted:
-                raise MessageEditError("Message not found.", 404)
-            if payload.base_version_id is None or message.current_version_id != payload.base_version_id:
-                raise MessageEditError("The message has changed since editing began.", 409)
-            finalized = finalize_upload_items(
-                db,
-                conversation_id=message.conversation_id,
-                item_ids=payload.upload_item_ids,
+            raise MessageEditError(
+                "Attachment uploads must be finalized before saving the message.",
+                409,
             )
-            promoted_storage_keys = finalized.promoted_storage_keys
-            attachment_by_item = {
-                attachment.source_attachment_id: attachment
-                for attachment in finalized.attachments
-                if attachment.source_attachment_id
-            }
-            for item_id in payload.upload_item_ids:
-                attachment = attachment_by_item.get(str(item_id))
-                if attachment is None:
-                    raise MessageEditError("Uploaded attachment could not be finalized.", 422)
-                source_text = source_text.replace(
-                    f"cr-upload://{item_id}",
-                    f"cr-asset://{attachment.id}",
-                )
+        try:
+            source_text = payload.text_value()
+        except ValueError as exc:
+            raise MessageEditError(str(exc), 422) from exc
+        timings["request_parse_ms"] = round((time.perf_counter() - request_started) * 1000, 3)
+        _upload_references(source_text)
         if "cr-upload://" in source_text:
             line_number = next(index for index, line in enumerate(source_text.splitlines(), 1) if "cr-upload://" in line)
             raise MessageEditError(f"Line {line_number} contains an unresolved attachment upload.", 422)
+        if payload.attachment_occurrences:
+            occurrence_keys = [item.occurrence_key for item in payload.attachment_occurrences]
+            if len(set(occurrence_keys)) != len(occurrence_keys):
+                raise MessageEditError("Attachment occurrence keys must be unique.", 422)
+            declared = sorted(str(item.attachment_id) for item in payload.attachment_occurrences)
+            referenced = sorted(match.group("id").lower() for match in ASSET_REFERENCE_RE.finditer(source_text))
+            if declared != referenced:
+                raise MessageEditError("Attachment occurrence declarations do not match the Markdown references.", 422)
         result = edit_message(
             db=db,
             message_id=message_id,
@@ -182,27 +177,25 @@ def update_message(
             edit_reason=payload.edit_reason,
             base_version_id=payload.base_version_id,
             save_mode=payload.save_mode,
+            rebuild_derived=False,
+            attachment_occurrences=payload.attachment_occurrences,
         )
+        _apply_removed_attachment_actions(db, result.message, payload.removed_attachment_actions)
+        timings.update(result.timings)
+        commit_started = time.perf_counter()
         db.commit()
+        timings["commit_ms"] = round((time.perf_counter() - commit_started) * 1000, 3)
     except MessageEditError as exc:
         db.rollback()
-        for storage_key in promoted_storage_keys:
-            get_asset_store().delete_key(storage_key)
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    except AttachmentUploadError as exc:
-        db.rollback()
-        for storage_key in promoted_storage_keys:
-            get_asset_store().delete_key(storage_key)
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except Exception:
         db.rollback()
-        for storage_key in promoted_storage_keys:
-            get_asset_store().delete_key(storage_key)
         raise
+    response_started = time.perf_counter()
     message = db.get(Message, result.message.id)
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
-    return _edit_response(
+    response = _edit_response(
         message=message,
         previous_version_id=result.previous_version_id,
         current_version_id=result.current_version.id,
@@ -210,6 +203,35 @@ def update_message(
         warnings=result.warnings,
         db=db,
     )
+    timings["response_serialize_ms"] = round((time.perf_counter() - response_started) * 1000, 3)
+    queue_started = time.perf_counter()
+    try:
+        queue_conversation_derived_rebuild(
+            db,
+            conversation_id=message.conversation_id,
+            idempotency_key=f"message-edit-derived:{message.conversation_id}:{result.current_version.id}",
+            rebuild_versions=False,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Unable to queue post-commit derived rebuild for conversation %s", message.conversation_id)
+    timings["derived_queue_ms"] = round((time.perf_counter() - queue_started) * 1000, 3)
+    timings["total_ms"] = round((time.perf_counter() - request_started) * 1000, 3)
+    for name in (
+        "base_version_check_ms",
+        "attachment_validation_ms",
+        "markdown_parse_ms",
+        "version_insert_ms",
+        "occurrence_insert_ms",
+        "render_block_ms",
+        "commit_ms",
+        "response_serialize_ms",
+    ):
+        timings.setdefault(name, 0.0)
+    log = logger.warning if timings["total_ms"] > 1000 else logger.info
+    log("message_save_timing message_id=%s conversation_id=%s timings=%s", message.id, message.conversation_id, timings)
+    return response
 
 
 @router.get("/{message_id}/versions", response_model=MessageVersionHistoryResponse)
@@ -346,6 +368,39 @@ def _edit_response(
     warnings: list[str],
     db: Session,
 ) -> MessageEditResponse:
+    current_version = db.get(MessageVersion, current_version_id)
+    if current_version is None:
+        raise HTTPException(status_code=404, detail="Message version not found.")
+    blocks = (
+        db.query(RenderBlock)
+        .filter(RenderBlock.message_version_id == current_version_id)
+        .order_by(RenderBlock.block_index.asc())
+        .all()
+    )
+    links = (
+        db.query(MessageVersionAttachment, Attachment)
+        .join(Attachment, Attachment.id == MessageVersionAttachment.attachment_id)
+        .filter(MessageVersionAttachment.message_version_id == current_version_id)
+        .order_by(MessageVersionAttachment.display_order.asc())
+        .all()
+    )
+    attachment_occurrences = [
+        MessageVersionAttachmentRead(
+            id=link.id,
+            message_version_id=link.message_version_id,
+            attachment=attachment_read(attachment),
+            occurrence_key=link.occurrence_key,
+            placement=link.placement,
+            relation_type=link.relation_type,
+            display_order=link.display_order,
+            block_index=link.block_index,
+            display_mode=link.display_mode,
+            alt_text=link.alt_text,
+            caption=link.caption,
+        )
+        for link, attachment in links
+    ]
+    attachment_summary = _conversation_attachment_summary(db, message.conversation_id)
     return MessageEditResponse(
         message_id=message.id,
         conversation_id=message.conversation_id,
@@ -353,8 +408,70 @@ def _edit_response(
         current_version_id=current_version_id,
         version_number=version_number,
         message=get_message(message.id, db),
+        message_version=_version_read(current_version),
+        render_blocks=[_block_read(block) for block in blocks],
+        attachment_occurrences=attachment_occurrences,
+        conversation_attachment_summary=attachment_summary,
         warnings=warnings,
     )
+
+
+def _conversation_attachment_summary(db: Session, conversation_id: uuid.UUID) -> dict:
+    rows = (
+        db.query(Attachment.status, Attachment.resolution_status)
+        .filter(Attachment.conversation_id == conversation_id, Attachment.deleted_at.is_(None))
+        .all()
+    )
+    active = [row for row in rows if row[0] != "detached"]
+    return {
+        "total": len(active),
+        "used": db.query(MessageVersionAttachment.attachment_id)
+        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+        .join(Message, Message.id == MessageVersion.message_id)
+        .join(Attachment, Attachment.id == MessageVersionAttachment.attachment_id)
+        .filter(
+            Message.conversation_id == conversation_id,
+            Message.current_version_id == MessageVersionAttachment.message_version_id,
+            Attachment.deleted_at.is_(None),
+            Attachment.status != "detached",
+        )
+        .distinct()
+        .count(),
+        "missing": sum(1 for row in active if row[1] == "missing"),
+    }
+
+
+def _apply_removed_attachment_actions(db: Session, message: Message, actions) -> None:
+    detach_ids = {item.attachment_id for item in actions if item.action == "detach_from_conversation"}
+    if not detach_ids:
+        return
+    attachments = (
+        db.query(Attachment)
+        .filter(
+            Attachment.id.in_(detach_ids),
+            Attachment.conversation_id == message.conversation_id,
+            Attachment.deleted_at.is_(None),
+        )
+        .all()
+    )
+    if {item.id for item in attachments} != detach_ids:
+        raise MessageEditError("A detached attachment does not belong to this conversation.", 422)
+    referenced = {
+        row[0]
+        for row in db.query(MessageVersionAttachment.attachment_id)
+        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+        .join(Message, Message.id == MessageVersion.message_id)
+        .filter(
+            MessageVersionAttachment.attachment_id.in_(detach_ids),
+            Message.current_version_id == MessageVersionAttachment.message_version_id,
+            Message.is_deleted.is_(False),
+        )
+        .all()
+    }
+    if referenced:
+        raise MessageEditError("An attachment cannot be detached while a current message version still uses it.", 409)
+    for attachment in attachments:
+        attachment.status = "detached"
 
 
 def _upload_references(text: str) -> list[tuple[int, uuid.UUID]]:

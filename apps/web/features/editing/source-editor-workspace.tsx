@@ -5,8 +5,8 @@ import { File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll,
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
-import { createAttachmentUploadSession, deleteAttachmentUploadItem, editMessage, finalizeConversationAttachments, getConversationAttachments, uploadAttachmentItem } from "../../lib/api";
-import type { AttachmentRead, MessageListItem } from "../../lib/types";
+import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversationAttachments, uploadAttachmentItem } from "../../lib/api";
+import type { AttachmentRead, MessageEditResponse, MessageListItem } from "../../lib/types";
 import { EditMessageForm } from "./edit-message-form";
 import { blockIndexForSourceOffset, normalizedMessageBlocks } from "./message-source-position";
 import type { AttachmentDraft, AttachmentDraftCallbacks } from "./source-attachment-drop";
@@ -21,7 +21,9 @@ const FORM_ID = "reader-source-editor-form";
 type UploadJob = {
   token: string;
   file: File;
+  sessionId?: string;
   itemId?: string;
+  attachmentId?: string;
   cancel?: () => void;
   callbacks: AttachmentDraftCallbacks;
   cancelled?: boolean;
@@ -57,45 +59,43 @@ export function SourceEditorWorkspace({
   const queryClient = useQueryClient();
   const cursorOffsetRef = useRef(target.cursorOffset);
   const message = target.message;
-  const [, setUploadSessionId] = useState<string | null>(null);
-  const [, setUploadItemIds] = useState<string[]>([]);
-  const uploadSessionIdRef = useRef<string | null>(null);
-  const uploadItemIdsRef = useRef<string[]>([]);
-  const uploadSessionPromiseRef = useRef<Promise<string> | null>(null);
   const uploadJobsRef = useRef(new Map<string, UploadJob>());
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
+  const conversationAttachmentsQuery = useQuery({
+    queryKey: ["conversation-attachments", message.conversation_id],
+    queryFn: () => getConversationAttachments(message.conversation_id),
+  });
   const text = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
   const versionNumber = message.current_version?.version_number ?? 1;
   const effectiveAttachmentInsertion = localAttachmentInsertion ?? pendingAttachmentInsertion;
 
-  async function ensureUploadSession(): Promise<string> {
-    if (uploadSessionIdRef.current) return uploadSessionIdRef.current;
-    if (!uploadSessionPromiseRef.current) {
-      uploadSessionPromiseRef.current = createAttachmentUploadSession(message.conversation_id, {
-        targetMessageId: message.id,
-        baseMessageVersionId: message.current_version?.id,
-      }).then((session) => {
-        uploadSessionIdRef.current = session.id;
-        setUploadSessionId(session.id);
-        return session.id;
-      }).finally(() => { uploadSessionPromiseRef.current = null; });
-    }
-    return uploadSessionPromiseRef.current;
-  }
-
   async function startUploadJob(job: UploadJob): Promise<void> {
     try {
-      const sessionId = await ensureUploadSession();
+      const session = await createAttachmentUploadSession(message.conversation_id, {
+        targetMessageId: message.id,
+        baseMessageVersionId: message.current_version?.id,
+      });
+      job.sessionId = session.id;
       if (job.cancelled) return;
-      const request = uploadAttachmentItem(sessionId, job.file, (progress) => job.callbacks.onProgress(job.token, progress));
+      const request = uploadAttachmentItem(session.id, job.file, (progress) => job.callbacks.onProgress(job.token, progress));
       job.cancel = request.cancel;
       const item = await request.promise;
       if (job.cancelled) return;
       job.itemId = item.id;
-      uploadItemIdsRef.current = uploadItemIdsRef.current.includes(item.id) ? uploadItemIdsRef.current : [...uploadItemIdsRef.current, item.id];
-      setUploadItemIds((current) => current.includes(item.id) ? current : [...current, item.id]);
-      job.callbacks.onComplete(job.token, item);
+      const finalized = await finalizeConversationAttachments(message.conversation_id, [item.id]);
+      const attachment = finalized[0];
+      if (!attachment) throw new Error("Uploaded attachment could not be finalized.");
+      job.attachmentId = attachment.id;
+      if (job.cancelled) {
+        await deleteConversationAttachment(message.conversation_id, attachment.id).catch(() => undefined);
+        return;
+      }
+      queryClient.setQueryData<AttachmentRead[]>(
+        ["conversation-attachments", message.conversation_id],
+        (current) => current?.some((item) => item.id === attachment.id) ? current : [...(current ?? []), attachment],
+      );
+      job.callbacks.onComplete(job.token, { id: item.id, attachmentId: attachment.id });
     } catch (error) {
       if (job.cancelled || (error instanceof DOMException && error.name === "AbortError")) return;
       job.callbacks.onError(job.token, error instanceof Error ? error.message : "Attachment upload failed.");
@@ -128,32 +128,29 @@ export function SourceEditorWorkspace({
     if (!job) return;
     job.cancelled = true;
     job.cancel?.();
-    if (job.itemId && uploadSessionIdRef.current) {
-      uploadItemIdsRef.current = uploadItemIdsRef.current.filter((id) => id !== job.itemId);
-      setUploadItemIds((current) => current.filter((id) => id !== job.itemId));
-      void deleteAttachmentUploadItem(uploadSessionIdRef.current, job.itemId).catch(() => undefined);
+    if (job.attachmentId) {
+      void deleteConversationAttachment(message.conversation_id, job.attachmentId)
+        .then(() => queryClient.invalidateQueries({ queryKey: ["conversation-attachments", message.conversation_id] }))
+        .catch(() => undefined);
+    } else if (job.itemId && job.sessionId) {
+      void deleteAttachmentUploadItem(job.sessionId, job.itemId).catch(() => undefined);
     }
     uploadJobsRef.current.delete(token);
   }
 
-  async function handleAttachmentCancel(preserve: boolean, itemIds: string[]): Promise<void> {
+  async function handleAttachmentCancel(preserve: boolean, _itemIds: string[]): Promise<void> {
+    const cleanup: Promise<unknown>[] = [];
     for (const job of uploadJobsRef.current.values()) {
       job.cancelled = true;
       job.cancel?.();
-    }
-    const readyIds = itemIds.filter((itemId) => uploadItemIdsRef.current.includes(itemId));
-    if (uploadSessionIdRef.current && readyIds.length) {
-      if (preserve) {
-        await finalizeConversationAttachments(message.conversation_id, readyIds);
-      } else {
-        await Promise.all(readyIds.map((itemId) => deleteAttachmentUploadItem(uploadSessionIdRef.current!, itemId).catch(() => undefined)));
+      if (!preserve && job.attachmentId) {
+        cleanup.push(deleteConversationAttachment(message.conversation_id, job.attachmentId).catch(() => undefined));
+      } else if (job.itemId && job.sessionId && !job.attachmentId) {
+        cleanup.push(deleteAttachmentUploadItem(job.sessionId, job.itemId).catch(() => undefined));
       }
     }
+    await Promise.all(cleanup);
     await queryClient.invalidateQueries({ queryKey: ["conversation-attachments", message.conversation_id] });
-    setUploadItemIds([]);
-    uploadItemIdsRef.current = [];
-    uploadSessionIdRef.current = null;
-    setUploadSessionId(null);
     uploadJobsRef.current.clear();
     onClose();
   }
@@ -221,21 +218,40 @@ export function SourceEditorWorkspace({
             onAttachmentRetry={retryAttachment}
             onAttachmentRemove={removeAttachment}
             onAttachmentCancel={handleAttachmentCancel}
-            onSave={async (nextText, reason, saveMode) => {
+            conversationAttachments={conversationAttachmentsQuery.data ?? []}
+            onSave={async (nextText, reason, saveMode, removedActions) => {
+              const clickedAt = window.performance.now();
+              const requestStartedAt = window.performance.now();
               const response = await editMessage(message.id, {
-                displayText: nextText,
+                contentMarkdown: nextText,
                 editReason: reason,
                 baseVersionId: message.current_version?.id,
                 saveMode,
-                uploadItemIds: uploadItemIdsRef.current,
+                removedAttachmentActions: removedActions,
               });
-              await queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] });
+              const networkCompletedAt = window.performance.now();
+              queryClient.setQueryData(
+                ["conversation-attachments", message.conversation_id],
+                (current: AttachmentRead[] | undefined) => patchConversationAttachmentCache(
+                  current,
+                  response,
+                  message.id,
+                  saveMode,
+                  removedActions,
+                ),
+              );
+              const cacheCompletedAt = window.performance.now();
               await onMessageChanged(response.message);
+              await nextPaint();
+              const renderCompletedAt = window.performance.now();
+              window.dispatchEvent(new CustomEvent("chat-reader:message-save-performance", { detail: {
+                save_click_to_request_ms: requestStartedAt - clickedAt,
+                network_ms: networkCompletedAt - requestStartedAt,
+                cache_update_ms: cacheCompletedAt - networkCompletedAt,
+                reader_render_ms: renderCompletedAt - cacheCompletedAt,
+              } }));
+              void queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] });
               onTargetUpdated({ message: response.message, cursorOffset: cursorOffsetRef.current });
-              setUploadItemIds([]);
-              uploadItemIdsRef.current = [];
-              uploadSessionIdRef.current = null;
-              setUploadSessionId(null);
               uploadJobsRef.current.clear();
             }}
           />
@@ -260,6 +276,60 @@ export function SourceEditorWorkspace({
       </div>
     </FloatingWorkspacePanel>
   );
+}
+
+function patchConversationAttachmentCache(
+  current: AttachmentRead[] | undefined,
+  response: MessageEditResponse,
+  messageId: string,
+  saveMode: "create_version" | "replace_current",
+  removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>,
+): AttachmentRead[] | undefined {
+  if (!current) return current;
+  const detached = new Set(
+    removedActions
+      .filter((item) => item.action === "detach_from_conversation")
+      .map((item) => item.attachment_id),
+  );
+  const nextByAttachment = new Map<string, MessageEditResponse["attachment_occurrences"]>();
+  for (const occurrence of response.attachment_occurrences) {
+    const rows = nextByAttachment.get(occurrence.attachment.id) ?? [];
+    rows.push(occurrence);
+    nextByAttachment.set(occurrence.attachment.id, rows);
+  }
+
+  return current
+    .filter((attachment) => !detached.has(attachment.id))
+    .map((attachment) => {
+      const previous = attachment.occurrences ?? [];
+      const retained = previous
+        .filter((occurrence) => !(saveMode === "replace_current" && occurrence.message_id === messageId && occurrence.is_current_version))
+        .map((occurrence) => occurrence.message_id === messageId && occurrence.is_current_version
+          ? { ...occurrence, is_current_version: false }
+          : occurrence);
+      const next = (nextByAttachment.get(attachment.id) ?? []).map((occurrence) => ({
+        message_id: messageId,
+        message_version_id: occurrence.message_version_id,
+        is_current_version: true,
+        occurrence_key: occurrence.occurrence_key,
+        placement: occurrence.placement,
+        block_index: occurrence.block_index,
+      }));
+      const occurrences = [...retained, ...next];
+      return {
+        ...attachment,
+        occurrence_count: occurrences.length,
+        message_count: new Set(occurrences.map((occurrence) => occurrence.message_id)).size,
+        is_used: occurrences.some((occurrence) => occurrence.is_current_version),
+        occurrences,
+      };
+    });
+}
+
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+  });
 }
 
 function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }: {
@@ -297,7 +367,7 @@ function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }:
           <div className="space-y-1">
             {items.map((attachment) => {
               const mime = attachment.detected_mime_type ?? attachment.asset_object?.detected_mime_type ?? attachment.declared_mime_type ?? "";
-              const image = mime.startsWith("image/") && mime !== "image/svg+xml";
+              const image = mime.startsWith("image/");
               return (
                 <div key={attachment.id} className="flex min-h-14 items-center gap-3 rounded-lg px-2 hover:bg-subtle" data-testid="source-editor-attachment-option">
                   <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface text-secondary">{image ? <ImageIcon className="h-4 w-4" /> : <File className="h-4 w-4" />}</span>

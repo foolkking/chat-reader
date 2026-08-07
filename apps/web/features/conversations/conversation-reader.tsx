@@ -40,10 +40,11 @@ import { offlineAnnotationRepository, remoteAnnotationRepository } from "../../l
 import { ResizableDockPanel } from "../../components/resizable-pane";
 import { ReaderUtilityDrawer } from "../../components/reader-utility-drawer";
 import { MobilePageHeader } from "../../components/mobile-page-header";
-import { acquireReaderBlockLease, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "./block-virtualization";
+import { acquireReaderBlockLease, notifyReaderMessageLayoutChanged, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "./block-virtualization";
 import { SourceEditorWorkspace, type SourceEditorTarget } from "../editing/source-editor-workspace";
 import { normalizedMessageBlocks, sourceOffsetForBlock } from "../editing/message-source-position";
 import { ConversationFilesPanel } from "../attachments/conversation-files-panel";
+import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
@@ -77,6 +78,7 @@ export function ConversationReader({
   const [showExport, setShowExport] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
+  const filesPreferenceReadyRef = useRef(false);
   const [splitWorkspaceOpen, setSplitWorkspaceOpen] = useState(false);
   const [annotationsOpen, setAnnotationsOpen] = useState(searchParams.get("annotations") === "open");
   const [focusMode, setFocusMode] = useState(false);
@@ -97,6 +99,17 @@ export function ConversationReader({
   const [sourceEditorDirty, setSourceEditorDirty] = useState(false);
   const [sourceRequestedCursorOffset, setSourceRequestedCursorOffset] = useState<number | undefined>(undefined);
   const [pendingSourceAttachment, setPendingSourceAttachment] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("chat-reader:conversation-files-open");
+    if (saved === "true") setShowFiles(true);
+    filesPreferenceReadyRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!filesPreferenceReadyRef.current) return;
+    window.localStorage.setItem("chat-reader:conversation-files-open", String(showFiles));
+  }, [showFiles]);
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
   const [navigationStatus, setNavigationStatus] = useState<"idle" | "loading" | "failed" | "stale">("idle");
   const [pendingTargetMessageId, setPendingTargetMessageId] = useState<string | null>(targetMessageId);
@@ -1164,7 +1177,7 @@ export function ConversationReader({
     setShowSearch(false);
     setShowShare(false);
     setShowExport(false);
-    setShowFiles(false);
+    // The file workspace may remain open beside the source editor.
     setDesktopActionsExpanded(false);
     setMobileActionsExpanded(false);
   }
@@ -1330,15 +1343,14 @@ export function ConversationReader({
     const nextWindow: LoadedMessageWindow = {
       ...current,
       items: current.items.map(replace),
-      turns: current.turns.map((turn) => ({ ...turn, items: turn.items.map(replace) })),
+      turns: current.turns.map((turn) => turn.items.some((item) => item.id === nextMessage.id)
+        ? { ...turn, items: turn.items.map(replace) }
+        : turn),
     };
     loadedWindowRef.current = nextWindow;
     setLoadedWindow(nextWindow);
-    notifyReaderWindowLayoutChanged();
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["toc", readerSourceKey, conversationId] }),
-      queryClient.invalidateQueries({ queryKey: ["conversation", dataSource.mode, conversationId] }),
-    ]);
+    notifyReaderMessageLayoutChanged(nextMessage.id);
+    void queryClient.invalidateQueries({ queryKey: ["toc", readerSourceKey, conversationId] });
   }
 
   async function mergeSelectedMessages() {
@@ -1360,10 +1372,10 @@ export function ConversationReader({
       setUtilityPanel(null);
       return;
     }
-    if (!(await closeSourceEditorForWorkspace())) return;
+    if (panel !== "files" && !(await closeSourceEditorForWorkspace())) return;
     setDesktopActionsExpanded(false);
     setMobileActionsExpanded(false);
-    setAnnotationsOpen(false);
+    if (panel !== "files") setAnnotationsOpen(false);
     if (window.innerWidth < 768) {
       setShowShare(false);
       setShowExport(false);
@@ -1508,12 +1520,11 @@ export function ConversationReader({
     setPendingSourceAttachment({
       referenceUri: `cr-asset://${attachment.id}`,
       displayName: attachment.display_name,
-      image: mime.startsWith("image/") && mime !== "image/svg+xml",
+      image: mime.startsWith("image/"),
       placement,
     });
     setUtilityPanel(null);
-    setShowFiles(false);
-    openSourceEditor();
+    if (!sourceEditorTarget) openSourceEditor();
   }
 
   function pruneMessageState(retainedIds: string[]) {
@@ -1858,15 +1869,32 @@ export function ConversationReader({
       <MobileReaderSheet open={utilityPanel === "files" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         <ConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} onInsert={insertConversationAttachment} />
       </MobileReaderSheet>
-      {!focusMode && (showShare || showExport || showSearch || showFiles) ? (
-        <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : showFiles ? (resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files") : t("export")} onClose={closeDesktopUtilityPanels}>
+      {!focusMode && (showShare || showExport || showSearch) ? (
+        <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels}>
             <div className="flex h-full min-w-0 w-full overflow-hidden">
-              {showFiles ? <ConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setShowFiles(false); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} onInsert={insertConversationAttachment} /> : showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+              {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
                 {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} /> : null}
               </ReaderPanelShell>}
             </div>
         </ReaderUtilityDrawer>
+      ) : null}
+      {!focusMode && showFiles ? (
+        <FloatingWorkspacePanel
+          storageKey="chat-reader:conversation-files-workspace"
+          placement="floating"
+          testId="conversation-files-workspace"
+          title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}
+          closeLabel={t("close")}
+          resetLabel={resolvedLocale === "zh-CN" ? "重置文件窗口位置" : "Reset file window position"}
+          onClose={() => setShowFiles(false)}
+        >
+          <ConversationFilesPanel
+            conversationId={conversation.id}
+            onLocate={async (messageId, blockIndex) => { await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }}
+            onInsert={insertConversationAttachment}
+          />
+        </FloatingWorkspacePanel>
       ) : null}
       <AnnotationWorkspace
         conversationId={conversation.id}

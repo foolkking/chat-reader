@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from test_import_preview_api import client  # noqa: F401
 from test_message_editing_api import assistant_message, commit_edit_sample
+from background_job_test_utils import process_queued_jobs
 
 
 def test_edit_rebuilds_search_documents(client: TestClient) -> None:
@@ -17,6 +18,7 @@ def test_edit_rebuilds_search_documents(client: TestClient) -> None:
         json={"display_text": "Edited current searchable zetaonly"},
     )
     assert response.status_code == 200
+    process_queued_jobs()
 
     new_search = client.get("/api/search?q=zetaonly")
     assert new_search.status_code == 200
@@ -42,6 +44,7 @@ def test_edit_rebuilds_toc_headings(client: TestClient) -> None:
         json={"display_text": "# Edited TOC Heading\n\nBody"},
     )
     assert heading_edit.status_code == 200
+    process_queued_jobs()
 
     toc = client.get(f"/api/conversations/{conversation_id}/toc")
     assert toc.status_code == 200
@@ -53,6 +56,7 @@ def test_edit_rebuilds_toc_headings(client: TestClient) -> None:
         json={"display_text": "Body without heading"},
     )
     assert remove_heading.status_code == 200
+    process_queued_jobs()
 
     updated_toc = client.get(f"/api/conversations/{conversation_id}/toc")
     assert updated_toc.status_code == 200

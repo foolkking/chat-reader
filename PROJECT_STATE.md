@@ -24,6 +24,18 @@
 
 最后更新：2026-08-06
 
+## 2026-08-07 Attachment Workflow Performance Addendum
+
+- Alembic 当前单一 head 为 `20260806_0021`。该迁移补充 `attachments(conversation_id, id)` 与 `message_versions(message_id, created_at)` 索引；现有 occurrence 索引继续覆盖 version/display order 与 attachment lookup。
+- 普通上传与消息保存已彻底分离：上传项必须先通过 conversation attachment 接口提升为已存在的 Attachment；`PATCH /api/messages/{id}` 对非空旧 `upload_item_ids` 明确拒绝，不再读取、移动、hash 或检测附件对象。
+- 消息保存同步事务只处理 base-version、批量附件归属校验、当前 Markdown 解析、MessageVersion、RenderBlock、AttachmentOccurrence、current-version 指针与必要批注迁移。TOC、搜索、统计和会话摘要在提交后进入去重的 `conversation_derived_rebuild` 任务。
+- 保存响应直接返回当前 message/version、render blocks、occurrences 和 conversation attachment summary。Web 使用局部 query cache 替换与单消息重测，不再重新获取完整对话或清空 Reader 窗口；其他 MessageItem 引用保持稳定。
+- “当前对话文件”在桌面是首次居中、可拖动/缩放并持久化几何信息的独立浮窗，可与源码工作区同时打开且没有遮罩；移动端仍使用覆盖式工作面板。已有 Attachment 通过 `application/x-chat-reader-attachment` 从独立拖动柄进入 CodeMirror，不上传字节、不创建新 Attachment/AssetObject。
+- 删除源码附件引用只在保存前统一确认。默认 `keep_in_conversation`；只有不存在其他当前版本引用时才允许 `detach_from_conversation`。detached Attachment 从活动文件列表隐藏，但历史 MessageVersion 仍可读取，AssetObject 仅由后台 GC 在所有真实引用消失后处理。
+- Project 与 Conversation Droppable 保持物理分离；未分类接收区是稳定标题行，列表中的 conversation row/insert slot 只表达排序意图。项目/对话查询刷新保留上一份数据，避免拖拽期间卸载目标。
+
+最后更新：2026-08-07
+
 ## 项目快照
 
 | 字段 | 当前状态 |
@@ -33,11 +45,11 @@
 | 包管理 | Corepack + pnpm 9.15.4；Python setuptools |
 | Web | Next.js 14 App Router；9 个页面路由 |
 | API | FastAPI 0.12.0；本地 OpenAPI 99 paths / 117 operations |
-| 数据库 | PostgreSQL 16；29 张业务表；源码与本地 Alembic 单一 head `20260805_0020` |
+| 数据库 | PostgreSQL 16；29 张业务表；源码与本地 Alembic 单一 head `20260806_0021` |
 | 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
 | 部署 | Compose：postgres、migrate、api、import-worker、web |
 | Git 基线 | 发布应用与镜像源提交为 `af17c93b344947f3d58bb7af0a77bb40a35a27fe`；生产验收后另有 docs-only 证据提交，不改变运行镜像 |
-| 最近完整验证 | 2026-08-06；Web lint/typecheck/build、API 203 passed；PWA 基线 8 passed / 19 conditional skipped；真实附件/SVG/Share、上传（含源码拖放/粘贴）及长 Reader 专项 Playwright 通过；用户确认生产 Chrome 上传、Share 与 `.cr v4` 空实例恢复通过；生产 Chrome SVG 正文/全页面弹窗与可访问性通过 |
+| 最近完整验证 | 2026-08-07；Web lint/typecheck/build、API 205 passed / 1 fixture-gated skipped；PWA 基线 8 passed / 20 conditional skipped；附件上传/粘贴/已有附件拖放、配对导入、结构化侧栏 DnD 与长 Reader 在线专项 11/11 passed。当前提交尚未部署 King，生产状态为 `NOT_PRODUCTION_VERIFIED` |
 
 ## 当前目的与边界
 
@@ -118,9 +130,9 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 | `corepack pnpm run lint` | 通过，0 warnings |
 | `corepack pnpm run typecheck` | 通过 |
 | `corepack pnpm --filter web build` | 通过，9 个页面路由 |
-| `corepack pnpm run test:api` | 通过，203 passed；默认命令 1 个真实 fixture 条件 skip，注入桌面 fixture 后对应模块 9/9 passed |
-| `corepack pnpm --filter web test:pwa` | 基线 8 passed；19 个需要在线 API/专项 fixture 的场景按条件 skipped，不计为 PASS |
-| 附件在线 Playwright | 通过：真实 Bundle/SVG/Share；源码文件选择、精确拖放、剪贴板粘贴、围栏选择和保留未放置文件 4/4；SVG 正文/弹窗均为 IMG，焦点与滚动锁恢复通过 |
+| `corepack pnpm run test:api` | 通过，205 passed；1 个真实 fixture 条件 skip，不计为 PASS |
+| `corepack pnpm --filter web test:pwa` | 基线 8 passed；20 个需要在线 API/专项 fixture 的场景按条件 skipped，不计为 PASS |
+| 附件/Reader/DnD 在线 Playwright | 通过，11/11：文件选择、独立多文件上传、拖放/粘贴、围栏选择、保留未放置文件、已有 Attachment 拖入、删除引用确认、配对导入、结构化侧栏 DnD 与 4 条长 Reader 恢复场景 |
 | `E2E_LONG_READER=1 ... reader-restoration.spec.ts` | 通过，4 tests；含虚拟目标、TOC、布局变化、批注恢复与边缘锚点 |
 | 本地 Chrome production Reader | 通过；目标误差 4px，继续滚动后刷新恢复到同一 block |
 

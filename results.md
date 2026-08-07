@@ -1,4 +1,27 @@
-# 2026-08-06 Implementation Results
+# Implementation Results
+
+## 2026-08-07 Attachment Workflow Release Candidate
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Message save transaction | PASS | uploaded files are finalized before save; message PATCH performs batch ownership validation, current Markdown/version/block/occurrence persistence and pointer update only |
+| Derived rebuild | PASS | search, TOC, statistics and summary rebuild is queued only after commit and coalesced per conversation |
+| Save response and Reader cache | PASS | response includes message/version/blocks/occurrences/attachment summary; Web replaces the current message and remeasures only its layout |
+| Existing Attachment drag | PASS | `application/x-chat-reader-attachment` inserts the existing conversation Attachment at the CodeMirror location without uploading bytes or creating another Attachment/AssetObject |
+| Removed reference confirmation | PASS | save-time comparison defaults to keep; detach is refused while another current occurrence exists; historical versions remain readable |
+| Conversation file workspace | PASS | desktop floating workspace is unmasked, resizable and geometry-persistent; it coexists with the source editor; mobile retains its overlay panel |
+| Structured sidebar DnD | PASS | project order, project receiver, conversation rows/slots and the unclassified header are separate targets; the dedicated E2E moved conversations across projects, reordered, and returned one to unclassified |
+| Web lint/typecheck/build | PASS | all three required commands passed on 2026-08-07 |
+| API suite | PASS | 205 passed; 1 real-fixture test was conditionally skipped and is not counted as passed |
+| Alembic | PASS | single head `20260806_0021` |
+| PWA baseline | PARTIAL_PASS | 8 passed; 20 online/fixture-gated tests skipped by the default command |
+| Online attachment/Reader/DnD suite | PASS | 11/11 passed with explicit online flags: 5 attachment workflows, paired import, structured DnD, and 4 long Reader restoration scenarios |
+| Save p50/p95 on King | NOT_PRODUCTION_VERIFIED | instrumentation is implemented; production measurements require this release candidate to be deployed and exercised on a dedicated test conversation |
+| 2026-08-07 King deployment | NOT_PRODUCTION_VERIFIED | current production evidence below describes the previous `af17c93` release until the new commit/image is deployed |
+
+The default PWA command's 20 skipped scenarios and the fixture-gated API test are disclosed separately; they are not PASS. Office/OCR/CAD/complex archive preview remains `NOT_IMPLEMENTED` with authenticated download fallback.
+
+## 2026-08-06 Release
 
 ## Status Vocabulary
 

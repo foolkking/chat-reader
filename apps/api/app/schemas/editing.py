@@ -4,15 +4,38 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.schemas.message import MessageDetail
+from app.schemas.attachment import MessageVersionAttachmentRead
+from app.schemas.message import MessageDetail, MessageVersionRead, RenderBlockRead
+
+
+class MessageAttachmentOccurrenceInput(BaseModel):
+    occurrence_key: str = Field(min_length=1, max_length=255)
+    attachment_id: UUID
+    placement: Literal["inline", "after_message"] = "inline"
+    display_order: int = Field(default=0, ge=0)
+    alt_text: str | None = None
+
+
+class RemovedAttachmentActionInput(BaseModel):
+    attachment_id: UUID
+    action: Literal["keep_in_conversation", "detach_from_conversation"]
 
 
 class MessageEditRequest(BaseModel):
-    display_text: str
+    content_markdown: str | None = None
+    display_text: str | None = None
     edit_reason: str | None = None
     base_version_id: UUID | None = None
     save_mode: Literal["create_version", "replace_current"] = "create_version"
     upload_item_ids: list[UUID] = Field(default_factory=list)
+    attachment_occurrences: list[MessageAttachmentOccurrenceInput] = Field(default_factory=list)
+    removed_attachment_actions: list[RemovedAttachmentActionInput] = Field(default_factory=list)
+
+    def text_value(self) -> str:
+        value = self.content_markdown if self.content_markdown is not None else self.display_text
+        if value is None:
+            raise ValueError("content_markdown is required.")
+        return value
 
 
 class MessageEditResponse(BaseModel):
@@ -22,6 +45,10 @@ class MessageEditResponse(BaseModel):
     current_version_id: UUID
     version_number: int
     message: MessageDetail
+    message_version: MessageVersionRead
+    render_blocks: list[RenderBlockRead] = Field(default_factory=list)
+    attachment_occurrences: list[MessageVersionAttachmentRead] = Field(default_factory=list)
+    conversation_attachment_summary: dict = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
 
 

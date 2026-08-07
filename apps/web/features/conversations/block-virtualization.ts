@@ -14,6 +14,12 @@ export function notifyReaderWindowLayoutChanged(): void {
   });
 }
 
+export function notifyReaderMessageLayoutChanged(messageId: string): void {
+  window.requestAnimationFrame(() => {
+    window.dispatchEvent(new CustomEvent(READER_WINDOW_LAYOUT_EVENT, { detail: { messageId } }));
+  });
+}
+
 export function registerVirtualMessage(
   messageId: string,
   acquireBlockLease: AcquireBlockLease,

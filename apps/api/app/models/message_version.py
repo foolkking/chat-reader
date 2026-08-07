@@ -49,5 +49,6 @@ class MessageVersion(Base):
 
 
 Index("idx_message_versions_message_id", MessageVersion.message_id)
+Index("idx_message_versions_message_created_at", MessageVersion.message_id, MessageVersion.created_at)
 Index("idx_message_versions_content_hash", MessageVersion.content_hash)
 Index("idx_message_versions_edit_type", MessageVersion.edit_type)

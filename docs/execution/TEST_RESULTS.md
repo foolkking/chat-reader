@@ -1,5 +1,19 @@
 # 测试结果
 
+## 2026-08-07 attachment workflow release candidate
+
+| 检查 | 状态 | 结果 |
+| --- | --- | --- |
+| Web lint / typecheck / build | PASS | 三条必需命令通过；Next.js 9 routes，conversation 首次加载 bundle 671 kB |
+| API full suite | PASS | 205 passed；1 个真实 fixture 条件 skip，未计入 PASS |
+| Alembic | PASS | 单一 head `20260806_0021` |
+| PWA default | PARTIAL_PASS | 8 passed / 20 conditional skipped；跳过项不计为通过 |
+| Online attachment/Reader/DnD | PASS | 显式启用在线场景后 11/11 passed：5 个附件工作流、配对导入、结构化 DnD、4 个长 Reader 恢复场景 |
+| King save latency | NOT_PRODUCTION_VERIFIED | 分段 timing 已实现；须发布本提交后使用专用测试对话记录 p50/p95 |
+| King deployment | NOT_PRODUCTION_VERIFIED | 本节为发布候选本地证据，不覆盖下方上一版本生产证据 |
+
+本轮保存路径不再提升上传项或重建整场会话；测试确认已有 Attachment 拖入源码不会上传字节或复制 Attachment/AssetObject，保存后只局部替换当前消息。
+
 执行环境：Windows / PowerShell，本地 SQLite API fixture 与 Next.js production server；未连接生产数据库。
 
 | 时间（2026-07-27） | 命令 | 结果 | 通过/失败 | 备注 |

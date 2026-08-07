@@ -69,8 +69,8 @@
 | 导出 | 已确认 | Markdown v2、CanJSON v2、`.cr`；CanJSON v1 位于 Legacy；私人内容默认关闭 |
 | Library PWA | 已确认 | 独立 `/library` scope、原子 shell staging、离线冷启动 |
 | 增量数据更新 | 已确认 | `known_revisions` -> v3 conversation delta；未变化不传输/重写，读 v1/v2/v3 |
-| 对话附件 | 已确认（本地 E2E） | 普通上传暂存、对话文件抽屉、源码插入、版本 occurrence、Reader/Share/Offline、Range 与基础预览 |
-| 附件导出 | 已确认（自动化） | CanJSON metadata-only、AI 承接包、Markdown 占位、可移植 Markdown ZIP、系统 `.cr v4` |
+| 对话附件 | 已确认（本地在线专项；本轮 King 待发布） | 普通上传暂存、对话文件浮窗、已有附件拖入源码、版本 occurrence、Reader/Share/Offline、Range 与基础预览 |
+| 附件导出 | 已确认（自动化；生产基线保持） | CanJSON metadata-only、AI 承接包、Markdown 占位、可移植 Markdown ZIP、系统 `.cr v4` |
 | 离线 Reader/搜索 | 已确认 | 在线同一 ReaderDataSource 语义；只覆盖已下载资料 |
 | 离线写入 | 已确认 | 仅批注/精选笔记和本地阅读位置；canonical 管理禁用 |
 

@@ -153,6 +153,10 @@ export function ProjectSidebar({
   const projectsQuery = useQuery({
     queryKey: ["projects", projectSortMode, projectSortDirection],
     queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
+    // Keep droppable project rows mounted while a background refresh runs.
+    // Unmounting a target mid-drag makes dnd-kit fall back to the unclassified
+    // container and loses the placement intent.
+    placeholderData: (previous) => previous,
   });
   const conversationsQuery = useQuery({
     queryKey: ["conversations", "history", conversationSortMode, conversationSortDirection],
@@ -162,6 +166,7 @@ export function ProjectSidebar({
       direction: conversationSortDirection,
       limit: 5000,
     }),
+    placeholderData: (previous) => previous,
   });
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -550,6 +555,7 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
     queryKey: ["project-conversations", project.id, conversationSortMode, conversationSortDirection],
     queryFn: () => getProjectConversations(project.id, { sort: conversationSortMode, direction: conversationSortDirection, limit: 5000 }),
     enabled: expanded,
+    placeholderData: (previous) => previous,
   });
   const conversations = conversationsQuery.data ?? [];
   const projectActivityTime = projectSortMode === "updated" ? project.updated_at : projectSortMode === "created" ? project.created_at : project.last_read_at;
@@ -576,8 +582,8 @@ function HistoryDropZone({ pathname, conversations, loading, error, closeMobile,
   const { setNodeRef, isOver } = useDroppable({ id: "unclassified-container", data: { dropType: "unclassified-container", projectId: null } satisfies ConversationContainerDrop });
   const t = useTranslations();
   return (
-    <div ref={setNodeRef} data-testid="unclassified-container" className={`mt-5 rounded-lg p-1 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
-      <div className="flex items-center justify-between px-2"><h2 className="text-xs font-semibold text-secondary">{t("unclassified")}</h2><span className="text-[11px] text-secondary">{conversations.length}</span></div>
+    <div className="mt-5 rounded-lg p-1">
+      <div ref={setNodeRef} data-testid="unclassified-container" className={`flex min-h-9 items-center justify-between rounded-lg px-2 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}><h2 className="text-xs font-semibold text-secondary">{t("unclassified")}</h2><span className="text-[11px] text-secondary">{conversations.length}</span></div>
       <nav className="mt-2 space-y-1">
         {loading ? <p role="status" className="px-2 py-2 text-xs text-secondary">正在加载对话…</p> : null}
         {error ? <p role="alert" className="px-2 py-2 text-xs text-[var(--danger)]">加载失败</p> : null}

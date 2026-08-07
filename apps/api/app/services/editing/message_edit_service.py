@@ -34,6 +34,7 @@ from app.services.search.search_indexer import (
 from app.services.annotations import relocate_annotations_for_new_version
 from app.services.editing.conversation_merge_service import copy_conversation_history
 from app.services.assets.scanner import scan_status_allows_use
+from app.services.database.bulk_insert import insert_rows
 
 MAX_EDIT_TEXT_LENGTH = 200_000
 MergeProgressCallback = Callable[[str, int, int, int], None]
@@ -51,6 +52,7 @@ class MessageEditResult:
     previous_version_id: uuid.UUID | None
     current_version: MessageVersion
     warnings: list[str] = field(default_factory=list)
+    timings: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -102,10 +104,19 @@ def edit_message(
     edit_reason: str | None = None,
     base_version_id: uuid.UUID | None = None,
     save_mode: str = "create_version",
+    rebuild_derived: bool = True,
+    attachment_occurrences=None,
 ) -> MessageEditResult:
+    import time
+
+    timings: dict[str, float] = {}
+    base_started = time.perf_counter()
     message = _get_editable_message(db, message_id)
     current_version = _get_current_version(db, message)
+    timings["base_version_check_ms"] = round((time.perf_counter() - base_started) * 1000, 3)
+    markdown_started = time.perf_counter()
     clean_text = _validate_text(new_text)
+    timings["request_validation_ms"] = round((time.perf_counter() - markdown_started) * 1000, 3)
 
     if base_version_id is not None and current_version.id != base_version_id:
         raise MessageEditError("Base version does not match current version.", HTTPStatus.CONFLICT)
@@ -118,13 +129,17 @@ def edit_message(
         if current_version.version_number == 1:
             raise MessageEditError("The initial version cannot be replaced.")
         previous_hash = current_version.content_hash
+        version_started = time.perf_counter()
         _replace_version_content(
             db=db,
             message=message,
             version=current_version,
             text=clean_text,
             edit_reason=edit_reason or "replace current version",
+            timings=timings,
+            attachment_occurrences=attachment_occurrences,
         )
+        timings["version_insert_ms"] = round((time.perf_counter() - version_started) * 1000, 3)
         _write_event(
             db=db,
             message=message,
@@ -140,15 +155,18 @@ def edit_message(
                 "edit_reason": current_version.edit_reason,
             },
         )
-        _refresh_conversation_stats(db, message.conversation_id)
-        rebuild_search_and_toc_for_conversation(db, message.conversation_id)
+        if rebuild_derived:
+            _refresh_conversation_stats(db, message.conversation_id)
+            rebuild_search_and_toc_for_conversation(db, message.conversation_id)
         db.flush()
         return MessageEditResult(
             message=message,
             previous_version_id=current_version.id,
             current_version=current_version,
+            timings=timings,
         )
 
+    version_started = time.perf_counter()
     new_version = _create_version(
         db=db,
         message=message,
@@ -157,7 +175,10 @@ def edit_message(
         edit_reason=edit_reason or "manual edit",
         created_by="user",
         based_on_version_id=current_version.id,
+        timings=timings,
+        attachment_occurrences=attachment_occurrences,
     )
+    timings["version_insert_ms"] = round((time.perf_counter() - version_started) * 1000, 3)
     _write_event(
         db=db,
         message=message,
@@ -174,13 +195,15 @@ def edit_message(
             "content_hash": new_version.content_hash,
         },
     )
-    _refresh_conversation_stats(db, message.conversation_id)
-    rebuild_search_and_toc_for_conversation(db, message.conversation_id)
+    if rebuild_derived:
+        _refresh_conversation_stats(db, message.conversation_id)
+        rebuild_search_and_toc_for_conversation(db, message.conversation_id)
     db.flush()
     return MessageEditResult(
         message=message,
         previous_version_id=current_version.id,
         current_version=new_version,
+        timings=timings,
     )
 
 
@@ -818,12 +841,18 @@ def _version_blocks(db: Session, version_id: uuid.UUID) -> list[RenderBlock]:
     )
 
 
-def _sync_message_from_version(db: Session, message: Message, version: MessageVersion) -> None:
-    blocks = _version_blocks(db, version.id)
+def _sync_message_from_version(
+    db: Session,
+    message: Message,
+    version: MessageVersion,
+    *,
+    block_count: int | None = None,
+) -> None:
+    blocks = _version_blocks(db, version.id) if block_count is None else []
     message.content_hash = version.content_hash
-    message.block_count = len(blocks)
+    message.block_count = block_count if block_count is not None else len(blocks)
     message.char_count = len(version.display_text)
-    message.is_heavy = len(version.display_text) > 12000 or len(blocks) > 80
+    message.is_heavy = len(version.display_text) > 12000 or message.block_count > 80
     conversation = db.get(Conversation, message.conversation_id)
     if conversation is not None:
         conversation.offline_revision += 1
@@ -836,8 +865,15 @@ def _replace_version_content(
     version: MessageVersion,
     text: str,
     edit_reason: str,
+    timings: dict[str, float] | None = None,
+    attachment_occurrences=None,
 ) -> None:
+    import time
+    parse_started = time.perf_counter()
     block_drafts = build_basic_render_blocks(text)
+    if timings is not None:
+        timings["markdown_parse_ms"] = round((time.perf_counter() - parse_started) * 1000, 3)
+    render_started = time.perf_counter()
     db.query(RenderBlock).filter(RenderBlock.message_version_id == version.id).delete(synchronize_session=False)
     version.plain_text = text
     version.display_text = text
@@ -858,19 +894,21 @@ def _replace_version_content(
     version.markdown_parser_version = MARKDOWN_PARSER_VERSION
     version.block_builder_version = BLOCK_BUILDER_VERSION
     version.search_document_version = SEARCH_DOCUMENT_VERSION
-    for index, block in enumerate(block_drafts):
-        db.add(RenderBlock(
-            id=uuid.uuid4(),
-            message_version_id=version.id,
-            block_index=index,
-            block_type=block.block_type,
-            plain_text=block.plain_text,
-            data=block.data,
-            char_count=block.char_count,
-            collapsed_by_default=block.collapsed_by_default,
-            render_priority=block.render_priority,
-        ))
-    _sync_version_attachment_links(db, version.id, block_drafts, source_text=text, replace_existing=True)
+    insert_rows(db, RenderBlock, _render_block_rows(version.id, block_drafts))
+    if timings is not None:
+        timings["render_block_ms"] = round((time.perf_counter() - render_started) * 1000, 3)
+    occurrence_started = time.perf_counter()
+    _sync_version_attachment_links(
+        db,
+        version.id,
+        block_drafts,
+        source_text=text,
+        replace_existing=True,
+        timings=timings,
+        occurrence_declarations=attachment_occurrences,
+    )
+    if timings is not None:
+        timings["occurrence_insert_ms"] = round((time.perf_counter() - occurrence_started) * 1000, 3)
     db.flush()
     relocate_annotations_for_new_version(
         db,
@@ -878,7 +916,7 @@ def _replace_version_content(
         version=version,
         block_texts=[block.plain_text for block in block_drafts],
     )
-    _sync_message_from_version(db, message, version)
+    _sync_message_from_version(db, message, version, block_count=len(block_drafts))
 
 
 def _create_version(
@@ -890,10 +928,16 @@ def _create_version(
     created_by: str,
     based_on_version_id: uuid.UUID | None,
     plain_text: str | None = None,
+    timings: dict[str, float] | None = None,
+    attachment_occurrences=None,
 ) -> MessageVersion:
+    import time
+    parse_started = time.perf_counter()
     next_version_number = _next_version_number(db, message.id)
     plain = plain_text if plain_text is not None else text
     block_drafts = build_basic_render_blocks(text)
+    if timings is not None:
+        timings["markdown_parse_ms"] = round((time.perf_counter() - parse_started) * 1000, 3)
     blocks_payload = [
         {
             "block_index": index,
@@ -925,22 +969,23 @@ def _create_version(
     db.add(version)
     db.flush()
 
-    for index, block in enumerate(block_drafts):
-        db.add(
-            RenderBlock(
-                id=uuid.uuid4(),
-                message_version_id=version.id,
-                block_index=index,
-                block_type=block.block_type,
-                plain_text=block.plain_text,
-                data=block.data,
-                char_count=block.char_count,
-                collapsed_by_default=block.collapsed_by_default,
-                render_priority=block.render_priority,
-            )
-        )
+    render_started = time.perf_counter()
+    insert_rows(db, RenderBlock, _render_block_rows(version.id, block_drafts))
 
-    _sync_version_attachment_links(db, version.id, block_drafts, source_text=text, replace_existing=False)
+    if timings is not None:
+        timings["render_block_ms"] = round((time.perf_counter() - render_started) * 1000, 3)
+    occurrence_started = time.perf_counter()
+    _sync_version_attachment_links(
+        db,
+        version.id,
+        block_drafts,
+        source_text=text,
+        replace_existing=False,
+        timings=timings,
+        occurrence_declarations=attachment_occurrences,
+    )
+    if timings is not None:
+        timings["occurrence_insert_ms"] = round((time.perf_counter() - occurrence_started) * 1000, 3)
 
     relocate_annotations_for_new_version(
         db,
@@ -967,7 +1012,10 @@ def _sync_version_attachment_links(
     *,
     source_text: str,
     replace_existing: bool,
+    timings: dict[str, float] | None = None,
+    occurrence_declarations=None,
 ) -> None:
+    import time
     if replace_existing:
         db.query(MessageVersionAttachment).filter(
             MessageVersionAttachment.message_version_id == version_id
@@ -982,9 +1030,14 @@ def _sync_version_attachment_links(
             line_number = _attachment_reference_line(source_text, str(block.data.get("attachmentId") or ""))
             raise MessageEditError(f"Line {line_number} contains an invalid attachment reference.", 422) from exc
         references.append((index, attachment_id, block))
+    if occurrence_declarations and len(occurrence_declarations) != len(references):
+        raise MessageEditError("Attachment occurrence declarations do not match the Markdown references.", 422)
     if not references:
+        if timings is not None:
+            timings["attachment_validation_ms"] = 0.0
         return
     attachment_ids = {item[1] for item in references}
+    validation_started = time.perf_counter()
     available_rows = (
         db.query(Attachment, AssetObject)
         .join(AssetObject, AssetObject.id == Attachment.asset_object_id)
@@ -995,7 +1048,7 @@ def _sync_version_attachment_links(
             ).filter(MessageVersion.id == version_id).scalar_subquery(),
             Attachment.deleted_at.is_(None),
             Attachment.resolution_status == "resolved",
-            Attachment.status == "available",
+            Attachment.status.in_(("available", "detached")),
             AssetObject.status == "available",
         )
         .all()
@@ -1012,23 +1065,56 @@ def _sync_version_attachment_links(
             f"Line {line_number} references an unavailable attachment or an attachment from another conversation.",
             422,
         )
-    for display_order, attachment_id, block in references:
+    for attachment, _asset in available_rows:
+        attachment.status = "available"
+    if timings is not None:
+        timings["attachment_validation_ms"] = round((time.perf_counter() - validation_started) * 1000, 3)
+    rows: list[dict] = []
+    for ordinal, (block_index, attachment_id, block) in enumerate(references):
         data = block.data
-        db.add(
-            MessageVersionAttachment(
-                id=uuid.uuid4(),
-                message_version_id=version_id,
-                attachment_id=attachment_id,
-                occurrence_key=str(data.get("occurrenceKey") or f"block-{display_order}-{uuid.uuid4().hex[:8]}")[:255],
-                placement=str(data.get("placement") or "inline")[:50],
-                relation_type=str(data.get("relationType") or ("inline" if block.block_type == "image" else "file")),
-                display_order=display_order,
-                block_index=display_order,
-                display_mode=str(data.get("displayMode") or ("inline" if block.block_type == "image" else "card")),
-                alt_text=str(data.get("alt") or "") or None,
-                caption=str(data.get("caption") or "") or None,
-            )
-        )
+        declaration = occurrence_declarations[ordinal] if occurrence_declarations else None
+        if declaration is not None and declaration.attachment_id != attachment_id:
+            raise MessageEditError("Attachment occurrence declarations are not in Markdown reference order.", 422)
+        display_order = declaration.display_order if declaration is not None else ordinal
+        rows.append({
+            "id": uuid.uuid4(),
+            "message_version_id": version_id,
+            "attachment_id": attachment_id,
+            "occurrence_key": str(
+                declaration.occurrence_key
+                if declaration is not None
+                else data.get("occurrenceKey") or f"block-{block_index}-{uuid.uuid4().hex[:8]}"
+            )[:255],
+            "placement": str(declaration.placement if declaration is not None else data.get("placement") or "inline")[:50],
+            "relation_type": str(data.get("relationType") or ("inline" if block.block_type == "image" else "file")),
+            "display_order": display_order,
+            "block_index": block_index,
+            "display_mode": str(data.get("displayMode") or ("inline" if block.block_type == "image" else "card")),
+            "alt_text": (
+                declaration.alt_text
+                if declaration is not None and declaration.alt_text is not None
+                else str(data.get("alt") or "") or None
+            ),
+            "caption": str(data.get("caption") or "") or None,
+        })
+    insert_rows(db, MessageVersionAttachment, rows)
+
+
+def _render_block_rows(version_id: uuid.UUID, block_drafts) -> list[dict]:
+    return [
+        {
+            "id": uuid.uuid4(),
+            "message_version_id": version_id,
+            "block_index": index,
+            "block_type": block.block_type,
+            "plain_text": block.plain_text,
+            "data": block.data,
+            "char_count": block.char_count,
+            "collapsed_by_default": block.collapsed_by_default,
+            "render_priority": block.render_priority,
+        }
+        for index, block in enumerate(block_drafts)
+    ]
 
 
 def _attachment_reference_line(source_text: str, attachment_id: str) -> int:

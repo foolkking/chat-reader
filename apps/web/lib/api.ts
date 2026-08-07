@@ -415,16 +415,24 @@ export async function splitConversation(
 
 export async function editMessage(
   messageId: string,
-  input: { displayText: string; editReason?: string; baseVersionId?: string; saveMode?: "create_version" | "replace_current"; uploadItemIds?: string[] },
+  input: {
+    contentMarkdown: string;
+    editReason?: string;
+    baseVersionId?: string;
+    saveMode?: "create_version" | "replace_current";
+    attachmentOccurrences?: Array<Record<string, unknown>>;
+    removedAttachmentActions?: Array<Record<string, unknown>>;
+  },
 ): Promise<MessageEditResponse> {
   return fetchJson<MessageEditResponse>(
     `/api/messages/${messageId}`,
     jsonRequest("PATCH", {
-      display_text: input.displayText,
+      content_markdown: input.contentMarkdown,
       edit_reason: input.editReason,
       base_version_id: input.baseVersionId,
       save_mode: input.saveMode ?? "create_version",
-      upload_item_ids: input.uploadItemIds ?? [],
+      attachment_occurrences: input.attachmentOccurrences ?? [],
+      removed_attachment_actions: input.removedAttachmentActions ?? [],
     }),
   );
 }

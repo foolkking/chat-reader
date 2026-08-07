@@ -4,7 +4,7 @@
 
 ## PostgreSQL
 
-当前 SQLAlchemy metadata 有 29 张业务表；加 `alembic_version` 共 30 张。源码和本地数据库 Alembic 单一 head 为 `20260805_0020`；生产部署时仍需重新执行 `alembic current`。
+当前 SQLAlchemy metadata 有 29 张业务表；加 `alembic_version` 共 30 张。源码和本地数据库 Alembic 单一 head 为 `20260806_0021`；生产部署后必须执行 `alembic current` 核对该 head。
 
 | 领域 | 表 |
 | --- | --- |
@@ -27,6 +27,8 @@ Conversation
 ```
 
 附件关系为 `AssetObject -> Attachment(conversation_id) -> MessageVersionAttachment occurrence`。一个物理对象可被多个对话级 Attachment 复用，但 Attachment 不跨对话引用；Occurrence 有独立 ID、`occurrence_key` 和 `placement=inline|after_message`，同一 Attachment 可在同一版本出现多次。上传 session/item 是有期限的暂存数据，不是 canonical Attachment，也不是用户可见回收站。
+
+消息保存路径使用 `idx_attachments_conversation_id_id` 与 `idx_message_versions_message_created_at` 批量校验和版本查询；occurrence 写入使用现有 version/display-order 与 attachment 索引。上传项提升与消息版本事务分离，保存不会移动或重新读取物理附件对象。
 
 - `Message.current_version_id` 指向当前不可变版本；编辑/恢复不覆盖旧版本。
 - `MessageVersion.display_text` 继续存储唯一 Markdown 正文；服务层以 `display_markdown` 表达其语义，并记录 normalizer/parser/block/search builder 版本。

@@ -261,6 +261,7 @@ def queue_conversation_derived_rebuild(
     *,
     conversation_id: uuid.UUID,
     idempotency_key: str | None,
+    rebuild_versions: bool = True,
 ) -> BackgroundJob:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
@@ -278,6 +279,27 @@ def queue_conversation_derived_rebuild(
         )
         if existing is not None:
             return existing
+    if not rebuild_versions:
+        queued = (
+            db.query(BackgroundJob)
+            .filter(
+                BackgroundJob.job_type == "conversation_derived_rebuild",
+                BackgroundJob.status == "queued",
+            )
+            .order_by(BackgroundJob.created_at.desc())
+            .all()
+        )
+        existing = next(
+            (
+                item
+                for item in queued
+                if str((item.payload or {}).get("conversation_id")) == str(conversation_id)
+                and not bool((item.payload or {}).get("rebuild_versions", True))
+            ),
+            None,
+        )
+        if existing is not None:
+            return existing
     job = BackgroundJob(
         id=uuid.uuid4(),
         job_type="conversation_derived_rebuild",
@@ -286,7 +308,11 @@ def queue_conversation_derived_rebuild(
         progress=0,
         processed_items=0,
         total_items=conversation.message_count,
-        payload={"conversation_id": str(conversation.id), "title": conversation.display_title},
+        payload={
+            "conversation_id": str(conversation.id),
+            "title": conversation.display_title,
+            "rebuild_versions": rebuild_versions,
+        },
         result={},
         idempotency_key=idempotency_key,
     )
@@ -600,7 +626,12 @@ def process_background_job(
                 processed_items = result.scanned_messages
             elif job.job_type == "conversation_derived_rebuild":
                 conversation_id = uuid.UUID(payload["conversation_id"])
-                result = rebuild_conversation_derived_data(db, conversation_id, progress_callback=report)
+                result = rebuild_conversation_derived_data(
+                    db,
+                    conversation_id,
+                    progress_callback=report,
+                    rebuild_versions=bool(payload.get("rebuild_versions", True)),
+                )
                 job_result = {
                     "conversation_id": str(conversation_id),
                     "conversation_ids": [str(conversation_id)],

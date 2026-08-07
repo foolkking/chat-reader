@@ -43,7 +43,7 @@ Browser
 
 ## 部署状态
 
-源码 Compose 包含 `postgres`、`migrate`、`api`、`import-worker`、`web`，并提供可选 `scanner` profile；King 不启用该 profile。源码 Alembic 单一 head 为 `20260805_0020`。
+源码 Compose 包含 `postgres`、`migrate`、`api`、`import-worker`、`web`，并提供可选 `scanner` profile；King 不启用该 profile。源码 Alembic 单一 head 为 `20260806_0021`；该 head 只补充消息保存路径的批量查询索引。
 
 最后一份生产发布证据记录于 2026-07-29：生产 migration 为 `20260728_0016`，API/Web/PostgreSQL healthy，worker running，并完成离线 TOC 补丁后的 Chrome 复验。该结论是时间点快照；当前线上状态需重新检查。详见 [execution/DEPLOYMENT_CHECKLIST.md](../execution/DEPLOYMENT_CHECKLIST.md)。
 

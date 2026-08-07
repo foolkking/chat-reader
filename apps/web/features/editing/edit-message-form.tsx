@@ -9,6 +9,7 @@ import { tags } from "@lezer/highlight";
 import { ChevronDown, Save, SaveAll, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
+import type { AttachmentRead } from "../../lib/types";
 import {
   insertPendingMarkers,
   removePendingMarker,
@@ -39,6 +40,8 @@ export function EditMessageForm({
   onAttachmentRetry,
   onAttachmentRemove,
   onAttachmentCancel,
+  onExistingAttachment,
+  conversationAttachments = [],
 }: {
   formId?: string;
   initialText: string;
@@ -50,17 +53,20 @@ export function EditMessageForm({
   onCursorOffsetChange?: (offset: number) => void;
   onDirtyChange?: (dirty: boolean) => void;
   onCancel: (dirty: boolean) => void | Promise<void>;
-  onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current") => Promise<void>;
+  onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>) => Promise<void>;
   onAttachmentInsertionApplied?: () => void;
   onAttachmentFiles?: (files: File[], position: number, callbacks: AttachmentDraftCallbacks) => AttachmentDraft[];
   onAttachmentRetry?: (token: string) => void;
   onAttachmentRemove?: (token: string) => void;
   onAttachmentCancel?: (preserve: boolean, itemIds: string[]) => Promise<void> | void;
+  onExistingAttachment?: (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void;
+  conversationAttachments?: AttachmentRead[];
 }) {
   const { t, resolvedLocale, resolvedTheme } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const editorViewRef = useRef<EditorView | null>(null);
   const insertFilesRef = useRef<(files: File[], position: number, originalCodePosition?: number) => void>(() => undefined);
+  const insertExistingAttachmentRef = useRef<(attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void>(() => undefined);
   const completedUploadItemsRef = useRef(new Map<string, string>());
   const queuedFilesRef = useRef<File[]>([]);
   const themeCompartmentRef = useRef(new Compartment());
@@ -74,18 +80,38 @@ export function EditMessageForm({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [attachmentDrafts, setAttachmentDrafts] = useState<Record<string, AttachmentDraftState>>({});
-  const [pendingCodeDrop, setPendingCodeDrop] = useState<{ files: File[]; afterPosition: number; originalPosition: number } | null>(null);
+  const [pendingCodeDrop, setPendingCodeDrop] = useState<{
+    files: File[];
+    attachment?: { attachmentId: string; displayName: string; mimeType: string };
+    afterPosition: number;
+    originalPosition: number;
+  } | null>(null);
+  const [removedConfirmMode, setRemovedConfirmMode] = useState<"create_version" | "replace_current" | null>(null);
+  const [removedActions, setRemovedActions] = useState<Record<string, "keep_in_conversation" | "detach_from_conversation">>({});
   const trimmedText = text.trim();
   const isUnchanged = trimmedText === baselineText.trim();
   const hasAttachmentWork = Object.values(attachmentDrafts).some((draft) => draft.status !== "removed");
   const hasUnresolvedAttachment = Object.values(attachmentDrafts).some((draft) => draft.status === "uploading" || draft.status === "error");
+  const canDetachRemovedAttachment = (attachmentId: string) => {
+    const attachment = conversationAttachments.find((item) => item.id === attachmentId);
+    const draftStillUses = countAttachmentReferences(trimmedText, attachmentId) > 0;
+    const anotherCurrentMessageUses = Boolean(
+      attachment?.occurrences?.some((item) => item.is_current_version && item.message_id !== messageId),
+    );
+    return !draftStillUses && !anotherCurrentMessageUses;
+  };
   const performAttachmentInsert = (files: File[], position: number) => {
+    if (!files.length && pendingCodeDrop?.attachment) {
+      performExistingAttachmentInsert(pendingCodeDrop.attachment, position);
+      return;
+    }
     const callbacks: AttachmentDraftCallbacks = {
       onProgress: (token, progress) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], progress } } : current),
       onComplete: (token, item) => {
         const view = editorViewRef.current;
-        if (!view || !replacePendingMarker(view, token, item.id)) completedUploadItemsRef.current.set(token, item.id);
-        setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: item.id, status: "ready", progress: 100 } } : current);
+        const canonicalId = item.attachmentId ?? item.id;
+        if (!view || !replacePendingMarker(view, token, canonicalId)) completedUploadItemsRef.current.set(token, canonicalId);
+        setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
       onError: (token, message) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current),
     };
@@ -103,6 +129,22 @@ export function EditMessageForm({
       }
     }
   };
+  const performExistingAttachmentInsert = (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number) => {
+    const image = attachment.mimeType.startsWith("image/");
+    const label = attachment.displayName.replaceAll("[", "\\[").replaceAll("]", "\\]");
+    const markdown = image
+      ? `![${label}](cr-asset://${attachment.attachmentId})`
+      : `[${zh ? "附件" : "Attachment"}：${label}](cr-asset://${attachment.attachmentId})`;
+    const view = editorViewRef.current;
+    if (!view) return;
+    const line = view.state.doc.lineAt(position);
+    const before = position > line.from && view.state.doc.sliceString(position - 1, position) !== "\n" ? "\n\n" : "";
+    const after = position < line.to && view.state.doc.sliceString(position, position + 1) !== "\n" ? "\n\n" : "";
+    const insert = `${before}${markdown}${after}`;
+    const anchor = position + insert.length;
+    view.dispatch({ changes: { from: position, insert }, selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
+    onExistingAttachment?.(attachment, position);
+  };
   insertFilesRef.current = (files, position, originalCodePosition) => {
     if (originalCodePosition !== undefined) {
       setPendingCodeDrop({ files, afterPosition: position, originalPosition: originalCodePosition });
@@ -110,8 +152,16 @@ export function EditMessageForm({
     }
     performAttachmentInsert(files, position);
   };
+  insertExistingAttachmentRef.current = (attachment, position, originalCodePosition) => {
+    if (originalCodePosition !== undefined) {
+      setPendingCodeDrop({ files: [], attachment, afterPosition: position, originalPosition: originalCodePosition });
+      return;
+    }
+    performExistingAttachmentInsert(attachment, position);
+  };
   const extensions = useMemo(() => codeMirrorExtensions(themeCompartmentRef.current, initialThemeRef.current, {
     onFiles: (files, position, originalCodePosition) => insertFilesRef.current(files, position, originalCodePosition),
+    onAttachment: (attachment, position, originalCodePosition) => insertExistingAttachmentRef.current(attachment, position, originalCodePosition),
   }), []);
 
   useEffect(() => {
@@ -194,7 +244,7 @@ export function EditMessageForm({
     onAttachmentInsertionApplied?.();
   }
 
-  async function submit(mode: "create_version" | "replace_current") {
+  async function submit(mode: "create_version" | "replace_current", confirmedRemoval = false) {
     setError(null);
     const unresolved = Object.values(attachmentDrafts).find((draft) => draft.status === "uploading" || draft.status === "error");
     if (unresolved) {
@@ -202,15 +252,28 @@ export function EditMessageForm({
       return;
     }
     if (!trimmedText || isUnchanged) return;
+    const removedIds = removedAttachmentIds(baselineText, trimmedText);
+    if (removedIds.length && !confirmedRemoval) {
+      setRemovedActions(Object.fromEntries(removedIds.map((attachmentId) => [attachmentId, "keep_in_conversation"])));
+      setRemovedConfirmMode(mode);
+      return;
+    }
     setIsSaving(true);
     try {
-      await onSave(trimmedText, reason.trim() || undefined, mode);
+      await onSave(
+        trimmedText,
+        reason.trim() || undefined,
+        mode,
+        removedIds.map((attachmentId) => ({ attachment_id: attachmentId, action: removedActions[attachmentId] ?? "keep_in_conversation" })),
+      );
       setBaselineText(trimmedText);
       setText(trimmedText);
       setReason("");
       setShowClosePrompt(false);
       setAttachmentDrafts({});
       completedUploadItemsRef.current.clear();
+      setRemovedConfirmMode(null);
+      setRemovedActions({});
       onDirtyChange?.(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("unableSaveEdit"));
@@ -245,6 +308,13 @@ export function EditMessageForm({
     const original = view.state.selection.main.head;
     const resolved = resolveAttachmentDropPosition(view.state.doc.toString(), original);
     insertFilesRef.current(files, resolved.position, resolved.adjustedFromCode ? original : undefined);
+  }
+
+  function applyPendingCodeDrop(position: number): void {
+    if (!pendingCodeDrop) return;
+    if (pendingCodeDrop.attachment) performExistingAttachmentInsert(pendingCodeDrop.attachment, position);
+    else performAttachmentInsert(pendingCodeDrop.files, position);
+    setPendingCodeDrop(null);
   }
 
   return (
@@ -296,8 +366,8 @@ export function EditMessageForm({
         {pendingCodeDrop ? <div className="rounded-lg border border-[var(--mark-border)] bg-[var(--mark-bg)] p-3 text-xs text-primary" role="status" data-testid="source-editor-code-drop-choice">
           <p>{zh ? "当前位置在代码块内。附件放在这里不会在 Reader 中显示。" : "This position is inside a code block, so an attachment placed here will not render in Reader."}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" className="min-h-8 rounded-md bg-[var(--text)] px-3 font-medium text-[var(--surface)]" onClick={() => { performAttachmentInsert(pendingCodeDrop.files, pendingCodeDrop.afterPosition); setPendingCodeDrop(null); }}>{zh ? "插入到代码块之后" : "Insert after code block"}</button>
-            <button type="button" className="min-h-8 rounded-md border border-ui bg-surface px-3 font-medium text-primary" onClick={() => { performAttachmentInsert(pendingCodeDrop.files, pendingCodeDrop.originalPosition); setPendingCodeDrop(null); }}>{zh ? "仍作为普通文本插入" : "Insert as plain text"}</button>
+            <button type="button" className="min-h-8 rounded-md bg-[var(--text)] px-3 font-medium text-[var(--surface)]" onClick={() => { applyPendingCodeDrop(pendingCodeDrop.afterPosition); setPendingCodeDrop(null); }}>{zh ? "插入到代码块之后" : "Insert after code block"}</button>
+            <button type="button" className="min-h-8 rounded-md border border-ui bg-surface px-3 font-medium text-primary" onClick={() => { applyPendingCodeDrop(pendingCodeDrop.originalPosition); setPendingCodeDrop(null); }}>{zh ? "仍作为普通文本插入" : "Insert as plain text"}</button>
             <button type="button" className="min-h-8 rounded-md px-3 font-medium text-secondary hover:bg-subtle" onClick={() => setPendingCodeDrop(null)}>{zh ? "取消" : "Cancel"}</button>
           </div>
         </div> : null}
@@ -319,6 +389,26 @@ export function EditMessageForm({
           <button type="submit" data-testid="source-editor-create-version" disabled={isSaving || !trimmedText || isUnchanged || hasUnresolvedAttachment} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-50"><SaveAll className="h-4 w-4" />{isSaving ? t("saving") : `${zh ? "\u521b\u5efa" : "Create"} v${versionNumber + 1}`}</button>
         </div>
       </footer>
+      {removedConfirmMode ? (
+        <div className="fixed inset-0 z-[255] flex items-end justify-center bg-[var(--overlay)] p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={`removed-attachments-${versionNumber}`}>
+          <button type="button" className="absolute inset-0" onClick={() => setRemovedConfirmMode(null)} aria-label={zh ? "取消保存" : "Cancel save"} />
+          <section className="relative max-h-[80dvh] w-full overflow-y-auto rounded-t-xl border border-ui bg-raised p-5 shadow-2xl sm:max-w-xl sm:rounded-xl">
+            <h2 id={`removed-attachments-${versionNumber}`} className="text-base font-semibold text-primary">{zh ? "已从正文移除附件引用" : "Attachment references were removed"}</h2>
+            <p className="mt-1 text-sm text-secondary">{zh ? "默认继续保留在当前对话文件中。" : "Files remain in the conversation by default."}</p>
+            <div className="mt-4 space-y-2">{removedAttachmentIds(baselineText, trimmedText).map((attachmentId) => {
+              const attachment = conversationAttachments.find((item) => item.id === attachmentId);
+              const canDetach = canDetachRemovedAttachment(attachmentId);
+              return <div key={attachmentId} className="rounded-lg border border-ui bg-surface p-3"><p className="truncate text-sm font-medium text-primary">{attachment?.display_name ?? attachmentId}</p>{!canDetach ? <p className="mt-1 text-xs text-secondary">{zh ? "本次只移除这一处引用，该文件仍在其他位置使用。" : "Only this occurrence is removed; the file is still used elsewhere."}</p> : null}<div className="mt-2 flex flex-wrap gap-3 text-xs"><label className="flex items-center gap-1.5"><input type="radio" name={`removed-${attachmentId}`} checked={(removedActions[attachmentId] ?? "keep_in_conversation") === "keep_in_conversation"} onChange={() => setRemovedActions((current) => ({ ...current, [attachmentId]: "keep_in_conversation" }))} />{zh ? "保留在当前对话文件" : "Keep in conversation"}</label><label className={`flex items-center gap-1.5 ${canDetach ? "" : "opacity-50"}`}><input type="radio" name={`removed-${attachmentId}`} disabled={!canDetach} checked={removedActions[attachmentId] === "detach_from_conversation"} onChange={() => setRemovedActions((current) => ({ ...current, [attachmentId]: "detach_from_conversation" }))} />{zh ? "同时从当前对话文件移除" : "Detach from conversation"}</label></div></div>;
+            })}</div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, trimmedText).map((id) => [id, "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部保留" : "Keep all"}</button>
+              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, trimmedText).map((id) => [id, canDetachRemovedAttachment(id) ? "detach_from_conversation" : "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部移除" : "Detach all eligible"}</button>
+              <button type="button" onClick={() => setRemovedConfirmMode(null)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm text-primary">{zh ? "取消保存" : "Cancel save"}</button>
+              <button type="button" onClick={() => { const mode = removedConfirmMode; setRemovedConfirmMode(null); void submit(mode, true); }} className="min-h-9 rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)]">{zh ? "确认并保存" : "Confirm and save"}</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {showClosePrompt ? (
         <div className="fixed inset-0 z-[250] flex items-end justify-center bg-[var(--overlay)] p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={`unsaved-edit-${versionNumber}`}>
           <button type="button" className="absolute inset-0" onClick={() => setShowClosePrompt(false)} aria-label={zh ? "\u7ee7\u7eed\u7f16\u8f91" : "Continue editing"} />
@@ -338,10 +428,22 @@ export function EditMessageForm({
   );
 }
 
+function attachmentReferenceCounts(text: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const match of text.matchAll(/cr-asset:\/\/([0-9a-f-]{36})/gi)) counts.set(match[1].toLowerCase(), (counts.get(match[1].toLowerCase()) ?? 0) + 1);
+  return counts;
+}
+
+function countAttachmentReferences(text: string, attachmentId: string): number { return attachmentReferenceCounts(text).get(attachmentId.toLowerCase()) ?? 0; }
+function removedAttachmentIds(before: string, after: string): string[] { const previous = attachmentReferenceCounts(before); const next = attachmentReferenceCounts(after); return Array.from(previous.entries()).filter(([id, count]) => (next.get(id) ?? 0) < count).map(([id]) => id); }
+
 function codeMirrorExtensions(
   themeCompartment: Compartment,
   theme: "light" | "dark",
-  handlers: { onFiles: (files: File[], position: number, originalCodePosition?: number) => void },
+  handlers: {
+    onFiles: (files: File[], position: number, originalCodePosition?: number) => void;
+    onAttachment: (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void;
+  },
 ) {
   return [
     markdown(),

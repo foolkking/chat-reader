@@ -6,6 +6,8 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.main import app
 from app.models.attachment import Attachment, AssetObject, AttachmentUploadItem, MessageVersionAttachment
+from app.models.background_job import BackgroundJob
+from app.models.message_version import MessageVersion
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -59,7 +61,7 @@ def _upload(client, session_id: str, name: str = "evidence.md", body: bytes = b"
     return response.json()
 
 
-def test_disabled_scanner_upload_atomic_message_save_and_unplaced_file(client, tmp_path: Path, monkeypatch) -> None:
+def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_file(client, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
     monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
     monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
@@ -80,13 +82,18 @@ def test_disabled_scanner_upload_atomic_message_save_and_unplaced_file(client, t
     assert item["validation_status"] == "ready"
     assert item["scan_status"] == "scanner_disabled"
 
-    updated_text = message["current_version"]["display_text"] + f"\n\n[Attachment](cr-upload://{item['id']})"
+    promoted = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [item["id"]]},
+    )
+    assert promoted.status_code == 201, promoted.text
+    attachment_id = promoted.json()["items"][0]["id"]
+    updated_text = message["current_version"]["display_text"] + f"\n\n[Attachment](cr-asset://{attachment_id})"
     saved = client.patch(
         f"/api/messages/{message['id']}",
         json={
-            "display_text": updated_text,
+            "content_markdown": updated_text,
             "base_version_id": message["current_version"]["id"],
-            "upload_item_ids": [item["id"]],
         },
     )
     assert saved.status_code == 200, saved.text
@@ -94,6 +101,10 @@ def test_disabled_scanner_upload_atomic_message_save_and_unplaced_file(client, t
     saved_text = saved.json()["message"]["current_version"]["display_text"]
     assert "cr-upload://" not in saved_text
     assert "cr-asset://" in saved_text
+    assert saved.json()["message_version"]["id"] == saved.json()["current_version_id"]
+    assert saved.json()["render_blocks"]
+    assert len(saved.json()["attachment_occurrences"]) == 1
+    assert saved.json()["conversation_attachment_summary"]["used"] == 1
 
     attachments = client.get(f"/api/conversations/{conversation_id}/attachments")
     assert attachments.status_code == 200
@@ -133,6 +144,12 @@ def test_upload_rolls_back_when_base_version_is_stale(client, tmp_path: Path, mo
     conversation_id, message = _conversation_with_message(client)
     stale_session = _create_session(client, conversation_id, message)
     stale_item = _upload(client, stale_session["id"], "stale.txt", b"stale")
+    finalized = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [stale_item["id"]]},
+    )
+    assert finalized.status_code == 201, finalized.text
+    attachment_id = finalized.json()["items"][0]["id"]
 
     concurrent = client.patch(
         f"/api/messages/{message['id']}",
@@ -145,28 +162,27 @@ def test_upload_rolls_back_when_base_version_is_stale(client, tmp_path: Path, mo
     stale = client.patch(
         f"/api/messages/{message['id']}",
         json={
-            "display_text": f"[Stale](cr-upload://{stale_item['id']})",
+            "content_markdown": f"[Stale](cr-asset://{attachment_id})",
             "base_version_id": message["current_version"]["id"],
-            "upload_item_ids": [stale_item["id"]],
         },
     )
     assert stale.status_code == 409, stale.text
 
     session_state = client.get(f"/api/attachment-upload-sessions/{stale_session['id']}").json()
-    assert session_state["status"] == "open"
-    assert session_state["items"][0]["validation_status"] == "ready"
-    assert client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"] == []
+    assert session_state["status"] == "committed"
+    assert session_state["items"][0]["validation_status"] == "committed"
+    attachments = client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"]
+    assert len(attachments) == 1
+    assert attachments[0]["is_used"] is False
 
     override = app.dependency_overrides[get_db]
     generator = override()
     db = next(generator)
     try:
-        assert db.query(Attachment).filter(Attachment.conversation_id == uuid.UUID(conversation_id)).count() == 0
+        assert db.query(Attachment).filter(Attachment.conversation_id == uuid.UUID(conversation_id)).count() == 1
         assert db.query(MessageVersionAttachment).count() == 0
         item = db.get(AttachmentUploadItem, uuid.UUID(stale_item["id"]))
-        assert item is not None and item.temporary_storage_key
-        staged_path = Path(get_settings().asset_storage_dir) / item.temporary_storage_key
-        assert staged_path.is_file()
+        assert item is not None and item.validation_status == "committed"
     finally:
         db.close()
         generator.close()
@@ -212,6 +228,151 @@ def test_message_save_rejects_unresolved_upload_references_with_line_number(
     assert session_state["status"] == "open"
     assert session_state["items"][0]["validation_status"] == "ready"
     assert client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"] == []
+
+
+def test_message_save_rejects_legacy_implicit_upload_finalize(client, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+
+    conversation_id, message = _conversation_with_message(client)
+    session = _create_session(client, conversation_id, message)
+    item = _upload(client, session["id"], "legacy.txt", b"legacy upload\n")
+    response = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": f"[Attachment](cr-upload://{item['id']})",
+            "base_version_id": message["current_version"]["id"],
+            "upload_item_ids": [item["id"]],
+        },
+    )
+    assert response.status_code == 409, response.text
+    assert "finalized before saving" in response.json()["detail"]
+    assert client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"] == []
+
+
+def test_message_save_occurrence_contract_detach_and_lightweight_rebuild(
+    client, tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+
+    conversation_id, message = _conversation_with_message(client)
+    session = _create_session(client, conversation_id, message)
+    item = _upload(client, session["id"], "twice.png", b"not-real-image-bytes")
+    promoted = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [item["id"]]},
+    )
+    assert promoted.status_code == 201, promoted.text
+    attachment = promoted.json()["items"][0]
+    attachment_id = attachment["id"]
+    markdown = (
+        f"First\n\n![copy one](cr-asset://{attachment_id})\n\n"
+        f"Second\n\n![copy two](cr-asset://{attachment_id})"
+    )
+    saved = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": markdown,
+            "base_version_id": message["current_version"]["id"],
+            "attachment_occurrences": [
+                {
+                    "occurrence_key": "draft-one",
+                    "attachment_id": attachment_id,
+                    "placement": "inline",
+                    "display_order": 0,
+                    "alt_text": "copy one",
+                },
+                {
+                    "occurrence_key": "draft-two",
+                    "attachment_id": attachment_id,
+                    "placement": "inline",
+                    "display_order": 1,
+                    "alt_text": "copy two",
+                },
+            ],
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    payload = saved.json()
+    assert [row["occurrence_key"] for row in payload["attachment_occurrences"]] == ["draft-one", "draft-two"]
+    assert payload["conversation_attachment_summary"] == {"total": 1, "used": 1, "missing": 0}
+
+    listed = client.get(f"/api/conversations/{conversation_id}/attachments")
+    assert listed.status_code == 200, listed.text
+    listed_attachment = listed.json()["items"][0]
+    assert listed_attachment["occurrence_count"] == 2
+    assert listed_attachment["message_count"] == 1
+    assert {row["message_role"] for row in listed_attachment["occurrences"]} == {"user"}
+    assert {row["version_number"] for row in listed_attachment["occurrences"]} == {2}
+    assert all(row["message_preview"] for row in listed_attachment["occurrences"])
+
+    mismatch = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": markdown + "\n\nMismatch.",
+            "base_version_id": payload["current_version_id"],
+            "attachment_occurrences": [{
+                "occurrence_key": "only-one",
+                "attachment_id": attachment_id,
+                "placement": "inline",
+                "display_order": 0,
+            }],
+        },
+    )
+    assert mismatch.status_code == 422, mismatch.text
+
+    kept = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": "References removed, file retained.",
+            "base_version_id": payload["current_version_id"],
+            "removed_attachment_actions": [{
+                "attachment_id": attachment_id,
+                "action": "keep_in_conversation",
+            }],
+        },
+    )
+    assert kept.status_code == 200, kept.text
+    retained = client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"]
+    assert len(retained) == 1
+    assert retained[0]["is_used"] is False
+    assert retained[0]["occurrence_count"] == 2
+
+    detached = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": "References removed, file detached.",
+            "base_version_id": kept.json()["current_version_id"],
+            "removed_attachment_actions": [{
+                "attachment_id": attachment_id,
+                "action": "detach_from_conversation",
+            }],
+        },
+    )
+    assert detached.status_code == 200, detached.text
+    assert client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"] == []
+    assert client.get(f"/api/attachments/{attachment_id}/content").status_code == 200
+
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        stored = db.get(Attachment, uuid.UUID(attachment_id))
+        assert stored is not None and stored.status == "detached" and stored.deleted_at is None
+        assert db.query(MessageVersion).filter(MessageVersion.message_id == uuid.UUID(message["id"])).count() == 4
+        jobs = db.query(BackgroundJob).filter(BackgroundJob.job_type == "conversation_derived_rebuild").all()
+        assert jobs
+        assert any(job.payload.get("rebuild_versions") is False for job in jobs)
+    finally:
+        db.close()
+        generator.close()
 
 
 def test_hard_delete_preserves_asset_object_shared_by_another_conversation(

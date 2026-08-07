@@ -41,6 +41,10 @@ class AttachmentOccurrenceLocationRead(BaseModel):
     message_id: UUID
     message_version_id: UUID
     is_current_version: bool
+    message_order_key: str | None = None
+    message_role: str | None = None
+    message_preview: str | None = None
+    version_number: int | None = None
     occurrence_key: str
     placement: str
     block_index: int | None

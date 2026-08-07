@@ -1,10 +1,11 @@
 # Markdown 文档台账
 
-## 2026-08-05 attachment ownership and acceptance additions
+## 2026-08-07 attachment workflow performance and DnD additions
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
 | `apps/api/alembic/versions/20260805_0020_conversation_attachments_and_uploads.py` | Current | Conversation-owned Attachment, occurrence identity, upload staging, system export scope migration. |
+| `apps/api/alembic/versions/20260806_0021_attachment_workflow_performance.py` | Current | Batch ownership/version lookup indexes for the separated message save path. |
 | `apps/api/app/api/routes/attachments.py` | Current | Upload sessions, conversation files, metadata, Range content, derivatives and Share attachment access. |
 | `apps/api/app/services/assets/asset_store.py` | Current | Local and optional S3-compatible storage providers with controlled keys. |
 | `apps/api/app/services/assets/scanner.py` | Current | Disabled, ClamAV and remote scanner providers; deployment-policy status. |
@@ -15,9 +16,11 @@
 | `apps/web/features/attachments/conversation-files-panel.tsx` | Current | Current conversation file drawer, upload and occurrence actions. |
 | `apps/web/e2e/attachment-fixture.spec.ts` | Current | Real bundle product-flow acceptance without mutating source fixture. |
 | `apps/web/e2e/attachment-upload-flow.spec.ts` | Current | Ordinary upload, insertion, version switching and file reuse acceptance. |
+| `apps/web/e2e/project-sidebar-dnd.spec.ts` | Current | Explicit project/conversation drop-target and placement regression. |
+| `apps/api/tests/background_job_test_utils.py` | Test support | Deterministic post-commit derived-job processing for API tests. |
 | `results.md` | Current | Exact local/production acceptance status for the 2026-08-06 release. |
 
-最后审计：2026-08-05
+最后审计：2026-08-07
 
 ## 2026-08-04 implementation ownership additions
 

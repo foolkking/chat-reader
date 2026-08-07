@@ -3,6 +3,7 @@ import json
 from fastapi.testclient import TestClient
 
 from test_import_preview_api import client  # noqa: F401
+from background_job_test_utils import process_queued_jobs
 
 
 def _preview_commit(client: TestClient, files: dict) -> str:
@@ -38,6 +39,7 @@ def test_exporter_json_full_flow(client: TestClient) -> None:
     assert client.get(f"/api/conversations/{conversation_id}/toc").json()["items"][0]["text"] == "JSON Flow Heading"
     message_id = client.get(f"/api/conversations/{conversation_id}/message-window").json()["items"][1]["id"]
     assert client.patch(f"/api/messages/{message_id}", json={"display_text": "# Edited Flow\n\nupdated"}).status_code == 200
+    process_queued_jobs()
     assert client.get("/api/search?q=updated").json()["total"] >= 1
     share = client.post(f"/api/conversations/{conversation_id}/shares", json={}).json()
     assert client.get(f"/api/shared/{share['token']}").status_code == 200

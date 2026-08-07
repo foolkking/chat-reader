@@ -24,6 +24,7 @@ from app.services.background_jobs import (
 )
 from app.services.editing.message_edit_service import merge_conversations
 from test_import_preview_api import client  # noqa: F401
+from background_job_test_utils import process_queued_jobs
 
 
 def _commit_messages(client: TestClient, title: str, messages: list[dict]) -> str:
@@ -55,12 +56,7 @@ def _window(client: TestClient, conversation_id: str) -> list[dict]:
 
 
 def _complete_background_job(job_id: str) -> None:
-    with _database_session() as db:
-        testing_session_local = sessionmaker(bind=db.get_bind(), autoflush=False, autocommit=False)
-        claimed_id = claim_next_job(db)
-        assert claimed_id == uuid.UUID(job_id)
-        db.commit()
-    process_background_job(uuid.UUID(job_id), testing_session_local)
+    process_queued_jobs(until_job_id=job_id)
 
 
 @contextmanager

@@ -99,7 +99,7 @@ PostgreSQL `search_documents` 同时支持全文排名和基于 `pg_trgm` GIN �
 
 ## 编辑和版本
 
-编辑、拆分、合并和恢复都保留旧 MessageVersion。写操作完成后重建当前版本的 blocks、headings 和 search documents，并写入 ConversationEvent。会话 merge/split 创建新 conversation，不修改来源会话。
+编辑、拆分、合并和恢复都保留旧 MessageVersion。消息编辑的同步事务只写当前版本所需的 blocks、AttachmentOccurrence、current-version 指针和批注锚点；保存提交后再排队重建 headings、search documents、统计和摘要，并写入 ConversationEvent。会话 merge/split 创建新 conversation，不修改来源会话。
 
 ## 分享和导出
 

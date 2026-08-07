@@ -18,6 +18,7 @@ from app.models.attachment import (
 )
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.message_version import MessageVersion
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import AssetScanError, detect_mime_type, scan_attachment, scan_status_allows_use
 
@@ -227,21 +228,19 @@ def finalize_upload_items(
 
 
 def remove_unreferenced_attachment(db: Session, attachment: Attachment) -> str | None:
-    if db.query(MessageVersionAttachment.id).filter(
-        MessageVersionAttachment.attachment_id == attachment.id
-    ).first() is not None:
-        raise AttachmentUploadError("Attachment is still referenced by message history.", 409)
-    asset_id = attachment.asset_object_id
-    db.delete(attachment)
+    current_reference = (
+        db.query(MessageVersionAttachment.id)
+        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+        .join(Message, Message.id == MessageVersion.message_id)
+        .filter(
+            MessageVersionAttachment.attachment_id == attachment.id,
+            Message.current_version_id == MessageVersionAttachment.message_version_id,
+            Message.is_deleted.is_(False),
+        )
+        .first()
+    )
+    if current_reference is not None:
+        raise AttachmentUploadError("Attachment is still used by a current message version.", 409)
+    attachment.status = "detached"
     db.flush()
-    if asset_id is None:
-        return None
-    asset = db.get(AssetObject, asset_id)
-    if asset is None:
-        return None
-    if db.query(Attachment.id).filter(Attachment.asset_object_id == asset_id).first() is not None:
-        return None
-    storage_key = asset.storage_key
-    db.delete(asset)
-    db.flush()
-    return storage_key
+    return None

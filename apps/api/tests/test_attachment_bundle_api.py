@@ -6,8 +6,6 @@ import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy.orm import sessionmaker
-
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.main import app
@@ -17,25 +15,13 @@ from app.models.background_job import BackgroundJob
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
-from app.services.background_jobs import claim_next_job, process_background_job
+from background_job_test_utils import process_queued_jobs
 from test_import_preview_api import client  # noqa: F401
 from test_message_editing_api import commit_edit_sample
 
 
 def _process_task(task_id: str) -> None:
-    override = app.dependency_overrides[get_db]
-    generator = override()
-    db = next(generator)
-    try:
-        factory = sessionmaker(bind=db.get_bind(), autoflush=False, autocommit=False)
-    finally:
-        db.close()
-        generator.close()
-    with factory() as claim_db:
-        claimed_id = claim_next_job(claim_db)
-        claim_db.commit()
-    assert claimed_id == uuid.UUID(task_id)
-    process_background_job(claimed_id, session_factory=factory)
+    process_queued_jobs(until_job_id=task_id)
 
 
 def _bundle_bytes(*, filename: str = "evidence.txt", content: bytes = b"attachment body\n") -> bytes:

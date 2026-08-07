@@ -36,13 +36,17 @@ async function pointerDrag(page: Page, source: Locator, target: Locator, hoverMs
   const handle = source.getByTestId(/^conversation-drag-handle-/);
   await expect(handle).toBeVisible();
   const sourceBox = await handle.boundingBox();
-  const targetBox = await target.boundingBox();
   expect(sourceBox).not.toBeNull();
-  expect(targetBox).not.toBeNull();
   await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
   await page.mouse.down();
   await page.mouse.move(sourceBox!.x + sourceBox!.width / 2 + 16, sourceBox!.y + sourceBox!.height / 2, { steps: 4 });
   await expect(page.getByTestId("sidebar-drag-overlay")).toBeVisible({ timeout: 5_000 });
+  // A pointer cannot be released on a DOM target outside the scrollport.
+  // Scroll the destination into view after pickup, matching a user dragging
+  // through the sidebar's auto-scroll region.
+  await target.scrollIntoViewIfNeeded();
+  const targetBox = await target.boundingBox();
+  expect(targetBox).not.toBeNull();
   await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2, { steps: 12 });
   await page.waitForTimeout(hoverMs);
   const settledTargetBox = await target.boundingBox();
