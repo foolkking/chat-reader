@@ -7,7 +7,8 @@
 - Consecutive attachments are grouped in Reader output. Images use a gallery and ordinary files use a compact list with an explicit expand action, so fixture-heavy messages do not force every attachment into a large standalone card.
 - Conversation CanJSON/Markdown exports exclude `detached` Attachment identities and recalculate attachment/object/reference completeness. System `.cr v4` continues to preserve historical version relationships. Portable Markdown filenames preserve leading dots, Unicode, spaces, case, compound extensions, and business identities that share one AssetObject.
 - Online owner Reader task-list markers are interactive. `POST /api/messages/{message_id}/tasks/{task_key}/toggle` uses stable task metadata and base-version conflict checks; a v1 toggle creates v2, while v2+ toggles explicitly replace the current version. Share, Offline Reader, and attachment Markdown previews remain read-only.
-- Current local verification: Web lint/typecheck/build pass; API `208 passed, 1 fixture-gated skipped`; Alembic has one head `20260806_0021`; PWA/Playwright baseline has `10 passed, 20 conditional skipped`; the real attachment Bundle browser flow passes `1/1` and validates Markdown rendering, bounded image preview, SVG-as-IMG, file groups, Share authorization/revocation, and cleanup. King deployment for this addendum is `NOT_PRODUCTION_VERIFIED` until the release below is published.
+- Current verification: Web lint/typecheck/build pass; API `208 passed, 1 fixture-gated skipped`; Alembic has one head `20260806_0021`; PWA/Playwright baseline has `10 passed, 20 conditional skipped`; the real attachment Bundle browser flow passes `1/1` and validates Markdown rendering, bounded image preview, SVG-as-IMG, file groups, Share authorization/revocation, and cleanup.
+- Release commit `65585eb40ca1ad44eaeb2ebbe8b6d6be309ddcdc` was built by GitHub Actions run `31242030506` and deployed to King through prebuilt images only. The release archive SHA-256 is `ef3480b2c0afa3b69ed342e53c602ca5028d523561f7859a196683c0af8ea18d`; the validated backup is `/opt/chat-reader/backups/release-20260808T053116Z-4983a8d`. API/Web/PostgreSQL are healthy, the worker is running, Alembic is at `20260806_0021`, and ClamAV remains stopped. Production Chrome visual acceptance is still `NOT_PRODUCTION_VERIFIED` because the requested Chrome extension was unavailable after deployment.
 
 ## 2026-08-04 Current Implementation Addendum
 
@@ -57,8 +58,8 @@
 | 数据库 | PostgreSQL 16；29 张业务表；源码与本地 Alembic 单一 head `20260806_0021` |
 | 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
 | 部署 | Compose：postgres、migrate、api、import-worker、web |
-| Git 基线 | 发布应用与镜像源提交为 `af17c93b344947f3d58bb7af0a77bb40a35a27fe`；生产验收后另有 docs-only 证据提交，不改变运行镜像 |
-| 最近完整验证 | 2026-08-08；Web lint/typecheck/build；API 208 passed / 1 fixture-gated skipped；PWA 基线 10 passed / 20 conditional skipped；真实附件 Bundle 浏览器流程 1/1 passed；任务切换专项通过。当前提交尚未部署 King，生产状态为 `NOT_PRODUCTION_VERIFIED` |
+| Git 基线 | 应用与镜像源提交为 `65585eb40ca1ad44eaeb2ebbe8b6d6be309ddcdc`；发布由 GitHub Actions run `31242030506` 构建，文档证据随后同步 |
+| 最近完整验证 | 2026-08-08；Web lint/typecheck/build；API 208 passed / 1 fixture-gated skipped；PWA 基线 10 passed / 20 conditional skipped；真实附件 Bundle 浏览器流程 1/1 passed；King 服务已部署且健康。Chrome 视觉点击验收因扩展未连接仍为 `NOT_PRODUCTION_VERIFIED` |
 
 ## 当前目的与边界
 

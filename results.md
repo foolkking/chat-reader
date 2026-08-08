@@ -16,7 +16,9 @@
 | Alembic | PASS | single head `20260806_0021` |
 | PWA baseline | PARTIAL_PASS | 10 passed; 20 online/fixture-gated scenarios skipped by the default matrix and are not PASS |
 | Real attachment browser fixture | PASS | 1/1 passed; product import, Markdown attachment rendering, bounded image dialog, SVG DOM, file groups, Share authorization/revocation and hard-delete cleanup completed |
-| King deployment and Chrome acceptance | NOT_PRODUCTION_VERIFIED | local release candidate has not yet been pushed, deployed, or inspected on King |
+| King incremental deployment | PASS | GitHub Actions run `31242030506` built commit `65585eb`; King verified archive SHA-256 `ef3480b2c0afa3b69ed342e53c602ca5028d523561f7859a196683c0af8ea18d`, used backup `release-20260808T053116Z-4983a8d`, ran migration, and recreated API/worker/Web with prebuilt images only |
+| King service and capability checks | PASS | public health and Reader routes return HTTP 200; API/Web/PostgreSQL are healthy, worker is running, Alembic is `20260806_0021`, scanner provider is disabled, unscanned use is allowed, basic preview is enabled, and complex preview remains disabled |
+| King Chrome attachment visual acceptance | NOT_PRODUCTION_VERIFIED | the requested Chrome extension was not connected after deployment; no substitute browser was used, so bounded viewer panels, inline attachment presentation, and interactive task toggles still require the requested Chrome click pass |
 
 The large fixture previously duplicated full Share-page hydration and consumed the test timeout after owner assertions. The fixture now verifies Share authorization directly; the dedicated Share UI path remains separately covered. This was a test-scope performance issue, not an attachment content API failure.
 

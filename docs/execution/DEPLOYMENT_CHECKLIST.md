@@ -152,3 +152,11 @@ Web 低内存构建期间 PostgreSQL 的一个后端进程于 `14:22:18Z` 被系
 - [x] PostgreSQL 未重启；API/Web/PostgreSQL healthy，worker running，Alembic `20260805_0020 (head)`，公网 health/capabilities 正常，无 ClamAV/scanner 容器。
 - [x] 生产 Chrome 使用临时验收对话确认 SVG 正文和全页面弹窗均以 `IMG` 渲染；内容区无 inline SVG/script/object/embed/iframe，Esc、背景关闭、焦点约束、滚动锁和焦点恢复通过。
 - [x] 临时验收对话已硬删除，本地临时 Bundle 已移除；本次失败格式校验提示仅在指定 Chrome profile 中关闭，未删除历史任务记录。
+
+## 附件呈现与任务清单发布（2026-08-08）
+
+- [x] GitHub Actions run `31242030506` 构建提交 `65585eb40ca1ad44eaeb2ebbe8b6d6be309ddcdc`；镜像归档 SHA-256 为 `ef3480b2c0afa3b69ed342e53c602ca5028d523561f7859a196683c0af8ea18d`。
+- [x] 发布前有效备份为 `/opt/chat-reader/backups/release-20260808T053116Z-4983a8d`，包含 PostgreSQL 与 import/export/offline/asset 业务卷；未覆盖 `.env.production`、未删除 volume、未在 King 构建。
+- [x] King 已拉取源码、加载预构建镜像、执行 migration，并以 `--no-build --no-deps --force-recreate` 更新 API/worker/Web；API/Web/PostgreSQL healthy，worker running，Alembic `20260806_0021 (head)`，ClamAV 保持停止。
+- [x] 公网 `/api/health` 与目标 Reader 路由返回 HTTP 200；`/api/capabilities` 报告 scanner disabled、允许未扫描附件、基础预览启用、复杂预览关闭。
+- [ ] 请求的 Chrome 扩展在发布后未连接；因此附件 Viewer 的最终 DOM、点击交互和任务 checkbox 的 King 生产验收仍为 `NOT_PRODUCTION_VERIFIED`，不得由服务健康检查替代。
