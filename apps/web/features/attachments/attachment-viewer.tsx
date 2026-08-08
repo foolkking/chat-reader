@@ -244,12 +244,21 @@ function ImageViewer({ attachment, session, activeIndex, mode, onSelect, onPrevi
 
 function ViewerOverviewImage({ item, access, index, onSelect }: { item: AttachmentViewerItem; access: AttachmentAccess; index: number; onSelect: (index: number) => void }) {
   const query = useViewerAttachment(item.attachmentId, access);
-  return <button type="button" onClick={() => onSelect(index)} className="mb-3 flex min-h-28 w-full break-inside-avoid items-center justify-center rounded-lg border border-ui bg-subtle p-2 focus-visible:ring-2 focus-visible:ring-[var(--accent)]" aria-label={`查看第 ${index + 1} 张图片`}>{query.data?.content_url ? <img src={query.data.content_url} alt={item.alt ?? query.data.display_name} loading="lazy" decoding="async" className="h-auto max-h-80 max-w-full object-contain" /> : <Loader2 className="h-4 w-4 animate-spin text-secondary" />}</button>;
+  return <button type="button" onClick={() => onSelect(index)} className="mb-3 flex min-h-28 w-full break-inside-avoid items-center justify-center rounded-lg border border-ui bg-subtle p-2 focus-visible:ring-2 focus-visible:ring-[var(--accent)]" aria-label={`查看第 ${index + 1} 张图片`}>{query.data ? <ViewerThumbnailImage attachment={query.data} alt={item.alt ?? query.data.display_name} fallbackLabel={`${index + 1}`} className="h-auto max-h-80 max-w-full object-contain" /> : <Loader2 className="h-4 w-4 animate-spin text-secondary" />}</button>;
 }
 
 function ViewerThumbnail({ item, access, active, label, onClick }: { item: AttachmentViewerItem; access: AttachmentAccess; active: boolean; label: string; onClick: () => void }) {
   const query = useViewerAttachment(item.attachmentId, access);
-  return <button type="button" role="listitem" aria-current={active ? "true" : undefined} aria-label={label} onClick={onClick} className={`flex h-12 min-w-12 items-center justify-center rounded-md border p-1 ${active ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : "border-ui"}`} title={query.data?.display_name ?? item.alt ?? label}>{query.data?.content_url ? <img src={query.data.content_url} alt="" loading="lazy" className="h-10 w-10 object-contain" /> : <span className="text-xs text-secondary">{label.replace(/\D/g, "")}</span>}</button>;
+  return <button type="button" role="listitem" aria-current={active ? "true" : undefined} aria-label={label} onClick={onClick} className={`flex h-12 min-w-12 items-center justify-center rounded-md border p-1 ${active ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : "border-ui"}`} title={query.data?.display_name ?? item.alt ?? label}>{query.data ? <ViewerThumbnailImage attachment={query.data} alt="" fallbackLabel={label.replace(/\D/g, "")} className="h-10 w-10 object-contain" /> : <span className="text-xs text-secondary">{label.replace(/\D/g, "")}</span>}</button>;
+}
+
+function ViewerThumbnailImage({ attachment, alt, fallbackLabel, className }: { attachment: AttachmentRead; alt: string; fallbackLabel: string; className: string }) {
+  const [failed, setFailed] = useState(false);
+  const capability = resolveAttachmentCapability(attachment);
+  const source = capability.rendererKey === "image" ? attachment.content_url : null;
+  useEffect(() => setFailed(false), [attachment.id, source]);
+  if (!source || failed) return <span className="flex h-10 min-w-10 items-center justify-center rounded bg-surface px-1 text-xs font-medium text-secondary">{fallbackLabel}</span>;
+  return <img src={source} alt={alt} loading="lazy" decoding="async" className={className} onError={() => setFailed(true)} />;
 }
 
 function useViewerAttachment(attachmentId: string, access: AttachmentAccess) {

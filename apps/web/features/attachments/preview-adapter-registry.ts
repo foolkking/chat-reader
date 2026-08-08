@@ -114,11 +114,21 @@ export function resolveAttachmentCapability(attachment: Pick<AttachmentRead, "de
   const filename = attachment.display_name || attachment.original_filename;
   const compound = compoundAttachmentExtension(filename);
   const simple = simpleAttachmentExtension(filename);
+  const detectedCapability = capabilityForMime(detectedMime);
+  const declaredCapability = capabilityForMime(declaredMime);
+  const extensionCapability = capabilityForExtension(compound) ?? capabilityForExtension(simple);
 
-  return capabilityForMime(detectedMime)
-    ?? capabilityForMime(declaredMime)
-    ?? capabilityForExtension(compound)
-    ?? capabilityForExtension(simple)
+  // libmagic commonly reports Markdown, source files and text-based engineering
+  // formats as text/plain. Treat that value as a content fact, but let a more
+  // specific declared type or a text-compatible extension refine the renderer.
+  if (detectedMime === "text/plain") {
+    if (declaredCapability && declaredMime !== "text/plain") return declaredCapability;
+    if (extensionCapability && isTextCompatibleRefinement(extensionCapability)) return extensionCapability;
+  }
+
+  return detectedCapability
+    ?? declaredCapability
+    ?? extensionCapability
     ?? CAPABILITIES.download;
 }
 
@@ -184,9 +194,14 @@ export function compoundAttachmentExtension(filename: string): string {
 
 export function simpleAttachmentExtension(filename: string): string {
   const value = filename.trim().toLowerCase();
+  if (value.startsWith(".") && value.indexOf(".", 1) < 0) return "";
   const index = value.lastIndexOf(".");
   if (index < 0 || index === value.length - 1) return "";
   return value.slice(index + 1);
+}
+
+function isTextCompatibleRefinement(capability: AttachmentRendererCapability): boolean {
+  return ["markdown", "text", "code", "json", "table", "generic"].includes(capability.rendererKey);
 }
 
 export function friendlyAttachmentType(attachment: AttachmentRead): string {

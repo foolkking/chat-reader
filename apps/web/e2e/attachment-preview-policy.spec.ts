@@ -17,6 +17,16 @@ function capability(mime: string, filename: string) {
   });
 }
 
+function capabilityWith(detectedMime: string, declaredMime: string, filename: string) {
+  return resolveAttachmentCapability({
+    detected_mime_type: detectedMime,
+    declared_mime_type: declaredMime,
+    display_name: filename,
+    original_filename: filename,
+    asset_object: null,
+  });
+}
+
 test("attachment renderer policy separates supported viewers from reliable download fallbacks", () => {
   expect(capability("text/markdown", "README.md").rendererKey).toBe("markdown");
   expect(capability("text/csv", "data.csv").rendererKey).toBe("table");
@@ -31,6 +41,14 @@ test("attachment renderer policy separates supported viewers from reliable downl
 test("trusted mime takes precedence over conflicting filename extensions", () => {
   expect(capability("application/pdf", "fake.png").rendererKey).toBe("pdf");
   expect(capability("application/zip", "fake.txt").inlineMode).toBe("download-only");
+});
+
+test("generic text detection is refined without overriding trusted binary formats", () => {
+  expect(capabilityWith("text/plain", "text/markdown", "README.md").rendererKey).toBe("markdown");
+  expect(capabilityWith("text/plain", "application/octet-stream", "model.obj").inlineMode).toBe("download-only");
+  expect(capabilityWith("text/plain", "application/octet-stream", "drawing.dxf").inlineMode).toBe("download-only");
+  expect(capabilityWith("text/plain", "text/plain", ".hiddenfile").rendererKey).toBe("text");
+  expect(capabilityWith("application/pdf", "text/plain", "fake.md").rendererKey).toBe("pdf");
 });
 
 test("render plans expose only media, preview-panel, or file-row skins", () => {
