@@ -1,14 +1,16 @@
 # 文档导航
 
-## 2026-08-06 current implementation notes
+## 2026-08-08 current implementation notes
 
 - [Backend/API merge and cancellation](system/BACKEND_AND_API.md#conversation-merge-execution-current)
 - [Reader and task user flow](system/USER_FLOWS.md#reader-source-workspace-and-merge-cancellation-current)
 - [API task additions](api-reference.md#current-task-additions-2026-08-04)
 - [Attachment data and storage](system/DATA_AND_STORAGE.md)
+- [Attachment UI and task-list rendering](system/FRONTEND_ARCHITECTURE.md#附件-ui)
+- [Task toggle and attachment export API](api-reference.md)
 - [Current verification results](../results.md)
 
-当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-06。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-08。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 
 ## 开始这里
 

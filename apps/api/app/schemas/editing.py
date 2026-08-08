@@ -52,6 +52,11 @@ class MessageEditResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class MessageTaskToggleRequest(BaseModel):
+    base_version_id: UUID
+    checked: bool
+
+
 class MessageVersionHistoryItem(BaseModel):
     id: UUID
     version_number: int

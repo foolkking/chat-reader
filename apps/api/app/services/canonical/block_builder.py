@@ -13,11 +13,21 @@ class RenderBlockDraft:
     render_priority: int = 0
 
 
+@dataclass(frozen=True)
+class MarkdownTaskDraft:
+    task_key: str
+    checked: bool
+    checked_offset: int
+    label: str
+    ordinal: int
+
+
 FENCE_OPEN_RE = re.compile(r"^(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
 ASSET_LINE_RE = re.compile(
     r'^\s*(?P<image>!)?\[(?P<label>[^\]]*)\]\(cr-asset://(?P<attachment_id>[A-Za-z0-9._:-]+)(?:\s+["\'][^"\']*["\'])?\)\s*$'
 )
+TASK_LINE_RE = re.compile(r"^(?P<prefix>\s*[-+*]\s+)\[(?P<checked>[ xX])\](?P<label>(?:\s+.*)?)$")
 THINKING_RE = re.compile(
     r"^\s*(?:>\s*)?(?:已思考|思考了|思考)\s*"
     r"(?:(?:\d+\s*(?:h|hr|hour|小时)\s*)?"
@@ -33,31 +43,53 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
         return []
 
     blocks: list[RenderBlockDraft] = []
-    paragraph_lines: list[str] = []
+    paragraph_lines: list[tuple[str, int]] = []
     code_lines: list[str] = []
     in_code = False
     code_language = ""
     code_metadata: dict[str, str] = {}
     fence_character = ""
     fence_length = 0
+    task_items = extract_markdown_tasks(display_text)
 
     def flush_paragraph() -> None:
         if not paragraph_lines:
             return
-        text = "\n".join(paragraph_lines).strip()
+        paragraph_start = paragraph_lines[0][1]
+        paragraph_end = paragraph_lines[-1][1] + len(paragraph_lines[-1][0])
+        text = "\n".join(line for line, _ in paragraph_lines).strip()
         paragraph_lines.clear()
         if text:
+            data: dict = {"text": text}
+            paragraph_tasks = [
+                {
+                    "task_key": task.task_key,
+                    "checked": task.checked,
+                    "checked_offset": task.checked_offset,
+                    "local_checked_offset": max(0, task.checked_offset - paragraph_start),
+                    "label": task.label,
+                    "ordinal": task.ordinal,
+                }
+                for task in task_items
+                if paragraph_start <= task.checked_offset <= paragraph_end
+            ]
+            if paragraph_tasks:
+                data["tasks"] = paragraph_tasks
             blocks.append(
                 RenderBlockDraft(
                     block_type="paragraph",
                     plain_text=text,
-                    data={"text": text},
+                    data=data,
                     char_count=len(text),
                     collapsed_by_default=_looks_like_thinking_block(text),
                 )
             )
 
-    for line in display_text.splitlines():
+    source_offset = 0
+    for source_line in display_text.splitlines(keepends=True):
+        line = source_line.rstrip("\r\n")
+        line_start = source_offset
+        source_offset += len(source_line)
         stripped = line.strip()
         if in_code:
             if _is_closing_fence(stripped, fence_character, fence_length):
@@ -133,7 +165,7 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
             continue
 
         if line.strip():
-            paragraph_lines.append(line)
+            paragraph_lines.append((line, line_start))
         else:
             flush_paragraph()
 
@@ -154,6 +186,59 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
 
     flush_paragraph()
     return blocks
+
+
+def extract_markdown_tasks(display_text: str) -> list[MarkdownTaskDraft]:
+    tasks: list[MarkdownTaskDraft] = []
+    duplicate_counts: dict[str, int] = {}
+    in_code = False
+    fence_character = ""
+    fence_length = 0
+    source_offset = 0
+    for source_line in display_text.splitlines(keepends=True):
+        line = source_line.rstrip("\r\n")
+        stripped = line.strip()
+        if in_code:
+            if _is_closing_fence(stripped, fence_character, fence_length):
+                in_code = False
+                fence_character = ""
+                fence_length = 0
+            source_offset += len(source_line)
+            continue
+        fence = FENCE_OPEN_RE.match(stripped)
+        if fence:
+            marker = fence.group("marker")
+            in_code = True
+            fence_character = marker[0]
+            fence_length = len(marker)
+            source_offset += len(source_line)
+            continue
+        task = TASK_LINE_RE.match(line)
+        if task:
+            label = task.group("label").strip()
+            identity = re.sub(r"\s+", " ", label).strip()
+            digest = _stable_task_digest(identity)
+            occurrence = duplicate_counts.get(digest, 0) + 1
+            duplicate_counts[digest] = occurrence
+            tasks.append(
+                MarkdownTaskDraft(
+                    task_key=f"task-{digest}-{occurrence}",
+                    checked=task.group("checked").lower() == "x",
+                    checked_offset=source_offset + task.start("checked"),
+                    label=label,
+                    ordinal=len(tasks),
+                )
+            )
+        source_offset += len(source_line)
+    return tasks
+
+
+def _stable_task_digest(value: str) -> str:
+    digest = 2166136261
+    for byte in value.encode("utf-8"):
+        digest ^= byte
+        digest = (digest * 16777619) & 0xFFFFFFFF
+    return f"{digest:08x}"
 
 
 def _looks_like_thinking_block(text: str) -> bool:

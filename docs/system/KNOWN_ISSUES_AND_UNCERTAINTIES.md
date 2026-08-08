@@ -1,6 +1,6 @@
 # 已知风险与不确定性
 
-最后核验：2026-08-06
+最后核验：2026-08-08
 
 已解决问题和实施过程保留在 [execution/](../execution/README.md)，本页只维护当前仍成立的风险。
 
@@ -19,6 +19,7 @@
 | KI-011 | King 单用户部署主动关闭附件恶意软件扫描和内容安全审查 | `scanner_disabled`/`unscanned` 文件没有经过安全检测 | 这是用户接受的部署策略；UI 明确显示“未扫描”，附件功能正常使用，数据完整性校验继续执行 |
 | KI-012 | Office/OCR/CAD/复杂压缩包预览未实现 | 用户只能下载原文件，无法站内查看复杂内容 | 明确 `NOT_IMPLEMENTED`，不在主服务器运行重型转换；基础上传、插入、Range 和浏览器预览不受阻 |
 | KI-013 | King 原机 Web 构建会触发 OOM | PostgreSQL checkpointer 可能被杀并进入 WAL 恢复 | 禁止在 King 编译 Next 镜像；改用 CI/独立 Linux 构建机和 registry 或 `docker save/load`。本轮恢复后 dump 已校验 |
+| KI-014 | 2026-08-08 附件呈现与任务清单 release candidate 尚未部署 King | 本地自动化不能证明生产 CSS、对象内容路由和真实浏览器体验 | GitHub/CI 构建后由 King 只拉取镜像与代码；部署前备份，部署后用隔离数据和真实 Chrome 验证，再更新状态 |
 
 ## 验证边界
 

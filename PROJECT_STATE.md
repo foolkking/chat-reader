@@ -1,5 +1,14 @@
 # Project State
 
+## 2026-08-08 Attachment Rendering And Task Checklist Addendum
+
+- Reader attachments use four presentation policies: `inline-rich`, `inline-compact`, `file-card`, and `fallback`. Markdown is rendered through the existing Markdown renderer; text/code/table previews are bounded; TIFF, unsupported media, Office, archive, CAD, and 3D formats use an explicit download fallback instead of a broken preview.
+- Attachment preview remains a `document.body` portal with dialog semantics, focus containment, shared body scroll locking, Esc/backdrop close, and trigger focus restoration. The visible panel is now content-specific rather than a viewport-sized white sheet: images/video use a bounded dark stage, audio uses a compact panel, and Markdown/text/table/PDF use bounded document workspaces.
+- Consecutive attachments are grouped in Reader output. Images use a gallery and ordinary files use a compact list with an explicit expand action, so fixture-heavy messages do not force every attachment into a large standalone card.
+- Conversation CanJSON/Markdown exports exclude `detached` Attachment identities and recalculate attachment/object/reference completeness. System `.cr v4` continues to preserve historical version relationships. Portable Markdown filenames preserve leading dots, Unicode, spaces, case, compound extensions, and business identities that share one AssetObject.
+- Online owner Reader task-list markers are interactive. `POST /api/messages/{message_id}/tasks/{task_key}/toggle` uses stable task metadata and base-version conflict checks; a v1 toggle creates v2, while v2+ toggles explicitly replace the current version. Share, Offline Reader, and attachment Markdown previews remain read-only.
+- Current local verification: Web lint/typecheck/build pass; API `208 passed, 1 fixture-gated skipped`; Alembic has one head `20260806_0021`; PWA/Playwright baseline has `10 passed, 20 conditional skipped`; the real attachment Bundle browser flow passes `1/1` and validates Markdown rendering, bounded image preview, SVG-as-IMG, file groups, Share authorization/revocation, and cleanup. King deployment for this addendum is `NOT_PRODUCTION_VERIFIED` until the release below is published.
+
 ## 2026-08-04 Current Implementation Addendum
 
 - Conversation merge now clones the canonical message/version/render-block/source-ref/annotation graph with bounded batch inserts. It does not reparse Markdown; headings and search are built from canonical projections after ID remapping. Source conversations remain unchanged and notebooks are intentionally excluded.
@@ -49,7 +58,7 @@
 | 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
 | 部署 | Compose：postgres、migrate、api、import-worker、web |
 | Git 基线 | 发布应用与镜像源提交为 `af17c93b344947f3d58bb7af0a77bb40a35a27fe`；生产验收后另有 docs-only 证据提交，不改变运行镜像 |
-| 最近完整验证 | 2026-08-07；Web lint/typecheck/build、API 205 passed / 1 fixture-gated skipped；PWA 基线 8 passed / 20 conditional skipped；附件上传/粘贴/已有附件拖放、配对导入、结构化侧栏 DnD 与长 Reader 在线专项 11/11 passed。当前提交尚未部署 King，生产状态为 `NOT_PRODUCTION_VERIFIED` |
+| 最近完整验证 | 2026-08-08；Web lint/typecheck/build；API 208 passed / 1 fixture-gated skipped；PWA 基线 10 passed / 20 conditional skipped；真实附件 Bundle 浏览器流程 1/1 passed；任务切换专项通过。当前提交尚未部署 King，生产状态为 `NOT_PRODUCTION_VERIFIED` |
 
 ## 当前目的与边界
 
@@ -95,7 +104,7 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - `/library` 与在线侧栏、TOC 和 Reader 语义对齐；更新只传输新增或 revision 变化的 conversation。
 - 消息工具栏位于正文上方的信息栏。在线 Reader 的桌面顶栏固定为“编辑、搜索、批注、专注、更多”，移动端固定为“导航、编辑、更多”；Share 和 Offline Reader 不显示编辑入口。
 - Markdown 源码编辑器是非模态浮动工作区，不替换正文或改变消息高度；桌面可拖动、四边缩放、复位并保存尺寸，移动端使用顶栏下方全宽面板。只有真实 wheel/touch/pointer/阅读键输入会驱动源码单向跟随阅读线；同消息同步源码位置，干净状态跨消息切换，脏状态锁定并要求保存或放弃。保存后局部更新消息与派生数据，工作区保持打开，并用真实 DOM 锚点补偿正文位置。
-- 附件预览通过 React portal 挂载到 `document.body`，覆盖完整视口并使用共享计数锁定背景滚动。弹窗具备 dialog 语义、初始焦点、Tab 焦点循环、Esc/背景关闭与触发器焦点恢复。图片（含 SVG 图片上下文）在正文和弹窗中最终均为 `<img>`，不内联 SVG XML、不以独立文档打开；文本/Markdown/JSON/CSV/代码和浏览器原生音视频可直接轻量展示。
+- 附件预览通过 React portal 挂载到 `document.body`；覆盖层负责 dialog 语义、共享背景滚动锁、初始焦点、Tab 循环、Esc/背景关闭与触发器焦点恢复，实际内容面板不再统一铺满视口。图片/视频使用受限尺寸的深色舞台，音频使用紧凑面板，Markdown/文本/表格/PDF 使用受限文档工作区。图片（含 SVG 图片上下文）最终均为 `<img>`，不内联 SVG XML、不以独立文档打开。
 - 对话导出主选项仍为 CanJSON/Markdown 与“包含附件”；折叠的二级内容选项控制对话简介、批注、笔记和 CanJSON 来源引用。普通文件与附件 ZIP 复用同一组后端 `ExportOptions`。
 - 单消息版本使用持久化左右切换器；第一版受保护，后续版本可永久删除，删除当前版本会回退到编号更小的最近可用版本。统一“拆分对话”工作区支持连续区间、边界双份和离散消息三种非破坏式复制。
 

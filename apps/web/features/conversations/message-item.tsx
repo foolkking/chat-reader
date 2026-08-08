@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useRef } from "react";
+import { memo, useRef, useState } from "react";
 import { BookmarkPlus, CheckSquare2, MoreHorizontal, Pencil, Square } from "lucide-react";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
@@ -8,6 +8,7 @@ import { normalizedMessageBlocks } from "../editing/message-source-position";
 import { VersionHistoryPanel } from "../editing/version-history-panel";
 import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import { AttachmentAccessProvider, type AttachmentAccess } from "../attachments/attachment-access";
+import { toggleMessageTask } from "../../lib/api";
 
 function MessageItemComponent({
   message,
@@ -37,6 +38,10 @@ function MessageItemComponent({
   const { t, resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const articleRef = useRef<HTMLElement | null>(null);
+  const taskToggleInFlightRef = useRef(false);
+  const [pendingTaskKeys, setPendingTaskKeys] = useState<Set<string>>(() => new Set());
+  const [taskCheckedOverrides, setTaskCheckedOverrides] = useState<Map<string, boolean>>(() => new Map());
+  const [taskError, setTaskError] = useState<string | null>(null);
   const blocks = normalizedMessageBlocks(message);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
   const isUser = message.role === "user";
@@ -77,6 +82,26 @@ function MessageItemComponent({
     await afterLayout();
     const nextAnchor = (anchorId ? document.getElementById(anchorId) : null) ?? articleRef.current;
     if (nextAnchor) scrollBy(nextAnchor.getBoundingClientRect().top - anchorTop);
+  }
+
+  async function handleTaskToggle(taskKey: string, checked: boolean) {
+    const baseVersionId = message.current_version?.id;
+    if (readOnly || !baseVersionId || taskToggleInFlightRef.current) return;
+    taskToggleInFlightRef.current = true;
+    setTaskError(null);
+    setPendingTaskKeys(new Set([taskKey]));
+    setTaskCheckedOverrides(new Map([[taskKey, checked]]));
+    try {
+      const response = await toggleMessageTask(message.id, taskKey, { baseVersionId, checked });
+      await replaceMessagePreservingAnchor(response.message);
+      setTaskCheckedOverrides(new Map());
+    } catch (error) {
+      setTaskCheckedOverrides(new Map());
+      setTaskError(error instanceof Error ? error.message : (zh ? "任务状态保存失败，请重试。" : "Task update failed. Please retry."));
+    } finally {
+      taskToggleInFlightRef.current = false;
+      setPendingTaskKeys(new Set());
+    }
   }
 
   const actions = (mobile: boolean) => (
@@ -134,8 +159,17 @@ function MessageItemComponent({
             ? "reader-message-body text-primary"
             : "reader-message-body rounded-lg border border-ui bg-surface px-4 py-3 text-primary"}>
           {isUser ? <span className="sr-only">User message {message.order_key}</span> : null}
+          {taskError ? <p className="mb-2 rounded-lg bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]" role="alert">{taskError}</p> : null}
           <AttachmentAccessProvider access={attachmentAccess}>
-            <AssistantMessageRenderer message={message} blocks={blocks} highlightTargetId={highlightTargetId} scrollRootMode={scrollRootMode} />
+            <AssistantMessageRenderer
+              message={message}
+              blocks={blocks}
+              highlightTargetId={highlightTargetId}
+              scrollRootMode={scrollRootMode}
+              pendingTaskKeys={pendingTaskKeys}
+              taskCheckedOverrides={taskCheckedOverrides}
+              onTaskToggle={readOnly ? undefined : handleTaskToggle}
+            />
           </AttachmentAccessProvider>
         </div>
       </div>

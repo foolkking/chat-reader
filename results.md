@@ -1,5 +1,25 @@
 # Implementation Results
 
+## 2026-08-08 Attachment Rendering And Task Checklist Release Candidate
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Attachment presentation policy | PASS | Markdown renders as Markdown; image metadata/download controls, bounded text/code/table previews, TIFF/media failure fallbacks, and download-only complex formats are covered by code policy and focused browser tests |
+| Preview workspace UX | PASS | portal/backdrop remains viewport-level while visible panels are type-specific: bounded dark image/video stage, compact audio panel, and bounded document/PDF workspace; focus trap, Esc, backdrop close, scroll lock and restoration remain covered |
+| SVG contract | PASS | Reader and preview content use `IMG`; focused tests reject inline SVG/script/object/embed and independent document opening |
+| Attachment grouping | PASS | consecutive images/files are grouped with bounded initial item counts and explicit expansion |
+| Conversation export projection | PASS | detached Attachments are excluded from conversation CanJSON/Markdown packages; manifest counts are recalculated; system `.cr v4` history remains unchanged |
+| Portable hidden filenames | PASS | leading dots are preserved while path confinement and collision handling remain active |
+| Interactive task lists | PASS | owner user/assistant tasks toggle immediately; v1 creates v2, v2+ replaces current, refresh persists, conflict rollback is API-covered, and Share remains read-only |
+| Web lint/typecheck/build | PASS | required commands passed on 2026-08-08 |
+| API suite | PASS | 208 passed; 1 real-fixture test was conditionally skipped and is not counted as passed |
+| Alembic | PASS | single head `20260806_0021` |
+| PWA baseline | PARTIAL_PASS | 10 passed; 20 online/fixture-gated scenarios skipped by the default matrix and are not PASS |
+| Real attachment browser fixture | PASS | 1/1 passed; product import, Markdown attachment rendering, bounded image dialog, SVG DOM, file groups, Share authorization/revocation and hard-delete cleanup completed |
+| King deployment and Chrome acceptance | NOT_PRODUCTION_VERIFIED | local release candidate has not yet been pushed, deployed, or inspected on King |
+
+The large fixture previously duplicated full Share-page hydration and consumed the test timeout after owner assertions. The fixture now verifies Share authorization directly; the dedicated Share UI path remains separately covered. This was a test-scope performance issue, not an attachment content API failure.
+
 ## 2026-08-07 Attachment Workflow Release Candidate
 
 | Area | Status | Evidence |

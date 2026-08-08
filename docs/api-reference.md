@@ -112,6 +112,14 @@ Conversation merge 可携带 `Idempotency-Key` 请求头。相同 key 的 queued
 
 TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、block index、level、title、anchor 和顺序信息，并支持 `message_id`、`max_level`、`role`、`q`、`order_key_from`、`order_key_to`、`offset` 和 `limit`。
 
+消息编辑补充接口：
+
+| Method | Path | 说明 |
+| --- | --- | --- |
+| POST | `/api/messages/{message_id}/tasks/{task_key}/toggle` | 立即切换当前 Owner Reader 中的 GFM 任务；校验 `base_version_id`，v1 创建 v2，v2+ 覆盖当前版本，返回局部消息编辑投影 |
+
+任务 key 来自 canonical block builder 的稳定元数据，不使用当前可见序号；Share、Offline 和附件 Markdown 预览不调用该写接口。
+
 ## Reading
 
 阅读位置由服务端身份解析器绑定到 `local:default`，客户端不能提交身份字段。当前客户端写入 `anchor_data.position_mode=block-relative-v2`，包含 block id/index、version id、order key、scroll ratio、block 内像素及字符偏移；恢复按 `block_id -> block_index/message_id -> order_key -> scroll_ratio` 降级，并继续读取 v1。重新进入会话时直接请求包含保存 message 的完整 `reader-turn`。
@@ -178,7 +186,7 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 | POST | `/api/system/archive/exports` | 生成系统 `.cr v4`；附件自动包含，可选择是否包含 archived |
 | POST | `/api/system/archive/restore` | 只恢复到没有 conversation/attachment 的空实例；非空返回 409 |
 
-对话产品 UI 始终导出完整当前对话，只显示 CanJSON/Markdown 与“包含附件”。无附件分别调用流式 `.canjsonl`/`.md`；含附件排队 `.context.zip`/可移植 Markdown ZIP。API 中旧 selection/context format 暂保兼容，但不在新 UI 暴露。`.context.zip` 只含 `manifest.json`、`conversation.canjsonl` 和内容寻址附件对象；manifest 分开记录 conversation/asset completeness。CanJSON metadata-only 仍保留 Attachment 和 occurrence；Markdown metadata-only 使用人类可读缺失占位。
+对话产品 UI 始终导出完整当前对话，只显示 CanJSON/Markdown 与“包含附件”。无附件分别调用流式 `.canjsonl`/`.md`；含附件排队 `.context.zip`/可移植 Markdown ZIP。API 中旧 selection/context format 暂保兼容，但不在新 UI 暴露。`.context.zip` 只含 `manifest.json`、`conversation.canjsonl` 和内容寻址附件对象；manifest 分开记录 conversation/asset completeness。当前对话投影排除 `status=detached` 的 Attachment；系统 `.cr v4` 仍保留历史版本引用。CanJSON metadata-only 仍保留 active Attachment 和 occurrence；Markdown metadata-only 使用人类可读缺失占位。
 
 附件：
 

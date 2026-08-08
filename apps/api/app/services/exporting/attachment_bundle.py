@@ -186,6 +186,7 @@ def _current_attachments(db: Session, conversation_id: uuid.UUID) -> list[Attach
         .filter(
             Attachment.conversation_id == conversation_id,
             Attachment.deleted_at.is_(None),
+            Attachment.status != "detached",
         )
         .order_by(Attachment.created_at.asc(), Attachment.id.asc())
         .all()
@@ -321,9 +322,11 @@ def _portable_attachment_paths(attachments: list[Attachment]) -> dict[uuid.UUID,
 
 
 def _safe_portable_name(value: str) -> str:
-    cleaned = re.sub(r"[\\/:*?\"<>|\x00-\x1f]+", "-", Path(value).name).strip(" .")
+    basename = value.replace("\\", "/").rsplit("/", 1)[-1]
+    cleaned = re.sub(r"[\\/:*?\"<>|\x00-\x1f]+", "-", basename).strip().rstrip(" .")
     cleaned = re.sub(r"\s+", " ", cleaned)
-    if not cleaned or cleaned.upper().split(".")[0] in {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}:
+    reserved_stem = cleaned.lstrip(".").upper().split(".")[0]
+    if cleaned in {"", ".", ".."} or reserved_stem in {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}:
         cleaned = "attachment"
     return cleaned[:120].rstrip(" .") or "attachment"
 

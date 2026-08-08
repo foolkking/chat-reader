@@ -12,12 +12,14 @@ from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.models.attachment import Attachment, MessageVersionAttachment
 from app.schemas.editing import (
+    MessageAttachmentOccurrenceInput,
     MessageEditRequest,
     MessageEditResponse,
     MessageMergeRequest,
     MessageMergeResponse,
     MessageSplitRequest,
     MessageSplitResponse,
+    MessageTaskToggleRequest,
     MessageVersionHistoryItem,
     MessageVersionHistoryResponse,
     MessageVersionDeleteResponse,
@@ -38,6 +40,7 @@ from app.services.editing.message_edit_service import (
 )
 from app.services.assets.attachment_service import attachment_read
 from app.services.background_jobs import queue_conversation_derived_rebuild
+from app.services.canonical.block_builder import extract_markdown_tasks
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 UPLOAD_REFERENCE_RE = re.compile(r"cr-upload://(?P<id>[^\s)]+)")
@@ -231,6 +234,97 @@ def update_message(
         timings.setdefault(name, 0.0)
     log = logger.warning if timings["total_ms"] > 1000 else logger.info
     log("message_save_timing message_id=%s conversation_id=%s timings=%s", message.id, message.conversation_id, timings)
+    return response
+
+
+@router.post("/{message_id}/tasks/{task_key}/toggle", response_model=MessageEditResponse)
+def toggle_message_task(
+    message_id: uuid.UUID,
+    task_key: str,
+    payload: MessageTaskToggleRequest,
+    db: Session = Depends(get_db),
+) -> MessageEditResponse:
+    message = db.get(Message, message_id)
+    if message is None or message.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
+    current_version = db.get(MessageVersion, message.current_version_id) if message.current_version_id else None
+    if current_version is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current message version not found.")
+    if current_version.id != payload.base_version_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Base version does not match current version.")
+    task = next((item for item in extract_markdown_tasks(current_version.display_text) if item.task_key == task_key), None)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Markdown task was not found in the current version.")
+    if task.checked == payload.checked:
+        return _edit_response(
+            message=message,
+            previous_version_id=current_version.id,
+            current_version_id=current_version.id,
+            version_number=current_version.version_number,
+            warnings=[],
+            db=db,
+        )
+    marker = current_version.display_text[task.checked_offset: task.checked_offset + 1]
+    if marker not in {" ", "x", "X"}:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Markdown task position is stale.")
+    next_text = (
+        current_version.display_text[:task.checked_offset]
+        + ("x" if payload.checked else " ")
+        + current_version.display_text[task.checked_offset + 1:]
+    )
+    occurrences = [
+        MessageAttachmentOccurrenceInput(
+            occurrence_key=link.occurrence_key,
+            attachment_id=link.attachment_id,
+            placement=link.placement,
+            display_order=link.display_order,
+            alt_text=link.alt_text,
+        )
+        for link in db.query(MessageVersionAttachment)
+        .filter(MessageVersionAttachment.message_version_id == current_version.id)
+        .order_by(MessageVersionAttachment.display_order.asc())
+        .all()
+    ]
+    try:
+        result = edit_message(
+            db=db,
+            message_id=message_id,
+            new_text=next_text,
+            edit_reason="task checklist toggled",
+            base_version_id=current_version.id,
+            save_mode="create_version" if current_version.version_number == 1 else "replace_current",
+            rebuild_derived=False,
+            attachment_occurrences=occurrences,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except Exception:
+        db.rollback()
+        raise
+    refreshed_message = db.get(Message, result.message.id)
+    if refreshed_message is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
+    response = _edit_response(
+        message=refreshed_message,
+        previous_version_id=result.previous_version_id,
+        current_version_id=result.current_version.id,
+        version_number=result.current_version.version_number,
+        warnings=result.warnings,
+        db=db,
+    )
+    try:
+        queue_conversation_derived_rebuild(
+            db,
+            conversation_id=message.conversation_id,
+            idempotency_key=f"message-task-derived:{message.conversation_id}:{result.current_version.id}",
+            rebuild_versions=False,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Unable to queue task-toggle derived rebuild for conversation %s", message.conversation_id)
     return response
 
 

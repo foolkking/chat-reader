@@ -41,6 +41,7 @@ def export_conversation_markdown_v2(db: Session, conversation_id: uuid.UUID, opt
             for row in db.query(Attachment).filter(
                 Attachment.conversation_id == conversation.id,
                 Attachment.deleted_at.is_(None),
+                Attachment.status != "detached",
             )
         }
         chunks = _markdown_attachment_placeholder_chunks(chunks, attachment_names)
@@ -343,6 +344,7 @@ def _canjson_v2_chunks(
                 for item in stream_db.query(Attachment).filter(
                     Attachment.conversation_id == conversation_id,
                     Attachment.deleted_at.is_(None),
+                    Attachment.status != "detached",
                 ).all()
             }
             for attachment in attachments.values():

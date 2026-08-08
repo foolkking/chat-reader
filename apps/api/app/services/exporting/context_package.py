@@ -96,6 +96,7 @@ def create_context_package(
         for row in db.query(Attachment).filter(
             Attachment.conversation_id == conversation.id,
             Attachment.deleted_at.is_(None),
+            Attachment.status != "detached",
         ).all()
     }
     message_seq = {message.id: all_sequence[message.id] for message, _ in messages}

@@ -18,6 +18,14 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { BundledLanguage, ThemedToken } from "shiki";
 
+export type MarkdownTaskItem = {
+  taskKey: string;
+  checked: boolean;
+  checkedOffset: number;
+  label: string;
+  ordinal: number;
+};
+
 const shikiTokenCache = new Map<string, ThemedToken[][]>();
 let shikiHighlighterPromise: ReturnType<typeof createCachedHighlighter> | null = null;
 const shikiLanguagePromises = new Map<BundledLanguage, Promise<void>>();
@@ -220,16 +228,29 @@ export function MarkdownRenderer({
   text,
   className = "",
   isAssistant = true,
+  taskItems = [],
+  pendingTaskKeys,
+  onTaskToggle,
 }: {
   text: string;
   className?: string;
   isAssistant?: boolean;
+  taskItems?: MarkdownTaskItem[];
+  pendingTaskKeys?: ReadonlySet<string>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
 }) {
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
+  const tasksByPart = useMemo(() => assignTasksToParts(parts, taskItems), [parts, taskItems]);
   return (
     <div className={`aui-chat-markdown max-w-full break-words text-primary ${className}`}>
       {parts.map((part, index) => (
-        <CanonicalPartRenderer key={`${part.type}-${index}`} part={part} />
+        <CanonicalPartRenderer
+          key={`${part.type}-${index}`}
+          part={part}
+          taskItems={tasksByPart[index] ?? []}
+          pendingTaskKeys={pendingTaskKeys}
+          onTaskToggle={onTaskToggle}
+        />
       ))}
     </div>
   );
@@ -283,17 +304,45 @@ export function ThinkingDisclosure({ label, text }: { label: string; text: strin
   );
 }
 
-export function AssistantMarkdownPart({ text, className = "" }: { text: string; className?: string }) {
+export function AssistantMarkdownPart({
+  text,
+  className = "",
+  taskItems = [],
+  pendingTaskKeys,
+  onTaskToggle,
+}: {
+  text: string;
+  className?: string;
+  taskItems?: MarkdownTaskItem[];
+  pendingTaskKeys?: ReadonlySet<string>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
+}) {
   if (!text.trim()) {
     return null;
+  }
+  const interactiveComponents = createTaskAwareComponents(taskItems, pendingTaskKeys, onTaskToggle);
+  const taskPlugin = taskItems.length > 0 ? remarkTaskKeys(taskItems) : null;
+  if (onTaskToggle && taskItems.length > 0) {
+    return (
+      <div className={`reader-prose ${className}`}>
+        <ReactMarkdown
+          components={interactiveComponents as Components}
+          remarkPlugins={[remarkGfm, remarkBreaks, remarkMath, ...(taskPlugin ? [taskPlugin] : [])]}
+          rehypePlugins={[rehypeSanitize, rehypeKatex]}
+          skipHtml
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    );
   }
   return (
     <TextMessagePartProvider text={text}>
       <MarkdownTextPrimitive
         className={`reader-prose ${className}`}
-        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath, ...(taskPlugin ? [taskPlugin] : [])]}
         rehypePlugins={[rehypeSanitize, rehypeKatex]}
-        components={markdownComponents}
+        components={interactiveComponents}
         componentsByLanguage={{ mermaid: { SyntaxHighlighter: MermaidDiagram, CodeHeader: MermaidCodeHeader } }}
         skipHtml
       />
@@ -332,12 +381,22 @@ export function canonicalMessagePartsFromText(text: string, isAssistant = true):
   );
 }
 
-function CanonicalPartRenderer({ part }: { part: CanonicalMessagePart }) {
+function CanonicalPartRenderer({
+  part,
+  taskItems,
+  pendingTaskKeys,
+  onTaskToggle,
+}: {
+  part: CanonicalMessagePart;
+  taskItems: MarkdownTaskItem[];
+  pendingTaskKeys?: ReadonlySet<string>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
+}) {
   if (part.type === "reasoning") {
     return <ThinkingDisclosure label={part.label} text={part.text} />;
   }
   if (part.type === "text") {
-    return <AssistantMarkdownPart text={part.text} />;
+    return <AssistantMarkdownPart text={part.text} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />;
   }
   if (part.type === "source") {
     return <CitationPart part={part} />;
@@ -349,6 +408,172 @@ function CanonicalPartRenderer({ part }: { part: CanonicalMessagePart }) {
     return <AttachmentPart name={part.name} detail={part.mimeType} url={part.url} />;
   }
   return <AttachmentPart name={part.alt ?? "图片附件"} detail="image" url={part.url} />;
+}
+
+type MarkdownAstNode = {
+  type?: string;
+  checked?: boolean | null;
+  data?: { hProperties?: Record<string, unknown> };
+  children?: MarkdownAstNode[];
+  position?: {
+    start?: { offset?: number };
+    end?: { offset?: number };
+  };
+};
+
+function remarkTaskKeys(taskItems: MarkdownTaskItem[]) {
+  return () => (tree: MarkdownAstNode) => {
+    let taskIndex = 0;
+    const walk = (node: MarkdownAstNode) => {
+      if (node.type === "listItem" && typeof node.checked === "boolean") {
+        const task = taskItems[taskIndex];
+        taskIndex += 1;
+        if (task) {
+          node.data = node.data ?? {};
+          node.data.hProperties = { ...(node.data.hProperties ?? {}), "data-task-key": task.taskKey };
+        }
+      }
+      node.children?.forEach(walk);
+    };
+    walk(tree);
+  };
+}
+
+function createTaskAwareComponents(
+  taskItems: MarkdownTaskItem[],
+  pendingTaskKeys?: ReadonlySet<string>,
+  onTaskToggle?: (taskKey: string, checked: boolean) => void,
+): typeof markdownComponents {
+  if (!onTaskToggle || taskItems.length === 0) return markdownComponents;
+  const taskByKey = new Map(taskItems.map((task) => [task.taskKey, task]));
+  let taskCursor = 0;
+  return {
+    ...markdownComponents,
+    input({ node, checked, type }) {
+      if (type !== "checkbox") {
+        return <input type={type} checked={checked} readOnly />;
+      }
+      const task = taskForListNode(node, taskItems) ?? taskItems[taskCursor++];
+      const pending = Boolean(task && pendingTaskKeys?.has(task.taskKey));
+      if (task) {
+        return (
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={task.checked}
+            aria-label={task.label || "Markdown task"}
+            disabled={pending}
+            className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded border border-ui align-[-2px] text-[var(--surface)] enabled:cursor-pointer disabled:opacity-60"
+            style={{ background: task.checked ? "var(--accent)" : "var(--surface)" }}
+            onClick={() => onTaskToggle(task.taskKey, !task.checked)}
+          >
+            {task.checked ? <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" /> : null}
+          </button>
+        );
+      }
+      return (
+        <input
+          type="checkbox"
+          checked={Boolean(checked)}
+          readOnly
+          className="mr-2 h-4 w-4 rounded border-ui align-[-2px] accent-[var(--accent)]"
+        />
+      );
+    },
+    li({ node, children, className }) {
+      const rawKey = node?.properties?.["data-task-key"];
+      const taskKey = typeof rawKey === "string" ? rawKey : null;
+      const task = (taskKey ? taskByKey.get(taskKey) : undefined) ?? taskForListNode(node, taskItems);
+      const resolvedTaskKey = task?.taskKey ?? taskKey;
+      const pending = Boolean(resolvedTaskKey && pendingTaskKeys?.has(resolvedTaskKey));
+      return (
+        <li
+          className={`pl-[0.375em] marker:text-secondary ${task ? "task-list-interactive" : ""} ${pending ? "opacity-60" : ""} ${className ?? ""}`}
+          data-task-key={resolvedTaskKey ?? undefined}
+          aria-busy={pending || undefined}
+        >
+          {children}
+        </li>
+      );
+    },
+  };
+}
+
+function taskForListNode(
+  node: { position?: { start?: { offset?: number }; end?: { offset?: number } } } | undefined,
+  tasks: MarkdownTaskItem[],
+): MarkdownTaskItem | undefined {
+  const start = node?.position?.start?.offset;
+  const end = node?.position?.end?.offset;
+  if (typeof start !== "number" || typeof end !== "number") return undefined;
+  return tasks.find((task) => task.checkedOffset >= start && task.checkedOffset <= end);
+}
+
+function assignTasksToParts(parts: CanonicalMessagePart[], tasks: MarkdownTaskItem[]): MarkdownTaskItem[][] {
+  const remaining = [...tasks];
+  return parts.map((part) => {
+    if (part.type !== "text") return [];
+    const local = extractMarkdownTaskItems(part.text);
+    return local.map((candidate) => {
+      const index = remaining.findIndex((task) => task.label === candidate.label && task.checked === candidate.checked);
+      if (index < 0) return candidate;
+      return remaining.splice(index, 1)[0];
+    });
+  });
+}
+
+export function extractMarkdownTaskItems(text: string): MarkdownTaskItem[] {
+  const items: MarkdownTaskItem[] = [];
+  const duplicateCounts = new Map<string, number>();
+  let inCode = false;
+  let fenceCharacter = "";
+  let fenceLength = 0;
+  const linePattern = /[^\r\n]*(?:\r\n|\r|\n|$)/g;
+  for (const lineMatch of text.matchAll(linePattern)) {
+    const sourceLine = lineMatch[0];
+    if (!sourceLine) break;
+    const line = sourceLine.replace(/(?:\r\n|\r|\n)$/, "");
+    const stripped = line.trim();
+    if (inCode) {
+      let closingLength = 0;
+      while (stripped[closingLength] === fenceCharacter) closingLength += 1;
+      if (stripped.startsWith(fenceCharacter) && closingLength >= fenceLength && stripped.slice(closingLength).trim() === "") {
+        inCode = false;
+      }
+      continue;
+    }
+    const fence = stripped.match(/^(`{3,}|~{3,})/);
+    if (fence) {
+      inCode = true;
+      fenceCharacter = fence[1][0];
+      fenceLength = fence[1].length;
+      continue;
+    }
+    const task = line.match(/^(\s*[-+*]\s+)\[([ xX])\]((?:\s+.*)?)$/);
+    if (!task) continue;
+    const label = task[3].trim();
+    const digest = stableTaskDigest(label.replace(/\s+/g, " ").trim());
+    const occurrence = (duplicateCounts.get(digest) ?? 0) + 1;
+    duplicateCounts.set(digest, occurrence);
+    const checkedIndex = line.indexOf("[", task[1].length - 1) + 1;
+    items.push({
+      taskKey: `task-${digest}-${occurrence}`,
+      checked: task[2].toLowerCase() === "x",
+      checkedOffset: (lineMatch.index ?? 0) + checkedIndex,
+      label,
+      ordinal: items.length,
+    });
+  }
+  return items;
+}
+
+function stableTaskDigest(value: string): string {
+  let digest = 2166136261;
+  for (const byte of new TextEncoder().encode(value)) {
+    digest ^= byte;
+    digest = Math.imul(digest, 16777619) >>> 0;
+  }
+  return digest.toString(16).padStart(8, "0");
 }
 
 function EmptyCodeHeader(_: CodeHeaderProps) {

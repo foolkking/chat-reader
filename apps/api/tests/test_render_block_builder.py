@@ -1,4 +1,4 @@
-from app.services.canonical.block_builder import build_basic_render_blocks
+from app.services.canonical.block_builder import build_basic_render_blocks, extract_markdown_tasks
 
 
 def test_plain_paragraph_builds_paragraph_block() -> None:
@@ -82,3 +82,19 @@ def test_plain_paragraph_is_not_collapsed_by_default() -> None:
 
     assert len(blocks) == 1
     assert blocks[0].collapsed_by_default is False
+
+
+def test_task_metadata_is_stable_and_ignores_fenced_code() -> None:
+    unchecked = "- [ ] Ship release\n- [x] Verify backup\n\n```md\n- [ ] example only\n```"
+    checked = unchecked.replace("- [ ] Ship release", "- [x] Ship release")
+
+    unchecked_tasks = extract_markdown_tasks(unchecked)
+    checked_tasks = extract_markdown_tasks(checked)
+    blocks = build_basic_render_blocks(unchecked)
+
+    assert len(unchecked_tasks) == 2
+    assert [task.task_key for task in unchecked_tasks] == [task.task_key for task in checked_tasks]
+    assert [task.checked for task in unchecked_tasks] == [False, True]
+    paragraph = next(block for block in blocks if block.block_type == "paragraph")
+    assert [task["task_key"] for task in paragraph.data["tasks"]] == [task.task_key for task in unchecked_tasks]
+    assert all(task["checked_offset"] >= 0 for task in paragraph.data["tasks"])

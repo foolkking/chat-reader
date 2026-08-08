@@ -747,6 +747,70 @@ def test_canjson_bundle_honors_secondary_content_options(client) -> None:
         assert any(item["record_type"] == "notebook" for item in records)
 
 
+def test_active_conversation_exports_preserve_hidden_names_and_exclude_detached_attachments(client, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "storage" / "assets"))
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+    conversation_id = _import_attachment_bundle(
+        client,
+        bundle=_bundle_bytes(filename=".hiddenfile", content=b"hidden attachment\n"),
+        filename="hidden.crbundle",
+    )
+    message = client.get(f"/api/conversations/{conversation_id}/messages").json()[0]
+    attachment = client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"][0]
+
+    markdown_job = client.post(
+        f"/api/conversations/{conversation_id}/exports",
+        json={"format": "markdown_bundle"},
+        headers={"Idempotency-Key": "hidden-name-markdown"},
+    ).json()
+    _process_task(markdown_job["job_id"])
+    markdown_task = client.get(f"/api/tasks/{markdown_job['job_id']}").json()
+    with zipfile.ZipFile(io.BytesIO(client.get(markdown_task["result"]["download_url"]).content)) as bundle:
+        assert "attachments/.hiddenfile" in bundle.namelist()
+        assert b"attachments/.hiddenfile" in bundle.read("conversation.md")
+
+    detached = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": "The attachment was removed from the active conversation files.",
+            "base_version_id": message["current_version"]["id"],
+            "removed_attachment_actions": [{"attachment_id": attachment["id"], "action": "detach_from_conversation"}],
+        },
+    )
+    assert detached.status_code == 200, detached.text
+
+    for bundle_format in ("markdown_bundle", "canjson_bundle"):
+        queued = client.post(
+            f"/api/conversations/{conversation_id}/exports",
+            json={"format": bundle_format},
+            headers={"Idempotency-Key": f"detached-{bundle_format}"},
+        ).json()
+        _process_task(queued["job_id"])
+        task = client.get(f"/api/tasks/{queued['job_id']}").json()
+        with zipfile.ZipFile(io.BytesIO(client.get(task["result"]["download_url"]).content)) as bundle:
+            assert all(".hiddenfile" not in name for name in bundle.namelist())
+            if bundle_format == "canjson_bundle":
+                manifest = json.loads(bundle.read("manifest.json"))
+                assert manifest["attachments"]["record_count"] == 0
+                records = [json.loads(line) for line in bundle.read("conversation.canjsonl").splitlines()]
+                assert not any(record["record_type"] in {"attachment", "attachment_ref"} for record in records)
+
+    context_job = client.post(
+        f"/api/conversations/{conversation_id}/exports",
+        json={"format": "context_package", "context_scope": "full_conversation"},
+        headers={"Idempotency-Key": "detached-context-package"},
+    ).json()
+    _process_task(context_job["job_id"])
+    context_task = client.get(f"/api/tasks/{context_job['job_id']}").json()
+    with zipfile.ZipFile(io.BytesIO(client.get(context_task["result"]["download_url"]).content)) as package:
+        manifest = json.loads(package.read("manifest.json"))
+        assert manifest["assets"]["attachment_records"] == 0
+        records = [json.loads(line) for line in package.read("conversation.canjsonl").splitlines()]
+        assert not any(record["record_type"] == "attachment" for record in records)
+
+
 def test_context_package_reading_scope_starts_at_selected_message_and_keeps_sequence(client) -> None:
     preview = client.post(
         "/api/imports/preview",

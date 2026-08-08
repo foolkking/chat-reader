@@ -437,6 +437,20 @@ export async function editMessage(
   );
 }
 
+export async function toggleMessageTask(
+  messageId: string,
+  taskKey: string,
+  input: { baseVersionId: string; checked: boolean },
+): Promise<MessageEditResponse> {
+  return fetchJson<MessageEditResponse>(
+    `/api/messages/${messageId}/tasks/${encodeURIComponent(taskKey)}/toggle`,
+    jsonRequest("POST", {
+      base_version_id: input.baseVersionId,
+      checked: input.checked,
+    }),
+  );
+}
+
 export async function selectMessageVersion(messageId: string, versionId: string): Promise<MessageEditResponse> {
   return fetchJson<MessageEditResponse>(
     `/api/messages/${messageId}/current-version`,

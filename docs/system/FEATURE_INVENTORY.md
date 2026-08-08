@@ -36,7 +36,7 @@
 | 连续上下阅读 | 已确认 | 相邻轮次预取、prepend/trim 真实锚点补偿 |
 | 阅读位置 | 已确认 | v2 block/version/order/ratio/字符偏移；按 block id -> index/message -> order -> ratio 恢复，兼容 v1 |
 | 双 TOC | 已确认 | 对话索引跨消息；章节 TOC 绑定消息/heading |
-| Markdown | 已确认 | GFM、Shiki、KaTeX、Mermaid、callout、表格、引用、任务列表 |
+| Markdown | 已确认 | GFM、Shiki、KaTeX、Mermaid、callout、表格、引用；在线 Owner 的任务列表可立即切换，Share/Offline/附件预览只读 |
 | 阅读偏好 | 已确认 | 宽度、Markdown 间距、15-22px 字号、主题、语言、默认专注 |
 | 专注模式 | 已确认 | 临时隐藏侧栏、TOC、提示和工具，退出恢复锚点/面板 |
 
@@ -69,8 +69,8 @@
 | 导出 | 已确认 | Markdown v2、CanJSON v2、`.cr`；CanJSON v1 位于 Legacy；私人内容默认关闭 |
 | Library PWA | 已确认 | 独立 `/library` scope、原子 shell staging、离线冷启动 |
 | 增量数据更新 | 已确认 | `known_revisions` -> v3 conversation delta；未变化不传输/重写，读 v1/v2/v3 |
-| 对话附件 | 已确认（本地在线专项；本轮 King 待发布） | 普通上传暂存、对话文件浮窗、已有附件拖入源码、版本 occurrence、Reader/Share/Offline、Range 与基础预览 |
-| 附件导出 | 已确认（自动化；生产基线保持） | CanJSON metadata-only、AI 承接包、Markdown 占位、可移植 Markdown ZIP、系统 `.cr v4` |
+| 对话附件 | 已确认（本地在线专项；本轮 King 待发布） | 四种正文策略、连续附件分组、类型化 Viewer、普通上传暂存、对话文件浮窗、已有附件拖入源码、版本 occurrence、Reader/Share/Offline 与 Range |
+| 附件导出 | 已确认（自动化；生产基线保持） | conversation export 排除 detached、CanJSON metadata-only、AI 承接包、Markdown 占位、隐藏文件名、可移植 Markdown ZIP；系统 `.cr v4` 保留历史 |
 | 离线 Reader/搜索 | 已确认 | 在线同一 ReaderDataSource 语义；只覆盖已下载资料 |
 | 离线写入 | 已确认 | 仅批注/精选笔记和本地阅读位置；canonical 管理禁用 |
 

@@ -40,6 +40,7 @@ import {
 } from "../../lib/api";
 import type { AttachmentRead } from "../../lib/types";
 import { AttachmentPreviewDialog, readableBytes } from "./attachment-block";
+import { attachmentExtension } from "./preview-adapter-registry";
 
 type Placement = "inline" | "after_message";
 type FileFilter = "all" | "used" | "unused" | "missing";
@@ -372,7 +373,9 @@ function FileRow({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{attachment.display_name}</p>
           <p className="truncate text-[11px] text-secondary">
-            {mimeLabel(mime)} · {zeroBytes ? (zh ? "空文件 · 0 B" : "Empty file · 0 B") : readableBytes(attachment.asset_object?.byte_size ?? 0)}
+            {zeroBytes
+              ? (zh ? "空文件 · 0 B" : "Empty file · 0 B")
+              : `${mimeLabel(mime, attachment.display_name)} · ${readableBytes(attachment.asset_object?.byte_size ?? 0)}`}
           </p>
           <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-secondary">
             <span>{unscanned ? (zh ? "未扫描" : "Unscanned") : attachment.scan_status}</span>
@@ -513,9 +516,11 @@ function filterLabel(value: FileFilter, zh: boolean): string {
   return zh ? "全部" : "All";
 }
 
-function mimeLabel(mime: string): string {
-  if (mime === "inode/x-empty") return "EMPTY";
-  if (mime === "application/octet-stream") return "FILE";
+function mimeLabel(mime: string, filename: string): string {
+  const extension = attachmentExtension(filename);
+  if (extension === "md" || extension === "markdown") return "Markdown";
+  if (extension) return extension.toUpperCase();
+  if (mime === "inode/x-empty" || mime === "application/octet-stream") return "FILE";
   const index = mime.indexOf("/");
   return (index >= 0 ? mime.slice(index + 1) : mime).toUpperCase();
 }

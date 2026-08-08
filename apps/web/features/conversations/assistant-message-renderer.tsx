@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { defaultRangeExtractor, useVirtualizer, useWindowVirtualizer } from "@tanstack/react-virtual";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { BlockRenderer } from "./block-renderer";
-import { MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./markdown-renderer";
+import { extractMarkdownTaskItems, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
 import { useTranslations } from "../../components/preferences-provider";
 import { READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLease } from "./block-virtualization";
 import { registerRenderedBlock } from "./rendered-block-registry";
@@ -20,19 +20,30 @@ export function AssistantMessageRenderer({
   blocks,
   highlightTargetId,
   scrollRootMode = "element",
+  pendingTaskKeys,
+  taskCheckedOverrides,
+  onTaskToggle,
 }: {
   message: MessageListItem;
   blocks: RenderBlockRead[];
   highlightTargetId?: string | null;
   scrollRootMode?: "element" | "window";
+  pendingTaskKeys?: ReadonlySet<string>;
+  taskCheckedOverrides?: ReadonlyMap<string, boolean>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
 }) {
   const t = useTranslations();
   const isAssistant = message.role === "assistant";
+  const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
+  const allTasks = useMemo(() => extractMarkdownTaskItems(currentText), [currentText]);
+  const tasksByBlock = useMemo(
+    () => assignTasksToBlocks(blocks, allTasks, taskCheckedOverrides),
+    [allTasks, blocks, taskCheckedOverrides],
+  );
 
   if (blocks.length === 0) {
-    const text = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
-    return text.trim() ? (
-      <MarkdownRenderer text={text} isAssistant={isAssistant} />
+    return currentText.trim() ? (
+      <MarkdownRenderer text={currentText} isAssistant={isAssistant} taskItems={applyTaskOverrides(allTasks, taskCheckedOverrides)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
     ) : (
       <p className="text-sm text-secondary">{t("noDisplayableContent")}</p>
     );
@@ -41,6 +52,7 @@ export function AssistantMessageRenderer({
   const leadingThinking = isAssistant ? findLeadingThinkingBlocks(blocks) : null;
   const visibleBlocks = leadingThinking ? blocks.slice(leadingThinking.endIndex + 1) : blocks;
   const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
+  const displayUnits = groupAttachmentBlocks(visibleBlocks);
 
   return (
     <div className="reader-block-flow break-words">
@@ -50,28 +62,126 @@ export function AssistantMessageRenderer({
       {shouldVirtualize ? (
         <div className="reader-block-slot" style={leadingThinking ? slotGapStyle(blockGapVariable(null, visibleBlocks[0])) : undefined}>
           {scrollRootMode === "window" ? (
-            <WindowVirtualizedBlocks messageId={message.id} blocks={visibleBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} />
+            <WindowVirtualizedBlocks messageId={message.id} blocks={visibleBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
           ) : (
-            <ElementVirtualizedBlocks messageId={message.id} blocks={visibleBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} />
+            <ElementVirtualizedBlocks messageId={message.id} blocks={visibleBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
           )}
         </div>
-      ) : visibleBlocks.map((block, index) => (
-        <BlockSlot
-          key={block.id ?? `${message.id}-${index}`}
-          messageId={message.id}
-          block={block}
-          previousBlock={visibleBlocks[index - 1] ?? null}
-          hasLeadingContent={Boolean(leadingThinking) || index > 0}
-          isAssistant={isAssistant}
-          highlightTargetId={highlightTargetId}
-        />
-      ))}
+      ) : displayUnits.map((unit, index) => {
+        const previousBlock = index > 0 ? displayUnits[index - 1].blocks.at(-1) ?? null : null;
+        const firstBlock = unit.blocks[0];
+        if (!firstBlock) return null;
+        if (unit.kind === "attachment-group") {
+          return (
+            <AttachmentBlockGroup
+              key={`attachment-group-${firstBlock.id ?? firstBlock.block_index}`}
+              messageId={message.id}
+              blocks={unit.blocks}
+              groupType={unit.groupType}
+              previousBlock={previousBlock}
+              hasLeadingContent={Boolean(leadingThinking) || index > 0}
+              isAssistant={isAssistant}
+              highlightTargetId={highlightTargetId}
+            />
+          );
+        }
+        return (
+          <BlockSlot
+            key={firstBlock.id ?? `${message.id}-${index}`}
+            messageId={message.id}
+            block={firstBlock}
+            previousBlock={previousBlock}
+            hasLeadingContent={Boolean(leadingThinking) || index > 0}
+            isAssistant={isAssistant}
+            highlightTargetId={highlightTargetId}
+            taskItems={tasksByBlock.get(firstBlock.block_index)}
+            pendingTaskKeys={pendingTaskKeys}
+            onTaskToggle={onTaskToggle}
+          />
+        );
+      })}
       {visibleBlocks.length === 0 ? null : null}
     </div>
   );
 }
 
-function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId }: VirtualizedBlocksProps) {
+type DisplayUnit = {
+  kind: "block" | "attachment-group";
+  blocks: RenderBlockRead[];
+  groupType?: "images" | "files";
+};
+
+function groupAttachmentBlocks(blocks: RenderBlockRead[]): DisplayUnit[] {
+  const units: DisplayUnit[] = [];
+  for (let index = 0; index < blocks.length;) {
+    const block = blocks[index];
+    const groupType = block.block_type === "image" ? "images" : block.block_type === "attachment" ? "files" : null;
+    if (!groupType) {
+      units.push({ kind: "block", blocks: [block] });
+      index += 1;
+      continue;
+    }
+    const grouped: RenderBlockRead[] = [];
+    while (index < blocks.length && (blocks[index].block_type === "image" ? "images" : blocks[index].block_type === "attachment" ? "files" : null) === groupType) {
+      grouped.push(blocks[index]);
+      index += 1;
+    }
+    units.push(grouped.length > 1 ? { kind: "attachment-group", blocks: grouped, groupType } : { kind: "block", blocks: grouped });
+  }
+  return units;
+}
+
+function AttachmentBlockGroup({
+  messageId,
+  blocks,
+  groupType = "files",
+  previousBlock,
+  hasLeadingContent,
+  isAssistant,
+  highlightTargetId,
+}: {
+  messageId: string;
+  blocks: RenderBlockRead[];
+  groupType?: "images" | "files";
+  previousBlock: RenderBlockRead | null;
+  hasLeadingContent: boolean;
+  isAssistant: boolean;
+  highlightTargetId?: string | null;
+}) {
+  const initialLimit = groupType === "images" ? 4 : 5;
+  const targetInside = Boolean(highlightTargetId && blocks.some((block) => highlightTargetId === `block-${messageId}-${block.block_index}`));
+  const [expanded, setExpanded] = useState(targetInside);
+  useEffect(() => {
+    if (targetInside) setExpanded(true);
+  }, [targetInside]);
+  const visibleBlocks = expanded ? blocks : blocks.slice(0, initialLimit);
+  const hiddenCount = blocks.length - visibleBlocks.length;
+  return (
+    <div
+      className="reader-block-slot"
+      data-testid="attachment-group"
+      data-attachment-group={groupType}
+      style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, blocks[0] ?? null)) : undefined}
+    >
+      <div className={groupType === "images" ? "grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2" : "flex min-w-0 flex-col gap-2"}>
+        {visibleBlocks.map((block) => (
+          <BlockElement key={block.id ?? block.block_index} messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} />
+        ))}
+      </div>
+      {hiddenCount > 0 ? (
+        <button type="button" onClick={() => setExpanded(true)} className="mt-2 inline-flex min-h-10 items-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
+          展开其余 {hiddenCount} 个附件
+        </button>
+      ) : expanded && blocks.length > initialLimit ? (
+        <button type="button" onClick={() => setExpanded(false)} className="mt-2 inline-flex min-h-10 items-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
+          收起附件组
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle }: VirtualizedBlocksProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
@@ -136,7 +246,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
           <Fragment key={String(item.key)}>
             {gapBefore > 0 ? <div aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
             <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={blocks[item.index + 1] ? blockGapVariable(block, blocks[item.index + 1] ?? null) : null}>
-              <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} />
+              <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
             </VirtualBlockRow>
           </Fragment>
         );
@@ -146,7 +256,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   );
 }
 
-function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId }: VirtualizedBlocksProps) {
+function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle }: VirtualizedBlocksProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
@@ -192,7 +302,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
           <Fragment key={String(item.key)}>
             {gapBefore > 0 ? <div aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
             <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={blocks[item.index + 1] ? blockGapVariable(block, blocks[item.index + 1] ?? null) : null}>
-              <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} />
+              <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
             </VirtualBlockRow>
           </Fragment>
         );
@@ -207,6 +317,9 @@ type VirtualizedBlocksProps = {
   blocks: RenderBlockRead[];
   isAssistant: boolean;
   highlightTargetId?: string | null;
+  tasksByBlock: Map<number, MarkdownTaskItem[]>;
+  pendingTaskKeys?: ReadonlySet<string>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
 };
 
 function useVirtualMessageRegistration(
@@ -446,17 +559,20 @@ function VirtualBlockRow({ itemIndex, measureElement, gapAfter, children }: {
   );
 }
 
-function BlockSlot({ messageId, block, previousBlock, hasLeadingContent, isAssistant, highlightTargetId }: {
+function BlockSlot({ messageId, block, previousBlock, hasLeadingContent, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle }: {
   messageId: string;
   block: RenderBlockRead;
   previousBlock: RenderBlockRead | null;
   hasLeadingContent: boolean;
   isAssistant: boolean;
   highlightTargetId?: string | null;
+  taskItems?: MarkdownTaskItem[];
+  pendingTaskKeys?: ReadonlySet<string>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
 }) {
   return (
     <div className="reader-block-slot" style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, block)) : undefined}>
-      <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} />
+      <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
     </div>
   );
 }
@@ -482,11 +598,14 @@ function isRichBlock(block: RenderBlockRead | null): boolean {
   return Boolean(block && ["blockquote", "code", "table", "image", "attachment", "mermaid", "math"].includes(block.block_type));
 }
 
-function BlockElement({ messageId, block, isAssistant, highlightTargetId }: {
+function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle }: {
   messageId: string;
   block: RenderBlockRead;
   isAssistant: boolean;
   highlightTargetId?: string | null;
+  taskItems?: MarkdownTaskItem[];
+  pendingTaskKeys?: ReadonlySet<string>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
 }) {
   const domId = `block-${messageId}-${block.block_index}`;
   const unregisterRef = useRef<(() => void) | null>(null);
@@ -510,9 +629,54 @@ function BlockElement({ messageId, block, isAssistant, highlightTargetId }: {
           : ""
       }`}
     >
-      <BlockRenderer block={block} isAssistant={isAssistant} />
+      <BlockRenderer block={block} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
     </div>
   );
+}
+
+function assignTasksToBlocks(
+  blocks: RenderBlockRead[],
+  allTasks: MarkdownTaskItem[],
+  overrides?: ReadonlyMap<string, boolean>,
+): Map<number, MarkdownTaskItem[]> {
+  const output = new Map<number, MarkdownTaskItem[]>();
+  let cursor = 0;
+  for (const block of blocks) {
+    const localTasks = extractMarkdownTaskItems(readBlockText(block));
+    const localCount = localTasks.length;
+    const stored = readStoredTaskItems(block.data.tasks);
+    const selected = stored.length > 0
+      ? stored
+      : allTasks.slice(cursor, cursor + localCount).map((task, index) => ({
+          ...task,
+          checkedOffset: localTasks[index]?.checkedOffset ?? task.checkedOffset,
+        }));
+    if (selected.length > 0) output.set(block.block_index, applyTaskOverrides(selected, overrides));
+    cursor += localCount;
+  }
+  return output;
+}
+
+function readStoredTaskItems(value: unknown): MarkdownTaskItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const task = item as Record<string, unknown>;
+    const taskKey = typeof task.task_key === "string" ? task.task_key : null;
+    if (!taskKey) return [];
+    return [{
+      taskKey,
+      checked: Boolean(task.checked),
+      checkedOffset: Number(task.local_checked_offset ?? task.checked_offset ?? 0),
+      label: typeof task.label === "string" ? task.label : "",
+      ordinal: Number(task.ordinal ?? 0),
+    }];
+  });
+}
+
+function applyTaskOverrides(items: MarkdownTaskItem[], overrides?: ReadonlyMap<string, boolean>): MarkdownTaskItem[] {
+  if (!overrides || overrides.size === 0) return items;
+  return items.map((item) => overrides.has(item.taskKey) ? { ...item, checked: Boolean(overrides.get(item.taskKey)) } : item);
 }
 
 function estimateBlockSize(block?: RenderBlockRead): number {

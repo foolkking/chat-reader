@@ -345,6 +345,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .reader-frame .reader-content-inner .reader-prose li { margin-block: 0; }
 .reader-frame .reader-content-inner .reader-prose li + li,
 .reader-frame .reader-content-inner .reader-prose li > * + * { margin-block-start: var(--reader-list-item-gap); }
+.reader-frame .reader-content-inner .reader-prose .task-list-interactive > input[type="checkbox"] { cursor: pointer; }
 .reader-frame .reader-content-inner .reader-prose :is(blockquote, pre, .markdown-table, .markdown-callout, .reader-code-block) { margin-block: 0; }
 .reader-frame .reader-content-inner .reader-prose > * + :is(blockquote, pre, .markdown-table, .markdown-callout, .reader-code-block, .katex-display, .mermaid),
 .reader-frame .reader-content-inner .reader-prose > :is(blockquote, pre, .markdown-table, .markdown-callout, .reader-code-block, .katex-display, .mermaid) + * { margin-block-start: var(--reader-rich-block-gap); }

@@ -50,6 +50,18 @@
 
 最后审计：2026-08-05
 
+## 2026-08-08 attachment rendering and task ownership additions
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `apps/web/features/attachments/attachment-block.tsx` | Current | Four attachment presentation modes, bounded type-specific body-level Viewer, media failure fallback, metadata and download actions. |
+| `apps/web/features/attachments/preview-adapter-registry.ts` | Current | Extension/MIME policy for Markdown, table, code, media, image and download-only formats. |
+| `apps/web/features/conversations/markdown-renderer.tsx` | Current | Stable task-key extraction and owner-only interactive GFM task controls. |
+| `apps/api/app/services/canonical/block_builder.py` | Current | Canonical task metadata and stable key generation outside code fences. |
+| `apps/api/app/api/routes/messages.py` | Current | Base-version-aware task toggle endpoint and bounded message edit transaction. |
+
+最后审计：2026-08-08
+
 ## 项目画像与规则
 
 - 项目画像：Monorepo、前端应用、Web/后端服务。

@@ -109,3 +109,59 @@ def test_edit_writes_conversation_event(client: TestClient) -> None:
     assert payload["total"] == 1
     assert payload["items"][0]["target_message_id"] == message["id"]
     assert payload["items"][0]["payload"]["edit_reason"] == "Event check"
+
+
+def test_task_checkbox_toggle_creates_v2_then_replaces_current_for_user_and_assistant(client: TestClient) -> None:
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "tasks.json",
+                json.dumps({
+                    "metadata": {"title": "Task toggles", "powered_by": "ChatGPT Exporter"},
+                    "messages": [
+                        {"role": "Prompt", "say": "- [ ] User task"},
+                        {"role": "Response", "say": "- [ ] Assistant task\n\n```md\n- [ ] example only\n```"},
+                    ],
+                }).encode(),
+                "application/json",
+            )
+        },
+    )
+    assert preview.status_code == 200
+    commit = client.post(f"/api/imports/{preview.json()['import_id']}/commit")
+    assert commit.status_code == 200
+    conversation_id = commit.json()["conversation_ids"][0]
+    messages = client.get(f"/api/conversations/{conversation_id}/message-window?include_blocks=true&limit=10").json()["items"]
+
+    for message in messages:
+        current = message["current_version"]
+        paragraph = next(block for block in message["render_blocks"] if block["block_type"] == "paragraph")
+        tasks = paragraph["data"]["tasks"]
+        assert len(tasks) == 1
+        task_key = tasks[0]["task_key"]
+
+        first = client.post(
+            f"/api/messages/{message['id']}/tasks/{task_key}/toggle",
+            json={"base_version_id": current["id"], "checked": True},
+        )
+        assert first.status_code == 200, first.text
+        first_payload = first.json()
+        assert first_payload["version_number"] == 2
+        assert "- [x]" in first_payload["message_version"]["display_text"]
+
+        second = client.post(
+            f"/api/messages/{message['id']}/tasks/{task_key}/toggle",
+            json={"base_version_id": first_payload["current_version_id"], "checked": False},
+        )
+        assert second.status_code == 200, second.text
+        assert second.json()["version_number"] == 2
+        assert "- [ ]" in second.json()["message_version"]["display_text"]
+        history = client.get(f"/api/messages/{message['id']}/versions").json()["items"]
+        assert [item["version_number"] for item in history] == [2, 1]
+
+        conflict = client.post(
+            f"/api/messages/{message['id']}/tasks/{task_key}/toggle",
+            json={"base_version_id": current["id"], "checked": True},
+        )
+        assert conflict.status_code == 409

@@ -1,10 +1,22 @@
 import type { RenderBlockRead } from "../../lib/types";
-import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp } from "./markdown-renderer";
+import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
 import { AttachmentBlock } from "../attachments/attachment-block";
 
 const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 
-export function BlockRenderer({ block, isAssistant = true }: { block: RenderBlockRead; isAssistant?: boolean }) {
+export function BlockRenderer({
+  block,
+  isAssistant = true,
+  taskItems,
+  pendingTaskKeys,
+  onTaskToggle,
+}: {
+  block: RenderBlockRead;
+  isAssistant?: boolean;
+  taskItems?: MarkdownTaskItem[];
+  pendingTaskKeys?: ReadonlySet<string>;
+  onTaskToggle?: (taskKey: string, checked: boolean) => void;
+}) {
   if (block.block_type === "image" || block.block_type === "attachment") {
     const attachmentId = readString(block.data.attachmentId);
     if (!attachmentId) return null;
@@ -51,7 +63,7 @@ export function BlockRenderer({ block, isAssistant = true }: { block: RenderBloc
     return <MarkdownRenderer text={`\`\`\`${language ?? ""}\n${code}\n\`\`\``} isAssistant={false} />;
   }
 
-  return <MarkdownRenderer text={text} isAssistant={isAssistant} />;
+  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />;
 }
 
 function normalizeHeadingLevel(value: unknown): 1 | 2 | 3 | 4 {
