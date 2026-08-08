@@ -26,6 +26,7 @@ jobs:
             --file apps/web/Dockerfile \
             --build-arg API_INTERNAL_URL=http://api:8000 \
             --build-arg COMPLEX_ATTACHMENT_PREVIEW_ENABLED=false \
+            --build-arg WEB_BUILD_HEAP_MB=2048 \
             --tag chat-reader-web:${GITHUB_SHA} \
             .
 
