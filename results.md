@@ -15,11 +15,15 @@
 | Web lint/typecheck/build | PASS | all required commands passed on 2026-08-09; build uses browser PDF.js with optional Node canvas excluded |
 | API suite | PASS | 211 passed; 1 fixture-gated test skipped and not counted as passed |
 | Alembic | PASS | one head `20260806_0021`; no migration added |
-| Attachment policy/SVG/portal tests | PASS | 6/6 passed |
+| Attachment policy/SVG/portal tests | PASS | final focused run 7/7 passed, including generic `text/plain` refinement and trusted binary MIME precedence |
 | PWA default matrix | PARTIAL_PASS | 13 passed; 21 online/fixture-gated scenarios skipped and not counted as passed |
-| Production deployment and Chrome acceptance | NOT_PRODUCTION_VERIFIED | the candidate has not been deployed and the multi-format production conversation has not been rechecked against it |
+| Production deployment | PASS | final commit `5baea32` was built by run `31269172465`, archive SHA-256 `55a53e8606ae1e404255729dbb566172913997b3678648e3630b95be73400f6e`, and deployed with migration plus `--no-build` service recreation |
+| Production Chrome core Viewer acceptance | PASS | real multi-format conversation verified one body dialog, image Gallery/filmstrip, Markdown Rendered/Source, OBJ/STL/DXF download-only behavior, TIFF non-broken fallback, Esc and scroll restoration |
+| Optional/conditional Viewer matrix | PARTIAL_PASS | Offline/PWA conditional scenarios, animation frame enforcement and TIFF converted first-page preview were not fully exercised in production |
 
 Contract approval markers and the implementation/verification boundary are recorded in `docs/system/ATTACHMENT_RENDERER_CONTRACT.md`.
+
+Release backup `/opt/chat-reader/backups/release-20260808T170034Z-254b5bb` is 378 MiB. Its PostgreSQL custom dump passed `pg_restore --list`; SHA-256 manifests cover the dump and all four business-volume archives. Production capabilities report Viewer, Range, derivatives, text search and batch download enabled; scanner provider remains disabled, unscanned use is allowed, and complex preview remains disabled.
 
 ## 2026-08-08 Attachment Rendering And Task Checklist Release Candidate
 

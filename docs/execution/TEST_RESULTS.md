@@ -1,5 +1,19 @@
 # 测试结果
 
+## 2026-08-09 Attachment Renderer final release
+
+| Check | Status | Result |
+| --- | --- | --- |
+| Web lint / typecheck / production build | PASS | final registry/thumbnail patch passes all three commands; 9 Next.js routes |
+| API full suite | PASS | 211 passed, 1 fixture-gated skipped; skipped case is not counted as PASS |
+| Renderer/SVG/single-portal policy | PASS | final focused run 7/7 |
+| PWA default | PARTIAL_PASS | 13 passed, 21 conditional skipped |
+| Linux release images | PASS | GitHub Actions run `31269172465`, commit `5baea32`, archive SHA-256 `55a53e8606ae1e404255729dbb566172913997b3678648e3630b95be73400f6e` |
+| King services and migration | PASS | API/Web/PostgreSQL healthy, worker running, Alembic `20260806_0021`, ClamAV stopped |
+| Production Chrome core Viewer | PASS | one body dialog; image Gallery/filmstrip; Markdown Rendered/Source; engineering download fallback; TIFF failure fallback; Esc and scroll restoration |
+| Optional complex Viewer | NOT_IMPLEMENTED | Office/Spreadsheet/Presentation/EPUB/Archive/Diagram/CAD/3D use authenticated download-only fallback |
+| Conditional Offline/PWA and animation/TIFF derivative matrix | PARTIAL_PASS | not all production scenarios were executed |
+
 ## 2026-08-07 attachment workflow release candidate
 
 | 检查 | 状态 | 结果 |

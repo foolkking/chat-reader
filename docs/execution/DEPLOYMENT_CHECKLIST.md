@@ -160,3 +160,13 @@ Web 低内存构建期间 PostgreSQL 的一个后端进程于 `14:22:18Z` 被系
 - [x] King 已拉取源码、加载预构建镜像、执行 migration，并以 `--no-build --no-deps --force-recreate` 更新 API/worker/Web；API/Web/PostgreSQL healthy，worker running，Alembic `20260806_0021 (head)`，ClamAV 保持停止。
 - [x] 公网 `/api/health` 与目标 Reader 路由返回 HTTP 200；`/api/capabilities` 报告 scanner disabled、允许未扫描附件、基础预览启用、复杂预览关闭。
 - [ ] 请求的 Chrome 扩展在发布后未连接；因此附件 Viewer 的最终 DOM、点击交互和任务 checkbox 的 King 生产验收仍为 `NOT_PRODUCTION_VERIFIED`，不得由服务健康检查替代。
+
+## Attachment Renderer 合同发布（2026-08-09）
+
+- [x] 最终应用与镜像源提交 `5baea32cdada3ed22ae01268cac128f88fa9f527` 已推送 GitHub；最终 Linux 镜像由 Actions run `31269172465` 生成，归档 SHA-256 为 `55a53e8606ae1e404255729dbb566172913997b3678648e3630b95be73400f6e`。
+- [x] 首次失败 run `31267864860` 的原因是 Web Docker builder 固定 640 MiB heap OOM；`254b5bb` 将构建 heap 改为外部可配置，未改变 King runtime 或 worker 640 MiB 限制。
+- [x] 发布前备份 `/opt/chat-reader/backups/release-20260808T170034Z-254b5bb` 为 378 MiB；PostgreSQL custom dump 已通过 `pg_restore --list`，dump 与 import/export/offline/asset 四个归档均有 SHA-256。
+- [x] King 只执行源码 fast-forward、双端归档校验、`docker load`、migration 与 `--no-build --no-deps --force-recreate`；未执行 Next build、未覆盖 `.env.production`、未删除 volume、未启动 ClamAV，PostgreSQL 未重启。
+- [x] 最终 API/Web/PostgreSQL healthy，worker running，Alembic `20260806_0021 (head)`；公网首页、health、Library 和测试 Reader 均为 HTTP 200，最近部署日志无 error/exception/traceback/fatal/panic。
+- [x] 生产 Chrome 核验一个 body-level Viewer：图片 Gallery/filmstrip、Markdown Rendered/Source、OBJ/STL/DXF download-only、TIFF 缩略图和主视图 fallback、Esc、scroll lock/restoration 均通过。Viewer 页面中只存在一个 dialog。
+- [ ] PWA 默认矩阵的 21 个条件场景、动画帧限制、TIFF 转换首帧预览和可选复杂 Viewer 未在本批生产逐项执行，保持 `PARTIAL_PASS`/`NOT_IMPLEMENTED`。

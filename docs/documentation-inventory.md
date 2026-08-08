@@ -177,3 +177,5 @@
 | `examples/example1/ChatGPT-社交训练.md` | 数据资产 | 解析/展示示例；由相关测试或产品样例维护，不按文档风格改写 |
 
 新增 import 目录中的 Markdown 自动继承“数据资产”分类，即使尚未写入本表。若未来需要删除或匿名化，必须先确认测试依赖和用户数据保留要求。
+
+2026-08-09 文档同步：Attachment Renderer 最终合同、生产镜像 run、备份、部署与真实 Chrome 证据已写入 `PROJECT_STATE.md`、`results.md`、`docs/system/ATTACHMENT_RENDERER_CONTRACT.md`、部署文档和执行记录。没有新增文档类别；条件跳过和 `NOT_IMPLEMENTED` 项未提升为 PASS。

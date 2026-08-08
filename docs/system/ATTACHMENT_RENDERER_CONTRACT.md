@@ -97,7 +97,11 @@ Schema introspection is limited to startup, CI, migration tests and deployment p
 
 ## Verification Status
 
-The 2026-08-09 local verification passed Web lint, typecheck, production build, API `211 passed / 1 fixture-gated skipped`, attachment contract tests `3/3`, Renderer/SVG/portal tests `6/6`, and PWA baseline `13 passed / 21 conditional skipped`. Conditional and production visual scenarios are not PASS. This change set is `NOT_PRODUCTION_VERIFIED` until deployed and exercised with the real multi-format conversation in Chrome.
+The 2026-08-09 local verification passed Web lint, typecheck, production build, API `211 passed / 1 fixture-gated skipped`, attachment contract tests `3/3`, final Renderer/SVG/portal policy tests `7/7`, and PWA baseline `13 passed / 21 conditional skipped`. Conditional tests remain `PARTIAL_PASS`, not PASS.
+
+Final commit `5baea32cdada3ed22ae01268cac128f88fa9f527` was built by GitHub Actions run `31269172465` and deployed to King from archive SHA-256 `55a53e8606ae1e404255729dbb566172913997b3678648e3630b95be73400f6e`. Production Chrome verified the single `document.body` dialog, image Gallery and filmstrip, Markdown Rendered/Source, trusted MIME versus generic-text refinement, download-only engineering formats, TIFF fallback without a broken image, Esc, body scroll lock and restoration. Core Viewer production acceptance is PASS.
+
+This does not promote unexecuted conditional PWA/Offline tests, animated-image frame enforcement, TIFF converted first-page preview, or optional complex viewers. Office, Spreadsheet, Presentation, EPUB, Archive, Diagram, CAD and 3D remain `NOT_IMPLEMENTED` with reliable authenticated download-only fallback.
 
 ```text
 ATTACHMENT_RENDERER_CONTRACT = APPROVED

@@ -8,7 +8,9 @@
 - Image display modes are `auto/small/medium/large` with 280px/480px/Reader-width caps and no forced low-resolution enlargement. Adjacent current-version images form one group; more than six shows five images plus a sixth `+N` entry while retaining the full Viewer session.
 - Markdown/text/code/table previews are bounded. Long Markdown Viewer has a contained scroll region; Markdown remains inert. PDF uses lazy PDF.js canvas rendering. Media/image/PDF/text failures show retry/download fallback and runtime codec rejection does not mutate static capability. Office/ODF/EPUB/archive/CAD/3D remain `NOT_IMPLEMENTED` with authenticated download-only fallback.
 - API additions include abstract attachment capability flags, checksum/query-bound paginated text search, bounded image thumbnail/preview derivatives and Owner-only worker ZIP downloads. Existing GET/HEAD single-range routes remain the content authority. No migration was added; local schema/migration verification remains at single head `20260806_0021`.
-- Local verification on 2026-08-09: Web lint/typecheck/build PASS; API `211 passed, 1 fixture-gated skipped`; attachment API contract `3/3`; Renderer/SVG/single-portal tests `6/6`; PWA default matrix `13 passed, 21 conditional skipped` (`PARTIAL_PASS`). This change set has not been deployed or visually accepted on production Chrome and is `NOT_PRODUCTION_VERIFIED`.
+- Local verification on 2026-08-09: Web lint/typecheck/build PASS; API `211 passed, 1 fixture-gated skipped`; attachment API contract `3/3`; final Renderer/SVG/single-portal policy tests `7/7`; PWA default matrix `13 passed, 21 conditional skipped` (`PARTIAL_PASS`).
+- Production now runs final source/image commit `5baea32cdada3ed22ae01268cac128f88fa9f527`, built by GitHub Actions run `31269172465` and deployed from verified archive SHA-256 `55a53e8606ae1e404255729dbb566172913997b3678648e3630b95be73400f6e`. Backup `/opt/chat-reader/backups/release-20260808T170034Z-254b5bb` contains a validated PostgreSQL custom dump and import/export/offline/asset archives. API/Web/PostgreSQL are healthy, worker is running, Alembic is `20260806_0021`, and ClamAV remains stopped.
+- Production Chrome verified the single body-level Viewer, image Gallery/filmstrip, Markdown Rendered/Source modes, download-only engineering formats, TIFF thumbnail/main failure fallback, Esc, scroll lock and restoration. Full conditional PWA/Offline scenarios and optional complex viewers are not promoted to PASS by this visual acceptance.
 - Durable contract: `docs/system/ATTACHMENT_RENDERER_CONTRACT.md`.
 
 ## 2026-08-08 Attachment Rendering And Task Checklist Addendum
@@ -69,8 +71,8 @@
 | 数据库 | PostgreSQL 16；29 张业务表；源码与本地 Alembic 单一 head `20260806_0021` |
 | 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
 | 部署 | Compose：postgres、migrate、api、import-worker、web |
-| Git 基线 | 应用与镜像源提交为 `65585eb40ca1ad44eaeb2ebbe8b6d6be309ddcdc`；发布由 GitHub Actions run `31242030506` 构建，文档证据随后同步 |
-| 最近完整验证 | 2026-08-09 本地：Web lint/typecheck/build；API 211 passed / 1 fixture-gated skipped；PWA 基线 13 passed / 21 conditional skipped。King 仍运行 2026-08-08 已发布版本；本次 Attachment Viewer candidate 尚未部署，生产 Chrome 为 `NOT_PRODUCTION_VERIFIED` |
+| Git 基线 | 应用与镜像源提交为 `5baea32cdada3ed22ae01268cac128f88fa9f527`；最终镜像由 GitHub Actions run `31269172465` 构建，文档证据随后同步 |
+| 最近完整验证 | 2026-08-09 本地：Web lint/typecheck/build；API 211 passed / 1 fixture-gated skipped；PWA 基线 13 passed / 21 conditional skipped。King 已部署最终 Viewer commit，并完成真实 Chrome 核心 Viewer/Registry 验收；条件跳过的 PWA/Offline 与可选复杂 Viewer 仍不算 PASS |
 
 ## 当前目的与边界
 
