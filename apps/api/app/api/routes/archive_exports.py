@@ -150,7 +150,7 @@ def download_archive(artifact_id: uuid.UUID, db: Session = Depends(get_db)) -> F
         CONTEXT_PACKAGE_MIME
         if artifact.format == CONTEXT_PACKAGE_FORMAT
         else BUNDLE_MIME
-        if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT}
+        if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT, "attachment-batch-zip"}
         else ARCHIVE_MIME
     )
     return FileResponse(path, media_type=media_type, filename=artifact.filename)

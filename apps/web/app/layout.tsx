@@ -6,6 +6,7 @@ import { ShortcutManager } from "../components/shortcut-manager";
 import { InteractionDialogProvider } from "../components/interaction-dialog-provider";
 import { ServiceWorkerRegistration } from "../components/service-worker-registration";
 import { OfflineSyncManager } from "../components/offline-sync-manager";
+import { AttachmentViewerProvider } from "../features/attachments/attachment-viewer";
 import { resolveLocale } from "../lib/i18n";
 import type { UserPreferenceRead } from "../lib/types";
 import { headers } from "next/headers";
@@ -41,7 +42,7 @@ export default async function RootLayout({
       <body>
         <QueryProvider>
           <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
-            <InteractionDialogProvider><ImportDialogProvider><ShortcutManager /><OfflineSyncManager />{children}</ImportDialogProvider></InteractionDialogProvider>
+            <InteractionDialogProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager />{children}</AttachmentViewerProvider></ImportDialogProvider></InteractionDialogProvider>
           </PreferencesProvider>
         </QueryProvider>
         <ServiceWorkerRegistration />

@@ -22,6 +22,11 @@ class AttachmentCapabilities(BaseModel):
     basic_preview_enabled: bool
     complex_preview_enabled: bool
     max_file_size_bytes: int
+    viewer: bool
+    range: bool
+    imageDerivatives: bool
+    textSearch: bool
+    batchDownload: bool
 
 
 class CapabilitiesResponse(BaseModel):
@@ -64,5 +69,10 @@ def capabilities() -> CapabilitiesResponse:
                 settings.complex_attachment_preview_enabled and settings.attachment_preview_origin
             ),
             max_file_size_bytes=settings.bundle_max_object_bytes,
+            viewer=True,
+            range=True,
+            imageDerivatives=True,
+            textSearch=True,
+            batchDownload=True,
         )
     )

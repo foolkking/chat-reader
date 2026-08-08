@@ -1,5 +1,16 @@
 # Project State
 
+## 2026-08-09 Attachment Renderer Contract Addendum
+
+- Attachment presentation now separates `AttachmentDataState`, static `RendererCapability`, per-request `RuntimeRenderState`, and `RenderPlan`. Inline UI has exactly three skins: `media`, `preview-panel`, and `file-row`; empty/missing/unsupported/preview failure/offline absence are FileRow variants.
+- The root layout mounts one `AttachmentViewerProvider` and one body-level `AttachmentViewerShell`. Reader, file-panel compatibility calls and Gallery sessions use the same shell; the old preview component no longer owns a second portal. Viewer is consumption-only.
+- Current-version occurrence metadata (`messageVersionId`, `occurrenceKey`, display order/mode, caption and alt) is included in Reader turns, direct message/block responses and Offline package blocks. Gallery identity is `message_version_id + occurrence_key`; block index is only positioning metadata.
+- Image display modes are `auto/small/medium/large` with 280px/480px/Reader-width caps and no forced low-resolution enlargement. Adjacent current-version images form one group; more than six shows five images plus a sixth `+N` entry while retaining the full Viewer session.
+- Markdown/text/code/table previews are bounded. Long Markdown Viewer has a contained scroll region; Markdown remains inert. PDF uses lazy PDF.js canvas rendering. Media/image/PDF/text failures show retry/download fallback and runtime codec rejection does not mutate static capability. Office/ODF/EPUB/archive/CAD/3D remain `NOT_IMPLEMENTED` with authenticated download-only fallback.
+- API additions include abstract attachment capability flags, checksum/query-bound paginated text search, bounded image thumbnail/preview derivatives and Owner-only worker ZIP downloads. Existing GET/HEAD single-range routes remain the content authority. No migration was added; local schema/migration verification remains at single head `20260806_0021`.
+- Local verification on 2026-08-09: Web lint/typecheck/build PASS; API `211 passed, 1 fixture-gated skipped`; attachment API contract `3/3`; Renderer/SVG/single-portal tests `6/6`; PWA default matrix `13 passed, 21 conditional skipped` (`PARTIAL_PASS`). This change set has not been deployed or visually accepted on production Chrome and is `NOT_PRODUCTION_VERIFIED`.
+- Durable contract: `docs/system/ATTACHMENT_RENDERER_CONTRACT.md`.
+
 ## 2026-08-08 Attachment Rendering And Task Checklist Addendum
 
 - Reader attachments use four presentation policies: `inline-rich`, `inline-compact`, `file-card`, and `fallback`. Markdown is rendered through the existing Markdown renderer; text/code/table previews are bounded; TIFF, unsupported media, Office, archive, CAD, and 3D formats use an explicit download fallback instead of a broken preview.
@@ -59,7 +70,7 @@
 | 浏览器离线库 | Dexie version 2；兼容读取 v1；offline package 写 v3、读 v1/v2/v3 |
 | 部署 | Compose：postgres、migrate、api、import-worker、web |
 | Git 基线 | 应用与镜像源提交为 `65585eb40ca1ad44eaeb2ebbe8b6d6be309ddcdc`；发布由 GitHub Actions run `31242030506` 构建，文档证据随后同步 |
-| 最近完整验证 | 2026-08-08；Web lint/typecheck/build；API 208 passed / 1 fixture-gated skipped；PWA 基线 10 passed / 20 conditional skipped；真实附件 Bundle 浏览器流程 1/1 passed；King 服务已部署且健康。Chrome 视觉点击验收因扩展未连接仍为 `NOT_PRODUCTION_VERIFIED` |
+| 最近完整验证 | 2026-08-09 本地：Web lint/typecheck/build；API 211 passed / 1 fixture-gated skipped；PWA 基线 13 passed / 21 conditional skipped。King 仍运行 2026-08-08 已发布版本；本次 Attachment Viewer candidate 尚未部署，生产 Chrome 为 `NOT_PRODUCTION_VERIFIED` |
 
 ## 当前目的与边界
 

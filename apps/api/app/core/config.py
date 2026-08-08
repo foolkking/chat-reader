@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     attachment_upload_ttl_hours: int = Field(default=24, alias="ATTACHMENT_UPLOAD_TTL_HOURS")
     complex_attachment_preview_enabled: bool = Field(default=False, alias="COMPLEX_ATTACHMENT_PREVIEW_ENABLED")
     attachment_preview_origin: str | None = Field(default=None, alias="ATTACHMENT_PREVIEW_ORIGIN")
+    attachment_cursor_secret: str = Field(default="chat-reader-local-cursor-v1", alias="ATTACHMENT_CURSOR_SECRET")
     bundle_max_compressed_bytes: int = Field(default=512 * 1024 * 1024, alias="BUNDLE_MAX_COMPRESSED_BYTES")
     bundle_max_expanded_bytes: int = Field(default=2 * 1024 * 1024 * 1024, alias="BUNDLE_MAX_EXPANDED_BYTES")
     bundle_max_object_bytes: int = Field(default=256 * 1024 * 1024, alias="BUNDLE_MAX_OBJECT_BYTES")

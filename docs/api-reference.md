@@ -1,5 +1,17 @@
 # API 参考
 
+## Attachment Renderer supporting APIs (2026-08-09)
+
+| Method | Path | Contract |
+| --- | --- | --- |
+| `GET` | `/api/attachments/{id}/text/search?q=&limit=&cursor=` | Bounded literal text search with signed continuation cursor; stale object/query cursors return `cursor_stale` |
+| `POST` | `/api/attachments/{id}/derivatives/{type}` | Queue `text_extract`, `image_thumbnail`, or `image_preview` through the existing worker |
+| `GET/HEAD` | `/api/attachments/{id}/derivatives/{type}/content` | Authorized derivative content using the shared single-byte-Range contract |
+| `POST` | `/api/conversations/{id}/attachment-downloads` | Owner-only bounded background ZIP of active available conversation Attachments |
+| `GET` | `/api/capabilities` | Abstract Viewer/Range/derivative/search/batch flags only; no database schema details |
+
+Owner, Share and derivative content authorization occurs before file stat/read. Share cannot enumerate owner attachments or create derivative/batch jobs. Offline never calls search or job endpoints. See [Attachment Renderer Contract](system/ATTACHMENT_RENDERER_CONTRACT.md).
+
 ## Current task additions (2026-08-04)
 
 | Method | Path | Purpose |

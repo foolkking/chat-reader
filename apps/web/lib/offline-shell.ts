@@ -176,6 +176,7 @@ async function prepareOfflineShellInternal(force: boolean): Promise<OfflineShell
 
     existing = await postMessage(serviceWorker, { type: "GET_LIBRARY_SHELL_STATUS" });
     if (existing.ok && existing.status?.ready) applyWorkerStatus(existing);
+    await warmAttachmentViewerRuntime();
     const assets = collectLibraryShellAssets();
     const workerUrl = getOfflineSearchWorkerUrl();
     const revision = await createRevision(assets);
@@ -210,6 +211,16 @@ async function prepareOfflineShellInternal(force: boolean): Promise<OfflineShell
     setStatus(status);
     throw error;
   }
+}
+
+async function warmAttachmentViewerRuntime(): Promise<void> {
+  // Offline preparation is explicit. Load dynamic viewer chunks now so the
+  // shell asset inventory includes them instead of discovering a missing
+  // renderer only after connectivity has been lost.
+  await Promise.all([
+    import("pdfjs-dist"),
+    import("react-zoom-pan-pinch"),
+  ]);
 }
 
 function collectLibraryShellAssets(): string[] {

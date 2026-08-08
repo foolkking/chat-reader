@@ -20,6 +20,7 @@
 | KI-012 | Office/OCR/CAD/复杂压缩包预览未实现 | 用户只能下载原文件，无法站内查看复杂内容 | 明确 `NOT_IMPLEMENTED`，不在主服务器运行重型转换；基础上传、插入、Range 和浏览器预览不受阻 |
 | KI-013 | King 原机 Web 构建会触发 OOM | PostgreSQL checkpointer 可能被杀并进入 WAL 恢复 | 禁止在 King 编译 Next 镜像；改用 CI/独立 Linux 构建机和 registry 或 `docker save/load`。本轮恢复后 dump 已校验 |
 | KI-014 | 2026-08-08 附件呈现与任务清单已部署，但请求的 Chrome 扩展验收连接不可用 | 服务健康和路由检查不能替代生产 CSS、最终 DOM 与真实交互体验 | 应用继续运行已发布镜像；Chrome 扩展恢复连接后验证有界 Viewer、附件正文策略和任务 checkbox，再将该项关闭 |
+| KI-015 | 2026-08-09 统一 Attachment Viewer 合同仅完成本地自动化验证 | 真实多格式文件的视觉、codec、PDF worker、长 Markdown 与移动端体验尚不能标为生产 PASS | 使用外部 Linux 镜像部署后，在隔离测试对话执行 Chrome 逐类型验收；默认矩阵跳过项保持 `PARTIAL_PASS` |
 
 ## 验证边界
 

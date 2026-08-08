@@ -62,6 +62,18 @@
 
 最后审计：2026-08-08
 
+## 2026-08-09 attachment renderer contract additions
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/ATTACHMENT_RENDERER_CONTRACT.md` | Current | Four-layer state, Registry, inline skins, Gallery, unified Viewer, Range/search/batch/offline and permission contract. |
+| `apps/web/features/attachments/attachment-viewer.tsx` | Current | Single provider/shell portal, image/document/media Viewer kernels and runtime retry state. |
+| `apps/api/app/services/assets/text_search.py` | Current | Bounded text search and checksum/query-bound signed continuation cursor. |
+| `apps/api/app/services/exporting/attachment_download.py` | Current | Owner batch ZIP validation, stable names, streaming worker artifact and TTL. |
+| `apps/api/tests/test_attachment_renderer_contract.py` | Current | Capability privacy, cursor staleness and business-identity ZIP regression. |
+
+最后审计：2026-08-09
+
 ## 项目画像与规则
 
 - 项目画像：Monorepo、前端应用、Web/后端服务。

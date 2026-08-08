@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.models.attachment import MessageVersionAttachment
 from app.models.render_block import RenderBlock
 from app.schemas.message import MessageListItem, MessageVersionRead, ReaderTurnResponse, RenderBlockRead
 
@@ -63,8 +64,27 @@ def build_reader_turn(
         if version_ids else []
     )
     blocks_by_version: dict[uuid.UUID, list[RenderBlockRead]] = {}
+    attachment_links = (
+        db.query(MessageVersionAttachment)
+        .filter(MessageVersionAttachment.message_version_id.in_(version_ids))
+        .order_by(
+            MessageVersionAttachment.message_version_id.asc(),
+            MessageVersionAttachment.block_index.asc().nullslast(),
+            MessageVersionAttachment.display_order.asc(),
+            MessageVersionAttachment.occurrence_key.asc(),
+        )
+        .all()
+        if version_ids else []
+    )
+    occurrence_by_block = {
+        (link.message_version_id, link.block_index): link
+        for link in attachment_links
+        if link.block_index is not None
+    }
     for block in blocks:
-        blocks_by_version.setdefault(block.message_version_id, []).append(_block_read(block))
+        blocks_by_version.setdefault(block.message_version_id, []).append(
+            _block_read(block, occurrence_by_block.get((block.message_version_id, block.block_index)))
+        )
     items = []
     for index, message in enumerate(selected_messages):
         version = version_by_id.get(message.current_version_id) if message.current_version_id else None
@@ -143,13 +163,24 @@ def _message_item(message: Message, version: MessageVersion | None, blocks: list
     )
 
 
-def _block_read(block: RenderBlock) -> RenderBlockRead:
+def _block_read(block: RenderBlock, occurrence: MessageVersionAttachment | None = None) -> RenderBlockRead:
+    data = dict(block.data or {})
+    if occurrence is not None:
+        data.update({
+            "messageVersionId": str(occurrence.message_version_id),
+            "occurrenceKey": occurrence.occurrence_key,
+            "displayOrder": occurrence.display_order,
+            "displayMode": occurrence.display_mode,
+            "alt": occurrence.alt_text,
+            "caption": occurrence.caption,
+            "relationType": occurrence.relation_type,
+        })
     return RenderBlockRead(
         id=block.id,
         block_index=block.block_index,
         block_type=block.block_type,
         plain_text=block.plain_text,
-        data=block.data,
+        data=data,
         char_count=block.char_count,
         collapsed_by_default=block.collapsed_by_default,
         render_priority=block.render_priority,

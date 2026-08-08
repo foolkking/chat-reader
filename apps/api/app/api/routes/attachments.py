@@ -1,3 +1,4 @@
+import hashlib
 import re
 import uuid
 from collections.abc import Iterator
@@ -21,6 +22,7 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.schemas.attachment import (
     AttachmentFinalizeRequest,
+    AttachmentBatchDownloadRequest,
     AttachmentListRead,
     AttachmentOccurrenceLocationRead,
     AttachmentRead,
@@ -28,10 +30,13 @@ from app.schemas.attachment import (
     AttachmentUploadItemRead,
     AttachmentUploadSessionCreate,
     AttachmentUploadSessionRead,
+    AttachmentTextSearchMatch,
+    AttachmentTextSearchRead,
 )
 from app.schemas.task import BackgroundTaskRead
 from app.api.routes.tasks import background_job_read
-from app.services.background_jobs import queue_attachment_derivative
+from app.services.background_jobs import queue_attachment_derivative, queue_attachment_download
+from app.services.exporting.attachment_download import AttachmentDownloadError
 from app.services.assets.attachment_service import (
     AttachmentAccessError,
     attachment_content,
@@ -40,6 +45,7 @@ from app.services.assets.attachment_service import (
     get_share_attachment,
 )
 from app.services.assets.asset_store import get_asset_store
+from app.services.assets.text_search import AttachmentTextSearchError, search_text_file
 from app.services.assets.upload_service import (
     AttachmentUploadError,
     add_upload_item,
@@ -183,6 +189,33 @@ def create_conversation_attachments(
         raise
 
 
+@router.post(
+    "/api/conversations/{conversation_id}/attachment-downloads",
+    response_model=BackgroundTaskRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def create_attachment_download(
+    conversation_id: uuid.UUID,
+    payload: AttachmentBatchDownloadRequest,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+) -> BackgroundTaskRead:
+    normalized = sorted(str(value) for value in payload.attachment_ids)
+    selection_hash = hashlib.sha256((str(conversation_id) + ":" + ",".join(normalized)).encode("utf-8")).hexdigest()
+    try:
+        job = queue_attachment_download(
+            db,
+            conversation_id=conversation_id,
+            attachment_ids=payload.attachment_ids,
+            idempotency_key=idempotency_key or f"attachment-download:{selection_hash}",
+        )
+        db.commit()
+        return background_job_read(job)
+    except AttachmentDownloadError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
 @router.get("/api/conversations/{conversation_id}/attachments", response_model=AttachmentListRead)
 def list_conversation_attachments(
     conversation_id: uuid.UUID,
@@ -294,8 +327,8 @@ def queue_attachment_derivative_route(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
-    if derivative_type != "text_extract":
-        raise HTTPException(status_code=422, detail="Only text_extract derivatives are enabled.")
+    if derivative_type not in {"text_extract", "image_thumbnail", "image_preview"}:
+        raise HTTPException(status_code=422, detail="Unsupported attachment derivative type.")
     try:
         get_owner_attachment(db, attachment_id)
         job = queue_attachment_derivative(
@@ -346,7 +379,8 @@ def get_attachment_derivative_content(
             path = get_asset_store().resolve_key(asset.storage_key)
         except (ValueError, FileNotFoundError):
             raise AttachmentAccessError("Attachment derivative is missing.")
-        return _content_response(path, asset.detected_mime_type, f"{attachment.display_name}.{derivative_type}.txt", request.method, disposition, range_header)
+        suffix = ".txt" if derivative_type == "text_extract" else ".png"
+        return _content_response(path, asset.detected_mime_type, f"{attachment.display_name}.{derivative_type}{suffix}", request.method, disposition, range_header)
     except AttachmentAccessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
@@ -355,6 +389,38 @@ def get_attachment_derivative_content(
 def get_attachment_metadata(attachment_id: uuid.UUID, db: Session = Depends(get_db)) -> AttachmentRead:
     try:
         return attachment_read(get_owner_attachment(db, attachment_id))
+    except AttachmentAccessError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/api/attachments/{attachment_id}/text/search", response_model=AttachmentTextSearchRead)
+def search_attachment_text(
+    attachment_id: uuid.UUID,
+    q: str = Query(min_length=1, max_length=256),
+    limit: int = Query(default=50, ge=1, le=200),
+    cursor: str | None = Query(default=None, max_length=4096),
+    db: Session = Depends(get_db),
+) -> AttachmentTextSearchRead:
+    try:
+        content = attachment_content(get_owner_attachment(db, attachment_id))
+        page = search_text_file(
+            attachment_id=str(attachment_id),
+            sha256=content.asset_object.sha256,
+            byte_size=content.asset_object.byte_size,
+            path=content.path,
+            query=q,
+            limit=limit,
+            cursor=cursor,
+        )
+        return AttachmentTextSearchRead(
+            matches=[AttachmentTextSearchMatch(byte_offset=item.byte_offset, preview=item.preview) for item in page.matches],
+            scanned_bytes=page.scanned_bytes,
+            complete=page.complete,
+            nextCursor=page.next_cursor,
+        )
+    except AttachmentTextSearchError as exc:
+        status_code = 409 if exc.code == "cursor_stale" else 422
+        raise HTTPException(status_code=status_code, detail={"code": exc.code, "message": str(exc)}) from exc
     except AttachmentAccessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 

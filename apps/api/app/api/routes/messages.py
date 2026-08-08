@@ -87,6 +87,7 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
         if message.current_version_id
         else []
     )
+    occurrences = _occurrences_by_block(db, message.current_version_id)
     return MessageDetail(
         id=message.id,
         conversation_id=message.conversation_id,
@@ -95,7 +96,7 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
         turn_index=message.turn_index,
         created_at=message.created_at,
         current_version=_version_read(version) if version else None,
-        render_blocks=[_block_read(block) for block in blocks],
+        render_blocks=[_block_read(block, occurrences.get(block.block_index)) for block in blocks],
         block_count=message.block_count,
         char_count=message.char_count,
         is_heavy=message.is_heavy,
@@ -451,7 +452,8 @@ def get_message_blocks(
         .limit(limit)
         .all()
     )
-    return [_block_read(block) for block in blocks]
+    occurrences = _occurrences_by_block(db, message.current_version_id)
+    return [_block_read(block, occurrences.get(block.block_index)) for block in blocks]
 
 
 def _edit_response(
@@ -478,6 +480,11 @@ def _edit_response(
         .order_by(MessageVersionAttachment.display_order.asc())
         .all()
     )
+    occurrences = {
+        link.block_index: link
+        for link, _attachment in links
+        if link.block_index is not None
+    }
     attachment_occurrences = [
         MessageVersionAttachmentRead(
             id=link.id,
@@ -503,7 +510,7 @@ def _edit_response(
         version_number=version_number,
         message=get_message(message.id, db),
         message_version=_version_read(current_version),
-        render_blocks=[_block_read(block) for block in blocks],
+        render_blocks=[_block_read(block, occurrences.get(block.block_index)) for block in blocks],
         attachment_occurrences=attachment_occurrences,
         conversation_attachment_summary=attachment_summary,
         warnings=warnings,
@@ -597,13 +604,47 @@ def _version_read(version: MessageVersion) -> MessageVersionRead:
     )
 
 
-def _block_read(block: RenderBlock) -> RenderBlockRead:
+def _occurrences_by_block(
+    db: Session,
+    message_version_id: uuid.UUID | None,
+) -> dict[int, MessageVersionAttachment]:
+    if message_version_id is None:
+        return {}
+    return {
+        link.block_index: link
+        for link in db.query(MessageVersionAttachment)
+        .filter(MessageVersionAttachment.message_version_id == message_version_id)
+        .order_by(
+            MessageVersionAttachment.block_index.asc().nullslast(),
+            MessageVersionAttachment.display_order.asc(),
+            MessageVersionAttachment.occurrence_key.asc(),
+        )
+        .all()
+        if link.block_index is not None
+    }
+
+
+def _block_read(
+    block: RenderBlock,
+    occurrence: MessageVersionAttachment | None = None,
+) -> RenderBlockRead:
+    data = dict(block.data or {})
+    if occurrence is not None:
+        data.update({
+            "messageVersionId": str(occurrence.message_version_id),
+            "occurrenceKey": occurrence.occurrence_key,
+            "displayOrder": occurrence.display_order,
+            "displayMode": occurrence.display_mode,
+            "alt": occurrence.alt_text,
+            "caption": occurrence.caption,
+            "relationType": occurrence.relation_type,
+        })
     return RenderBlockRead(
         id=block.id,
         block_index=block.block_index,
         block_type=block.block_type,
         plain_text=block.plain_text,
-        data=block.data,
+        data=data,
         char_count=block.char_count,
         collapsed_by_default=block.collapsed_by_default,
         render_priority=block.render_priority,

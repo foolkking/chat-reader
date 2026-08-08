@@ -1,5 +1,26 @@
 # Implementation Results
 
+## 2026-08-09 Attachment Renderer Contract Candidate
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Four-layer state and Registry | PASS | data/capability/runtime/plan are separate; runtime unsupported and failure do not mutate static capability |
+| Inline skins and display mode | PASS | only media/preview-panel/file-row are emitted; auto/small/medium/large normalization and width caps are covered |
+| Unified Viewer portal | PASS | root Provider owns the single body portal; source assertions cover the portal count and compatibility adapter |
+| Occurrence identity propagation | PASS | Reader turn, direct message/block and Offline payloads include messageVersionId + occurrenceKey metadata |
+| Image/Markdown/media runtime fallback | PASS | image/text/PDF/media retry issues were corrected; load failure no longer leaves a blank Viewer stage |
+| Inert SVG/Markdown path | PASS | SVG uses IMG and attachment paths reject inline SVG/object/embed/window.open; Markdown skips/sanitizes raw HTML and does not auto-load external images |
+| Text search / derivative / batch ZIP API | PASS | focused API tests cover capability privacy, stale cursors and distinct business filenames sharing one AssetObject |
+| Office/Spreadsheet/Presentation/EPUB/Archive/CAD/3D Viewer | NOT_IMPLEMENTED | reliable authenticated download-only fallback remains the approved behavior |
+| Web lint/typecheck/build | PASS | all required commands passed on 2026-08-09; build uses browser PDF.js with optional Node canvas excluded |
+| API suite | PASS | 211 passed; 1 fixture-gated test skipped and not counted as passed |
+| Alembic | PASS | one head `20260806_0021`; no migration added |
+| Attachment policy/SVG/portal tests | PASS | 6/6 passed |
+| PWA default matrix | PARTIAL_PASS | 13 passed; 21 online/fixture-gated scenarios skipped and not counted as passed |
+| Production deployment and Chrome acceptance | NOT_PRODUCTION_VERIFIED | the candidate has not been deployed and the multi-format production conversation has not been rechecked against it |
+
+Contract approval markers and the implementation/verification boundary are recorded in `docs/system/ATTACHMENT_RENDERER_CONTRACT.md`.
+
 ## 2026-08-08 Attachment Rendering And Task Checklist Release Candidate
 
 | Area | Status | Evidence |

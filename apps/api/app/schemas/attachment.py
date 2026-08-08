@@ -103,3 +103,19 @@ class AttachmentUpdateRequest(BaseModel):
 
 class AttachmentListRead(BaseModel):
     items: list[AttachmentRead]
+
+
+class AttachmentTextSearchMatch(BaseModel):
+    byte_offset: int
+    preview: str
+
+
+class AttachmentTextSearchRead(BaseModel):
+    matches: list[AttachmentTextSearchMatch] = Field(default_factory=list)
+    scanned_bytes: int
+    complete: bool
+    nextCursor: str | None = None
+
+
+class AttachmentBatchDownloadRequest(BaseModel):
+    attachment_ids: list[UUID] = Field(min_length=1, max_length=500)

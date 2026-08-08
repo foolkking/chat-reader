@@ -42,6 +42,16 @@ const nextConfig = {
       { source: "/((?!_next/static|icons/).*)", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
     ];
   },
+  webpack(config) {
+    // PDF.js exposes an optional Node canvas integration. Browser viewers use
+    // the DOM canvas path, so bundling the native addon would be both invalid
+    // and unnecessary.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

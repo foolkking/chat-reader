@@ -203,6 +203,11 @@ export type CapabilitiesRead = {
     basic_preview_enabled: boolean;
     complex_preview_enabled: boolean;
     max_file_size_bytes: number;
+    viewer?: boolean;
+    range?: boolean;
+    imageDerivatives?: boolean;
+    textSearch?: boolean;
+    batchDownload?: boolean;
   };
 };
 

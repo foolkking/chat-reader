@@ -20,6 +20,7 @@ from app.services.exporting.cr_archive import create_cr_archive
 from app.services.exporting.context_package import create_context_package
 from app.services.exporting.attachment_bundle import create_attachment_bundle, MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT
 from app.services.exporting.system_archive import create_system_archive
+from app.services.exporting.attachment_download import create_attachment_download, validate_attachment_download
 from app.schemas.export import ExportOptions
 from app.services.offline_packages import build_catalog, build_offline_package, changed_conversations, select_conversations
 from app.services.derived_rebuild import rebuild_conversation_derived_data
@@ -209,6 +210,43 @@ def queue_system_archive_export(
         processed_items=0,
         total_items=total,
         payload={"include_archived": include_archived},
+        result={},
+        idempotency_key=idempotency_key,
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
+def queue_attachment_download(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    attachment_ids: list[uuid.UUID],
+    idempotency_key: str,
+) -> BackgroundJob:
+    validate_attachment_download(db, conversation_id=conversation_id, attachment_ids=attachment_ids)
+    existing = (
+        db.query(BackgroundJob)
+        .filter(
+            BackgroundJob.job_type == "attachment_batch_download",
+            BackgroundJob.idempotency_key == idempotency_key,
+            BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
+        )
+        .order_by(BackgroundJob.created_at.desc())
+        .first()
+    )
+    if existing is not None:
+        return existing
+    job = BackgroundJob(
+        id=uuid.uuid4(),
+        job_type="attachment_batch_download",
+        status="queued",
+        phase="queued",
+        progress=0,
+        processed_items=0,
+        total_items=len(attachment_ids),
+        payload={"conversation_id": str(conversation_id), "attachment_ids": [str(value) for value in attachment_ids]},
         result={},
         idempotency_key=idempotency_key,
     )
@@ -663,6 +701,24 @@ def process_background_job(
                     "download_url": f"/api/offline/packages/{package.id}/download",
                 }
                 processed_items = package.conversation_count
+            elif job.job_type == "attachment_batch_download":
+                conversation_id = uuid.UUID(payload["conversation_id"])
+                attachment_ids = [uuid.UUID(value) for value in payload.get("attachment_ids", [])]
+                artifact = create_attachment_download(
+                    db,
+                    conversation_id=conversation_id,
+                    attachment_ids=attachment_ids,
+                    job_id=job.id,
+                    progress_callback=report,
+                )
+                job_result = {
+                    "conversation_id": str(conversation_id),
+                    "artifact_id": str(artifact.id),
+                    "filename": artifact.filename,
+                    "byte_size": artifact.byte_size,
+                    "download_url": f"/api/exports/{artifact.id}/download",
+                }
+                processed_items = len(attachment_ids)
             elif job.job_type == "bundle_preview":
                 import_id = uuid.UUID(payload["import_id"])
                 preview = preview_bundle_import(db, import_id=import_id, progress_callback=report)

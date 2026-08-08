@@ -8,6 +8,7 @@ import { extractMarkdownTaskItems, MarkdownRenderer, ThinkingDisclosure, stripLe
 import { useTranslations } from "../../components/preferences-provider";
 import { READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLease } from "./block-virtualization";
 import { registerRenderedBlock } from "./rendered-block-registry";
+import type { AttachmentViewerItem } from "../attachments/attachment-viewer";
 
 const THINKING_LABEL = "思考过程";
 const THINKING_DURATION_RE =
@@ -148,14 +149,15 @@ function AttachmentBlockGroup({
   isAssistant: boolean;
   highlightTargetId?: string | null;
 }) {
-  const initialLimit = groupType === "images" ? 4 : 5;
+  const initialLimit = groupType === "images" ? 6 : 5;
   const targetInside = Boolean(highlightTargetId && blocks.some((block) => highlightTargetId === `block-${messageId}-${block.block_index}`));
   const [expanded, setExpanded] = useState(targetInside);
   useEffect(() => {
     if (targetInside) setExpanded(true);
   }, [targetInside]);
-  const visibleBlocks = expanded ? blocks : blocks.slice(0, initialLimit);
+  const visibleBlocks = groupType === "images" ? blocks.slice(0, initialLimit) : expanded ? blocks : blocks.slice(0, initialLimit);
   const hiddenCount = blocks.length - visibleBlocks.length;
+  const galleryItems = useMemo(() => groupType === "images" ? blocks.map((block) => attachmentViewerItem(messageId, block)) : undefined, [blocks, groupType, messageId]);
   return (
     <div
       className="reader-block-slot"
@@ -163,12 +165,15 @@ function AttachmentBlockGroup({
       data-attachment-group={groupType}
       style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, blocks[0] ?? null)) : undefined}
     >
-      <div className={groupType === "images" ? "grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2" : "flex min-w-0 flex-col gap-2"}>
-        {visibleBlocks.map((block) => (
-          <BlockElement key={block.id ?? block.block_index} messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} />
+      <div className={groupType === "images" ? "flex min-w-0 flex-wrap items-start gap-2" : "flex min-w-0 flex-col gap-2"}>
+        {visibleBlocks.map((block, index) => (
+          <div key={block.id ?? block.block_index} className={groupType === "images" ? "relative min-w-[12rem] max-w-full flex-[1_1_18rem]" : undefined}>
+          <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} galleryItems={galleryItems} />
+          {groupType === "images" && hiddenCount > 0 && index === visibleBlocks.length - 1 ? <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-black/55 text-2xl font-semibold text-white" aria-label={`还有 ${hiddenCount} 张图片`}>+{hiddenCount}</span> : null}
+          </div>
         ))}
       </div>
-      {hiddenCount > 0 ? (
+      {groupType !== "images" && hiddenCount > 0 ? (
         <button type="button" onClick={() => setExpanded(true)} className="mt-2 inline-flex min-h-10 items-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
           展开其余 {hiddenCount} 个附件
         </button>
@@ -598,7 +603,7 @@ function isRichBlock(block: RenderBlockRead | null): boolean {
   return Boolean(block && ["blockquote", "code", "table", "image", "attachment", "mermaid", "math"].includes(block.block_type));
 }
 
-function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle }: {
+function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle, galleryItems }: {
   messageId: string;
   block: RenderBlockRead;
   isAssistant: boolean;
@@ -606,6 +611,7 @@ function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskIt
   taskItems?: MarkdownTaskItem[];
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
+  galleryItems?: AttachmentViewerItem[];
 }) {
   const domId = `block-${messageId}-${block.block_index}`;
   const unregisterRef = useRef<(() => void) | null>(null);
@@ -629,9 +635,27 @@ function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskIt
           : ""
       }`}
     >
-      <BlockRenderer block={block} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+      <BlockRenderer block={block} messageId={messageId} galleryItems={galleryItems} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
     </div>
   );
+}
+
+function attachmentViewerItem(messageId: string, block: RenderBlockRead): AttachmentViewerItem {
+  const attachmentId = typeof block.data.attachmentId === "string" ? block.data.attachmentId : "";
+  const messageVersionId = typeof block.data.messageVersionId === "string" ? block.data.messageVersionId : undefined;
+  const occurrenceKey = typeof block.data.occurrenceKey === "string" ? block.data.occurrenceKey : undefined;
+  return {
+    itemKey: messageVersionId && occurrenceKey ? `${messageVersionId}:${occurrenceKey}` : `${messageId}:block:${block.block_index}`,
+    attachmentId,
+    messageId,
+    messageVersionId,
+    occurrenceKey,
+    blockIndex: block.block_index,
+    displayOrder: typeof block.data.displayOrder === "number" ? block.data.displayOrder : undefined,
+    displayMode: typeof block.data.displayMode === "string" && ["auto", "small", "medium", "large"].includes(block.data.displayMode) ? block.data.displayMode as AttachmentViewerItem["displayMode"] : "auto",
+    alt: typeof block.data.alt === "string" ? block.data.alt : undefined,
+    caption: typeof block.data.caption === "string" ? block.data.caption : undefined,
+  };
 }
 
 function assignTasksToBlocks(

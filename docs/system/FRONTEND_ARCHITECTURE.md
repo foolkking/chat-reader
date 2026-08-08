@@ -113,9 +113,9 @@ RootLayout + providers
 - Markdown 源码工作区提供上传与选择已有文件；新文件先独立上传并显式提升为当前对话 Attachment，已有文件通过 `application/x-chat-reader-attachment` 只传递业务 ID，在光标或消息末尾插入 `cr-asset://` 引用。用户无需手写内部协议；若光标位于已有的独立附件行内，插入点移动到该行末尾，避免破坏原引用。
 - 源码工作区的 CodeMirror DOM 事件只接受真实 `DataTransfer.files`；拖放通过 `posAtCoords` 显示插入光标，粘贴读取剪贴板文件，二者和文件选择共用 `AttachmentDraftCallbacks`。临时标记拥有独立进度/错误/重试/移除状态，完成后通过命令式文档替换保持阅读位置和源码光标。
 - 代码围栏落点返回明确的调整意图并显示选择条；链接内部落点自动放到链接节点后。编辑器滚动和拖放位置不反向驱动 Reader，保存前任何 unresolved upload 均阻止提交。
-- `AttachmentPreviewDialog` 通过 React portal 直接挂载到 `document.body`，不受 Reader/侧栏 transform 或 overflow 约束。全视口层只负责遮罩、背景关闭、焦点约束和共享 body scroll lock；可见内容窗口按类型受限，不再统一显示整屏白框。图片/视频使用深色舞台，音频使用紧凑面板，Markdown/文本/表格/PDF 使用有最大宽高的文档工作区；卸载后恢复原滚动位置和触发器焦点。
-- `PreviewAdapterRegistry` 将附件分为 `inline-rich`、`inline-compact`、`file-card` 和 `fallback`。PNG/JPEG/WebP/GIF/BMP/SVG 优先 `<img>`，TIFF 和解码失败降级为文件卡；所有 SVG 在正文和 Viewer 中最终都由普通 `<img src="受控内容 URL">` 渲染，不插入 XML/React 节点，不使用 object/embed，不通过新标签页打开。Markdown 复用系统 renderer，文本/代码/表格是有界预览，浏览器不支持的媒体和 Office/ZIP/CAD/3D 只显示可靠下载卡。
-- 连续 attachment blocks 由消息渲染层聚合：图片最多先显示 4 项 gallery，普通文件最多先显示 5 项 compact list，其余通过“展开全部”显示。分组只改变呈现，不改变 AttachmentOccurrence 顺序或 canonical blocks。
+- `AttachmentViewerProvider` 在根 layout 中只挂载一个 `AttachmentViewerShell` portal；旧 `AttachmentPreviewDialog` 仅是无 DOM 的兼容适配器。统一 shell 负责焦点、Esc/backdrop、共享 body scroll lock、滚动恢复和文件类型内核，Files Panel、Reader、Gallery 与旧入口不再创建第二套预览 DOM。
+- Registry 将数据状态、静态 capability、单次 runtime 状态和 RenderPlan 分离。正文只使用 `media`、`preview-panel`、`file-row` 三种皮肤；missing、empty、unsupported、preview-failed 和 offline-unavailable 都是 FileRow variant。SVG 始终使用 `<img>`，Markdown 使用 inert renderer，Office/ZIP/CAD/3D 保持可靠下载降级。
+- 连续图片仅在同一当前 MessageVersion 内组团；普通正文立即断组。2–6 张完整展示，超过 6 张显示前 5 张与 `+N` 入口。Viewer identity 使用 `message_version_id + occurrence_key`，`block_index` 只用于顺序和 DOM 定位。完整合同见 [Attachment Renderer Contract](ATTACHMENT_RENDERER_CONTRACT.md)。
 - Owner Reader 的 GFM task checkbox 由 `MarkdownRenderer` 的 `interactiveTasks` 合同驱动，点击后进行局部 optimistic update 并调用稳定 task key 接口；Share、Offline 和附件 Markdown renderer 不传写回调，因此保持只读。
 - 对话导出面板将格式与附件作为一级选项；简介、批注、笔记和 CanJSON 来源引用位于折叠的二级选项。普通导出与附件 ZIP 使用同一组参数。
 - 消息保存使用服务端返回的局部 message/version/blocks/occurrences 投影更新 TanStack Query；不重新加载整场对话，受影响消息单独重测布局，其他 MessageItem 引用保持稳定。
