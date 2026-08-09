@@ -31,10 +31,18 @@ const MAX_IMAGE_PREVIEW_BYTES = 2 * 1024 * 1024;
 const MAX_ARCHIVE_PREVIEW_BYTES = 8 * 1024 * 1024;
 
 self.onmessage = (event: MessageEvent<RequestMessage>) => {
-  const { requestId, kind, filename, bytes } = event.data;
+  void handleRequest(event.data);
+};
+
+async function handleRequest({ requestId, kind, filename, bytes }: RequestMessage) {
   try {
     if (bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("文件超过 32 MiB 浏览器预览上限，请下载原文件。 ");
     const source = new Uint8Array(bytes);
+    if (kind === "document" && filename.toLowerCase().endsWith(".doc")) {
+      const result = await parseLegacyWordDocument(source);
+      self.postMessage({ requestId, ok: true, result });
+      return;
+    }
     validateCentralDirectory(source);
     const files = unzipSync(source);
     const result = parseResult(kind, filename, files);
@@ -42,7 +50,26 @@ self.onmessage = (event: MessageEvent<RequestMessage>) => {
   } catch (error) {
     self.postMessage({ requestId, ok: false, error: error instanceof Error ? error.message : "无法解析此文件。" });
   }
-};
+}
+
+async function parseLegacyWordDocument(source: Uint8Array): Promise<Result> {
+  const [{ Buffer }, oleModule, readerModule] = await Promise.all([
+    import("buffer"),
+    import("word-extractor/lib/word-ole-extractor"),
+    import("word-extractor/lib/buffer-reader"),
+  ]);
+  const WordOleExtractor = oleModule.default;
+  const BufferReader = readerModule.default;
+  const buffer = Buffer.from(source.buffer, source.byteOffset, source.byteLength);
+  const document = await new WordOleExtractor().extract(new BufferReader(buffer));
+  const body = document.getBody({ filterUnicode: false }).slice(0, 2_000_000);
+  const paragraphs = body
+    .split(/[\r\n\v\f]+/)
+    .map((paragraph) => paragraph.split(String.fromCharCode(0)).join("").trim())
+    .filter(Boolean)
+    .slice(0, 2_000);
+  return { kind: "document", paragraphs, tables: [] };
+}
 
 function parseResult(kind: ComplexKind, filename: string, files: Record<string, Uint8Array>): Result {
   if (kind === "archive") return parseArchive(files);

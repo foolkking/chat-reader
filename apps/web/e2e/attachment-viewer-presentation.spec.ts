@@ -18,15 +18,26 @@ test("viewer kinds resolve to adaptive presentation classes", () => {
     expect(presentation(kind, mode).presentation).toBe("reading");
   }
   expect(presentation("table", "table").presentation).toBe("workspace");
-  expect(presentation("document", "document").presentation).toBe("reading");
-  expect(presentation("spreadsheet", "spreadsheet").presentation).toBe("workspace");
-  expect(presentation("presentation", "presentation").presentation).toBe("workspace");
-  expect(presentation("archive", "archive").presentation).toBe("workspace");
+  expect(presentation("document", "document").presentation).toBe("compact");
+  expect(presentation("spreadsheet", "spreadsheet").presentation).toBe("reading");
+  expect(presentation("presentation", "presentation").presentation).toBe("reading");
+  expect(presentation("archive", "archive").presentation).toBe("compact");
   expect(presentation("pdf", "pdf", 1, 1)).toEqual({ presentation: "document", size: "normal" });
   expect(presentation("pdf", "pdf", 1, 8)).toEqual({ presentation: "document", size: "large" });
   expect(presentation("image", "image-focus").presentation).toBe("media");
   expect(presentation("image", "image-overview", 9).presentation).toBe("workspace");
   expect(presentation("video", "video").presentation).toBe("media");
+});
+
+test("complex viewers only promote to workspace when parsed content needs the space", () => {
+  expect(resolveViewerPresentation({ viewerKind: "document", viewerMode: "document", itemCount: 1, contentMetrics: { documentBlocks: 8 } }).presentation).toBe("compact");
+  expect(resolveViewerPresentation({ viewerKind: "document", viewerMode: "document", itemCount: 1, contentMetrics: { documentBlocks: 80 } }).presentation).toBe("reading");
+  expect(resolveViewerPresentation({ viewerKind: "spreadsheet", viewerMode: "spreadsheet", itemCount: 1, contentMetrics: { sheetCount: 1, maxRows: 10, maxColumns: 5 } }).presentation).toBe("reading");
+  expect(resolveViewerPresentation({ viewerKind: "spreadsheet", viewerMode: "spreadsheet", itemCount: 1, contentMetrics: { sheetCount: 1, maxRows: 100, maxColumns: 5 } }).presentation).toBe("workspace");
+  expect(resolveViewerPresentation({ viewerKind: "presentation", viewerMode: "presentation", itemCount: 1, contentMetrics: { slideCount: 4 } }).presentation).toBe("reading");
+  expect(resolveViewerPresentation({ viewerKind: "presentation", viewerMode: "presentation", itemCount: 1, contentMetrics: { slideCount: 24 } }).presentation).toBe("workspace");
+  expect(resolveViewerPresentation({ viewerKind: "archive", viewerMode: "archive", itemCount: 1, contentMetrics: { archiveFiles: 1, archiveDirectories: 0 } }).presentation).toBe("compact");
+  expect(resolveViewerPresentation({ viewerKind: "archive", viewerMode: "archive", itemCount: 1, contentMetrics: { archiveFiles: 120, archiveDirectories: 8 } }).presentation).toBe("workspace");
 });
 
 test("desktop presentation sizes differ while workspace and maximize retain large canvas", () => {
@@ -67,7 +78,9 @@ test("complex attachment viewers are lazy and bounded", () => {
   const worker = readFileSync(resolve(process.cwd(), "features/attachments/complex-attachment-worker.ts"), "utf8");
   expect(source).toContain("new Worker(new URL(\"./complex-attachment-worker.ts\", import.meta.url)");
   expect(source).toContain("MAX_SOURCE_BYTES");
+  expect(source).toContain("onPresentationMetrics");
   expect(worker).toContain("validateCentralDirectory");
   expect(worker).toContain("MAX_EXPANDED_BYTES");
+  expect(worker).toContain("parseLegacyWordDocument");
   expect(worker).not.toContain("eval(");
 });

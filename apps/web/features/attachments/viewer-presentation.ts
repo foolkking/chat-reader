@@ -12,6 +12,17 @@ export type ViewerPresentationInput = {
   viewerMode: AttachmentViewerMode | null;
   itemCount: number;
   pdfPageCount?: number | null;
+  contentMetrics?: ViewerContentMetrics | null;
+};
+
+export type ViewerContentMetrics = {
+  documentBlocks?: number;
+  sheetCount?: number;
+  maxRows?: number;
+  maxColumns?: number;
+  slideCount?: number;
+  archiveFiles?: number;
+  archiveDirectories?: number;
 };
 
 export type ViewerMediaDimensions = { width: number; height: number } | null;
@@ -20,8 +31,33 @@ export type ViewerViewport = { width: number; height: number };
 export function resolveViewerPresentation(input: ViewerPresentationInput): { presentation: ViewerPresentation; size: "normal" | "large" } {
   if (input.viewerKind === "image" && input.viewerMode === "image-overview") return { presentation: "workspace", size: "large" };
   if (input.viewerKind === "table") return { presentation: "workspace", size: "large" };
-  if (["spreadsheet", "presentation", "archive"].includes(input.viewerKind ?? "")) return { presentation: "workspace", size: "large" };
-  if (input.viewerKind === "document") return { presentation: "reading", size: "normal" };
+  if (input.viewerKind === "document") {
+    return (input.contentMetrics?.documentBlocks ?? 0) > 20
+      ? { presentation: "reading", size: "normal" }
+      : { presentation: "compact", size: "normal" };
+  }
+  if (input.viewerKind === "spreadsheet") {
+    const metrics = input.contentMetrics;
+    const needsWorkspace = Boolean(metrics && (
+      (metrics.sheetCount ?? 0) > 3
+      || (metrics.maxRows ?? 0) > 40
+      || (metrics.maxColumns ?? 0) > 10
+    ));
+    return needsWorkspace ? { presentation: "workspace", size: "large" } : { presentation: "reading", size: "large" };
+  }
+  if (input.viewerKind === "presentation") {
+    return (input.contentMetrics?.slideCount ?? 0) > 12
+      ? { presentation: "workspace", size: "large" }
+      : { presentation: "reading", size: "normal" };
+  }
+  if (input.viewerKind === "archive") {
+    const metrics = input.contentMetrics;
+    const needsWorkspace = Boolean(metrics && ((metrics.archiveFiles ?? 0) > 80 || (metrics.archiveDirectories ?? 0) > 20));
+    if (needsWorkspace) return { presentation: "workspace", size: "large" };
+    return (metrics?.archiveFiles ?? 0) > 3
+      ? { presentation: "reading", size: "normal" }
+      : { presentation: "compact", size: "normal" };
+  }
   if (input.viewerKind === "audio") return { presentation: "compact", size: "normal" };
   if (input.viewerKind === "pdf") return { presentation: "document", size: (input.pdfPageCount ?? 1) > 1 ? "large" : "normal" };
   if (input.viewerKind === "image" || input.viewerKind === "video") return { presentation: "media", size: input.itemCount > 1 ? "large" : "normal" };

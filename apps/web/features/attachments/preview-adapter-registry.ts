@@ -73,12 +73,12 @@ const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "ico", "s
 const TIFF_EXT = new Set(["tif", "tiff"]);
 const AUDIO_EXT = new Set(["mp3", "wav", "ogg", "flac", "m4a", "aac"]);
 const VIDEO_EXT = new Set(["mp4", "webm", "mov"]);
-const DOCUMENT_EXT = new Set(["docx", "odt"]);
+const DOCUMENT_EXT = new Set(["doc", "docx", "odt"]);
 const SPREADSHEET_EXT = new Set(["xlsx", "ods"]);
 const PRESENTATION_EXT = new Set(["pptx", "odp"]);
 const ARCHIVE_EXT = new Set(["zip"]);
 const DOWNLOAD_ONLY_EXT = new Set([
-  "7z", "avi", "bz2", "doc", "drawio", "dxf", "epub", "gz", "mkv", "obj",
+  "7z", "avi", "bz2", "drawio", "dxf", "epub", "gz", "mkv", "obj",
   "ppt", "rar", "rtf", "stl", "tar", "tar.gz", "vsdx", "xls", "xz",
 ]);
 
@@ -234,6 +234,7 @@ function capabilityForMime(mime: string): AttachmentRendererCapability | null {
   if (CODE_MIME.has(mime)) return CAPABILITIES.code;
   if (mime === "application/pdf") return CAPABILITIES.pdf;
   if (mime === "application/zip") return CAPABILITIES.archive;
+  if (mime === "application/msword") return CAPABILITIES.document;
   if ([
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.oasis.opendocument.text",
@@ -251,7 +252,7 @@ function capabilityForMime(mime: string): AttachmentRendererCapability | null {
   if ([
     "application/x-7z-compressed", "application/x-bzip2", "application/x-gzip",
     "application/x-rar-compressed", "application/x-tar", "application/x-xz",
-    "application/msword", "application/rtf", "application/vnd.ms-excel", "application/vnd.ms-powerpoint",
+    "application/rtf", "application/vnd.ms-excel", "application/vnd.ms-powerpoint",
     "application/epub+zip",
   ].includes(mime)) return CAPABILITIES.download;
   if (mime.startsWith("image/")) return CAPABILITIES.image;

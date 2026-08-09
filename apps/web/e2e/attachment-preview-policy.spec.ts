@@ -36,12 +36,12 @@ test("attachment renderer policy separates supported viewers from reliable downl
   expect(capability("video/x-msvideo", "clip.avi").inlineMode).toBe("download-only");
   expect(capability("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "report.docx").viewerKind).toBe("document");
   expect(capability("application/vnd.oasis.opendocument.text", "report.odt").viewerKind).toBe("document");
+  expect(capability("application/msword", "legacy.doc").viewerKind).toBe("document");
   expect(capability("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "book.xlsx").viewerKind).toBe("spreadsheet");
   expect(capability("application/vnd.oasis.opendocument.spreadsheet", "book.ods").viewerKind).toBe("spreadsheet");
   expect(capability("application/vnd.openxmlformats-officedocument.presentationml.presentation", "deck.pptx").viewerKind).toBe("presentation");
   expect(capability("application/vnd.oasis.opendocument.presentation", "deck.odp").viewerKind).toBe("presentation");
   expect(capability("application/zip", "archive.zip").viewerKind).toBe("archive");
-  expect(capability("application/msword", "legacy.doc").inlineMode).toBe("download-only");
   expect(capability("application/x-tar", "archive.tar").inlineMode).toBe("download-only");
 });
 

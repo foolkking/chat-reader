@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, ChevronLeft, ChevronRight, FileText, Grid3X3, Loader2 } from "lucide-react";
 import type { AttachmentRead } from "../../lib/types";
 import type { AttachmentViewerKind } from "./preview-adapter-registry";
+import type { ViewerContentMetrics } from "./viewer-presentation";
 
 type SupportedKind = Extract<AttachmentViewerKind, "document" | "spreadsheet" | "presentation" | "archive">;
 type ArchiveEntry = {
@@ -20,7 +21,7 @@ type ParseResult =
 
 const MAX_SOURCE_BYTES = 32 * 1024 * 1024;
 
-export function ComplexAttachmentViewer({ attachment, kind }: { attachment: AttachmentRead; kind: SupportedKind }) {
+export function ComplexAttachmentViewer({ attachment, kind, onPresentationMetrics }: { attachment: AttachmentRead; kind: SupportedKind; onPresentationMetrics: (metrics: ViewerContentMetrics | null) => void }) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<ParseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,12 +70,41 @@ export function ComplexAttachmentViewer({ attachment, kind }: { attachment: Atta
     };
   }, [attachment.asset_object?.byte_size, attachment.content_url, attachment.display_name, attempt, kind]);
 
+  useEffect(() => {
+    onPresentationMetrics(result ? presentationMetrics(result) : null);
+    return () => onPresentationMetrics(null);
+  }, [onPresentationMetrics, result]);
+
   if (error) return <ComplexError message={error} downloadUrl={attachment.download_url} onRetry={() => setAttempt((value) => value + 1)} />;
   if (!result) return <div className="flex h-full items-center justify-center gap-2 text-secondary"><Loader2 className="h-5 w-5 animate-spin" />正在浏览器中解析只读预览…</div>;
   if (result.kind === "document") return <DocumentView result={result} />;
   if (result.kind === "spreadsheet") return <SpreadsheetView result={result} />;
   if (result.kind === "presentation") return <PresentationView result={result} />;
   return <ArchiveView result={result} />;
+}
+
+function presentationMetrics(result: ParseResult): ViewerContentMetrics {
+  if (result.kind === "document") {
+    return { documentBlocks: result.paragraphs.length + result.tables.reduce((total, table) => total + table.length, 0) };
+  }
+  if (result.kind === "spreadsheet") {
+    let maxRows = 0;
+    let maxColumns = 0;
+    for (const sheet of result.sheets) {
+      maxRows = Math.max(maxRows, sheet.rows.length);
+      for (const row of sheet.rows) maxColumns = Math.max(maxColumns, row.length);
+    }
+    return {
+      sheetCount: result.sheets.length,
+      maxRows,
+      maxColumns,
+    };
+  }
+  if (result.kind === "presentation") return { slideCount: result.slides.length };
+  return {
+    archiveFiles: result.entries.filter((entry) => !entry.directory).length,
+    archiveDirectories: result.entries.filter((entry) => entry.directory).length,
+  };
 }
 
 function DocumentView({ result }: { result: Extract<ParseResult, { kind: "document" }> }) {
