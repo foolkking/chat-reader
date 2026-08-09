@@ -18,9 +18,11 @@
 | Alembic | PASS | single head `20260806_0021`; no migration added |
 | PWA default matrix | PARTIAL_PASS | 19 passed; 21 online/fixture-gated scenarios skipped and not counted as PASS |
 | Production old-layout baseline | PASS | Chrome measured the old single-page PDF shell at about 1844 x 1016 CSS px in a 1920 x 1080 viewport, confirming universal 96vw x 94vh behavior |
-| Adaptive production deployment / Chrome | NOT_PRODUCTION_VERIFIED | pending prebuilt-image rollout and same-fixture verification; this row must be updated after deployment |
+| Adaptive production deployment / Chrome | PASS | commit `a89bc28` deployed from Actions run `31294947752` (archive SHA-256 `4d48d4d55c461be318c5ccab2b06eaabeefb11e1c32dcb73b2201aa3d833e5be`); Chrome verified document/reading/media/compact/workspace, maximize/Esc, Fit Page/Fit Width, five viewport classes and mobile 100vw x 100dvh |
 
 The adaptive change does not alter inline attachment layout, Reader width, data models, upload, Files Panel, Share, export, `.cr v4`, Scanner, Range or permissions.
+
+Production backup `/opt/chat-reader/backups/adaptive-viewer-20260809T050228Z-a89bc28` is 378 MiB. Its PostgreSQL custom dump passed `pg_restore --list`; import/export/offline/asset archives passed tar reads and every SHA-256 entry passed. King pulled source before loading prebuilt images, ran migration, and recreated API/worker/Web with `--no-build`; API/Web/PostgreSQL are healthy, worker is running, Alembic is `20260806_0021`, ClamAV is stopped, and Scanner remains disabled.
 
 ## 2026-08-09 Attachment Renderer Contract Candidate
 

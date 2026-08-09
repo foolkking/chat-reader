@@ -121,6 +121,7 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - 附件预览通过唯一的 React portal 挂载到 `document.body`；覆盖层负责 dialog 语义、共享背景滚动锁、初始焦点、Tab 循环、Esc/背景关闭与触发器焦点恢复。`ViewerPresentationResolver` 将同一 Shell 派生为 compact/reading/document/media/workspace：音频紧凑，Markdown/Text/Code/JSON 为阅读窗，PDF 为文档窗，图片/视频按 intrinsic ratio，CSV 与 Gallery Overview 才使用近全屏 workspace。移动端统一 100vw × 100dvh；桌面可最大化，第一次 Esc 退出最大化、第二次关闭。presentation 不持久化，也不改变正文宽度。
 - PDF 的 page/fit/zoom 与可折叠缩略图控制位于共享 Shell 顶栏；单页默认 Fit Page、完整居中且 PDF viewport 不产生纵向滚动，Fit Width/自定义缩放由 PDF Renderer 独占滚动。Shell 本身保持 `overflow: hidden`，避免与 Markdown/PDF 的内容滚动形成双层滚动。
 - 图片/视频使用媒体 canvas，音频使用系统 surface，Markdown/文本使用阅读 surface，PDF 使用浅灰 document canvas。图片（含 SVG 图片上下文）最终均为 `<img>`，不内联 SVG XML、不以独立文档打开。
+- Adaptive Viewer 当前生产版本为 `a89bc28`，由 GitHub Actions run `31294947752` 构建并以 `--no-build` 部署。生产 Chrome 已验证单页 PDF 从旧 96vw × 94vh 缩为 1120 × 900 document window，Fit Page 无内部纵向滚动；compact/reading/media/workspace、CSS 最大化双阶段 Esc 与 390 × 844 移动端全屏均通过。发布前有效备份为 `/opt/chat-reader/backups/adaptive-viewer-20260809T050228Z-a89bc28`。
 - 对话导出主选项仍为 CanJSON/Markdown 与“包含附件”；折叠的二级内容选项控制对话简介、批注、笔记和 CanJSON 来源引用。普通文件与附件 ZIP 复用同一组后端 `ExportOptions`。
 - 单消息版本使用持久化左右切换器；第一版受保护，后续版本可永久删除，删除当前版本会回退到编号更小的最近可用版本。统一“拆分对话”工作区支持连续区间、边界双份和离散消息三种非破坏式复制。
 

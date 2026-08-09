@@ -12,7 +12,7 @@
 | Migration head | PASS | `20260806_0021` only; no migration in this change |
 | PWA/default Playwright | PARTIAL_PASS | 19 passed, 21 online/fixture-gated skipped; skipped cases are not PASS |
 | Production before baseline | PASS | real Chrome, five required viewport classes; old 1920 x 1080 single-page PDF was about 1844 x 1016 CSS px |
-| Production after screenshots and interaction | NOT_PRODUCTION_VERIFIED | pending deployment; requires PDF, image, Gallery, Markdown, code, JSON, CSV, audio and video checks |
+| Production after screenshots and interaction | PASS | real Chrome verified PDF document/Fit modes, image Focus and workspace Overview, Markdown/JSON reading, 1240px code reading, CSV workspace, compact audio, aspect-ratio video fallback size, maximize/Esc and mobile fullscreen |
 
 The baseline screenshots are transient release evidence and are not committed because repository policy forbids persisting real production conversation identifiers or content.
 

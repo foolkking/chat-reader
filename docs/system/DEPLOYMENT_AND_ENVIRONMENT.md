@@ -6,6 +6,8 @@ Production Compose sets `import-worker.mem_limit` to `${IMPORT_WORKER_MEMORY_LIM
 
 Before an incremental production update, create and validate both the PostgreSQL custom-format dump and read-only archives of `import-storage`, `export-storage`, `offline-storage`, and `asset-storage`. Source deployment archives must exclude `.env.production`, named-volume data, user import directories, caches, and browser traces.
 
+The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for commit `a89bc28`; the archive SHA-256 was verified as `4d48d4d55c461be318c5ccab2b06eaabeefb11e1c32dcb73b2201aa3d833e5be` on both ends. Backup `/opt/chat-reader/backups/adaptive-viewer-20260809T050228Z-a89bc28` contains a validated PostgreSQL custom dump and all four business-volume archives. King only pulled source, loaded images, ran migration and recreated services with `--no-build`; `.env.production`, named volumes and the disabled Scanner policy were unchanged.
+
 最后核验：2026-08-06
 
 本页维护运行边界和配置名称。可复制的本地/生产步骤分别见 [本地开发](../development.md) 与 [生产部署](../deployment.md)。
