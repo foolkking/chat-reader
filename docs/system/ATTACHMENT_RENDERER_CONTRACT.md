@@ -4,6 +4,33 @@ Last verified: 2026-08-09
 
 This is the durable contract for attachment presentation. Code and tests remain the source of truth. It does not change attachment ownership, uploads, exports, Scanner policy, or Reader content width.
 
+## Inline Layout System
+
+Inline rendering and the Viewer share capability/RenderPlan facts, but they own different geometry. Reader layout is now:
+
+```text
+Reader body -> Attachment Lane -> Attachment Group -> Semantic Renderer
+```
+
+`InlinePresentation` has exactly `reading`, `data`, `gallery`, `audio-list`, `video`, and `file-list`. The group is the only centred unit. Renderer components cannot add independent `margin-inline`, arbitrary max widths or per-file rounded-card shells.
+
+| Presentation | Primitive | Maximum inline size |
+| --- | --- | ---: |
+| `reading` | RichPreview (Markdown/text/log/code/JSON/source) | 45rem |
+| `data` | DataPreview (CSV/TSV bounded table) | 55rem |
+| `gallery` | ImageGallery | Reader attachment width |
+| `audio-list` | AudioList | 38rem |
+| `video` | VideoPreview | 43rem |
+| `file-list` | FileList | 38rem |
+
+Adjacent attachment blocks are queried using the same owner/share/offline access and Registry facts, then split whenever `InlinePresentation` changes. Ordinary body content always terminates a group. Runtime image/media failure can move an item into FileList without changing persistent capability.
+
+Gallery items have no permanent file header. Filename and View are progressively disclosed on hover/focus; original download remains in the Viewer. Rows preserve aspect ratios at an approximately 200px target, do not crop, and cap the final row at 220px before centring it. More than six images shows five images plus a dedicated `+N` Overview entry. TIFF joins Gallery only when the RenderPlan has a reliable visual preview; otherwise it remains a FileList row.
+
+AudioList and FileList each own one subtle border/radius surface and row dividers. Rows do not have individual outer cards. Rich/Data previews keep one bounded preview surface with no vertical nested scroll; Code/Data may scroll horizontally. Metadata order is filename, friendly type, size and low-weight `未扫描`.
+
+Spacing follows an 8px base: 24px between semantic groups, 8px within a group, 12px inner padding, 48px preview headers/footers, 56px FileList rows and at least 44px action targets. Normal surfaces use 10px radius and media uses 12px. These tokens live in Reader CSS and do not change the Reader width.
+
 ## Product Boundary
 
 ```text

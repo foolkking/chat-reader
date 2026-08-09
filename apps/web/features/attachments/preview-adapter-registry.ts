@@ -3,6 +3,8 @@ import type { AttachmentRead } from "../../lib/types";
 export type AttachmentDataState = "available" | "empty" | "missing" | "uploading" | "upload_failed";
 export type AttachmentInlineMode = "inline-rich" | "inline-compact" | "viewer-only" | "download-only";
 export type AttachmentInlineSkin = "media" | "preview-panel" | "file-row";
+// The Reader owns inline geometry. Renderers only select a semantic track.
+export type InlinePresentation = "reading" | "data" | "gallery" | "audio-list" | "video" | "file-list";
 export type AttachmentViewerKind = "image" | "markdown" | "text" | "code" | "json" | "table" | "pdf" | "audio" | "video" | "document" | "spreadsheet" | "presentation" | "archive";
 export type AttachmentViewerMode =
   | "image-focus"
@@ -166,6 +168,21 @@ export function buildAttachmentRenderPlan(
     viewerMode: capability.defaultViewerMode ?? null,
     actions: { open: Boolean(capability.viewerKind), download: downloadable, retry: false, locate: true },
   };
+}
+
+/**
+ * Maps the shared RenderPlan to the only six inline layouts. Runtime failure
+ * is deliberately represented as a FileList item; it never mutates registry
+ * capability and can therefore be retried later.
+ */
+export function resolveInlinePresentation(plan: AttachmentRenderPlan): InlinePresentation {
+  if (plan.inline === "file-row") return "file-list";
+  if (plan.viewerKind === "image") return plan.inline === "media" ? "gallery" : "file-list";
+  if (plan.viewerKind === "audio") return "audio-list";
+  if (plan.viewerKind === "video") return "video";
+  if (plan.viewerKind === "table") return "data";
+  if (["markdown", "text", "code", "json"].includes(plan.viewerKind ?? "")) return "reading";
+  return "file-list";
 }
 
 function fileRowPlan(

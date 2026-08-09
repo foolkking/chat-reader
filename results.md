@@ -1,5 +1,22 @@
 # Implementation Results
 
+## 2026-08-09 Attachment Inline Layout System Candidate
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Group-level alignment | PASS | `AttachmentInlineGroup` partitions adjacent current-version attachments into one of six semantic lanes; individual `mx-auto`/renderer max-width card geometry was removed |
+| Reading/Data lanes | PASS | 45rem/55rem centralized limits, bounded preview body, fade/expand and group-stable headers/footers |
+| Image Gallery | PASS | no permanent per-image header; aspect-ratio rows, centred capped last row, full occurrence session and dedicated five-plus-`+N` Overview entry |
+| AudioList/FileList | PASS | one group surface, row dividers, 38rem lane, progressive actions; Office/archive/CAD/download-only entries no longer form independent cards |
+| Video runtime fallback | PASS | supported video uses the 43rem video lane; codec/decode runtime states re-partition to FileList without mutating static capability |
+| Scanner/status contract | PASS | `scanner_disabled/unscanned` remains low-weight `未扫描`; no clean/safe wording or Scanner service change |
+| Web lint/typecheck/build | PASS | all required Web commands passed; production build generated 9 routes |
+| Focused inline/viewer tests | PASS | 12/12 passed |
+| API regression | PASS | 216 passed; 3 skipped and not counted as PASS |
+| Alembic | PASS | single head `20260806_0021`; no migration added |
+| PWA default matrix | PARTIAL_PASS | 28 passed; 21 conditional online/fixture tests skipped and not counted as PASS |
+| Production deployment / visual acceptance | NOT_PRODUCTION_VERIFIED | candidate not yet deployed at this documentation checkpoint |
+
 ## 2026-08-09 Conversation Editing, Import Stability And Complex Viewer Addendum
 
 | Area | Status | Evidence |

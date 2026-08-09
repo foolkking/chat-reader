@@ -1,5 +1,13 @@
 # Project State
 
+## 2026-08-09 Attachment Inline Layout System Candidate
+
+- Reader attachments now use one group-owned geometry chain: `Attachment Lane -> Attachment Group -> Semantic Renderer`. The six presentations are `reading`, `data`, `gallery`, `audio-list`, `video`, and `file-list`; individual renderers no longer apply independent centring or arbitrary max widths.
+- Lane maxima are 45rem reading, 55rem data, 100% gallery, 38rem audio/file and 43rem video. These values do not alter the Reader content-width contract.
+- Consecutive current-version attachment blocks are resolved through the shared Renderer/RenderPlan registry, then partitioned by presentation without crossing ordinary text. Gallery contains only runtime-previewable images; TIFF, image decode failure and unsupported media use FileList. Audio and download-only files share one group surface with row dividers.
+- Gallery rows preserve aspect ratio, use an approximately 200px target, cap the final row at 220px and centre the incomplete row. More than six images renders five images plus a dedicated `+N` Overview tile while retaining the complete occurrence-authoritative Viewer session.
+- Local verification: Web lint/typecheck/build PASS; focused inline/viewer tests `12/12`; API `216 passed / 3 skipped`; PWA default matrix `28 passed / 21 conditional skipped`; Alembic single head `20260806_0021`. Production deployment and Chrome visual acceptance remain `NOT_PRODUCTION_VERIFIED` until this candidate is published.
+
 ## 2026-08-09 Conversation Editing, Import Pairing And Complex Viewer Addendum
 
 - Manual conversation creation is available at `POST /api/conversations`. It atomically creates one non-empty User version followed by one non-empty Assistant version, with optional project ownership.

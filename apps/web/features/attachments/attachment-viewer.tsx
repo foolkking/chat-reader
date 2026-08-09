@@ -45,6 +45,8 @@ export type AttachmentViewerSession = {
   scope: "single" | "message-gallery" | "conversation-gallery";
   items: AttachmentViewerItem[];
   activeItemKey: string;
+  /** Optional transient entry mode; used by the inline +N Gallery tile. */
+  initialMode?: AttachmentViewerMode;
   access?: AttachmentAccess;
   permissions: {
     downloadOriginal: boolean;
@@ -114,7 +116,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const [mode, setMode] = useState<AttachmentViewerMode | null>(null);
+  const [mode, setMode] = useState<AttachmentViewerMode | null>(session.initialMode ?? null);
   const [maximized, setMaximized] = useState(false);
   const maximizedRef = useRef(false);
   const [mediaDimensions, setMediaDimensions] = useState<ViewerMediaDimensions>(null);

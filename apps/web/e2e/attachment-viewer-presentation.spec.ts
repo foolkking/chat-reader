@@ -85,11 +85,13 @@ test("complex attachment viewers are lazy and bounded", () => {
   expect(worker).not.toContain("eval(");
 });
 
-test("inline attachment content is centered without changing the reader width", () => {
+test("inline attachments use group-owned semantic lanes without changing the reader width", () => {
   const block = readFileSync(resolve(process.cwd(), "features/attachments/attachment-block.tsx"), "utf8");
   const groups = readFileSync(resolve(process.cwd(), "features/conversations/assistant-message-renderer.tsx"), "utf8");
-  expect(block).toContain('className="m-0 mx-auto max-w-full"');
-  expect(block).toContain('className="mx-auto flex min-h-16 w-full max-w-[720px]');
-  expect(groups).toContain("flex min-w-0 flex-wrap items-start justify-center gap-2");
-  expect(groups).toContain("flex min-w-0 flex-col items-center gap-2");
+  const layout = readFileSync(resolve(process.cwd(), "features/attachments/attachment-inline-layout.tsx"), "utf8");
+  expect(layout).toContain("attachment-lane--${presentation}");
+  expect(layout).toContain("partitionPresentationRuns");
+  expect(groups).toContain("<AttachmentInlineGroup items={items} />");
+  expect(block).not.toContain("mx-auto max-w-[720px]");
+  expect(block).not.toContain("mx-auto max-w-[560px]");
 });

@@ -71,7 +71,7 @@ test("imports the real attachment fixture through the product UI", async ({ page
     expect(markdownAttachment).toBeTruthy();
     const markdownBlock = page.locator(`[data-testid="attachment-block"][data-attachment-id="${markdownAttachment!.id}"]`);
     if (!(await markdownBlock.isVisible())) {
-      const expandFiles = page.locator('[data-testid="attachment-group"][data-attachment-group="files"]').getByRole("button", { name: /展开其余|Expand/ });
+      const expandFiles = page.locator('[data-testid="attachment-group"][data-attachment-group="file-list"]').getByRole("button", { name: /展开另外|Expand/ });
       if (await expandFiles.count()) await expandFiles.first().click();
     }
     await expect(markdownBlock).toBeVisible();
@@ -81,16 +81,13 @@ test("imports the real attachment fixture through the product UI", async ({ page
       (item.detected_mime_type ?? item.asset_object?.detected_mime_type) === "image/svg+xml");
     expect(svgAttachment).toBeTruthy();
     const svgBlock = page.locator(`[data-testid="attachment-block"][data-attachment-id="${svgAttachment!.id}"]`);
-    if (!(await svgBlock.isVisible())) {
-      await page.locator('[data-testid="attachment-group"][data-attachment-group="images"]').getByRole("button", { name: /展开其余|Expand/ }).click();
-    }
     await expect(svgBlock).toBeVisible();
     await expect(svgBlock.locator("img")).toHaveCount(1);
     await expect(svgBlock.locator("svg, script, object, embed, iframe")).toHaveCount(0);
 
     const pageCountBeforeSvgPreview = page.context().pages().length;
     const scrollPositionBeforeSvgPreview = await page.evaluate(() => window.scrollY);
-    const svgTrigger = svgBlock.getByRole("button", { name: /Preview/ }).first();
+    const svgTrigger = svgBlock.getByRole("button", { name: /查看|Preview/ }).first();
     await svgTrigger.click();
     const svgDialog = page.locator('body > [role="dialog"]');
     await expect(svgDialog).toBeVisible();

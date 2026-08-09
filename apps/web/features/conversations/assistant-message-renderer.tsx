@@ -9,6 +9,7 @@ import { useTranslations } from "../../components/preferences-provider";
 import { READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLease } from "./block-virtualization";
 import { registerRenderedBlock } from "./rendered-block-registry";
 import type { AttachmentViewerItem } from "../attachments/attachment-viewer";
+import { AttachmentInlineGroup, type AttachmentInlineGroupItem } from "../attachments/attachment-inline-layout";
 
 const THINKING_LABEL = "思考过程";
 const THINKING_DURATION_RE =
@@ -78,11 +79,8 @@ export function AssistantMessageRenderer({
               key={`attachment-group-${firstBlock.id ?? firstBlock.block_index}`}
               messageId={message.id}
               blocks={unit.blocks}
-              groupType={unit.groupType}
               previousBlock={previousBlock}
               hasLeadingContent={Boolean(leadingThinking) || index > 0}
-              isAssistant={isAssistant}
-              highlightTargetId={highlightTargetId}
             />
           );
         }
@@ -109,25 +107,26 @@ export function AssistantMessageRenderer({
 type DisplayUnit = {
   kind: "block" | "attachment-group";
   blocks: RenderBlockRead[];
-  groupType?: "images" | "files";
 };
 
 function groupAttachmentBlocks(blocks: RenderBlockRead[]): DisplayUnit[] {
   const units: DisplayUnit[] = [];
   for (let index = 0; index < blocks.length;) {
     const block = blocks[index];
-    const groupType = block.block_type === "image" ? "images" : block.block_type === "attachment" ? "files" : null;
-    if (!groupType) {
+    const isAttachment = block.block_type === "image" || block.block_type === "attachment";
+    if (!isAttachment) {
       units.push({ kind: "block", blocks: [block] });
       index += 1;
       continue;
     }
     const grouped: RenderBlockRead[] = [];
-    while (index < blocks.length && (blocks[index].block_type === "image" ? "images" : blocks[index].block_type === "attachment" ? "files" : null) === groupType) {
+    while (index < blocks.length && (blocks[index].block_type === "image" || blocks[index].block_type === "attachment")) {
       grouped.push(blocks[index]);
       index += 1;
     }
-    units.push(grouped.length > 1 ? { kind: "attachment-group", blocks: grouped, groupType } : { kind: "block", blocks: grouped });
+    // A single attachment is still a one-item group: the group, never the
+    // renderer, owns centring and track width.
+    units.push({ kind: "attachment-group", blocks: grouped });
   }
   return units;
 }
@@ -135,53 +134,23 @@ function groupAttachmentBlocks(blocks: RenderBlockRead[]): DisplayUnit[] {
 function AttachmentBlockGroup({
   messageId,
   blocks,
-  groupType = "files",
   previousBlock,
   hasLeadingContent,
-  isAssistant,
-  highlightTargetId,
 }: {
   messageId: string;
   blocks: RenderBlockRead[];
-  groupType?: "images" | "files";
   previousBlock: RenderBlockRead | null;
   hasLeadingContent: boolean;
-  isAssistant: boolean;
-  highlightTargetId?: string | null;
 }) {
-  const initialLimit = groupType === "images" ? 6 : 5;
-  const targetInside = Boolean(highlightTargetId && blocks.some((block) => highlightTargetId === `block-${messageId}-${block.block_index}`));
-  const [expanded, setExpanded] = useState(targetInside);
-  useEffect(() => {
-    if (targetInside) setExpanded(true);
-  }, [targetInside]);
-  const visibleBlocks = groupType === "images" ? blocks.slice(0, initialLimit) : expanded ? blocks : blocks.slice(0, initialLimit);
-  const hiddenCount = blocks.length - visibleBlocks.length;
-  const galleryItems = useMemo(() => groupType === "images" ? blocks.map((block) => attachmentViewerItem(messageId, block)) : undefined, [blocks, groupType, messageId]);
+  const items = useMemo(() => blocks.map((block) => attachmentInlineItem(messageId, block)), [blocks, messageId]);
   return (
     <div
       className="reader-block-slot"
       data-testid="attachment-group"
-      data-attachment-group={groupType}
+      data-attachment-group="semantic"
       style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, blocks[0] ?? null)) : undefined}
     >
-      <div className={groupType === "images" ? "flex min-w-0 flex-wrap items-start justify-center gap-2" : "flex min-w-0 flex-col items-center gap-2"}>
-        {visibleBlocks.map((block, index) => (
-          <div key={block.id ?? block.block_index} className={groupType === "images" ? "relative min-w-[12rem] max-w-full flex-[1_1_18rem]" : undefined}>
-          <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} galleryItems={galleryItems} />
-          {groupType === "images" && hiddenCount > 0 && index === visibleBlocks.length - 1 ? <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-black/55 text-2xl font-semibold text-white" aria-label={`还有 ${hiddenCount} 张图片`}>+{hiddenCount}</span> : null}
-          </div>
-        ))}
-      </div>
-      {groupType !== "images" && hiddenCount > 0 ? (
-        <button type="button" onClick={() => setExpanded(true)} className="mt-2 inline-flex min-h-10 items-center self-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
-          展开其余 {hiddenCount} 个附件
-        </button>
-      ) : expanded && blocks.length > initialLimit ? (
-        <button type="button" onClick={() => setExpanded(false)} className="mt-2 inline-flex min-h-10 items-center self-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
-          收起附件组
-        </button>
-      ) : null}
+      <AttachmentInlineGroup items={items} />
     </div>
   );
 }
@@ -655,6 +624,22 @@ function attachmentViewerItem(messageId: string, block: RenderBlockRead): Attach
     displayMode: typeof block.data.displayMode === "string" && ["auto", "small", "medium", "large"].includes(block.data.displayMode) ? block.data.displayMode as AttachmentViewerItem["displayMode"] : "auto",
     alt: typeof block.data.alt === "string" ? block.data.alt : undefined,
     caption: typeof block.data.caption === "string" ? block.data.caption : undefined,
+  };
+}
+
+function attachmentInlineItem(messageId: string, block: RenderBlockRead): AttachmentInlineGroupItem {
+  const viewerItem = attachmentViewerItem(messageId, block);
+  return {
+    itemKey: viewerItem.itemKey,
+    attachmentId: viewerItem.attachmentId,
+    displayMode: viewerItem.displayMode,
+    alt: viewerItem.alt,
+    caption: viewerItem.caption,
+    messageId: viewerItem.messageId,
+    messageVersionId: viewerItem.messageVersionId,
+    occurrenceKey: viewerItem.occurrenceKey,
+    blockIndex: viewerItem.blockIndex,
+    displayOrder: viewerItem.displayOrder,
   };
 }
 

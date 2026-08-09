@@ -1,5 +1,11 @@
 # 前端架构
 
+## Attachment inline lanes (2026-08-09)
+
+`AssistantMessageRenderer` groups adjacent attachment RenderBlocks without crossing ordinary text. `AttachmentInlineGroup` resolves each Attachment through the shared access/query and RenderPlan registry, partitions consecutive semantic runs, and mounts one centralized lane. The six primitives are RichPreview, DataPreview, ImageGallery, AudioList, VideoPreview and FileList.
+
+Geometry is centralized in `app/globals.css`: 45rem reading, 55rem data, full-width gallery, 38rem audio/file and 43rem video. Individual Renderer components only render group-internal rows/panels. Runtime image/media failure reports back to the group and moves the item to FileList without changing static capability. The unified adaptive Viewer remains unchanged except that the inline `+N` tile requests its existing Overview mode.
+
 ## Source workspace performance boundary (2026-08-04)
 
 - `ConversationReader` owns only the active source message and dirty/cross-message state. Same-message cursor follow is dispatched imperatively once per animation frame with an offset threshold; wheel input no longer increments a React state counter.
