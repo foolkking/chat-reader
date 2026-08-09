@@ -96,7 +96,7 @@ function InlineImage({ attachment, props, onOpen, onRuntime }: {
   const displayMode = normalizeImageDisplayMode(props.displayMode);
   const maxWidth = imageDisplayMaxWidth(displayMode);
   return (
-    <figure className="m-0 max-w-full" data-testid="attachment-block" data-attachment-mode="media" data-display-mode={displayMode}>
+    <figure className="m-0 mx-auto max-w-full" data-testid="attachment-block" data-attachment-mode="media" data-display-mode={displayMode}>
       <AttachmentMeta attachment={attachment} kind="image" onOpen={onOpen} />
       <button type="button" onClick={onOpen} disabled={!onOpen} className="block max-w-full overflow-hidden rounded-md bg-subtle text-left disabled:cursor-default" aria-label={`打开 ${attachment.display_name}`}>
         <img
@@ -135,7 +135,7 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime }: {
     return () => controller.abort();
   }, [attachment.content_url, onRuntime]);
   return (
-    <figure className="m-0 max-w-[720px] overflow-hidden rounded-md border border-ui bg-surface" data-testid="attachment-block" data-attachment-mode="preview-panel">
+    <figure className="m-0 mx-auto max-w-[720px] overflow-hidden rounded-md border border-ui bg-surface" data-testid="attachment-block" data-attachment-mode="preview-panel">
       <AttachmentMeta attachment={attachment} kind={kind} onOpen={onOpen} />
       <div className="relative max-h-[260px] overflow-hidden p-3">
         {text === null ? <div className="flex min-h-20 items-center justify-center text-secondary"><Loader2 className="h-4 w-4 animate-spin" /></div> : renderBoundedText(text, kind, attachment.display_name)}
@@ -151,7 +151,7 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime }: {
 
 function InlineAudio({ attachment, onOpen, onRuntime }: MediaProps) {
   return (
-    <figure className="m-0 max-w-[720px] rounded-md border border-ui bg-surface" data-testid="attachment-block" data-attachment-mode="preview-panel">
+    <figure className="m-0 mx-auto max-w-[720px] rounded-md border border-ui bg-surface" data-testid="attachment-block" data-attachment-mode="preview-panel">
       <AttachmentMeta attachment={attachment} kind="audio" onOpen={onOpen} />
       <div className="flex items-center gap-2 px-3 py-2">
         <audio src={attachment.content_url ?? undefined} controls preload="metadata" className="h-11 min-w-0 flex-1" onCanPlay={() => onRuntime({ status: "ready", requestId: crypto.randomUUID() })} onError={() => onRuntime(mediaFailure(attachment, "audio"))} />
@@ -163,7 +163,7 @@ function InlineAudio({ attachment, onOpen, onRuntime }: MediaProps) {
 
 function InlineVideo({ attachment, onOpen, onRuntime }: MediaProps) {
   return (
-    <figure className="m-0 max-w-[560px] rounded-md border border-ui bg-surface" data-testid="attachment-block" data-attachment-mode="preview-panel">
+    <figure className="m-0 mx-auto max-w-[560px] rounded-md border border-ui bg-surface" data-testid="attachment-block" data-attachment-mode="preview-panel">
       <AttachmentMeta attachment={attachment} kind="video" onOpen={onOpen} />
       <button type="button" onClick={onOpen} className="relative flex aspect-video max-h-[315px] w-full items-center justify-center overflow-hidden bg-subtle" aria-label={`播放 ${attachment.display_name}`}>
         <video src={attachment.content_url ?? undefined} preload="metadata" muted playsInline className="h-full w-full object-contain" onLoadedMetadata={() => onRuntime({ status: "ready", requestId: crypto.randomUUID() })} onError={() => onRuntime(mediaFailure(attachment, "video"))} />
@@ -199,7 +199,7 @@ function FileRow({ attachment, plan, onOpen, onRetry }: {
           : variant === "offline-unavailable" ? "离线资源未缓存"
             : attachmentMeta(attachment);
   return (
-    <div className="flex min-h-16 w-full max-w-[720px] items-center gap-3 rounded-md border border-ui bg-surface px-3 py-2" data-testid="attachment-block" data-attachment-mode="file-row" data-file-row-variant={variant}>
+    <div className="mx-auto flex min-h-16 w-full max-w-[720px] items-center gap-3 rounded-md border border-ui bg-surface px-3 py-2" data-testid="attachment-block" data-attachment-mode="file-row" data-file-row-variant={variant}>
       <KindIcon kind={plan.capability.viewerKind} warning={variant !== "normal" && variant !== "empty"} />
       <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</p><p className="mt-0.5 text-xs text-secondary">{message}</p></div>
       {plan.actions.retry ? <button type="button" onClick={onRetry} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="重试预览" title="重试预览"><RotateCcw className="h-4 w-4" /></button> : null}
@@ -255,11 +255,11 @@ function attachmentMeta(attachment: AttachmentRead): string {
 }
 
 function LoadingRow({ label }: { label: string }) {
-  return <div className="flex min-h-16 max-w-[720px] items-center gap-3 rounded-md border border-ui bg-surface px-3"><Loader2 className="h-5 w-5 animate-spin text-secondary" /><span className="truncate text-sm text-secondary">正在加载 {label}</span></div>;
+  return <div className="mx-auto flex min-h-16 max-w-[720px] items-center gap-3 rounded-md border border-ui bg-surface px-3"><Loader2 className="h-5 w-5 animate-spin text-secondary" /><span className="truncate text-sm text-secondary">正在加载 {label}</span></div>;
 }
 
 function UnavailableRow({ label, onRetry }: { label: string; onRetry: () => void }) {
-  return <div className="flex min-h-16 max-w-[720px] items-center gap-3 rounded-md border border-ui bg-surface px-3"><AlertTriangle className="h-5 w-5 text-secondary" /><div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{label}</p><p className="text-xs text-secondary">附件信息加载失败</p></div><button type="button" onClick={onRetry} className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle">重试</button></div>;
+  return <div className="mx-auto flex min-h-16 max-w-[720px] items-center gap-3 rounded-md border border-ui bg-surface px-3"><AlertTriangle className="h-5 w-5 text-secondary" /><div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{label}</p><p className="text-xs text-secondary">附件信息加载失败</p></div><button type="button" onClick={onRetry} className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle">重试</button></div>;
 }
 
 export { AttachmentPreviewDialog };

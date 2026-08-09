@@ -165,7 +165,7 @@ function AttachmentBlockGroup({
       data-attachment-group={groupType}
       style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, blocks[0] ?? null)) : undefined}
     >
-      <div className={groupType === "images" ? "flex min-w-0 flex-wrap items-start gap-2" : "flex min-w-0 flex-col gap-2"}>
+      <div className={groupType === "images" ? "flex min-w-0 flex-wrap items-start justify-center gap-2" : "flex min-w-0 flex-col items-center gap-2"}>
         {visibleBlocks.map((block, index) => (
           <div key={block.id ?? block.block_index} className={groupType === "images" ? "relative min-w-[12rem] max-w-full flex-[1_1_18rem]" : undefined}>
           <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} galleryItems={galleryItems} />
@@ -174,11 +174,11 @@ function AttachmentBlockGroup({
         ))}
       </div>
       {groupType !== "images" && hiddenCount > 0 ? (
-        <button type="button" onClick={() => setExpanded(true)} className="mt-2 inline-flex min-h-10 items-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
+        <button type="button" onClick={() => setExpanded(true)} className="mt-2 inline-flex min-h-10 items-center self-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
           展开其余 {hiddenCount} 个附件
         </button>
       ) : expanded && blocks.length > initialLimit ? (
-        <button type="button" onClick={() => setExpanded(false)} className="mt-2 inline-flex min-h-10 items-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
+        <button type="button" onClick={() => setExpanded(false)} className="mt-2 inline-flex min-h-10 items-center self-center rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle">
           收起附件组
         </button>
       ) : null}
