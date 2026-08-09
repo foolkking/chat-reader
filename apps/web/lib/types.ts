@@ -87,6 +87,40 @@ export type ConversationUpdateInput = {
 
 export type ConversationManagementResponse = ConversationDetail;
 
+export type ConversationCreateInput = {
+  title: string;
+  project_id?: string | null;
+  messages: [
+    { role: "user"; content_markdown: string },
+    { role: "assistant"; content_markdown: string },
+  ];
+};
+
+export type ConversationCreateResponse = {
+  conversation: ConversationDetail;
+  messages: MessageListItem[];
+};
+
+export type MessageInsertInput = {
+  anchor_message_id: string;
+  position: "before" | "after";
+  mode: "single" | "pair";
+  messages: Array<{ role?: "user" | "assistant" | null; content_markdown: string }>;
+  expected_offline_revision?: number;
+};
+
+export type MessageInsertResponse = {
+  conversation: ConversationDetail;
+  messages: MessageListItem[];
+};
+
+export type MessageDeleteResponse = {
+  message_id: string;
+  conversation_id: string;
+  deleted: boolean;
+  message: MessageListItem;
+};
+
 export type ConversationPlacementInput = {
   target_project_id: string | null;
   target_section?: "pinned" | "normal";

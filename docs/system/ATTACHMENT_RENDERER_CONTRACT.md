@@ -163,3 +163,15 @@ WORKSPACE_VIEWER = APPROVED
 MOBILE_FULLSCREEN = APPROVED
 OPTIONAL_MAXIMIZE = APPROVED
 ```
+# 2026-08-09 Addendum: First Complex Browser Renderers
+
+The contract remains `Viewer = consume`, `Files panel = manage`, and `Editor = compose`. No attachment data model or migration changed.
+
+| Capability | Inline | Viewer | Limit/fallback |
+| --- | --- | --- | --- |
+| DOCX/ODT | viewer-only file row | `document` | bounded paragraphs/tables in a Worker, otherwise download |
+| XLSX/ODS | viewer-only file row | `spreadsheet` | bounded read-only sheets/grid, otherwise download |
+| PPTX/ODP | viewer-only file row | `presentation` | bounded static slide text/navigation, otherwise download |
+| ZIP | viewer-only file row | `archive` | bounded directory and small text/image entry preview, no recursive extraction |
+
+`fflate` is reused for the lazy ZIP Worker; it does not replace the established export/offline implementation. The Worker rejects oversized source files, excessive central-directory entries, oversized entries and excessive expanded bytes before preview. Original authenticated downloads remain available. DOC/XLS/PPT, RTF, TAR-family, EPUB, VSDX, drawio, DXF, STL, OBJ and unknown formats remain `NOT_IMPLEMENTED` with reliable download-only behavior.

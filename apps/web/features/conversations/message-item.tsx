@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useRef, useState } from "react";
-import { BookmarkPlus, CheckSquare2, MoreHorizontal, Pencil, Square } from "lucide-react";
+import { BookmarkPlus, CheckSquare2, MoreHorizontal, Pencil, Plus, Square, Trash2 } from "lucide-react";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { normalizedMessageBlocks } from "../editing/message-source-position";
@@ -20,6 +20,8 @@ function MessageItemComponent({
   editing = false,
   onEdit,
   onBookmark,
+  onInsert,
+  onDelete,
   scrollRootMode = "element",
   attachmentAccess = { kind: "owner" },
 }: {
@@ -32,6 +34,8 @@ function MessageItemComponent({
   editing?: boolean;
   onEdit?: (message: MessageListItem, blockId?: string | null) => void;
   onBookmark?: (message: MessageListItem) => void | Promise<void>;
+  onInsert?: (message: MessageListItem) => void;
+  onDelete?: (message: MessageListItem) => void | Promise<void>;
   scrollRootMode?: "element" | "window";
   attachmentAccess?: AttachmentAccess;
 }) {
@@ -118,10 +122,12 @@ function MessageItemComponent({
       ) : null}
       {!readOnly ? (
         <>
+          {onInsert ? <button type="button" onClick={() => onInsert(message)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "在此处插入消息" : "Insert message here"} title={zh ? "插入消息" : "Insert message"}><Plus className="h-4 w-4" /></button> : null}
           <button type="button" disabled={!onEdit} onClick={() => onEdit?.(message, visibleBlockAnchor()?.id)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-subtle disabled:opacity-40 ${editing ? "bg-[var(--accent-soft)] text-accent" : "text-secondary"}`} aria-pressed={editing} aria-label={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}>
             <Pencil className="h-4 w-4" />
           </button>
           <VersionHistoryPanel messageId={message.id} currentVersionId={message.current_version?.id} onChanged={replaceMessagePreservingAnchor} />
+          {onDelete ? <button type="button" onClick={() => void onDelete(message)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[var(--danger)] hover:bg-[var(--danger-soft)]" aria-label={zh ? "删除消息" : "Delete message"} title={zh ? "删除消息" : "Delete message"}><Trash2 className="h-4 w-4" /></button> : null}
         </>
       ) : null}
     </div>
@@ -183,6 +189,8 @@ export const MessageItem = memo(MessageItemComponent, (previous, next) => (
   && previous.selected === next.selected
   && previous.highlightTargetId === next.highlightTargetId
   && previous.editing === next.editing
+  && previous.onInsert === next.onInsert
+  && previous.onDelete === next.onDelete
   && previous.scrollRootMode === next.scrollRootMode
   && previous.attachmentAccess?.kind === next.attachmentAccess?.kind
   && (previous.attachmentAccess?.kind !== "share" || next.attachmentAccess?.kind !== "share" || previous.attachmentAccess.token === next.attachmentAccess.token)

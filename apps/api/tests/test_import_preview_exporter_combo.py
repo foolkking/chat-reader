@@ -1,7 +1,12 @@
 import json
+import os
+import time
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.services.import_pipeline import exporter_markdown_parser
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -91,6 +96,19 @@ def test_preview_exporter_combo_exposes_markdown_display_preview(client: TestCli
     assert preview["first_user_message_markdown"] == "Content 0"
 
 
+def test_preview_pairing_budget_returns_structured_422(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(exporter_markdown_parser, "PAIRING_MAX_CANDIDATES", 1)
+    response = client.post(
+        "/api/imports/preview",
+        files=[
+            ("files", ("export.json", _json_file(), "application/json")),
+            ("files", ("export.md", _markdown_file(), "text/markdown")),
+        ],
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "pairing_candidate_limit"
+
+
 def test_preview_pairing_conflict_disables_commit(client: TestClient) -> None:
     response = client.post(
         "/api/imports/preview",
@@ -145,3 +163,33 @@ def test_preview_preserves_first_user_markdown_structure(client: TestClient) -> 
     assert response.status_code == 200
     preview = response.json()["conversation_preview"]
     assert preview["first_user_message_markdown"] == "### Preview heading\n\n- preview list item"
+
+
+def test_real_exporter_pair_preview_commit_and_retry(client: TestClient) -> None:
+    fixture_dir = os.getenv("CHAT_READER_E2E_FIXTURE_DIR")
+    if not fixture_dir:
+        pytest.skip("CHAT_READER_E2E_FIXTURE_DIR is not configured")
+    root = Path(fixture_dir)
+    json_path = next(root.glob("*.json"))
+    markdown_path = next(root.glob("*.md"))
+    started = time.perf_counter()
+    response = client.post(
+        "/api/imports/preview",
+        files=[
+            ("files", (json_path.name, json_path.read_bytes(), "application/json")),
+            ("files", (markdown_path.name, markdown_path.read_bytes(), "text/markdown")),
+        ],
+    )
+    elapsed = time.perf_counter() - started
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["conversation_preview"]["message_count"] == 398
+    assert payload["conversation_preview"]["alignment_status"] == "exact_match"
+    assert elapsed < 20
+
+    first = client.post(f"/api/imports/{payload['import_id']}/commit")
+    assert first.status_code == 200, first.text
+    assert first.json()["message_count"] == 398
+    repeated = client.post(f"/api/imports/{payload['import_id']}/commit")
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["conversation_ids"] == first.json()["conversation_ids"]

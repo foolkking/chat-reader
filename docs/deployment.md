@@ -139,3 +139,8 @@ docker compose --env-file .env.production -f docker-compose.production.yml exec 
 - 监控磁盘、内存、swap、PostgreSQL health、worker 存活和 failed jobs。
 - 定期验证恢复流程，而不仅是验证备份文件存在。
 - 应用没有内置认证，公开域名必须长期由代理/VPN/访问网关保护。
+# 2026-08-09 Addendum
+
+Build Web/API images on GitHub Actions or an external Linux builder. King only pulls the verified image, runs the existing migration preflight and recreates services with `--no-build`. Do not run `next build`, start ClamAV, remove volumes, or overwrite the server `.env`.
+
+The complex attachment Viewer is a browser-side lazy Worker and has no server dependency. The production deployment remains `ATTACHMENT_SCANNER=disabled`; unsupported complex formats continue to download.

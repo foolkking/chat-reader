@@ -15,6 +15,7 @@ from app.schemas.editing import (
     MessageAttachmentOccurrenceInput,
     MessageEditRequest,
     MessageEditResponse,
+    MessageDeleteResponse,
     MessageMergeRequest,
     MessageMergeResponse,
     MessageSplitRequest,
@@ -35,8 +36,10 @@ from app.services.editing.message_edit_service import (
     list_message_versions,
     merge_messages,
     restore_message_version,
+    restore_soft_deleted_message,
     select_message_version,
     split_message,
+    soft_delete_message,
 )
 from app.services.assets.attachment_service import attachment_read
 from app.services.background_jobs import queue_conversation_derived_rebuild
@@ -117,6 +120,56 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
     )
 
 
+@router.delete("/{message_id}", response_model=MessageDeleteResponse)
+def delete_message_endpoint(
+    message_id: uuid.UUID,
+    expected_offline_revision: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+) -> MessageDeleteResponse:
+    try:
+        result = soft_delete_message(db, message_id, expected_offline_revision=expected_offline_revision)
+        conversation_id = result.message.conversation_id
+        queue_conversation_derived_rebuild(
+            db,
+            conversation_id=conversation_id,
+            idempotency_key=f"message-delete:{message_id}:{result.message.deleted_at.isoformat()}",
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return MessageDeleteResponse(
+        message_id=result.message.id,
+        conversation_id=conversation_id,
+        deleted=True,
+        message=get_message(result.message.id, db),
+    )
+
+
+@router.post("/{message_id}/restore", response_model=MessageDeleteResponse)
+def restore_deleted_message_endpoint(
+    message_id: uuid.UUID,
+    expected_offline_revision: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+) -> MessageDeleteResponse:
+    try:
+        result = restore_soft_deleted_message(db, message_id, expected_offline_revision=expected_offline_revision)
+        conversation_id = result.message.conversation_id
+        queue_conversation_derived_rebuild(
+            db,
+            conversation_id=conversation_id,
+            idempotency_key=f"message-restore:{message_id}:{result.message.order_key}",
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return MessageDeleteResponse(
+        message_id=result.message.id,
+        conversation_id=conversation_id,
+        deleted=False,
+        message=get_message(result.message.id, db),
+    )
 @router.post("/{message_id}/split", response_model=MessageSplitResponse)
 def split_message_endpoint(
     message_id: uuid.UUID,

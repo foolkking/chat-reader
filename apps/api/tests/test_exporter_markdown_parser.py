@@ -1,3 +1,10 @@
+import os
+import time
+from pathlib import Path
+
+import pytest
+
+from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
 from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
 
 
@@ -49,3 +56,24 @@ hi
 
     assert result.prompt_count == 1
     assert result.response_count == 1
+
+
+def test_real_paired_fixture_uses_bounded_fast_path() -> None:
+    fixture_dir = os.getenv("CHAT_READER_E2E_FIXTURE_DIR")
+    if not fixture_dir:
+        pytest.skip("CHAT_READER_E2E_FIXTURE_DIR is not configured")
+    root = Path(fixture_dir)
+    json_files = sorted(root.glob("*.json"))
+    markdown_files = sorted(root.glob("*.md"))
+    if not json_files or not markdown_files:
+        pytest.skip("paired JSON/Markdown fixture is unavailable")
+
+    expected = parse_exporter_json(json_files[0].read_bytes())
+    started = time.perf_counter()
+    parsed = parse_exporter_markdown(markdown_files[0].read_bytes(), expected.messages)
+    elapsed = time.perf_counter() - started
+
+    assert len(expected.messages) == 398
+    assert len(parsed.sections) == 398
+    assert parsed.empty_message_count == 0
+    assert elapsed < 10

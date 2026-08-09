@@ -68,6 +68,11 @@
 | --- | --- | --- |
 | `docs/system/ATTACHMENT_RENDERER_CONTRACT.md` | Current | Four-layer state, Registry, inline skins, Gallery, unified adaptive Viewer presentations, Range/search/batch/offline and permission contract. |
 | `apps/web/features/attachments/attachment-viewer.tsx` | Current | Single provider/shell portal, image/document/media Viewer kernels and runtime retry state. |
+| `apps/web/features/attachments/complex-attachment-viewer.tsx` | Current | Lazy read-only document, spreadsheet, presentation and ZIP Viewer surface. |
+| `apps/web/features/attachments/complex-attachment-worker.ts` | Current | Bounded browser Worker parsing using the existing `fflate` dependency. |
+| `apps/web/features/conversations/new-conversation-dialog.tsx` | Current | Atomic User + Assistant conversation creation UI. |
+| `apps/web/features/conversations/message-insert-dialog.tsx` | Current | Before/after single or User + Assistant message insertion UI. |
+| `docs/testing.md` | Current | Addendum-specific local, fixture and production verification status. |
 | `apps/api/app/services/assets/text_search.py` | Current | Bounded text search and checksum/query-bound signed continuation cursor. |
 | `apps/api/app/services/exporting/attachment_download.py` | Current | Owner batch ZIP validation, stable names, streaming worker artifact and TTL. |
 | `apps/api/tests/test_attachment_renderer_contract.py` | Current | Capability privacy, cursor staleness and business-identity ZIP regression. |

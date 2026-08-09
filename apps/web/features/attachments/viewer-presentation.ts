@@ -20,6 +20,8 @@ export type ViewerViewport = { width: number; height: number };
 export function resolveViewerPresentation(input: ViewerPresentationInput): { presentation: ViewerPresentation; size: "normal" | "large" } {
   if (input.viewerKind === "image" && input.viewerMode === "image-overview") return { presentation: "workspace", size: "large" };
   if (input.viewerKind === "table") return { presentation: "workspace", size: "large" };
+  if (["spreadsheet", "presentation", "archive"].includes(input.viewerKind ?? "")) return { presentation: "workspace", size: "large" };
+  if (input.viewerKind === "document") return { presentation: "reading", size: "normal" };
   if (input.viewerKind === "audio") return { presentation: "compact", size: "normal" };
   if (input.viewerKind === "pdf") return { presentation: "document", size: (input.pdfPageCount ?? 1) > 1 ? "large" : "normal" };
   if (input.viewerKind === "image" || input.viewerKind === "video") return { presentation: "media", size: input.itemCount > 1 ? "large" : "normal" };

@@ -1,5 +1,14 @@
 # Project State
 
+## 2026-08-09 Conversation Editing, Import Pairing And Complex Viewer Addendum
+
+- Manual conversation creation is available at `POST /api/conversations`. It atomically creates one non-empty User version followed by one non-empty Assistant version, with optional project ownership.
+- Manual insertion is available at `POST /api/conversations/{id}/messages/insert`. It supports before/after placement, one-message role inference, and a fixed User -> Assistant pair. Ordering uses the existing `messages.order_key` with local midpoint allocation and bounded rebalance; no migration was added.
+- `DELETE /api/messages/{id}` is a transactional soft delete and `POST /api/messages/{id}/restore` provides short undo. Both accept an optional `expected_offline_revision` query parameter and return 409 on stale conversation state. This is not a Trash product flow.
+- The JSON + Markdown exporter path now uses an O(n) unique role/timestamp pairing path. Ambiguous or over-budget pairing returns structured 422 errors instead of an unhandled 500. The optional fixture-gated API test reads `<EXAMPLES_DIR>` without modifying the source files; the verified 398-message preview/commit/retry path completed in 17.7 seconds in the local SQLite test harness.
+- Renderer Registry now maps DOCX/ODT to `document`, XLSX/ODS to `spreadsheet`, PPTX/ODP to `presentation`, and ZIP to `archive`. Legacy Office, RTF, TAR-family, EPUB, CAD and 3D formats remain reliable download-only. Complex viewers are lazy-loaded into a Worker and bounded before ZIP expansion; the existing `fflate` dependency is reused and stable export/offline ZIP paths are unchanged.
+- Local verification for this addendum: API `216 passed, 3 skipped`; Web lint/typecheck/build PASS; adaptive renderer policy and presentation tests PASS. Complex Viewer and manual conversation browser flows remain `NOT_PRODUCTION_VERIFIED` until deployed and exercised in a dedicated King test conversation.
+
 ## 2026-08-09 Attachment Renderer Contract Addendum
 
 - Attachment presentation now separates `AttachmentDataState`, static `RendererCapability`, per-request `RuntimeRenderState`, and `RenderPlan`. Inline UI has exactly three skins: `media`, `preview-panel`, and `file-row`; empty/missing/unsupported/preview failure/offline absence are FileRow variants.

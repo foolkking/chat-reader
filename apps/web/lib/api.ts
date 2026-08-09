@@ -15,6 +15,8 @@ import type {
   ConversationDetail,
   ConversationListItem,
   ConversationManagementResponse,
+  ConversationCreateInput,
+  ConversationCreateResponse,
   ConversationPlacementInput,
   ConversationPlacementResponse,
   ConversationUpdateInput,
@@ -31,6 +33,9 @@ import type {
   ImportStatusResponse,
   NotebookRead,
   MessageEditResponse,
+  MessageDeleteResponse,
+  MessageInsertInput,
+  MessageInsertResponse,
   MessageListItem,
   MessageMergeResponse,
   MessageSplitResponse,
@@ -179,6 +184,30 @@ export async function getConversations(
   if (input.limit) params.set("limit", String(input.limit));
   const query = params.toString();
   return fetchJson<ConversationListItem[]>(`/api/conversations${query ? `?${query}` : ""}`);
+}
+
+export async function createConversation(input: ConversationCreateInput): Promise<ConversationCreateResponse> {
+  return fetchJson<ConversationCreateResponse>("/api/conversations", jsonRequest("POST", input));
+}
+
+export async function insertConversationMessages(
+  conversationId: string,
+  input: MessageInsertInput,
+): Promise<MessageInsertResponse> {
+  return fetchJson<MessageInsertResponse>(
+    `/api/conversations/${conversationId}/messages/insert`,
+    jsonRequest("POST", input),
+  );
+}
+
+export async function deleteMessage(messageId: string, expectedOfflineRevision?: number): Promise<MessageDeleteResponse> {
+  const suffix = expectedOfflineRevision === undefined ? "" : `?expected_offline_revision=${expectedOfflineRevision}`;
+  return fetchJson<MessageDeleteResponse>(`/api/messages/${messageId}${suffix}`, { method: "DELETE" });
+}
+
+export async function restoreDeletedMessage(messageId: string, expectedOfflineRevision?: number): Promise<MessageDeleteResponse> {
+  const suffix = expectedOfflineRevision === undefined ? "" : `?expected_offline_revision=${expectedOfflineRevision}`;
+  return fetchJson<MessageDeleteResponse>(`/api/messages/${messageId}/restore${suffix}`, jsonRequest("POST", {}));
 }
 
 export async function getConversation(conversationId: string): Promise<ConversationDetail> {

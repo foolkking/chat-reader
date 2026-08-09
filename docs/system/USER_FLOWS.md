@@ -127,3 +127,9 @@ conversation + reading position 并行加载
 - 移动端优先阅读与单项管理，消息操作菜单可打开 Markdown 源码编辑与版本控件；复杂批量和 Project 管理以桌面为主。
 
 注册、登录、发送消息、停止生成、选择模型、会员购买和管理员审核不属于当前流程。
+# 2026-08-09 Addendum: Message Organization
+
+1. Select New Conversation, enter a title, project (or unclassified), User text and Assistant text, then submit. Empty bodies are rejected before the request and by the API.
+2. Use the plus action between messages to insert before or after the anchor. Single insertion defaults to the opposite role of the adjacent message; pair insertion always creates User then Assistant.
+3. Delete uses a confirmation, hides the message optimistically, and offers a short undo. It is a soft delete and does not create a user-visible Trash. A stale revision returns 409 and leaves the reader unchanged.
+4. Opening DOCX/ODT, XLSX/ODS, PPTX/ODP or ZIP uses the existing unified Viewer Shell and lazy browser Worker. The body shows bounded semantic content; parser limits or unsupported legacy formats fall back to an original-file download.

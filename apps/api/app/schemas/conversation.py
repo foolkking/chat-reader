@@ -3,6 +3,9 @@ from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
+from typing import Literal
+
+from app.schemas.message import MessageListItem
 
 
 class ConversationListItem(BaseModel):
@@ -35,6 +38,56 @@ class ConversationDetail(ConversationListItem):
     render_version: int
     content_hash: str | None
     sort_time: datetime | None
+
+
+class ConversationCreateMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content_markdown: str = Field(min_length=1, max_length=200_000)
+
+
+class ConversationCreateRequest(BaseModel):
+    title: str = Field(default="New conversation", max_length=500)
+    project_id: UUID | None = None
+    messages: list[ConversationCreateMessage] = Field(min_length=2, max_length=2)
+
+    @model_validator(mode="after")
+    def validate_messages(self) -> "ConversationCreateRequest":
+        if [message.role for message in self.messages] != ["user", "assistant"]:
+            raise ValueError("Initial messages must be user then assistant.")
+        return self
+
+
+class ConversationCreateResponse(BaseModel):
+    conversation: ConversationDetail
+    messages: list[MessageListItem]
+
+
+class MessageInsertMessage(BaseModel):
+    role: Literal["user", "assistant"] | None = None
+    content_markdown: str = Field(min_length=1, max_length=200_000)
+
+
+class MessageInsertRequest(BaseModel):
+    anchor_message_id: UUID
+    position: Literal["before", "after"]
+    mode: Literal["single", "pair"] = "single"
+    messages: list[MessageInsertMessage] = Field(min_length=1, max_length=2)
+    expected_offline_revision: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_messages(self) -> "MessageInsertRequest":
+        if self.mode == "pair":
+            if len(self.messages) != 2 or [message.role for message in self.messages] != ["user", "assistant"]:
+                raise ValueError("A message pair must contain user then assistant content.")
+        elif len(self.messages) != 1:
+            raise ValueError("A single insertion must contain exactly one message.")
+        return self
+
+
+class MessageInsertResponse(BaseModel):
+    conversation: ConversationDetail
+    messages: list[MessageListItem]
+
 
 
 class ConversationUpdate(BaseModel):

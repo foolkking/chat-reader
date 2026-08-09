@@ -1,5 +1,27 @@
 # Implementation Results
 
+## 2026-08-09 Conversation Editing, Import Stability And Complex Viewer Addendum
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| New conversation | PASS | API and schema tests create a non-empty User -> Assistant pair atomically; Web dialog was typechecked and built |
+| Message insertion | PASS | API tests cover before/after, inferred opposite role, User -> Assistant pair, ordering and stale revision 409; Web plus dialog is implemented |
+| Message delete/undo | PASS | API tests cover soft delete and restore without Trash; optional revision query is validated; Web confirmation/undo toast is implemented |
+| JSON + Markdown pairing | PASS | Unique role/timestamp fast path; real `<EXAMPLES_DIR>` fixture has 398 sections with no empty messages |
+| Real fixture preview/commit/retry | PASS | Preview, commit and repeated commit passed in the local API harness; elapsed 17.7 seconds, source fixture is read-only |
+| Pairing budget failures | PASS | Candidate/transition/deadline guards return structured 422 rather than generic 500 |
+| DOCX/ODT Viewer | NOT_PRODUCTION_VERIFIED | Browser Worker extracts bounded paragraphs/tables; build and static contract tests pass |
+| XLSX/ODS Viewer | NOT_PRODUCTION_VERIFIED | Browser Worker exposes bounded read-only sheets/grid; build and static contract tests pass |
+| PPTX/ODP Viewer | NOT_PRODUCTION_VERIFIED | Browser Worker exposes bounded static slide navigation; build and static contract tests pass |
+| ZIP Viewer | NOT_PRODUCTION_VERIFIED | `fflate` Worker validates central directory and bounded text/image entry previews; no King browser acceptance yet |
+| Legacy Office/TAR/EPUB/CAD/3D | NOT_IMPLEMENTED | Reliable authenticated download-only fallback remains intentional |
+| Web lint/typecheck/build | PASS | `corepack pnpm run lint`, `corepack pnpm run typecheck`, and `corepack pnpm --filter web build` passed |
+| API suite | PASS | `216 passed, 3 skipped`; skipped tests remain disclosed and are not counted as PASS |
+| Migration head | PASS | `20260806_0021`; no migration added |
+| Production verification for this addendum | NOT_PRODUCTION_VERIFIED | No deployment or production data mutation was performed in this round |
+
+The existing production release entries below are historical evidence and are not upgraded by this local implementation. A King release still requires a backup, CI/external Linux image build, GitHub synchronization, pull, migration preflight and `--no-build` recreation.
+
 ## 2026-08-09 Adaptive Viewer Presentation Candidate
 
 | Area | Status | Evidence |

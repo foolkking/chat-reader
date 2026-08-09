@@ -10,6 +10,7 @@
 - [Attachment Renderer contract](system/ATTACHMENT_RENDERER_CONTRACT.md)
 - [Task toggle and attachment export API](api-reference.md)
 - [Current verification results](../results.md)
+- [Conversation/import/viewer test addendum](testing.md)
 
 当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-08。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 

@@ -23,7 +23,7 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { Archive, ChevronDown, ChevronRight, Clock3, Folder, GripVertical, Import, PanelLeftClose, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createProject,
@@ -35,6 +35,7 @@ import {
 } from "../../lib/api";
 import type { ConversationListItem, ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
+import { NewConversationDialog } from "../conversations/new-conversation-dialog";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
 import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
 import { SidebarPreferences } from "../../components/sidebar-preferences";
@@ -134,9 +135,11 @@ export function ProjectSidebar({
   const { conversationSortMode, conversationSortDirection, projectSortMode, projectSortDirection, resolvedLocale } = usePreferences();
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [showNewConversation, setShowNewConversation] = useState(false);
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | null>(null);
@@ -425,6 +428,10 @@ export function ProjectSidebar({
         setShowMobileDrawer(false);
         (onImportClick ?? openImportDialog)();
       }}
+      onNewConversation={() => {
+        setShowMobileDrawer(false);
+        setShowNewConversation(true);
+      }}
       showProjectForm={showProjectForm}
       setShowProjectForm={setShowProjectForm}
       name={name}
@@ -454,6 +461,17 @@ export function ProjectSidebar({
       </ReaderSidebarFrame>
       <DragOverlay>{activeDrag ? <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="max-w-[15rem] truncate rounded-lg border border-[var(--accent)] bg-raised px-3 py-2 text-sm text-primary shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
       {dragError ? <div role="alert" className="fixed bottom-4 left-1/2 z-[240] max-w-sm -translate-x-1/2 rounded-lg border border-[var(--danger)] bg-raised px-4 py-3 text-sm text-[var(--danger)] shadow-xl">{dragError}</div> : null}
+      <NewConversationDialog
+        open={showNewConversation}
+        projects={projects}
+        initialProjectId={currentProjectId}
+        onClose={() => setShowNewConversation(false)}
+        onCreated={(conversationId) => {
+          setShowNewConversation(false);
+          void refreshSidebar();
+          router.push(`/conversations/${conversationId}`);
+        }}
+      />
     </DndContext>
   );
 }
@@ -470,6 +488,7 @@ type SidebarContentProps = {
   expandedProjects: Set<string>;
   toggleProject: (projectId: string) => void;
   onImportClick: () => void;
+  onNewConversation: () => void;
   showProjectForm: boolean;
   setShowProjectForm: (value: boolean) => void;
   name: string;
@@ -495,7 +514,10 @@ function SidebarContent(props: SidebarContentProps) {
         {props.onCollapse ? <button type="button" onClick={props.onCollapse} className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-surface hover:text-primary" aria-label={t("closeSidebar")} title={t("closeSidebar")}><PanelLeftClose className="h-5 w-5" /></button> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="mb-3 hidden min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle md:flex"><Import className="h-4 w-4" /> {t("importData")}</button>
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          <button type="button" data-testid="sidebar-new-conversation-button" onClick={props.onNewConversation} className="min-h-11 rounded-xl bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] shadow-sm hover:opacity-90"><span className="inline-flex items-center gap-2"><Plus className="h-4 w-4" />新建对话</span></button>
+          <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="min-h-11 rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><span className="inline-flex items-center gap-2"><Import className="h-4 w-4" />{t("importData")}</span></button>
+        </div>
         <SidebarSearch onNavigate={props.closeMobile} />
         <ImportTaskMonitor placement="sidebar" />
         <nav className="grid grid-cols-2 gap-1 md:grid-cols-1" aria-label={t("quickNavigation")}>

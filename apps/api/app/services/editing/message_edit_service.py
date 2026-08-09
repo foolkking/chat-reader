@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from http import HTTPStatus
 
 from sqlalchemy import func
@@ -37,6 +38,7 @@ from app.services.assets.scanner import scan_status_allows_use
 from app.services.database.bulk_insert import insert_rows
 
 MAX_EDIT_TEXT_LENGTH = 200_000
+MESSAGE_ORDER_SCALE = Decimal("1000000")
 MergeProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -95,6 +97,24 @@ class ConversationAutoCleanResult:
     conversation: Conversation
     scanned_messages: int
     cleaned_messages: int
+
+
+@dataclass(frozen=True)
+class ConversationCreateResult:
+    conversation: Conversation
+    messages: list[Message]
+
+
+@dataclass(frozen=True)
+class MessageInsertResult:
+    conversation: Conversation
+    messages: list[Message]
+
+
+@dataclass(frozen=True)
+class MessageDeleteResult:
+    message: Message
+    was_deleted: bool
 
 
 def edit_message(
@@ -1261,6 +1281,224 @@ def _create_empty_conversation(
     db.add(conversation)
     db.flush()
     return conversation
+
+
+def create_manual_conversation(
+    db: Session,
+    *,
+    title: str,
+    user_text: str,
+    assistant_text: str,
+    project_id: uuid.UUID | None = None,
+) -> ConversationCreateResult:
+    title = title.strip() or "New conversation"
+    now = utc_now()
+    conversation = _create_empty_conversation(
+        db,
+        title=title,
+        source_type="manual",
+        source_profile="chat_reader_manual",
+    )
+    conversation.created_at = now
+    conversation.updated_at = now
+    conversation.sort_time = now
+    if project_id is None:
+        project_id = ensure_default_project(db).id
+    add_conversation_to_project(db, project_id, conversation.id, added_by="user")
+    messages: list[Message] = []
+    for index, (role, text) in enumerate((("user", user_text), ("assistant", assistant_text)), start=1):
+        message, _version = _create_message_with_version(
+            db=db,
+            conversation_id=conversation.id,
+            role=role,
+            text=text,
+            order_key=_format_message_order_key(index * 1_000_000),
+            turn_index=index,
+            created_at=now,
+            edit_type="manual_create",
+            edit_reason="manual conversation creation",
+            created_by="user",
+            source_type="manual",
+            based_on_version_id=None,
+        )
+        messages.append(message)
+    _refresh_conversation_stats(db, conversation.id)
+    return ConversationCreateResult(conversation=conversation, messages=messages)
+
+
+def insert_manual_messages(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    anchor_message_id: uuid.UUID,
+    position: str,
+    mode: str,
+    messages: list[tuple[str, str]],
+    expected_offline_revision: int | None = None,
+) -> MessageInsertResult:
+    conversation = _get_active_conversation(db, conversation_id)
+    if expected_offline_revision is not None and conversation.offline_revision != expected_offline_revision:
+        raise MessageEditError("Conversation changed since it was loaded.", HTTPStatus.CONFLICT)
+    if position not in {"before", "after"} or mode not in {"single", "pair"}:
+        raise MessageEditError("Unsupported message insertion mode.", HTTPStatus.UNPROCESSABLE_ENTITY)
+    if mode == "pair":
+        if len(messages) != 2 or [role for role, _text in messages] != ["user", "assistant"]:
+            raise MessageEditError("A message pair must contain user then assistant content.", HTTPStatus.UNPROCESSABLE_ENTITY)
+    elif len(messages) != 1:
+        raise MessageEditError("A single insertion must contain exactly one message.", HTTPStatus.UNPROCESSABLE_ENTITY)
+
+    active = _active_messages(db, conversation_id)
+    anchor_index = _message_index(active, anchor_message_id)
+    anchor = active[anchor_index]
+    if mode == "single" and not messages[0][0]:
+        previous = anchor if position == "after" else (active[anchor_index - 1] if anchor_index > 0 else anchor)
+        messages = [("assistant" if previous.role == "user" else "user", messages[0][1])]
+    for role, text in messages:
+        if role not in {"user", "assistant"}:
+            raise MessageEditError("Only user and assistant messages can be inserted.", HTTPStatus.UNPROCESSABLE_ENTITY)
+        _validate_text(text)
+
+    _ensure_gapped_order_keys(db, active)
+    active = _active_messages(db, conversation_id)
+    anchor_index = _message_index(active, anchor_message_id)
+    left = _order_value(active[anchor_index - 1].order_key) if position == "before" and anchor_index > 0 else (
+        _order_value(active[anchor_index].order_key) if position == "after" else Decimal(0)
+    )
+    right = _order_value(active[anchor_index].order_key) if position == "before" else (
+        _order_value(active[anchor_index + 1].order_key) if anchor_index + 1 < len(active) else None
+    )
+    if right is None:
+        right = left + MESSAGE_ORDER_SCALE * (len(messages) + 1)
+    step = (right - left) / Decimal(len(messages) + 1)
+    if step < Decimal("0.000001"):
+        _rebalance_active_order_keys(db, active)
+        active = _active_messages(db, conversation_id)
+        anchor_index = _message_index(active, anchor_message_id)
+        return insert_manual_messages(
+            db,
+            conversation_id=conversation_id,
+            anchor_message_id=anchor_message_id,
+            position=position,
+            mode=mode,
+            messages=messages,
+            expected_offline_revision=expected_offline_revision,
+        )
+
+    now = utc_now()
+    created: list[Message] = []
+    for index, (role, text) in enumerate(messages, start=1):
+        order_value = left + (step * index)
+        message, _version = _create_message_with_version(
+            db=db,
+            conversation_id=conversation_id,
+            role=role,
+            text=text,
+            order_key=_format_message_order_key(order_value),
+            turn_index=None,
+            created_at=now,
+            edit_type="manual_insert",
+            edit_reason="manual message insertion",
+            created_by="user",
+            source_type="manual",
+            based_on_version_id=None,
+        )
+        created.append(message)
+    _refresh_turn_indexes(db, conversation_id)
+    _refresh_conversation_stats(db, conversation_id)
+    return MessageInsertResult(conversation=conversation, messages=created)
+
+
+def soft_delete_message(
+    db: Session,
+    message_id: uuid.UUID,
+    *,
+    reason: str | None = None,
+    expected_offline_revision: int | None = None,
+) -> MessageDeleteResult:
+    message = db.get(Message, message_id)
+    if message is None or message.is_deleted:
+        raise MessageEditError("Message not found.", HTTPStatus.NOT_FOUND)
+    conversation = _get_active_conversation(db, message.conversation_id)
+    if expected_offline_revision is not None and conversation.offline_revision != expected_offline_revision:
+        raise MessageEditError("Conversation changed since it was loaded.", HTTPStatus.CONFLICT)
+    original_order = message.order_key
+    message.order_key = f"deleted-{original_order}-{message.id.hex[:8]}"
+    message.is_deleted = True
+    message.deleted_at = utc_now()
+    message.deleted_by = "user"
+    message.delete_reason = reason or "user deleted message"
+    _refresh_turn_indexes(db, message.conversation_id)
+    _refresh_conversation_stats(db, message.conversation_id)
+    return MessageDeleteResult(message=message, was_deleted=True)
+
+
+def restore_soft_deleted_message(
+    db: Session,
+    message_id: uuid.UUID,
+    *,
+    expected_offline_revision: int | None = None,
+) -> MessageDeleteResult:
+    message = db.get(Message, message_id)
+    if message is None or not message.is_deleted:
+        raise MessageEditError("Deleted message not found.", HTTPStatus.NOT_FOUND)
+    conversation = _get_active_conversation(db, message.conversation_id)
+    if expected_offline_revision is not None and conversation.offline_revision != expected_offline_revision:
+        raise MessageEditError("Conversation changed since it was loaded.", HTTPStatus.CONFLICT)
+    original = message.order_key.removeprefix("deleted-").rsplit("-", 1)[0]
+    active = _active_messages(db, message.conversation_id)
+    try:
+        desired = _order_value(original)
+    except InvalidOperation:
+        desired = None
+    if desired is None or any(item.order_key == original for item in active):
+        desired = (_order_value(active[-1].order_key) + MESSAGE_ORDER_SCALE) if active else MESSAGE_ORDER_SCALE
+    message.order_key = _format_message_order_key(desired)
+    message.is_deleted = False
+    message.deleted_at = None
+    message.deleted_by = None
+    _refresh_turn_indexes(db, message.conversation_id)
+    _refresh_conversation_stats(db, message.conversation_id)
+    return MessageDeleteResult(message=message, was_deleted=False)
+
+
+def _order_value(value: str) -> Decimal:
+    return Decimal(value)
+
+
+def _format_message_order_key(value: Decimal | int) -> str:
+    return f"{Decimal(value):012.6f}"
+
+
+def _ensure_gapped_order_keys(db: Session, active: list[Message]) -> None:
+    if not active:
+        return
+    parsed: list[Decimal] = []
+    try:
+        parsed = [_order_value(message.order_key) for message in active]
+    except InvalidOperation:
+        parsed = []
+    if not parsed or any(right - left < MESSAGE_ORDER_SCALE for left, right in zip(parsed, parsed[1:])):
+        _rebalance_active_order_keys(db, active)
+
+
+def _rebalance_active_order_keys(db: Session, active: list[Message]) -> None:
+    for index, message in enumerate(active, start=1):
+        message.order_key = f"__tmp_manual_{index:08d}_{message.id.hex[:8]}"
+    db.flush()
+    for index, message in enumerate(active, start=1):
+        message.order_key = _format_message_order_key(index * 1_000_000)
+    _refresh_turn_indexes(db, active[0].conversation_id if active else None)
+    db.flush()
+
+
+def _refresh_turn_indexes(db: Session, conversation_id: uuid.UUID | None) -> None:
+    if conversation_id is None:
+        return
+    turn_index = 0
+    for message in _active_messages(db, conversation_id):
+        if message.role == "user":
+            turn_index += 1
+        message.turn_index = turn_index if message.role in {"user", "assistant"} else None
 
 
 def _copy_messages_to_conversation(

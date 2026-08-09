@@ -1,5 +1,7 @@
 import hashlib
+import logging
 import os
+import time
 import uuid
 import shutil
 from datetime import datetime, timezone
@@ -38,7 +40,7 @@ from app.services.import_queue import (
 from app.services.import_pipeline.canonical_draft import CanonicalDraftConversation, preview_markdown, preview_text
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
-from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
+from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdownPairingError, parse_exporter_markdown
 from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v1, parse_canjson_v2
 from app.services.import_pipeline.draft_store import attach_import_draft
 from app.services.import_pipeline.draft_store import ImportDraftError, read_import_draft
@@ -50,6 +52,7 @@ from app.services.background_jobs import queue_bundle_preview
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
+logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {
     ".cr",
@@ -679,7 +682,20 @@ def _build_supported_drafts(files: list[UploadedPreviewFile]) -> list[CanonicalD
         raise HTTPException(status_code=422, detail={"code": "invalid_exporter_json", "message": str(exc)}) from exc
 
     if exporter_markdown is not None:
-        markdown_result = parse_exporter_markdown(exporter_markdown[1], json_result.messages)
+        pairing_started = time.perf_counter()
+        try:
+            markdown_result = parse_exporter_markdown(exporter_markdown[1], json_result.messages)
+        except ExporterMarkdownPairingError as exc:
+            raise HTTPException(status_code=422, detail={"code": exc.code, "message": str(exc)}) from exc
+        finally:
+            logger.info(
+                "import_preview_pairing",
+                extra={
+                    "pairing_ms": round((time.perf_counter() - pairing_started) * 1000, 2),
+                    "json_message_count": len(json_result.messages),
+                    "markdown_bytes": len(exporter_markdown[1]),
+                },
+            )
 
     alignment = align_exporter_sources(json_result, markdown_result)
     if alignment.conversation is None:

@@ -16,6 +16,8 @@ from app.models.project_conversation import ProjectConversation
 from app.models.render_block import RenderBlock
 from app.models.recent_item import RecentItem
 from app.schemas.conversation import (
+    ConversationCreateRequest,
+    ConversationCreateResponse,
     ConversationDetail,
     ConversationListItem,
     ConversationOrderUpdate,
@@ -23,6 +25,8 @@ from app.schemas.conversation import (
     ConversationPlacementRequest,
     ConversationPlacementResponse,
     ConversationUpdate,
+    MessageInsertRequest,
+    MessageInsertResponse,
 )
 from app.schemas.editing import (
     ConversationEventListResponse,
@@ -49,7 +53,9 @@ from app.schemas.task import BackgroundTaskRead, ConversationProjectMoveRequest
 from app.models.import_record import utc_now
 from app.services.editing.message_edit_service import (
     MessageEditError,
+    create_manual_conversation,
     execute_conversation_split,
+    insert_manual_messages,
     plan_conversation_split,
     split_conversation,
 )
@@ -70,6 +76,61 @@ from app.services.assets.asset_store import get_asset_store
 from app.services.assets.lifecycle import asset_object_has_live_references
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
+
+
+@router.post("", response_model=ConversationCreateResponse, status_code=status.HTTP_201_CREATED)
+def create_conversation_endpoint(
+    payload: ConversationCreateRequest,
+    db: Session = Depends(get_db),
+) -> ConversationCreateResponse:
+    try:
+        result = create_manual_conversation(
+            db,
+            title=payload.title,
+            user_text=payload.messages[0].content_markdown,
+            assistant_text=payload.messages[1].content_markdown,
+            project_id=payload.project_id,
+        )
+        db.commit()
+        db.refresh(result.conversation)
+    except (MessageEditError, ProjectServiceError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=getattr(exc, "status_code", 422), detail=str(exc)) from exc
+    return ConversationCreateResponse(
+        conversation=_conversation_detail(result.conversation),
+        messages=[_message_item(message, True, db, ordinal=index + 1) for index, message in enumerate(result.messages)],
+    )
+
+
+@router.post("/{conversation_id}/messages/insert", response_model=MessageInsertResponse, status_code=status.HTTP_201_CREATED)
+def insert_message_endpoint(
+    conversation_id: uuid.UUID,
+    payload: MessageInsertRequest,
+    db: Session = Depends(get_db),
+) -> MessageInsertResponse:
+    try:
+        messages = [
+            (item.role or "", item.content_markdown)
+            for item in payload.messages
+        ]
+        result = insert_manual_messages(
+            db,
+            conversation_id=conversation_id,
+            anchor_message_id=payload.anchor_message_id,
+            position=payload.position,
+            mode=payload.mode,
+            messages=messages,
+            expected_offline_revision=payload.expected_offline_revision,
+        )
+        db.commit()
+        db.refresh(result.conversation)
+    except (MessageEditError, ProjectServiceError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=getattr(exc, "status_code", 422), detail=str(exc)) from exc
+    return MessageInsertResponse(
+        conversation=_conversation_detail(result.conversation),
+        messages=[_message_item(message, True, db) for message in result.messages],
+    )
 
 
 @router.get("", response_model=list[ConversationListItem])

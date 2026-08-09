@@ -121,3 +121,9 @@ RootLayout + providers
 - Owner Reader 的 GFM task checkbox 由 `MarkdownRenderer` 的 `interactiveTasks` 合同驱动，点击后进行局部 optimistic update 并调用稳定 task key 接口；Share、Offline 和附件 Markdown renderer 不传写回调，因此保持只读。
 - 对话导出面板将格式与附件作为一级选项；简介、批注、笔记和 CanJSON 来源引用位于折叠的二级选项。普通导出与附件 ZIP 使用同一组参数。
 - 消息保存使用服务端返回的局部 message/version/blocks/occurrences 投影更新 TanStack Query；不重新加载整场对话，受影响消息单独重测布局，其他 MessageItem 引用保持稳定。
+# 2026-08-09 Addendum: Conversation Editing And Complex Viewers
+
+- The sidebar exposes a New Conversation dialog with title, project, User and Assistant fields. Both message bodies are required and submitted atomically.
+- Reader message actions expose insertion before/after (single or User -> Assistant pair) and soft delete with an undo toast. Insert/delete mutations refresh only the affected reader data; no Trash UI is introduced.
+- The single `AttachmentViewerProvider -> AttachmentViewerShell` remains the only body-level viewer. `ViewerKind` now includes document, spreadsheet, presentation and archive. A lazy `ComplexAttachmentViewer` starts a module Worker only after opening one of these supported attachments.
+- The complex Worker enforces source, ZIP-entry, expanded-size and preview-byte caps before extracting read-only DOCX/ODT paragraphs/tables, XLSX/ODS bounded grids, PPTX/ODP static slide text, or ZIP directory entries with bounded text/image previews. Unsupported formats keep a reliable download row.

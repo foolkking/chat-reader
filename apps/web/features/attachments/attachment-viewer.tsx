@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type UIEvent } from "react";
+import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Download, Grid2X2, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
@@ -23,6 +23,8 @@ import {
   type ViewerMediaDimensions,
   type ViewerViewport,
 } from "./viewer-presentation";
+
+const ComplexAttachmentViewer = lazy(() => import("./complex-attachment-viewer").then((module) => ({ default: module.ComplexAttachmentViewer })));
 
 export type AttachmentViewerItem = {
   itemKey: string;
@@ -252,6 +254,9 @@ function ViewerBody({ attachment, kind, mode, onModeChange, session, activeIndex
   if (kind === "audio") return <MediaViewer attachment={attachment} audio onMediaDimensions={onMediaDimensions} />;
   if (kind === "video") return <MediaViewer attachment={attachment} onMediaDimensions={onMediaDimensions} />;
   if (kind === "pdf") return <PdfViewer attachment={attachment} toolbarHost={toolbarHost} onPageCountChange={onPdfPageCount} />;
+  if (kind === "document" || kind === "spreadsheet" || kind === "presentation" || kind === "archive") {
+    return <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-secondary"><Loader2 className="h-5 w-5 animate-spin" />正在加载预览组件…</div>}><ComplexAttachmentViewer attachment={attachment} kind={kind} /></Suspense>;
+  }
   return <TextualViewer attachment={attachment} mode="source" onModeChange={onModeChange} />;
 }
 
@@ -551,6 +556,10 @@ function defaultMode(kind: AttachmentViewerKind | null): AttachmentViewerMode | 
   if (kind === "pdf") return "pdf";
   if (kind === "audio") return "audio";
   if (kind === "video") return "video";
+  if (kind === "document") return "document";
+  if (kind === "spreadsheet") return "spreadsheet";
+  if (kind === "presentation") return "presentation";
+  if (kind === "archive") return "archive";
   return null;
 }
 

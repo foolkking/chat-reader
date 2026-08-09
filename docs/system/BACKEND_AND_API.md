@@ -119,3 +119,18 @@ The current deployment policy does not inspect attachment contents for secrets o
 - 日志来自 Uvicorn、worker/Python logging 和 Docker json-file rotation。
 - 仓库没有 Sentry/OpenTelemetry/APM/告警配置；生产需通过容器状态、health、failed jobs 和外部监控补足。
 - 生产同源层不保证公开 OpenAPI；精确 schema 在受控环境调用 `app.openapi()`。
+# 2026-08-09 Addendum: Conversation Editing And Import Pairing
+
+## Manual message operations
+
+`POST /api/conversations` creates a non-empty User and Assistant message pair in one transaction. `POST /api/conversations/{conversation_id}/messages/insert` inserts one message before/after an anchor or a fixed User -> Assistant pair. The existing `order_key` is used for midpoint allocation and local rebalance. The API validates `expected_offline_revision` and returns `409` for stale clients.
+
+`DELETE /api/messages/{message_id}` marks the current message deleted without a Trash view. `POST /api/messages/{message_id}/restore` supports short undo. Both endpoints accept `expected_offline_revision`; historical versions and attachment objects remain available. Derived search/TOC/statistics work is queued after commit.
+
+## Exporter JSON + Markdown pairing
+
+When each non-empty JSON message has one unique Markdown heading with the same role and normalized timestamp, pairing uses a direct linear candidate path. Ambiguous or over-budget fallback pairing returns structured HTTP 422 (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, or `pairing_ambiguous`) instead of an unhandled 500. The `CHAT_READER_E2E_FIXTURE_DIR` test setting is only used by tests.
+
+## Browser-side complex attachment viewers
+
+The existing attachment provider/shell remains the only viewer path. Registry capabilities now include `document`, `spreadsheet`, `presentation`, and `archive`. The corresponding lazy viewer runs in a browser Worker, uses bounded `fflate` ZIP expansion, extracts read-only text/tables/slides, and retains original download. Legacy Office/TAR/EPUB/CAD/3D types remain download-only. No new database table, migration, ClamAV process, or King-side conversion service is required.

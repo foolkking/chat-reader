@@ -237,3 +237,13 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 `format=markdown_bundle` 输出 Markdown 与相对 `assets/objects/<sha-prefix>/<sha256>` 文件；`format=canjson_bundle` 输出带附件对象路径的 CanJSON JSONL。两种 Bundle 只包含当前版本，并接受 `include_description`、`annotation_scope`、`notebook_scope` 与 `include_source_refs` 二级选项。当前不做附件内容秘密扫描；对象仍需通过状态、大小和 SHA-256 完整性校验，manifest 中 `excluded_object_count` 为兼容字段。
 
 生产同源代理当前不承诺公开 `/api/openapi.json`。需要核验完整 schema 时，在受控环境调用 FastAPI `app.openapi()`，并与 `apps/api/app/schemas` 交叉检查。
+# 2026-08-09 API Addendum
+
+## Conversation editing
+
+- `POST /api/conversations`: atomically create a titled conversation with a project and exactly two non-empty initial messages (`user`, then `assistant`).
+- `POST /api/conversations/{conversation_id}/messages/insert`: body contains `anchor_message_id`, `position` (`before|after`), `mode` (`single|pair`), messages, and optional `expected_offline_revision`.
+- `DELETE /api/messages/{message_id}?expected_offline_revision=N`: soft-delete the message and return the deleted message.
+- `POST /api/messages/{message_id}/restore?expected_offline_revision=N`: undo a soft delete.
+
+All mutations are transactional and return `409` for an old conversation revision. No Trash endpoint or recovery list is added.

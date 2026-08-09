@@ -52,6 +52,13 @@ class MessageEditResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class MessageDeleteResponse(BaseModel):
+    message_id: UUID
+    conversation_id: UUID
+    deleted: bool
+    message: MessageDetail
+
+
 class MessageTaskToggleRequest(BaseModel):
     base_version_id: UUID
     checked: bool

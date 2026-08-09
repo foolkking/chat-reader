@@ -1,11 +1,23 @@
 import json
 import re
+import time
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
 from app.services.import_pipeline.canonical_draft import content_hash, normalize_text
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonMessage, extract_conversation_id
 from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
+
+PAIRING_MAX_CANDIDATES = 5_000
+PAIRING_MAX_MATCH_OPTIONS = 20_000
+PAIRING_MAX_TRANSITIONS = 250_000
+PAIRING_DEADLINE_SECONDS = 3.0
+
+
+class ExporterMarkdownPairingError(ValueError):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 SECTION_RE = re.compile(r"^##\s*(Prompt|Response)\s*:?\s*$", re.IGNORECASE)
 METADATA_RE = re.compile(r"^(Created|Updated|Exported|Link):\s*(.*?)\s*$", re.IGNORECASE | re.MULTILINE)
@@ -162,7 +174,10 @@ def _paired_message_sections(
     if not expected or any(message.time is None for message in expected):
         return None, 0
 
+    started = time.monotonic()
     candidates = _all_heading_candidates(text)
+    if len(candidates) > PAIRING_MAX_CANDIDATES:
+        raise ExporterMarkdownPairingError("pairing_candidate_limit", "Markdown contains too many message heading candidates.")
     candidate_indexes: list[list[int]] = []
     for message in expected:
         matches = [
@@ -175,8 +190,26 @@ def _paired_message_sections(
         if not matches:
             return None, 0
         candidate_indexes.append(matches)
+    if sum(len(indexes) for indexes in candidate_indexes) > PAIRING_MAX_MATCH_OPTIONS:
+        raise ExporterMarkdownPairingError("pairing_candidate_limit", "JSON/Markdown pairing has too many ambiguous candidates.")
+
+    # Exporter output normally gives every top-level message a unique
+    # (role, timestamp) heading.  In that common case the structural identity
+    # is already unambiguous, so running the quadratic candidate search and a
+    # SequenceMatcher for every section only makes large, correctly paired
+    # exports slower without improving the result.
+    direct_path = [indexes[0] for indexes in candidate_indexes] if all(len(indexes) == 1 for indexes in candidate_indexes) else []
+    if (
+        direct_path
+        and len(candidates) == len(expected)
+        and all(left < right for left, right in zip(direct_path, direct_path[1:]))
+    ):
+        sections = _sections_from_candidate_path(text, expected, candidates, direct_path, require_text_check=False)
+        if sections is not None:
+            return sections, len(candidates) - len(direct_path)
 
     states: list[dict[int, tuple[int, int | None, int]]] = [{} for _ in expected]
+    transitions = 0
     last_index = len(expected) - 1
     for candidate_index in candidate_indexes[last_index]:
         candidate = candidates[candidate_index]
@@ -192,6 +225,11 @@ def _paired_message_sections(
             best_next: int | None = None
             best_count = 0
             for next_candidate_index, tail in states[message_index + 1].items():
+                transitions += 1
+                if transitions > PAIRING_MAX_TRANSITIONS:
+                    raise ExporterMarkdownPairingError("pairing_complexity_limit", "JSON/Markdown pairing exceeded its bounded comparison budget.")
+                if time.monotonic() - started > PAIRING_DEADLINE_SECONDS:
+                    raise ExporterMarkdownPairingError("pairing_timeout", "JSON/Markdown pairing exceeded the preview time budget.")
                 if next_candidate_index <= candidate_index:
                     continue
                 total_score = _paired_section_score(
@@ -218,7 +256,9 @@ def _paired_message_sections(
         elif result[0] == overall_score:
             overall_count = min(2, overall_count + result[2])
 
-    if overall_score is None or first_candidate is None or overall_count != 1:
+    if overall_count != 1 and overall_score is not None:
+        raise ExporterMarkdownPairingError("pairing_ambiguous", "JSON/Markdown pairing has multiple equally reliable solutions.")
+    if overall_score is None or first_candidate is None:
         return None, 0
 
     path: list[int] = []
@@ -229,13 +269,25 @@ def _paired_message_sections(
         path.append(candidate_index)
         candidate_index = states[message_index][candidate_index][1]
 
-    sections = []
+    sections = _sections_from_candidate_path(text, expected, candidates, path, require_text_check=True)
+    return (sections, len(candidates) - len(path)) if sections is not None else (None, 0)
+
+
+def _sections_from_candidate_path(
+    text: str,
+    expected: list[ExporterJsonMessage],
+    candidates: list[_HeadingCandidate],
+    path: list[int],
+    *,
+    require_text_check: bool,
+) -> list[_MarkerSection] | None:
+    sections: list[_MarkerSection] = []
     for index, candidate_index in enumerate(path):
         candidate = candidates[candidate_index]
         next_start = candidates[path[index + 1]].start if index + 1 < len(path) else len(text)
         markdown_text = text[candidate.body_start : next_start].strip()
-        if not _paired_section_is_reliable(expected[index], markdown_text):
-            return None, 0
+        if require_text_check and not _paired_section_is_reliable(expected[index], markdown_text):
+            return None
         sections.append(
             _MarkerSection(
                 role=candidate.role,
@@ -244,7 +296,7 @@ def _paired_message_sections(
                 markdown_text=markdown_text,
             )
         )
-    return sections, len(candidates) - len(path)
+    return sections
 
 
 def _all_heading_candidates(text: str) -> list[_HeadingCandidate]:

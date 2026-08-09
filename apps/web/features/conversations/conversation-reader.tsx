@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, Scissors, Search, Share2, X } from "lucide-react";
 import {
+  deleteMessage,
   mergeMessages,
+  restoreDeletedMessage,
   saveReadingPositionKeepalive,
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
@@ -18,6 +20,7 @@ import { ConversationToc } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MessageItem } from "./message-item";
+import { MessageInsertDialog } from "./message-insert-dialog";
 import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, resolveActiveBlockDomId, restoreScrollAnchor } from "./reader-navigation";
 import {
   emptyLoadedWindow,
@@ -99,6 +102,8 @@ export function ConversationReader({
   const [sourceEditorDirty, setSourceEditorDirty] = useState(false);
   const [sourceRequestedCursorOffset, setSourceRequestedCursorOffset] = useState<number | undefined>(undefined);
   const [pendingSourceAttachment, setPendingSourceAttachment] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
+  const [messageInsertTarget, setMessageInsertTarget] = useState<MessageListItem | null>(null);
+  const [deletedMessage, setDeletedMessage] = useState<MessageListItem | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("chat-reader:conversation-files-open");
@@ -1362,6 +1367,36 @@ export function ConversationReader({
     await refreshReader();
   }
 
+  async function deleteReaderMessage(message: MessageListItem) {
+    if (!(await dialog.confirm({
+      title: resolvedLocale === "zh-CN" ? "删除这条消息？" : "Delete this message?",
+      description: resolvedLocale === "zh-CN" ? "消息会从当前阅读视图隐藏，可在短时间内撤销。历史版本和附件不会立即物理删除。" : "The message will be hidden from the reader. Its history and attachments are retained.",
+      confirmLabel: resolvedLocale === "zh-CN" ? "删除消息" : "Delete message",
+      danger: true,
+    }))) return;
+    try {
+      await deleteMessage(message.id, conversation?.offline_revision);
+      setDeletedMessage(message);
+      await refreshReader();
+      window.setTimeout(() => setDeletedMessage((current) => current?.id === message.id ? null : current), 8000);
+    } catch (error) {
+      setNavigationStatus("failed");
+      window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: error instanceof Error ? error.message : "Delete failed" } }));
+    }
+  }
+
+  async function restoreReaderMessage() {
+    if (!deletedMessage) return;
+    const message = deletedMessage;
+    try {
+      await restoreDeletedMessage(message.id, conversation?.offline_revision);
+      setDeletedMessage(null);
+      await refreshReader();
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: error instanceof Error ? error.message : "Restore failed" } }));
+    }
+  }
+
   const openUtilityPanel = useCallback(async (panel: Exclude<ReaderUtilityPanel, null | "navigation">) => {
     const alreadyOpen = panel === "search" ? showSearch : panel === "share" ? showShare : panel === "export" ? showExport : showFiles;
     if (alreadyOpen) {
@@ -1746,6 +1781,8 @@ export function ConversationReader({
                       highlightTargetId={targetHighlightId}
                       editing={sourceEditorTarget?.message.id === message.id}
                       onEdit={canManageCanonical ? openSourceEditor : undefined}
+                      onInsert={canManageCanonical ? setMessageInsertTarget : undefined}
+                      onDelete={canManageCanonical ? deleteReaderMessage : undefined}
                       attachmentAccess={libraryMode ? { kind: "offline" } : { kind: "owner" }}
                       selected={selectedMessageIds.has(message.id)}
                       onSelectedChange={!canManageCanonical ? undefined : (selected) => {
@@ -1917,6 +1954,19 @@ export function ConversationReader({
           await queryClient.invalidateQueries({ queryKey: ["conversations"] });
         }}
       /> : null}
+      {canManageCanonical ? <MessageInsertDialog
+        key={messageInsertTarget?.id ?? "closed"}
+        open={Boolean(messageInsertTarget)}
+        conversationId={conversation.id}
+        anchor={messageInsertTarget}
+        revision={conversation.offline_revision}
+        onClose={() => setMessageInsertTarget(null)}
+        onSubmitted={async () => {
+          setMessageInsertTarget(null);
+          await refreshReader();
+        }}
+      /> : null}
+      {deletedMessage ? <div role="status" className="fixed bottom-4 left-1/2 z-[280] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-ui bg-raised px-4 py-3 text-sm text-primary shadow-xl"><span>消息已删除</span><button type="button" onClick={() => void restoreReaderMessage()} className="min-h-10 rounded-lg px-3 font-medium text-accent hover:bg-[var(--accent-soft)]">撤销</button></div> : null}
     </main>
   );
 }

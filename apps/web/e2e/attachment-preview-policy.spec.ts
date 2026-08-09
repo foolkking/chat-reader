@@ -34,13 +34,20 @@ test("attachment renderer policy separates supported viewers from reliable downl
   expect(capability("image/svg+xml", "diagram.svg").rendererKey).toBe("image");
   expect(capability("image/tiff", "scan.tiff").rendererKey).toBe("converted-image");
   expect(capability("video/x-msvideo", "clip.avi").inlineMode).toBe("download-only");
-  expect(capability("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "report.docx").inlineMode).toBe("download-only");
-  expect(capability("application/zip", "archive.zip").inlineMode).toBe("download-only");
+  expect(capability("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "report.docx").viewerKind).toBe("document");
+  expect(capability("application/vnd.oasis.opendocument.text", "report.odt").viewerKind).toBe("document");
+  expect(capability("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "book.xlsx").viewerKind).toBe("spreadsheet");
+  expect(capability("application/vnd.oasis.opendocument.spreadsheet", "book.ods").viewerKind).toBe("spreadsheet");
+  expect(capability("application/vnd.openxmlformats-officedocument.presentationml.presentation", "deck.pptx").viewerKind).toBe("presentation");
+  expect(capability("application/vnd.oasis.opendocument.presentation", "deck.odp").viewerKind).toBe("presentation");
+  expect(capability("application/zip", "archive.zip").viewerKind).toBe("archive");
+  expect(capability("application/msword", "legacy.doc").inlineMode).toBe("download-only");
+  expect(capability("application/x-tar", "archive.tar").inlineMode).toBe("download-only");
 });
 
 test("trusted mime takes precedence over conflicting filename extensions", () => {
   expect(capability("application/pdf", "fake.png").rendererKey).toBe("pdf");
-  expect(capability("application/zip", "fake.txt").inlineMode).toBe("download-only");
+  expect(capability("application/zip", "fake.txt").viewerKind).toBe("archive");
 });
 
 test("generic text detection is refined without overriding trusted binary formats", () => {
@@ -70,7 +77,7 @@ test("render plans expose only media, preview-panel, or file-row skins", () => {
 
   expect(buildAttachmentRenderPlan(base).inline).toBe("media");
   expect(buildAttachmentRenderPlan({ ...base, detected_mime_type: "text/markdown", display_name: "notes.md" }).inline).toBe("preview-panel");
-  expect(buildAttachmentRenderPlan({ ...base, detected_mime_type: "application/zip", display_name: "archive.zip" }).inline).toBe("file-row");
+  expect(buildAttachmentRenderPlan({ ...base, detected_mime_type: "application/zip", display_name: "archive.zip" }).inline).toBe("preview-panel");
   expect(buildAttachmentRenderPlan(base, { status: "unsupported", requestId: "probe-1", reason: "browser-capability" }).fileRowVariant).toBe("unsupported");
   expect(buildAttachmentRenderPlan(base, { status: "failed", requestId: "probe-2", reason: "decode" }).fileRowVariant).toBe("preview-failed");
 });

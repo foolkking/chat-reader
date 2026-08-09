@@ -3,7 +3,7 @@ import type { AttachmentRead } from "../../lib/types";
 export type AttachmentDataState = "available" | "empty" | "missing" | "uploading" | "upload_failed";
 export type AttachmentInlineMode = "inline-rich" | "inline-compact" | "viewer-only" | "download-only";
 export type AttachmentInlineSkin = "media" | "preview-panel" | "file-row";
-export type AttachmentViewerKind = "image" | "markdown" | "text" | "code" | "json" | "table" | "pdf" | "audio" | "video";
+export type AttachmentViewerKind = "image" | "markdown" | "text" | "code" | "json" | "table" | "pdf" | "audio" | "video" | "document" | "spreadsheet" | "presentation" | "archive";
 export type AttachmentViewerMode =
   | "image-focus"
   | "image-overview"
@@ -17,7 +17,11 @@ export type AttachmentViewerMode =
   | "table-raw"
   | "pdf"
   | "audio"
-  | "video";
+  | "video"
+  | "document"
+  | "spreadsheet"
+  | "presentation"
+  | "archive";
 export type AttachmentRuntimeRenderState =
   | { status: "idle" }
   | { status: "loading"; requestId: string }
@@ -69,9 +73,13 @@ const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "ico", "s
 const TIFF_EXT = new Set(["tif", "tiff"]);
 const AUDIO_EXT = new Set(["mp3", "wav", "ogg", "flac", "m4a", "aac"]);
 const VIDEO_EXT = new Set(["mp4", "webm", "mov"]);
+const DOCUMENT_EXT = new Set(["docx", "odt"]);
+const SPREADSHEET_EXT = new Set(["xlsx", "ods"]);
+const PRESENTATION_EXT = new Set(["pptx", "odp"]);
+const ARCHIVE_EXT = new Set(["zip"]);
 const DOWNLOAD_ONLY_EXT = new Set([
-  "7z", "avi", "bz2", "doc", "docx", "drawio", "dxf", "epub", "gz", "mkv", "obj", "odp", "ods", "odt",
-  "ppt", "pptx", "rar", "rtf", "stl", "tar", "tar.gz", "vsdx", "xls", "xlsx", "xz", "zip",
+  "7z", "avi", "bz2", "doc", "drawio", "dxf", "epub", "gz", "mkv", "obj",
+  "ppt", "rar", "rtf", "stl", "tar", "tar.gz", "vsdx", "xls", "xz",
 ]);
 
 const CAPABILITIES = {
@@ -85,6 +93,10 @@ const CAPABILITIES = {
   pdf: capability("pdf", "inline-compact", "pdf", "pdf", "PDF 文档"),
   audio: capability("audio", "inline-compact", "audio", "audio", "音频", "media-codec"),
   video: capability("video", "inline-compact", "video", "video", "视频", "media-codec"),
+  document: capability("document", "viewer-only", "document", "document", "Office 文档"),
+  spreadsheet: capability("spreadsheet", "viewer-only", "spreadsheet", "spreadsheet", "工作簿"),
+  presentation: capability("presentation", "viewer-only", "presentation", "presentation", "演示文稿"),
+  archive: capability("archive", "viewer-only", "archive", "archive", "ZIP 压缩包"),
   download: capability("generic", "download-only", null, undefined, "文件"),
 } satisfies Record<string, AttachmentRendererCapability>;
 
@@ -221,16 +233,26 @@ function capabilityForMime(mime: string): AttachmentRendererCapability | null {
   if (JSON_MIME.has(mime)) return CAPABILITIES.json;
   if (CODE_MIME.has(mime)) return CAPABILITIES.code;
   if (mime === "application/pdf") return CAPABILITIES.pdf;
+  if (mime === "application/zip") return CAPABILITIES.archive;
+  if ([
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.oasis.opendocument.text",
+  ].includes(mime)) return CAPABILITIES.document;
+  if ([
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.oasis.opendocument.spreadsheet",
+  ].includes(mime)) return CAPABILITIES.spreadsheet;
+  if ([
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.oasis.opendocument.presentation",
+  ].includes(mime)) return CAPABILITIES.presentation;
   if (mime === "image/tiff") return CAPABILITIES.tiff;
   if (["video/x-msvideo", "video/x-matroska"].includes(mime)) return CAPABILITIES.download;
   if ([
-    "application/zip", "application/x-7z-compressed", "application/x-bzip2", "application/x-gzip",
+    "application/x-7z-compressed", "application/x-bzip2", "application/x-gzip",
     "application/x-rar-compressed", "application/x-tar", "application/x-xz",
     "application/msword", "application/rtf", "application/vnd.ms-excel", "application/vnd.ms-powerpoint",
-    "application/vnd.oasis.opendocument.presentation", "application/vnd.oasis.opendocument.spreadsheet",
-    "application/vnd.oasis.opendocument.text", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/epub+zip",
+    "application/epub+zip",
   ].includes(mime)) return CAPABILITIES.download;
   if (mime.startsWith("image/")) return CAPABILITIES.image;
   if (mime.startsWith("audio/")) return CAPABILITIES.audio;
@@ -241,6 +263,10 @@ function capabilityForMime(mime: string): AttachmentRendererCapability | null {
 
 function capabilityForExtension(extension: string): AttachmentRendererCapability | null {
   if (!extension) return null;
+  if (DOCUMENT_EXT.has(extension)) return CAPABILITIES.document;
+  if (SPREADSHEET_EXT.has(extension)) return CAPABILITIES.spreadsheet;
+  if (PRESENTATION_EXT.has(extension)) return CAPABILITIES.presentation;
+  if (ARCHIVE_EXT.has(extension)) return CAPABILITIES.archive;
   if (DOWNLOAD_ONLY_EXT.has(extension)) return CAPABILITIES.download;
   if (TIFF_EXT.has(extension)) return CAPABILITIES.tiff;
   if (MARKDOWN_EXT.has(extension)) return CAPABILITIES.markdown;

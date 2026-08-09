@@ -18,6 +18,10 @@ test("viewer kinds resolve to adaptive presentation classes", () => {
     expect(presentation(kind, mode).presentation).toBe("reading");
   }
   expect(presentation("table", "table").presentation).toBe("workspace");
+  expect(presentation("document", "document").presentation).toBe("reading");
+  expect(presentation("spreadsheet", "spreadsheet").presentation).toBe("workspace");
+  expect(presentation("presentation", "presentation").presentation).toBe("workspace");
+  expect(presentation("archive", "archive").presentation).toBe("workspace");
   expect(presentation("pdf", "pdf", 1, 1)).toEqual({ presentation: "document", size: "normal" });
   expect(presentation("pdf", "pdf", 1, 8)).toEqual({ presentation: "document", size: "large" });
   expect(presentation("image", "image-focus").presentation).toBe("media");
@@ -56,4 +60,14 @@ test("unified shell owns presentation, maximize, and PDF fit controls", () => {
   expect(source).toContain("Fit width");
   expect(source).toContain('data-pdf-fit={fitMode}');
   expect(source).not.toContain('sm:h-[94vh] sm:w-[96vw]');
+});
+
+test("complex attachment viewers are lazy and bounded", () => {
+  const source = readFileSync(resolve(process.cwd(), "features/attachments/complex-attachment-viewer.tsx"), "utf8");
+  const worker = readFileSync(resolve(process.cwd(), "features/attachments/complex-attachment-worker.ts"), "utf8");
+  expect(source).toContain("new Worker(new URL(\"./complex-attachment-worker.ts\", import.meta.url)");
+  expect(source).toContain("MAX_SOURCE_BYTES");
+  expect(worker).toContain("validateCentralDirectory");
+  expect(worker).toContain("MAX_EXPANDED_BYTES");
+  expect(worker).not.toContain("eval(");
 });
