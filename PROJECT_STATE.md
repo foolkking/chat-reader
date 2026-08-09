@@ -37,7 +37,7 @@
 
 ## 2026-08-05 Attachment and Sidebar Addendum
 
-- Alembic 当前单一 head 为 `20260805_0020`。附件采用 `AssetObject -> conversation-owned Attachment -> MessageVersion occurrence` 三层模型；`message_version_attachments` 保留物理表名，但每行有独立 ID、`occurrence_key` 和 `placement`，允许同一附件多次出现。上传先进入 `attachment_upload_sessions/items`，只有显式提交或保存消息时才原子提升为 canonical 数据。
+- Alembic 当前单一 head 为 `20260806_0021`。附件采用 `AssetObject -> conversation-owned Attachment -> MessageVersion occurrence` 三层模型；`message_version_attachments` 保留物理表名，但每行有独立 ID、`occurrence_key` 和 `placement`，允许同一附件多次出现。上传先进入 `attachment_upload_sessions/items`，只有显式提交或保存消息时才原子提升为 canonical 数据。
 - `.crbundle` preview/commit 校验 ZIP 路径、大小、SHA-256、MIME、扫描状态和引用，并兼容 `chat-reader-import-bundle v1`。Reader/Share 使用权限受控 metadata/content 与单 Range 接口；“当前对话文件”抽屉和 Markdown 源码编辑器支持普通上传、未放置文件、已有文件复用及光标/消息尾部插入。
 - 对话导出 UI 只暴露 CanJSON、Markdown 和“包含附件”。结果固定为 `.canjsonl`、`.context.zip`、`.md` 或可移植 Markdown ZIP；系统级 `.cr v4` 位于“数据与备份”，包含附件且第一版只允许恢复到空实例。旧对话级 `.cr` 仅保留导入兼容。
 - Context Package 导出前只校验对象状态、大小与 SHA-256 完整性；当前产品策略不执行附件内容秘密扫描或敏感文件排除。未扫描对象仍明确标记 `scanner_disabled`，不能解释为 clean/safe。过期未提交 Bundle preview 会释放 staging 对象；`apps/api/scripts/gc_assets.py` 默认 dry-run、执行时按 30 天无引用/无 lease 保留 tombstone 后删除物理文件。
@@ -118,7 +118,9 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - `/library` 与在线侧栏、TOC 和 Reader 语义对齐；更新只传输新增或 revision 变化的 conversation。
 - 消息工具栏位于正文上方的信息栏。在线 Reader 的桌面顶栏固定为“编辑、搜索、批注、专注、更多”，移动端固定为“导航、编辑、更多”；Share 和 Offline Reader 不显示编辑入口。
 - Markdown 源码编辑器是非模态浮动工作区，不替换正文或改变消息高度；桌面可拖动、四边缩放、复位并保存尺寸，移动端使用顶栏下方全宽面板。只有真实 wheel/touch/pointer/阅读键输入会驱动源码单向跟随阅读线；同消息同步源码位置，干净状态跨消息切换，脏状态锁定并要求保存或放弃。保存后局部更新消息与派生数据，工作区保持打开，并用真实 DOM 锚点补偿正文位置。
-- 附件预览通过 React portal 挂载到 `document.body`；覆盖层负责 dialog 语义、共享背景滚动锁、初始焦点、Tab 循环、Esc/背景关闭与触发器焦点恢复，实际内容面板不再统一铺满视口。图片/视频使用受限尺寸的深色舞台，音频使用紧凑面板，Markdown/文本/表格/PDF 使用受限文档工作区。图片（含 SVG 图片上下文）最终均为 `<img>`，不内联 SVG XML、不以独立文档打开。
+- 附件预览通过唯一的 React portal 挂载到 `document.body`；覆盖层负责 dialog 语义、共享背景滚动锁、初始焦点、Tab 循环、Esc/背景关闭与触发器焦点恢复。`ViewerPresentationResolver` 将同一 Shell 派生为 compact/reading/document/media/workspace：音频紧凑，Markdown/Text/Code/JSON 为阅读窗，PDF 为文档窗，图片/视频按 intrinsic ratio，CSV 与 Gallery Overview 才使用近全屏 workspace。移动端统一 100vw × 100dvh；桌面可最大化，第一次 Esc 退出最大化、第二次关闭。presentation 不持久化，也不改变正文宽度。
+- PDF 的 page/fit/zoom 与可折叠缩略图控制位于共享 Shell 顶栏；单页默认 Fit Page、完整居中且 PDF viewport 不产生纵向滚动，Fit Width/自定义缩放由 PDF Renderer 独占滚动。Shell 本身保持 `overflow: hidden`，避免与 Markdown/PDF 的内容滚动形成双层滚动。
+- 图片/视频使用媒体 canvas，音频使用系统 surface，Markdown/文本使用阅读 surface，PDF 使用浅灰 document canvas。图片（含 SVG 图片上下文）最终均为 `<img>`，不内联 SVG XML、不以独立文档打开。
 - 对话导出主选项仍为 CanJSON/Markdown 与“包含附件”；折叠的二级内容选项控制对话简介、批注、笔记和 CanJSON 来源引用。普通文件与附件 ZIP 复用同一组后端 `ExportOptions`。
 - 单消息版本使用持久化左右切换器；第一版受保护，后续版本可永久删除，删除当前版本会回退到编号更小的最近可用版本。统一“拆分对话”工作区支持连续区间、边界双份和离散消息三种非破坏式复制。
 

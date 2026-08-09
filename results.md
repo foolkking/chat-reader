@@ -1,5 +1,27 @@
 # Implementation Results
 
+## 2026-08-09 Adaptive Viewer Presentation Candidate
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Unified Viewer architecture | PASS | one `AttachmentViewerProvider -> AttachmentViewerShell`; PDF tools mount into the same shell toolbar and do not create a second dialog |
+| Presentation resolver | PASS | compact/reading/document/media/workspace mapping is unit-covered; presentation remains transient UI state |
+| Desktop adaptive sizing | PASS | compact 720px, reading 1000/1240px, document 1120/1280px, intrinsic media <= 90vw x 90vh, workspace 96vw x 94vh |
+| Mobile shell | PASS | every presentation resolves to 100vw x 100dvh below 768px and the overlay has no mobile inset |
+| Maximize state machine | PASS | CSS-only 96vw x 94vh maximize; first Escape exits maximize and second Escape closes |
+| Single-page PDF | PASS | defaults to Fit Page, page is centered in one non-scrolling PDF viewport, page/fit/zoom tools occupy the shared toolbar |
+| Multi-page PDF | PASS | large document presentation, Fit Width/custom scrolling, page navigation and collapsible thumbnail rail implemented |
+| Renderer scroll ownership | PASS | Shell viewport is overflow-hidden; Markdown, code, table, PDF and media keep renderer-owned content behavior |
+| Focused Viewer tests | PASS | 12/12 presentation/policy/SVG/single-shell tests |
+| Web lint/typecheck/build | PASS | all required Web commands passed; production build generated 9 routes |
+| API regression | PASS | 211 passed; 1 fixture-gated test skipped and not counted as PASS |
+| Alembic | PASS | single head `20260806_0021`; no migration added |
+| PWA default matrix | PARTIAL_PASS | 19 passed; 21 online/fixture-gated scenarios skipped and not counted as PASS |
+| Production old-layout baseline | PASS | Chrome measured the old single-page PDF shell at about 1844 x 1016 CSS px in a 1920 x 1080 viewport, confirming universal 96vw x 94vh behavior |
+| Adaptive production deployment / Chrome | NOT_PRODUCTION_VERIFIED | pending prebuilt-image rollout and same-fixture verification; this row must be updated after deployment |
+
+The adaptive change does not alter inline attachment layout, Reader width, data models, upload, Files Panel, Share, export, `.cr v4`, Scanner, Range or permissions.
+
 ## 2026-08-09 Attachment Renderer Contract Candidate
 
 | Area | Status | Evidence |

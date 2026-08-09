@@ -1,5 +1,21 @@
 # 测试结果
 
+## 2026-08-09 Adaptive Viewer Presentation
+
+| Check | Status | Result |
+| --- | --- | --- |
+| Web lint | PASS | zero warnings |
+| Web typecheck | PASS | `tsc --noEmit` |
+| Web production build | PASS | 9 Next.js routes; conversation first-load JS 698 kB |
+| Adaptive Viewer focused tests | PASS | 12/12 presentation resolver, size bounds, mobile fullscreen, maximize/PDF toolbar, Registry/SVG/single-shell contract |
+| API full suite | PASS | 211 passed, 1 fixture-gated skipped |
+| Migration head | PASS | `20260806_0021` only; no migration in this change |
+| PWA/default Playwright | PARTIAL_PASS | 19 passed, 21 online/fixture-gated skipped; skipped cases are not PASS |
+| Production before baseline | PASS | real Chrome, five required viewport classes; old 1920 x 1080 single-page PDF was about 1844 x 1016 CSS px |
+| Production after screenshots and interaction | NOT_PRODUCTION_VERIFIED | pending deployment; requires PDF, image, Gallery, Markdown, code, JSON, CSV, audio and video checks |
+
+The baseline screenshots are transient release evidence and are not committed because repository policy forbids persisting real production conversation identifiers or content.
+
 ## 2026-08-09 Attachment Renderer final release
 
 | Check | Status | Result |

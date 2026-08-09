@@ -62,9 +62,34 @@ Occurrence identity is `message_version_id + occurrence_key`. `block_index` is o
 
 Current-conversation image order is `message order -> current MessageVersion -> RenderBlock order -> display_order -> occurrence_key`. Attachment, derivative, and database return order are not authorities.
 
-## Fullscreen Viewer
+## Unified Viewer And Adaptive Presentation
 
-Desktop uses a centered `96vw x 94vh` shell; mobile uses `100vw x 100dvh`. The shell is portaled to `document.body`, has one bounded content scroll area, safe-area handling, dialog semantics, focus containment, Esc/backdrop close, reference-counted body scroll lock, and trigger focus/Reader scroll restoration.
+The application has one Viewer architecture, not one universal Viewer size:
+
+```text
+AttachmentViewerProvider
+-> ViewerPresentationResolver
+-> AttachmentViewerShell
+-> Renderer
+```
+
+`ViewerPresentation` is transient UI state derived from the Viewer kind/mode, item count, intrinsic media dimensions, PDF page count and current viewport. It is never written to Attachment, occurrence or database state.
+
+| Presentation | Default Viewer | Desktop bounds |
+| --- | --- | --- |
+| `compact` | audio | `min(720px, 90vw)` by up to `min(70vh, 640px)`; current audio shell targets about 420px height |
+| `reading` | Markdown, text, log, code, JSON | 1000px normal / 1240px code maximum, 90vw by 82vh |
+| `document` | PDF | 1120px single-page / 1280px multi-page maximum, 88vw by 86-90vh |
+| `media` | image, image Focus, video | intrinsic aspect-ratio-aware, at most 90vw by 90vh; small media is not enlarged to the viewport |
+| `workspace` | image Overview, CSV/TSV table | 96vw by 94vh |
+
+At viewport widths below 768px every presentation becomes `100vw x 100dvh`; the outer overlay has no mobile inset. Desktop presentations may enter a CSS-only `maximized` state at 96vw x 94vh. Browser fullscreen is not used. While maximized, the first Escape exits maximized and the next Escape closes the Viewer. Resize changes only the shell bounds and does not reset renderer page, active item, zoom, mode or scroll state.
+
+The shell remains portaled to `document.body`, has one bounded content viewport, safe-area handling, dialog semantics, focus containment, backdrop close, reference-counted body scroll lock, and trigger focus/Reader scroll restoration. `AttachmentPreviewDialog` remains a portal-free adapter; renderer-specific portals are forbidden. A PDF toolbar may portal into the toolbar host inside the same shell without creating another dialog.
+
+The shell owns no vertical scroll. Its `ViewerViewport` is `min-height: 0; overflow: hidden`; each renderer owns its single content scroll container. Canvas backgrounds are renderer-specific: document gray for PDF, reading surface for Markdown/text, code surface for source, neutral media for images, dark media for video, and system surface for audio/table.
+
+PDF defaults to Fit Page. Single-page PDF shows exactly the active page, centered and fully contained without a vertical scrollbar. Fit Width and custom zoom own both horizontal and vertical scrolling. Multi-page PDF uses the large document presentation and an optional, collapsible thumbnail rail. Page, fit and zoom controls live in the common toolbar rather than consuming a second content row.
 
 Image Focus supports Fit, zoom, pan, previous/next keys and a filmstrip with `aria-current`. Overview returns to the selected Focus item. Controls have 44px targets, survive 200% zoom/reflow, respect reduced motion and do not communicate state by color alone.
 
@@ -99,6 +124,8 @@ Schema introspection is limited to startup, CI, migration tests and deployment p
 
 The 2026-08-09 local verification passed Web lint, typecheck, production build, API `211 passed / 1 fixture-gated skipped`, attachment contract tests `3/3`, final Renderer/SVG/portal policy tests `7/7`, and PWA baseline `13 passed / 21 conditional skipped`. Conditional tests remain `PARTIAL_PASS`, not PASS.
 
+The adaptive-presentation candidate additionally passed 12 focused policy/presentation/SVG tests, Web lint, typecheck and production build. Its default PWA matrix passed 19 tests with 21 online/fixture-gated conditional skips; the full API suite remained `211 passed / 1 skipped`, and Alembic remained at the single `20260806_0021` head. Before deployment, production Chrome measured the old single-page PDF shell at about 1844 x 1016 CSS pixels in a 1920 x 1080 viewport, confirming the former universal 96vw x 94vh behavior. Adaptive production verification is recorded separately after the prebuilt-image rollout; skipped scenarios are never promoted to PASS.
+
 Final commit `5baea32cdada3ed22ae01268cac128f88fa9f527` was built by GitHub Actions run `31269172465` and deployed to King from archive SHA-256 `55a53e8606ae1e404255729dbb566172913997b3678648e3630b95be73400f6e`. Production Chrome verified the single `document.body` dialog, image Gallery and filmstrip, Markdown Rendered/Source, trusted MIME versus generic-text refinement, download-only engineering formats, TIFF fallback without a broken image, Esc, body scroll lock and restoration. Core Viewer production acceptance is PASS.
 
 This does not promote unexecuted conditional PWA/Offline tests, animated-image frame enforcement, TIFF converted first-page preview, or optional complex viewers. Office, Spreadsheet, Presentation, EPUB, Archive, Diagram, CAD and 3D remain `NOT_IMPLEMENTED` with reliable authenticated download-only fallback.
@@ -120,4 +147,17 @@ INERT_CONTENT_SECURITY = APPROVED
 DOWNLOAD_ONLY_FALLBACK = APPROVED
 
 IMPLEMENTATION_READY = YES
+
+UNIFIED_VIEWER_SHELL = APPROVED
+ADAPTIVE_VIEWER_PRESENTATION = APPROVED
+DEFAULT_FULLSCREEN_FOR_ALL_ATTACHMENTS = REMOVED
+
+COMPACT_VIEWER = APPROVED
+READING_VIEWER = APPROVED
+DOCUMENT_VIEWER = APPROVED
+MEDIA_VIEWER = APPROVED
+WORKSPACE_VIEWER = APPROVED
+
+MOBILE_FULLSCREEN = APPROVED
+OPTIONAL_MAXIMIZE = APPROVED
 ```

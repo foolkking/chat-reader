@@ -66,7 +66,7 @@
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
-| `docs/system/ATTACHMENT_RENDERER_CONTRACT.md` | Current | Four-layer state, Registry, inline skins, Gallery, unified Viewer, Range/search/batch/offline and permission contract. |
+| `docs/system/ATTACHMENT_RENDERER_CONTRACT.md` | Current | Four-layer state, Registry, inline skins, Gallery, unified adaptive Viewer presentations, Range/search/batch/offline and permission contract. |
 | `apps/web/features/attachments/attachment-viewer.tsx` | Current | Single provider/shell portal, image/document/media Viewer kernels and runtime retry state. |
 | `apps/api/app/services/assets/text_search.py` | Current | Bounded text search and checksum/query-bound signed continuation cursor. |
 | `apps/api/app/services/exporting/attachment_download.py` | Current | Owner batch ZIP validation, stable names, streaming worker artifact and TTL. |
@@ -179,3 +179,5 @@
 新增 import 目录中的 Markdown 自动继承“数据资产”分类，即使尚未写入本表。若未来需要删除或匿名化，必须先确认测试依赖和用户数据保留要求。
 
 2026-08-09 文档同步：Attachment Renderer 最终合同、生产镜像 run、备份、部署与真实 Chrome 证据已写入 `PROJECT_STATE.md`、`results.md`、`docs/system/ATTACHMENT_RENDERER_CONTRACT.md`、部署文档和执行记录。没有新增文档类别；条件跳过和 `NOT_IMPLEMENTED` 项未提升为 PASS。
+
+2026-08-09 Adaptive Viewer 文档同步：同一 Viewer Shell 的 compact/reading/document/media/workspace presentation、移动端全屏退化、CSS 最大化状态机、PDF Fit Page/Fit Width 单滚动所有权和五档视口验收要求已同步到当前合同、前端架构、项目状态与测试结果。未增加新的文档类别、数据模型或 migration。

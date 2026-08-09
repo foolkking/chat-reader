@@ -21,7 +21,10 @@ test("attachment viewer has one body portal and compatibility preview delegates 
   const viewer = readFileSync(resolve(process.cwd(), "features/attachments/attachment-viewer.tsx"), "utf8");
   const block = readFileSync(resolve(process.cwd(), "features/attachments/attachment-block.tsx"), "utf8");
 
-  expect(viewer.match(/createPortal\(/g)).toHaveLength(1);
+  // The PDF toolbar is portaled into the shared shell toolbar host. Only the
+  // shell itself may create a portal rooted at document.body.
+  expect(viewer.match(/return createPortal\(/g)).toHaveLength(1);
+  expect(viewer).toContain("toolbarHost");
   expect(viewer).toContain("<AttachmentViewerShell session={session}");
   expect(viewer).toContain("data-testid=\"attachment-viewer-shell\"");
   expect(block).not.toContain("createPortal(");
