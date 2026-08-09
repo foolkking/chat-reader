@@ -12,3 +12,10 @@ test("new conversation dialog is a compact two-message composer", () => {
   expect(source).toContain('setUserText("")');
   expect(source).toContain('setAssistantText("")');
 });
+
+test("new conversation entry is attached to the unclassified heading", () => {
+  const source = readFileSync(resolve(process.cwd(), "features/projects/project-sidebar.tsx"), "utf8");
+  expect(source).not.toContain('data-testid="sidebar-new-conversation-button"');
+  expect(source).toContain('data-testid="unclassified-new-conversation-button"');
+  expect(source).toContain('aria-label="新建对话"');
+});

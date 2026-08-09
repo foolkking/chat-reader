@@ -514,9 +514,8 @@ function SidebarContent(props: SidebarContentProps) {
         {props.onCollapse ? <button type="button" onClick={props.onCollapse} className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-surface hover:text-primary" aria-label={t("closeSidebar")} title={t("closeSidebar")}><PanelLeftClose className="h-5 w-5" /></button> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        <div className="mb-3 grid grid-cols-2 gap-2">
-          <button type="button" data-testid="sidebar-new-conversation-button" onClick={props.onNewConversation} className="min-h-11 rounded-xl bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] shadow-sm hover:opacity-90"><span className="inline-flex items-center gap-2"><Plus className="h-4 w-4" />新建对话</span></button>
-          <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="min-h-11 rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><span className="inline-flex items-center gap-2"><Import className="h-4 w-4" />{t("importData")}</span></button>
+        <div className="mb-3">
+          <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="min-h-11 w-full rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><span className="inline-flex items-center justify-center gap-2"><Import className="h-4 w-4" />{t("importData")}</span></button>
         </div>
         <SidebarSearch onNavigate={props.closeMobile} />
         <ImportTaskMonitor placement="sidebar" />
@@ -550,7 +549,7 @@ function SidebarContent(props: SidebarContentProps) {
           {props.projectsError ? <p className="mt-2 rounded-md bg-[var(--danger-soft)] px-2 py-1 text-xs text-[var(--danger)]">{props.projectsError}</p> : null}
         </div>
 
-        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} />
+        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} onNewConversation={props.onNewConversation} />
       </div>
       <div className="shrink-0 border-t border-ui p-3">
         <SidebarPreferences />
@@ -600,12 +599,18 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
   );
 }
 
-function HistoryDropZone({ pathname, conversations, loading, error, closeMobile, onChanged }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: string | null; closeMobile: () => void; onChanged: () => Promise<void> }) {
+function HistoryDropZone({ pathname, conversations, loading, error, closeMobile, onChanged, onNewConversation }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: string | null; closeMobile: () => void; onChanged: () => Promise<void>; onNewConversation: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: "unclassified-container", data: { dropType: "unclassified-container", projectId: null } satisfies ConversationContainerDrop });
   const t = useTranslations();
   return (
     <div className="mt-5 rounded-lg p-1">
-      <div ref={setNodeRef} data-testid="unclassified-container" className={`flex min-h-9 items-center justify-between rounded-lg px-2 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}><h2 className="text-xs font-semibold text-secondary">{t("unclassified")}</h2><span className="text-[11px] text-secondary">{conversations.length}</span></div>
+      <div ref={setNodeRef} data-testid="unclassified-container" className={`flex min-h-9 items-center justify-between rounded-lg px-2 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
+        <h2 className="text-xs font-semibold text-secondary">{t("unclassified")}</h2>
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] text-secondary">{conversations.length}</span>
+          <button type="button" data-testid="unclassified-new-conversation-button" onClick={() => { onNewConversation(); closeMobile(); }} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface hover:text-primary" aria-label="新建对话" title="新建对话"><Plus className="h-4 w-4" /></button>
+        </div>
+      </div>
       <nav className="mt-2 space-y-1">
         {loading ? <p role="status" className="px-2 py-2 text-xs text-secondary">正在加载对话…</p> : null}
         {error ? <p role="alert" className="px-2 py-2 text-xs text-[var(--danger)]">加载失败</p> : null}
