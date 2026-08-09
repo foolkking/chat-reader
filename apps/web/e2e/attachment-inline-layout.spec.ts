@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { computeJustifiedRows } from "../features/attachments/attachment-inline-policy";
 import { resolveInlinePresentation, type AttachmentRenderPlan, type AttachmentViewerKind } from "../features/attachments/preview-adapter-registry";
+import { parseDelimitedRows } from "../features/attachments/attachment-table-policy";
 
 function plan(viewerKind: AttachmentViewerKind | null, inline: AttachmentRenderPlan["inline"]): AttachmentRenderPlan {
   return {
@@ -72,4 +73,18 @@ test("runtime preview failures move to FileList while static capability stays un
   expect(registry).toContain('if (runtime.status === "unsupported") return fileRowPlan');
   expect(registry).toContain('if (runtime.status === "failed") return fileRowPlan');
   expect(registry).toContain('if (plan.inline === "file-row") return "file-list"');
+});
+
+test("CSV and TSV viewer defaults to bounded table mode with a Raw escape hatch", () => {
+  expect(parseDelimitedRows('name,notes\nAlice,"has, comma"\nBob,"two ""quotes"""', ",")).toEqual([
+    ["name", "notes"],
+    ["Alice", "has, comma"],
+    ["Bob", 'two "quotes"'],
+  ]);
+  const source = readFileSync(resolve(process.cwd(), "features/attachments/attachment-viewer.tsx"), "utf8");
+  expect(source).toContain('viewerKind === "table"');
+  expect(source).toContain('active={effectiveMode === "table"}');
+  expect(source).toContain('active={effectiveMode === "table-raw"}');
+  expect(source).toContain('data-testid="attachment-table-viewer"');
+  expect(source).toContain('mode={mode === "table-raw" ? "source" : "rendered"}');
 });

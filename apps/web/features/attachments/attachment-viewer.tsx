@@ -24,6 +24,7 @@ import {
   type ViewerMediaDimensions,
   type ViewerViewport,
 } from "./viewer-presentation";
+import { parseDelimitedRows } from "./attachment-table-policy";
 
 const ComplexAttachmentViewer = lazy(() => import("./complex-attachment-viewer").then((module) => ({ default: module.ComplexAttachmentViewer })));
 
@@ -235,6 +236,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
           </div>
           <div ref={setToolbarHost} className="order-3 flex min-w-0 basis-full items-center justify-center gap-1 overflow-x-auto sm:order-none sm:basis-auto">
             {viewerKind === "markdown" ? <><ModeButton active={effectiveMode === "markdown-rendered"} onClick={() => setMode("markdown-rendered")}>Rendered</ModeButton><ModeButton active={effectiveMode === "markdown-source"} onClick={() => setMode("markdown-source")}>Source</ModeButton></> : null}
+            {viewerKind === "table" ? <><ModeButton active={effectiveMode === "table"} onClick={() => setMode("table")}>Table</ModeButton><ModeButton active={effectiveMode === "table-raw"} onClick={() => setMode("table-raw")}>Raw</ModeButton></> : null}
           </div>
           {!mobileFullscreen ? <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => setMaximized((value) => !value)} aria-label={maximized ? "退出最大化" : "最大化 Viewer"} title={maximized ? "退出最大化" : "最大化 Viewer"}>{maximized ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}</button> : null}
           {session.permissions.downloadOriginal && attachment?.download_url ? <a href={attachment.download_url} download className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={`下载 ${attachment.display_name}`} title="下载"><Download className="h-5 w-5" /></a> : null}
@@ -255,7 +257,7 @@ function ViewerBody({ attachment, kind, mode, onModeChange, session, activeIndex
   if (kind === "markdown") return <TextualViewer attachment={attachment} mode={mode === "markdown-source" ? "source" : "rendered"} onModeChange={onModeChange} markdown />;
   if (kind === "code") return <TextualViewer attachment={attachment} mode="source" onModeChange={onModeChange} code />;
   if (kind === "json") return <JsonViewer attachment={attachment} />;
-  if (kind === "table") return <TextualViewer attachment={attachment} mode="source" onModeChange={onModeChange} table />;
+  if (kind === "table") return <TextualViewer attachment={attachment} mode={mode === "table-raw" ? "source" : "rendered"} onModeChange={onModeChange} table />;
   if (kind === "audio") return <MediaViewer attachment={attachment} audio onMediaDimensions={onMediaDimensions} />;
   if (kind === "video") return <MediaViewer attachment={attachment} onMediaDimensions={onMediaDimensions} />;
   if (kind === "pdf") return <PdfViewer attachment={attachment} toolbarHost={toolbarHost} onPageCountChange={onPdfPageCount} />;
@@ -333,9 +335,25 @@ function TextualViewer({ attachment, mode, onModeChange: _onModeChange, markdown
   if (error) return <ViewerError message="预览加载失败，原文件仍可下载。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
   if (text === null) return <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div>;
   if (markdown && mode === "rendered") return <div className="h-full overflow-y-auto overscroll-contain bg-page p-5"><div className="mx-auto max-w-[900px]"><MarkdownRenderer text={text} isAssistant={false} /></div></div>;
-  if (table && mode === "rendered") return <pre className="h-full overflow-auto whitespace-pre p-5 font-mono text-sm text-primary">{text}</pre>;
+  if (table && mode === "rendered") return <DelimitedTableViewer text={text} delimiter={attachment.display_name.toLowerCase().endsWith(".tsv") ? "\t" : ","} />;
   return <pre className={`h-full overflow-auto overscroll-contain whitespace-pre-wrap break-words bg-page p-5 text-sm text-primary ${code || !markdown ? "font-mono" : ""}`}>{text}</pre>;
 }
+
+function DelimitedTableViewer({ text, delimiter }: { text: string; delimiter: string }) {
+  const rows = parseDelimitedRows(text, delimiter);
+  if (!rows.length) return <div className="flex h-full items-center justify-center p-6 text-sm text-secondary">空表格 · 没有可显示的行</div>;
+  const columns = Math.max(...rows.map((row) => row.length));
+  return (
+    <div className="h-full overflow-auto overscroll-contain bg-page p-4" data-testid="attachment-table-viewer">
+      <table className="min-w-max border-separate border-spacing-0 text-sm">
+        <thead className="sticky top-0 z-10 bg-subtle"><tr><th className="sticky left-0 border-b border-r border-ui px-2 py-2 text-right font-normal text-secondary">#</th>{Array.from({ length: columns }, (_, index) => <th key={index} className="border-b border-r border-ui px-3 py-2 text-left font-medium text-primary">{rows[0]?.[index] || `列 ${index + 1}`}</th>)}</tr></thead>
+        <tbody>{rows.slice(1).map((row, rowIndex) => <tr key={rowIndex}><th className="sticky left-0 border-b border-r border-ui bg-page px-2 py-1.5 text-right font-normal text-secondary">{rowIndex + 1}</th>{Array.from({ length: columns }, (_, columnIndex) => <td key={columnIndex} className="max-w-80 border-b border-r border-ui px-3 py-1.5 align-top text-primary"><span className="line-clamp-3" title={row[columnIndex] ?? ""}>{row[columnIndex] ?? ""}</span></td>)}</tr>)}</tbody>
+      </table>
+      <p className="mt-3 text-xs text-secondary">已显示 {Math.max(0, rows.length - 1)} 行 · {columns} 列（有界预览）</p>
+    </div>
+  );
+}
+
 
 function JsonViewer({ attachment }: { attachment: AttachmentRead }) {
   const [text, setText] = useState<string | null>(null);
