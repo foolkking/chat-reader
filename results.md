@@ -354,3 +354,11 @@ Detailed findings, screenshots and QA cleanup: `docs/evidence/UX_RELEASE_READINE
 - GitHub Actions run `31385483844`; release commit `e4bc9c3ce00ed7071d896546df330cdd1a0f1b53`; artifact SHA-256 `1deddb658a8c663111e530ffd793cb3f437cc9498ca68fded7dd498934f8c777`.
 - King used verified backup, migration preflight and `--no-build`; API/Web/Postgres are healthy. Backup: `/opt/chat-reader/backups/reader-scroll-20260810T120035Z-e4bc9c3`.
 - Production bridge has no page console/network stream and timed out on viewport screenshot capture. Exact 360px/zoom/offline-negative and a full production edge-sentinel trace remain `NOT_PRODUCTION_VERIFIED`; local functional invariants are not relabeled as production PASS.
+
+## Reader Scrollbar-Thumb Blank-Window Closure - 2026-08-10
+
+- Root cause: a mounted message could intersect the Reader while its per-message TanStack virtualizer still used a stale absolute `scrollMargin`. A large native scrollbar-thumb jump then selected rows far outside the visible message, producing an apparently empty page although API data and the message shell were present. Native thumb movement could also trigger an edge-window merge while Chromium still held the thumb, changing `scrollHeight` during the gesture.
+- Fix: visible-message gap recovery rebases the virtual coordinate system without discarding measured row heights; pointer-held thumb gestures defer edge-window transitions until release; viewport-scale non-wheel jumps publish a layout rebase event. Ordinary wheel scrolling retains the measurement-free hot path.
+- Automated: lint, typecheck and Web production build PASS; API `216 passed, 3 skipped`; Alembic `20260806_0021 (head)`; default PWA `37 passed, 25 conditional skipped`; focused final Reader regressions `3/3` PASS, with the earlier full Reader restoration suite `8/8` PASS.
+- Production: commit `771f4c8`, Actions run `31398377216`, archive SHA-256 `b8c6dc8e7769cfe4e03e9523595b179f50308a045f78ebe8beb71a44291e1000`. Native Chrome thumb drags in both directions immediately retained 15/14 visible blocks. API/Web/PostgreSQL are healthy; worker running; Scanner disabled.
+- Current status: `READER_SCROLLBAR_BLANK_GAP = PASS`, `NATIVE_THUMB_DRAG = PASS`, `ORDINARY_WHEEL_REGRESSION = PASS`. Conditional PWA cases remain `PARTIAL_PASS`, not PASS.
