@@ -67,12 +67,12 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      queueMicrotask(() => {
+      window.setTimeout(() => {
         const logicalTarget = restoreFocusRef.current?.();
         if (logicalTarget?.isConnected) logicalTarget.focus({ preventScroll: true });
         else if (previous?.isConnected) previous.focus({ preventScroll: true });
         else focusFallback();
-      });
+      }, 0);
     };
   }, [initialFocusRef, open, rootRef]);
 }

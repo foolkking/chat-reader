@@ -508,7 +508,7 @@ function SidebarContent(props: SidebarContentProps) {
   const projectCreateTriggerRef = useRef<HTMLButtonElement | null>(null);
   const closeProjectCreateForm = () => {
     props.setShowProjectForm(false);
-    window.requestAnimationFrame(() => projectCreateTriggerRef.current?.focus({ preventScroll: true }));
+    window.setTimeout(() => projectCreateTriggerRef.current?.focus({ preventScroll: true }), 0);
   };
   return (
     <>
