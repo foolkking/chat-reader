@@ -9,6 +9,7 @@ import { getAttachment } from "../../lib/api";
 import { getOfflineAttachment } from "../../lib/offline-db";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 import type { AttachmentAccess } from "./attachment-access";
 import {
   friendlyAttachmentType,
@@ -116,7 +117,6 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const index = Math.max(0, session.items.findIndex((candidate) => candidate.itemKey === item?.itemKey));
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<AttachmentViewerMode | null>(session.initialMode ?? null);
   const [maximized, setMaximized] = useState(false);
   const maximizedRef = useRef(false);
@@ -139,6 +139,19 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const panelStyle = viewerPresentationStyle({ ...presentation, maximized, viewport, mediaDimensions, itemCount: session.items.length });
   const mobileFullscreen = isMobileViewerViewport(viewport);
 
+  useDialogFocus({
+    open: true,
+    rootRef: dialogRef,
+    initialFocusRef: closeRef,
+    onClose: () => {
+      if (maximizedRef.current) {
+        setMaximized(false);
+        return;
+      }
+      onClose();
+    },
+  });
+
   useEffect(() => {
     maximizedRef.current = maximized;
   }, [maximized]);
@@ -150,19 +163,8 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   }, [item?.attachmentId]);
 
   useEffect(() => {
-    previousFocusRef.current = session.trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     acquireViewerScrollLock();
-    const frame = window.requestAnimationFrame(() => closeRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        if (maximizedRef.current) {
-          setMaximized(false);
-          return;
-        }
-        onClose();
-        return;
-      }
       if (event.key === "ArrowLeft" && session.items.length > 1) {
         event.preventDefault();
         setActiveIndex(-1);
@@ -174,33 +176,13 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
       } else if (event.key === "-") {
         document.querySelector<HTMLButtonElement>('[data-viewer-zoom="out"]')?.click();
       }
-      if (event.key !== "Tab" || !dialogRef.current) return;
-      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
-        'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
-      ));
-      if (!focusable.length) {
-        event.preventDefault();
-        dialogRef.current.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      window.cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKeyDown);
       releaseViewerScrollLock();
-      window.requestAnimationFrame(() => previousFocusRef.current?.focus());
     };
-  }, [onClose, session.items.length]);
+  }, [session.items.length]);
 
   function setActiveIndex(delta: number) {
     const next = (index + delta + session.items.length) % session.items.length;

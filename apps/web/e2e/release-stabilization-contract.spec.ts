@@ -34,6 +34,7 @@ test("managed dialogs have one pointer-only backdrop and shared focus lifecycle"
     expect(content).toContain('data-dialog-backdrop');
     expect(content).not.toContain('aria-label="关闭" onClick={onClose}');
   }
+  expect(source("features/attachments/attachment-viewer.tsx")).toContain("useDialogFocus");
 });
 
 test("attachment usage count remains a current-version projection", () => {
