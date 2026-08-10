@@ -37,6 +37,7 @@ export function SourceEditorWorkspace({
   onDirtyChange,
   onTargetUpdated,
   onMessageChanged,
+  onConversationRevision,
   onClose,
   onLocate,
   onDiscardAndSwitch,
@@ -49,6 +50,7 @@ export function SourceEditorWorkspace({
   onDirtyChange: (dirty: boolean) => void;
   onTargetUpdated: (target: SourceEditorTarget) => void;
   onMessageChanged: (message: MessageListItem) => Promise<void> | void;
+  onConversationRevision?: (revision: number) => void;
   onClose: () => void;
   onLocate: (messageId: string, blockIndex: number) => void | Promise<void>;
   onDiscardAndSwitch: () => void;
@@ -241,6 +243,7 @@ export function SourceEditorWorkspace({
                 ),
               );
               const cacheCompletedAt = window.performance.now();
+              onConversationRevision?.(response.conversation_revision);
               await onMessageChanged(response.message);
               await nextPaint();
               const renderCompletedAt = window.performance.now();

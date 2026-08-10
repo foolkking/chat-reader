@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   ClipboardCopy,
   Download,
   Eye,
@@ -41,6 +40,7 @@ import {
 import type { AttachmentRead } from "../../lib/types";
 import { AttachmentPreviewDialog, readableBytes } from "./attachment-block";
 import { attachmentExtension } from "./preview-adapter-registry";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 
 type Placement = "inline" | "after_message";
 type FileFilter = "all" | "used" | "unused" | "missing";
@@ -111,7 +111,7 @@ export function ConversationFilesPanel({
         if (sort === "name") return a.display_name.localeCompare(b.display_name);
         if (sort === "type") return attachmentMime(a).localeCompare(attachmentMime(b));
         if (sort === "size") return (a.asset_object?.byte_size ?? 0) - (b.asset_object?.byte_size ?? 0);
-        if (sort === "usage") return (b.occurrence_count ?? 0) - (a.occurrence_count ?? 0);
+        if (sort === "usage") return (b.current_occurrence_count ?? (b.is_used ? b.occurrence_count : 0) ?? 0) - (a.current_occurrence_count ?? (a.is_used ? a.occurrence_count : 0) ?? 0);
         return b.created_at.localeCompare(a.created_at);
       });
   }, [filesQuery.data, filter, search, sort]);
@@ -260,7 +260,7 @@ export function ConversationFilesPanel({
         ) : null}
         {capabilitiesQuery.data?.attachments.scanner_provider === "disabled" ? (
           <p className="flex items-center gap-1.5 text-[11px] text-secondary">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+            <Info className="h-3.5 w-3.5 text-secondary" aria-hidden="true" />
             {zh ? "当前部署未启用扫描，附件状态显示为“未扫描”。" : "Scanning is disabled; attachments remain unscanned."}
           </p>
         ) : null}
@@ -444,16 +444,18 @@ function AttachmentDetailsDialog({
   onLocate: (messageId: string, blockIndex?: number) => void | Promise<void>;
 }) {
   const occurrences = attachment.occurrences ?? [];
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus({ open: true, rootRef, onClose });
   return (
-    <div className="fixed inset-0 z-[260] flex items-end justify-center bg-[var(--overlay)] p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={`attachment-details-${attachment.id}`}>
-      <button type="button" className="absolute inset-0" onClick={onClose} aria-label={zh ? "关闭文件详情" : "Close file details"} />
+    <div ref={rootRef} tabIndex={-1} className="fixed inset-0 z-[260] flex items-end justify-center bg-[var(--overlay)] p-0 outline-none sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={`attachment-details-${attachment.id}`}>
+      <div aria-hidden="true" data-dialog-backdrop className="absolute inset-0" onPointerDown={onClose} />
       <section className="relative max-h-[80dvh] w-full overflow-y-auto rounded-t-xl border border-ui bg-raised p-5 shadow-2xl sm:max-w-xl sm:rounded-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id={`attachment-details-${attachment.id}`} className="truncate text-base font-semibold text-primary">{attachment.display_name}</h2>
             <p className="mt-1 text-xs text-secondary">{attachment.original_filename} · {attachmentMime(attachment)} · {readableBytes(attachment.asset_object?.byte_size ?? 0)}</p>
           </div>
-          <button type="button" onClick={onClose} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭文件详情" : "Close file details"}>×</button>
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭文件详情" : "Close file details"} title={zh ? "关闭" : "Close"}>×</button>
         </div>
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
           <dt className="text-secondary">{zh ? "状态" : "Status"}</dt><dd>{attachment.resolution_status === "missing" ? (zh ? "缺失" : "Missing") : attachment.status}</dd>

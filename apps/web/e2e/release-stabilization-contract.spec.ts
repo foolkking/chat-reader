@@ -1,0 +1,45 @@
+import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+function source(path: string): string {
+  return readFileSync(resolve(process.cwd(), path), "utf8");
+}
+
+test("conversation mutations hand the committed revision to the client", () => {
+  const reader = source("features/conversations/conversation-reader.tsx");
+  const createDialog = source("features/conversations/new-conversation-dialog.tsx");
+  const insertDialog = source("features/conversations/message-insert-dialog.tsx");
+  const types = source("lib/types.ts");
+  expect(types).toContain("conversation_revision: number");
+  expect(createDialog).toContain("onCreated(result)");
+  expect(insertDialog).toContain("onSubmitted(result)");
+  expect(reader).toContain("applyConversationRevision(result.conversation_revision)");
+  expect(reader).toContain("applyConversationRevision(result.conversation.offline_revision)");
+});
+
+test("managed dialogs have one pointer-only backdrop and shared focus lifecycle", () => {
+  const hook = source("components/use-dialog-focus.ts");
+  expect(hook).toContain("Tab");
+  expect(hook).toContain("focusFallback");
+  for (const path of [
+    "components/import-dialog-provider.tsx",
+    "components/interaction-dialog-provider.tsx",
+    "features/conversations/new-conversation-dialog.tsx",
+    "features/conversations/message-insert-dialog.tsx",
+    "features/attachments/conversation-files-panel.tsx",
+  ]) {
+    const content = source(path);
+    expect(content).toContain("useDialogFocus");
+    expect(content).toContain('data-dialog-backdrop');
+    expect(content).not.toContain('aria-label="关闭" onClick={onClose}');
+  }
+});
+
+test("attachment usage count remains a current-version projection", () => {
+  const api = source("../api/app/api/routes/attachments.py");
+  const panel = source("features/attachments/conversation-files-panel.tsx");
+  expect(api).toContain("current_occurrence_count");
+  expect(panel).toContain("current_occurrence_count");
+  expect(panel).toContain('filter === "unused"');
+});

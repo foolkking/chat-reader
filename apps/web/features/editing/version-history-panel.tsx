@@ -11,7 +11,7 @@ import { usePreferences } from "../../components/preferences-provider";
 export function VersionHistoryPanel({ messageId, currentVersionId, onChanged }: {
   messageId: string;
   currentVersionId?: string;
-  onChanged: (message: MessageListItem) => Promise<void> | void;
+  onChanged: (message: MessageListItem, conversationRevision?: number) => Promise<void> | void;
 }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -30,7 +30,7 @@ export function VersionHistoryPanel({ messageId, currentVersionId, onChanged }: 
     try {
       const response = await selectMessageVersion(messageId, target.id);
       await versionsQuery.refetch();
-      await onChanged(response.message);
+      await onChanged(response.message, response.conversation_revision);
     } finally { setBusy(false); }
   }
 
@@ -42,7 +42,7 @@ export function VersionHistoryPanel({ messageId, currentVersionId, onChanged }: 
     try {
       const response = await deleteMessageVersion(messageId, current.id);
       await versionsQuery.refetch();
-      await onChanged(response.message);
+      await onChanged(response.message, response.conversation_revision);
     } finally { setBusy(false); }
   }
 

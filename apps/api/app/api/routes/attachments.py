@@ -270,6 +270,7 @@ def list_conversation_attachments(
             attachment_read(attachment).model_copy(
                 update={
                     "occurrence_count": len(rows),
+                    "current_occurrence_count": sum(1 for row in rows if row[0].message_version_id == row[2]),
                     "message_count": len(message_ids),
                     "is_used": any(row[0].message_version_id == row[2] for row in rows),
                     "occurrences": occurrences,

@@ -1,6 +1,6 @@
 # 已知风险与不确定性
 
-最后核验：2026-08-08
+最后核验：2026-08-10
 
 已解决问题和实施过程保留在 [execution/](../execution/README.md)，本页只维护当前仍成立的风险。
 
@@ -27,3 +27,12 @@
 - 2026-07-29 的生产健康、migration、Reader 和离线 TOC 结论是发布时快照，不保证之后未变化。
 - 导入、删除、冲突、Share token 和数据恢复等破坏性/敏感流程应使用隔离数据，不能在唯一生产资料上试验。
 - 文档不保存真实会话数量、标题、正文、批注内容、ID、token 或凭据；需要诊断时使用脱敏标识。
+## 2026-08-10 Release-Readiness Findings
+
+| ID | Risk / uncertainty | Current control / required closure |
+| --- | --- | --- |
+| RA-001 | Historical acceptance evidence showed active zero-current-occurrence rows missing from the Files Panel. | Root cause audit confirmed explicit `detached` status is the only exclusion; API now exposes `current_occurrence_count` and lifecycle regression tests preserve active/unreferenced semantics. Production recheck after this code release remains `NOT_PRODUCTION_VERIFIED`. |
+| RA-002 | Historical Web delete-undo toast did not restore the dedicated QA message and gave no failure feedback. | Delete/restore now return post-commit revision; Web keeps a retryable restore state and API restore is idempotent. Local API/build verification PASS; production browser recheck remains `NOT_PRODUCTION_VERIFIED`. |
+| RA-003 | Historical first insertion after conversation creation used an obsolete revision until manual refresh. | Create response now seeds the canonical conversation cache and insert applies the response revision. Online browser flow remains flag-gated and is not yet production-verified. |
+| RA-004 | Historical dialog/viewer focus restoration and duplicate backdrop close controls blocked keyboard sign-off. | Shared `useDialogFocus` migrated to managed dialogs; backdrop is pointer-only/aria-hidden and one visible close remains. Local compile/contract checks PASS; full keyboard browser sign-off remains pending. |
+| RA-005 | 360px, 125/150/200% zoom, production chooser, negative Offline faults and QA `.cr v4` restore were not safely completed. | Keep `NOT_PRODUCTION_VERIFIED`; do not promote conditional skips to PASS. |

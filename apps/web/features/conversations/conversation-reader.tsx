@@ -103,7 +103,12 @@ export function ConversationReader({
   const [sourceRequestedCursorOffset, setSourceRequestedCursorOffset] = useState<number | undefined>(undefined);
   const [pendingSourceAttachment, setPendingSourceAttachment] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
   const [messageInsertTarget, setMessageInsertTarget] = useState<MessageListItem | null>(null);
-  const [deletedMessage, setDeletedMessage] = useState<MessageListItem | null>(null);
+  const [deletedMessage, setDeletedMessage] = useState<{
+    message: MessageListItem;
+    conversationRevision: number;
+    status: "deleted" | "restoring" | "restore_failed";
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("chat-reader:conversation-files-open");
@@ -1338,11 +1343,12 @@ export function ConversationReader({
     ]);
   }
 
-  async function applyMessageChange(nextMessage?: MessageListItem) {
+  async function applyMessageChange(nextMessage?: MessageListItem, conversationRevision?: number) {
     if (!nextMessage) {
       await refreshReader();
       return;
     }
+    if (conversationRevision !== undefined) applyConversationRevision(conversationRevision);
     const replace = (item: MessageListItem) => item.id === nextMessage.id ? nextMessage : item;
     const current = loadedWindowRef.current;
     const nextWindow: LoadedMessageWindow = {
@@ -1356,6 +1362,12 @@ export function ConversationReader({
     setLoadedWindow(nextWindow);
     notifyReaderMessageLayoutChanged(nextMessage.id);
     void queryClient.invalidateQueries({ queryKey: ["toc", readerSourceKey, conversationId] });
+  }
+
+  function applyConversationRevision(revision: number) {
+    queryClient.setQueryData<ConversationDetail>(["conversation", dataSource.mode, conversationId], (current) => (
+      current ? { ...current, offline_revision: revision } : current
+    ));
   }
 
   async function mergeSelectedMessages() {
@@ -1375,10 +1387,11 @@ export function ConversationReader({
       danger: true,
     }))) return;
     try {
-      await deleteMessage(message.id, conversation?.offline_revision);
-      setDeletedMessage(message);
+      const result = await deleteMessage(message.id, conversation?.offline_revision);
+      applyConversationRevision(result.conversation_revision);
+      setDeletedMessage({ message, conversationRevision: result.conversation_revision, status: "deleted" });
       await refreshReader();
-      window.setTimeout(() => setDeletedMessage((current) => current?.id === message.id ? null : current), 8000);
+      window.setTimeout(() => setDeletedMessage((current) => current?.message.id === message.id && current.status === "deleted" ? null : current), 8000);
     } catch (error) {
       setNavigationStatus("failed");
       window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: error instanceof Error ? error.message : "Delete failed" } }));
@@ -1386,14 +1399,18 @@ export function ConversationReader({
   }
 
   async function restoreReaderMessage() {
-    if (!deletedMessage) return;
-    const message = deletedMessage;
+    if (!deletedMessage || deletedMessage.status === "restoring") return;
+    const message = deletedMessage.message;
+    setDeletedMessage((current) => current ? { ...current, status: "restoring", error: undefined } : current);
     try {
-      await restoreDeletedMessage(message.id, conversation?.offline_revision);
+      const result = await restoreDeletedMessage(message.id, deletedMessage.conversationRevision);
+      applyConversationRevision(result.conversation_revision);
       setDeletedMessage(null);
       await refreshReader();
     } catch (error) {
-      window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: error instanceof Error ? error.message : "Restore failed" } }));
+      const messageText = error instanceof Error ? error.message : "撤销失败，消息尚未恢复。";
+      setDeletedMessage((current) => current ? { ...current, status: "restore_failed", error: messageText } : current);
+      window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: messageText, tone: "error", persist: true } }));
     }
   }
 
@@ -1851,6 +1868,7 @@ export function ConversationReader({
           setSourceRequestedCursorOffset(nextTarget.cursorOffset);
         }}
         onMessageChanged={applySourceMessageChange}
+        onConversationRevision={applyConversationRevision}
         onClose={() => {
           window.dispatchEvent(new Event("chat-reader:reader-layout-will-change"));
           sourceEditorBaseLeftRef.current = null;
@@ -1961,12 +1979,13 @@ export function ConversationReader({
         anchor={messageInsertTarget}
         revision={conversation.offline_revision}
         onClose={() => setMessageInsertTarget(null)}
-        onSubmitted={async () => {
+        onSubmitted={async (result) => {
           setMessageInsertTarget(null);
+          applyConversationRevision(result.conversation.offline_revision);
           await refreshReader();
         }}
       /> : null}
-      {deletedMessage ? <div role="status" className="fixed bottom-4 left-1/2 z-[280] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-ui bg-raised px-4 py-3 text-sm text-primary shadow-xl"><span>消息已删除</span><button type="button" onClick={() => void restoreReaderMessage()} className="min-h-10 rounded-lg px-3 font-medium text-accent hover:bg-[var(--accent-soft)]">撤销</button></div> : null}
+      {deletedMessage ? <div role={deletedMessage.status === "restore_failed" ? "alert" : "status"} aria-live="assertive" className="fixed bottom-4 left-1/2 z-[280] flex max-w-[min(92vw,30rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-ui bg-raised px-4 py-3 text-sm text-primary shadow-xl"><span className="min-w-0 flex-1">{deletedMessage.status === "restore_failed" ? (deletedMessage.error ?? "撤销失败，消息尚未恢复。") : deletedMessage.status === "restoring" ? "正在恢复消息…" : "消息已删除"}</span>{deletedMessage.status !== "restoring" ? <button type="button" onClick={() => void restoreReaderMessage()} className="min-h-10 shrink-0 rounded-lg px-3 font-medium text-accent hover:bg-[var(--accent-soft)]">{deletedMessage.status === "restore_failed" ? "重试" : "撤销"}</button> : null}</div> : null}
     </main>
   );
 }

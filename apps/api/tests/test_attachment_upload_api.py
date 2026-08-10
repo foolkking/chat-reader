@@ -122,6 +122,7 @@ def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_fi
     )
     assert finalized.status_code == 201, finalized.text
     assert finalized.json()["items"][0]["is_used"] is False
+    assert finalized.json()["items"][0]["current_occurrence_count"] == 0
     all_files = client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"]
     assert len(all_files) == 2
     assert sum(item["is_used"] for item in all_files) == 1
@@ -344,6 +345,7 @@ def test_message_save_occurrence_contract_detach_and_lightweight_rebuild(
     assert len(retained) == 1
     assert retained[0]["is_used"] is False
     assert retained[0]["occurrence_count"] == 2
+    assert retained[0]["current_occurrence_count"] == 0
 
     detached = client.patch(
         f"/api/messages/{message['id']}",

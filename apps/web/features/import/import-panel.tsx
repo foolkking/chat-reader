@@ -174,6 +174,7 @@ export function ImportPanel({ onImportCommitted }: { onImportCommitted?: () => v
           label="JSON / CanJSON"
           description="JSON 必需，Markdown 可选"
           onClick={() => selectMode("standard")}
+          initialFocus
         />
         <ModeButton
           active={mode === "bundle"}
@@ -289,10 +290,11 @@ export function ImportPanel({ onImportCommitted }: { onImportCommitted?: () => v
   );
 }
 
-function ModeButton({ active, icon, label, description, onClick }: { active: boolean; icon: ReactNode; label: string; description: string; onClick: () => void }) {
+function ModeButton({ active, icon, label, description, onClick, initialFocus = false }: { active: boolean; icon: ReactNode; label: string; description: string; onClick: () => void; initialFocus?: boolean }) {
   return (
     <button
       type="button"
+      data-dialog-initial-focus={initialFocus ? "true" : undefined}
       aria-pressed={active}
       onClick={onClick}
       className={`min-w-0 rounded-md px-3 py-2 text-left transition ${active ? "bg-surface text-primary shadow-sm" : "text-secondary hover:text-primary"}`}

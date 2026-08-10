@@ -1439,11 +1439,15 @@ def restore_soft_deleted_message(
     expected_offline_revision: int | None = None,
 ) -> MessageDeleteResult:
     message = db.get(Message, message_id)
-    if message is None or not message.is_deleted:
-        raise MessageEditError("Deleted message not found.", HTTPStatus.NOT_FOUND)
+    if message is None:
+        raise MessageEditError("Message not found.", HTTPStatus.NOT_FOUND)
     conversation = _get_active_conversation(db, message.conversation_id)
     if expected_offline_revision is not None and conversation.offline_revision != expected_offline_revision:
         raise MessageEditError("Conversation changed since it was loaded.", HTTPStatus.CONFLICT)
+    # Restore is intentionally idempotent so a double click or retry cannot
+    # create a second message or reorder the conversation again.
+    if not message.is_deleted:
+        return MessageDeleteResult(message=message, was_deleted=False)
     original = message.order_key.removeprefix("deleted-").rsplit("-", 1)[0]
     active = _active_messages(db, message.conversation_id)
     try:

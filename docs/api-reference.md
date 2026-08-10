@@ -243,7 +243,9 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 
 - `POST /api/conversations`: atomically create a titled conversation with a project and exactly two non-empty initial messages (`user`, then `assistant`).
 - `POST /api/conversations/{conversation_id}/messages/insert`: body contains `anchor_message_id`, `position` (`before|after`), `mode` (`single|pair`), messages, and optional `expected_offline_revision`.
-- `DELETE /api/messages/{message_id}?expected_offline_revision=N`: soft-delete the message and return the deleted message.
-- `POST /api/messages/{message_id}/restore?expected_offline_revision=N`: undo a soft delete.
+- `DELETE /api/messages/{message_id}?expected_offline_revision=N`: soft-delete the message and return the deleted message plus the post-mutation `conversation_revision`.
+- `POST /api/messages/{message_id}/restore?expected_offline_revision=N`: undo a soft delete and return the restored message plus the post-mutation `conversation_revision`; repeating an already successful restore is idempotent.
 
 All mutations are transactional and return `409` for an old conversation revision. No Trash endpoint or recovery list is added.
+
+Message edit, task toggle, current-version selection and version deletion responses also include the post-commit `conversation_revision`; Web must use it as the next mutation's base revision.

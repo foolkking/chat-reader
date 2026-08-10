@@ -26,7 +26,7 @@ function MessageItemComponent({
   attachmentAccess = { kind: "owner" },
 }: {
   message: MessageListItem;
-  onChanged?: (message?: MessageListItem) => Promise<void> | void;
+  onChanged?: (message?: MessageListItem, conversationRevision?: number) => Promise<void> | void;
   readOnly?: boolean;
   selected?: boolean;
   onSelectedChange?: (selected: boolean) => void;
@@ -78,11 +78,11 @@ function MessageItemComponent({
     }) ?? candidates[0] ?? articleRef.current;
   }
 
-  async function replaceMessagePreservingAnchor(nextMessage: MessageListItem) {
+  async function replaceMessagePreservingAnchor(nextMessage: MessageListItem, conversationRevision?: number) {
     const anchor = visibleBlockAnchor();
     const anchorId = anchor?.id;
     const anchorTop = anchor?.getBoundingClientRect().top ?? 96;
-    await onChanged?.(nextMessage);
+    await onChanged?.(nextMessage, conversationRevision);
     await afterLayout();
     const nextAnchor = (anchorId ? document.getElementById(anchorId) : null) ?? articleRef.current;
     if (nextAnchor) scrollBy(nextAnchor.getBoundingClientRect().top - anchorTop);
@@ -97,7 +97,7 @@ function MessageItemComponent({
     setTaskCheckedOverrides(new Map([[taskKey, checked]]));
     try {
       const response = await toggleMessageTask(message.id, taskKey, { baseVersionId, checked });
-      await replaceMessagePreservingAnchor(response.message);
+      await replaceMessagePreservingAnchor(response.message, response.conversation_revision);
       setTaskCheckedOverrides(new Map());
     } catch (error) {
       setTaskCheckedOverrides(new Map());

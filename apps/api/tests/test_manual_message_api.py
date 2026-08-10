@@ -96,11 +96,19 @@ def test_manual_message_delete_and_restore_without_trash(client) -> None:
     deleted = client.delete(f"/api/messages/{message_id}")
     assert deleted.status_code == 200, deleted.text
     assert deleted.json()["deleted"] is True
+    deleted_revision = deleted.json()["conversation_revision"]
+    assert deleted_revision > created["conversation"]["offline_revision"]
     assert client.get(f"/api/conversations/{conversation_id}/message-window?limit=10").json()["total"] == 1
 
-    restored = client.post(f"/api/messages/{message_id}/restore")
+    restored = client.post(f"/api/messages/{message_id}/restore?expected_offline_revision={deleted_revision}")
     assert restored.status_code == 200, restored.text
     assert restored.json()["deleted"] is False
+    assert restored.json()["conversation_revision"] > deleted_revision
+    assert client.get(f"/api/conversations/{conversation_id}/message-window?limit=10").json()["total"] == 2
+    repeated = client.post(f"/api/messages/{message_id}/restore?expected_offline_revision={restored.json()['conversation_revision']}")
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["deleted"] is False
+    assert repeated.json()["conversation_revision"] == restored.json()["conversation_revision"]
     assert client.get(f"/api/conversations/{conversation_id}/message-window?limit=10").json()["total"] == 2
 
 

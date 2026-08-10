@@ -1,5 +1,21 @@
 # Project State
 
+## 2026-08-10 Release Stabilization / Lifecycle Closure
+
+- Root-cause fixes are implemented without migration or production data changes. Successful message mutations now return the post-commit `conversation_revision`; Web applies that canonical value for create, insert, edit, task toggle, version changes, delete and undo restore. Create now seeds the conversation cache, and restore is idempotent with a visible retryable failure state.
+- Attachment list responses expose `current_occurrence_count` separately from Attachment status. Active zero-reference files remain distinct from explicit `detached` files; shared AssetObjects do not merge business Attachment rows.
+- Import, interaction, new-conversation, insert and file-details dialogs share `useDialogFocus`: meaningful initial focus, focus trap, Escape, pointer-only backdrop and logical focus restoration. Disabled Scanner is neutral `未扫描`; Project creation uses Chinese labels and autofocus.
+- Verification this closure: targeted API `10 passed`; full API `216 passed / 3 skipped`; Web lint/typecheck/build PASS; PWA default `30 passed / 21 skipped`. Conditional online mutation, chooser, two-tab, 360px/zoom, forced-offline negative paths and post-deploy Chrome regression remain explicitly `NOT_PRODUCTION_VERIFIED`.
+- Contract: [Mutation / Revision Contract](docs/system/MUTATION_REVISION_CONTRACT.md). Evidence: [Release-Readiness Audit remediation](docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md).
+
+## 2026-08-10 Release-Readiness Audit
+
+- Current status is `PARTIAL_PASS`, not an unconditional production sign-off. Required local checks passed: Web lint/typecheck/build, API `216 passed / 3 conditional skips`, PWA `30 passed / 21 conditional skips`, and Alembic single head `20260806_0021`.
+- Real Chrome production acceptance used existing data read-only and a separate QA project/conversations for writes. It verified the large JSON+Markdown import path, Reader windowing, Scanner-disabled `未扫描` wording, Markdown/CSV/SVG/PDF/ZIP attachment paths, Range, restricted Share/revocation and adaptive visible Viewer panels. The visible ZIP panel was 720x420 and the one-page PDF panel about 1120x786; the full viewport dialog root is backdrop/focus infrastructure only.
+- Release blockers found: active unreferenced Attachments in the acceptance fixture disappear from the Files Panel despite remaining in export facts, and the visible message-delete `撤销` action does not restore its QA message. Immediate insertion after conversation creation also uses a stale revision until reload; dialog close does not restore trigger focus and multiple dialogs expose two focusable close controls.
+- QA cleanup: test conversations were deleted, test Share revoked and test Project archived. Existing business records were not changed. A committed QA ImportRecord remains under normal lifecycle because no safe owner deletion endpoint exists.
+- Detailed redacted findings, traceability, coverage, remediation and evidence: [UX release-readiness audit](docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md).
+
 ## 2026-08-09 Attachment Inline Layout System Candidate
 
 - Reader attachments now use one group-owned geometry chain: `Attachment Lane -> Attachment Group -> Semantic Renderer`. The six presentations are `reading`, `data`, `gallery`, `audio-list`, `video`, and `file-list`; individual renderers no longer apply independent centring or arbitrary max widths.

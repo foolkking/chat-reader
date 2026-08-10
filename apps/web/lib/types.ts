@@ -118,6 +118,7 @@ export type MessageDeleteResponse = {
   message_id: string;
   conversation_id: string;
   deleted: boolean;
+  conversation_revision: number;
   message: MessageListItem;
 };
 
@@ -183,6 +184,7 @@ export type AttachmentRead = {
   resolution_status: string;
   created_at: string;
   occurrence_count?: number;
+  current_occurrence_count?: number;
   message_count?: number;
   is_used?: boolean;
   occurrences?: Array<{
@@ -693,6 +695,7 @@ export type MessageEditResponse = {
     caption?: string | null;
   }>;
   conversation_attachment_summary: { total?: number; used?: number; missing?: number };
+  conversation_revision: number;
   warnings?: string[];
 };
 
@@ -723,6 +726,7 @@ export type MessageVersionDeleteResponse = {
   deleted_version_id: string;
   current_version_id: string;
   message: MessageListItem;
+  conversation_revision: number;
   warnings: string[];
 };
 

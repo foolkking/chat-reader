@@ -1117,6 +1117,9 @@ async function getErrorMessage(response: Response, path: string): Promise<string
       return payload.error.message;
     }
     if (typeof payload.detail === "string") {
+      if (response.status === 409 && /conversation changed|base version|revision|stale/i.test(payload.detail)) {
+        return "对话已在其他操作中更新。你的内容仍然保留，请加载最新状态后重试。";
+      }
       return payload.detail;
     }
   } catch {

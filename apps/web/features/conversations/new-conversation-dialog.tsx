@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, Folder, Loader2, MessageSquarePlus, User, X } from "lucide-react";
 import { createConversation } from "../../lib/api";
-import type { ProjectRead } from "../../lib/types";
+import type { ConversationCreateResponse, ProjectRead } from "../../lib/types";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 
 export function NewConversationDialog({
   open,
@@ -16,7 +17,7 @@ export function NewConversationDialog({
   projects: ProjectRead[];
   initialProjectId?: string;
   onClose: () => void;
-  onCreated: (conversationId: string) => void;
+  onCreated: (result: ConversationCreateResponse) => void;
 }) {
   const [title, setTitle] = useState("新对话");
   const [projectId, setProjectId] = useState(initialProjectId ?? "");
@@ -24,6 +25,8 @@ export function NewConversationDialog({
   const [assistantText, setAssistantText] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus({ open, rootRef, onClose });
 
   useEffect(() => {
     if (!open) return;
@@ -50,7 +53,7 @@ export function NewConversationDialog({
           { role: "assistant", content_markdown: assistantText.trim() },
         ],
       });
-      onCreated(result.conversation.id);
+      onCreated(result);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "新建对话失败，请重试。");
     } finally {
@@ -60,20 +63,21 @@ export function NewConversationDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[260] flex items-end justify-center bg-[var(--overlay)] sm:items-center sm:p-5"
+      ref={rootRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-[260] flex items-end justify-center bg-[var(--overlay)] outline-none sm:items-center sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="new-conversation-title"
       data-testid="new-conversation-dialog"
       onKeyDown={(event) => {
-        if (event.key === "Escape" && !pending) onClose();
         if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
           event.preventDefault();
           event.currentTarget.querySelector<HTMLFormElement>("form")?.requestSubmit();
         }
       }}
     >
-      <button type="button" className="absolute inset-0" aria-label="关闭新建对话" onClick={onClose} />
+      <div aria-hidden="true" data-dialog-backdrop className="absolute inset-0" onPointerDown={onClose} />
       <form onSubmit={submit} className="relative flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-lg border border-ui bg-raised shadow-2xl sm:rounded-lg">
         <header className="flex min-h-16 items-center gap-3 border-b border-ui px-4 sm:px-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent" aria-hidden="true"><MessageSquarePlus className="h-5 w-5" /></span>

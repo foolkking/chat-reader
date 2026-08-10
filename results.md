@@ -1,5 +1,29 @@
 # Implementation Results
 
+## Release Stabilization / Lifecycle Closure 2026-08-10
+
+### Implemented
+
+- Mutation responses now carry the committed conversation revision, and the Web uses it as canonical cache state. Conversation creation seeds the new conversation query; insert/edit/task/version/delete/restore handoffs no longer leave the next action on a stale revision.
+- Delete -> Undo uses the delete response revision, has visible restoring/failure/retry states, refresh persistence coverage and idempotent repeated restore. This remains short soft-delete recovery, not Trash.
+- Attachment API exposes current-version occurrence count independently from active/detached status. Scanner-disabled metadata is neutral `未扫描`. Dialogs use shared initial focus/trapping/restoration and non-focusable backdrops; project creation copy/autofocus is localized.
+
+### Verified this release (local)
+
+| Check | Result |
+| --- | --- |
+| Targeted attachment + message lifecycle API | PASS, 10 passed |
+| Full API suite | PASS, 216 passed / 3 conditional skips |
+| Web lint | PASS |
+| Web typecheck | PASS |
+| Web production build | PASS |
+| PWA default matrix | PARTIAL_PASS, 30 passed / 21 conditional skips |
+| Alembic | PASS, one head `20260806_0021` |
+
+### Not promoted to PASS
+
+Post-change production Chrome, 360px/125%/150%/200% zoom, keyboard-only mutation flow, genuine two-tab race, browser chooser, forced-offline negative paths, full online Playwright mutation/Reader fixture and QA `.cr` round trip were not rerun in this code-only closure. They remain `NOT_PRODUCTION_VERIFIED`; skipped tests are not PASS. Existing production data was not modified or deleted.
+
 ## 2026-08-10 CSV Table Viewer And Production Release
 
 | Area | Status | Evidence |
@@ -240,3 +264,17 @@ The AI context package contains 18 content-addressed objects and reports partial
 | Complex archive browsing/conversion | NOT_IMPLEMENTED | Authenticated download |
 | Local ClamAV on the 2 GiB King host | NOT_IMPLEMENTED | `DisabledScanner`; optional remote scanner later |
 | Full online Playwright matrix in default PWA command | PARTIAL_PASS | Conditional tests require running API and explicit fixture flags |
+## 2026-08-10 Comprehensive Release-Readiness Audit
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Production Chrome core Reader/attachment/Share acceptance | `PARTIAL_PASS` | Real Chrome verified rendered Reader, Markdown/CSV/SVG/PDF/ZIP, Range, Scanner-disabled `未扫描`, adaptive visible Viewer panels and Share revocation. |
+| Large JSON + Markdown import | `PASS` | Production multipart preview HTTP 200 in 8.7s, exact 398 nonempty messages, commit completed in 28.7s; browser file chooser remains `NOT_PRODUCTION_VERIFIED`. |
+| New conversation / insertion | `PARTIAL_PASS` | QA atomic pair and pair insertion pass; immediate first insert exposes stale revision until refresh. |
+| Message delete / undo | `FAILED` | QA delete works, visible undo did not restore and gave no error. Release blocker FUNC-003. |
+| Unreferenced attachment Files Panel | `FAILED` | Active zero-reference records disappear from All/Unreferenced despite export facts. Release blocker FUNC-001. |
+| Share permission boundary | `PASS` | QA Share exposed read-only scope and revocation invalidated the URL. |
+| Local required checks | `PASS` | lint, typecheck, build, API `216 passed / 3 skipped`, Alembic single head. |
+| PWA/Offline full matrix | `PARTIAL_PASS` | 30 passed, 21 conditional skips; production negative offline and 360/zoom cases remain `NOT_PRODUCTION_VERIFIED`. |
+
+Detailed findings, screenshots and QA cleanup: `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md`.

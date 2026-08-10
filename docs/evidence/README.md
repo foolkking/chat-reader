@@ -47,3 +47,7 @@
 - 不保存未脱敏的私密聊天正文、真实 ID、项目名或分享地址。
 - 请求记录只保存方法、路径模板、状态、响应字段和脱敏计数。
 - 后续新增证据需在本页登记，并注明视口、身份、日期和脱敏状态。
+# Release readiness audit (2026-08-10)
+
+- [UX release-readiness audit](UX_RELEASE_READINESS_AUDIT_2026-08-10.md) records the redacted production Chrome, QA-data and local automated evidence. It is a dated audit record, not a replacement for current code/system facts.
+- `screenshots/ux-audit-20260810/` retains only cropped QA/synthetic fixture evidence. Unredacted captures of existing conversation data were removed before the report was persisted.

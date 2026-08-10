@@ -127,6 +127,8 @@ The current deployment policy does not inspect attachment contents for secrets o
 
 `DELETE /api/messages/{message_id}` marks the current message deleted without a Trash view. `POST /api/messages/{message_id}/restore` supports short undo. Both endpoints accept `expected_offline_revision`; historical versions and attachment objects remain available. Derived search/TOC/statistics work is queued after commit.
 
+Every successful conversation mutation returns the post-commit `conversation_revision` with the canonical affected resource where applicable. Web applies that response before enabling the next mutation. Restore is idempotent after a successful cycle; a failed restore remains retryable in the UI.
+
 ## Exporter JSON + Markdown pairing
 
 When each non-empty JSON message has one unique Markdown heading with the same role and normalized timestamp, pairing uses a direct linear candidate path. Ambiguous or over-budget fallback pairing returns structured HTTP 422 (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, or `pairing_ambiguous`) instead of an unhandled 500. The `CHAT_READER_E2E_FIXTURE_DIR` test setting is only used by tests.

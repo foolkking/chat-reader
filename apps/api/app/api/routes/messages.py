@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
@@ -138,10 +139,14 @@ def delete_message_endpoint(
     except MessageEditError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     return MessageDeleteResponse(
         message_id=result.message.id,
         conversation_id=conversation_id,
         deleted=True,
+        conversation_revision=conversation.offline_revision,
         message=get_message(result.message.id, db),
     )
 
@@ -164,10 +169,14 @@ def restore_deleted_message_endpoint(
     except MessageEditError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     return MessageDeleteResponse(
         message_id=result.message.id,
         conversation_id=conversation_id,
         deleted=False,
+        conversation_revision=conversation.offline_revision,
         message=get_message(result.message.id, db),
     )
 @router.post("/{message_id}/split", response_model=MessageSplitResponse)
@@ -447,11 +456,15 @@ def delete_message_version_endpoint(
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     message = db.get(Message, result.message.id)
     assert message is not None
+    conversation = db.get(Conversation, message.conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     return MessageVersionDeleteResponse(
         message_id=message.id,
         deleted_version_id=result.deleted_version_id,
         current_version_id=result.current_version.id,
         message=get_message(message.id, db),
+        conversation_revision=conversation.offline_revision,
         warnings=result.warnings,
     )
 
@@ -555,6 +568,9 @@ def _edit_response(
         for link, attachment in links
     ]
     attachment_summary = _conversation_attachment_summary(db, message.conversation_id)
+    conversation = db.get(Conversation, message.conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     return MessageEditResponse(
         message_id=message.id,
         conversation_id=message.conversation_id,
@@ -566,6 +582,7 @@ def _edit_response(
         render_blocks=[_block_read(block, occurrences.get(block.block_index)) for block in blocks],
         attachment_occurrences=attachment_occurrences,
         conversation_attachment_summary=attachment_summary,
+        conversation_revision=conversation.offline_revision,
         warnings=warnings,
     )
 

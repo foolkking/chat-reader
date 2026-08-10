@@ -49,6 +49,8 @@ class MessageEditResponse(BaseModel):
     render_blocks: list[RenderBlockRead] = Field(default_factory=list)
     attachment_occurrences: list[MessageVersionAttachmentRead] = Field(default_factory=list)
     conversation_attachment_summary: dict = Field(default_factory=dict)
+    # Post-commit conversation revision is the canonical client mutation handoff.
+    conversation_revision: int
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -56,6 +58,8 @@ class MessageDeleteResponse(BaseModel):
     message_id: UUID
     conversation_id: UUID
     deleted: bool
+    # The transaction's post-mutation revision is the client cache authority.
+    conversation_revision: int
     message: MessageDetail
 
 
@@ -89,6 +93,7 @@ class MessageVersionDeleteResponse(BaseModel):
     deleted_version_id: UUID
     current_version_id: UUID
     message: MessageDetail
+    conversation_revision: int
     warnings: list[str] = Field(default_factory=list)
 
 

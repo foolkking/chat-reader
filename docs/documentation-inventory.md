@@ -79,6 +79,16 @@
 
 最后审计：2026-08-09
 
+## 2026-08-10 release stabilization additions
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/MUTATION_REVISION_CONTRACT.md` | Current | Canonical mutation revision handoff, attachment lifecycle invariants, delete/undo idempotency, dialog focus and Scanner wording. |
+| `apps/web/components/use-dialog-focus.ts` | Current | Shared initial focus, focus trap, Escape and logical focus restoration for managed dialogs. |
+| `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md` | Evidence | Redacted release audit findings and remediation result; historical failures are retained. |
+
+最后审计：2026-08-10
+
 ## 项目画像与规则
 
 - 项目画像：Monorepo、前端应用、Web/后端服务。
@@ -188,3 +198,4 @@
 2026-08-09 文档同步：Attachment Inline Layout System 的六条语义轨道、组级对齐、Gallery/AudioList/FileList、统一 spacing/radius 和本地测试状态已写入现有当前事实文档；未新增文档类别，生产视觉验收在部署前保持 `NOT_PRODUCTION_VERIFIED`。
 
 2026-08-09 Adaptive Viewer 文档同步：同一 Viewer Shell 的 compact/reading/document/media/workspace presentation、移动端全屏退化、CSS 最大化状态机、PDF Fit Page/Fit Width 单滚动所有权和五档视口验收要求已同步到当前合同、前端架构、项目状态与测试结果。未增加新的文档类别、数据模型或 migration。
+| `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md` | historical evidence | 2026-08-10 release-readiness audit, redacted QA evidence and verification limits |

@@ -32,6 +32,9 @@ class AttachmentRead(BaseModel):
     content_url: str | None
     download_url: str | None
     occurrence_count: int = 0
+    # Historical occurrences are kept for version inspection; this count is
+    # limited to the current MessageVersion projection used by Files Panel.
+    current_occurrence_count: int = 0
     message_count: int = 0
     is_used: bool = False
     occurrences: list["AttachmentOccurrenceLocationRead"] = Field(default_factory=list)
