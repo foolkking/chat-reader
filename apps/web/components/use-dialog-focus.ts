@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 
 type DialogFocusOptions = {
   open: boolean;
   rootRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  restoreFocus?: () => HTMLElement | null;
 };
 
 function focusable(root: HTMLElement): HTMLElement[] {
@@ -25,24 +26,19 @@ function focusFallback() {
 }
 
 /** Shared modal lifecycle: initial focus, trap, Escape and logical restoration. */
-export function useDialogFocus({ open, rootRef, onClose, initialFocusRef }: DialogFocusOptions) {
+export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restoreFocus }: DialogFocusOptions) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const restoreFocusRef = useRef(restoreFocus);
+  restoreFocusRef.current = restoreFocus;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return undefined;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    let frame = 0;
-    frame = window.requestAnimationFrame(() => {
-      const root = rootRef.current;
-      const preferred = initialFocusRef?.current;
-      if (preferred?.isConnected) {
-        preferred.focus();
-        return;
-      }
-      const first = root ? initialFocusable(root) : null;
-      (first ?? root)?.focus();
-    });
+    const root = rootRef.current;
+    const preferred = initialFocusRef?.current;
+    const first = root ? initialFocusable(root) : null;
+    (preferred?.isConnected ? preferred : first ?? root)?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -70,10 +66,11 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef }: Dial
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      window.cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKeyDown);
-      window.requestAnimationFrame(() => {
-        if (previous?.isConnected) previous.focus();
+      queueMicrotask(() => {
+        const logicalTarget = restoreFocusRef.current?.();
+        if (logicalTarget?.isConnected) logicalTarget.focus({ preventScroll: true });
+        else if (previous?.isConnected) previous.focus({ preventScroll: true });
         else focusFallback();
       });
     };

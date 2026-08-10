@@ -143,6 +143,11 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
     open: true,
     rootRef: dialogRef,
     initialFocusRef: closeRef,
+    restoreFocus: () => {
+      if (session.trigger?.isConnected) return session.trigger;
+      const container = document.querySelector<HTMLElement>(`[data-attachment-id="${CSS.escape(item?.attachmentId ?? "")}"]`);
+      return container?.querySelector<HTMLElement>("button:not([disabled]),a[href]") ?? null;
+    },
     onClose: () => {
       if (maximizedRef.current) {
         setMaximized(false);

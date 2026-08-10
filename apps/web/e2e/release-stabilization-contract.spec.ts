@@ -37,6 +37,10 @@ test("managed dialogs have one pointer-only backdrop and shared focus lifecycle"
   const viewerSource = source("features/attachments/attachment-viewer.tsx");
   expect(viewerSource).toContain("useDialogFocus");
   expect(viewerSource).toContain("ref={closeRef}");
+  expect(viewerSource).toContain("restoreFocus:");
+  const focusSource = source("components/use-dialog-focus.ts");
+  expect(focusSource).toContain("useLayoutEffect");
+  expect(focusSource).toContain("logicalTarget?.isConnected");
 });
 
 test("attachment usage count remains a current-version projection", () => {
