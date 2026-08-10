@@ -206,3 +206,5 @@ The contract remains `Viewer = consume`, `Files panel = manage`, and `Editor = c
 # 2026-08-10 CSV/TSV Viewer Closure
 
 CSV and TSV use the existing unified `AttachmentViewerShell` with `table` as the default rendered mode and `table-raw` as the explicit source mode. Rendered mode uses a bounded quoted-field parser, sticky header, row numbers, horizontal overflow within the Viewer and a row/column summary; it never reads beyond the existing 8 MiB content range and aborts at parser row/column caps. `Raw` remains available from the same toolbar and does not create another dialog.
+
+Legacy import labels exactly equivalent to the visible filename (for example `Attachment: sample.csv` and `附件：sample.csv`) are not rendered as captions. This removes duplicate footer information without suppressing a real occurrence caption.

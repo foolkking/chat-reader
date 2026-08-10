@@ -4,6 +4,8 @@
 
 Commit `5cc491f3a8a1b398735c0e5b84629731a13da0bf` was built by GitHub Actions run `31325841867` and deployed from archive SHA-256 `d75a66b214932a542fc39f8630f674128f134b61eb51445da59eb75cce117f17`. PostgreSQL and business-volume backup completed at `/opt/chat-reader/backups/csv-table-20260810T010711Z`; King ran migration preflight and `up -d --no-build`. The release adds CSV/TSV Table/Raw Viewer behavior. Previous service image tags were removed while current SHA and `latest` tags were retained; no production volumes or `.env.production` were changed.
 
+Follow-up commit `6d025e7fdcca47334e8020ed8b615f9c4d40d928` removes redundant legacy attachment captions only. It was built by Actions run `31347470091`, archive SHA-256 `158dc6e03d2fa6abb536a1c0a66e297e8c42e17512db57b7af6e4e1afb5f88f9`, and deployed with the same `--no-build` procedure. The checked backup above remains the pre-release recovery point because neither release changed schema or persistent data.
+
 ## Merge worker resource control
 
 - Default worker limit: `IMPORT_WORKER_MEMORY_LIMIT=640m` through Compose interpolation.

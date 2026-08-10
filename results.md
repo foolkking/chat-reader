@@ -16,6 +16,8 @@
 
 Production Chrome screenshot evidence was captured in the deployment acceptance run (2032x975 viewport). The broader PWA matrix remains `PARTIAL_PASS` because 21 online/fixture-gated cases were skipped and are not counted as PASS.
 
+The caption-only follow-up commit `6d025e7` was built by Actions run `31347470091` and deployed from archive SHA-256 `158dc6e03d2fa6abb536a1c0a66e297e8c42e17512db57b7af6e4e1afb5f88f9`. Final Chrome acceptance found zero redundant legacy `Attachment:`/`附件：` footer captions while retaining all three CSV table actions. Current API, Web, Worker and PostgreSQL are healthy. Status: `PASS` for the CSV Viewer and caption closure; `PARTIAL_PASS` for the larger conditional PWA matrix.
+
 ## 2026-08-09 Attachment Inline Layout System Candidate
 
 | Area | Status | Evidence |

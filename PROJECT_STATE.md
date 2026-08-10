@@ -9,6 +9,7 @@
 - Local verification: Web lint/typecheck/build PASS; focused inline/viewer tests `13/13`; API `216 passed / 3 skipped`; PWA default matrix `28 passed / 21 conditional skipped`; Alembic single head `20260806_0021`.
 - Production release `5cc491f3a8a1b398735c0e5b84629731a13da0bf` was built by GitHub Actions run `31325841867` (archive SHA-256 `d75a66b214932a542fc39f8630f674128f134b61eb51445da59eb75cce117f17`) and deployed to King using `--no-build` after backup `/opt/chat-reader/backups/csv-table-20260810T010711Z`. API, Web, worker and PostgreSQL are healthy; scanner remains disabled and Alembic remains `20260806_0021`.
 - Production Chrome verified the group-owned inline layout and CSV detail Viewer: one `AttachmentViewerShell`, `Table` default with bounded 70-row table, `Raw` toggle and return to `Table`, no legacy preview modal. Previous service image tags were removed after deployment; only the current full SHA and `latest` remain. Volumes were not touched.
+- Follow-up release `6d025e7fdcca47334e8020ed8b615f9c4d40d928` was built by Actions run `31347470091` (archive SHA-256 `158dc6e03d2fa6abb536a1c0a66e297e8c42e17512db57b7af6e4e1afb5f88f9`) and deployed with the same no-build procedure. Final Chrome acceptance found zero redundant legacy `Attachment:`/`附件：` captions across Preview panels; meaningful captions remain available. Current containers are healthy and only this SHA plus `latest` are tagged.
 
 ## 2026-08-09 Conversation Editing, Import Pairing And Complex Viewer Addendum
 
