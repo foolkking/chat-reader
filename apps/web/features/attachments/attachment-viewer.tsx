@@ -211,7 +211,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
         style={panelStyle}
       >
         <header className="flex min-h-14 flex-wrap items-center gap-2 border-b border-ui px-3 py-1 sm:px-4">
-          <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={onClose} aria-label="关闭附件查看器" title="关闭"><X className="h-5 w-5" /></button>
+          <button ref={closeRef} type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={onClose} aria-label="关闭附件查看器" title="关闭"><X className="h-5 w-5" /></button>
           <div className="min-w-32 flex-1">
             <h2 className="truncate text-sm font-semibold text-primary" title={attachment?.display_name}>{attachment?.display_name ?? "正在加载附件"}</h2>
             <p className="truncate text-xs text-secondary">{attachment ? `${friendlyAttachmentType(attachment)} · ${formatBytes(attachment.asset_object?.byte_size ?? 0)}${attachment.scan_status === "scanner_disabled" || attachment.scan_status === "unscanned" ? " · 未扫描" : ""}` : ""}{session.items.length > 1 ? ` · ${index + 1} / ${session.items.length}` : ""}</p>
