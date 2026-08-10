@@ -84,7 +84,7 @@
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
 | `docs/system/MUTATION_REVISION_CONTRACT.md` | Current | Canonical mutation revision handoff, attachment lifecycle invariants, delete/undo idempotency, dialog focus and Scanner wording. |
-| `apps/web/components/use-dialog-focus.ts` | Current | Shared initial focus, focus trap, Escape and logical focus restoration for managed dialogs. |
+| `apps/web/components/use-dialog-focus.ts` | Current | Shared synchronous initial focus, focus trap, Escape and post-pointer logical focus restoration for managed dialogs. |
 | `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md` | Evidence | Redacted release audit findings and remediation result; historical failures are retained. |
 
 最后审计：2026-08-10

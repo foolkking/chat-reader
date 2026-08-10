@@ -20,9 +20,11 @@
 | PWA default matrix | PARTIAL_PASS, 30 passed / 21 conditional skips |
 | Alembic | PASS, one head `20260806_0021` |
 
-### Not promoted to PASS
+### Production browser closure
 
-The code release was externally built (Actions `31362680316`) and deployed incrementally to King with verified archive checksum, PostgreSQL/volume backup, migration preflight and healthy API/Web/worker/PostgreSQL services. Post-change production Chrome, 360px/125%/150%/200% zoom, keyboard-only mutation flow, genuine two-tab race, browser chooser, forced-offline negative paths, full online Playwright mutation/Reader fixture and QA `.cr` round trip were not rerun. They remain `NOT_PRODUCTION_VERIFIED`; skipped tests are not PASS. Existing production data was not modified or deleted.
+Final commit `ed9116a` was externally built by Actions `31374507130` and deployed incrementally to King from archive SHA-256 `a6132d7801253da105893967a87e373a151587795c1c220ecb741f53bba1788b`. PostgreSQL and existing imports were backed up at `/opt/chat-reader/backups/stabilization-20260810T0815Z-248b771`; checksums pass. Migration preflight remained at the single head `20260806_0021`, and API/Web/PostgreSQL are healthy while the worker is running.
+
+Real production Chrome now passes the Attachment Viewer initial-focus, Tab/Shift+Tab loop, single Shell/single accessible close, Esc/X/backdrop close and trigger restoration paths. Project creation passes Chinese naming, input autofocus and Escape cancellation with trigger restoration. A requested 390x844 viewport resolved to 433x938 in the browser bridge; that narrow layout has no page horizontal overflow, a non-zero Viewer content area and approximately 44px close/download targets. Exact 360/390 sizing, real 125/150/200% browser zoom, keyboard-only mutation flow, genuine two-tab race, browser chooser, forced-offline negative paths, full online Playwright mutation/Reader fixture and QA `.cr` round trip remain `NOT_PRODUCTION_VERIFIED`; skipped tests are not PASS. Existing production records were not modified or deleted.
 
 ## 2026-08-10 CSV Table Viewer And Production Release
 

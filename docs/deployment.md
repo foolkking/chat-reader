@@ -2,6 +2,10 @@
 
 ## 2026-08-10 release evidence
 
+### Focus lifecycle closure
+
+Commit `ed9116abd496684a1bb50c2e5891d4bc0879e05e` was built externally by GitHub Actions run `31374507130`. King verified release archive SHA-256 `a6132d7801253da105893967a87e373a151587795c1c220ecb741f53bba1788b`, ran the production-compose migration preflight, and recreated API, import-worker and Web with `--no-build`. PostgreSQL and existing imports were backed up with verified checksums at `/opt/chat-reader/backups/stabilization-20260810T0815Z-248b771`; storage directories absent on the server were not fabricated as successful archives. No volume or `.env.production` was modified, ClamAV remained disabled, Alembic stayed at `20260806_0021`, and final API/Web/PostgreSQL health checks passed.
+
 ### Lifecycle stabilization release
 
 Commit `200cf9ea01c57a2ab5fa344688a4a77f70c154b9` was built externally by GitHub Actions run `31362680316`. The image archive SHA-256 was verified locally and on King as `f864e609c5a108e8fd98545d73d1ff037f4e39a7ff2257a7da6b7a61d7310154`. Before update, King created `/opt/chat-reader/backups/stabilization-20260810T064736Z-200cf9e` with a validated PostgreSQL custom dump and read-only import/export/offline/asset volume archives plus checksums. King fast-forwarded source, loaded the prebuilt archive, ran the existing migration preflight, and recreated API, worker and Web only with `--no-build`; `.env.production`, PostgreSQL and all named volumes were unchanged. Post-deploy API/Web/PostgreSQL are healthy, worker is running, `/api/health` is `ok`, capabilities retain Scanner `disabled`, and Alembic remains `20260806_0021`.

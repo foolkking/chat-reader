@@ -23,7 +23,7 @@ Two active Attachments may share one AssetObject and must remain two business ro
 
 ## Dialog focus
 
-All managed dialogs use the shared focus controller: initial focus goes to the first meaningful control (or an explicitly marked control), Tab and Shift+Tab stay inside the dialog, Escape/X/backdrop share close semantics, and close restores the connected trigger or a deterministic Reader fallback. The backdrop is pointer-only and `aria-hidden`; each dialog exposes one visible accessible close control.
+All managed dialogs use the shared focus controller: synchronous layout focus goes to the first meaningful control (or an explicitly marked control), Tab and Shift+Tab stay inside the dialog, and Escape/X/backdrop share close semantics. Restoration runs after pointer defaults, prefers a connected logical trigger and otherwise uses a deterministic Reader fallback. The Attachment Viewer may resolve the current trigger by Attachment identity when React replaced the opener node. The backdrop is pointer-only and `aria-hidden`; each dialog exposes one visible accessible close control.
 
 ## Scanner wording
 
