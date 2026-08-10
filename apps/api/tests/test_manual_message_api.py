@@ -79,6 +79,49 @@ def test_manual_insert_defaults_to_opposite_role_and_pair(client) -> None:
     ]
 
 
+def test_manual_pair_insert_before_first_message_uses_lexically_sortable_keys(client) -> None:
+    created = client.post(
+        "/api/conversations",
+        json={
+            "title": "Insert before first conversation",
+            "messages": [
+                {"role": "user", "content_markdown": "Original question"},
+                {"role": "assistant", "content_markdown": "Original answer"},
+            ],
+        },
+    ).json()
+    conversation_id = created["conversation"]["id"]
+    first_message_id = created["messages"][0]["id"]
+
+    inserted = client.post(
+        f"/api/conversations/{conversation_id}/messages/insert",
+        json={
+            "anchor_message_id": first_message_id,
+            "position": "before",
+            "mode": "pair",
+            "messages": [
+                {"role": "user", "content_markdown": "Earlier question"},
+                {"role": "assistant", "content_markdown": "Earlier answer"},
+            ],
+            "expected_offline_revision": created["conversation"]["offline_revision"],
+        },
+    )
+    assert inserted.status_code == 201, inserted.text
+
+    items = client.get(
+        f"/api/conversations/{conversation_id}/message-window?limit=10"
+    ).json()["items"]
+    assert [item["current_version"]["display_text"] for item in items] == [
+        "Earlier question",
+        "Earlier answer",
+        "Original question",
+        "Original answer",
+    ]
+    assert [item["order_key"] for item in items] == sorted(
+        item["order_key"] for item in items
+    )
+
+
 def test_manual_message_delete_and_restore_without_trash(client) -> None:
     created = client.post(
         "/api/conversations",

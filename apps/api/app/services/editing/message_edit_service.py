@@ -39,6 +39,7 @@ from app.services.database.bulk_insert import insert_rows
 
 MAX_EDIT_TEXT_LENGTH = 200_000
 MESSAGE_ORDER_SCALE = Decimal("1000000")
+MESSAGE_ORDER_INTEGER_WIDTH = 18
 MergeProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -1481,7 +1482,10 @@ def _order_value(value: str) -> Decimal:
 
 
 def _format_message_order_key(value: Decimal | int) -> str:
-    return f"{Decimal(value):012.6f}"
+    # order_key is stored and queried as text, so every numeric key must have
+    # the same integer width. A minimum-width format silently overflowed at
+    # 1,000,000 and made lexical order disagree with numeric placement.
+    return f"{Decimal(value):0{MESSAGE_ORDER_INTEGER_WIDTH + 7}.6f}"
 
 
 def _ensure_gapped_order_keys(db: Session, active: list[Message]) -> None:
@@ -1492,7 +1496,17 @@ def _ensure_gapped_order_keys(db: Session, active: list[Message]) -> None:
         parsed = [_order_value(message.order_key) for message in active]
     except InvalidOperation:
         parsed = []
-    if not parsed or any(right - left < MESSAGE_ORDER_SCALE for left, right in zip(parsed, parsed[1:])):
+    canonical = bool(parsed) and all(
+        message.order_key == _format_message_order_key(value)
+        for message, value in zip(active, parsed)
+    )
+    if parsed and not canonical:
+        active.sort(key=lambda message: _order_value(message.order_key))
+        parsed = [_order_value(message.order_key) for message in active]
+    if not parsed or not canonical or any(
+        right - left < MESSAGE_ORDER_SCALE
+        for left, right in zip(parsed, parsed[1:])
+    ):
         _rebalance_active_order_keys(db, active)
 
 
