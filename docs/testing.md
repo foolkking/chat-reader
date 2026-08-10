@@ -1,5 +1,31 @@
 # Testing Addendum 2026-08-09
 
+## Reader wheel stabilization 2026-08-10
+
+The production-equivalent fixture contains three heavy Assistant messages with 402, 389 and 501 mixed paragraph, CJK, emoji, heading, list, table and short/long-code blocks. It may be created by the suite or reused explicitly:
+
+```powershell
+$env:E2E_LONG_READER='1'
+$env:E2E_LONG_READER_CONVERSATION_ID='<qa-conversation-id>'
+$env:E2E_LONG_READER_TARGET_MESSAGE_ID='<qa-message-id>'
+$env:E2E_LONG_READER_TARGET_BLOCK_INDEX='180'
+$env:E2E_LONG_READER_ANNOTATION_QUOTE='<qa-quote>'
+corepack pnpm --filter web exec playwright test e2e/reader-restoration.spec.ts e2e/reader-block-layout.spec.ts --config=playwright.config.ts
+```
+
+The suite asserts estimator bounds, direct/search/annotation navigation, refresh restoration, TOC virtualization, preference anchoring, Owner and Share reuse, 30 monotonic wheel steps, at most six mounted messages, bounded virtual rows, no row gaps/overlap, no middle-window turn fetch, no save during wheel input and exactly one save after idle. Current result: `9 passed`.
+
+Performance gating is opt-in so slow CI hardware does not hide functional failures:
+
+```powershell
+$env:E2E_READER_PERF_BUDGET='1'
+corepack pnpm --filter web exec playwright test e2e/reader-restoration.spec.ts --config=playwright.config.ts --grep 'continuous wheel' --repeat-each=3
+```
+
+Current production-build Chromium results were `16.7ms` p95 frame interval in all three runs; longest task was `72/68/70ms` and five-second long-task total was `72/68/70ms`. Budgets are p95 `<=34ms`, no task `>150ms`, and total long-task time `<=250ms`.
+
+Release checks for this change: Web lint/typecheck/build PASS; API `216 passed / 3 skipped`; Alembic one head `20260806_0021`; PWA default `37 passed / 22 conditional skips`. Conditional PWA skips remain `PARTIAL_PASS`, not PASS.
+
 ## Release-Readiness Audit 2026-08-10
 
 - Required local baseline: lint, typecheck and production Web build passed; API `216 passed, 3 conditional skips`; PWA `30 passed, 21 conditional skips`; Alembic has one head `20260806_0021`. Conditional skips are not PASS.

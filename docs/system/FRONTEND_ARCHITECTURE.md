@@ -1,5 +1,20 @@
 # 前端架构
 
+## Reader wheel and virtual-layout contract (2026-08-10)
+
+The Reader keeps the existing six-message window and TanStack block virtualization. Wheel responsiveness depends on stable row estimates and a single hot path rather than disabling virtualization or weakening navigation accuracy.
+
+- `ReaderBlockLayoutMetrics` is derived from the stable Reader content width, computed font size/line height and density. It changes only after mount, font readiness, explicit Reader layout events or real width/preference changes; ordinary wheel input cannot invalidate it.
+- `estimateReaderBlockSize` estimates paragraph visual lines with explicit newlines and Unicode display width, derives heading geometry by level and line count, and derives code geometry from actual source lines plus the renderer header/padding/collapse cap. Empty content uses the real minimum rhythm. Tables, media and attachments retain bounded type-specific estimates.
+- A measured virtual row remains authoritative. Measurement compensation is allowed only for rows wholly above the current reading line; first measurement of partially visible or later rows cannot rewrite the active wheel displacement.
+- `ActiveReadingTarget` is resolved at the reading line with `elementsFromPoint()`. Only whitespace misses use the bounded rendered-block registry and mounted-message fallback; the scroll frame never scans every mounted block.
+- Owner and Share readers use one passive listener per scroll owner. Active sampling runs at most every 80ms plus one trailing sample. Reading-position persistence is one idle write after approximately one second; the full character anchor is not calculated during dense wheel input.
+- Edge loading is sentinel-IntersectionObserver driven. The listener records direction only; an already-visible sentinel can consume that intent once, but no pixel threshold issues a second request.
+- The virtual total-size container is not a Reader layout observer target. Per-row measurement remains enabled, while `scrollMargin` is recalculated only for mount/window merge/prepend and explicit layout changes.
+- TOC rows are memoized and receive the derived active heading. Auto-follow is scheduled in a frame and changes the TOC's own scroll only when the heading is outside its viewport. Conversation Index updates only when the active message changes.
+
+Public APIs, persistence formats, Reader width, revision semantics and stable DOM navigation anchors are unchanged.
+
 ## Attachment inline lanes (2026-08-09)
 
 `AssistantMessageRenderer` groups adjacent attachment RenderBlocks without crossing ordinary text. `AttachmentInlineGroup` resolves each Attachment through the shared access/query and RenderPlan registry, partitions consecutive semantic runs, and mounts one centralized lane. The six primitives are RichPreview, DataPreview, ImageGallery, AudioList, VideoPreview and FileList.

@@ -1,5 +1,19 @@
 # Markdown 文档台账
 
+## 2026-08-10 Reader wheel performance ownership additions
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `apps/web/features/conversations/reader-block-layout.ts` | Current | Stable metric-aware virtual block estimates and Reader layout signatures. |
+| `apps/web/features/conversations/reader-active-position.ts` | Current | Bounded reading-line target resolution shared by Owner and Share readers. |
+| `apps/web/features/conversations/conversation-reader.tsx` | Current | Single Owner scroll coordinator, idle position persistence and sentinel-authoritative window loading. |
+| `apps/web/features/sharing/share-readonly-reader.tsx` | Current | Share reuse of the same bounded active-position and wheel behavior. |
+| `apps/web/features/toc/conversation-toc.tsx` | Current | Memoized TOC with derived heading activity and bounded asynchronous follow. |
+| `apps/web/e2e/reader-block-layout.spec.ts` | Current test | Paragraph/CJK/heading/code/empty estimator regression. |
+| `apps/web/e2e/reader-restoration.spec.ts` | Current test | Heavy Owner/Share navigation, restoration, wheel monotonicity, edge-load, persistence and performance regression. |
+
+No new documentation category, public API, migration or persisted Reader contract was introduced.
+
 ## 2026-08-07 attachment workflow performance and DnD additions
 
 | Path | Lifecycle | Responsibility |

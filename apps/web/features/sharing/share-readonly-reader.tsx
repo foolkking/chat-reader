@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getSharedConversation,
   getSharedDialogueIndex,
@@ -10,7 +10,7 @@ import {
 } from "../../lib/api";
 import type { LoadedMessageWindow, MessageListItem, NavigationResult, PersistedSharePosition, ScrollAnchorSnapshot, ScrollDirection } from "../../lib/types";
 import { MessageItem } from "../conversations/message-item";
-import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, resolveActiveBlockDomId, restoreScrollAnchor } from "../conversations/reader-navigation";
+import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor } from "../conversations/reader-navigation";
 import {
   emptyLoadedWindow,
   INITIAL_WINDOW_TURNS,
@@ -21,12 +21,13 @@ import {
   type CompleteTurnWindow,
 } from "../conversations/reader-window";
 import { ConversationIndex } from "../toc/conversation-index";
-import { ConversationToc } from "../toc/conversation-toc";
+import { ConversationToc, resolveActiveHeadingId } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
 import { useTranslations } from "../../components/preferences-provider";
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
 import { X } from "lucide-react";
 import { acquireReaderBlockLease, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "../conversations/block-virtualization";
+import { resolveActiveReadingTarget } from "../conversations/reader-active-position";
 
 const ACTIVE_READING_OFFSET = 96;
 
@@ -50,7 +51,6 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   });
   const navigationTokenRef = useRef(0);
   const restoreAttemptedRef = useRef(false);
-  const saveTimerRef = useRef<number | null>(null);
   const latestStablePositionRef = useRef<PersistedSharePosition | null>(null);
   const messagesRef = useRef<MessageListItem[]>([]);
   const loadedWindowRef = useRef<LoadedMessageWindow>(emptyLoadedWindow());
@@ -67,10 +67,22 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const lastScrollTopRef = useRef(0);
   const loadPreviousActionRef = useRef<() => void>(() => undefined);
   const loadNextActionRef = useRef<() => void>(() => undefined);
+  const previousSentinelVisibleRef = useRef(false);
+  const nextSentinelVisibleRef = useRef(false);
+  const activeMessageIdRef = useRef<string | null>(null);
+  const activeBlockIdRef = useRef<string | null>(null);
   const [edgeLoading, setEdgeLoading] = useState<"previous" | "next" | null>(null);
   const [edgeError, setEdgeError] = useState<"previous" | "next" | null>(null);
   const previousTurnAnchorRef = useRef<string | null>(null);
   const nextTurnAnchorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activeMessageIdRef.current = activeMessageId;
+  }, [activeMessageId]);
+
+  useEffect(() => {
+    activeBlockIdRef.current = activeBlockId;
+  }, [activeBlockId]);
 
   const shareQuery = useQuery({
     queryKey: ["shared-conversation", token],
@@ -94,6 +106,10 @@ export function ShareReadonlyReader({ token }: { token: string }) {
 
   const payload = shareQuery.data;
   const toc = tocQuery.data?.items ?? [];
+  const activeHeadingId = useMemo(
+    () => resolveActiveHeadingId(toc, activeBlockId),
+    [activeBlockId, toc],
+  );
 
   useEffect(() => {
     if (!payload) return;
@@ -267,22 +283,46 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     if (unlockNavigation) {
       setNavigationTargetMessageId(null);
     }
-    const nextActiveId = resolveActiveMessageId();
-    if (nextActiveId) {
-      setActiveMessageId(nextActiveId);
-      setActiveBlockId(resolveActiveBlockDomId(null, nextActiveId, ACTIVE_READING_OFFSET));
-    }
+    const target = resolveActiveReadingTarget(null, ACTIVE_READING_OFFSET);
+    if (!target?.messageId) return;
+    const messageChanged = activeMessageIdRef.current !== target.messageId;
+    const blockChanged = activeBlockIdRef.current !== target.blockId;
+    if (!messageChanged && !blockChanged) return;
+    activeMessageIdRef.current = target.messageId;
+    activeBlockIdRef.current = target.blockId;
+    startTransition(() => {
+      if (messageChanged) setActiveMessageId(target.messageId);
+      if (blockChanged) setActiveBlockId(target.blockId);
+    });
   }, []);
+
+  loadPreviousActionRef.current = () => { void loadPreviousPage(); };
+  loadNextActionRef.current = () => { void loadNextPage(); };
 
   useEffect(() => {
     if (messages.length === 0) return undefined;
     let frame = 0;
+    let sampleTimer: number | null = null;
+    let persistTimer: number | null = null;
+    let lastSampleAt = 0;
+    let lastScrollAt = 0;
+    let pendingUnlock = false;
     const scheduleRefresh = (unlockNavigation = false) => {
-      if (frame) window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        refreshActiveMessageFromLayout(unlockNavigation);
-      });
+      pendingUnlock ||= unlockNavigation;
+      if (frame || sampleTimer !== null) return;
+      const wait = Math.max(0, 80 - (window.performance.now() - lastSampleAt));
+      const queueFrame = () => {
+        sampleTimer = null;
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          lastSampleAt = window.performance.now();
+          const shouldUnlock = pendingUnlock;
+          pendingUnlock = false;
+          refreshActiveMessageFromLayout(shouldUnlock);
+        });
+      };
+      if (wait > 0) sampleTimer = window.setTimeout(queueFrame, wait);
+      else queueFrame();
     };
     const onManualIntent = () => scheduleRefresh(true);
     const onScroll = () => {
@@ -290,25 +330,53 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       const delta = current - lastScrollTopRef.current;
       if (userScrollIntentRef.current && edgeTransitionRef.current === null && Math.abs(delta) > 1) {
         scrollDirectionRef.current = delta < 0 ? "up" : "down";
-        const edgeThreshold = window.innerHeight * 0.45;
-        if (scrollDirectionRef.current === "up" && current <= edgeThreshold) {
-          loadPreviousActionRef.current();
-        }
-        if (
-          scrollDirectionRef.current === "down" &&
-          document.documentElement.scrollHeight - window.innerHeight - current <= edgeThreshold
-        ) {
-          loadNextActionRef.current();
-        }
       }
       lastScrollTopRef.current = current;
       scheduleRefresh(false);
+      lastScrollAt = window.performance.now();
+      if (persistTimer === null && storageKey && positionReady) {
+        persistTimer = window.setTimeout(persistWhenIdle, 1000);
+      }
+    };
+    const persist = () => {
+      if (!storageKey || !positionReady) return;
+      const position = captureSharePosition(messagesRef.current);
+      if (!position) return;
+      latestStablePositionRef.current = position;
+      window.localStorage.setItem(storageKey, JSON.stringify(position));
+    };
+    const persistWhenIdle = () => {
+      persistTimer = null;
+      const remaining = 1000 - (window.performance.now() - lastScrollAt);
+      if (remaining > 0) {
+        persistTimer = window.setTimeout(persistWhenIdle, remaining);
+        return;
+      }
+      persist();
+    };
+    const persistCached = () => {
+      if (!storageKey) return;
+      const position = latestStablePositionRef.current;
+      if (position) window.localStorage.setItem(storageKey, JSON.stringify(position));
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") persistCached();
     };
     const markScrollIntent = () => {
       userScrollIntentRef.current = true;
       scrollIntentSequenceRef.current += 1;
       navigationTokenRef.current += 1;
       onManualIntent();
+    };
+    const markWheelIntent = (event: WheelEvent) => {
+      markScrollIntent();
+      if (event.deltaY < 0) {
+        scrollDirectionRef.current = "up";
+        if (previousSentinelVisibleRef.current) loadPreviousActionRef.current();
+      } else if (event.deltaY > 0) {
+        scrollDirectionRef.current = "down";
+        if (nextSentinelVisibleRef.current) loadNextActionRef.current();
+      }
     };
     const markKeyboardIntent = (event: KeyboardEvent) => {
       if (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) return;
@@ -317,22 +385,28 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       if (["ArrowDown", "PageDown", "End", " "].includes(event.key)) scrollDirectionRef.current = "down";
     };
     window.addEventListener("pointerdown", markScrollIntent, { passive: true });
-    window.addEventListener("wheel", markScrollIntent, { passive: true });
+    window.addEventListener("wheel", markWheelIntent, { passive: true });
     window.addEventListener("touchstart", markScrollIntent, { passive: true });
     window.addEventListener("keydown", markKeyboardIntent);
     window.addEventListener("click", onManualIntent, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", persistCached);
     scheduleRefresh(false);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
+      if (sampleTimer !== null) window.clearTimeout(sampleTimer);
+      if (persistTimer !== null) window.clearTimeout(persistTimer);
       window.removeEventListener("pointerdown", markScrollIntent);
-      window.removeEventListener("wheel", markScrollIntent);
+      window.removeEventListener("wheel", markWheelIntent);
       window.removeEventListener("touchstart", markScrollIntent);
       window.removeEventListener("keydown", markKeyboardIntent);
       window.removeEventListener("click", onManualIntent);
       window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", persistCached);
     };
-  }, [messages, refreshActiveMessageFromLayout]);
+  }, [messages.length, positionReady, refreshActiveMessageFromLayout, storageKey]);
 
   useEffect(() => {
     const top = topSentinelRef.current;
@@ -340,6 +414,8 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     if (!top || !bottom || messages.length === 0) return undefined;
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
+        if (entry.target === top) previousSentinelVisibleRef.current = entry.isIntersecting;
+        if (entry.target === bottom) nextSentinelVisibleRef.current = entry.isIntersecting;
         if (!entry.isIntersecting || !userScrollIntentRef.current) continue;
         if (entry.target === top && scrollDirectionRef.current === "up") void loadPreviousPage();
         if (entry.target === bottom && scrollDirectionRef.current === "down") void loadNextPage();
@@ -347,41 +423,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     }, { rootMargin: "45% 0px", threshold: 0 });
     observer.observe(top);
     observer.observe(bottom);
-    return () => observer.disconnect();
-  }, [messages.length]);
-
-  useEffect(() => {
-    if (!storageKey || !positionReady) return undefined;
-    const persist = () => {
-      const position = captureSharePosition(messagesRef.current);
-      if (!position) return;
-      latestStablePositionRef.current = position;
-      window.localStorage.setItem(storageKey, JSON.stringify(position));
-    };
-    const schedule = () => {
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = window.setTimeout(() => {
-        saveTimerRef.current = null;
-        persist();
-      }, 1000);
-    };
-    const persistCached = () => {
-      const position = latestStablePositionRef.current;
-      if (position) window.localStorage.setItem(storageKey, JSON.stringify(position));
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") persistCached();
-    };
-    window.addEventListener("scroll", schedule, { passive: true });
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pagehide", persistCached);
     return () => {
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-      window.removeEventListener("scroll", schedule);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pagehide", persistCached);
+      previousSentinelVisibleRef.current = false;
+      nextSentinelVisibleRef.current = false;
+      observer.disconnect();
     };
-  }, [positionReady, storageKey]);
+  }, [messages.length]);
 
   const indexLoader = useCallback(
     (options: { offset?: number; limit?: number; anchorMessageId?: string }) =>
@@ -392,25 +439,6 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     () => `${activeMessageId ?? "none"}:${messages.length}`,
     [activeMessageId, messages.length],
   );
-
-  useEffect(() => {
-    loadPreviousActionRef.current = () => void loadPreviousPage();
-    loadNextActionRef.current = () => void loadNextPage();
-  });
-
-  useEffect(() => {
-    if (!activeMessageId || !userScrollIntentRef.current) return;
-    const activeTurnIndex = loadedWindow.turns.findIndex((turn) => (
-      turn.items.some((message) => message.id === activeMessageId)
-    ));
-    if (activeTurnIndex < 0) return;
-    if (scrollDirectionRef.current === "down" && activeTurnIndex === loadedWindow.turns.length - 1) {
-      loadNextActionRef.current();
-    }
-    if (scrollDirectionRef.current === "up" && activeTurnIndex === 0) {
-      loadPreviousActionRef.current();
-    }
-  }, [activeMessageId, loadedWindow.turns]);
 
   if (shareQuery.isLoading || !storageReady) {
     return <ShareState title="正在加载分享" detail="正在获取只读会话信息。" />;
@@ -469,7 +497,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           <ConversationToc
             conversationId={payload.conversation.id}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}
-            activeBlockId={activeBlockId}
+            activeHeadingId={activeHeadingId}
             observerKey={tocObserverKey}
             items={toc}
             onNavigate={async (item) => {
@@ -489,7 +517,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           const result = await navigateToTarget(item.messageId);
           setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
           if (result.ok) setNavigationOpen(false);
-        }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeBlockId={activeBlockId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => {
+        }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => {
           setMobileNavigation({ pending: true, error: null });
           const result = await navigateToTarget(item.message_id, item.block_index);
           setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
@@ -502,7 +530,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
             <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} /></header>
             <div className="px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeBlockId={activeBlockId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget(item.message_id, item.block_index); if (result.ok) setNavigationOpen(false); }} />}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget(item.message_id, item.block_index); if (result.ok) setNavigationOpen(false); }} />}</div>
           </section>
         </div>
       ) : null}
@@ -709,18 +737,22 @@ function readSharePosition(key: string): PersistedSharePosition | null {
 }
 
 function captureSharePosition(messages: MessageListItem[]): PersistedSharePosition | null {
-  const messageId = resolveActiveMessageId();
+  const activeTarget = resolveActiveReadingTarget(null, ACTIVE_READING_OFFSET);
+  const messageId = activeTarget?.messageId;
   if (!messageId) return null;
   const article = document.getElementById(`message-${messageId}`);
   if (!article) return null;
   const blocks = Array.from(article.querySelectorAll<HTMLElement>("[data-block-index]"));
-  let activeBlock: HTMLElement | null = null;
-  for (const block of blocks) {
-    const rect = block.getBoundingClientRect();
-    if (rect.top <= ACTIVE_READING_OFFSET) activeBlock = block;
-    if (rect.top <= ACTIVE_READING_OFFSET && rect.bottom >= ACTIVE_READING_OFFSET) {
-      activeBlock = block;
-      break;
+  let activeBlock = activeTarget?.blockId ? document.getElementById(activeTarget.blockId) : null;
+  if (!activeBlock || !article.contains(activeBlock)) {
+    activeBlock = null;
+    for (const block of blocks) {
+      const rect = block.getBoundingClientRect();
+      if (rect.top <= ACTIVE_READING_OFFSET) activeBlock = block;
+      if (rect.top <= ACTIVE_READING_OFFSET && rect.bottom >= ACTIVE_READING_OFFSET) {
+        activeBlock = block;
+        break;
+      }
     }
   }
   const activeBlockIndex = numberOrNull(activeBlock?.dataset.blockIndex);
@@ -755,20 +787,6 @@ function captureSharePosition(messages: MessageListItem[]): PersistedSharePositi
     },
     saved_at: new Date().toISOString(),
   };
-}
-
-function resolveActiveMessageId(): string | null {
-  const articles = Array.from(document.querySelectorAll<HTMLElement>("article[data-message-id]"));
-  let nearest: { id: string; distance: number } | null = null;
-  for (const article of articles) {
-    const id = article.dataset.messageId;
-    if (!id) continue;
-    const rect = article.getBoundingClientRect();
-    if (rect.top <= ACTIVE_READING_OFFSET && rect.bottom >= ACTIVE_READING_OFFSET) return id;
-    const distance = Math.min(Math.abs(rect.top - ACTIVE_READING_OFFSET), Math.abs(rect.bottom - ACTIVE_READING_OFFSET));
-    if (!nearest || distance < nearest.distance) nearest = { id, distance };
-  }
-  return nearest?.id ?? null;
 }
 
 function numberOrNull(value: unknown): number | null {

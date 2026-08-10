@@ -8,13 +8,36 @@ let conversationId = "";
 let targetMessageId = "";
 let targetBlockIndex = 0;
 let annotationQuote = "";
+let shareId = "";
+let shareToken = "";
 
 test.beforeAll(async ({ request }) => {
-  const seeded = await seedLongConversation(request);
-  conversationId = seeded.conversationId;
-  targetMessageId = seeded.targetMessageId;
-  targetBlockIndex = seeded.targetBlockIndex;
-  annotationQuote = seeded.annotationQuote;
+  const existingConversationId = process.env.E2E_LONG_READER_CONVERSATION_ID;
+  const existingTargetMessageId = process.env.E2E_LONG_READER_TARGET_MESSAGE_ID;
+  const existingTargetBlockIndex = Number(process.env.E2E_LONG_READER_TARGET_BLOCK_INDEX);
+  if (existingConversationId && existingTargetMessageId && Number.isFinite(existingTargetBlockIndex)) {
+    conversationId = existingConversationId;
+    targetMessageId = existingTargetMessageId;
+    targetBlockIndex = existingTargetBlockIndex;
+    annotationQuote = process.env.E2E_LONG_READER_ANNOTATION_QUOTE ?? `target-35-180-paragraph`;
+  } else {
+    const seeded = await seedLongConversation(request);
+    conversationId = seeded.conversationId;
+    targetMessageId = seeded.targetMessageId;
+    targetBlockIndex = seeded.targetBlockIndex;
+    annotationQuote = seeded.annotationQuote;
+  }
+  const share = await request.post(`/api/conversations/${conversationId}/shares`, {
+    data: { scope: "conversation", include_toc: true, include_metadata: true },
+  });
+  expect(share.ok()).toBe(true);
+  const payload = await share.json() as { id: string; token: string };
+  shareId = payload.id;
+  shareToken = payload.token;
+});
+
+test.afterAll(async ({ request }) => {
+  if (shareId) await request.post(`/api/shares/${shareId}/revoke`);
 });
 
 test("direct URL keeps a virtualized target mounted through final alignment", async ({ page }) => {
@@ -207,7 +230,8 @@ test("far annotation jump and refresh restore hydrate heavy content", async ({ p
   const targetArticle = page.locator(`#message-${targetMessageId}`);
   await expect(targetBlock).toBeVisible();
   const virtualizedBlocks = targetArticle.locator('[data-virtualized-block-list="true"]');
-  await expect(virtualizedBlocks).toHaveAttribute("data-virtualized-block-count", "220");
+  await expect.poll(async () => Number(await virtualizedBlocks.getAttribute("data-virtualized-block-count")))
+    .toBeGreaterThanOrEqual(380);
   await expect.poll(() => targetArticle.locator("[data-block-index]").count()).toBeLessThanOrEqual(32);
   await expectVirtualRowsNotToOverlap(targetArticle);
   await expect(targetArticle.getByRole("button", { name: /立即展开|Expand now/ })).toHaveCount(0);
@@ -346,6 +370,138 @@ test("far annotation jump and refresh restore hydrate heavy content", async ({ p
   await expect(page.locator("article[data-message-id]").getByRole("button", { name: /立即展开|Expand now/ })).toHaveCount(0);
 });
 
+test("continuous wheel scrolling remains monotonic after virtual estimates warm up", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(
+    `/conversations/${conversationId}?messageId=${targetMessageId}&blockIndex=${Math.max(24, targetBlockIndex - 120)}&characterOffset=0`,
+  );
+
+  const scrollRoot = page.locator("[data-reader-scroll-root='true']");
+  const targetArticle = page.locator(`#message-${targetMessageId}`);
+  await expect(scrollRoot).toHaveAttribute("data-navigation-stage", "settled");
+  await expect.poll(() => page.locator("article[data-message-id]").count()).toBeLessThanOrEqual(6);
+  await expect.poll(() => targetArticle.locator("[data-index]").count()).toBeLessThanOrEqual(36);
+
+  await scrollRoot.hover();
+  await page.mouse.wheel(0, 480);
+  await page.waitForTimeout(1300);
+
+  let readerTurnRequests = 0;
+  let readingPositionWrites = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/reader-turn")) readerTurnRequests += 1;
+    if (request.method() === "PUT" && request.url().includes("/reading-position")) readingPositionWrites += 1;
+  });
+  await page.evaluate(() => {
+    const telemetry = {
+      frames: [] as number[],
+      longTasks: [] as number[],
+      lastFrame: 0,
+      startedAt: window.performance.now(),
+      observer: null as PerformanceObserver | null,
+    };
+    (window as typeof window & { __readerWheelTelemetry?: typeof telemetry }).__readerWheelTelemetry = telemetry;
+    const frame = (time: number) => {
+      if (telemetry.lastFrame > 0) telemetry.frames.push(time - telemetry.lastFrame);
+      telemetry.lastFrame = time;
+      if (telemetry.frames.length < 420) window.requestAnimationFrame(frame);
+    };
+    window.requestAnimationFrame(frame);
+    if (PerformanceObserver.supportedEntryTypes.includes("longtask")) {
+      telemetry.observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.startTime >= telemetry.startedAt) telemetry.longTasks.push(entry.duration);
+        }
+      });
+      telemetry.observer.observe({ type: "longtask" });
+    }
+  });
+
+  const samples: Array<{ scrollTop: number; scrollHeight: number }> = [];
+  for (let step = 0; step < 30; step += 1) {
+    await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(34);
+    samples.push(await scrollRoot.evaluate((root) => ({
+      scrollTop: root.scrollTop,
+      scrollHeight: root.scrollHeight,
+    })));
+  }
+
+  for (let index = 1; index < samples.length; index += 1) {
+    expect(samples[index]!.scrollTop + 2, `wheel sample ${index} moved backward`).toBeGreaterThanOrEqual(samples[index - 1]!.scrollTop);
+  }
+  const firstKilopixelOfScroll = samples.slice(0, 9);
+  const firstKilopixelHeights = firstKilopixelOfScroll.map((sample) => sample.scrollHeight);
+  expect(Math.max(...firstKilopixelHeights) - Math.min(...firstKilopixelHeights)).toBeLessThanOrEqual(200);
+  expect(readerTurnRequests).toBe(0);
+  expect(readingPositionWrites).toBe(0);
+  await page.waitForTimeout(650);
+  expect(readingPositionWrites).toBe(0);
+  await expect.poll(() => readingPositionWrites, { timeout: 2500 }).toBe(1);
+  await expect.poll(() => page.locator("article[data-message-id]").count()).toBeLessThanOrEqual(6);
+  await expect.poll(() => targetArticle.locator("[data-index]").count()).toBeLessThanOrEqual(36);
+  await expectVirtualRowsNotToOverlap(targetArticle);
+
+  const telemetry = await page.evaluate(() => {
+    const value = (window as typeof window & {
+      __readerWheelTelemetry?: { frames: number[]; longTasks: number[]; observer: PerformanceObserver | null };
+    }).__readerWheelTelemetry;
+    value?.observer?.disconnect();
+    if (!value) return { p95FrameInterval: null, longestTask: null, longTaskTotal: null };
+    const frames = value.frames.filter((duration) => duration < 1000).sort((left, right) => left - right);
+    const p95Index = Math.max(0, Math.ceil(frames.length * 0.95) - 1);
+    return {
+      p95FrameInterval: frames[p95Index] ?? null,
+      longestTask: value.longTasks.length ? Math.max(...value.longTasks) : 0,
+      longTaskTotal: value.longTasks.reduce((total, duration) => total + duration, 0),
+    };
+  });
+  await testInfo.attach("reader-wheel-telemetry.json", {
+    body: Buffer.from(JSON.stringify({ samples, telemetry }, null, 2)),
+    contentType: "application/json",
+  });
+  if (process.env.E2E_READER_PERF_BUDGET === "1") {
+    console.info(`[reader-wheel-performance] ${JSON.stringify(telemetry)}`);
+    expect(telemetry.p95FrameInterval).not.toBeNull();
+    expect(telemetry.p95FrameInterval!).toBeLessThanOrEqual(34);
+    expect(telemetry.longestTask!).toBeLessThanOrEqual(150);
+    expect(telemetry.longTaskTotal!).toBeLessThanOrEqual(250);
+  } else {
+    testInfo.annotations.push({
+      type: "performance-budget",
+      description: `Recorded without CI hardware gate: ${JSON.stringify(telemetry)}`,
+    });
+  }
+});
+
+test("Share Reader reuses the bounded active-position and wheel path", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/share/${shareToken}`);
+  await page.getByRole("button", { name: /展开对话索引|Open dialogue index/ }).click();
+  await page.getByRole("button", { name: /索引范围|Index range/ }).click();
+  await page.getByRole("button", { name: /全部索引|All messages/ }).click();
+  const targetIndexItem = page.getByRole("button", { name: /target-35-000-section/ }).first();
+  await expect(targetIndexItem).toBeVisible();
+  await targetIndexItem.click();
+
+  const targetArticle = page.locator(`#message-${targetMessageId}`);
+  await expect(targetArticle).toBeVisible();
+  await expect.poll(() => targetArticle.locator("[data-index]").count()).toBeLessThanOrEqual(36);
+  const samples: number[] = [];
+  await page.mouse.move(720, 620);
+  for (let step = 0; step < 20; step += 1) {
+    await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(34);
+    samples.push(await page.evaluate(() => window.scrollY));
+  }
+  for (let index = 1; index < samples.length; index += 1) {
+    expect(samples[index]! + 2).toBeGreaterThanOrEqual(samples[index - 1]!);
+  }
+  await expect.poll(() => page.locator("article[data-message-id]").count()).toBeLessThanOrEqual(6);
+  await expect.poll(() => targetArticle.locator("[data-index]").count()).toBeLessThanOrEqual(36);
+  await expectVirtualRowsNotToOverlap(targetArticle);
+});
+
 async function expectVirtualRowsNotToOverlap(article: Locator) {
   const virtualList = article.locator('[data-virtualized-block-list="true"]');
   await expect.poll(async () => virtualList.evaluate((list) => {
@@ -444,16 +600,16 @@ async function seedLongConversation(request: APIRequestContext): Promise<{
   annotationQuote: string;
 }> {
   const targetPair = 35;
+  const heavyMessageBlocks = new Map<number, number>([
+    [targetPair - 1, 402],
+    [targetPair, 389],
+    [targetPair + 1, 501],
+  ]);
   const messages: Array<{ role: "Prompt" | "Response"; say: string }> = [];
   for (let index = 0; index < 50; index += 1) {
     messages.push({ role: "Prompt", say: `Reader restore user message ${index}` });
-    const response = index === targetPair
-      ? Array.from({ length: 220 }, (_, paragraph) => (
-          paragraph % 4 === 0 && paragraph !== 180
-            ? `## target-${index}-section-${String(paragraph).padStart(3, "0")}`
-            : `target-${index}-paragraph-${String(paragraph).padStart(3, "0")} ` +
-              "Long reader content keeps the target message heavy while preserving distinct block anchors. ".repeat(3)
-        )).join("\n\n")
+    const response = heavyMessageBlocks.has(index)
+      ? buildHeavyReaderResponse(index, heavyMessageBlocks.get(index)!)
       : `Reader restore assistant message ${index}`;
     messages.push({ role: "Response", say: response });
   }
@@ -489,9 +645,9 @@ async function seedLongConversation(request: APIRequestContext): Promise<{
   const blocksResponse = await request.get(`/api/messages/${target.id}/blocks?start=0&limit=200`);
   expect(blocksResponse.ok()).toBe(true);
   const blocks = await blocksResponse.json() as Array<{ block_index: number; plain_text: string }>;
-  const targetBlock = blocks.find((block) => block.plain_text.includes(`target-${targetPair}-paragraph-180`));
+  const targetBlock = blocks.find((block) => block.plain_text.includes(`target-${targetPair}-180-paragraph`));
   expect(targetBlock).toBeTruthy();
-  const quote = `target-${targetPair}-paragraph-180`;
+  const quote = `target-${targetPair}-180-paragraph`;
   const annotation = await request.post(`/api/conversations/${seededConversationId}/annotations`, {
     data: {
       message_id: target.id,
@@ -513,6 +669,24 @@ async function seedLongConversation(request: APIRequestContext): Promise<{
     targetBlockIndex: targetBlock!.block_index,
     annotationQuote: quote,
   };
+}
+
+function buildHeavyReaderResponse(messageIndex: number, blockCount: number): string {
+  return Array.from({ length: blockCount }, (_, blockIndex) => {
+    const marker = `target-${messageIndex}-${String(blockIndex).padStart(3, "0")}`;
+    if (blockIndex % 8 === 0 && blockIndex !== 180) return `## ${marker}-section`;
+    if (blockIndex % 19 === 0 && blockIndex !== 180) {
+      return `\`\`\`ts\nconst block = ${blockIndex};\nconsole.log("${marker}", block);\n\`\`\``;
+    }
+    if (blockIndex % 23 === 0 && blockIndex !== 180) {
+      return `| label | value |\n| --- | ---: |\n| ${marker} | ${blockIndex} |`;
+    }
+    const multilingual = blockIndex % 7 === 0
+      ? "连续滚轮应该稳定跟手，中文、全角字符与 emoji 🙂 都需要按真实视觉宽度估算。"
+      : "Long reader content keeps the target message heavy while preserving distinct block anchors.";
+    const explicitBreak = blockIndex % 13 === 0 ? "\nA deliberate second visual line exercises explicit wrapping." : "";
+    return `${marker}-paragraph ${multilingual.repeat(blockIndex % 5 === 0 ? 5 : 2)}${explicitBreak}`;
+  }).join("\n\n");
 }
 
 async function waitForCommittedImport(request: APIRequestContext, importId: string) {

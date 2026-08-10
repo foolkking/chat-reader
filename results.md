@@ -1,5 +1,31 @@
 # Implementation Results
 
+## Reader Wheel Performance Stabilization 2026-08-10
+
+### Root cause and implementation
+
+- The six-message Reader window was working, but three mounted Assistant messages contained 402, 389 and 501 virtual blocks. Coarse estimates (including a fixed 260px for code) caused approximately 550–640px total-height corrections during small wheel sequences.
+- The wheel path also scanned mounted messages/blocks with repeated rectangles, observed the changing virtual total-height container and retained two edge-load triggers. These combined measurement, compensation and state updates made the wheel feel detached from user input.
+- The fix introduces metric-aware block estimates, Unicode/CJK visual-line accounting, bounded compensation above the reading line, stable-width observation, one Owner/Share active-target resolver, one 80ms/trailing scroll coordinator, a single idle reading-position save, sentinel-authoritative edge loading and memoized TOC following.
+
+### Verified locally
+
+| Check | Result |
+| --- | --- |
+| Estimator + Owner/Share long Reader suite | PASS, `9/9` |
+| 30-step wheel monotonicity | PASS, no reverse correction over 2px |
+| Warm 1000px virtual-height drift | PASS, within 200px budget |
+| Mounted messages / virtual rows | PASS, `<=6` messages and bounded row overscan |
+| Wheel persistence | PASS, zero writes during input and one after idle |
+| Middle-window edge traffic | PASS, no Reader turn request |
+| Three Chromium performance runs | PASS, median p95 `16.7ms`, longest task `70ms`, total long-task time `70ms` |
+| Web lint/typecheck/build | PASS |
+| Full API | PASS, `216 passed / 3 skipped` |
+| Default PWA matrix | PARTIAL_PASS, `37 passed / 22 conditional skips` |
+| Alembic | PASS, one head `20260806_0021` |
+
+Production deployment and read-only Chrome verification are appended after the external image release. No existing production message or attachment is modified for this acceptance.
+
 ## Release Stabilization / Lifecycle Closure 2026-08-10
 
 ### Implemented

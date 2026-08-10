@@ -1,5 +1,14 @@
 # Project State
 
+## 2026-08-10 Reader Wheel Performance Stabilization
+
+- The production scroll hitch was traced to measurement churn inside a bounded six-message window, not to mounting all 398 messages. Three visible Assistant messages contained 402, 389 and 501 virtual blocks; coarse paragraph, heading and fixed 260px code estimates repeatedly corrected the virtual total height while wheel input was active.
+- Reader block estimation now uses stable content-width/font/density metrics, Unicode-aware visual-line estimates and type-specific heading/code/table/media geometry. TanStack keeps measured row sizes, and scroll compensation is limited to rows wholly above the reading line.
+- Owner and Share readers now use the same bounded active-target resolver and one passive scroll coordinator. Active sampling is capped at 80ms with a trailing sample, reading-position persistence is a single idle write, and sentinel intersection is the sole edge-loading authority. The virtual container's changing total height is no longer observed as a Reader layout signal.
+- The TOC receives a derived active heading, keeps its rows memoized and only follows asynchronously when the active item is outside its own viewport. Existing source-follow, refresh restoration, annotation jump, search target and six-message window semantics remain intact.
+- Local verification: lint and typecheck PASS; estimator plus long Owner/Share Reader suite `9/9` PASS. Three production-build Chromium wheel runs recorded median p95 frame interval `16.7ms`, median longest task `70ms`, median five-second long-task total `70ms`; each run stayed within the `34ms / 150ms / 250ms` budgets. Full API remains `216 passed / 3 skipped`, Web production build PASS and default PWA matrix `37 passed / 22 conditional skips`.
+- Deployment and real production Chrome status are recorded separately after the external image release. Existing production conversation content is read-only during this verification.
+
 ## 2026-08-10 Release Stabilization / Lifecycle Closure
 
 - Root-cause fixes are implemented without migration or production data changes. Successful message mutations now return the post-commit `conversation_revision`; Web applies that canonical value for create, insert, edit, task toggle, version changes, delete and undo restore. Create now seeds the conversation cache, and restore is idempotent with a visible retryable failure state.

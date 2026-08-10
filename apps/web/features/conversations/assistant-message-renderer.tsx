@@ -10,6 +10,13 @@ import { READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLea
 import { registerRenderedBlock } from "./rendered-block-registry";
 import type { AttachmentViewerItem } from "../attachments/attachment-viewer";
 import { AttachmentInlineGroup, type AttachmentInlineGroupItem } from "../attachments/attachment-inline-layout";
+import {
+  DEFAULT_READER_BLOCK_LAYOUT_METRICS,
+  estimateReaderBlockSize,
+  readReaderBlockLayoutMetrics,
+  readerBlockLayoutSignature,
+  type ReaderBlockLayoutMetrics,
+} from "./reader-block-layout";
 
 const THINKING_LABEL = "思考过程";
 const THINKING_DURATION_RE =
@@ -158,6 +165,7 @@ function AttachmentBlockGroup({
 function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle }: VirtualizedBlocksProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
+  const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
@@ -168,7 +176,11 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   const virtualizer = useVirtualizer({
     count: blocks.length,
     getScrollElement: () => containerRef.current?.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? null,
-    estimateSize: (index) => estimateBlockSize(blocks[index]),
+    estimateSize: (index) => estimateReaderBlockSize(
+      blocks[index],
+      layoutMetrics,
+      stripLeadingTimestamp(blocks[index]?.plain_text ?? ""),
+    ),
     getItemKey: (index) => blocks[index]?.id ?? `${messageId}-${blocks[index]?.block_index ?? index}`,
     measureElement: (element) => element?.getBoundingClientRect().height ?? 0,
     overscan: 8,
@@ -183,23 +195,16 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
     if (root?.dataset.readerLayoutCompensating === "true") return false;
     if (root?.dataset.readerSurfaceCompensating === "true") return false;
 
-    // Preserve TanStack Virtual's normal anchor rule: a new measurement may
-    // compensate an estimated item that starts above the fold, while a later
-    // resize only compensates an item that is entirely above it. Returning
-    // `true` for every row used to let font, spacing, and width changes below
-    // the reading line push the viewport by their accumulated deltas.
-    const scrollOffset = (instance.scrollOffset ?? 0) + instance.scrollAdjustments;
-    const isFirstMeasurement = !instance.itemSizeCache.has(item.key);
-    return isFirstMeasurement
-      ? item.start < scrollOffset
-      : item.end <= scrollOffset && instance.scrollDirection !== "backward";
+    return shouldAdjustMeasuredRow(item, instance);
   };
 
   useVirtualLayoutMeasurements(
     containerRef,
     messageId,
     "element",
+    layoutMetrics,
     setScrollMargin,
+    setLayoutMetrics,
     virtualizer.measure,
     virtualizer.measureElement,
   );
@@ -233,6 +238,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
 function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle }: VirtualizedBlocksProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
+  const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
@@ -242,7 +248,11 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
   }, [pinnedVirtualIndexes]);
   const virtualizer = useWindowVirtualizer({
     count: blocks.length,
-    estimateSize: (index) => estimateBlockSize(blocks[index]),
+    estimateSize: (index) => estimateReaderBlockSize(
+      blocks[index],
+      layoutMetrics,
+      stripLeadingTimestamp(blocks[index]?.plain_text ?? ""),
+    ),
     getItemKey: (index) => blocks[index]?.id ?? `${messageId}-${blocks[index]?.block_index ?? index}`,
     measureElement: (element) => element?.getBoundingClientRect().height ?? 0,
     overscan: 8,
@@ -251,11 +261,21 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     useAnimationFrameWithResizeObserver: true,
   });
 
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => {
+    const root = containerRef.current?.closest<HTMLElement>('[data-reader-scroll-root="true"]');
+    if (root?.dataset.navigationStage?.startsWith("aligning:")) return false;
+    if (root?.dataset.readerLayoutCompensating === "true") return false;
+    if (root?.dataset.readerSurfaceCompensating === "true") return false;
+    return shouldAdjustMeasuredRow(item, instance);
+  };
+
   useVirtualLayoutMeasurements(
     containerRef,
     messageId,
     "window",
+    layoutMetrics,
     setScrollMargin,
+    setLayoutMetrics,
     virtualizer.measure,
     virtualizer.measureElement,
   );
@@ -377,10 +397,13 @@ function useVirtualLayoutMeasurements(
   containerRef: React.RefObject<HTMLDivElement>,
   messageId: string,
   mode: "element" | "window",
+  committedLayoutMetrics: ReaderBlockLayoutMetrics,
   setScrollMargin: React.Dispatch<React.SetStateAction<number>>,
+  setLayoutMetrics: React.Dispatch<React.SetStateAction<ReaderBlockLayoutMetrics>>,
   resetMeasurements: () => void,
   measureElement: (element: Element | null) => void,
 ) {
+  const appliedMetricsSignatureRef = useRef(readerBlockLayoutSignature(committedLayoutMetrics));
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
@@ -388,7 +411,10 @@ function useVirtualLayoutMeasurements(
     let frame = 0;
     let remeasureFrame = 0;
     let settleFrame = 0;
-    let layoutSignature = readVirtualLayoutSignature(container);
+    let layoutMetrics = readReaderBlockLayoutMetrics(container);
+    let layoutSignature = readerBlockLayoutSignature(layoutMetrics);
+    let pendingForceReset = false;
+    let observedWidth = layoutMetrics.contentWidth;
 
     const measureMountedRows = () => {
       remeasureFrame = 0;
@@ -412,6 +438,14 @@ function useVirtualLayoutMeasurements(
         });
       });
     };
+    const committedSignature = readerBlockLayoutSignature(committedLayoutMetrics);
+    if (appliedMetricsSignatureRef.current !== committedSignature) {
+      appliedMetricsSignatureRef.current = committedSignature;
+      resetForLayoutChange();
+    }
+    if (layoutSignature !== committedSignature) {
+      setLayoutMetrics(layoutMetrics);
+    }
     const update = (forceReset = false) => {
       frame = 0;
       const next = mode === "window"
@@ -423,20 +457,35 @@ function useVirtualLayoutMeasurements(
           })();
       setScrollMargin((current) => Math.abs(current - next) > 0.5 ? next : current);
 
-      const nextSignature = readVirtualLayoutSignature(container);
-      if (forceReset || nextSignature !== layoutSignature) {
+      const nextMetrics = readReaderBlockLayoutMetrics(container);
+      const nextSignature = readerBlockLayoutSignature(nextMetrics);
+      if (nextSignature !== layoutSignature) {
+        layoutMetrics = nextMetrics;
         layoutSignature = nextSignature;
+        setLayoutMetrics((current) => readerBlockLayoutSignature(current) === nextSignature ? current : nextMetrics);
+      } else if (forceReset) {
         resetForLayoutChange();
       }
     };
     const schedule = (forceReset = false) => {
-      if (frame) window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => update(forceReset));
+      pendingForceReset ||= forceReset;
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        const shouldReset = pendingForceReset;
+        pendingForceReset = false;
+        update(shouldReset);
+      });
     };
 
     const frameElement = container.closest<HTMLElement>(".reader-frame");
-    const resizeObserver = new ResizeObserver(() => schedule());
-    resizeObserver.observe(container);
+    const widthTarget = container.closest<HTMLElement>(".reader-content-inner") ?? frameElement ?? container;
+    const resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? widthTarget.getBoundingClientRect().width;
+      if (Math.abs(width - observedWidth) <= 0.5) return;
+      observedWidth = width;
+      schedule(true);
+    });
+    resizeObserver.observe(widthTarget);
     const preferenceObserver = new MutationObserver(() => schedule());
     if (frameElement) {
       preferenceObserver.observe(frameElement, {
@@ -444,11 +493,10 @@ function useVirtualLayoutMeasurements(
         attributeFilter: ["data-reader-density", "data-reader-width", "style"],
       });
     }
-    const onWindowResize = () => schedule();
+    const onWindowResize = () => schedule(true);
     const onReaderWindowLayout = (event: Event) => {
       const targetMessageId = (event as CustomEvent<{ messageId?: string }>).detail?.messageId;
-      if (targetMessageId && targetMessageId !== messageId) return;
-      schedule();
+      schedule(targetMessageId === messageId);
     };
     window.addEventListener("resize", onWindowResize);
     window.addEventListener(READER_WINDOW_LAYOUT_EVENT, onReaderWindowLayout);
@@ -466,31 +514,7 @@ function useVirtualLayoutMeasurements(
       window.removeEventListener("resize", onWindowResize);
       window.removeEventListener(READER_WINDOW_LAYOUT_EVENT, onReaderWindowLayout);
     };
-  }, [containerRef, measureElement, messageId, mode, resetMeasurements, setScrollMargin]);
-}
-
-function readVirtualLayoutSignature(container: HTMLElement): string {
-  const frame = container.closest<HTMLElement>(".reader-frame");
-  const style = window.getComputedStyle(container);
-  return [
-    Math.round(container.getBoundingClientRect().width * 2) / 2,
-    frame?.dataset.readerWidth ?? "",
-    frame?.dataset.readerDensity ?? "",
-    style.fontSize,
-    style.lineHeight,
-    // Preferences are sourced on the reader frame, while the virtual list
-    // inherits their resolved values. Include both so a 15-22px font switch
-    // and every Markdown-spacing preset invalidate stale row estimates.
-    frame ? window.getComputedStyle(frame).getPropertyValue("--reader-font-size") : "",
-    frame ? window.getComputedStyle(frame).getPropertyValue("--reader-line-height") : "",
-    style.getPropertyValue("--reader-paragraph-gap"),
-    style.getPropertyValue("--reader-heading-before"),
-    style.getPropertyValue("--reader-heading-after"),
-    style.getPropertyValue("--reader-list-item-gap"),
-    style.getPropertyValue("--reader-block-gap"),
-    style.getPropertyValue("--reader-rich-block-gap"),
-    style.getPropertyValue("--reader-divider-gap"),
-  ].join("|");
+  }, [committedLayoutMetrics, containerRef, measureElement, messageId, mode, resetMeasurements, setLayoutMetrics, setScrollMargin]);
 }
 
 type VirtualFlowItem = {
@@ -688,13 +712,20 @@ function applyTaskOverrides(items: MarkdownTaskItem[], overrides?: ReadonlyMap<s
   return items.map((item) => overrides.has(item.taskKey) ? { ...item, checked: Boolean(overrides.get(item.taskKey)) } : item);
 }
 
-function estimateBlockSize(block?: RenderBlockRead): number {
-  if (!block) return 96;
-  if (block.block_type === "image" || block.block_type === "mermaid") return 420;
-  if (block.block_type === "code" || block.block_type === "table") return 260;
-  if (block.block_type === "heading") return 72;
-  const characters = block.char_count ?? block.plain_text?.length ?? 0;
-  return Math.max(64, Math.min(720, 52 + Math.ceil(characters / 72) * 30));
+function shouldAdjustMeasuredRow(
+  item: { key: string | number | bigint; end: number },
+  instance: {
+    scrollOffset: number | null;
+    scrollAdjustments: number;
+    itemSizeCache: Map<unknown, number>;
+    scrollDirection: "forward" | "backward" | null;
+  },
+): boolean {
+  const scrollOffset = (instance.scrollOffset ?? 0) + instance.scrollAdjustments;
+  const aboveReadingLine = item.end <= scrollOffset + 120;
+  if (!aboveReadingLine) return false;
+  const isFirstMeasurement = !instance.itemSizeCache.has(item.key);
+  return isFirstMeasurement || instance.scrollDirection !== "backward";
 }
 
 function findLeadingThinkingBlocks(blocks: RenderBlockRead[]): { endIndex: number; text: string; label: string } | null {
