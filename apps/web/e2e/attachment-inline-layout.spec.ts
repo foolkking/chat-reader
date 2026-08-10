@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { computeJustifiedRows } from "../features/attachments/attachment-inline-policy";
 import { resolveInlinePresentation, type AttachmentRenderPlan, type AttachmentViewerKind } from "../features/attachments/preview-adapter-registry";
 import { parseDelimitedRows } from "../features/attachments/attachment-table-policy";
+import { normalizeVisibleCaption } from "../features/attachments/attachment-caption-policy";
 
 function plan(viewerKind: AttachmentViewerKind | null, inline: AttachmentRenderPlan["inline"]): AttachmentRenderPlan {
   return {
@@ -87,4 +88,10 @@ test("CSV and TSV viewer defaults to bounded table mode with a Raw escape hatch"
   expect(source).toContain('active={effectiveMode === "table-raw"}');
   expect(source).toContain('data-testid="attachment-table-viewer"');
   expect(source).toContain('mode={mode === "table-raw" ? "source" : "rendered"}');
+});
+
+test("legacy attachment labels do not duplicate the filename while real captions remain", () => {
+  expect(normalizeVisibleCaption("Attachment: sample.csv", "sample.csv")).toBeUndefined();
+  expect(normalizeVisibleCaption("附件：sample.csv", "sample.csv")).toBeUndefined();
+  expect(normalizeVisibleCaption("Quarterly revenue source", "sample.csv")).toBe("Quarterly revenue source");
 });

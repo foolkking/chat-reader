@@ -7,6 +7,7 @@ import { getAttachment } from "../../lib/api";
 import { getOfflineAttachment } from "../../lib/offline-db";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
+import { normalizeVisibleCaption } from "./attachment-caption-policy";
 import { useAttachmentAccess } from "./attachment-access";
 import {
   buildAttachmentRenderPlan,
@@ -129,6 +130,7 @@ function InlineImage({ attachment, props, onOpen, onRuntime }: {
 }) {
   const displayMode = normalizeImageDisplayMode(props.displayMode);
   const maxWidth = imageDisplayMaxWidth(displayMode);
+  const visibleCaption = normalizeVisibleCaption(props.caption, attachment.display_name);
   return (
     <figure
       className="attachment-gallery-item"
@@ -158,7 +160,7 @@ function InlineImage({ attachment, props, onOpen, onRuntime }: {
           <span>查看</span>
         </span>
       </button>
-      {props.caption ? <figcaption className="attachment-gallery-caption">{props.caption}</figcaption> : null}
+      {visibleCaption ? <figcaption className="attachment-gallery-caption">{visibleCaption}</figcaption> : null}
     </figure>
   );
 }
@@ -173,6 +175,7 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, prese
 }) {
   const [text, setText] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const visibleCaption = normalizeVisibleCaption(caption, attachment.display_name);
   useEffect(() => {
     if (!attachment.content_url) return;
     const controller = new AbortController();
@@ -193,7 +196,7 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, prese
         {isLong && !expanded ? <div className="attachment-preview-fade" /> : null}
       </div>
       <footer className="attachment-preview-footer">
-        <span className="min-w-0 truncate text-xs text-secondary">{caption ?? ""}</span>
+        <span className="min-w-0 truncate text-xs text-secondary">{visibleCaption ?? ""}</span>
         <span className="flex shrink-0 items-center gap-1">
           {isLong ? <button type="button" onClick={() => setExpanded((value) => !value)} className="attachment-inline-action">{expanded ? "收起预览" : "展开预览"}</button> : null}
           {onOpen ? <button type="button" onClick={onOpen} className="attachment-inline-action">{presentation === "data" ? "打开完整表格" : "打开完整预览"}</button> : null}
