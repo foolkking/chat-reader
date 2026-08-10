@@ -46,3 +46,10 @@ test("attachment usage count remains a current-version projection", () => {
   expect(panel).toContain("current_occurrence_count");
   expect(panel).toContain('filter === "unused"');
 });
+
+test("project create Escape restores its trigger", () => {
+  const projectSidebar = source("features/projects/project-sidebar.tsx");
+  expect(projectSidebar).toContain("projectCreateTriggerRef");
+  expect(projectSidebar).toContain('event.key === "Escape"');
+  expect(projectSidebar).toContain("props.onCancel()");
+});

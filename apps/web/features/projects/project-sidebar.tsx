@@ -505,6 +505,11 @@ type SidebarContentProps = {
 
 function SidebarContent(props: SidebarContentProps) {
   const t = useTranslations();
+  const projectCreateTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeProjectCreateForm = () => {
+    props.setShowProjectForm(false);
+    window.requestAnimationFrame(() => projectCreateTriggerRef.current?.focus({ preventScroll: true }));
+  };
   return (
     <>
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-ui px-4">
@@ -528,9 +533,9 @@ function SidebarContent(props: SidebarContentProps) {
         <div className="mt-5">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-semibold text-secondary">{t("projects")}</h2>
-            <div className="hidden items-center gap-1 md:flex"><ProjectSortMenu /><button type="button" aria-label="新建项目" title="新建项目" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button></div>
+            <div className="hidden items-center gap-1 md:flex"><ProjectSortMenu /><button ref={projectCreateTriggerRef} type="button" aria-label="新建项目" title="新建项目" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button></div>
           </div>
-          {props.showProjectForm ? <ProjectCreateForm {...props} /> : null}
+          {props.showProjectForm ? <ProjectCreateForm {...props} onCancel={closeProjectCreateForm} /> : null}
           <SortableContext items={props.projects.map((project) => `project-order:${project.id}`)} strategy={verticalListSortingStrategy}><div className="mt-2 space-y-1">
             {props.projects.map((project) => (
               <ProjectBranch
@@ -559,9 +564,9 @@ function SidebarContent(props: SidebarContentProps) {
   );
 }
 
-function ProjectCreateForm(props: SidebarContentProps) {
+function ProjectCreateForm(props: SidebarContentProps & { onCancel: () => void }) {
   return (
-    <form className="mt-2 hidden rounded-xl border border-ui bg-surface p-2 md:block" onSubmit={(event) => { event.preventDefault(); props.onCreateProject(); }}>
+    <form className="mt-2 hidden rounded-xl border border-ui bg-surface p-2 md:block" onSubmit={(event) => { event.preventDefault(); props.onCreateProject(); }} onKeyDown={(event) => { if (event.key === "Escape" && !props.createPending) { event.preventDefault(); props.onCancel(); } }}>
       <input autoFocus value={props.name} onChange={(event) => props.setName(event.target.value)} className="min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary outline-none focus:border-[var(--accent)]" placeholder="项目名称" aria-label="项目名称" />
       <button type="submit" disabled={!props.name.trim() || props.createPending} className="mt-2 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50">创建项目</button>
       {props.createError ? <p className="mt-2 text-xs text-[var(--danger)]">{props.createError}</p> : null}
