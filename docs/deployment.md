@@ -2,6 +2,12 @@
 
 ## 2026-08-10 release evidence
 
+### Lifecycle stabilization release
+
+Commit `200cf9ea01c57a2ab5fa344688a4a77f70c154b9` was built externally by GitHub Actions run `31362680316`. The image archive SHA-256 was verified locally and on King as `f864e609c5a108e8fd98545d73d1ff037f4e39a7ff2257a7da6b7a61d7310154`. Before update, King created `/opt/chat-reader/backups/stabilization-20260810T064736Z-200cf9e` with a validated PostgreSQL custom dump and read-only import/export/offline/asset volume archives plus checksums. King fast-forwarded source, loaded the prebuilt archive, ran the existing migration preflight, and recreated API, worker and Web only with `--no-build`; `.env.production`, PostgreSQL and all named volumes were unchanged. Post-deploy API/Web/PostgreSQL are healthy, worker is running, `/api/health` is `ok`, capabilities retain Scanner `disabled`, and Alembic remains `20260806_0021`.
+
+The remote Compose version does not support `run --no-build`; it never ran that unsupported command successfully. Migration used `docker compose ... run --rm migrate`, which consumed the already loaded `chat-reader-migrate:latest` image. The service recreation still used `up -d --no-build --no-deps`.
+
 Commit `5cc491f3a8a1b398735c0e5b84629731a13da0bf` was built by GitHub Actions run `31325841867` and deployed from archive SHA-256 `d75a66b214932a542fc39f8630f674128f134b61eb51445da59eb75cce117f17`. PostgreSQL and business-volume backup completed at `/opt/chat-reader/backups/csv-table-20260810T010711Z`; King ran migration preflight and `up -d --no-build`. The release adds CSV/TSV Table/Raw Viewer behavior. Previous service image tags were removed while current SHA and `latest` tags were retained; no production volumes or `.env.production` were changed.
 
 Follow-up commit `6d025e7fdcca47334e8020ed8b615f9c4d40d928` removes redundant legacy attachment captions only. It was built by Actions run `31347470091`, archive SHA-256 `158dc6e03d2fa6abb536a1c0a66e297e8c42e17512db57b7af6e4e1afb5f88f9`, and deployed with the same `--no-build` procedure. The checked backup above remains the pre-release recovery point because neither release changed schema or persistent data.

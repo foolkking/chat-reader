@@ -238,7 +238,7 @@ Why the previous tests missed these issues: API-only tests asserted status codes
 
 ### Current release closure
 
-- Core local code checks: PASS.
+- Core local code checks: PASS. External build and King health deployment for commit `200cf9e` are PASS; production browser flow evidence remains separate.
 - Attachment lifecycle semantics: PASS in API/contract tests; production recheck pending.
 - Delete/Undo API and idempotency: PASS; real browser flow pending.
 - Dialog focus infrastructure: implemented; keyboard browser run pending.

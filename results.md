@@ -22,7 +22,7 @@
 
 ### Not promoted to PASS
 
-Post-change production Chrome, 360px/125%/150%/200% zoom, keyboard-only mutation flow, genuine two-tab race, browser chooser, forced-offline negative paths, full online Playwright mutation/Reader fixture and QA `.cr` round trip were not rerun in this code-only closure. They remain `NOT_PRODUCTION_VERIFIED`; skipped tests are not PASS. Existing production data was not modified or deleted.
+The code release was externally built (Actions `31362680316`) and deployed incrementally to King with verified archive checksum, PostgreSQL/volume backup, migration preflight and healthy API/Web/worker/PostgreSQL services. Post-change production Chrome, 360px/125%/150%/200% zoom, keyboard-only mutation flow, genuine two-tab race, browser chooser, forced-offline negative paths, full online Playwright mutation/Reader fixture and QA `.cr` round trip were not rerun. They remain `NOT_PRODUCTION_VERIFIED`; skipped tests are not PASS. Existing production data was not modified or deleted.
 
 ## 2026-08-10 CSV Table Viewer And Production Release
 
