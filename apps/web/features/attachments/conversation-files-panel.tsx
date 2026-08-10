@@ -379,7 +379,7 @@ function FileRow({
           </p>
           <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-secondary">
             <span>{unscanned ? (zh ? "未扫描" : "Unscanned") : attachment.scan_status}</span>
-            <span>{zh ? `正文引用 ${attachment.occurrence_count ?? 0} 处` : `${attachment.occurrence_count ?? 0} occurrences`}</span>
+            <span>{zh ? `正文引用 ${attachment.current_occurrence_count ?? (attachment.is_used ? attachment.occurrence_count : 0) ?? 0} 处` : `${attachment.current_occurrence_count ?? (attachment.is_used ? attachment.occurrence_count : 0) ?? 0} current occurrences`}</span>
             <span>{created} · {attachment.id.slice(0, 6)}</span>
           </div>
         </div>

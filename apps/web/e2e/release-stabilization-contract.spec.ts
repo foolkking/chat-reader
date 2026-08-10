@@ -49,9 +49,11 @@ test("managed dialogs have one pointer-only backdrop and shared focus lifecycle"
 test("attachment usage count remains a current-version projection", () => {
   const api = source("../api/app/api/routes/attachments.py");
   const panel = source("features/attachments/conversation-files-panel.tsx");
+  const sourceWorkspace = source("features/editing/source-editor-workspace.tsx");
   expect(api).toContain("current_occurrence_count");
   expect(panel).toContain("current_occurrence_count");
   expect(panel).toContain('filter === "unused"');
+  expect(sourceWorkspace).toContain("current_occurrence_count: currentOccurrenceCount");
 });
 
 test("project create Escape restores its trigger", () => {

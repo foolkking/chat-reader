@@ -44,6 +44,24 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "imports"))
     get_settings.cache_clear()
     conversation_id = _import_attachment_conversation(client)
+    upload_session = client.post(
+        f"/api/conversations/{conversation_id}/attachment-upload-sessions",
+        json={},
+    ).json()
+    unreferenced_items = []
+    for filename in ("round-trip-unreferenced-a.txt", "round-trip-unreferenced-b.txt"):
+        item = client.post(
+            f"/api/attachment-upload-sessions/{upload_session['id']}/items",
+            files={"file": (filename, b"shared unreferenced bytes\n", "text/plain")},
+        )
+        assert item.status_code == 201, item.text
+        unreferenced_items.append(item.json()["id"])
+    finalized = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": unreferenced_items},
+    )
+    assert finalized.status_code == 201, finalized.text
+    assert len(finalized.json()["items"]) == 2
     detail = client.get(f"/api/conversations/{conversation_id}/message-window", params={"limit": 10}).json()
     message = detail["items"][0]
     edited = client.patch(
@@ -133,7 +151,7 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
     )
     assert restored.status_code == 200, restored.text
     assert restored.json()["restored"]["conversations"] == 1
-    assert restored.json()["restored"]["attachments"] == 1
+    assert restored.json()["restored"]["attachments"] == 3
     assert restored.json()["restored"]["attachment_occurrences"] == 2
 
     generator = override()
@@ -144,10 +162,31 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
         restored_message = db.query(Message).filter(Message.conversation_id == restored_conversation.id).one()
         assert db.query(MessageVersion).filter(MessageVersion.message_id == restored_message.id).count() == 2
         assert db.query(RenderBlock).join(MessageVersion).filter(MessageVersion.message_id == restored_message.id).count() > 0
-        restored_attachment = db.query(Attachment).filter(Attachment.conversation_id == restored_conversation.id).one()
-        assert restored_attachment.scan_status == "scanner_disabled"
-        assert db.query(MessageVersionAttachment).filter(MessageVersionAttachment.attachment_id == restored_attachment.id).count() == 2
-        attachment_id = restored_attachment.id
+        restored_attachments = db.query(Attachment).filter(Attachment.conversation_id == restored_conversation.id).all()
+        assert len(restored_attachments) == 3
+        assert all(attachment.scan_status == "scanner_disabled" for attachment in restored_attachments)
+        referenced_attachment = next(
+            attachment for attachment in restored_attachments
+            if attachment.display_name == "evidence.txt"
+        )
+        unreferenced_attachments = [
+            attachment for attachment in restored_attachments
+            if attachment.display_name.startswith("round-trip-unreferenced-")
+        ]
+        assert len(unreferenced_attachments) == 2
+        assert all(attachment.status == "available" for attachment in unreferenced_attachments)
+        assert all(
+            db.query(MessageVersionAttachment)
+            .filter(MessageVersionAttachment.attachment_id == attachment.id)
+            .count() == 0
+            for attachment in unreferenced_attachments
+        )
+        assert unreferenced_attachments[0].id != unreferenced_attachments[1].id
+        assert unreferenced_attachments[0].asset_object_id == unreferenced_attachments[1].asset_object_id
+        assert db.query(MessageVersionAttachment).filter(
+            MessageVersionAttachment.attachment_id == referenced_attachment.id
+        ).count() == 2
+        attachment_id = referenced_attachment.id
     finally:
         db.close()
         generator.close()

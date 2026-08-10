@@ -319,11 +319,13 @@ function patchConversationAttachmentCache(
         block_index: occurrence.block_index,
       }));
       const occurrences = [...retained, ...next];
+      const currentOccurrenceCount = occurrences.filter((occurrence) => occurrence.is_current_version).length;
       return {
         ...attachment,
         occurrence_count: occurrences.length,
+        current_occurrence_count: currentOccurrenceCount,
         message_count: new Set(occurrences.map((occurrence) => occurrence.message_id)).size,
-        is_used: occurrences.some((occurrence) => occurrence.is_current_version),
+        is_used: currentOccurrenceCount > 0,
         occurrences,
       };
     });
