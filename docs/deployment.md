@@ -1,5 +1,9 @@
 # 生产部署
 
+## 2026-08-10 release evidence
+
+Commit `5cc491f3a8a1b398735c0e5b84629731a13da0bf` was built by GitHub Actions run `31325841867` and deployed from archive SHA-256 `d75a66b214932a542fc39f8630f674128f134b61eb51445da59eb75cce117f17`. PostgreSQL and business-volume backup completed at `/opt/chat-reader/backups/csv-table-20260810T010711Z`; King ran migration preflight and `up -d --no-build`. The release adds CSV/TSV Table/Raw Viewer behavior. Previous service image tags were removed while current SHA and `latest` tags were retained; no production volumes or `.env.production` were changed.
+
 ## Merge worker resource control
 
 - Default worker limit: `IMPORT_WORKER_MEMORY_LIMIT=640m` through Compose interpolation.

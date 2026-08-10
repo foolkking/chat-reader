@@ -1,5 +1,21 @@
 # Implementation Results
 
+## 2026-08-10 CSV Table Viewer And Production Release
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| CSV/TSV detail default | PASS | `ViewerBody` maps `table` to rendered bounded table mode; production Chrome displayed `MANIFEST.csv` as a table with 70 rows and sticky header |
+| Table/Raw toggle | PASS | Production Chrome switched `Table -> Raw -> Table`; Raw used one source `<pre>`, returning restored the table |
+| CSV parser bounds | PASS | Quoted fields and embedded delimiters covered by focused test; parser caps 10,001 rows and 256 columns |
+| Web lint/typecheck/build | PASS | lint, typecheck and Next production build passed |
+| Focused attachment tests | PASS | `13/13` attachment layout/presentation tests passed |
+| Production deployment | PASS | commit `5cc491f`, Actions run `31325841867`, archive SHA-256 `d75a66b214932a542fc39f8630f674128f134b61eb51445da59eb75cce117f17`, deployed with `--no-build` |
+| Production backup | PASS | `/opt/chat-reader/backups/csv-table-20260810T010711Z`; database and business volumes checksummed successfully |
+| Production health | PASS | API/Web/worker/PostgreSQL healthy; `/api/health` status `ok`; capability endpoint reports scanner `disabled` |
+| Old image cleanup | PASS | previous service tags removed; current full SHA and `latest` retained; no volume deletion |
+
+Production Chrome screenshot evidence was captured in the deployment acceptance run (2032x975 viewport). The broader PWA matrix remains `PARTIAL_PASS` because 21 online/fixture-gated cases were skipped and are not counted as PASS.
+
 ## 2026-08-09 Attachment Inline Layout System Candidate
 
 | Area | Status | Evidence |

@@ -202,3 +202,7 @@ The contract remains `Viewer = consume`, `Files panel = manage`, and `Editor = c
 | ZIP | viewer-only file row | `archive` | bounded directory and small text/image entry preview, no recursive extraction |
 
 `fflate` is reused for the lazy ZIP Worker; it does not replace the established export/offline implementation. The Worker rejects oversized source files, excessive central-directory entries, oversized entries and excessive expanded bytes before preview. Original authenticated downloads remain available. DOC/XLS/PPT, RTF, TAR-family, EPUB, VSDX, drawio, DXF, STL, OBJ and unknown formats remain `NOT_IMPLEMENTED` with reliable download-only behavior.
+
+# 2026-08-10 CSV/TSV Viewer Closure
+
+CSV and TSV use the existing unified `AttachmentViewerShell` with `table` as the default rendered mode and `table-raw` as the explicit source mode. Rendered mode uses a bounded quoted-field parser, sticky header, row numbers, horizontal overflow within the Viewer and a row/column summary; it never reads beyond the existing 8 MiB content range and aborts at parser row/column caps. `Raw` remains available from the same toolbar and does not create another dialog.
