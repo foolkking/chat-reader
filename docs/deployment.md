@@ -160,3 +160,9 @@ docker compose --env-file .env.production -f docker-compose.production.yml exec 
 Build Web/API images on GitHub Actions or an external Linux builder. King only pulls the verified image, runs the existing migration preflight and recreates services with `--no-build`. Do not run `next build`, start ClamAV, remove volumes, or overwrite the server `.env`.
 
 The complex attachment Viewer is a browser-side lazy Worker and has no server dependency. The production deployment remains `ATTACHMENT_SCANNER=disabled`; unsupported complex formats continue to download.
+
+## 2026-08-10 Reader Scroll Release
+
+GitHub Actions run `31385483844` produced the verified `e4bc9c3` artifact (`1deddb658a8c663111e530ffd793cb3f437cc9498ca68fded7dd498934f8c777`). King was backed up, loaded and recreated with `--no-build`; no migration was added and the single Alembic head remained `20260806_0021`. API/Web/Postgres health checks passed. The rollback backup is `/opt/chat-reader/backups/reader-scroll-20260810T120035Z-e4bc9c3`; it includes PostgreSQL and the import/export/offline/asset storage archives with checksums.
+
+Production Chrome read-only wheel verification recorded zero reverse wheel steps and six mounted messages. Exact 360px, browser zoom and forced-offline negative cases remain explicit verification debt rather than unconditional PASS.

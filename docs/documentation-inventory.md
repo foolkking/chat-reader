@@ -212,4 +212,6 @@ No new documentation category, public API, migration or persisted Reader contrac
 2026-08-09 文档同步：Attachment Inline Layout System 的六条语义轨道、组级对齐、Gallery/AudioList/FileList、统一 spacing/radius 和本地测试状态已写入现有当前事实文档；未新增文档类别，生产视觉验收在部署前保持 `NOT_PRODUCTION_VERIFIED`。
 
 2026-08-09 Adaptive Viewer 文档同步：同一 Viewer Shell 的 compact/reading/document/media/workspace presentation、移动端全屏退化、CSS 最大化状态机、PDF Fit Page/Fit Width 单滚动所有权和五档视口验收要求已同步到当前合同、前端架构、项目状态与测试结果。未增加新的文档类别、数据模型或 migration。
+
+2026-08-10 Reader Scroll Stabilization 文档同步：稳定 block estimator、单一滚动协调器、TOC 派生更新、生产构建性能预算、King 增量部署与真实 Chrome 滚轮证据已同步到 `PROJECT_STATE.md`、`results.md`、`docs/testing.md`、`docs/system/FRONTEND_ARCHITECTURE.md` 和 `docs/deployment.md`。360px/zoom/offline-negative 等未执行项保持 `NOT_PRODUCTION_VERIFIED`。
 | `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md` | historical evidence | 2026-08-10 release-readiness audit, redacted QA evidence and verification limits |

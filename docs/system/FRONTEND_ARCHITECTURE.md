@@ -148,3 +148,11 @@ RootLayout + providers
 - Reader message actions expose insertion before/after (single or User -> Assistant pair) and soft delete with an undo toast. Insert/delete mutations refresh only the affected reader data; no Trash UI is introduced.
 - The single `AttachmentViewerProvider -> AttachmentViewerShell` remains the only body-level viewer. `ViewerKind` now includes document, spreadsheet, presentation and archive. A lazy `ComplexAttachmentViewer` starts a module Worker only after opening one of these supported attachments.
 - The complex Worker enforces source, ZIP-entry, expanded-size and preview-byte caps before extracting read-only DOCX/ODT paragraphs/tables, XLSX/ODS bounded grids, PPTX/ODP static slide text, or ZIP directory entries with bounded text/image previews. Unsupported formats keep a reliable download row.
+
+## Reader Scroll Hot Path
+
+- `ReaderBlockLayoutMetrics` is derived from stable content width, font size, line height and density. Paragraph and code estimates are content-aware; the metrics cache changes only for width, font, density, font-load or explicit Reader layout events.
+- TanStack Virtual owns measured row sizes. Automatic scroll compensation is limited to rows wholly above the 120px reading line, preventing partially visible rows from counter-moving a wheel gesture.
+- `resolveActiveReadingTarget` uses `elementsFromPoint()` at the reading line and falls back to a bounded rendered-block registry only when the line is in whitespace. Owner and Share Readers use the same resolver.
+- One passive listener coordinates direction, 80ms active-position sampling and a trailing sample. Reading-position persistence uses one trailing idle timer and calculates the full character anchor after scrolling stops. The container's changing total height is not observed.
+- Previous/next sentinel IntersectionObservers are the only reader-window loading triggers. TOC receives the derived active heading and scrolls its own list asynchronously only when that item is out of view.

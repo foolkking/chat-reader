@@ -306,3 +306,26 @@ The AI context package contains 18 content-addressed objects and reports partial
 | PWA/Offline full matrix | `PARTIAL_PASS` | 30 passed, 21 conditional skips; production negative offline and 360/zoom cases remain `NOT_PRODUCTION_VERIFIED`. |
 
 Detailed findings, screenshots and QA cleanup: `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md`.
+
+## Reader Scroll Stabilization - 2026-08-10
+
+### Root cause and remediation
+
+- Coarse virtual-block estimates caused repeated 550-640px total-height corrections during normal wheel input. Estimates are now metric-aware for paragraphs, CJK/emoji, code, headings, tables and media.
+- The changing virtual total-height container is no longer a layout-observation source. Width/font/density/layout events invalidate metrics; TanStack row measurements remain canonical.
+- Active position, direction and idle persistence share one passive scroll coordinator; sentinel IntersectionObserver alone owns edge loading.
+
+### Automated verification
+
+- Web lint/typecheck/production build: PASS.
+- API: `216 passed, 3 skipped`; Alembic: one head `20260806_0021`.
+- PWA default matrix: `37 passed, 22 skipped` (`PARTIAL_PASS`; skips are not PASS).
+- Focused Reader suite: `9 passed` (estimators, TOC, preference anchoring, restoration, annotation/refresh, continuous wheel and Share Reader).
+- Three production-build Chromium performance runs: p95 frame interval `16.7ms`; longest task `72/68/70ms`; total long-task time `72/68/70ms`. Budgets 34/150/250ms passed.
+
+### Production verification and deployment
+
+- Real production Chrome, read-only: 30 wheel steps had `minDelta=119.576px`, `reverseSteps=0`, six mounted messages. The warmed 1,080px segment had 85px height correction. TOC followed block 54 -> 62; server position persisted and restoration settled back to block 68.
+- GitHub Actions run `31385483844`; release commit `e4bc9c3ce00ed7071d896546df330cdd1a0f1b53`; artifact SHA-256 `1deddb658a8c663111e530ffd793cb3f437cc9498ca68fded7dd498934f8c777`.
+- King used verified backup, migration preflight and `--no-build`; API/Web/Postgres are healthy. Backup: `/opt/chat-reader/backups/reader-scroll-20260810T120035Z-e4bc9c3`.
+- Production bridge has no page console/network stream and timed out on viewport screenshot capture. Exact 360px/zoom/offline-negative and a full production edge-sentinel trace remain `NOT_PRODUCTION_VERIFIED`; local functional invariants are not relabeled as production PASS.

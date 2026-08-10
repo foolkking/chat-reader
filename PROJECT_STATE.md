@@ -281,3 +281,12 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - 临时源码只使用编辑器草稿态 `cr-upload://<draft-token>`，顶部/底部草稿区显示每个文件的上传进度、失败重试和移除。上传成功后原位替换为 UploadItem UUID，消息 API 保存时在事务内提升为对话级 Attachment 并写入 MessageVersion occurrence；最终 canonical 内容不会保留 draft token 或 `cr-upload://`。
 - 代码围栏内的拖放不会静默写入：默认提示插入到围栏后，也可选择仍作为普通文本或取消；已有 Markdown 链接内的落点移动到完整链接之后，避免破坏链接语法。保存前存在上传中/失败/未解析草稿会阻止提交。
 - 关闭带未保存附件的源码工作区时可选择保留到“当前对话文件”（无 occurrence）或删除暂存项；已移除的草稿不再参与保留。服务端拒绝漏传 UploadItem、非法 draft token 和残留 `cr-upload://`，并返回源码行号。
+
+## 2026-08-10 Reader Scroll Stabilization (Current)
+
+- Production wheel-scroll regression fixed in commit `e4bc9c3ce00ed7071d896546df330cdd1a0f1b53`. The existing virtualized Reader and public contracts remain intact. Block estimates now use content width, font metrics, explicit line counts, Unicode display width and block-specific limits.
+- A single passive scroll coordinator samples active content at most every 80ms and saves one reading position after roughly one second of idle time. Sentinel IntersectionObserver is the only edge-loading trigger. Measured-height compensation applies only to rows fully above the reading line.
+- Local production-build Chromium (three repeats): p95 frame interval 16.7ms; longest task 72/68/70ms; total long-task time 72/68/70ms. All configured budgets passed.
+- Production Chrome read-only verification: 30 real wheel steps were monotonic (`minDelta=119.576px`, `reverseSteps=0`) while six messages stayed mounted. A warmed 1,080px segment corrected virtual height by 85px. TOC followed block 54 to block 62. A temporary 17px font change invalidated layout correctly and was restored to 16px.
+- The server persisted block 68. After hard navigation, asynchronous restoration settled back to the same message and block 68; the early top-of-window state was the restore-loading interval, not lost data.
+- GitHub Actions run `31385483844` built `e4bc9c3`; artifact SHA-256 `1deddb658a8c663111e530ffd793cb3f437cc9498ca68fded7dd498934f8c777` matched locally and on King. Deployment used `--no-build`; health checks passed; Alembic remains at the single head `20260806_0021`. Verified rollback backup: `/opt/chat-reader/backups/reader-scroll-20260810T120035Z-e4bc9c3`.
