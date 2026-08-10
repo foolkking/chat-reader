@@ -1,9 +1,0 @@
-
-> web@0.0.0 start E:\1project\chat-reader\apps\web
-> next start "-p" "3001"
-
-  ▲ Next.js 14.2.23
-  - Local:        http://localhost:3001
-
- ✓ Starting...
- ✓ Ready in 546ms
