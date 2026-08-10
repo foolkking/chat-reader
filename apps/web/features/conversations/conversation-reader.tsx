@@ -305,6 +305,7 @@ export function ConversationReader({
   const lastReaderUserIntentAtRef = useRef(0);
   const navigationInProgressRef = useRef(false);
   const pointerDraggingRef = useRef(false);
+  const pointerDragMovedRef = useRef(false);
   const pointerScrollTopRef = useRef(0);
   const activeMessageIdRef = useRef<string | null>(null);
   const activeBlockIdRef = useRef<string | null>(null);
@@ -413,10 +414,26 @@ export function ConversationReader({
     };
     const markPointerDown = () => {
       pointerDraggingRef.current = true;
+      pointerDragMovedRef.current = false;
       pointerScrollTopRef.current = root.scrollTop;
+      root.dataset.readerPointerDragging = "true";
+      // A native scrollbar-thumb drag can jump tens of thousands of pixels in
+      // one frame. Rebase every mounted virtual message before the pointer
+      // starts moving so a coordinate left stale by earlier row measurement
+      // cannot select rows outside the visible message.
+      notifyReaderWindowLayoutChanged();
     };
     const markPointerUp = () => {
+      const moved = pointerDragMovedRef.current;
       pointerDraggingRef.current = false;
+      pointerDragMovedRef.current = false;
+      delete root.dataset.readerPointerDragging;
+      if (!moved || edgeTransitionRef.current || loadingPreviousRef.current || loadingNextRef.current) return;
+      if (scrollDirectionRef.current === "up" && previousSentinelVisibleRef.current) {
+        loadPreviousActionRef.current();
+      } else if (scrollDirectionRef.current === "down" && nextSentinelVisibleRef.current) {
+        loadNextActionRef.current();
+      }
     };
     const markKeyboardIntent = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -438,6 +455,7 @@ export function ConversationReader({
       window.removeEventListener("pointerup", markPointerUp);
       window.removeEventListener("pointercancel", markPointerUp);
       window.removeEventListener("keydown", markKeyboardIntent);
+      delete root.dataset.readerPointerDragging;
     };
   }, [initialPaintReady, markReaderScrollIntent]);
 
@@ -978,6 +996,7 @@ export function ConversationReader({
         previousSentinelVisibleRef.current = entries.some((entry) => entry.isIntersecting);
         if (
           userScrollIntentRef.current &&
+          !pointerDraggingRef.current &&
           edgeTransitionRef.current === null &&
           !loadingPreviousRef.current &&
           !loadingNextRef.current &&
@@ -1005,6 +1024,7 @@ export function ConversationReader({
         nextSentinelVisibleRef.current = entries.some((entry) => entry.isIntersecting);
         if (
           userScrollIntentRef.current &&
+          !pointerDraggingRef.current &&
           edgeTransitionRef.current === null &&
           !loadingPreviousRef.current &&
           !loadingNextRef.current &&
@@ -1096,6 +1116,7 @@ export function ConversationReader({
     const onScroll = () => {
       const current = root.scrollTop;
       if (pointerDraggingRef.current && Math.abs(current - pointerScrollTopRef.current) > 1) {
+        pointerDragMovedRef.current = true;
         markReaderScrollIntent(current < pointerScrollTopRef.current ? "up" : "down");
       }
       pointerScrollTopRef.current = current;

@@ -209,7 +209,9 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
     virtualizer.measureElement,
   );
   useVirtualMessageRegistration(messageId, indexByBlock, setPinnedVirtualIndexes);
-  const virtualFlow = buildVirtualFlow(virtualizer.getVirtualItems(), scrollMargin, virtualizer.getTotalSize());
+  const virtualItems = virtualizer.getVirtualItems();
+  const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
+  useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
 
   return (
     <div
@@ -280,7 +282,9 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     virtualizer.measureElement,
   );
   useVirtualMessageRegistration(messageId, indexByBlock, setPinnedVirtualIndexes);
-  const virtualFlow = buildVirtualFlow(virtualizer.getVirtualItems(), scrollMargin, virtualizer.getTotalSize());
+  const virtualItems = virtualizer.getVirtualItems();
+  const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
+  useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
 
   return (
     <div
@@ -315,6 +319,49 @@ type VirtualizedBlocksProps = {
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
 };
+
+/**
+ * A Reader window merge can mount or remeasure content before this message.
+ * That changes the message's absolute offset without changing its own width or
+ * height, so a cached TanStack `scrollMargin` can point at a completely wrong
+ * block range after a large scrollbar-thumb jump. The message shell remains in
+ * the viewport while every rendered virtual row is placed far above or below
+ * it, which looks like an indefinitely blank Reader.
+ *
+ * Keep the normal wheel path measurement-free. Only when a virtual range has
+ * changed *and* its message intersects the scroll viewport but none of its
+ * mounted rows do, read the real offset and repair the coordinate system. A
+ * pointer-down layout notification normally prevents the gap; this guard also
+ * covers Home/End, accessibility tooling and programmatic scroll jumps.
+ */
+function useVisibleVirtualGapRecovery(
+  containerRef: React.RefObject<HTMLDivElement>,
+  virtualItems: VirtualFlowItem[],
+  setScrollMargin: React.Dispatch<React.SetStateAction<number>>,
+) {
+  const firstIndex = virtualItems[0]?.index ?? -1;
+  const lastIndex = virtualItems.at(-1)?.index ?? -1;
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const root = container?.closest<HTMLElement>('[data-reader-scroll-root="true"]');
+    if (!container || !root) return;
+
+    const rootRect = root.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    if (containerRect.bottom <= rootRect.top || containerRect.top >= rootRect.bottom) return;
+
+    const rows = container.querySelectorAll<HTMLElement>(":scope > [data-index]");
+    for (const row of rows) {
+      const rowRect = row.getBoundingClientRect();
+      if (rowRect.bottom > rootRect.top && rowRect.top < rootRect.bottom) return;
+    }
+
+    const actualScrollMargin = root.scrollTop + containerRect.top - rootRect.top;
+    if (!Number.isFinite(actualScrollMargin)) return;
+    setScrollMargin((current) => Math.abs(current - actualScrollMargin) > 0.5 ? actualScrollMargin : current);
+  }, [containerRef, firstIndex, lastIndex, setScrollMargin, virtualItems.length]);
+}
 
 function useVirtualMessageRegistration(
   messageId: string,

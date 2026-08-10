@@ -1,5 +1,12 @@
 # Project State
 
+## 2026-08-10 Reader Scrollbar-Jump Blank-Window Closure
+
+- A second production Reader scroll defect was reproduced with direct scrollbar-thumb jumps: a visible heavy message could retain its shell while all mounted virtual block rows were positioned tens of thousands of pixels outside the viewport. The failure was not an empty API response.
+- Root cause: edge-window merge and late upstream row measurement changed a downstream virtual message's absolute offset without changing its own width or height. Its cached TanStack `scrollMargin` therefore remained stale; large scroll jumps selected a valid but wrong block range. Pointer dragging could also grow the message window while Chromium still held the native scrollbar thumb, changing the drag coordinate system mid-gesture.
+- Virtualized messages now perform a bounded gap recovery only when their shell intersects the Reader viewport but none of their mounted rows do. The recovery rebases the real scroll margin without clearing measured row sizes. Pointer-down proactively rebases coordinates; edge-window loading is deferred while the pointer gesture is active and runs once after release.
+- Production-equivalent verification before release: Web lint/typecheck/build PASS; Reader restoration/Share suite `8/8`; blank-jump plus wheel repeat `6/6`; API `216 passed / 3 skipped`; default PWA `37 passed / 25 conditional skips`; Alembic remains single head `20260806_0021`.
+
 ## 2026-08-10 Reader Wheel Performance Stabilization
 
 - The production scroll hitch was traced to measurement churn inside a bounded six-message window, not to mounting all 398 messages. Three visible Assistant messages contained 402, 389 and 501 virtual blocks; coarse paragraph, heading and fixed 260px code estimates repeatedly corrected the virtual total height while wheel input was active.

@@ -1,5 +1,30 @@
 # Implementation Results
 
+## Reader Scrollbar Jump Blank-Window Closure - 2026-08-10
+
+### Root cause
+
+- Production Chrome reproduced persistent empty Reader content after large scrollbar jumps: the visible article remained mounted, but `visibleBlocks=0` and its nine virtual rows were placed roughly 33,000px below the viewport.
+- The API and message data were present. A stale per-message `scrollMargin` survived edge-window growth and upstream virtual-height correction, so the virtualizer selected a valid range in the wrong coordinate system.
+- Native thumb dragging also allowed the sentinel load to merge more messages before pointer release, changing total scroll height during the gesture.
+
+### Remediation
+
+- Visible virtual gaps now rebase from the real DOM offset without clearing measured row sizes.
+- Pointer-down proactively requests a coordinate rebase. Sentinel visibility is still tracked during drag, but the fetch/merge is deferred until pointer release and invoked once.
+- Ordinary wheel scrolling does not perform the recovery DOM scan unless the virtual range changes and the message shell is actually visible without a visible row.
+
+### Verification before deployment
+
+| Check | Result |
+| --- | --- |
+| Web lint / typecheck / production build | PASS |
+| Reader restoration, navigation, Share and wheel suite | `8 passed` |
+| Blank-jump + continuous-wheel repeat (3x each) | `6 passed` |
+| API | `216 passed, 3 skipped` |
+| Alembic | single head `20260806_0021` |
+| Default PWA matrix | `37 passed, 25 conditional skipped` (`PARTIAL_PASS`) |
+
 ## Reader Wheel Performance Stabilization 2026-08-10
 
 ### Root cause and implementation

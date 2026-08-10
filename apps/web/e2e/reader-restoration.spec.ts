@@ -82,6 +82,77 @@ test("direct URL keeps a virtualized target mounted through final alignment", as
   await expectVirtualRowsNotToOverlap(targetArticle);
 });
 
+test("large scrollbar jumps repair stale virtual coordinates instead of leaving a blank message", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(
+    `/conversations/${conversationId}?messageId=${targetMessageId}&blockIndex=${Math.max(24, targetBlockIndex - 80)}&characterOffset=0`,
+  );
+
+  const scrollRoot = page.locator("[data-reader-scroll-root='true']");
+  const targetArticle = page.locator(`#message-${targetMessageId}`);
+  await expect(targetArticle.locator('[data-virtualized-block-list="true"]')).toBeVisible();
+  await expect.poll(() => visibleBlockCount(targetArticle)).toBeGreaterThan(0);
+
+  // Model a late upstream virtual-height correction after the target
+  // virtualizer cached its absolute scroll margin. The production failure was
+  // the same coordinate shift after edge-window merge and row measurement.
+  await targetArticle.evaluate((article) => {
+    const spacer = document.createElement("div");
+    spacer.dataset.testUpstreamVirtualShift = "true";
+    spacer.style.height = "8000px";
+    spacer.setAttribute("aria-hidden", "true");
+    article.before(spacer);
+  });
+  await scrollRoot.evaluate((root, messageId) => {
+    const article = document.getElementById(`message-${messageId}`);
+    if (!article) throw new Error("Target article is missing");
+    const rootRect = root.getBoundingClientRect();
+    const articleRect = article.getBoundingClientRect();
+    const articleStart = root.scrollTop + articleRect.top - rootRect.top;
+    root.scrollTop = articleStart + articleRect.height * 0.55;
+  }, targetMessageId);
+
+  await expect.poll(() => visibleBlockCount(targetArticle), { timeout: 1_500 }).toBeGreaterThan(0);
+  await expect.poll(() => readingLineContentDistance(page), { timeout: 1_500 }).toBeLessThanOrEqual(48);
+
+  await page.locator('[data-test-upstream-virtual-shift="true"]').evaluate((spacer) => spacer.remove());
+});
+
+test("scrollbar pointer drag defers edge-window growth until pointer release", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(
+    `/conversations/${conversationId}?messageId=${targetMessageId}&blockIndex=${Math.max(24, targetBlockIndex - 80)}&characterOffset=0`,
+  );
+
+  const scrollRoot = page.locator("[data-reader-scroll-root='true']");
+  await expect(scrollRoot).toBeVisible();
+  await expect(scrollRoot).toHaveAttribute("data-navigation-stage", "settled");
+  let edgeRequests = 0;
+  await page.route("**/api/conversations/*/reader-turn*", async (route) => {
+    edgeRequests += 1;
+    await route.continue();
+  });
+
+  await scrollRoot.evaluate((root) => {
+    root.scrollTop = Math.max(0, root.scrollHeight - root.clientHeight - 320);
+  });
+  const box = await scrollRoot.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + Math.min(360, box!.width / 2), box!.y + Math.min(240, box!.height / 2));
+  await page.mouse.down();
+  await expect(scrollRoot).toHaveAttribute("data-reader-pointer-dragging", "true");
+  await scrollRoot.evaluate((root) => {
+    root.scrollTop = root.scrollHeight - root.clientHeight;
+  });
+  await page.waitForTimeout(250);
+  expect(edgeRequests).toBe(0);
+
+  await page.mouse.up();
+  await expect(scrollRoot).not.toHaveAttribute("data-reader-pointer-dragging", "true");
+  await expect.poll(() => edgeRequests, { timeout: 5_000 }).toBe(1);
+  await page.unroute("**/api/conversations/*/reader-turn*");
+});
+
 test("section TOC follows virtual headings beyond the initially mounted blocks", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/conversations/${conversationId}?messageId=${targetMessageId}&blockIndex=0`);
@@ -512,6 +583,16 @@ async function expectVirtualRowsNotToOverlap(article: Locator) {
       Math.max(largest, rows[index]!.bottom - row.top)
     ), 0);
   })).toBeLessThanOrEqual(1);
+}
+
+async function visibleBlockCount(article: Locator): Promise<number> {
+  return article.locator("[data-block-index]").evaluateAll((blocks) => blocks.filter((block) => {
+    const root = block.closest<HTMLElement>("[data-reader-scroll-root='true']");
+    if (!root) return false;
+    const rootRect = root.getBoundingClientRect();
+    const rect = block.getBoundingClientRect();
+    return rect.bottom > rootRect.top && rect.top < rootRect.bottom;
+  }).length);
 }
 
 async function readingRangeError(block: Locator): Promise<number> {

@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-08-10 synchronization: Reader scrollbar-jump coordinate recovery and pointer-held edge-loading rules are current in `PROJECT_STATE.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md`, and `results.md`.
+
 ## 2026-08-10 Reader wheel performance ownership additions
 
 | Path | Lifecycle | Responsibility |
