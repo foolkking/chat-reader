@@ -98,7 +98,10 @@ def rebuild_conversation_derived_data(
         if progress_callback:
             progress_callback("rebuilding_versions", min(85, 10 + round(75 * rebuilt_versions / max(total, 1))), rebuilt_versions, total)
 
-    refresh_conversation_stats(db, conversation_id)
+    # Derived indexes and render blocks are rebuilt asynchronously after the
+    # user mutation has committed. They must not create a second conversation
+    # revision, otherwise the mutation response becomes stale immediately.
+    refresh_conversation_stats(db, conversation_id, bump_revision=False)
     if progress_callback:
         progress_callback("rebuilding_indexes", 90, rebuilt_versions, total)
     rebuild_search_and_toc_for_conversation(db, conversation_id)

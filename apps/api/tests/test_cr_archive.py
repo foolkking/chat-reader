@@ -157,6 +157,7 @@ def test_auto_clean_job_creates_new_version_and_preserves_history(client: TestCl
 
 def test_derived_rebuild_job_upgrades_legacy_versions_without_migration_rewrite(client: TestClient) -> None:
     conversation_id = _commit_source(client)
+    revision_before_rebuild = client.get(f"/api/conversations/{conversation_id}").json()["offline_revision"]
     override = app.dependency_overrides[get_db]
     override_generator = override()
     db = next(override_generator)
@@ -187,6 +188,9 @@ def test_derived_rebuild_job_upgrades_legacy_versions_without_migration_rewrite(
     task = client.get(f"/api/tasks/{queued.json()['job_id']}").json()
     assert task["status"] == "committed"
     assert task["result"]["rebuilt_versions"] == 2
+    # Derived maintenance is asynchronous and must not invalidate the
+    # canonical revision handed back by the user mutation that queued it.
+    assert client.get(f"/api/conversations/{conversation_id}").json()["offline_revision"] == revision_before_rebuild
 
     override_generator = override()
     db = next(override_generator)

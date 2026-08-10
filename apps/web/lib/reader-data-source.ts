@@ -14,6 +14,7 @@ import { offlineDb } from "./offline-db";
 import { searchOffline } from "./offline-search";
 import type {
   ConversationDetail,
+  ConversationListItem,
   DialogueIndexResponse,
   MessageWindowResponse,
   ReaderTurnResponse,
@@ -80,7 +81,7 @@ export interface ReaderDataSource {
   searchConversation(conversationId: string, options: ReaderSearchOptions): Promise<SearchResponse>;
   getReadingPosition(conversationId: string): Promise<ReadingPositionResponse>;
   saveReadingPosition(conversationId: string, input: ReadingPositionInput): Promise<void>;
-  recordRecent(conversationId: string, projectId?: string | null): Promise<void>;
+  recordRecent(conversationId: string, projectId?: string | null): Promise<ConversationListItem | null>;
 }
 
 export const remoteReaderDataSource: ReaderDataSource = {
@@ -106,7 +107,10 @@ export const remoteReaderDataSource: ReaderDataSource = {
   },
   getReadingPosition,
   async saveReadingPosition(conversationId, input) { await saveReadingPosition(conversationId, input); },
-  async recordRecent(conversationId, projectId) { await recordRecentConversation(conversationId, { project_id: projectId ?? null }); },
+  async recordRecent(conversationId, projectId) {
+    const recent = await recordRecentConversation(conversationId, { project_id: projectId ?? null });
+    return recent.conversation;
+  },
 };
 
 export const offlineReaderDataSource: ReaderDataSource = {
@@ -269,6 +273,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
   },
   async recordRecent(conversationId) {
     await offlineDb.conversations.update(conversationId, { last_read_at: new Date().toISOString() });
+    return null;
   },
 };
 

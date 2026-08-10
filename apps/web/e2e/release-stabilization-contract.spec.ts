@@ -8,6 +8,7 @@ function source(path: string): string {
 
 test("conversation mutations hand the committed revision to the client", () => {
   const reader = source("features/conversations/conversation-reader.tsx");
+  const dataSource = source("lib/reader-data-source.ts");
   const createDialog = source("features/conversations/new-conversation-dialog.tsx");
   const insertDialog = source("features/conversations/message-insert-dialog.tsx");
   const types = source("lib/types.ts");
@@ -16,6 +17,8 @@ test("conversation mutations hand the committed revision to the client", () => {
   expect(insertDialog).toContain("onSubmitted(result)");
   expect(reader).toContain("applyConversationRevision(result.conversation_revision)");
   expect(reader).toContain("applyConversationRevision(result.conversation.offline_revision)");
+  expect(reader).toContain("canonicalConversation.offline_revision");
+  expect(dataSource).toContain("return recent.conversation");
 });
 
 test("managed dialogs have one pointer-only backdrop and shared focus lifecycle", () => {

@@ -343,7 +343,19 @@ export function ConversationReader({
   }, [conversationQuery.data]);
 
   useEffect(() => {
-    void dataSource.recordRecent(conversationId, projectContextId ?? null).then(() => {
+    void dataSource.recordRecent(conversationId, projectContextId ?? null).then((canonicalConversation) => {
+      if (canonicalConversation) {
+        queryClient.setQueryData<ConversationDetail>(["conversation", dataSource.mode, conversationId], (current) => (
+          current
+            ? {
+                ...current,
+                offline_revision: canonicalConversation.offline_revision,
+                last_read_at: canonicalConversation.last_read_at,
+                reading_progress: canonicalConversation.reading_progress,
+              }
+            : current
+        ));
+      }
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     }).catch(() => undefined);

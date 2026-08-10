@@ -1227,7 +1227,12 @@ def _renumber_conversation(db: Session, conversation_id: uuid.UUID) -> None:
     db.flush()
 
 
-def _refresh_conversation_stats(db: Session, conversation_id: uuid.UUID) -> None:
+def _refresh_conversation_stats(
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    bump_revision: bool = True,
+) -> None:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None:
         return
@@ -1244,12 +1249,18 @@ def _refresh_conversation_stats(db: Session, conversation_id: uuid.UUID) -> None
     conversation.content_hash = content_hash("\n".join(text_parts)) if text_parts else None
     conversation.updated_at = utc_now()
     conversation.sort_time = conversation.updated_at
-    conversation.offline_revision += 1
+    if bump_revision:
+        conversation.offline_revision += 1
     db.flush()
 
 
-def refresh_conversation_stats(db: Session, conversation_id: uuid.UUID) -> None:
-    _refresh_conversation_stats(db, conversation_id)
+def refresh_conversation_stats(
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    bump_revision: bool = True,
+) -> None:
+    _refresh_conversation_stats(db, conversation_id, bump_revision=bump_revision)
 
 
 def _get_active_conversation(db: Session, conversation_id: uuid.UUID) -> Conversation:
