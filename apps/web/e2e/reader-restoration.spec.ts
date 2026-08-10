@@ -112,10 +112,25 @@ test("large scrollbar jumps repair stale virtual coordinates instead of leaving 
     root.scrollTop = articleStart + articleRect.height * 0.55;
   }, targetMessageId);
 
-  await expect.poll(() => visibleBlockCount(targetArticle), { timeout: 1_500 }).toBeGreaterThan(0);
-  await expect.poll(() => readingLineContentDistance(page), { timeout: 1_500 }).toBeLessThanOrEqual(48);
+  await expect.poll(() => visibleBlockCount(targetArticle), { timeout: 750, intervals: [25, 50, 100] }).toBeGreaterThan(0);
+  await expect.poll(() => readingLineContentDistance(page), { timeout: 750, intervals: [25, 50, 100] }).toBeLessThanOrEqual(48);
 
   await page.locator('[data-test-upstream-virtual-shift="true"]').evaluate((spacer) => spacer.remove());
+
+  const jumpLandings = await scrollRoot.evaluate(async (root) => {
+    const samples: number[] = [];
+    for (const ratio of [0.08, 0.88, 0.2, 0.74, 0.35, 0.62]) {
+      root.scrollTop = (root.scrollHeight - root.clientHeight) * ratio;
+      await new Promise((resolve) => window.setTimeout(resolve, 40));
+      const rootRect = root.getBoundingClientRect();
+      samples.push(Array.from(root.querySelectorAll<HTMLElement>("[data-block-index]")).filter((block) => {
+        const rect = block.getBoundingClientRect();
+        return rect.bottom > rootRect.top && rect.top < rootRect.bottom;
+      }).length);
+    }
+    return samples;
+  });
+  expect(jumpLandings.every((count) => count > 0), `blank jump samples: ${jumpLandings.join(",")}`).toBe(true);
 });
 
 test("scrollbar pointer drag defers edge-window growth until pointer release", async ({ page }) => {

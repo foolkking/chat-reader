@@ -1115,7 +1115,15 @@ export function ConversationReader({
     const onPageHide = () => sendCachedPosition();
     const onScroll = () => {
       const current = root.scrollTop;
-      if (pointerDraggingRef.current && Math.abs(current - pointerScrollTopRef.current) > 1) {
+      const scrollDelta = Math.abs(current - pointerScrollTopRef.current);
+      if (scrollDelta > Math.max(1200, root.clientHeight * 1.5)) {
+        // Home/End, accessibility tooling and scrollbar track jumps do not
+        // necessarily have a preceding pointer event. Rebase virtual message
+        // coordinates after a viewport-scale jump without adding layout reads
+        // to the ordinary wheel path.
+        notifyReaderWindowLayoutChanged();
+      }
+      if (pointerDraggingRef.current && scrollDelta > 1) {
         pointerDragMovedRef.current = true;
         markReaderScrollIntent(current < pointerScrollTopRef.current ? "up" : "down");
       }
