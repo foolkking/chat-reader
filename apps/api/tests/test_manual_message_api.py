@@ -24,6 +24,31 @@ def test_create_manual_conversation_creates_user_and_assistant(client) -> None:
     assert payload["conversation"]["message_count"] == 2
 
 
+def test_initial_notebook_read_does_not_make_first_message_mutation_stale(client) -> None:
+    created = client.post(
+        "/api/conversations",
+        json={
+            "title": "Notebook read revision",
+            "messages": [
+                {"role": "user", "content_markdown": "Question"},
+                {"role": "assistant", "content_markdown": "Answer"},
+            ],
+        },
+    ).json()
+    conversation_id = created["conversation"]["id"]
+    revision = created["conversation"]["offline_revision"]
+
+    notebook = client.get(f"/api/conversations/{conversation_id}/notebook")
+    assert notebook.status_code == 200
+    assert notebook.json()["blocks"] == []
+    assert client.get(f"/api/conversations/{conversation_id}").json()["offline_revision"] == revision
+
+    deleted = client.delete(
+        f"/api/messages/{created['messages'][1]['id']}?expected_offline_revision={revision}"
+    )
+    assert deleted.status_code == 200, deleted.text
+
+
 def test_manual_insert_defaults_to_opposite_role_and_pair(client) -> None:
     created = client.post(
         "/api/conversations",

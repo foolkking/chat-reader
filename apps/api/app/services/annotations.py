@@ -113,7 +113,7 @@ def delete_annotation(db: Session, annotation_id: uuid.UUID, base_revision: int)
 
 
 def get_notebook(db: Session, conversation_id: uuid.UUID) -> ConversationNotebook:
-    conversation = _conversation(db, conversation_id)
+    _conversation(db, conversation_id)
     notebook = (
         db.query(ConversationNotebook)
         .filter(
@@ -138,7 +138,10 @@ def get_notebook(db: Session, conversation_id: uuid.UUID) -> ConversationNoteboo
         updated_at=now,
     )
     db.add(notebook)
-    _touch_conversation(conversation)
+    # Lazily materializing the canonical empty notebook is a read bootstrap,
+    # not a user content mutation. Bumping the conversation revision here
+    # races the first real edit/delete after Reader hydration because this GET
+    # response does not carry a conversation revision handoff.
     db.flush()
     return notebook
 

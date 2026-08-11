@@ -18,7 +18,11 @@ test("conversation mutations hand the committed revision to the client", () => {
   expect(reader).toContain("applyConversationRevision(result.conversation_revision)");
   expect(reader).toContain("applyConversationRevision(result.conversation.offline_revision)");
   expect(reader).toContain("canonicalConversation.offline_revision");
+  expect(reader).toContain("recordedRecentConversationRef.current === conversationId");
+  expect(reader).toContain("if (!conversationQuery.data");
   expect(dataSource).toContain("return recent.conversation");
+  expect(reader).toContain("\\u64a4\\u9500\\u5931\\u8d25");
+  expect(source("lib/api.ts")).toContain("response.status >= 500");
 });
 
 test("managed dialogs have one pointer-only backdrop and shared focus lifecycle", () => {

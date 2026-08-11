@@ -1111,6 +1111,9 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 async function getErrorMessage(response: Response, path: string): Promise<string> {
+  if (response.status >= 500) {
+    return "服务暂时不可用，请稍后重试。";
+  }
   try {
     const payload = (await response.json()) as { detail?: unknown; error?: { message?: string } };
     if (typeof payload.error?.message === "string") {

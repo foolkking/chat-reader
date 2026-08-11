@@ -83,6 +83,7 @@ export function ConversationReader({
   const [showSearch, setShowSearch] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
   const filesPreferenceReadyRef = useRef(false);
+  const recordedRecentConversationRef = useRef<string | null>(null);
   const [splitWorkspaceOpen, setSplitWorkspaceOpen] = useState(false);
   const [annotationsOpen, setAnnotationsOpen] = useState(searchParams.get("annotations") === "open");
   const [focusMode, setFocusMode] = useState(false);
@@ -343,6 +344,8 @@ export function ConversationReader({
   }, [conversationQuery.data]);
 
   useEffect(() => {
+    if (!conversationQuery.data || recordedRecentConversationRef.current === conversationId) return;
+    recordedRecentConversationRef.current = conversationId;
     void dataSource.recordRecent(conversationId, projectContextId ?? null).then((canonicalConversation) => {
       if (canonicalConversation) {
         queryClient.setQueryData<ConversationDetail>(["conversation", dataSource.mode, conversationId], (current) => (
@@ -358,8 +361,10 @@ export function ConversationReader({
       }
       void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
-    }).catch(() => undefined);
-  }, [conversationId, dataSource, projectContextId, queryClient]);
+    }).catch(() => {
+      if (recordedRecentConversationRef.current === conversationId) recordedRecentConversationRef.current = null;
+    });
+  }, [conversationId, conversationQuery.data, dataSource, projectContextId, queryClient]);
 
   const positionQuery = useQuery({
     queryKey: ["reading-position", dataSource.mode, conversationId],
@@ -1460,8 +1465,10 @@ export function ConversationReader({
       applyConversationRevision(result.conversation_revision);
       setDeletedMessage(null);
       await refreshReader();
-    } catch (error) {
-      const messageText = error instanceof Error ? error.message : "撤销失败，消息尚未恢复。";
+    } catch {
+      const messageText = resolvedLocale === "zh-CN"
+        ? "\u64a4\u9500\u5931\u8d25\uff0c\u6d88\u606f\u5c1a\u672a\u6062\u590d\u3002"
+        : "Undo failed. The message has not been restored.";
       setDeletedMessage((current) => current ? { ...current, status: "restore_failed", error: messageText } : current);
       window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: messageText, tone: "error", persist: true } }));
     }
