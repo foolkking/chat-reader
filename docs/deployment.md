@@ -6,6 +6,8 @@ The release adds only static Skill files and browser-local offline export code; 
 
 After deployment, verify `/library` can interact while shell reconciliation is pending, the same current-conversation-files entry appears in Offline Reader, missing cached files show `offline-unavailable`, and `.context.zip` results expose the two Skill languages. Remove old image tags only after the replacement Web/API/worker images are healthy and rollback tags remain.
 
+Release evidence: commit `3b544feb97257722763437fc5c9206f80b3e68db`, Actions run `31486218261`, archive SHA-256 `1e83d68a5f3c7321e9e9d6f2d5602b043aa32ae127ab5cf3c320e75fa3b7bfe7`, verified backup `/opt/chat-reader/backups/offline-context-20260811T112745Z-3b544fe`. King used migration preflight and `--no-build` recreation. API/Web/PostgreSQL are healthy and worker is running. Cleanup retained current `3b544fe` and rollback `1cdadc4`, removed obsolete `b6ce0e6` tags/layers and the transferred archive, and did not touch volumes or `.env.production`.
+
 ## 2026-08-10 release evidence
 
 ### Focus lifecycle closure

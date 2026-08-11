@@ -28,6 +28,24 @@
 
 The 27 PWA skips are API/fixture-gated online flows in the no-API local web matrix and are not counted as PASS. The local offline exporter is a bounded snapshot projection; it does not alter the server export/import contract.
 
+### Production deployment and Chrome
+
+| Check | Result |
+| --- | --- |
+| Commit / Actions | `3b544fe` / run `31486218261` PASS |
+| Release archive | SHA-256 `1e83d68a5f3c7321e9e9d6f2d5602b043aa32ae127ab5cf3c320e75fa3b7bfe7` PASS |
+| Backup | PostgreSQL plus four business archives validated at `/opt/chat-reader/backups/offline-context-20260811T112745Z-3b544fe` |
+| Migration / health | `20260806_0021`; API/Web/PostgreSQL healthy; worker running |
+| `/library` startup | PASS: `checking` to `ready` in about 2.5 seconds, 27 shell resources, update action usable |
+| Existing offline Reader | PASS: 398-message snapshot opened, no page overflow |
+| Offline current-conversation files | PASS: read-only entry/panel present, no management actions |
+| Offline local `.context.zip` | PASS: generated from the existing snapshot without server mutation |
+| English Skill viewer | PASS: content and pinned SHA visible |
+| Production download event / clipboard readback | NOT_PRODUCTION_VERIFIED_IN_THIS_BROWSER_BRIDGE; UI reported success and production-build Playwright is PASS |
+| Image cleanup | PASS: retained current `3b544fe` plus rollback `1cdadc4`; removed obsolete `b6ce0e6` and transferred archive |
+
+Offline quota exhaustion, interrupted package writes, stale-package reconnect and a real production network cut remain verification debt. Therefore this release does not claim the complete PWA negative matrix as PASS.
+
 ## Reader Scrollbar Jump Blank-Window Closure - 2026-08-10
 
 ### Root cause
