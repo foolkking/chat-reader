@@ -1,6 +1,6 @@
 "use client";
 
-import { GripHorizontal, Maximize2, X } from "lucide-react";
+import { GripHorizontal, Maximize2, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 
 type Geometry = { x: number; y: number; width: number; height: number };
@@ -159,13 +159,14 @@ export function FloatingWorkspacePanel({
     >
       <header
         data-workspace-drag-handle={placement === "reader-floating" ? "true" : undefined}
-        className={`flex min-h-12 shrink-0 items-center gap-2 border-b border-ui bg-raised px-2 ${placement === "reader-floating" ? "touch-none md:cursor-move" : ""}`}
+        className={`flex min-h-12 shrink-0 items-center gap-2 border-b border-ui bg-raised px-2 ${placement === "reader-floating" ? "touch-none md:cursor-grab md:active:cursor-grabbing" : ""}`}
         onPointerDown={placement === "reader-floating" ? (event) => {
           if ((event.target as HTMLElement).closest("button")) return;
           beginDrag("move", event);
         } : undefined}
       >
         {placement === "floating" ? <button type="button" onPointerDown={(event) => beginDrag("move", event)} className="hidden h-10 w-10 cursor-move items-center justify-center rounded-lg text-secondary hover:bg-subtle md:inline-flex" aria-label={title} title={title}><GripHorizontal className="h-4 w-4" /></button> : null}
+        {placement === "reader-floating" ? <Paperclip className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" /> : null}
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-semibold text-primary">{title}</h2>
           {subtitle ? <p className="truncate text-[11px] text-secondary">{subtitle}</p> : null}
