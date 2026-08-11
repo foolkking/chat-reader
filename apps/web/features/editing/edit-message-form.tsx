@@ -67,6 +67,8 @@ export function EditMessageForm({
   const { t, resolvedLocale, resolvedTheme } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const editorViewRef = useRef<EditorView | null>(null);
+  const cursorOffsetChangeRef = useRef(onCursorOffsetChange);
+  cursorOffsetChangeRef.current = onCursorOffsetChange;
   const insertFilesRef = useRef<(files: File[], position: number, originalCodePosition?: number) => void>(() => undefined);
   const insertExistingAttachmentRef = useRef<(attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void>(() => undefined);
   const completedUploadItemsRef = useRef(new Map<string, string>());
@@ -176,11 +178,11 @@ export function EditMessageForm({
       if (!view) return;
       const anchor = Math.max(0, Math.min(detail.cursorOffset, view.state.doc.length));
       view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
-      onCursorOffsetChange?.(anchor);
+      cursorOffsetChangeRef.current?.(anchor);
     };
     window.addEventListener("chat-reader:source-editor-locate", onSourceLocate);
     return () => window.removeEventListener("chat-reader:source-editor-locate", onSourceLocate);
-  }, [messageId, onCursorOffsetChange]);
+  }, [messageId]);
 
   useEffect(() => {
     const view = editorViewRef.current;
@@ -211,8 +213,8 @@ export function EditMessageForm({
     if (!view || requestedCursorOffset === undefined) return;
     const anchor = Math.max(0, Math.min(requestedCursorOffset, view.state.doc.length));
     view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
-    onCursorOffsetChange?.(anchor);
-  }, [onCursorOffsetChange, requestedCursorOffset]);
+    cursorOffsetChangeRef.current?.(anchor);
+  }, [requestedCursorOffset]);
 
   useEffect(() => {
     if (!pendingAttachmentInsertion) {
@@ -244,7 +246,7 @@ export function EditMessageForm({
     const value = `${before}${markdown}${after}`;
     view.dispatch({ changes: { from: target, insert: value }, selection: { anchor: target + value.length }, effects: EditorView.scrollIntoView(target + value.length, { y: "center" }) });
     appliedInsertionRef.current = key;
-    onCursorOffsetChange?.(target + value.length);
+    cursorOffsetChangeRef.current?.(target + value.length);
     onAttachmentInsertionApplied?.();
   }
 
@@ -357,7 +359,7 @@ export function EditMessageForm({
             view.dispatch({ effects: themeCompartmentRef.current.reconfigure(codeMirrorTheme(resolvedTheme)) });
             const anchor = Math.max(0, Math.min(initialCursorOffset, view.state.doc.length));
             view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
-            onCursorOffsetChange?.(anchor);
+            cursorOffsetChangeRef.current?.(anchor);
             view.focus();
             if (pendingAttachmentInsertion) applyAttachmentInsertion(view, pendingAttachmentInsertion);
             if (queuedFilesRef.current.length) {
@@ -365,7 +367,9 @@ export function EditMessageForm({
               insertFilesAtCurrentPosition(view, files);
             }
           }}
-          onUpdate={(update) => onCursorOffsetChange?.(update.state.selection.main.head)}
+          onUpdate={(update) => {
+            if (update.docChanged || update.selectionSet) cursorOffsetChangeRef.current?.(update.state.selection.main.head);
+          }}
           onChange={setText}
           className="h-full text-sm [&_.cm-editor]:h-full"
         />

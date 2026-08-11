@@ -74,7 +74,7 @@ test("project create Escape restores its trigger", () => {
   expect(projectSidebar).toContain("props.onCancel()");
 });
 
-test("archive restore stays in Import data and files open in the left management workspace", () => {
+test("archive restore stays in Import data and files use the annotation-style reader workspace", () => {
   const backupPanel = source("components/data-backup-panel.tsx");
   const importPanel = source("features/import/import-panel.tsx");
   const reader = source("features/conversations/conversation-reader.tsx");
@@ -82,7 +82,19 @@ test("archive restore stays in Import data and files open in the left management
   expect(backupPanel).not.toContain("restoreSystemArchive");
   expect(backupPanel).not.toContain("恢复系统归档");
   expect(importPanel).toContain('label=".cr 归档"');
-  expect(reader).toContain('storageKey="chat-reader:conversation-files-workspace"');
-  expect(reader).toContain('placement="left-overlay"');
-  expect(reader).toContain("重置文件面板宽度");
+  expect(reader).toContain('storageKey="chat-reader:conversation-files-workspace-floating-v2"');
+  expect(reader).toContain('placement="reader-floating"');
+  expect(reader).toContain("重置文件窗口位置");
+  const workspace = source("components/floating-workspace-panel.tsx");
+  expect(workspace).toContain('placement === "reader-floating"');
+  expect(workspace).toContain("readerPanelSafeLeft");
+  expect(workspace).toContain("data-workspace-drag-handle");
+});
+
+test("source cursor location is a one-shot request and cannot replay after a dirty rerender", () => {
+  const editForm = source("features/editing/edit-message-form.tsx");
+  expect(editForm).toContain("cursorOffsetChangeRef.current = onCursorOffsetChange");
+  expect(editForm).toContain("}, [requestedCursorOffset]);");
+  expect(editForm).not.toContain("[onCursorOffsetChange, requestedCursorOffset]");
+  expect(editForm).toContain("update.docChanged || update.selectionSet");
 });

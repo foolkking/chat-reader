@@ -52,12 +52,13 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
 
 test("revision conflict preserves the source draft and can load the latest base before retry", async ({ page }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
+  const longAssistantSource = Array.from({ length: 180 }, (_, index) => `QA source line ${String(index + 1).padStart(3, "0")} with enough text to require editor scrolling.`).join("\n\n");
   const createdResponse = await page.request.post("/api/conversations", {
     data: {
       title: `QA conflict recovery ${suffix}`,
       messages: [
         { role: "user", content_markdown: "QA conflict user" },
-        { role: "assistant", content_markdown: "QA conflict assistant" },
+        { role: "assistant", content_markdown: longAssistantSource },
       ],
     },
   });
@@ -67,12 +68,27 @@ test("revision conflict preserves the source draft and can load the latest base 
 
   try {
     await page.goto(`/conversations/${conversationId}`);
-    const assistant = page.locator("article[data-message-id]").filter({ hasText: "QA conflict assistant" });
+    const assistant = page.locator("article[data-message-id]").filter({ hasText: "QA source line 001" });
     await expect(assistant).toBeVisible();
     await assistant.getByRole("button", { name: /Edit Markdown source|\u7f16\u8f91 Markdown \u6e90\u7801/ }).click();
     const editor = page.getByTestId("source-editor-codemirror").locator(".cm-content");
     await editor.click();
     await page.keyboard.press("Control+End");
+    const readCaret = () => editor.evaluate((element) => {
+      const selection = window.getSelection();
+      const scroller = element.closest<HTMLElement>(".cm-scroller");
+      if (!selection?.anchorNode || !element.contains(selection.anchorNode)) return { offset: -1, scrollTop: scroller?.scrollTop ?? -1 };
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      range.setEnd(selection.anchorNode, selection.anchorOffset);
+      return { offset: range.toString().length, scrollTop: scroller?.scrollTop ?? -1 };
+    });
+    const beforeFirstEdit = await readCaret();
+    await page.keyboard.insertText("Z");
+    await expect.poll(async () => (await readCaret()).offset).toBe(beforeFirstEdit.offset + 1);
+    await expect.poll(async () => (await readCaret()).scrollTop).toBeGreaterThanOrEqual(beforeFirstEdit.scrollTop - 2);
+    await page.keyboard.press("Backspace");
+    await expect.poll(async () => (await readCaret()).offset).toBe(beforeFirstEdit.offset);
     await page.keyboard.insertText("\n\nQA preserved draft");
     await expect(editor).toContainText("QA preserved draft");
 

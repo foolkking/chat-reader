@@ -143,6 +143,36 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   await expect(sourceWorkspace).toHaveCount(0);
   await expect.poll(async () => Math.abs((await page.locator(`#${sourceAnchor.id}`).boundingBox())!.y - sourceAnchor.top)).toBeLessThanOrEqual(24);
 
+  await page.evaluate(() => localStorage.removeItem("chat-reader:conversation-files-workspace-floating-v2"));
+  const filesButton = page.getByRole("button", { name: /\u5f53\u524d\u5bf9\u8bdd\u6587\u4ef6|Conversation files/ }).first();
+  await filesButton.click();
+  const filesWorkspace = page.getByTestId("conversation-files-workspace");
+  await expect(filesWorkspace).toBeVisible();
+  const defaultFilesBox = await filesWorkspace.boundingBox();
+  expect(defaultFilesBox).not.toBeNull();
+  expect(defaultFilesBox!.x).toBeCloseTo(1440 - 400 - 28, 0);
+  expect(defaultFilesBox!.y).toBeCloseTo(72, 0);
+  expect(defaultFilesBox!.width).toBeCloseTo(400, 0);
+  expect(defaultFilesBox!.height).toBeCloseTo(620, 0);
+  const filesDragHandle = filesWorkspace.locator("[data-workspace-drag-handle='true']");
+  const filesHeaderBox = await filesDragHandle.boundingBox();
+  expect(filesHeaderBox).not.toBeNull();
+  await page.mouse.move(filesHeaderBox!.x + filesHeaderBox!.width / 2, filesHeaderBox!.y + filesHeaderBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(filesHeaderBox!.x + filesHeaderBox!.width / 2 - 80, filesHeaderBox!.y + filesHeaderBox!.height / 2 + 24, { steps: 4 });
+  await page.mouse.up();
+  const movedFilesBox = await filesWorkspace.boundingBox();
+  expect(movedFilesBox!.x).toBeCloseTo(defaultFilesBox!.x - 80, 0);
+  expect(movedFilesBox!.y).toBeCloseTo(defaultFilesBox!.y + 24, 0);
+  await filesWorkspace.getByRole("button", { name: /Close|\u5173\u95ed/ }).click();
+  await filesButton.click();
+  const restoredFilesBox = await filesWorkspace.boundingBox();
+  expect(restoredFilesBox!.x).toBeCloseTo(movedFilesBox!.x, 0);
+  expect(restoredFilesBox!.y).toBeCloseTo(movedFilesBox!.y, 0);
+  await filesWorkspace.getByRole("button", { name: /Reset file window position|\u91cd\u7f6e\u6587\u4ef6\u7a97\u53e3\u4f4d\u7f6e/ }).click();
+  await expect.poll(async () => (await filesWorkspace.boundingBox())!.x).toBeCloseTo(defaultFilesBox!.x, 0);
+  await filesWorkspace.getByRole("button", { name: /Close|\u5173\u95ed/ }).click();
+
   await primaryActions.nth(2).click();
   await expect(page.locator('[data-annotation-mode="floating"]')).toBeVisible();
   await primaryActions.nth(2).click();
