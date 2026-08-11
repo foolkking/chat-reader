@@ -371,7 +371,7 @@ Detailed findings, screenshots and QA cleanup: `docs/evidence/UX_RELEASE_READINE
 | Delete -> Undo -> refresh | PASS | Real production delete, forced restore 500, localized retry, successful restore and refresh persistence. |
 | Active unreferenced Attachment | PASS | Production QA reconciled 2 active/unreferenced business rows with current count 0; both were visible. |
 | Shared AssetObject identity | PASS | Two distinct Attachment IDs for identical bytes shared one AssetObject without UI/API merging. |
-| Two-tab concurrency | PARTIAL_PASS | Stale write returned 409, preserved draft and did not overwrite the other tab; explicit `加载最新状态` action is absent. |
+| Two-tab concurrency | PASS | Production stale write returned 409, preserved draft, loaded the latest base explicitly and saved the retained draft without overwriting silently. |
 | Exact 360/390/768 reflow | PASS | Headless Chrome against production real long Reader: document widths exactly matched viewports with no page overflow. |
 | Browser 125/150/200% zoom | NOT_PRODUCTION_VERIFIED | Device-scale checks are not accepted as browser zoom. |
 | File chooser | PASS | Production-build Playwright real chooser/upload/insert/refresh 5/5; production bridge itself cannot control the native chooser. |
@@ -382,7 +382,7 @@ Detailed findings, screenshots and QA cleanup: `docs/evidence/UX_RELEASE_READINE
 
 Required commands: lint/typecheck/Web production build PASS; API `218 passed / 3 skipped`; Alembic one head `20260806_0021`; default PWA `37 passed / 27 conditional skipped`; mutation closure `6/6`; long Reader `8/8`; upload chooser `5/5`; Offline baseline `6/6`. Skipped scenarios are not counted as PASS.
 
-Deployment: commit `32912842671068a6af615b80a7c71d313fa5157e`, Actions run `31451781286`, artifact SHA-256 `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02`, validated backup `/opt/chat-reader/backups/final-closure-20260811T022014Z-3291284`, King migration preflight and `--no-build` recreation. API/Web/PostgreSQL are healthy, worker running, Scanner disabled.
+Deployment: commit `38c57c12191bb85ebca0a7caf9aea80f11070993`, Actions run `31453697905`, artifact SHA-256 `430dd0d88c927a6329da132aced75c742124ac4035b4c05c348bdbeda549e11c`, validated backup `/opt/chat-reader/backups/final-closure-20260811T030600Z-38c57c1`, King migration preflight and `--no-build` recreation. API/Web/PostgreSQL are healthy, worker running, Scanner disabled.
 
 ```text
 CORE_WEB_RELEASE = PARTIAL_PASS

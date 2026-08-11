@@ -139,5 +139,5 @@ conversation + reading position 并行加载
 1. Creating a conversation seeds the canonical response and revision before navigation completes. Initial Notebook/recent bootstrap reads do not advance Conversation revision, so the first insert, edit or delete can run without a refresh.
 2. Delete is complete when the message disappears and the server returns the new revision. Undo is complete only after restore succeeds, the Reader reconciles the returned canonical message/revision, and refresh still contains the message.
 3. Undo 409/500/network failure keeps a localized live error and a retry action. It never silently closes or claims the message was restored.
-4. A genuine second-tab 409 preserves the source draft and does not overwrite the other tab. The current UI explains that the conversation changed; a dedicated `加载最新状态` action remains a tracked follow-up.
+4. A genuine second-tab 409 preserves the source draft and does not overwrite the other tab. `加载最新状态` fetches the current Conversation revision and MessageVersion base without replacing the editor draft; the user reviews and saves again against that explicit latest base.
 5. An active Attachment with zero current-version occurrences remains visible in Files Panel `全部/未引用`. Occurrence removal with keep does not detach the Attachment, and multiple Attachment business identities may share one AssetObject.

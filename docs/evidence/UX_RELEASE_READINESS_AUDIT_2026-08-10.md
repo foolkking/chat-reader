@@ -258,7 +258,7 @@ OVERALL = PARTIAL_PASS
 ONLINE_WEB_GA_READY = NO
 ```
 
-The lifecycle P1 defects are closed in production. The strict Core Web gate is nevertheless not unconditional because actual browser 125/150/200% zoom remains uncontrolled and the two-tab conflict screen does not yet provide the contracted explicit `加载最新状态` action. The Online Web is technically stable for controlled release, but this audit does not relabel those verification/UX debts as PASS.
+The lifecycle P1 defects and explicit two-tab recovery action are closed in production. The strict Core Web gate is nevertheless not unconditional because actual browser 125/150/200% zoom remains uncontrolled. The Online Web is technically stable for controlled release, but this audit does not relabel that verification debt as PASS.
 
 ### Root causes and closure evidence
 
@@ -296,7 +296,7 @@ The isolated production QA conversation contained two available active Attachmen
 | Delete | PASS | PASS | PASS | PASS | PASS |
 | Undo | PASS | PASS | PASS | PASS | PASS |
 | Undo failure/retry | PASS | PASS | PASS | PASS (injected response) | PASS |
-| Two-tab conflict | PASS | PASS | PASS | PARTIAL_PASS | PARTIAL_PASS |
+| Two-tab conflict | PASS | PASS | PASS | PASS | PASS |
 | Unreferenced Attachment | PASS | PASS | PASS | PASS | PASS |
 | Keep after reference removal | PASS | PASS | PASS | PASS | PASS |
 | Reinsert existing Attachment | PASS | PASS | PASS | PASS | PASS |
@@ -319,7 +319,7 @@ The isolated production QA conversation contained two available active Attachmen
 | Offline quota | NOT_PRODUCTION_VERIFIED | NOT_APPLICABLE | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED |
 | Offline interrupted package | NOT_PRODUCTION_VERIFIED | PARTIAL_PASS | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED |
 
-File chooser final PASS is based on trusted production-build Playwright using a real chooser and upload API, as permitted by the gate; the production Chrome bridge limitation remains explicitly separate. `.cr v4` restore correctly ran in an empty production-equivalent instance rather than destructive production. Two-tab protection preserved the draft, rejected stale write and prevented silent overwrite, but its missing explicit load-latest action keeps the combined capability at PARTIAL_PASS.
+File chooser final PASS is based on trusted production-build Playwright using a real chooser and upload API, as permitted by the gate; the production Chrome bridge limitation remains explicitly separate. `.cr v4` restore correctly ran in an empty production-equivalent instance rather than destructive production. The final production two-tab flow rejected the stale write with 409, retained the CodeMirror draft, loaded the latest version base without replacing it, then saved successfully.
 
 ### Automated verification and skip classification
 
@@ -343,12 +343,11 @@ Default Playwright skips: 18 long-Reader/layout cases were environment/fixture-g
 ### Remaining verification debt
 
 - **P2:** Actual browser 125/150/200% zoom was not controllable. Device-scale-factor runs found no overflow but are not equivalent to browser zoom/reflow.
-- **P2:** Genuine 409 preserves the draft and shows localized feedback but lacks the contracted explicit `加载最新状态` action.
 - **P2 / PWA:** Viewer runtime chunk miss, original/derivative cache miss, quota exceeded, interrupted package and reconnect/retry are not fully exercised. `PWA_OFFLINE_RELEASE` remains PARTIAL_PASS.
 - No remaining confirmed P0 or P1 product defect was found in the executed closure flows. P3 count is zero.
 
 ### Deployment and cleanup
 
-Production release commit `32912842671068a6af615b80a7c71d313fa5157e` was built by Actions run `31451781286`. Artifact SHA-256 `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02` matched locally and on King. Backup `/opt/chat-reader/backups/final-closure-20260811T022014Z-3291284` passed checksum verification, `pg_restore --list` and archive listing. Services were recreated with `--no-build`; no migration, volume deletion, `.env` overwrite, local Next build or Scanner activation occurred.
+Production release commit `38c57c12191bb85ebca0a7caf9aea80f11070993` was built by Actions run `31453697905`. Artifact SHA-256 `430dd0d88c927a6329da132aced75c742124ac4035b4c05c348bdbeda549e11c` matched locally and on King. Backup `/opt/chat-reader/backups/final-closure-20260811T030600Z-38c57c1` passed checksum verification, `pg_restore --list` and archive listing. Services were recreated with `--no-build`; no migration, production-volume deletion, `.env` overwrite, local Next build or Scanner activation occurred. One initial command used the default compose file and created a separate empty PostgreSQL container/volume before Alembic started; both exact empty resources were inspected and removed, while the healthy production PostgreSQL container/volume stayed untouched. All subsequent commands explicitly used the production compose file and env file.
 
 All disposable QA conversations were removed through supported APIs and the QA Share was revoked. The now-empty QA Project remains because the product has no project-delete endpoint. Earlier failed import-preview records may remain because no safe owner deletion endpoint exists. No direct SQL cleanup was used, and no real business record was changed.

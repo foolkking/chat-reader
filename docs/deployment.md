@@ -175,11 +175,13 @@ Post-deploy API/Web/PostgreSQL are healthy, the worker is running, public `/api/
 
 ## 2026-08-11 Final Release Closure
 
-- Runtime commit: `32912842671068a6af615b80a7c71d313fa5157e`.
-- External build: GitHub Actions run `31451781286`.
-- Release archive SHA-256: `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02`, verified locally and on King.
-- Backup: `/opt/chat-reader/backups/final-closure-20260811T022014Z-3291284` (about 406 MiB). The PostgreSQL custom dump passed `pg_restore --list`; import/export/offline/asset archives passed checksum and archive listing.
+- Runtime commit: `38c57c12191bb85ebca0a7caf9aea80f11070993`.
+- External build: GitHub Actions run `31453697905`.
+- Release archive SHA-256: `430dd0d88c927a6329da132aced75c742124ac4035b4c05c348bdbeda549e11c`, verified locally and on King.
+- Backup: `/opt/chat-reader/backups/final-closure-20260811T030600Z-38c57c1` (about 406 MiB). The PostgreSQL custom dump passed `pg_restore --list`; import/export/offline/asset archives passed checksum and archive listing.
 - Deployment: verified images loaded, existing migration preflight run, API/import-worker/Web recreated with `--no-build`. No volume deletion, `.env` overwrite, local Next build, Scanner start or schema migration occurred.
 - Post-deploy: API/Web/PostgreSQL healthy, worker running, Scanner disabled, Alembic `20260806_0021 (head)`.
 
 Production QA writes were isolated. Disposable conversations were removed through the supported API and QA Share was revoked. The empty QA Project remains because no project-delete endpoint exists; import-preview residuals without a safe owner-delete API were not removed by SQL.
+
+The first migration invocation accidentally selected the repository's default compose file, created a separate empty `chat-reader-postgres` container and `chat-reader_chat-reader-postgres-data` volume, then failed before running Alembic. Inspection proved the production `chat-reader-postgres-1` and `chat-reader_postgres-data` remained healthy. The two exact empty resources were removed immediately; deployment then used explicit `-f docker-compose.production.yml --env-file .env.production` for migration and service recreation. The empty resources are not recoverable, contained no business data and were never mounted by production.

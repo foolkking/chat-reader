@@ -337,11 +337,11 @@ The Chrome extension did not have local-file URL access for automated chooser co
 | Create/immediate mutation | Pass | Production create -> insert and fresh Reader -> immediate delete required no refresh. |
 | Delete/Undo failure/retry/refresh | Pass | Production response injection showed localized retry, successful restore and refresh persistence. |
 | Attachment lifecycle | Pass | Production active-unreferenced/shared-AssetObject reconciliation plus keep/reinsert. |
-| Two-tab conflict | Partial | 409/draft preservation/no overwrite pass; explicit load-latest action absent. |
+| Two-tab conflict | Pass | Production 409 preserved the draft; explicit load-latest retained it, adopted the latest base and allowed a successful retry. |
 | Exact 360/390/768 | Pass | Production document width matched viewport with no page overflow. |
 | Browser zoom | Not production verified | Device scale is not accepted as actual 125/150/200% zoom. |
 | File chooser | Pass | Production-build Playwright 5/5; production bridge remains unable to control native chooser. |
 | `.cr v4` | Pass | Empty production-equivalent round trip preserved unreferenced and shared-object identities. |
 | Offline negative matrix | Partial | Baseline 6/6; cache/chunk/quota/interruption/reconnect gaps remain. |
 
-Deployment used commit `32912842671068a6af615b80a7c71d313fa5157e`, Actions run `31451781286`, verified SHA-256 `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02`, validated backup and King `--no-build` recreation. Current strict decision: Core Web PARTIAL_PASS, PWA PARTIAL_PASS, Overall PARTIAL_PASS.
+Deployment used commit `38c57c12191bb85ebca0a7caf9aea80f11070993`, Actions run `31453697905`, verified SHA-256 `430dd0d88c927a6329da132aced75c742124ac4035b4c05c348bdbeda549e11c`, validated backup and King `--no-build` recreation. Current strict decision: Core Web PARTIAL_PASS, PWA PARTIAL_PASS, Overall PARTIAL_PASS.
