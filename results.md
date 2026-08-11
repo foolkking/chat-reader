@@ -392,3 +392,9 @@ ONLINE_WEB_GA_READY = NO
 ```
 
 Historical failure rows above remain evidence of the state observed on 2026-08-10; this section is the current release status.
+
+## Entry and attachment-management placement closure - 2026-08-11
+
+- Settings retains system `.cr` export but no longer exposes a second restore file picker; `.cr` selection stays in Import data.
+- Desktop `当前对话文件` now defaults to the fixed left management workspace with right-edge resizing. Mobile remains a full-width sheet.
+- Regression coverage asserts that restore is absent from `DataBackupPanel` and that the Files workspace uses `left-overlay`.

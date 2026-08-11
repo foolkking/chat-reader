@@ -38,10 +38,11 @@ Project/未归类/归档列表 -> checkbox/Shift/键盘/移动长按
 2. 当前部署扫描器关闭时显示 `scanner_disabled`；策略允许继续使用不代表文件安全。
 3. 文件抽屉提交后成为当前对话 Attachment，可保持未放置，也可从编辑器在光标处或消息末尾插入。
 4. 上传完成后先显式提升为当前对话 Attachment；保存消息时以 base version 做并发校验，并在同一事务创建 MessageVersion、Occurrence、RenderBlock。搜索、TOC、统计和摘要在提交后异步重建。删除正文引用不会删除对话级 Attachment。
-5. 对话导出只选择 CanJSON/Markdown 与“包含附件”：分别得到 `.canjsonl`/`.context.zip` 或 `.md`/可移植 Markdown ZIP。系统 `.cr v4` 从设置的数据与备份导出，并只恢复到空实例。
+5. 对话导出只选择 CanJSON/Markdown 与“包含附件”：分别得到 `.canjsonl`/`.context.zip` 或 `.md`/可移植 Markdown ZIP。系统 `.cr v4` 从设置的数据与备份导出，恢复文件统一从“导入数据”选择，服务端只允许恢复到空实例。
 - 源码模式可把真实文件拖到具体文本位置，或粘贴剪贴板图片/文件；文件选择、拖放和粘贴共用上传 session、逐文件进度、取消与重试。上传中/失败项必须处理后才能保存。
 - 拖到 fenced code block 时先选择放到代码块之后、仍按普通文本插入或取消；拖到现有 Markdown 链接内部时移到完整链接之后。多文件保持原始顺序并分别生成 occurrence。
 - 关闭尚未保存的源码时，已完成上传可保留为“当前对话文件”的未放置附件，也可删除；正在上传的项会取消。源码中手动删除附件语法只影响当前新版本 occurrence，不删除对话级 Attachment。
+- 桌面“当前对话文件”默认从左侧管理工作区打开，只调整右边缘宽度；移动端使用全宽 sheet。该入口管理 Attachment，源码编辑器继续负责 occurrence 编排。
 - 拖拽使用 Pointer/Touch/Keyboard sensors：项目排序槽、Project 对话接收区、conversation row/insert slot 与未分类标题行是不同 drop target；跨项目移动只更新单一关系，移回未归类不删除会话，失败按 revision 回滚 optimistic cache。侧栏查询刷新保留上一份数据，避免拖拽期间卸载目标。
 
 ## 3. 阅读长对话并恢复位置

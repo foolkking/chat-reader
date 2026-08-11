@@ -1997,11 +1997,11 @@ export function ConversationReader({
       {!focusMode && showFiles ? (
         <FloatingWorkspacePanel
           storageKey="chat-reader:conversation-files-workspace"
-          placement="floating"
+          placement="left-overlay"
           testId="conversation-files-workspace"
           title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}
           closeLabel={t("close")}
-          resetLabel={resolvedLocale === "zh-CN" ? "重置文件窗口位置" : "Reset file window position"}
+          resetLabel={resolvedLocale === "zh-CN" ? "重置文件面板宽度" : "Reset file panel width"}
           onClose={() => setShowFiles(false)}
         >
           <ConversationFilesPanel

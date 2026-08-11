@@ -113,6 +113,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 - 本次不物理移动规划/证据文件，避免破坏内部链接和正在进行的工作树；通过目录 README 明确封存语义。
 - 2026-08-04 浮动源码工作区、CodeMirror 明暗主题和 JSON 辅助 Markdown 分段已同步到 `PROJECT_STATE.md`、`docs/product.md`、`docs/api-reference.md`、`docs/system/BACKEND_AND_API.md`、`docs/system/USER_FLOWS.md` 与 `docs/system/FRONTEND_ARCHITECTURE.md`；未新增文档类别。
 - 2026-08-06 全页附件预览、正文轻量展示、导出二级选项、扫描关闭策略与 King 原机构建 OOM 边界已同步到当前事实、产品、API、前端、部署、风险和结果文档；本次收尾补充 SVG `<img>` DOM 合同、弹窗焦点管理以及用户确认的 Chrome 上传、Share、`.cr v4` 恢复生产证据；未新增文档类别。
+- 2026-08-11 移除设置中的重复系统归档恢复入口；`.cr` 文件继续从“导入数据”选择。桌面“当前对话文件”默认改为左侧管理工作区，移动端行为不变；同步当前状态、产品、前端架构、用户流程和功能清单。
 
 ## 根目录与现行专题
 

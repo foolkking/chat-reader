@@ -3,6 +3,7 @@
 ## 2026-08-11 Final Release Closure
 
 - Production runtime is commit `38c57c12191bb85ebca0a7caf9aea80f11070993`, built by GitHub Actions run `31453697905` and deployed from archive SHA-256 `430dd0d88c927a6329da132aced75c742124ac4035b4c05c348bdbeda549e11c`. King used validated backup `/opt/chat-reader/backups/final-closure-20260811T030600Z-38c57c1`, migration preflight and `--no-build`; API/Web/PostgreSQL are healthy, the worker is running, Scanner remains disabled, and Alembic is the single head `20260806_0021`.
+- Settings now exposes system `.cr` export only. Users select `.cr` from the existing Import data flow; the duplicate restore file picker in Data and backup is removed. Desktop `当前对话文件` defaults to the fixed left management workspace with a resizable right edge; mobile remains a full-width sheet.
 - The final first-mutation race was a read-side revision write: lazy `GET /notebook` materialized an empty Notebook and touched the Conversation revision without returning the new revision. That GET no longer changes revision. Real production flow now passes create -> immediate insert, delete -> forced restore failure -> visible retry -> restore -> refresh persistence.
 - Active zero-current-occurrence Attachments are now reconciled as unreferenced business rows. Production QA verified two distinct Attachment identities for identical bytes sharing one AssetObject; both remained visible with current reference count zero, and insert/keep/reinsert preserved the Attachment/Object identities.
 - Production verification passes exact 360x800, 390x844 and 768x1024 reflow on the real long Reader, genuine two-tab conflict protection with draft preservation and explicit `加载最新状态`, Share expiry/revocation, long Reader restoration and the unified Dialog/Viewer focus contract. File chooser is PASS in production-build Playwright but remains unavailable to the production Chrome bridge.
@@ -100,7 +101,7 @@
 
 - Alembic 当前单一 head 为 `20260806_0021`。附件采用 `AssetObject -> conversation-owned Attachment -> MessageVersion occurrence` 三层模型；`message_version_attachments` 保留物理表名，但每行有独立 ID、`occurrence_key` 和 `placement`，允许同一附件多次出现。上传先进入 `attachment_upload_sessions/items`，只有显式提交或保存消息时才原子提升为 canonical 数据。
 - `.crbundle` preview/commit 校验 ZIP 路径、大小、SHA-256、MIME、扫描状态和引用，并兼容 `chat-reader-import-bundle v1`。Reader/Share 使用权限受控 metadata/content 与单 Range 接口；“当前对话文件”抽屉和 Markdown 源码编辑器支持普通上传、未放置文件、已有文件复用及光标/消息尾部插入。
-- 对话导出 UI 只暴露 CanJSON、Markdown 和“包含附件”。结果固定为 `.canjsonl`、`.context.zip`、`.md` 或可移植 Markdown ZIP；系统级 `.cr v4` 位于“数据与备份”，包含附件且第一版只允许恢复到空实例。旧对话级 `.cr` 仅保留导入兼容。
+- 对话导出 UI 只暴露 CanJSON、Markdown 和“包含附件”。结果固定为 `.canjsonl`、`.context.zip`、`.md` 或可移植 Markdown ZIP；系统级 `.cr v4` 从“数据与备份”导出，通过已有“导入数据”入口选择恢复文件，服务端仍只允许系统归档恢复到空实例。旧对话级 `.cr` 继续保留导入兼容。
 - Context Package 导出前只校验对象状态、大小与 SHA-256 完整性；当前产品策略不执行附件内容秘密扫描或敏感文件排除。未扫描对象仍明确标记 `scanner_disabled`，不能解释为 clean/safe。过期未提交 Bundle preview 会释放 staging 对象；`apps/api/scripts/gc_assets.py` 默认 dry-run、执行时按 30 天无引用/无 lease 保留 tombstone 后删除物理文件。
 - Scanner Provider 抽象保留；当前 King 单用户部署固定使用 `DisabledScanner`、`ATTACHMENT_SCANNER=disabled` 和 `ALLOW_UNSCANNED_ATTACHMENTS=true`。当前部署主动关闭附件恶意软件扫描和内容安全审查。附件以 `scanner_disabled`/`unscanned` 未扫描状态正常使用。这是当前单用户部署的已接受策略，不代表文件已经通过安全检测。
 - Project/Conversation 菜单已分离；Conversation 支持 archive/unarchive、不可恢复硬删除和单事务 placement，不存在 Trash/restore 产品流程。拖拽按 active 类型过滤 Droppable，统一 `DropIntent` 驱动指示线、optimistic cache 与 placement API。
@@ -114,7 +115,7 @@
 - 普通上传与消息保存已彻底分离：上传项必须先通过 conversation attachment 接口提升为已存在的 Attachment；`PATCH /api/messages/{id}` 对非空旧 `upload_item_ids` 明确拒绝，不再读取、移动、hash 或检测附件对象。
 - 消息保存同步事务只处理 base-version、批量附件归属校验、当前 Markdown 解析、MessageVersion、RenderBlock、AttachmentOccurrence、current-version 指针与必要批注迁移。TOC、搜索、统计和会话摘要在提交后进入去重的 `conversation_derived_rebuild` 任务。
 - 保存响应直接返回当前 message/version、render blocks、occurrences 和 conversation attachment summary。Web 使用局部 query cache 替换与单消息重测，不再重新获取完整对话或清空 Reader 窗口；其他 MessageItem 引用保持稳定。
-- “当前对话文件”在桌面是首次居中、可拖动/缩放并持久化几何信息的独立浮窗，可与源码工作区同时打开且没有遮罩；移动端仍使用覆盖式工作面板。已有 Attachment 通过 `application/x-chat-reader-attachment` 从独立拖动柄进入 CodeMirror，不上传字节、不创建新 Attachment/AssetObject。
+- “当前对话文件”在桌面默认固定于左侧管理工作区，占满视口高度并只允许调整右边缘宽度；打开时覆盖左侧源码工作区但保留其编辑状态，选择附件后返回源码。移动端仍使用覆盖式全宽工作面板。已有 Attachment 通过 `application/x-chat-reader-attachment` 从独立拖动柄进入 CodeMirror，不上传字节、不创建新 Attachment/AssetObject。
 - 删除源码附件引用只在保存前统一确认。默认 `keep_in_conversation`；只有不存在其他当前版本引用时才允许 `detach_from_conversation`。detached Attachment 从活动文件列表隐藏，但历史 MessageVersion 仍可读取，AssetObject 仅由后台 GC 在所有真实引用消失后处理。
 - Project 与 Conversation Droppable 保持物理分离；未分类接收区是稳定标题行，列表中的 conversation row/insert slot 只表达排序意图。项目/对话查询刷新保留上一份数据，避免拖拽期间卸载目标。
 

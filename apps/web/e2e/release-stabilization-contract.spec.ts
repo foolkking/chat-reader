@@ -73,3 +73,16 @@ test("project create Escape restores its trigger", () => {
   expect(projectSidebar).toContain('event.key === "Escape"');
   expect(projectSidebar).toContain("props.onCancel()");
 });
+
+test("archive restore stays in Import data and files open in the left management workspace", () => {
+  const backupPanel = source("components/data-backup-panel.tsx");
+  const importPanel = source("features/import/import-panel.tsx");
+  const reader = source("features/conversations/conversation-reader.tsx");
+  expect(backupPanel).toContain("Restore system archives from the Import data entry");
+  expect(backupPanel).not.toContain("restoreSystemArchive");
+  expect(backupPanel).not.toContain("恢复系统归档");
+  expect(importPanel).toContain('label=".cr 归档"');
+  expect(reader).toContain('storageKey="chat-reader:conversation-files-workspace"');
+  expect(reader).toContain('placement="left-overlay"');
+  expect(reader).toContain("重置文件面板宽度");
+});

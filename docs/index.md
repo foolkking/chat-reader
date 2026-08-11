@@ -1,8 +1,9 @@
 # 文档导航
 
-## 2026-08-09 current implementation notes
+## 2026-08-11 current implementation notes
 
 - [2026-08-11 Final Release Closure](evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md#final-release-closure-2026-08-11): current production lifecycle evidence, release matrix and remaining verification debt.
+- [Attachment UI](system/FRONTEND_ARCHITECTURE.md#附件-ui): `.cr` restore uses Import data; desktop conversation files default to the left management workspace.
 
 - [Backend/API merge and cancellation](system/BACKEND_AND_API.md#conversation-merge-execution-current)
 - [Reader and task user flow](system/USER_FLOWS.md#reader-source-workspace-and-merge-cancellation-current)
@@ -14,7 +15,7 @@
 - [Current verification results](../results.md)
 - [Conversation/import/viewer test addendum](testing.md)
 
-当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-08。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-11。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 
 ## 开始这里
 
