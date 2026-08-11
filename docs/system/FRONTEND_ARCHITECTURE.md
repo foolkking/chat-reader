@@ -99,7 +99,8 @@ RootLayout + providers
 
 - 桌面侧栏、章节 TOC 和 utility drawer 可调宽并 clamp；批注浮窗可拖动/缩放/重置。源码工作区固定覆盖桌面左侧且占满视口高度，只允许拖动右边缘调整宽度；正文以打开前的稳定左边界向右让位，关闭后恢复原布局。移动端固定为顶栏下方全宽面板。
 - 搜索、Share、Export 共用 `ReaderUtilityDrawer` 的宽度、Esc、焦点恢复和视口纠偏。
-- 源码、搜索、批注等工作区互斥显示但保留已挂载状态。源码编辑不替换 `MessageItem` 正文；Reader 只在最近真实滚动输入且没有导航/恢复/边缘事务时，将活动 block 单向映射到源码。脏状态跨消息锁定，保存通过局部消息替换和 DOM 锚点补偿完成。
+- 桌面“当前对话文件”复用批注式右侧 `reader-floating` 工作区：默认位于 Reader 右上安全区域，整个 header 可拖动，边缘可缩放，位置/尺寸可复位并持久化。header 使用 `grab`/`grabbing` 光标和强调色 `Paperclip`，不再默认占据左侧整高区域。移动端仍退化为顶栏下方全宽 sheet。
+- 源码、搜索、批注等工作区互斥显示但保留已挂载状态。源码编辑不替换 `MessageItem` 正文；Reader 只在最近真实滚动输入且没有导航/恢复/边缘事务时，将活动 block 单向映射到源码。Reader 的全局键盘滚动意图明确忽略 CodeMirror、表单和可编辑目标。CodeMirror 使用稳定 memoized setup/update callback，并将外部基线文档与逐键 draft state 分离，避免输入或删除一个字符时重配置、回放旧 value 或切换活动消息。脏状态跨消息锁定，保存通过局部消息替换和 DOM 锚点补偿完成。
 - 专注模式隐藏主侧栏、对话索引、章节 TOC、离线提示和普通工具；退出恢复原锚点/面板状态。
 - 移动端使用 Vaul/自定义 Sheet；无 desktop separator/rail。首页保留继续阅读，桌面隐藏。
 
@@ -114,6 +115,7 @@ RootLayout + providers
 | `chat-reader:reader-utility-panel-width` | 搜索/Share/Export drawer 宽度 |
 | `chat-reader:annotation-workspace-mode/panel` | 批注形态、位置和尺寸 |
 | `chat-reader:source-editor-panel` | 源码工作区持久化宽度 |
+| `chat-reader:conversation-files-workspace-floating-v2` | 当前对话文件浮窗的位置与尺寸 |
 | `chat-reader:last-library-conversation` | 最近离线对话 |
 | `chat-reader:share-position:<hash>` | Share 访客本地位置 |
 | Dexie | 离线 conversation/messages/blocks/search/annotations/positions/outbox |
@@ -130,7 +132,7 @@ RootLayout + providers
 
 ## 附件 UI
 
-- Reader“更多”中的“当前对话文件”复用 `FloatingWorkspacePanel` 的 `left-overlay` 形态。桌面默认固定覆盖左侧并占满视口高度，仅右边缘可调宽；若源码编辑器已打开则保留其状态，文件面板关闭或完成插入后回到源码。移动端使用覆盖式全宽文件抽屉。面板按已使用、未使用、缺失分组，支持搜索、上传、预览、下载、重命名、定位、插入和移除未引用文件。
+- Reader“更多”中的“当前对话文件”复用 `FloatingWorkspacePanel` 的 `reader-floating` 形态。桌面默认在 Reader 右上侧显示约 400x620 的注释式浮窗；整个表头可拖动，左/右/下边缘可缩放，几何状态持久化且支持复位。表头使用抓手光标并显示强调色附件图标；若源码编辑器已打开则保留其状态，文件面板关闭或完成插入后回到源码。移动端使用覆盖式全宽文件抽屉。面板按已使用、未使用、缺失分组，支持搜索、上传、预览、下载、重命名、定位、插入和移除未引用文件。
 - Markdown 源码工作区提供上传与选择已有文件；新文件先独立上传并显式提升为当前对话 Attachment，已有文件通过 `application/x-chat-reader-attachment` 只传递业务 ID，在光标或消息末尾插入 `cr-asset://` 引用。用户无需手写内部协议；若光标位于已有的独立附件行内，插入点移动到该行末尾，避免破坏原引用。
 - 源码工作区的 CodeMirror DOM 事件只接受真实 `DataTransfer.files`；拖放通过 `posAtCoords` 显示插入光标，粘贴读取剪贴板文件，二者和文件选择共用 `AttachmentDraftCallbacks`。临时标记拥有独立进度/错误/重试/移除状态，完成后通过命令式文档替换保持阅读位置和源码光标。
 - 代码围栏落点返回明确的调整意图并显示选择条；链接内部落点自动放到链接节点后。编辑器滚动和拖放位置不反向驱动 Reader，保存前任何 unresolved upload 均阻止提交。

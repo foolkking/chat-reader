@@ -185,3 +185,11 @@ Post-deploy API/Web/PostgreSQL are healthy, the worker is running, public `/api/
 Production QA writes were isolated. Disposable conversations were removed through the supported API and QA Share was revoked. The empty QA Project remains because no project-delete endpoint exists; import-preview residuals without a safe owner-delete API were not removed by SQL.
 
 The first migration invocation accidentally selected the repository's default compose file, created a separate empty `chat-reader-postgres` container and `chat-reader_chat-reader-postgres-data` volume, then failed before running Alembic. Inspection proved the production `chat-reader-postgres-1` and `chat-reader_postgres-data` remained healthy. The two exact empty resources were removed immediately; deployment then used explicit `-f docker-compose.production.yml --env-file .env.production` for migration and service recreation. The empty resources are not recoverable, contained no business data and were never mounted by production.
+
+## 2026-08-11 Attachment Workspace And Cursor Release
+
+- Runtime commit: `1cdadc4f90115d7b46ce55d07a2b4f23c90471d4`; GitHub Actions run `31470442426`; archive SHA-256 `429fb5384dc1dbf57eec68aecad4632c01bd71a58fca6ea9f276468c6d8630fb`.
+- Backup `/opt/chat-reader/backups/file-workspace-cursor-20260811T075200Z-1cdadc4` contains a PostgreSQL custom dump and import/export/offline/asset archives. Checksums, `pg_restore --list` and tar listings passed before replacement.
+- King performed `git pull --ff-only`, `docker load`, explicit production migration preflight and `--no-build` recreation. No Next build, schema migration, volume deletion, `.env.production` overwrite or Scanner start occurred.
+- After API/Web/PostgreSQL health, worker, Alembic and production Chrome acceptance passed, cleanup removed only 48 exact Chat Reader tags belonging to 12 older commits. The retained set is current `1cdadc4`, rollback `b6ce0e6` and `latest` for Web/API/import-worker/migrate. Do not replace this targeted retention policy with `docker image prune -a` on King.
+- Image storage decreased from 4.919 GB to 2.510 GB; root filesystem moved from 97% used/1.4 GB free to 90% used/3.9 GB free. Business volumes and non-Chat-Reader images were not touched.

@@ -393,8 +393,11 @@ ONLINE_WEB_GA_READY = NO
 
 Historical failure rows above remain evidence of the state observed on 2026-08-10; this section is the current release status.
 
-## Entry and attachment-management placement closure - 2026-08-11
+## Attachment workspace and Markdown cursor closure - 2026-08-11
 
 - Settings retains system `.cr` export but no longer exposes a second restore file picker; `.cr` selection stays in Import data.
-- Desktop `当前对话文件` now defaults to the fixed left management workspace with right-edge resizing. Mobile remains a full-width sheet.
-- Regression coverage asserts that restore is absent from `DataBackupPanel` and that the Files workspace uses `left-overlay`.
+- Desktop `当前对话文件` now uses the annotation-style `reader-floating` workspace at the Reader's upper-right safe region. Production Chrome verified approximately 400x620 at `y=72`, a whole-header `grab` handle and an accent attachment icon. Mobile remains a full-width sheet.
+- Markdown source editing no longer reconfigures CodeMirror per draft render, no longer classifies CodeMirror keys as Reader keyboard scrolling, and no longer echoes every keystroke through the external controlled value. Production Chrome verified offset `21860 -> 21861 -> 21860` with invariant `scrollTop=41091` after type/delete on the same message.
+- Web lint/typecheck/build PASS; API `218 passed / 3 skipped`; Alembic one head; default PWA/Playwright `39 passed / 27 conditional skipped`; focused source/placement contract `6/6`; production-equivalent source cursor/mutation flow `2/2`; production public health PASS. The Chrome bridge verified production geometry/cursor/icon and source stability. Physical pointer drag is covered by the production-equivalent `reader-layout` mouse regression; the Chrome bridge itself does not expose a physical mouse API.
+- Release commit `1cdadc4f90115d7b46ce55d07a2b4f23c90471d4`; Actions run `31470442426`; artifact SHA-256 `429fb5384dc1dbf57eec68aecad4632c01bd71a58fca6ea9f276468c6d8630fb`; validated backup `/opt/chat-reader/backups/file-workspace-cursor-20260811T075200Z-1cdadc4`. King used migration preflight and `--no-build`; API/Web/PostgreSQL are healthy, worker running, Scanner disabled and Alembic remains `20260806_0021`.
+- After health and browser acceptance, 48 exact tags from 12 old releases were removed. Current `1cdadc4`, rollback `b6ce0e6` and `latest` remain; Docker images dropped from 4.919 GB to 2.510 GB and root free space rose from 1.4 GB to 3.9 GB. No volume or non-Chat-Reader image was removed.
