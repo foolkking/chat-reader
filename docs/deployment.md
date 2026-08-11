@@ -172,3 +172,14 @@ Production Chrome read-only wheel verification recorded zero reverse wheel steps
 GitHub Actions run `31398377216` built commit `771f4c864df7d7dea619a17eb19339ae971a2f28`. The release archive SHA-256 `b8c6dc8e7769cfe4e03e9523595b179f50308a045f78ebe8beb71a44291e1000` matched locally and on King. The existing verified rollback backup `/opt/chat-reader/backups/reader-scrollbar-20260810T141005Z-5e50a6e` was retained; it contains the validated PostgreSQL dump and import/export/offline/asset archives. King loaded the prebuilt images, ran the existing migration preflight and recreated API, worker and Web with `--no-build`. No volume, `.env.production`, Scanner setting or database schema changed.
 
 Post-deploy API/Web/PostgreSQL are healthy, the worker is running, public `/api/health` returns `ok`, Scanner remains `disabled`, and Alembic is `20260806_0021 (head)`. Real Chrome read-only acceptance on the reported production conversation dragged the native scrollbar thumb across distant positions in both directions; the destination viewport immediately contained 15 and 14 rendered blocks respectively, with no blank virtual-message shell. The bridge's synthetic in-page `scrollTo()` is not treated as production pointer evidence because it bypasses the native scrollbar input path; the deterministic large-jump invariant is covered by production-build Playwright.
+
+## 2026-08-11 Final Release Closure
+
+- Runtime commit: `32912842671068a6af615b80a7c71d313fa5157e`.
+- External build: GitHub Actions run `31451781286`.
+- Release archive SHA-256: `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02`, verified locally and on King.
+- Backup: `/opt/chat-reader/backups/final-closure-20260811T022014Z-3291284` (about 406 MiB). The PostgreSQL custom dump passed `pg_restore --list`; import/export/offline/asset archives passed checksum and archive listing.
+- Deployment: verified images loaded, existing migration preflight run, API/import-worker/Web recreated with `--no-build`. No volume deletion, `.env` overwrite, local Next build, Scanner start or schema migration occurred.
+- Post-deploy: API/Web/PostgreSQL healthy, worker running, Scanner disabled, Alembic `20260806_0021 (head)`.
+
+Production QA writes were isolated. Disposable conversations were removed through the supported API and QA Share was revoked. The empty QA Project remains because no project-delete endpoint exists; import-preview residuals without a safe owner-delete API were not removed by SQL.

@@ -23,6 +23,13 @@ test("conversation mutations hand the committed revision to the client", () => {
   expect(dataSource).toContain("return recent.conversation");
   expect(reader).toContain("\\u64a4\\u9500\\u5931\\u8d25");
   expect(source("lib/api.ts")).toContain("response.status >= 500");
+  const editForm = source("features/editing/edit-message-form.tsx");
+  const sourceWorkspace = source("features/editing/source-editor-workspace.tsx");
+  expect(editForm).toContain("onReloadLatest");
+  expect(editForm).toContain("\\u52a0\\u8f7d\\u6700\\u65b0\\u72b6\\u6001");
+  expect(editForm).toContain("isRevisionConflictMessage");
+  expect(sourceWorkspace).toContain("getConversationReaderTurn");
+  expect(sourceWorkspace).toContain("baseVersionId: saveBaseVersionId");
 });
 
 test("managed dialogs have one pointer-only backdrop and shared focus lifecycle", () => {

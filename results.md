@@ -362,3 +362,33 @@ Detailed findings, screenshots and QA cleanup: `docs/evidence/UX_RELEASE_READINE
 - Automated: lint, typecheck and Web production build PASS; API `216 passed, 3 skipped`; Alembic `20260806_0021 (head)`; default PWA `37 passed, 25 conditional skipped`; focused final Reader regressions `3/3` PASS, with the earlier full Reader restoration suite `8/8` PASS.
 - Production: commit `771f4c8`, Actions run `31398377216`, archive SHA-256 `b8c6dc8e7769cfe4e03e9523595b179f50308a045f78ebe8beb71a44291e1000`. Native Chrome thumb drags in both directions immediately retained 15/14 visible blocks; a further five-position distant-drag sweep had `blankCount=0` and 11-15 visible blocks at every destination. API/Web/PostgreSQL are healthy; worker running; Scanner disabled.
 - Current status: `READER_SCROLLBAR_BLANK_GAP = PASS`, `NATIVE_THUMB_DRAG = PASS`, `ORDINARY_WHEEL_REGRESSION = PASS`. Conditional PWA cases remain `PARTIAL_PASS`, not PASS.
+
+## Final Release Closure - 2026-08-11
+
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Create -> immediate insert | PASS | Real production creation followed by single and pair insert without refresh; refresh preserved lexical order. |
+| Delete -> Undo -> refresh | PASS | Real production delete, forced restore 500, localized retry, successful restore and refresh persistence. |
+| Active unreferenced Attachment | PASS | Production QA reconciled 2 active/unreferenced business rows with current count 0; both were visible. |
+| Shared AssetObject identity | PASS | Two distinct Attachment IDs for identical bytes shared one AssetObject without UI/API merging. |
+| Two-tab concurrency | PARTIAL_PASS | Stale write returned 409, preserved draft and did not overwrite the other tab; explicit `加载最新状态` action is absent. |
+| Exact 360/390/768 reflow | PASS | Headless Chrome against production real long Reader: document widths exactly matched viewports with no page overflow. |
+| Browser 125/150/200% zoom | NOT_PRODUCTION_VERIFIED | Device-scale checks are not accepted as browser zoom. |
+| File chooser | PASS | Production-build Playwright real chooser/upload/insert/refresh 5/5; production bridge itself cannot control the native chooser. |
+| Long Reader | PASS | Owner/Share restoration, search/jump, native thumb/wheel and blank-window recovery suites pass; production narrow regression remained populated. |
+| Share scope/revoke/expiry | PASS | Production QA expiry was allowed before expiry and rejected after expiry; revoke returned success. |
+| `.cr v4` round trip | PASS | Empty production-equivalent restore preserved referenced/unreferenced Attachments and distinct business identities sharing an AssetObject. |
+| Offline/PWA | PARTIAL_PASS | Baseline 6/6; runtime-chunk/cache-miss/quota/interruption/reconnect negative matrix remains unverified. |
+
+Required commands: lint/typecheck/Web production build PASS; API `218 passed / 3 skipped`; Alembic one head `20260806_0021`; default PWA `37 passed / 27 conditional skipped`; mutation closure `6/6`; long Reader `8/8`; upload chooser `5/5`; Offline baseline `6/6`. Skipped scenarios are not counted as PASS.
+
+Deployment: commit `32912842671068a6af615b80a7c71d313fa5157e`, Actions run `31451781286`, artifact SHA-256 `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02`, validated backup `/opt/chat-reader/backups/final-closure-20260811T022014Z-3291284`, King migration preflight and `--no-build` recreation. API/Web/PostgreSQL are healthy, worker running, Scanner disabled.
+
+```text
+CORE_WEB_RELEASE = PARTIAL_PASS
+PWA_OFFLINE_RELEASE = PARTIAL_PASS
+OVERALL = PARTIAL_PASS
+ONLINE_WEB_GA_READY = NO
+```
+
+Historical failure rows above remain evidence of the state observed on 2026-08-10; this section is the current release status.

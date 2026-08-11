@@ -72,3 +72,33 @@ Local checks for the conversation, import and viewer addendum:
 - `reader-restoration.spec.ts` changes an upstream virtual height after a heavy message has cached its absolute margin, jumps into that message, and requires a visible block plus reading-line coverage within the recovery budget. A visible Message shell without a visible block is a failure.
 - The pointer-drag regression holds an active pointer while moving the Reader to the edge. It asserts that no `reader-turn` request starts while the pointer is held, then that exactly one request starts after release.
 - Run the production-equivalent path with `E2E_LONG_READER=1`; the default PWA matrix intentionally reports these fixture-gated cases as skipped rather than PASS.
+
+## Final Release Closure 2026-08-11
+
+### Current command results
+
+| Check | Result |
+| --- | --- |
+| Web lint / typecheck / production build | PASS |
+| Full API | PASS: 218 passed, 3 skipped |
+| Alembic | PASS: one head `20260806_0021` |
+| Default PWA | PARTIAL_PASS: 37 passed, 27 conditional skipped |
+| Mutation lifecycle/stabilization | PASS: 5/5 |
+| Long Reader restoration | PASS: 8/8 |
+| Offline baseline | PASS: 6/6 |
+| File chooser/upload lifecycle | PASS: 5/5 |
+| Flagged import/task/DnD | PASS: 3/3 |
+| Sharing/system archive/manual targeted | PASS: 13/13 |
+
+The default 27 skips are classified, not erased: 18 long-Reader/layout cases are environment/fixture-gated, 8 upload/import/task/DnD/mutation cases are online environment-gated, and 1 attachment case is fixture-gated. Release runs explicitly enabled the meaningful mutation, upload, import/task/DnD and long-Reader suites. A local reader-layout attempt using a production-only conversation ID produced four fixture-resolution failures; it is not a product PASS or failure and is superseded by exact production viewport checks and the valid long-Reader fixture.
+
+### Release test status rules
+
+- API PASS does not imply a complete user-flow PASS.
+- Latest higher-level production E2E overrides older component/API evidence.
+- A conditional skip remains unverified until its required service, fixture and flag are supplied.
+- Device-scale-factor is not accepted as browser 125/150/200% zoom.
+- Production bridge chooser limitations are recorded separately from Playwright's real `setInputFiles` coverage.
+- `.cr v4` restore runs only in an empty production-equivalent instance, never by clearing production.
+
+Actual browser zoom and the Offline negative matrix (runtime chunk miss, original/derivative miss, quota, interrupted package and reconnect) remain `NOT_PRODUCTION_VERIFIED`; therefore the strict Core and PWA release gates remain `PARTIAL_PASS`.

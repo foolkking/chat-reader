@@ -325,3 +325,23 @@ The acceptance fixture and DnD conversation were deleted after verification. The
 | Acceptance cleanup | Pass | Temporary conversation hard-deleted and local bundle removed after verification |
 
 The Chrome extension did not have local-file URL access for automated chooser control in this run. The fixture was therefore staged through the same production Bundle API and the UI was verified in Chrome. This does not replace or downgrade the user's previously confirmed production file-chooser upload E2E, which remains Pass.
+
+## 2026-08-11 Final Release Closure
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Web lint/typecheck/build | Pass | Required commands completed on final source. |
+| API | Pass | 218 passed, 3 skipped; Notebook bootstrap revision regression included. |
+| Alembic | Pass | Single head `20260806_0021`. |
+| Default PWA | Partial | 37 passed, 27 conditional skipped; skips are classified in `docs/testing.md`. |
+| Create/immediate mutation | Pass | Production create -> insert and fresh Reader -> immediate delete required no refresh. |
+| Delete/Undo failure/retry/refresh | Pass | Production response injection showed localized retry, successful restore and refresh persistence. |
+| Attachment lifecycle | Pass | Production active-unreferenced/shared-AssetObject reconciliation plus keep/reinsert. |
+| Two-tab conflict | Partial | 409/draft preservation/no overwrite pass; explicit load-latest action absent. |
+| Exact 360/390/768 | Pass | Production document width matched viewport with no page overflow. |
+| Browser zoom | Not production verified | Device scale is not accepted as actual 125/150/200% zoom. |
+| File chooser | Pass | Production-build Playwright 5/5; production bridge remains unable to control native chooser. |
+| `.cr v4` | Pass | Empty production-equivalent round trip preserved unreferenced and shared-object identities. |
+| Offline negative matrix | Partial | Baseline 6/6; cache/chunk/quota/interruption/reconnect gaps remain. |
+
+Deployment used commit `32912842671068a6af615b80a7c71d313fa5157e`, Actions run `31451781286`, verified SHA-256 `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02`, validated backup and King `--no-build` recreation. Current strict decision: Core Web PARTIAL_PASS, PWA PARTIAL_PASS, Overall PARTIAL_PASS.

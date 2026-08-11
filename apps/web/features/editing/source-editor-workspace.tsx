@@ -5,7 +5,7 @@ import { File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll,
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
-import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversationAttachments, uploadAttachmentItem } from "../../lib/api";
+import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
 import type { AttachmentRead, MessageEditResponse, MessageListItem } from "../../lib/types";
 import { EditMessageForm } from "./edit-message-form";
 import { blockIndexForSourceOffset, normalizedMessageBlocks } from "./message-source-position";
@@ -64,6 +64,7 @@ export function SourceEditorWorkspace({
   const uploadJobsRef = useRef(new Map<string, UploadJob>());
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
+  const [saveBaseVersionId, setSaveBaseVersionId] = useState(message.current_version?.id);
   const conversationAttachmentsQuery = useQuery({
     queryKey: ["conversation-attachments", message.conversation_id],
     queryFn: () => getConversationAttachments(message.conversation_id),
@@ -161,6 +162,10 @@ export function SourceEditorWorkspace({
     cursorOffsetRef.current = target.cursorOffset;
   }, [target.cursorOffset, target.message.id]);
 
+  useEffect(() => {
+    setSaveBaseVersionId(message.current_version?.id);
+  }, [message.id, message.current_version?.id]);
+
   function requestClose() {
     const button = document.querySelector<HTMLButtonElement>(`#${FORM_ID} [data-source-editor-close='true']`);
     button?.click();
@@ -221,13 +226,26 @@ export function SourceEditorWorkspace({
             onAttachmentRemove={removeAttachment}
             onAttachmentCancel={handleAttachmentCancel}
             conversationAttachments={conversationAttachmentsQuery.data ?? []}
+            onReloadLatest={async () => {
+              const [conversation, turn] = await Promise.all([
+                getConversation(message.conversation_id),
+                getConversationReaderTurn(message.conversation_id, message.id),
+              ]);
+              const latestMessage = turn.items.find((item) => item.id === message.id);
+              if (!latestMessage?.current_version?.id) {
+                throw new Error(zh ? "\u65e0\u6cd5\u52a0\u8f7d\u6700\u65b0\u6d88\u606f\u72b6\u6001\u3002" : "Unable to load the latest message state.");
+              }
+              setSaveBaseVersionId(latestMessage.current_version.id);
+              onConversationRevision?.(conversation.offline_revision);
+              await onMessageChanged(latestMessage);
+            }}
             onSave={async (nextText, reason, saveMode, removedActions) => {
               const clickedAt = window.performance.now();
               const requestStartedAt = window.performance.now();
               const response = await editMessage(message.id, {
                 contentMarkdown: nextText,
                 editReason: reason,
-                baseVersionId: message.current_version?.id,
+                baseVersionId: saveBaseVersionId,
                 saveMode,
                 removedAttachmentActions: removedActions,
               });
@@ -255,6 +273,7 @@ export function SourceEditorWorkspace({
               } }));
               void queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] });
               onTargetUpdated({ message: response.message, cursorOffset: cursorOffsetRef.current });
+              setSaveBaseVersionId(response.message.current_version?.id);
               uploadJobsRef.current.clear();
             }}
           />

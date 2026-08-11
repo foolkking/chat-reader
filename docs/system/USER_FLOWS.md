@@ -133,3 +133,11 @@ conversation + reading position 并行加载
 2. Use the plus action between messages to insert before or after the anchor. Single insertion defaults to the opposite role of the adjacent message; pair insertion always creates User then Assistant.
 3. Delete uses a confirmation, hides the message optimistically, and offers a short undo. It is a soft delete and does not create a user-visible Trash. Delete/restore responses carry the post-commit conversation revision; restore is idempotent and the undo surface remains actionable on failure. A stale revision returns 409 and leaves the reader unchanged.
 4. Opening DOCX/ODT, XLSX/ODS, PPTX/ODP or ZIP uses the existing unified Viewer Shell and lazy browser Worker. The body shows bounded semantic content; parser limits or unsupported legacy formats fall back to an original-file download.
+
+## 2026-08-11 Lifecycle closure
+
+1. Creating a conversation seeds the canonical response and revision before navigation completes. Initial Notebook/recent bootstrap reads do not advance Conversation revision, so the first insert, edit or delete can run without a refresh.
+2. Delete is complete when the message disappears and the server returns the new revision. Undo is complete only after restore succeeds, the Reader reconciles the returned canonical message/revision, and refresh still contains the message.
+3. Undo 409/500/network failure keeps a localized live error and a retry action. It never silently closes or claims the message was restored.
+4. A genuine second-tab 409 preserves the source draft and does not overwrite the other tab. The current UI explains that the conversation changed; a dedicated `加载最新状态` action remains a tracked follow-up.
+5. An active Attachment with zero current-version occurrences remains visible in Files Panel `全部/未引用`. Occurrence removal with keep does not detach the Attachment, and multiple Attachment business identities may share one AssetObject.

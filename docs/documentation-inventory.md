@@ -217,3 +217,5 @@ No new documentation category, public API, migration or persisted Reader contrac
 
 2026-08-10 Reader Scroll Stabilization 文档同步：稳定 block estimator、单一滚动协调器、TOC 派生更新、生产构建性能预算、King 增量部署与真实 Chrome 滚轮证据已同步到 `PROJECT_STATE.md`、`results.md`、`docs/testing.md`、`docs/system/FRONTEND_ARCHITECTURE.md` 和 `docs/deployment.md`。360px/zoom/offline-negative 等未执行项保持 `NOT_PRODUCTION_VERIFIED`。
 | `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md` | historical evidence | 2026-08-10 release-readiness audit, redacted QA evidence and verification limits |
+
+2026-08-11 Final Release Closure 文档同步：最终生产生命周期、mutation revision、Attachment 对账、精确窄屏、Share expiry、`.cr v4`、部署与 QA 清理证据已追加到当前事实和历史审计。真实浏览器 Zoom 与完整 Offline 负向矩阵保持 `NOT_PRODUCTION_VERIFIED/PARTIAL_PASS`，没有被默认 PWA 条件跳过覆盖。

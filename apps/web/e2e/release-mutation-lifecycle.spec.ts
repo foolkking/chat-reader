@@ -49,3 +49,52 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
     await page.request.delete(`/api/conversations/${conversationId}`);
   }
 });
+
+test("revision conflict preserves the source draft and can load the latest base before retry", async ({ page }) => {
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const createdResponse = await page.request.post("/api/conversations", {
+    data: {
+      title: `QA conflict recovery ${suffix}`,
+      messages: [
+        { role: "user", content_markdown: "QA conflict user" },
+        { role: "assistant", content_markdown: "QA conflict assistant" },
+      ],
+    },
+  });
+  expect(createdResponse.status()).toBe(201);
+  const created = await createdResponse.json();
+  const conversationId = created.conversation.id as string;
+
+  try {
+    await page.goto(`/conversations/${conversationId}`);
+    const assistant = page.locator("article[data-message-id]").filter({ hasText: "QA conflict assistant" });
+    await expect(assistant).toBeVisible();
+    await assistant.getByRole("button", { name: /Edit Markdown source|\u7f16\u8f91 Markdown \u6e90\u7801/ }).click();
+    const editor = page.getByTestId("source-editor-codemirror").locator(".cm-content");
+    await editor.click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.insertText("\n\nQA preserved draft");
+    await expect(editor).toContainText("QA preserved draft");
+
+    await page.route("**/api/messages/*", async (route) => {
+      if (route.request().method() === "PATCH") {
+        await route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ detail: "Conversation changed since it was loaded." }) });
+        return;
+      }
+      await route.continue();
+    }, { times: 1 });
+    await page.getByTestId("source-editor-create-version").click();
+
+    const loadLatest = page.getByRole("button", { name: /Load latest state|\u52a0\u8f7d\u6700\u65b0\u72b6\u6001/ });
+    await expect(loadLatest).toBeVisible();
+    await expect(editor).toContainText("QA preserved draft");
+    await loadLatest.click();
+    await expect(page.getByText(/Latest state loaded|\u5df2\u52a0\u8f7d\u6700\u65b0\u72b6\u6001/).last()).toBeVisible();
+    await expect(editor).toContainText("QA preserved draft");
+
+    await page.getByTestId("source-editor-create-version").click();
+    await expect(page.getByText("QA preserved draft").first()).toBeVisible();
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}`);
+  }
+});

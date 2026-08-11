@@ -244,3 +244,111 @@ Why the previous tests missed these issues: API-only tests asserted status codes
 - Dialog/Viewer focus infrastructure: PASS in production Chrome for initial focus, Tab loop, Esc/X/backdrop close and logical restoration.
 - Requested 390px rendered as 433px in the browser bridge and passed without horizontal overflow. Exact 360/390, 125/150/200% zoom, two-tab race and forced-offline negative paths remain NOT_PRODUCTION_VERIFIED.
 - No original production records were modified or deleted. The prior QA cleanup remains as documented; no new QA data was created in this code-only closure.
+
+## Final Release Closure (2026-08-11)
+
+This section supersedes the current-status conclusions above without deleting the historical failures. Evidence priority is: latest production E2E > production-equivalent browser E2E > browser integration > API integration > unit/static inspection. A lower-level PASS never overrides a newer user-flow failure.
+
+### Executive decision
+
+```text
+CORE_WEB_RELEASE = PARTIAL_PASS
+PWA_OFFLINE_RELEASE = PARTIAL_PASS
+OVERALL = PARTIAL_PASS
+ONLINE_WEB_GA_READY = NO
+```
+
+The lifecycle P1 defects are closed in production. The strict Core Web gate is nevertheless not unconditional because actual browser 125/150/200% zoom remains uncontrolled and the two-tab conflict screen does not yet provide the contracted explicit `加载最新状态` action. The Online Web is technically stable for controlled release, but this audit does not relabel those verification/UX debts as PASS.
+
+### Root causes and closure evidence
+
+| Finding | Actual root cause | Fix | Why earlier tests missed it | New prevention | Final evidence |
+| --- | --- | --- | --- | --- | --- |
+| FUNC-001 active unreferenced Attachment | Files Panel mixed historical/reference presentation with current-version occurrence facts; the client did not consistently surface the API's current count. | Current occurrence count is an explicit API/client projection; active zero-count rows remain in All/Unreferenced and only explicit detach hides them. | Historical API counts and export records were treated as sufficient; the full upload -> keep -> reinsert user flow was not asserted. | Lifecycle E2E plus shared-AssetObject/API reconciliation. | Production QA: two active rows, current count zero, two Attachment IDs and one shared AssetObject; insert/keep/reinsert preserved identities. PASS. |
+| FUNC-002 create/immediate mutation | The create response was initially discarded. After that fix, a second race remained: lazy `GET /notebook` created an empty Notebook and called `_touch_conversation`, advancing revision in a GET without handing it to the client. | Create seeds canonical cache. Empty Notebook GET no longer touches revision; real Notebook/annotation writes still do. Record-recent waits for the canonical query and runs once. | Tests did not open a fresh Reader and race bootstrap GETs against its first mutation. | API invariant that initial Notebook GET leaves revision unchanged; production-build lifecycle E2E performs an immediate mutation after bootstrap. | Real production create -> insert single/pair and fresh open -> immediate delete all returned success without refresh. PASS. |
+| FUNC-003 delete/undo | Undo used a stale revision and destroyed the action on restore failure; 5xx detail could leak through generic Web error mapping. | Delete/restore hand off committed revision. Undo stays in failed/retry state, uses live alert text, hides raw backend detail and reconciles canonical response before success. | API 200/idempotency did not assert toast state, failure visibility, cache reconciliation or refresh persistence. | Playwright forces restore 500, asserts localized retry, retries, refreshes and verifies persistence; API repeated-restore coverage. | Real production flow with forced restore 500: failure visible, raw detail hidden, retry restored, refresh persisted. PASS. |
+| A11Y dialog/viewer focus | Per-dialog lifecycle, focusable backdrops, missing close ref, RAF-delayed focus and replaced trigger nodes caused lost/duplicate focus. | Shared synchronous focus controller, pointer-only backdrop, one accessible close and identity-based logical fallback. | Static hook assertions did not inspect real `activeElement` across all close paths. | Focus/close Playwright contracts and production Chrome regression. | Previously verified production PASS; final static/browser regression PASS. |
+| COPY/UI Scanner and Project | Disabled deployment policy used fault weight; project affordance mixed English and did not autofocus/restore. | Neutral information/secondary `未扫描`; localized `新建项目`, autofocus and Escape restoration. | Copy and focus were not part of API tests. | UI contract and real Chrome focus regression. | Production PASS. |
+
+### Mutation revision verification
+
+| Mutation | Expected handoff | Verification | Status |
+| --- | --- | --- | --- |
+| Conversation create | Response revision seeds Reader/query cache | Production create followed by immediate inserts | PASS |
+| Message insert/pair | Returned revision becomes next base; order remains lexical | Production single and pair insert plus refresh | PASS |
+| Message edit | Canonical message/revision patches local projection | Production two-tab conflict and long-Reader regression | PASS |
+| Message delete | Post-delete revision is stored with Undo | Production immediate delete and Undo flow | PASS |
+| Message restore | Post-restore revision replaces deleted projection | Forced-failure/retry and refresh persistence | PASS |
+| Task toggle | Response revision patches current version without whole Reader reload | Full API and flagged browser matrix | PASS |
+| Attachment message save | Occurrences/current counts reconcile without recreating Attachment/Object | Upload/keep/reinsert lifecycle | PASS |
+
+### Attachment fact reconciliation
+
+The isolated production QA conversation contained two available active Attachments with identical bytes. Database/API facts were: business Attachment count 2, active 2, detached 0, missing 0, current occurrence count 0, referenced 0, unreferenced 2, distinct AssetObjects 1. Files Panel displayed both rows under `尚未放入正文 · 2`, each with current reference count zero and neutral `未扫描`. Insert/keep/reinsert reused the same Attachment and AssetObject; system `.cr v4` production-equivalent restore separately preserved an active unreferenced Attachment and two business Attachments sharing one AssetObject.
+
+### Production and production-equivalent verification
+
+| Capability | Unit | API | Browser E2E | Production | Final |
+| --- | --- | --- | --- | --- | --- |
+| Create conversation | PASS | PASS | PASS | PASS | PASS |
+| Immediate insert | PASS | PASS | PASS | PASS | PASS |
+| Message edit | PASS | PASS | PASS | PASS | PASS |
+| Delete | PASS | PASS | PASS | PASS | PASS |
+| Undo | PASS | PASS | PASS | PASS | PASS |
+| Undo failure/retry | PASS | PASS | PASS | PASS (injected response) | PASS |
+| Two-tab conflict | PASS | PASS | PASS | PARTIAL_PASS | PARTIAL_PASS |
+| Unreferenced Attachment | PASS | PASS | PASS | PASS | PASS |
+| Keep after reference removal | PASS | PASS | PASS | PASS | PASS |
+| Reinsert existing Attachment | PASS | PASS | PASS | PASS | PASS |
+| Shared AssetObject | PASS | PASS | PASS | PASS | PASS |
+| Dialog focus | PASS | NOT_APPLICABLE | PASS | PASS | PASS |
+| Project create focus | PASS | NOT_APPLICABLE | PASS | PASS | PASS |
+| File chooser | PASS | PASS | PASS | NOT_PRODUCTION_VERIFIED | PASS |
+| Exact 360 | PASS | NOT_APPLICABLE | PASS | PASS | PASS |
+| Exact 390 | PASS | NOT_APPLICABLE | PASS | PASS | PASS |
+| Zoom 125 | PARTIAL_PASS | NOT_APPLICABLE | PARTIAL_PASS | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED |
+| Zoom 150 | PARTIAL_PASS | NOT_APPLICABLE | PARTIAL_PASS | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED |
+| Zoom 200 | PARTIAL_PASS | NOT_APPLICABLE | PARTIAL_PASS | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED |
+| Long Reader mutation/restoration | PASS | PASS | PASS | PASS | PASS |
+| Share scope | PASS | PASS | PASS | PASS | PASS |
+| Share revoke | PASS | PASS | PASS | PASS | PASS |
+| Share expiry | PASS | PASS | PASS | PASS | PASS |
+| `.cr v4` export | PASS | PASS | PASS | NOT_PRODUCTION_VERIFIED | PASS |
+| `.cr v4` restore | PASS | PASS | PASS | NOT_PRODUCTION_VERIFIED | PASS |
+| Offline cache miss | PARTIAL_PASS | PASS | PARTIAL_PASS | NOT_PRODUCTION_VERIFIED | PARTIAL_PASS |
+| Offline quota | NOT_PRODUCTION_VERIFIED | NOT_APPLICABLE | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED |
+| Offline interrupted package | NOT_PRODUCTION_VERIFIED | PARTIAL_PASS | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED | NOT_PRODUCTION_VERIFIED |
+
+File chooser final PASS is based on trusted production-build Playwright using a real chooser and upload API, as permitted by the gate; the production Chrome bridge limitation remains explicitly separate. `.cr v4` restore correctly ran in an empty production-equivalent instance rather than destructive production. Two-tab protection preserved the draft, rejected stale write and prevented silent overwrite, but its missing explicit load-latest action keeps the combined capability at PARTIAL_PASS.
+
+### Automated verification and skip classification
+
+| Command/suite | Result |
+| --- | --- |
+| `corepack pnpm run lint` | PASS |
+| `corepack pnpm run typecheck` | PASS |
+| `corepack pnpm --filter web build` | PASS |
+| `corepack pnpm run test:api` | PASS: 218 passed, 3 skipped |
+| `python -m alembic heads` | PASS: one head `20260806_0021` |
+| default `test:pwa` | PARTIAL_PASS: 37 passed, 27 conditional skipped |
+| mutation lifecycle + stabilization | PASS: 6/6 |
+| long Reader restoration | PASS: 8/8 |
+| Offline baseline | PASS: 6/6 |
+| upload chooser flow | PASS: 5/5 |
+| import/task/DnD online flags | PASS: 3/3 |
+| system archive/sharing/manual targeted | PASS: 13/13 |
+
+Default Playwright skips: 18 long-Reader/layout cases were environment/fixture-gated, 8 online mutation/upload/import/task/DnD cases were environment-gated, and 1 attachment case was fixture-gated. The release executed their meaningful counterparts explicitly. Four reader-layout attempts that used a production-only conversation ID against a local database failed fixture resolution and are not product failures; exact production viewport and the real long-Reader suite supersede that invalid setup. Offline negative paths listed below were not silently promoted through these runs.
+
+### Remaining verification debt
+
+- **P2:** Actual browser 125/150/200% zoom was not controllable. Device-scale-factor runs found no overflow but are not equivalent to browser zoom/reflow.
+- **P2:** Genuine 409 preserves the draft and shows localized feedback but lacks the contracted explicit `加载最新状态` action.
+- **P2 / PWA:** Viewer runtime chunk miss, original/derivative cache miss, quota exceeded, interrupted package and reconnect/retry are not fully exercised. `PWA_OFFLINE_RELEASE` remains PARTIAL_PASS.
+- No remaining confirmed P0 or P1 product defect was found in the executed closure flows. P3 count is zero.
+
+### Deployment and cleanup
+
+Production release commit `32912842671068a6af615b80a7c71d313fa5157e` was built by Actions run `31451781286`. Artifact SHA-256 `8545d8f1fa853cebd215c57a96ad8646011b6bfaf9ddb897a680c0cbcd384a02` matched locally and on King. Backup `/opt/chat-reader/backups/final-closure-20260811T022014Z-3291284` passed checksum verification, `pg_restore --list` and archive listing. Services were recreated with `--no-build`; no migration, volume deletion, `.env` overwrite, local Next build or Scanner activation occurred.
+
+All disposable QA conversations were removed through supported APIs and the QA Share was revoked. The now-empty QA Project remains because the product has no project-delete endpoint. Earlier failed import-preview records may remain because no safe owner deletion endpoint exists. No direct SQL cleanup was used, and no real business record was changed.

@@ -35,6 +35,7 @@ export function EditMessageForm({
   onDirtyChange,
   onCancel,
   onSave,
+  onReloadLatest,
   onAttachmentInsertionApplied,
   onAttachmentFiles,
   onAttachmentRetry,
@@ -54,6 +55,7 @@ export function EditMessageForm({
   onDirtyChange?: (dirty: boolean) => void;
   onCancel: (dirty: boolean) => void | Promise<void>;
   onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>) => Promise<void>;
+  onReloadLatest?: () => Promise<void>;
   onAttachmentInsertionApplied?: () => void;
   onAttachmentFiles?: (files: File[], position: number, callbacks: AttachmentDraftCallbacks) => AttachmentDraft[];
   onAttachmentRetry?: (token: string) => void;
@@ -78,6 +80,8 @@ export function EditMessageForm({
   const [showReason, setShowReason] = useState(false);
   const [showClosePrompt, setShowClosePrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [revisionConflict, setRevisionConflict] = useState(false);
+  const [reloadStatus, setReloadStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [isSaving, setIsSaving] = useState(false);
   const [attachmentDrafts, setAttachmentDrafts] = useState<Record<string, AttachmentDraftState>>({});
   const [pendingCodeDrop, setPendingCodeDrop] = useState<{
@@ -246,6 +250,8 @@ export function EditMessageForm({
 
   async function submit(mode: "create_version" | "replace_current", confirmedRemoval = false) {
     setError(null);
+    setRevisionConflict(false);
+    setReloadStatus("idle");
     const unresolved = Object.values(attachmentDrafts).find((draft) => draft.status === "uploading" || draft.status === "error");
     if (unresolved) {
       setError(zh ? `附件“${unresolved.displayName}”尚未完成，请先重试或移除。` : `Attachment “${unresolved.displayName}” is not ready. Retry or remove it before saving.`);
@@ -276,7 +282,9 @@ export function EditMessageForm({
       setRemovedActions({});
       onDirtyChange?.(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("unableSaveEdit"));
+      const message = err instanceof Error ? err.message : t("unableSaveEdit");
+      setError(message);
+      setRevisionConflict(isRevisionConflictMessage(message));
     } finally {
       setIsSaving(false);
     }
@@ -382,7 +390,8 @@ export function EditMessageForm({
         </div> : null}
         <button type="button" onClick={() => setShowReason((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle"><ChevronDown className={`h-4 w-4 transition ${showReason ? "rotate-180" : ""}`} />{zh ? "\u7f16\u8f91\u8bf4\u660e\uff08\u53ef\u9009\uff09" : "Edit note (optional)"}</button>
         {showReason ? <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={t("editReason")} className="min-h-10 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" /> : null}
-        {error ? <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] p-2 text-sm text-[var(--danger)]" role="alert"><p>{error}</p><p className="mt-1 text-xs">{zh ? "\u672a\u4fdd\u5b58\u7684\u6e90\u7801\u5df2\u4fdd\u7559\uff0c\u53ef\u91cd\u8bd5\u6216\u5173\u95ed\u540e\u91cd\u65b0\u8f7d\u5165\u5f53\u524d\u7248\u672c\u3002" : "Your unsaved source is preserved. Retry, or close and reload the current version."}</p></div> : null}
+        {error ? <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] p-2 text-sm text-[var(--danger)]" role="alert"><p>{error}</p><p className="mt-1 text-xs">{zh ? "\u672a\u4fdd\u5b58\u7684\u6e90\u7801\u5df2\u4fdd\u7559\uff0c\u53ef\u91cd\u8bd5\u6216\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\u540e\u91cd\u65b0\u4fdd\u5b58\u3002" : "Your unsaved source is preserved. Retry, or load the latest state and save again."}</p>{revisionConflict && onReloadLatest ? <button type="button" disabled={reloadStatus === "loading"} onClick={() => { setReloadStatus("loading"); void onReloadLatest().then(() => { setError(null); setRevisionConflict(false); setReloadStatus("ready"); }).catch((reloadError) => { setReloadStatus("idle"); setError(reloadError instanceof Error ? reloadError.message : (zh ? "\u65e0\u6cd5\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\uff0c\u8bf7\u91cd\u8bd5\u3002" : "Unable to load the latest state. Please retry.")); }); }} className="mt-2 min-h-10 rounded-lg border border-[var(--danger)] px-3 font-medium hover:bg-surface disabled:opacity-60">{reloadStatus === "loading" ? (zh ? "\u6b63\u5728\u52a0\u8f7d\u2026" : "Loading…") : (zh ? "\u52a0\u8f7d\u6700\u65b0\u72b6\u6001" : "Load latest state")}</button> : null}</div> : null}
+        {reloadStatus === "ready" ? <div className="rounded-lg border border-ui bg-subtle p-2 text-sm text-primary" role="status">{zh ? "\u5df2\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\uff0c\u4f60\u7684\u8349\u7a3f\u4ecd\u4fdd\u7559\u3002\u8bf7\u68c0\u67e5\u540e\u91cd\u65b0\u4fdd\u5b58\u3002" : "Latest state loaded. Your draft is still preserved; review it and save again."}</div> : null}
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button type="button" data-source-editor-close="true" onClick={requestClose} disabled={isSaving} className="min-h-10 rounded-lg px-3 text-sm font-medium text-secondary hover:bg-subtle">{zh ? "\u9605\u8bfb\u6a21\u5f0f" : "Reading mode"}</button>
           {versionNumber > 1 ? <button type="button" onClick={() => void submit("replace_current")} disabled={isSaving || !trimmedText || isUnchanged || hasUnresolvedAttachment} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-4 w-4" />{zh ? "\u4fdd\u5b58\u5230\u5f53\u524d\u7248\u672c" : "Replace current version"}</button> : null}
@@ -426,6 +435,10 @@ export function EditMessageForm({
       ) : null}
     </form>
   );
+}
+
+function isRevisionConflictMessage(message: string): boolean {
+  return /\u5bf9\u8bdd\u5df2\u5728\u5176\u4ed6\u64cd\u4f5c\u4e2d\u66f4\u65b0|conversation.+(?:changed|updated)|revision|stale/i.test(message);
 }
 
 function attachmentReferenceCounts(text: string): Map<string, number> {
