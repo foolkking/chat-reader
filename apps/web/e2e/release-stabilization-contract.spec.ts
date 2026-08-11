@@ -89,6 +89,8 @@ test("archive restore stays in Import data and files use the annotation-style re
   expect(workspace).toContain('placement === "reader-floating"');
   expect(workspace).toContain("readerPanelSafeLeft");
   expect(workspace).toContain("data-workspace-drag-handle");
+  expect(workspace).toContain("{ left: geometry.x, top: geometry.y, width: geometry.width, height: geometry.height }");
+  expect(workspace).not.toContain(": geometry : undefined}");
 });
 
 test("source cursor location is a one-shot request and cannot replay after a dirty rerender", () => {

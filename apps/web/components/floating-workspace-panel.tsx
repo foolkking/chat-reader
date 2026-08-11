@@ -151,7 +151,11 @@ export function FloatingWorkspacePanel({
       aria-label={title}
       ref={panelRef}
       className={`fixed inset-x-0 bottom-0 top-14 z-[115] flex min-h-0 flex-col overflow-hidden border-t border-ui bg-surface shadow-2xl ${placement === "left-overlay" ? "lg:inset-auto lg:left-0 lg:top-0 lg:h-[100dvh] lg:w-[clamp(560px,32vw,720px)] lg:rounded-none lg:border-b-0 lg:border-l-0 lg:border-r lg:border-t" : "md:inset-auto md:rounded-lg md:border"}`}
-      style={geometry && typeof window !== "undefined" && desktop() ? placement === "left-overlay" ? { left: 0, top: 0, width: geometry.width, height: "100dvh" } : geometry : undefined}
+      style={geometry && typeof window !== "undefined" && desktop()
+        ? placement === "left-overlay"
+          ? { left: 0, top: 0, width: geometry.width, height: "100dvh" }
+          : { left: geometry.x, top: geometry.y, width: geometry.width, height: geometry.height }
+        : undefined}
     >
       <header
         data-workspace-drag-handle={placement === "reader-floating" ? "true" : undefined}
