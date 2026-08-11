@@ -1,5 +1,13 @@
 # Project State
 
+## 2026-08-11 Offline Startup, Read-only Attachments And Context Skill Delivery
+
+- Offline shell startup no longer blocks Library, Reader, or package downloads. An existing active shell is marked `ready` immediately; viewer runtime warming and shell reconciliation run as a background update. A failed update preserves the previous ready shell. The shell inventory is deterministic and includes the Chinese and English Context Acquisition Skill assets without scanning historical Performance entries.
+- Offline Reader now exposes the same `current conversation files` entry as the online Reader, through the existing `reader-floating` workspace on desktop and the existing full-width sheet on mobile. It is read-only: cached originals can open in the single Attachment Viewer Shell or download; missing originals show `offline-unavailable`; server attachment enumeration and management actions are unavailable.
+- Offline export is local-only and consumes the downloaded snapshot from IndexedDB/Cache Storage. CanJSON and Markdown exports preserve the existing offline boundary; local `.context.zip` includes a manifest, conversation JSONL and only cached content-addressed assets. Missing assets remain explicit metadata records. No API request, background job, derivative generation or migration is used.
+- Context Package results provide `Download Context Package`, `Copy parsing Skill`, and `View Skill`. Download attempts clipboard copy in the same gesture but never blocks the download. Clipboard denial or unavailable APIs show a persistent retryable error. Both Skill files are static, inert text resources: zh SHA-256 `BF467029CE810249701DCB21E0642ECEDF55F7B61ADA1C597BA386B891F9D08E`, en SHA-256 `BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613`.
+- Verified locally: Web production build, lint, typecheck, API `218 passed / 3 skipped`, Alembic single head `20260806_0021`, and PWA/Playwright `41 passed / 27 skipped`. Offline startup, read-only files, local export, both Skill deliveries, clipboard rejection, active shell preservation and exact 360/390/768 reflow passed. Quota exhaustion, interrupted package writes and production offline network interception remain `NOT_PRODUCTION_VERIFIED`.
+
 ## 2026-08-11 Attachment Workspace And Markdown Cursor Closure
 
 - Production now runs commit `1cdadc4f90115d7b46ce55d07a2b4f23c90471d4`, built by GitHub Actions run `31470442426` and deployed from archive SHA-256 `429fb5384dc1dbf57eec68aecad4632c01bd71a58fca6ea9f276468c6d8630fb`. Verified backup `/opt/chat-reader/backups/file-workspace-cursor-20260811T075200Z-1cdadc4` contains a PostgreSQL custom dump plus import/export/offline/asset archives; every checksum, `pg_restore --list` and tar listing passed.

@@ -68,6 +68,7 @@ export interface ReaderDataSource {
   readonly mode: "remote" | "offline";
   readonly capabilities: {
     canonicalManagement: boolean;
+    attachments: "manage" | "read-only" | "none";
     share: boolean;
     export: boolean;
   };
@@ -86,7 +87,7 @@ export interface ReaderDataSource {
 
 export const remoteReaderDataSource: ReaderDataSource = {
   mode: "remote",
-  capabilities: { canonicalManagement: true, share: true, export: true },
+  capabilities: { canonicalManagement: true, attachments: "manage", share: true, export: true },
   getConversation,
   getMessageWindow: getConversationMessageWindow,
   getReaderTurn: getConversationReaderTurn,
@@ -115,7 +116,7 @@ export const remoteReaderDataSource: ReaderDataSource = {
 
 export const offlineReaderDataSource: ReaderDataSource = {
   mode: "offline",
-  capabilities: { canonicalManagement: false, share: false, export: false },
+  capabilities: { canonicalManagement: false, attachments: "read-only", share: false, export: true },
   async getConversation(conversationId) {
     const conversation = await offlineDb.conversations.get(conversationId);
     if (!conversation) throw new Error("Conversation is not downloaded.");

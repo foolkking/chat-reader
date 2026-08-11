@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Download, FileArchive, FileJson2, FileText } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, ChevronDown, Copy, Download, Eye, FileArchive, FileJson2, FileText, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 import { usePreferences } from "../../components/preferences-provider";
 import {
   getConversationAttachments,
@@ -12,6 +14,27 @@ import {
 } from "../../lib/api";
 
 type ConversationExportFormat = "canjson" | "markdown";
+type SkillLocale = "zh-CN" | "en";
+
+const CONTEXT_SKILLS: Record<SkillLocale, {
+  url: string;
+  filename: string;
+  label: string;
+  sha256: string;
+}> = {
+  "zh-CN": {
+    url: "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
+    filename: "Chat-Reader-Conversation-Context-Acquisition-Skill.v1.md",
+    label: "中文",
+    sha256: "BF467029CE810249701DCB21E0642ECEDF55F7B61ADA1C597BA386B891F9D08E",
+  },
+  en: {
+    url: "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
+    filename: "Chat-Reader-Conversation-Context-Acquisition-Skill.v1-en.md",
+    label: "English",
+    sha256: "BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613",
+  },
+};
 
 export function ExportPanel({
   conversationId,
@@ -116,9 +139,13 @@ export function ExportPanel({
 
       {includeAttachments ? (
         downloadUrl && taskQuery.data?.status === "committed" ? (
-          <a href={String(downloadUrl)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
-            <Download className="h-4 w-4" />{zh ? "下载导出包" : "Download export"}
-          </a>
+          format === "canjson" ? (
+            <ContextPackageDelivery downloadUrl={String(downloadUrl)} defaultSkillLocale={zh ? "zh-CN" : "en"} />
+          ) : (
+            <a href={String(downloadUrl)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
+              <Download className="h-4 w-4" />{zh ? "下载导出包" : "Download export"}
+            </a>
+          )
         ) : (
           <button
             type="button"
@@ -155,6 +182,135 @@ export function ExportPanel({
       {jobKey === currentKey && taskQuery.data?.status === "failed" ? <p className="text-sm text-[var(--danger)]">{taskQuery.data.error_message || (zh ? "导出失败，请重试。" : "Export failed. Try again.")}</p> : null}
       {!compact && unavailableCount > 0 ? <p className="text-xs leading-5 text-secondary">{zh ? "缺失文件仍保留在元数据中，附件完整性会标记为 partial。" : "Missing files remain in metadata and make asset completeness partial."}</p> : null}
     </section>
+  );
+}
+
+export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultSkillLocale }: { downloadUrl: string; downloadFilename?: string; defaultSkillLocale: SkillLocale }) {
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
+  const [skillLocale, setSkillLocale] = useState<SkillLocale>(defaultSkillLocale);
+  const [skillText, setSkillText] = useState<string | null>(null);
+  const [skillError, setSkillError] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const skill = CONTEXT_SKILLS[skillLocale];
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setSkillText(null);
+    setSkillError(null);
+    setStatus(null);
+    void fetch(skill.url, { signal: controller.signal, credentials: "same-origin" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then(setSkillText)
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setSkillError(zh ? "解析 Skill 加载失败，请重试。" : "The parsing Skill could not be loaded. Try again.");
+        console.error("context-skill-load-failed", error);
+      });
+    return () => controller.abort();
+  }, [skill.url, zh]);
+
+  async function copySkill(successMessage?: string) {
+    if (!skillText) {
+      setStatus({ kind: "error", message: skillError ?? (zh ? "解析 Skill 尚未加载完成。" : "The parsing Skill is not loaded yet.") });
+      return false;
+    }
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard-unavailable");
+      await navigator.clipboard.writeText(skillText);
+      setStatus({ kind: "success", message: successMessage ?? (zh ? "解析 Skill 已复制。" : "Parsing Skill copied.") });
+      return true;
+    } catch {
+      setStatus({ kind: "error", message: zh ? "解析 Skill 复制失败，请允许剪贴板访问后重试。" : "Copy failed. Allow clipboard access and try again." });
+      return false;
+    }
+  }
+
+  function downloadPackageAndCopySkill() {
+    const copyAttempt = skillText && navigator.clipboard?.writeText
+      ? navigator.clipboard.writeText(skillText)
+      : Promise.reject(new Error("skill-unavailable"));
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = downloadFilename ?? "";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    void copyAttempt.then(() => {
+      setStatus({ kind: "success", message: zh ? "下载已开始，解析 Skill 已复制。" : "Download started and the parsing Skill was copied." });
+    }).catch(() => {
+      setStatus({ kind: "error", message: zh ? "下载已开始，但 Skill 复制失败。请点击“复制解析 Skill”重试。" : "Download started, but the Skill could not be copied. Use Copy parsing Skill to retry." });
+    });
+  }
+
+  return (
+    <section className="space-y-3 rounded-lg border border-ui bg-surface p-3" aria-label={zh ? "AI 上下文" : "AI context"} data-testid="context-package-delivery">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-primary">{zh ? "AI 上下文" : "AI context"}</h3>
+          <p className="mt-1 text-xs leading-5 text-secondary">{zh ? "在新 AI 中上传 Context Package，然后粘贴解析 Skill。" : "Upload the Context Package to a new AI, then paste the parsing Skill."}</p>
+        </div>
+        <div className="grid grid-cols-2 rounded-md bg-subtle p-1" role="group" aria-label={zh ? "Skill 语言" : "Skill language"}>
+          {(Object.keys(CONTEXT_SKILLS) as SkillLocale[]).map((locale) => (
+            <button key={locale} type="button" onClick={() => setSkillLocale(locale)} aria-pressed={skillLocale === locale} className={`min-h-9 rounded px-3 text-xs ${skillLocale === locale ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary"}`}>
+              {CONTEXT_SKILLS[locale].label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <button type="button" onClick={downloadPackageAndCopySkill} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
+        <Download className="h-4 w-4" />{zh ? "下载 Context Package" : "Download Context Package"}
+      </button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button type="button" disabled={!skillText} onClick={() => void copySkill()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-ui px-3 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">
+          <Copy className="h-4 w-4" />{zh ? "复制解析 Skill" : "Copy parsing Skill"}
+        </button>
+        <button type="button" disabled={!skillText} onClick={() => setViewerOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-ui px-3 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">
+          <Eye className="h-4 w-4" />{zh ? "查看 Skill" : "View Skill"}
+        </button>
+      </div>
+      {skillError ? <p className="text-xs text-[var(--danger)]" role="alert">{skillError}</p> : null}
+      {status ? <p className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs ${status.kind === "success" ? "bg-[var(--callout-tip-bg)] text-[var(--callout-tip-text)]" : "bg-[var(--danger-soft)] text-[var(--danger)]"}`} role={status.kind === "success" ? "status" : "alert"}>{status.kind === "success" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : null}<span>{status.message}</span></p> : null}
+      <ContextSkillDialog open={viewerOpen} onClose={() => setViewerOpen(false)} skill={skill} text={skillText ?? ""} onCopy={() => void copySkill()} />
+    </section>
+  );
+}
+
+function ContextSkillDialog({ open, onClose, skill, text, onCopy }: {
+  open: boolean;
+  onClose: () => void;
+  skill: (typeof CONTEXT_SKILLS)[SkillLocale];
+  text: string;
+  onCopy: () => void;
+}) {
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
+  const rootRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useDialogFocus({ open, rootRef, onClose, initialFocusRef: titleRef });
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[360] flex items-end justify-center bg-[var(--overlay)] sm:items-center sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div ref={rootRef} role="dialog" aria-modal="true" aria-labelledby="context-skill-title" tabIndex={-1} className="flex h-[100dvh] w-full flex-col overflow-hidden bg-page shadow-2xl sm:h-[min(86vh,900px)] sm:max-w-4xl sm:rounded-lg sm:border sm:border-ui">
+        <header className="flex min-h-14 shrink-0 items-center gap-3 border-b border-ui bg-surface px-4">
+          <div className="min-w-0 flex-1">
+            <h2 ref={titleRef} id="context-skill-title" tabIndex={-1} className="truncate text-sm font-semibold text-primary" title={skill.filename}>{zh ? "解析 Skill" : "Parsing Skill"}</h2>
+            <p className="truncate text-[11px] text-secondary" title={skill.sha256}>v1 · SHA-256 {skill.sha256}</p>
+          </div>
+          <button type="button" onClick={onCopy} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Copy className="h-4 w-4" />{zh ? "复制" : "Copy"}</button>
+          <a href={skill.url} download={skill.filename} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Download className="h-4 w-4" />{zh ? "下载" : "Download"}</a>
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-5 w-5" /></button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+          <pre className="mx-auto max-w-3xl whitespace-pre-wrap break-words font-mono text-xs leading-6 text-primary">{text}</pre>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

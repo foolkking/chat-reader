@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { strFromU8, unzipSync } from "fflate";
 
 test("only the library advertises the installable PWA", async ({ browser }) => {
   const context = await browser.newContext();
@@ -58,9 +60,16 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   await page.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]').fill("quantumfixture");
   await expect(page.locator("button:visible", { hasText: /quantumfixture 正文内容/ })).toBeVisible();
 
+  await expect.poll(async () => {
+    const record = await readActiveRecord(page);
+    return record.assets.includes("/skills/chat-reader-conversation-context-acquisition-skill.v1.md")
+      && record.assets.includes("/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md");
+  }).toBe(true);
   const activeBefore = await readActiveRecord(page);
   expect(activeBefore.revision).toBeTruthy();
   expect(activeBefore.assets).toContain("/library");
+  expect(activeBefore.assets).toContain("/skills/chat-reader-conversation-context-acquisition-skill.v1.md");
+  expect(activeBefore.assets).toContain("/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md");
 
   const failedUpdate = await page.evaluate(async (record) => {
     const registration = await navigator.serviceWorker.getRegistration("/library");
@@ -150,6 +159,116 @@ test("mirrors the unified sidebar and keeps preferences compact in library mode"
   await page.goto("/");
   await page.getByRole("button", { name: /外观与语言|Appearance & language/ }).click();
   await expect(page.getByRole("link", { name: /离线资料库|Offline library/ })).toHaveAttribute("href", "/library");
+});
+
+test("opens read-only offline files and exports the downloaded snapshot with both Skill languages", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3107" });
+  await page.goto("/library");
+  await seedOfflineFixture(page);
+  await page.goto("/library?conversationId=offline-fixture");
+
+  await openReaderHeaderAction(page, /当前对话文件|Conversation files/);
+  const filesPanel = page.getByTestId("offline-conversation-files-panel");
+  await expect(filesPanel).toBeVisible();
+  await expect(filesPanel.getByText("cached-note.txt", { exact: true })).toBeVisible();
+  await expect(filesPanel.getByText("missing-image.png", { exact: true })).toBeVisible();
+  await expect(filesPanel.getByText(/已缓存|Cached/)).toBeVisible();
+  await expect(filesPanel.getByText(/离线不可用|Unavailable offline/)).toBeVisible();
+  await expect(filesPanel.getByRole("button", { name: /上传|Upload|重命名|Rename|移除|Detach|删除|Delete/ })).toHaveCount(0);
+  await page.getByTestId("conversation-files-workspace").getByRole("button", { name: /关闭|Close/ }).click();
+
+  await openReaderHeaderAction(page, /^(导出|Export)$/);
+  const exportPanel = page.getByTestId("offline-export-panel");
+  await expect(exportPanel).toBeVisible();
+  await expect(exportPanel.getByText(/当前已下载快照|downloaded snapshot/)).toBeVisible();
+  await exportPanel.getByLabel(/包含已缓存附件|Include cached attachments/).check();
+  await exportPanel.getByRole("button", { name: /生成离线导出|Generate offline export/ }).click();
+  const delivery = exportPanel.getByTestId("context-package-delivery");
+  await expect(delivery).toBeVisible();
+  await expect(delivery.getByRole("button", { name: /下载 Context Package|Download Context Package/ })).toBeVisible();
+  await expect(delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ })).toBeEnabled();
+  await expect(exportPanel.getByText(/1 个附件未缓存|1 uncached attachment/)).toBeVisible();
+
+  await delivery.getByRole("button", { name: "English" }).click();
+  await expect(delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ })).toBeEnabled();
+  await delivery.getByRole("button", { name: /查看 Skill|View Skill/ }).click();
+  const skillDialog = page.getByRole("dialog", { name: /解析 Skill|Parsing Skill/ });
+  await expect(skillDialog).toBeVisible();
+  await expect(skillDialog.locator("pre")).toContainText("You are receiving a Conversation Context Package exported by Chat Reader.");
+  await expect(skillDialog.getByText(/BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613/)).toBeVisible();
+  const skillDownloadPromise = page.waitForEvent("download");
+  await skillDialog.getByRole("link", { name: /下载|Download/ }).click();
+  const skillDownload = await skillDownloadPromise;
+  expect(skillDownload.suggestedFilename()).toBe("Chat-Reader-Conversation-Context-Acquisition-Skill.v1-en.md");
+  await skillDialog.getByRole("button", { name: /关闭|Close/ }).click();
+  await expect(delivery.getByRole("button", { name: /查看 Skill|View Skill/ })).toBeFocused();
+
+  await delivery.getByRole("button", { name: "中文" }).click();
+  await expect(delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ })).toBeEnabled();
+  await delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ }).click();
+  await expect(delivery.getByRole("status")).toContainText(/解析 Skill 已复制|Parsing Skill copied/);
+  const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboard).toContain("Chat Reader");
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.clipboard, "writeText", {
+      configurable: true,
+      value: () => Promise.reject(new DOMException("Denied", "NotAllowedError")),
+    });
+  });
+  const packageDownloadPromise = page.waitForEvent("download");
+  await delivery.getByRole("button", { name: /下载 Context Package|Download Context Package/ }).click();
+  const packageDownload = await packageDownloadPromise;
+  expect(packageDownload.suggestedFilename()).toMatch(/\.context\.zip$/);
+  await expect(delivery.getByRole("alert")).toContainText(/下载已开始，但 Skill 复制失败|Download started, but the Skill could not be copied/);
+  const packagePath = await packageDownload.path();
+  if (!packagePath) throw new Error("Context Package download has no local path.");
+  const packageEntries = unzipSync(new Uint8Array(await readFile(packagePath)));
+  expect(Object.keys(packageEntries)).toEqual(expect.arrayContaining([
+    "manifest.json",
+    "conversation.canjsonl",
+  ]));
+  const manifest = JSON.parse(strFromU8(packageEntries["manifest.json"]));
+  expect(manifest.format).toBe("chat-reader-context-package");
+  expect(manifest.attachments.record_count).toBe(2);
+  expect(manifest.attachments.available_object_count).toBe(1);
+  expect(manifest.attachments.missing_object_count).toBe(1);
+  const records = strFromU8(packageEntries["conversation.canjsonl"]).trim().split("\n").map((line) => JSON.parse(line));
+  expect(records.filter((record) => record.record_type === "message")).toHaveLength(40);
+  expect(records.find((record) => record.id === "11111111-1111-4111-8111-111111111111")?.resolution_status).toBe("available");
+  expect(records.find((record) => record.id === "22222222-2222-4222-8222-222222222222")?.resolution_status).toBe("missing");
+
+  const hashes = await page.evaluate(async () => {
+    const urls = [
+      "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
+      "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
+    ];
+    return Promise.all(urls.map(async (url) => {
+      const bytes = await fetch(url).then((response) => response.arrayBuffer());
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
+    }));
+  });
+  expect(hashes).toEqual([
+    "BF467029CE810249701DCB21E0642ECEDF55F7B61ADA1C597BA386B891F9D08E",
+    "BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613",
+  ]);
+});
+
+test("keeps offline file browsing reflow-safe at exact narrow and tablet viewports", async ({ browser }) => {
+  for (const viewport of [{ width: 360, height: 800 }, { width: 390, height: 844 }, { width: 768, height: 1024 }]) {
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    await page.goto("/library");
+    await seedOfflineFixture(page);
+    await page.goto("/library?conversationId=offline-fixture");
+    await openReaderHeaderAction(page, /当前对话文件|Conversation files/);
+    await expect(page.getByTestId("offline-conversation-files-panel")).toBeVisible();
+    const dimensions = await page.evaluate(() => ({ documentWidth: document.documentElement.scrollWidth, viewportWidth: window.innerWidth }));
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    await expect(page.getByTestId("offline-conversation-files-panel").getByText("cached-note.txt", { exact: true })).toBeVisible();
+    await context.close();
+  }
 });
 
 test("restores the offline reader frame and target-loads a distant annotation", async ({ page }) => {
@@ -242,19 +361,22 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-    const requiredStores = ["conversations", "messages", "blocks", "headings", "searchDocuments", "annotations", "readingPositions"];
+    const requiredStores = ["conversations", "messages", "blocks", "headings", "searchDocuments", "annotations", "notebooks", "readingPositions", "attachments"];
     const ready = requiredStores.every((store) => database.objectStoreNames.contains(store));
     database.close();
     return ready;
   })).toBe(true);
   await page.evaluate(async () => {
+    const cachedAttachmentBytes = new TextEncoder().encode("Offline cached attachment fixture.\n");
+    const cachedAttachmentDigest = await crypto.subtle.digest("SHA-256", cachedAttachmentBytes);
+    const cachedAttachmentSha = Array.from(new Uint8Array(cachedAttachmentDigest), (byte) => byte.toString(16).padStart(2, "0")).join("");
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("chat-reader-offline-library");
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
     await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(["conversations", "messages", "blocks", "headings", "searchDocuments", "annotations", "readingPositions"], "readwrite");
+      const transaction = database.transaction(["conversations", "messages", "blocks", "headings", "searchDocuments", "annotations", "notebooks", "readingPositions", "attachments"], "readwrite");
       transaction.objectStore("conversations").put({
         id: "offline-fixture",
         title: "离线测试对话",
@@ -403,6 +525,62 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
         created_at: "2026-07-26T01:00:00.000Z",
         updated_at: "2026-07-26T01:00:00.000Z",
       });
+      transaction.objectStore("notebooks").put({
+        id: "offline-notebook",
+        conversation_id: "offline-fixture",
+        title: "Offline notes",
+        blocks: [{ id: "offline-note-block", type: "markdown", markdown: "Offline notebook fixture." }],
+        revision: 1,
+        is_conflict: false,
+        conflict_of_id: null,
+        created_at: "2026-07-26T01:00:00.000Z",
+        updated_at: "2026-07-26T01:00:00.000Z",
+      });
+      transaction.objectStore("attachments").put({
+        id: "11111111-1111-4111-8111-111111111111",
+        conversation_id: "offline-fixture",
+        message_id: "offline-message-1",
+        message_version_id: "offline-version-1",
+        display_name: "cached-note.txt",
+        original_filename: "cached-note.txt",
+        declared_mime_type: "text/plain",
+        detected_mime_type: "text/plain",
+        byte_size: cachedAttachmentBytes.byteLength,
+        sha256: cachedAttachmentSha,
+        content_path: "assets/cached-note.txt",
+        status: "available",
+        scan_status: "unscanned",
+        resolution_status: "resolved",
+        occurrences: [{
+          message_id: "offline-message-1",
+          message_version_id: "offline-version-1",
+          occurrence_key: "cached-note-occurrence",
+          placement: "block",
+          relation_type: "attachment",
+          display_order: 0,
+          block_index: 1,
+          display_mode: "auto",
+          alt_text: null,
+          caption: null,
+        }],
+      });
+      transaction.objectStore("attachments").put({
+        id: "22222222-2222-4222-8222-222222222222",
+        conversation_id: "offline-fixture",
+        message_id: null,
+        message_version_id: null,
+        display_name: "missing-image.png",
+        original_filename: "missing-image.png",
+        declared_mime_type: "image/png",
+        detected_mime_type: "image/png",
+        byte_size: 1024,
+        sha256: "b".repeat(64),
+        content_path: "assets/missing-image.png",
+        status: "available",
+        scan_status: "unscanned",
+        resolution_status: "resolved",
+        occurrences: [],
+      });
       transaction.objectStore("readingPositions").put({
         id: "offline-reading-position",
         conversation_id: "offline-fixture",
@@ -417,6 +595,11 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
     });
+    const cache = await caches.open("chat-reader-offline-assets-v1");
+    await cache.put(
+      "https://offline.chat-reader.local/assets/11111111-1111-4111-8111-111111111111",
+      new Response(cachedAttachmentBytes, { headers: { "Content-Type": "text/plain" } }),
+    );
     database.close();
   });
 }
@@ -456,6 +639,14 @@ async function arrangeOfflineSidebarFixture(page: import("@playwright/test").Pag
     });
     database.close();
   });
+}
+
+async function openReaderHeaderAction(page: import("@playwright/test").Page, name: RegExp): Promise<void> {
+  const action = page.getByRole("button", { name }).first();
+  if (!await action.isVisible().catch(() => false)) {
+    await page.getByRole("button", { name: /^(Message actions|消息操作|More|更多)$/ }).click();
+  }
+  await action.click();
 }
 
 async function hasConnectedAnnotationHighlight(page: import("@playwright/test").Page, quote: string): Promise<boolean> {

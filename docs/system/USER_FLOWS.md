@@ -1,5 +1,13 @@
 # 当前用户流程
 
+## Offline Reader and Context Package (2026-08-11)
+
+When the user opens `/library`, an existing complete offline shell is immediately readable. Resource reconciliation runs in the background and may show a non-blocking update failure; it must not disable `Update conversations`. A first-time device may show that the shell is still preparing, but online navigation remains usable.
+
+Inside an offline conversation, `More -> Current conversation files` is available in the same location as the online Reader. The panel is read-only. A cached attachment can be viewed/downloaded through the unified Viewer; a missing original says `offline-unavailable` and does not spin forever. No server file list or management action is requested.
+
+Offline `Export` creates CanJSON/Markdown locally from the downloaded snapshot. When a local `.context.zip` is ready, the two-step handoff is: (1) upload the Context Package to the new AI, (2) paste the selected parsing Skill. The result offers download, copy and inert text viewing in Chinese or English. Download also attempts copy in the same gesture; a browser clipboard denial is visible and retryable.
+
 ## Reader source workspace and merge cancellation (current)
 
 1. Desktop Reader keeps `Edit`, `Search`, `Annotations`, `Focus`, and `More` in that order. Search/annotations/source are mutually exclusive; clicking an open source or annotation action closes it. Share, export, merge, and split remain in `More`.

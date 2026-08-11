@@ -1,5 +1,16 @@
 # Markdown 文档台账
 
+2026-08-11 synchronization: Offline shell availability/background update, offline read-only attachment files, local snapshot export and bilingual Context Acquisition Skill delivery are current in `PROJECT_STATE.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/system/USER_FLOWS.md`, `docs/system/ATTACHMENT_RENDERER_CONTRACT.md`, `docs/testing.md` and `docs/deployment.md`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `apps/web/lib/offline-shell.ts` | Current | Immediate active-shell availability, deterministic asset inventory and non-blocking background reconciliation. |
+| `apps/web/features/attachments/offline-conversation-files-panel.tsx` | Current | Read-only offline current-conversation attachments and cached/unavailable states. |
+| `apps/web/lib/offline-export.ts` | Current | Bounded browser-local CanJSON/Markdown/context package projection from the downloaded snapshot. |
+| `apps/web/features/exporting/offline-export-panel.tsx` | Current | Offline export controls and local result delivery. |
+| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1.md` | Current static asset | Chinese inert parsing Skill; SHA-256 `BF467029CE810249701DCB21E0642ECEDF55F7B61ADA1C597BA386B891F9D08E`. |
+| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md` | Current static asset | English inert parsing Skill; SHA-256 `BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613`. |
+
 2026-08-10 synchronization: Reader scrollbar-jump coordinate recovery and pointer-held edge-loading rules are current in `PROJECT_STATE.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md`, and `results.md`.
 
 ## 2026-08-10 Reader wheel performance ownership additions

@@ -13,6 +13,7 @@ import {
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
 import type { AttachmentRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
+import { OfflineExportPanel } from "../exporting/offline-export-panel";
 import { MobileSidebarTrigger, ProjectSidebar } from "../projects/project-sidebar";
 import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
@@ -47,6 +48,7 @@ import { acquireReaderBlockLease, notifyReaderMessageLayoutChanged, notifyReader
 import { SourceEditorWorkspace, type SourceEditorTarget } from "../editing/source-editor-workspace";
 import { normalizedMessageBlocks, sourceOffsetForBlock } from "../editing/message-source-position";
 import { ConversationFilesPanel } from "../attachments/conversation-files-panel";
+import { OfflineConversationFilesPanel } from "../attachments/offline-conversation-files-panel";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { resolveActiveReadingTarget } from "./reader-active-position";
 
@@ -128,6 +130,7 @@ export function ConversationReader({
   const [initialPaintReady, setInitialPaintReady] = useState(false);
   const isOffline = dataSource.mode === "offline";
   const canManageCanonical = dataSource.capabilities.canonicalManagement;
+  const canBrowseAttachments = dataSource.capabilities.attachments !== "none";
   const annotationRepository = isOffline ? offlineAnnotationRepository : remoteAnnotationRepository;
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const loadPreviousSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -1699,7 +1702,7 @@ export function ConversationReader({
       icon: FileOutput,
       onSelect: () => { void openUtilityPanel("export"); },
     } as ReaderHeaderAction] : []),
-    ...(canManageCanonical ? [{
+    ...(canBrowseAttachments ? [{
       id: "conversation-files",
       label: resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files",
       icon: Paperclip,
@@ -1981,17 +1984,17 @@ export function ConversationReader({
         <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact /></div>
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "export" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("export")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("export")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact readingStartMessageId={activeMessageId} /></div>
+        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3">{dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact readingStartMessageId={activeMessageId} />}</div>
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "files" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <ConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} onInsert={insertConversationAttachment} />
+        {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} />}
       </MobileReaderSheet>
       {!focusMode && (showShare || showExport || showSearch) ? (
         <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels}>
             <div className="flex h-full min-w-0 w-full overflow-hidden">
               {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-                {showExport ? <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} /> : null}
+                {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} /> : null}
               </ReaderPanelShell>}
             </div>
         </ReaderUtilityDrawer>
@@ -2006,11 +2009,11 @@ export function ConversationReader({
           resetLabel={resolvedLocale === "zh-CN" ? "重置文件窗口位置" : "Reset file window position"}
           onClose={() => setShowFiles(false)}
         >
-          <ConversationFilesPanel
-            conversationId={conversation.id}
-            onLocate={async (messageId, blockIndex) => { await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }}
-            onInsert={insertConversationAttachment}
-          />
+          {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel
+              conversationId={conversation.id}
+              onLocate={async (messageId, blockIndex) => { await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }}
+              onInsert={insertConversationAttachment}
+            /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} />}
         </FloatingWorkspacePanel>
       ) : null}
       <AnnotationWorkspace

@@ -261,6 +261,7 @@ function isLibraryPath(pathname) {
 function isShellAssetPath(pathname) {
   return pathname.startsWith("/_next/static/")
     || pathname.startsWith("/icons/")
+    || pathname.startsWith("/skills/")
     || pathname === "/library/manifest.webmanifest";
 }
 

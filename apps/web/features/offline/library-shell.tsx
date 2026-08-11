@@ -174,12 +174,6 @@ export function LibraryShell() {
     scopeId?: string,
     silent = false,
   ) => {
-    if (process.env.NODE_ENV === "production") {
-      const shellStatus = await prepareOfflineShell();
-      if (shellStatus.phase !== "ready") {
-        throw new Error(shellStatus.message ?? "离线启动尚未准备完成，请重试。");
-      }
-    }
     const catalog = catalogQuery.data ?? await getOfflineCatalog();
     const scopedLocal = conversations.filter((conversation) => (
       scope === "all"
@@ -414,7 +408,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
       <label className="flex min-h-10 items-center gap-2 rounded-md border border-ui bg-surface px-3"><Search className="h-4 w-4 text-secondary" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索本地正文、代码与批注" : "Search offline text, code, and annotations"} /></label>
       <OfflineShellIndicator status={offlineShellStatus} online={online} onRetry={onRetryShell} />
       {online && catalog ? <label className="grid gap-1 text-xs text-secondary"><span>{zh ? "离线附件" : "Offline attachments"}</span><select value={assetMode} onChange={(event) => onAssetModeChange(event.target.value as OfflineAssetMode)} disabled={Boolean(download)} className="min-h-9 rounded-md border border-ui bg-surface px-2 text-sm text-primary disabled:opacity-50"><option value="none">{zh ? "仅附件信息" : "Metadata only"}</option><option value="small">{zh ? "小附件（≤10 MiB）" : "Small files (≤10 MiB)"}</option><option value="all">{zh ? "全部附件" : "All attachments"}</option></select></label> : null}
-      {online && catalog ? <button type="button" disabled={Boolean(download) || offlineShellStatus.phase === "preparing" || pendingSummary.count === 0} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{pendingSummary.count > 0 ? (zh ? `更新 ${pendingSummary.count} 个对话 · ${formatBytes(pendingSummary.bytes)}` : `Update ${pendingSummary.count} conversations · ${formatBytes(pendingSummary.bytes)}`) : (zh ? "离线资料已是最新" : "Offline library is up to date")}</button> : null}
+      {online && catalog ? <button type="button" disabled={Boolean(download) || pendingSummary.count === 0} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{pendingSummary.count > 0 ? (zh ? `更新 ${pendingSummary.count} 个对话 · ${formatBytes(pendingSummary.bytes)}` : `Update ${pendingSummary.count} conversations · ${formatBytes(pendingSummary.bytes)}`) : (zh ? "离线资料已是最新" : "Offline library is up to date")}</button> : null}
       {download ? <div className="space-y-1" role="status"><div className="h-1.5 overflow-hidden rounded bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${download.progress}%` }} /></div><p className="flex items-center gap-1 text-xs text-secondary"><LoaderCircle className="h-3 w-3 animate-spin" />{download.label}</p></div> : null}
       {error ? <p className="rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)]">{error}</p> : null}
     </div>
@@ -438,14 +432,24 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
 function OfflineShellIndicator({ status, online, onRetry }: { status: OfflineShellStatus; online: boolean; onRetry: () => void }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  if (status.phase === "ready") {
+  if (status.availability === "ready" && status.updatePhase === "idle") {
     return <p className="flex min-h-9 items-center gap-2 rounded-md bg-[var(--callout-tip-bg)] px-3 text-xs text-[var(--callout-tip-text)]"><CheckCircle2 className="h-4 w-4 shrink-0" />{zh ? `可离线启动 · ${status.resourceCount} 项资源` : `Offline ready · ${status.resourceCount} resources`}</p>;
   }
-  if (status.phase === "preparing") {
+  if (status.availability === "ready" && status.updatePhase === "preparing") {
     const progress = status.total ? `${status.completed}/${status.total}` : "";
-    return <p className="flex min-h-9 items-center gap-2 rounded-md bg-subtle px-3 text-xs text-secondary" role="status"><LoaderCircle className="h-4 w-4 shrink-0 animate-spin" />{zh ? `正在准备离线启动 ${progress}` : `Preparing offline access ${progress}`}</p>;
+    return <p className="flex min-h-9 items-center gap-2 rounded-md bg-subtle px-3 text-xs text-secondary" role="status"><LoaderCircle className="h-4 w-4 shrink-0 animate-spin" />{zh ? `可离线启动 · 正在后台更新资源 ${progress}` : `Offline ready · Updating resources ${progress}`}</p>;
   }
-  return <div className="flex min-h-9 items-center gap-2 rounded-md bg-[var(--callout-warning-bg)] px-3 py-2 text-xs text-[var(--callout-warning-text)]"><AlertTriangle className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1">{status.message ?? (zh ? "离线启动尚未就绪" : "Offline access is not ready")}</span>{status.phase === "error" && online ? <button type="button" onClick={onRetry} className="flex h-7 w-7 shrink-0 items-center justify-center rounded hover:bg-surface" aria-label={zh ? "重试准备离线启动" : "Retry offline preparation"} title={zh ? "重试" : "Retry"}><RefreshCw className="h-3.5 w-3.5" /></button> : null}</div>;
+  if (status.availability === "ready" && status.updatePhase === "failed") {
+    return <div className="flex min-h-9 items-center gap-2 rounded-md bg-subtle px-3 py-2 text-xs text-secondary"><AlertTriangle className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1">{zh ? "现有离线版本可用，资源更新失败" : "Existing offline version is available; update failed"}</span>{online ? <button type="button" onClick={onRetry} className="flex h-8 w-8 shrink-0 items-center justify-center rounded hover:bg-surface" aria-label={zh ? "重试更新离线资源" : "Retry offline resource update"} title={zh ? "重试" : "Retry"}><RefreshCw className="h-3.5 w-3.5" /></button> : null}</div>;
+  }
+  if (status.updatePhase === "checking" || status.updatePhase === "preparing") {
+    const progress = status.total ? `${status.completed}/${status.total}` : "";
+    return <p className="flex min-h-9 items-center gap-2 rounded-md bg-subtle px-3 text-xs text-secondary" role="status"><LoaderCircle className="h-4 w-4 shrink-0 animate-spin" />{status.updatePhase === "checking" ? (zh ? "正在检查离线启动" : "Checking offline access") : (zh ? `正在准备首次离线启动 ${progress}` : `Preparing offline access for the first time ${progress}`)}</p>;
+  }
+  if (status.availability === "unsupported") {
+    return <p className="flex min-h-9 items-center gap-2 rounded-md bg-subtle px-3 py-2 text-xs text-secondary"><AlertTriangle className="h-4 w-4 shrink-0" />{status.message ?? (zh ? "当前浏览器不支持离线启动" : "This browser does not support offline access")}</p>;
+  }
+  return <div className="flex min-h-9 items-center gap-2 rounded-md bg-[var(--callout-warning-bg)] px-3 py-2 text-xs text-[var(--callout-warning-text)]"><AlertTriangle className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1">{status.message ?? (zh ? "离线启动尚未就绪" : "Offline access is not ready")}</span>{online ? <button type="button" onClick={onRetry} className="flex h-8 w-8 shrink-0 items-center justify-center rounded hover:bg-surface" aria-label={zh ? "重试准备离线启动" : "Retry offline preparation"} title={zh ? "重试" : "Retry"}><RefreshCw className="h-3.5 w-3.5" /></button> : null}</div>;
 }
 
 function ConversationRows({ rows, selectedId, onOpen, onDownload, onRemove }: { rows: LibrarySidebarConversation[]; selectedId: string | null; onOpen: (id: string) => void; onDownload: (scope: "conversation", id: string) => void; onRemove: (ids: string[]) => void }) {

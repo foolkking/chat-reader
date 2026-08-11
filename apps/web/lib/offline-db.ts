@@ -315,7 +315,40 @@ export async function getOfflineAttachment(attachmentId: string): Promise<Attach
   const record = await offlineDb.attachments.get(attachmentId);
   if (!record) throw new Error("Offline attachment metadata was not found.");
   const cached = record.content_path ? await caches.open("chat-reader-offline-assets-v1").then((cache) => cache.match(offlineAttachmentCacheUrl(record.id))) : undefined;
-  const contentUrl = cached ? URL.createObjectURL(await cached.blob()) : null;
+  return offlineAttachmentRead(record, cached ? URL.createObjectURL(await cached.blob()) : null, Boolean(cached));
+}
+
+export async function getOfflineAttachmentBytes(attachmentId: string): Promise<Uint8Array | null> {
+  const record = await offlineDb.attachments.get(attachmentId);
+  if (!record?.content_path) return null;
+  const response = await caches.open("chat-reader-offline-assets-v1").then((cache) => cache.match(offlineAttachmentCacheUrl(record.id)));
+  return response ? new Uint8Array(await response.arrayBuffer()) : null;
+}
+
+export async function listOfflineConversationAttachments(conversationId: string): Promise<AttachmentRead[]> {
+  const records = await offlineDb.attachments.where("conversation_id").equals(conversationId).toArray();
+  const cache = await caches.open("chat-reader-offline-assets-v1");
+  const cached = await Promise.all(records.map((record) => (
+    record.content_path ? cache.match(offlineAttachmentCacheUrl(record.id)).then(Boolean) : Promise.resolve(false)
+  )));
+  return records
+    .map((record, index) => offlineAttachmentRead(record, null, cached[index]))
+    .sort((left, right) => left.display_name.localeCompare(right.display_name));
+}
+
+export function releaseOfflineAttachmentUrls(attachment?: AttachmentRead | null): void {
+  const urls = new Set([attachment?.content_url, attachment?.download_url]);
+  urls.forEach((url) => {
+    if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+  });
+}
+
+function offlineAttachmentRead(record: OfflineAttachmentRecord, contentUrl: string | null, cached: boolean): AttachmentRead {
+  const occurrences = (record.occurrences ?? []).map((occurrence) => ({
+    ...occurrence,
+    is_current_version: true,
+    block_index: occurrence.block_index,
+  }));
   return {
     id: record.id,
     conversation_id: record.conversation_id,
@@ -335,9 +368,18 @@ export async function getOfflineAttachment(attachmentId: string): Promise<Attach
     scan_status: record.scan_status ?? "unscanned",
     source_type: "offline_package",
     source_attachment_id: record.id,
-    metadata: {},
-    resolution_status: cached ? "resolved" : "unresolved",
+    metadata: { offline_resource_available: cached },
+    resolution_status: record.resolution_status === "missing"
+      ? "missing"
+      : cached
+        ? "resolved"
+        : "offline_unavailable",
     created_at: new Date(0).toISOString(),
+    occurrence_count: occurrences.length,
+    current_occurrence_count: occurrences.length,
+    message_count: new Set(occurrences.map((occurrence) => occurrence.message_id)).size,
+    is_used: occurrences.length > 0,
+    occurrences,
     content_url: contentUrl,
     download_url: contentUrl,
   };

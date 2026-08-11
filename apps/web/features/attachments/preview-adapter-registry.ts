@@ -153,6 +153,12 @@ export function buildAttachmentRenderPlan(
   const dataState = resolveAttachmentDataState(attachment);
   const capability = resolveAttachmentCapability(attachment);
   const downloadable = dataState !== "missing" && Boolean(attachment.download_url);
+  if (attachment.resolution_status === "offline_unavailable") {
+    const offlineRuntime: AttachmentRuntimeRenderState = runtime.status === "idle"
+      ? { status: "offline-unavailable", requestId: `offline:${attachment.id}` }
+      : runtime;
+    return fileRowPlan(dataState, capability, offlineRuntime, "offline-unavailable", false, false, false, true);
+  }
   if (dataState === "missing") return fileRowPlan(dataState, capability, runtime, "missing", false, false, false, true);
   if (dataState === "empty") return fileRowPlan(dataState, capability, runtime, "empty", false, downloadable, false, true);
   if (runtime.status === "offline-unavailable") return fileRowPlan(dataState, capability, runtime, "offline-unavailable", false, downloadable, false, true);

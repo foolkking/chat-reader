@@ -1,5 +1,33 @@
 # Implementation Results
 
+## Offline Startup, Attachments and Context Skill Delivery - 2026-08-11
+
+### Root causes closed
+
+- The Library shell was hard-coded to `preparing`, waited for `window.load` and dynamic viewer imports, and used historical Performance entries for its revision. That made a valid active shell appear blocked and could block downloads. Availability is now independent from background reconciliation; active shells are ready immediately, the inventory is deterministic, and the update is retryable without blocking the page.
+- Offline Reader had no corresponding current-conversation-files entry and offline attachment URL misses could leave a blank/indefinite Viewer. It now exposes a read-only panel through the existing workspace and unified Viewer; cache misses are explicit `offline-unavailable` and object URLs are released.
+- Context Package delivery had no bilingual Skill path and could allow clipboard failure to obscure the package handoff. The result now offers download/copy/view for both Skill files. Download always starts first, clipboard failure is visible and retryable, and both static files are inert and checksum-pinned.
+
+### Verification
+
+| Check | Result |
+| --- | --- |
+| Web lint | PASS |
+| Web typecheck | PASS |
+| Web production build | PASS |
+| API suite | `218 passed / 3 skipped` |
+| Alembic | PASS, one head `20260806_0021` |
+| PWA/Playwright full local matrix | `41 passed / 27 skipped` |
+| Offline startup and active-shell preservation | PASS |
+| Offline read-only attachment panel and unified Viewer path | PASS |
+| Local CanJSON/Markdown/`.context.zip` export | PASS |
+| Chinese/English Skill view, download, checksum | PASS |
+| Clipboard rejection after package download | PASS |
+| Exact 360/390/768 offline reflow | PASS |
+| Quota/interrupted package/reconnect/production offline interception | NOT_PRODUCTION_VERIFIED |
+
+The 27 PWA skips are API/fixture-gated online flows in the no-API local web matrix and are not counted as PASS. The local offline exporter is a bounded snapshot projection; it does not alter the server export/import contract.
+
 ## Reader Scrollbar Jump Blank-Window Closure - 2026-08-10
 
 ### Root cause

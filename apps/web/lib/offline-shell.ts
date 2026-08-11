@@ -1,9 +1,11 @@
 import { getOfflineSearchWorkerUrl } from "./offline-search";
 
-export type OfflineShellPhase = "unsupported" | "preparing" | "ready" | "error";
+export type OfflineShellAvailability = "unknown" | "ready" | "unavailable" | "unsupported";
+export type OfflineShellUpdatePhase = "idle" | "checking" | "preparing" | "failed";
 
 export type OfflineShellStatus = {
-  phase: OfflineShellPhase;
+  availability: OfflineShellAvailability;
+  updatePhase: OfflineShellUpdatePhase;
   revision: string | null;
   resourceCount: number;
   completed: number;
@@ -38,8 +40,10 @@ type WorkerProgressResponse = {
 const listeners = new Set<() => void>();
 let registrationPromise: Promise<ServiceWorkerRegistration> | null = null;
 let preparationPromise: Promise<OfflineShellStatus> | null = null;
+let reconciliationPromise: Promise<OfflineShellStatus> | null = null;
 let currentStatus: OfflineShellStatus = {
-  phase: "preparing",
+  availability: "unknown",
+  updatePhase: "checking",
   revision: null,
   resourceCount: 0,
   completed: 0,
@@ -59,7 +63,8 @@ export function subscribeOfflineShellStatus(listener: () => void): () => void {
 
 export function markOfflineShellUnsupported(message: string): void {
   setStatus({
-    phase: "unsupported",
+    availability: "unsupported",
+    updatePhase: "idle",
     revision: null,
     resourceCount: 0,
     completed: 0,
@@ -74,7 +79,12 @@ export function registerLibraryServiceWorker(): Promise<ServiceWorkerRegistratio
   registrationPromise = registerLibraryServiceWorkerInternal().catch((error: unknown) => {
     registrationPromise = null;
     const message = error instanceof Error ? error.message : "Service Worker 注册失败。";
-    setStatus({ ...currentStatus, phase: "error", message });
+    setStatus({
+      ...currentStatus,
+      availability: currentStatus.availability === "ready" ? "ready" : "unavailable",
+      updatePhase: "failed",
+      message,
+    });
     throw error;
   });
   return registrationPromise;
@@ -99,6 +109,13 @@ async function registerLibraryServiceWorkerInternal(): Promise<ServiceWorkerRegi
     if (registration.scope.replace(/\/+$/, "") === libraryScope) return;
     await registration.unregister();
   }));
+  const existingRegistration = registrations.find((registration) => registration.scope.replace(/\/+$/, "") === libraryScope);
+  if (existingRegistration?.active && await supportsLibraryShellProtocol(existingRegistration.active)) {
+    // The active shell is canonical for the current visit. Network update and
+    // runtime reconciliation are background work and never gate Library use.
+    void existingRegistration.update().catch(() => undefined);
+    return existingRegistration;
+  }
   let registration = await navigator.serviceWorker.register("/library-sw.js", {
     scope: "/library",
     updateViaCache: "none",
@@ -167,7 +184,13 @@ async function prepareOfflineShellInternal(force: boolean): Promise<OfflineShell
   if (typeof window === "undefined" || !window.location.pathname.startsWith("/library")) {
     return currentStatus;
   }
-  setStatus({ ...currentStatus, phase: "preparing", completed: 0, total: 0, message: null });
+  setStatus({
+    ...currentStatus,
+    updatePhase: "checking",
+    completed: 0,
+    total: 0,
+    message: null,
+  });
   let existing: WorkerStatusResponse | null = null;
   try {
     const registration = await registerLibraryServiceWorker();
@@ -175,68 +198,113 @@ async function prepareOfflineShellInternal(force: boolean): Promise<OfflineShell
     if (!serviceWorker) throw new Error("离线启动服务尚未激活，请重试。");
 
     existing = await postMessage(serviceWorker, { type: "GET_LIBRARY_SHELL_STATUS" });
-    if (existing.ok && existing.status?.ready) applyWorkerStatus(existing);
-    await warmAttachmentViewerRuntime();
-    const assets = collectLibraryShellAssets();
-    const workerUrl = getOfflineSearchWorkerUrl();
-    const revision = await createRevision(assets);
-    if (existing.ok && existing.status?.ready && existing.status.revision === revision && !force) {
-      return applyWorkerStatus(existing);
+    if (existing.ok && existing.status?.ready) {
+      applyWorkerStatus(existing);
+      if (!force) {
+        // A complete active shell is immediately usable. Runtime reconciliation
+        // continues in the background and cannot block Reader or package sync.
+        void startOfflineShellReconciliation(serviceWorker, existing).catch((error: unknown) => {
+          applyWorkerStatus({
+            type: "RESULT",
+            ok: true,
+            protocolVersion: existing?.protocolVersion,
+            status: existing?.status,
+            error: error instanceof Error ? error.message : "离线启动资源后台更新失败。",
+          }, "failed");
+        });
+        return currentStatus;
+      }
     }
-
-    const result = await postMessage(serviceWorker, {
-      type: "PREPARE_LIBRARY_SHELL",
-      revision: force ? `${revision}-${Date.now().toString(36)}` : revision,
-      assets,
-      workerUrl,
-    }, (progress) => {
-      setStatus({
-        ...currentStatus,
-        phase: "preparing",
-        completed: progress.completed,
-        total: progress.total,
-        message: null,
-      });
-    });
-    if (!result.ok || !result.status?.ready) {
-      throw new Error(result.error ?? "离线启动资源未能完整缓存。");
-    }
-    return applyWorkerStatus(result);
+    return await startOfflineShellReconciliation(serviceWorker, existing, force);
   } catch (error) {
     const message = error instanceof Error ? error.message : "离线启动准备失败。";
     if (existing?.ok && existing.status?.ready) {
-      return applyWorkerStatus({ ...existing, error: message });
+      return applyWorkerStatus({ ...existing, error: message }, "failed");
     }
-    const status = { ...currentStatus, phase: "error" as const, message };
+    const status = { ...currentStatus, availability: "unavailable" as const, updatePhase: "failed" as const, message };
     setStatus(status);
     throw error;
   }
 }
 
-async function warmAttachmentViewerRuntime(): Promise<void> {
+function startOfflineShellReconciliation(
+  serviceWorker: ServiceWorker,
+  existing: WorkerStatusResponse,
+  force = false,
+): Promise<OfflineShellStatus> {
+  if (reconciliationPromise && !force) return reconciliationPromise;
+  const request = reconcileOfflineShell(serviceWorker, existing, force).finally(() => {
+    if (reconciliationPromise === request) reconciliationPromise = null;
+  });
+  reconciliationPromise = request;
+  return request;
+}
+
+async function reconcileOfflineShell(serviceWorker: ServiceWorker, existing: WorkerStatusResponse, force = false): Promise<OfflineShellStatus> {
+  setStatus({ ...currentStatus, updatePhase: "preparing", completed: 0, total: 0, message: null });
+  const runtimeAssets = await warmAttachmentViewerRuntime();
+  const assets = collectLibraryShellAssets(runtimeAssets);
+  const workerUrl = getOfflineSearchWorkerUrl();
+  const revision = await createRevision(assets);
+  if (existing.ok && existing.status?.ready && existing.status.revision === revision && !force) {
+    return applyWorkerStatus(existing);
+  }
+  const result = await postMessage(serviceWorker, {
+    type: "PREPARE_LIBRARY_SHELL",
+    revision: force ? `${revision}-${Date.now().toString(36)}` : revision,
+    assets,
+    workerUrl,
+  }, (progress) => {
+    setStatus({
+      ...currentStatus,
+      updatePhase: "preparing",
+      completed: progress.completed,
+      total: progress.total,
+      message: null,
+    });
+  });
+  if (!result.ok || !result.status?.ready) {
+    throw new Error(result.error ?? "离线启动资源未能完整缓存。");
+  }
+  return applyWorkerStatus(result);
+}
+
+async function warmAttachmentViewerRuntime(): Promise<string[]> {
   // Offline preparation is explicit. Load dynamic viewer chunks now so the
   // shell asset inventory includes them instead of discovering a missing
   // renderer only after connectivity has been lost.
-  await Promise.all([
+  const before = new Set(performance.getEntriesByType("resource").map((entry) => entry.name));
+  const results = await Promise.allSettled([
     import("pdfjs-dist"),
     import("react-zoom-pan-pinch"),
   ]);
+  const failed = results.filter((result) => result.status === "rejected");
+  if (failed.length) {
+    throw new Error("部分附件预览组件未能缓存，请联网后重试。");
+  }
+  return performance.getEntriesByType("resource")
+    .map((entry) => entry.name)
+    .filter((value) => !before.has(value))
+    .map(normalizeShellAsset)
+    .filter((value): value is string => Boolean(value));
 }
 
-function collectLibraryShellAssets(): string[] {
+function collectLibraryShellAssets(runtimeAssets: string[] = []): string[] {
   const urls = new Set<string>([
     "/library/manifest.webmanifest",
     "/icons/icon-192.png",
     "/icons/icon-512.png",
     "/icons/icon-maskable-512.png",
     "/icons/apple-touch-icon.png",
+    "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
+    "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
     getOfflineSearchWorkerUrl(),
   ]);
   document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>("script[src], link[href]").forEach((element) => {
     const value = element instanceof HTMLScriptElement ? element.src : element.href;
     if (value) urls.add(value);
   });
-  performance.getEntriesByType("resource").forEach((entry) => urls.add(entry.name));
+  runtimeAssets.forEach((asset) => urls.add(asset));
   return Array.from(urls)
     .map(normalizeShellAsset)
     .filter((value): value is string => Boolean(value))
@@ -249,6 +317,7 @@ function normalizeShellAsset(value: string): string | null {
     if (url.origin !== window.location.origin) return null;
     const allowed = url.pathname.startsWith("/_next/static/")
       || url.pathname.startsWith("/icons/")
+      || url.pathname.startsWith("/skills/")
       || url.pathname === "/library/manifest.webmanifest";
     return allowed ? `${url.pathname}${url.search}` : null;
   } catch {
@@ -295,10 +364,11 @@ function postMessage(
   });
 }
 
-function applyWorkerStatus(result: WorkerStatusResponse): OfflineShellStatus {
+function applyWorkerStatus(result: WorkerStatusResponse, updatePhase: OfflineShellUpdatePhase = "idle"): OfflineShellStatus {
   const workerStatus = result.status;
   const status: OfflineShellStatus = {
-    phase: workerStatus?.ready ? "ready" : "error",
+    availability: workerStatus?.ready ? "ready" : "unavailable",
+    updatePhase,
     revision: workerStatus?.revision ?? null,
     resourceCount: workerStatus?.resourceCount ?? 0,
     completed: workerStatus?.resourceCount ?? 0,

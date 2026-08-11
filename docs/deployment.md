@@ -1,5 +1,11 @@
 # 生产部署
 
+## Offline shell and static Skill rollout (2026-08-11)
+
+The release adds only static Skill files and browser-local offline export code; no migration is required. The service-worker allowlist must include `/skills/` so both Skill files participate in the deterministic shell revision. Build the Web image on the external Linux/GitHub Actions builder. On King, verify the artifact checksum, back up PostgreSQL and business volumes, run migration preflight, and recreate with `up -d --no-build`. Do not build Next on King, overwrite `.env.production`, remove volumes, run `down -v`, or start Scanner.
+
+After deployment, verify `/library` can interact while shell reconciliation is pending, the same current-conversation-files entry appears in Offline Reader, missing cached files show `offline-unavailable`, and `.context.zip` results expose the two Skill languages. Remove old image tags only after the replacement Web/API/worker images are healthy and rollback tags remain.
+
 ## 2026-08-10 release evidence
 
 ### Focus lifecycle closure

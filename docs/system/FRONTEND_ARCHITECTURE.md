@@ -1,5 +1,13 @@
 # 前端架构
 
+## Offline shell and offline Reader attachments (2026-08-11)
+
+`offline-shell.ts` separates shell availability from background update phase. A complete active service-worker shell is usable immediately; dynamic viewer warming and deterministic shell reconciliation never gate Library interaction or conversation-package downloads. The inventory contains document scripts/styles/icons, the offline search worker, declared viewer runtime chunks and the two inert Skill files. It deliberately excludes API responses, images and historical `performance` resource entries. If reconciliation fails, the previous active shell remains ready and the UI exposes a retryable background-update state.
+
+Offline Reader uses `ReaderDataSource.capabilities.attachments = "read-only"`. The same `current conversation files` action opens the existing `reader-floating` workspace (or mobile sheet), but the panel reads only `offlineDb.attachments`, displays occurrence locations and offers cached Viewer/download actions. It cannot upload, insert, rename, detach or delete and never enumerates server attachments. Missing cached originals resolve to `offline-unavailable`; Object URLs are released after consumption. Viewer opening still follows the single `AttachmentViewerProvider -> AttachmentViewerShell` path.
+
+Offline export is a browser-local projection of the downloaded snapshot. It does not call export APIs, workers, search, derivatives or batch ZIP. The local `.context.zip` keeps the established manifest/JSONL shape and includes only cached assets; missing assets stay explicit records. The Context Package result links the two static Skill resources and handles clipboard denial as a visible retryable state. The English and Chinese Skill files are inert text and are never parsed as Markdown by the viewer.
+
 ## Reader wheel and virtual-layout contract (2026-08-10)
 
 The Reader keeps the existing six-message window and TanStack block virtualization. Wheel responsiveness depends on stable row estimates and a single hot path rather than disabling virtualization or weakening navigation accuracy.

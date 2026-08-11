@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Download, Grid2X2, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { getAttachment } from "../../lib/api";
-import { getOfflineAttachment } from "../../lib/offline-db";
+import { getOfflineAttachment, releaseOfflineAttachmentUrls } from "../../lib/offline-db";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import { useDialogFocus } from "../../components/use-dialog-focus";
@@ -130,9 +130,13 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
     queryKey: ["attachment-viewer", access.kind, access.kind === "share" ? access.token : "owner", item?.attachmentId],
     queryFn: () => access.kind === "offline" ? getOfflineAttachment(item!.attachmentId) : getAttachment(item!.attachmentId, access.kind === "share" ? access.token : undefined),
     enabled: Boolean(item),
-    staleTime: 5 * 60 * 1000,
+    staleTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
+    gcTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
   });
   const attachment = attachmentQuery.data;
+  useEffect(() => () => {
+    if (access.kind === "offline") releaseOfflineAttachmentUrls(attachment);
+  }, [access.kind, attachment]);
   const viewerKind = attachment ? resolveAttachmentCapability(attachment).viewerKind : null;
   const effectiveMode = mode ?? defaultMode(viewerKind);
   const presentation = resolveViewerPresentation({ viewerKind, viewerMode: effectiveMode, itemCount: session.items.length, pdfPageCount, contentMetrics });
@@ -300,11 +304,16 @@ function ViewerThumbnailImage({ attachment, alt, fallbackLabel, className }: { a
 }
 
 function useViewerAttachment(attachmentId: string, access: AttachmentAccess) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["attachment-viewer-item", access.kind, access.kind === "share" ? access.token : "owner", attachmentId],
     queryFn: () => access.kind === "offline" ? getOfflineAttachment(attachmentId) : getAttachment(attachmentId, access.kind === "share" ? access.token : undefined),
-    staleTime: 5 * 60 * 1000,
+    staleTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
+    gcTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
   });
+  useEffect(() => () => {
+    if (access.kind === "offline") releaseOfflineAttachmentUrls(query.data);
+  }, [access.kind, query.data]);
+  return query;
 }
 
 function TextualViewer({ attachment, mode, onModeChange: _onModeChange, markdown = false, code = false, table = false }: { attachment: AttachmentRead; mode: "rendered" | "source"; onModeChange: (mode: AttachmentViewerMode) => void; markdown?: boolean; code?: boolean; table?: boolean }) {

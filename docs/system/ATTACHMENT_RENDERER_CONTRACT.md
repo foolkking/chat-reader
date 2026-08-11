@@ -1,5 +1,11 @@
 # Attachment Renderer Contract
 
+## Offline attachment consumption addendum (2026-08-11)
+
+Offline attachment access is consumer-only. `ReaderDataSource.capabilities.attachments` is `read-only`; it does not grant owner file management or server enumeration. The current conversation files panel uses the same `AttachmentViewerProvider -> AttachmentViewerShell -> RenderPlan` path as the online Reader. Cached originals may open/download. Missing originals and missing dynamic viewer resources use the approved `offline-unavailable` FileRow state with explicit text and no permanent loading.
+
+Offline export never changes Attachment/Occurrence/AssetObject identity. It serializes the current downloaded snapshot locally. A missing cached asset remains a metadata record in the local package and is not silently omitted from the attachment accounting. The panel's used/unused predicates are computed from current offline occurrences only.
+
 Last verified: 2026-08-09
 
 This is the durable contract for attachment presentation. Code and tests remain the source of truth. It does not change attachment ownership, uploads, exports, Scanner policy, or Reader content width.
