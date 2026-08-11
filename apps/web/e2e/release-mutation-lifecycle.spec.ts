@@ -75,20 +75,23 @@ test("revision conflict preserves the source draft and can load the latest base 
     await editor.click();
     await page.keyboard.press("Control+End");
     const readCaret = () => editor.evaluate((element) => {
-      const selection = window.getSelection();
       const scroller = element.closest<HTMLElement>(".cm-scroller");
-      if (!selection?.anchorNode || !element.contains(selection.anchorNode)) return { offset: -1, scrollTop: scroller?.scrollTop ?? -1 };
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      range.setEnd(selection.anchorNode, selection.anchorOffset);
-      return { offset: range.toString().length, scrollTop: scroller?.scrollTop ?? -1 };
+      const host = element.closest<HTMLElement>("[data-testid='source-editor-codemirror']");
+      return {
+        offset: Number(host?.dataset.cursorOffset ?? -1),
+        scrollTop: scroller?.scrollTop ?? -1,
+        distanceFromBottom: scroller ? scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop : -1,
+      };
     });
+    await expect.poll(async () => (await readCaret()).offset).toBe(longAssistantSource.length);
+    await expect.poll(async () => (await readCaret()).distanceFromBottom).toBeLessThanOrEqual(12);
     const beforeFirstEdit = await readCaret();
     await page.keyboard.insertText("Z");
     await expect.poll(async () => (await readCaret()).offset).toBe(beforeFirstEdit.offset + 1);
     await expect.poll(async () => (await readCaret()).scrollTop).toBeGreaterThanOrEqual(beforeFirstEdit.scrollTop - 2);
     await page.keyboard.press("Backspace");
     await expect.poll(async () => (await readCaret()).offset).toBe(beforeFirstEdit.offset);
+    await expect.poll(async () => (await readCaret()).scrollTop).toBeGreaterThanOrEqual(beforeFirstEdit.scrollTop - 2);
     await page.keyboard.insertText("\n\nQA preserved draft");
     await expect(editor).toContainText("QA preserved draft");
 

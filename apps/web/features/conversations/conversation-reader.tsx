@@ -453,6 +453,8 @@ export function ConversationReader({
       }
     };
     const markKeyboardIntent = (event: KeyboardEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("[data-testid='floating-source-workspace'], input, textarea, select, [contenteditable='true'], [role='textbox']")) return;
       const key = event.key.toLowerCase();
       if (!["arrowup", "arrowdown", "pageup", "pagedown", "home", "end", " ", "j", "k"].includes(key)) return;
       markReaderScrollIntent(["arrowup", "pageup", "home", "k"].includes(key) ? "up" : "down");

@@ -4,10 +4,10 @@ import dynamic from "next/dynamic";
 import { markdown } from "@codemirror/lang-markdown";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { Compartment } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { ChevronDown, Save, SaveAll, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { AttachmentRead } from "../../lib/types";
 import {
@@ -67,6 +67,7 @@ export function EditMessageForm({
   const { t, resolvedLocale, resolvedTheme } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const editorViewRef = useRef<EditorView | null>(null);
+  const editorHostRef = useRef<HTMLDivElement | null>(null);
   const cursorOffsetChangeRef = useRef(onCursorOffsetChange);
   cursorOffsetChangeRef.current = onCursorOffsetChange;
   const insertFilesRef = useRef<(files: File[], position: number, originalCodePosition?: number) => void>(() => undefined);
@@ -76,6 +77,7 @@ export function EditMessageForm({
   const themeCompartmentRef = useRef(new Compartment());
   const initialThemeRef = useRef(resolvedTheme);
   const appliedInsertionRef = useRef<string | null>(null);
+  const [editorDocument, setEditorDocument] = useState(initialText);
   const [text, setText] = useState(initialText);
   const [baselineText, setBaselineText] = useState(initialText);
   const [reason, setReason] = useState("");
@@ -169,6 +171,18 @@ export function EditMessageForm({
     onFiles: (files, position, originalCodePosition) => insertFilesRef.current(files, position, originalCodePosition),
     onAttachment: (attachment, position, originalCodePosition) => insertExistingAttachmentRef.current(attachment, position, originalCodePosition),
   }), []);
+  const sourceEditorBasicSetup = useMemo(() => ({
+    lineNumbers: true,
+    highlightActiveLine: true,
+    foldGutter: true,
+    searchKeymap: true,
+  }), []);
+  const handleEditorUpdate = useCallback((update: ViewUpdate) => {
+    if (!update.docChanged && !update.selectionSet) return;
+    const offset = update.state.selection.main.head;
+    if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(offset);
+    cursorOffsetChangeRef.current?.(offset);
+  }, []);
 
   useEffect(() => {
     const onSourceLocate = (event: Event) => {
@@ -204,6 +218,7 @@ export function EditMessageForm({
 
   useEffect(() => {
     if (initialText === baselineText || !isUnchanged) return;
+    setEditorDocument(initialText);
     setText(initialText);
     setBaselineText(initialText);
   }, [baselineText, initialText, isUnchanged]);
@@ -275,6 +290,7 @@ export function EditMessageForm({
         removedIds.map((attachmentId) => ({ attachment_id: attachmentId, action: removedActions[attachmentId] ?? "keep_in_conversation" })),
       );
       setBaselineText(trimmedText);
+      setEditorDocument(trimmedText);
       setText(trimmedText);
       setReason("");
       setShowClosePrompt(false);
@@ -347,18 +363,19 @@ export function EditMessageForm({
           insertFilesAtCurrentPosition(view, files);
         }}
       />
-      <div className="min-h-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror">
+      <div ref={editorHostRef} className="min-h-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror">
         <CodeMirror
-          value={text}
+          value={editorDocument}
           height="100%"
           extensions={extensions}
           theme="none"
-          basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true, searchKeymap: true }}
+          basicSetup={sourceEditorBasicSetup}
           onCreateEditor={(view) => {
             editorViewRef.current = view;
             view.dispatch({ effects: themeCompartmentRef.current.reconfigure(codeMirrorTheme(resolvedTheme)) });
             const anchor = Math.max(0, Math.min(initialCursorOffset, view.state.doc.length));
             view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
+            if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(anchor);
             cursorOffsetChangeRef.current?.(anchor);
             view.focus();
             if (pendingAttachmentInsertion) applyAttachmentInsertion(view, pendingAttachmentInsertion);
@@ -367,9 +384,7 @@ export function EditMessageForm({
               insertFilesAtCurrentPosition(view, files);
             }
           }}
-          onUpdate={(update) => {
-            if (update.docChanged || update.selectionSet) cursorOffsetChangeRef.current?.(update.state.selection.main.head);
-          }}
+          onUpdate={handleEditorUpdate}
           onChange={setText}
           className="h-full text-sm [&_.cm-editor]:h-full"
         />
