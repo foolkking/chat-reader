@@ -16,7 +16,7 @@ canonical Markdown source
 -> safe React components
 ```
 
-`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v3` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
+`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v4` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
 
 ## Shared consumers
 
@@ -33,12 +33,14 @@ The same semantic and security configuration is used by Reader message Markdown,
 
 CommonMark consumes backslash punctuation escapes before `remark-math` sees them. `remarkAiMathCompatibility` therefore uses mdast source positions to recover bracket/parenthesis delimiters only in normal Markdown text. It never scans rendered DOM and never performs a blind source string replacement. `code` and `inlineCode` nodes are excluded.
 
-Some ChatGPT clipboard/export paths consume only the outer escapes before ingestion. `ai-rich-markdown-v3` recognizes two bounded compatibility shapes without rewriting source:
+Some ChatGPT clipboard/export paths consume only the outer escapes before ingestion. `ai-rich-markdown-v4` recognizes bounded compatibility shapes without rewriting source:
 
 - standalone `[` and `]` lines (or `/[` and `]/`) become display math when their body contains a recognized LaTeX command or a conservative mathematical token grammar; compact products such as `kn` are accepted only inside this strong standalone-bracket context;
 - compact parentheses embedded in prose, such as `(n^6)`, `(1/3)`, `(k)` and `(n)`, become inline math when they satisfy the same bounded grammar. Prose phrases, dates, versions, uppercase identifiers such as `A1`, currency and code do not qualify.
 
 The standalone-bracket grammar recognizes a bounded set of common KaTeX scientific commands, including Greek symbols, set relations, `mathbb`/font commands, products, inner products and labeled arrows. Explicit TeX spacing is accepted only inside a standalone display candidate. This does not make arbitrary prose or inline text a formula.
+
+ChatGPT also emits conceptual display labels inside the same standalone brackets. A label qualifies only when it is at most 80 characters, each label token starts uppercase and contains no free whitespace, and any operator is `>` or `+`. Examples include `Image > Text`, `Image+Text`, `OCR/Text`, `Text-only`, `Question` and `Answer + Provenance`. The UI-only value wraps labels in KaTeX `text{...}`; canonical Markdown keeps its original brackets. Lowercase prose and multiword prose remain paragraphs.
 
 Because canonical API RenderBlocks may split a bracket region at blank lines, Reader presentation may project adjacent paragraph/heading blocks into one semantic Markdown input while preserving every persisted block and the original source. Setext underline/heading artifacts are normalized to an equality only inside an already established formula boundary. Bare prose brackets and ordinary Markdown headings are not math.
 

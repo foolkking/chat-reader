@@ -22,6 +22,7 @@ const MATH_SIGNAL = /[\\_^=<>+*/{}]|(?:^|\s)-(?=\s|\d)/;
 const CURRENCY_WORDS = /\b(?:and|or|to|usd|eur|gbp|cny|rmb|dollars?|euros?|yuan)\b/i;
 const BARE_MATH_CHARACTERS = /^[A-Za-z0-9\\{}()[\]^_+\-*/=<>.,|!:'\s]+$/;
 const BARE_MATH_WORDS = new Set(["cos", "det", "exp", "gcd", "lim", "ln", "log", "max", "min", "mod", "sin", "tan"]);
+const DISPLAY_LABEL_TOKEN = /^[A-Z][A-Za-z0-9]*(?:[-/][A-Za-z0-9]+)*$/;
 
 /**
  * ChatGPT emits LaTeX using \(...\) and \[...\]. CommonMark consumes the
@@ -60,9 +61,19 @@ export function normalizeChatGptMathBody(source: string): string {
   // equality as a Setext underline and the following expression as a heading.
   // Recover that presentation artifact only after a bounded display-math
   // candidate has been established; ordinary Markdown headings are untouched.
-  return source
+  const normalized = source
     .replace(/^[\t ]*={3,}[\t ]*$(?:\r?\n[\t ]*)+(?:#[\t ]*)?/gm, "=\n")
     .trim();
+  return normalizeStandaloneDisplayLabel(normalized) ?? normalized;
+}
+
+function normalizeStandaloneDisplayLabel(source: string): string | null {
+  if (source.length > 80 || source.includes("\n")) return null;
+  const parts = source.split(/\s*([>+])\s*/);
+  if (!parts.length || parts.length > 7 || parts.some((part, index) => (
+    index % 2 === 0 ? !DISPLAY_LABEL_TOKEN.test(part) : part !== ">" && part !== "+"
+  ))) return null;
+  return parts.map((part, index) => (index % 2 === 0 ? `\\text{${part}}` : ` ${part} `)).join("");
 }
 
 /**

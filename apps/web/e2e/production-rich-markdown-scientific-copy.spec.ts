@@ -39,13 +39,15 @@ test("a transient scientific Markdown copy recovers bounded ChatGPT formulas", a
     expect(canonicalMessages.find((message) => message.role === "assistant")?.current_version?.display_text).toBe(source);
     await page.getByTestId("source-editor-preview-toggle").click();
     const preview = page.getByTestId("source-editor-rich-preview");
-    await expect.poll(async () => preview.locator(".katex-display").count()).toBeGreaterThan(15);
-    await expect.poll(async () => preview.locator(".katex-mathml math").count()).toBeGreaterThan(15);
+    await expect.poll(async () => preview.locator(".katex-display").count()).toBeGreaterThan(39);
+    await expect.poll(async () => preview.locator(".katex-mathml math").count()).toBeGreaterThan(39);
     const annotations = await preview.locator(".katex-mathml annotation").allTextContents();
     for (const command of ["\\lambda", "\\mathbb", "\\langle", "\\xrightarrow"]) {
       expect(annotations.some((value) => value.includes(command)), JSON.stringify(annotations)).toBe(true);
     }
     await expect(preview.locator('[data-math-error="true"]')).toHaveCount(0);
+    const literalBrackets = await preview.locator("p").allTextContents();
+    expect(literalBrackets.filter((value) => /^\s*\[/.test(value))).toEqual([]);
   } finally {
     await page.request.delete(`/api/conversations/${body.conversation.id}`);
   }

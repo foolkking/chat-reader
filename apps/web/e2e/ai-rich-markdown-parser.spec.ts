@@ -273,3 +273,37 @@ test("standalone ChatGPT brackets recover common scientific LaTeX commands", () 
     expect(tree.children[0]).toMatchObject({ type: "math", data: { aiMathDelimiter: "bare-bracket" } });
   }
 });
+
+test("standalone ChatGPT display labels render without accepting ordinary prose", () => {
+  const sources = [
+    "[\nImage > Text\n]",
+    "[\nText > Image\n]",
+    "[\nImage+Text\n]",
+    "[\nText-only\n]",
+    "[\nImage\n]",
+    "[\nOCR/Text\n]",
+    "[\nQuestion\n]",
+    "[\nAnswer + Provenance\n]",
+    "[\nordinary prose\n]",
+    "[\nAppendix A\n]",
+  ];
+  const rendered = sources.map((source) => {
+    const tree = {
+      type: "root",
+      children: [{
+        type: "paragraph",
+        position: { start: { offset: 0 }, end: { offset: source.length } },
+        children: [{ type: "text", value: source, position: { start: { offset: 0 }, end: { offset: source.length } } }],
+      }],
+    };
+    remarkAiMathCompatibility()(tree, { value: source });
+    return tree.children[0];
+  });
+
+  expect(rendered.slice(0, 8).every((node) => node.type === "math")).toBe(true);
+  expect(rendered[0]).toMatchObject({ value: "\\text{Image} > \\text{Text}" });
+  expect(rendered[2]).toMatchObject({ value: "\\text{Image} + \\text{Text}" });
+  expect(rendered[7]).toMatchObject({ value: "\\text{Answer} + \\text{Provenance}" });
+  expect(rendered[8]).toMatchObject({ type: "paragraph" });
+  expect(rendered[9]).toMatchObject({ type: "paragraph" });
+});
