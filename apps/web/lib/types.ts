@@ -431,6 +431,12 @@ export type BackgroundTaskRead = {
   attempt_count: number;
 };
 
+export type TocRefreshInput = {
+  refreshDialogueIndex: boolean;
+  refreshSectionToc: boolean;
+  sectionScope: "current_conversation" | "all_conversations";
+};
+
 export type ProjectRead = {
   id: string;
   name: string;

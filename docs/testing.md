@@ -1,5 +1,11 @@
 # Testing Addendum 2026-08-09
 
+## Manual TOC refresh (2026-08-13)
+
+`test_toc_api.py` 覆盖只更新对话目录、只更新当前对话章节目录、同时更新且章节范围为全部对话、幂等 key、未选择任何目标的 `422`，并断言派生重建不会提升 Conversation revision。`toc-refresh-contract.spec.ts` 固定 Reader 右上角 More 入口、两个默认选中目标、当前对话默认范围、全部对话选项、统一 Dialog focus、worker polling 和精确 query invalidation。
+
+本轮结果：TOC API `4 passed`，Web contract `1 passed`，全 API `236 passed / 4 fixture-gated skipped`，PWA/Playwright `59 passed / 36 environment-gated skipped`，lint/typecheck/build PASS，Alembic single head `20260806_0021`。PWA 的 API-dependent 场景因默认矩阵未启动 API 而 skip，不计为 PASS。
+
 ## Import compatibility v5 (2026-08-12)
 
 The import regression matrix now covers Prompt-only/Response-only paired Markdown, arbitrary single-role Markdown rejection, blank JSON messages at head/middle/tail, empty Markdown sections, missing non-empty messages at head/middle/tail, normalized matches without timestamps, duplicate ambiguity, timestamp mismatch, lossy JSON plus rich Markdown, old Markdown repair and the existing full-flow contract.

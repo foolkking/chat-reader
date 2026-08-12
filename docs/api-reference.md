@@ -128,6 +128,22 @@ Conversation merge 可携带 `Idempotency-Key` 请求头。相同 key 的 queued
 
 TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、block index、level、title、anchor 和顺序信息，并支持 `message_id`、`max_level`、`role`、`q`、`order_key_from`、`order_key_to`、`offset` 和 `limit`。
 
+Owner 可通过 `POST /api/conversations/{id}/toc/refresh` 手动排队目录更新任务：
+
+```json
+{
+  "refresh_dialogue_index": true,
+  "refresh_section_toc": true,
+  "section_scope": "current_conversation"
+}
+```
+
+- `refresh_dialogue_index` 与 `refresh_section_toc` 至少选择一项，否则返回 `422`。
+- `section_scope` 为 `current_conversation`（默认）或 `all_conversations`；仅影响章节目录重建。
+- 返回 `202 BackgroundTaskRead`，可由 `/api/tasks/{job_id}` 查询进度。请求可携带 `Idempotency-Key`，同 key 的活动或已完成任务不会重复创建。
+- 对话目录是当前 canonical 消息的实时投影；任务完成后客户端重新获取该索引。章节目录是 Heading 派生表，由 worker 从 current MessageVersion 的 heading RenderBlock 重建。
+- 该派生操作不提升 Conversation revision，不创建 MessageVersion，也不改变阅读位置。
+
 消息编辑补充接口：
 
 | Method | Path | 说明 |

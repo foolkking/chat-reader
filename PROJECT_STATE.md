@@ -1,5 +1,13 @@
 # Project State
 
+## 2026-08-13 Manual TOC Refresh
+
+- Owner Reader 的右上角“更多”新增“更新目录”。用户可分别选择“对话目录”“章节目录”或同时更新；章节目录范围默认当前对话，也可显式选择全部未删除对话。
+- 对话目录继续以当前 canonical Message/current MessageVersion 动态投影为唯一真值，不新增第二份持久化索引。手动更新任务会校验该投影，完成后 Web 精确失效 dialogue-index cache。章节目录由单并发 worker 从当前版本 heading RenderBlock 重建；全部范围逐对话报告进度且整个 job 失败时回滚。
+- 新接口为 `POST /api/conversations/{conversation_id}/toc/refresh`，返回统一 `BackgroundTaskRead`。任务支持 `Idempotency-Key`，不修改 Conversation revision、消息、阅读位置或正文，不新增 migration。
+- UI 使用统一 Dialog focus/close 合同，默认同时选中两类目录、默认章节范围为当前对话；任务状态通过可访问 status/alert 展示，失败时保留重试入口。Share 与 Offline Reader 不暴露 canonical 管理操作。
+- 本地验证：TOC API `4/4`、Web contract `1/1`、Web lint/typecheck/build PASS、完整 API `236 passed / 4 fixture-gated skipped`、默认 PWA `59 passed / 36 environment-gated skipped`、Alembic single head `20260806_0021`。Skip 不计为 PASS。
+
 ## 2026-08-12 JSON + Markdown Import Compatibility v5
 
 - The reported `ChatGPT-网页缺陷探索方法.json` + `.md` pair failed before parsing with HTTP `422 unsupported_source_profile`: its Markdown export contains only one `Response` section, while the old source detector required both `Prompt` and `Response` headings.

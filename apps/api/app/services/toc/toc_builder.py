@@ -67,14 +67,16 @@ def rebuild_headings_for_conversation(db: Session, conversation_id: uuid.UUID) -
     return TocBuildResult(conversation_count=1, heading_count=heading_count)
 
 
-def rebuild_headings_for_all(db: Session) -> TocBuildResult:
+def rebuild_headings_for_all(db: Session, *, progress_callback=None) -> TocBuildResult:
     conversation_ids = [
         row[0]
         for row in db.query(Conversation.id).filter(Conversation.deleted_at.is_(None)).all()
     ]
     total = 0
-    for conversation_id in conversation_ids:
+    for index, conversation_id in enumerate(conversation_ids, start=1):
         total += rebuild_headings_for_conversation(db, conversation_id).heading_count
+        if progress_callback:
+            progress_callback(index, len(conversation_ids))
     return TocBuildResult(conversation_count=len(conversation_ids), heading_count=total)
 
 

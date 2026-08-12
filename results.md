@@ -1,5 +1,13 @@
 # Implementation Results
 
+## Manual TOC Refresh - 2026-08-13
+
+The Owner Reader now exposes `更新目录` in the top-right More menu. Its accessible dialog allows dialogue index, section contents, or both; section rebuilding defaults to the current conversation and can explicitly target every non-deleted conversation. At least one target is required.
+
+The implementation preserves one source of truth: dialogue index rows are dynamically projected from current canonical messages, so refresh validates that source and then precisely invalidates the Web query cache. Persisted Heading rows are the only derived materialization rebuilt by the worker. The operation does not bump conversation revision, rewrite messages, reset Reader position, or add a migration. All-conversation rebuilding is idempotently queued and reports per-conversation progress.
+
+Local verification PASS: focused TOC API `4/4`, Web contract `1/1`, lint/typecheck/production build PASS, full API `236 passed / 4 fixture-gated skipped`, default PWA `59 passed / 36 environment-gated skipped`, Alembic `20260806_0021`. Skipped PWA flows are reported separately and are not PASS. Production deployment/Chrome verification is recorded after the external image release.
+
 ## JSON + Markdown Import Compatibility v5 - 2026-08-12
 
 Root cause confirmed: the supplied Markdown contains one `Response` section, and the old detector recognized exporter Markdown only when both literal `## Prompt:` and `## Response:` existed. The route therefore returned `422 unsupported_source_profile` before the existing JSON-aware parser/alignment logic could run; file size was not the cause.

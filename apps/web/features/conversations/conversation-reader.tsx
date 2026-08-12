@@ -3,15 +3,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, Scissors, Search, Share2, X } from "lucide-react";
+import { Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   deleteMessage,
+  getTask,
   mergeMessages,
   restoreDeletedMessage,
   saveReadingPositionKeepalive,
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
-import type { AttachmentRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem } from "../../lib/types";
+import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
 import { OfflineExportPanel } from "../exporting/offline-export-panel";
 import { MobileSidebarTrigger, ProjectSidebar } from "../projects/project-sidebar";
@@ -51,6 +52,7 @@ import { ConversationFilesPanel } from "../attachments/conversation-files-panel"
 import { OfflineConversationFilesPanel } from "../attachments/offline-conversation-files-panel";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { resolveActiveReadingTarget } from "./reader-active-position";
+import { TocRefreshDialog } from "../toc/toc-refresh-dialog";
 
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
@@ -84,6 +86,8 @@ export function ConversationReader({
   const [showExport, setShowExport] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
+  const [tocRefreshOpen, setTocRefreshOpen] = useState(false);
+  const [tocRefreshTask, setTocRefreshTask] = useState<{ task: BackgroundTaskRead; input: TocRefreshInput } | null>(null);
   const filesPreferenceReadyRef = useRef(false);
   const recordedRecentConversationRef = useRef<string | null>(null);
   const [splitWorkspaceOpen, setSplitWorkspaceOpen] = useState(false);
@@ -124,6 +128,35 @@ export function ConversationReader({
     if (!filesPreferenceReadyRef.current) return;
     window.localStorage.setItem("chat-reader:conversation-files-open", String(showFiles));
   }, [showFiles]);
+
+  useEffect(() => {
+    const active = tocRefreshTask?.task;
+    if (!active || !["queued", "processing", "cancelling"].includes(active.status)) return undefined;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const task = await getTask(active.job_id);
+        if (cancelled) return;
+        setTocRefreshTask((current) => current?.task.job_id === task.job_id ? { ...current, task } : current);
+        if (task.status === "committed") {
+          if (tocRefreshTask.input.refreshDialogueIndex) {
+            await queryClient.invalidateQueries({ queryKey: ["conversation-index"] });
+          }
+          if (tocRefreshTask.input.refreshSectionToc) {
+            await queryClient.invalidateQueries({ queryKey: ["toc"] });
+          }
+          window.setTimeout(() => setTocRefreshTask((current) => current?.task.job_id === task.job_id ? null : current), 6000);
+        }
+      } catch {
+        if (!cancelled) {
+          setTocRefreshTask((current) => current ? { ...current, task: { ...current.task, status: "failed", error_message: resolvedLocale === "zh-CN" ? "无法获取目录更新状态。" : "Unable to read refresh status." } } : current);
+        }
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 900);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [queryClient, resolvedLocale, tocRefreshTask?.input.refreshDialogueIndex, tocRefreshTask?.input.refreshSectionToc, tocRefreshTask?.task.job_id, tocRefreshTask?.task.status]);
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
   const [navigationStatus, setNavigationStatus] = useState<"idle" | "loading" | "failed" | "stale">("idle");
   const [pendingTargetMessageId, setPendingTargetMessageId] = useState<string | null>(targetMessageId);
@@ -1708,6 +1741,14 @@ export function ConversationReader({
       icon: Paperclip,
       onSelect: () => { void openUtilityPanel("files"); },
     } as ReaderHeaderAction] : []),
+    ...(canManageCanonical ? [{
+      id: "refresh-toc",
+      label: resolvedLocale === "zh-CN" ? "更新目录" : "Refresh contents",
+      icon: RefreshCw,
+      onSelect: () => setTocRefreshOpen(true),
+      disabled: Boolean(tocRefreshTask && ["queued", "processing", "cancelling"].includes(tocRefreshTask.task.status)),
+      busy: Boolean(tocRefreshTask && ["queued", "processing"].includes(tocRefreshTask.task.status)),
+    } as ReaderHeaderAction] : []),
     ...(canManageCanonical && selectedIds.length >= 2 ? [{
       id: "merge-selected",
       label: t("mergeSelected"),
@@ -1813,7 +1854,7 @@ export function ConversationReader({
               </button>
             ) : null}
             {canManageCanonical && !mobileActionsExpanded ? <button type="button" onClick={() => openSourceEditor()} aria-pressed={Boolean(sourceEditorTarget)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui ${sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}><Pencil className="h-5 w-5" /></button> : null}
-            <button type="button" onClick={() => setMobileActionsExpanded(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
+            <button type="button" data-reader-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
           {!focusMode && navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">{t("locating")}</div> : null}
           {!focusMode && navigationStatus === "stale" ? <div className="border-t border-ui bg-amber-50 px-[3vw] py-2 text-sm text-amber-800" role="status">{t("locateChanged")}</div> : null}
@@ -2050,9 +2091,28 @@ export function ConversationReader({
           await refreshReader();
         }}
       /> : null}
+      {canManageCanonical ? <TocRefreshDialog
+        open={tocRefreshOpen}
+        conversationId={conversation.id}
+        locale={resolvedLocale}
+        onClose={() => setTocRefreshOpen(false)}
+        onQueued={(task, input) => setTocRefreshTask({ task, input })}
+      /> : null}
+      {tocRefreshTask ? <div role={tocRefreshTask.task.status === "failed" ? "alert" : "status"} aria-live="polite" className="fixed bottom-4 left-1/2 z-[275] flex max-w-[min(92vw,34rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-ui bg-raised px-4 py-3 text-sm text-primary shadow-xl"><RefreshCw className={`h-4 w-4 shrink-0 text-accent ${["queued", "processing"].includes(tocRefreshTask.task.status) ? "animate-spin" : ""}`} /><span className="min-w-0 flex-1">{tocRefreshStatusText(tocRefreshTask.task, resolvedLocale)}</span>{tocRefreshTask.task.status === "failed" ? <button type="button" onClick={() => { setTocRefreshTask(null); setTocRefreshOpen(true); }} className="min-h-10 shrink-0 rounded-lg px-3 font-medium text-accent hover:bg-[var(--accent-soft)]">{resolvedLocale === "zh-CN" ? "重试" : "Retry"}</button> : null}{tocRefreshTask.task.status === "committed" ? <button type="button" onClick={() => setTocRefreshTask(null)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="h-4 w-4" /></button> : null}</div> : null}
       {deletedMessage ? <div role={deletedMessage.status === "restore_failed" ? "alert" : "status"} aria-live="assertive" className="fixed bottom-4 left-1/2 z-[280] flex max-w-[min(92vw,30rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-ui bg-raised px-4 py-3 text-sm text-primary shadow-xl"><span className="min-w-0 flex-1">{deletedMessage.status === "restore_failed" ? (deletedMessage.error ?? "撤销失败，消息尚未恢复。") : deletedMessage.status === "restoring" ? "正在恢复消息…" : "消息已删除"}</span>{deletedMessage.status !== "restoring" ? <button type="button" onClick={() => void restoreReaderMessage()} className="min-h-10 shrink-0 rounded-lg px-3 font-medium text-accent hover:bg-[var(--accent-soft)]">{deletedMessage.status === "restore_failed" ? "重试" : "撤销"}</button> : null}</div> : null}
     </main>
   );
+}
+
+function tocRefreshStatusText(task: BackgroundTaskRead, locale: "zh-CN" | "en-US"): string {
+  const zh = locale === "zh-CN";
+  if (task.status === "committed") {
+    const headings = Number(task.result.heading_count ?? 0);
+    return zh ? `目录更新完成${headings > 0 ? `，已生成 ${headings} 个章节` : ""}。` : `Contents refreshed${headings > 0 ? ` with ${headings} sections` : ""}.`;
+  }
+  if (task.status === "failed") return zh ? "目录更新失败，当前目录未被替换。" : "Contents refresh failed; the current contents were not replaced.";
+  if (task.status === "queued") return zh ? "目录更新任务已排队。" : "Contents refresh is queued.";
+  return zh ? `正在更新目录… ${task.progress}%` : `Refreshing contents… ${task.progress}%`;
 }
 
 function deriveActiveTocItems(message: MessageListItem | undefined): TocItem[] {

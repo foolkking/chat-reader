@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+2026-08-13 synchronization: manual Owner TOC refresh, canonical dialogue-index semantics, current/all section rebuild scope, background progress, UI focus/error behavior and regression evidence are current in `PROJECT_STATE.md`, `docs/api-reference.md`, `docs/system/USER_FLOWS.md`, `docs/testing.md` and `results.md`. No migration or new document category was added.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `apps/api/app/services/toc/toc_refresh.py` | Current | Canonical dialogue-index validation plus current/all section TOC rebuild orchestration. |
+| `apps/api/app/api/routes/toc.py` | Current API | Queues idempotent manual TOC refresh jobs. |
+| `apps/web/features/toc/toc-refresh-dialog.tsx` | Current UI | Selectable dialogue/section targets, current/all section scope and accessible submission dialog. |
+| `apps/api/tests/test_toc_api.py` | Current test | Target, scope, idempotency, revision and rebuild regression. |
+| `apps/web/e2e/toc-refresh-contract.spec.ts` | Current test | Reader entry, defaults, worker polling and cache invalidation contract. |
+
 2026-08-12 synchronization: archived-project deletion lifecycle, retained-conversation semantics, API/UI regression coverage and image-archive cleanup are current in `PROJECT_STATE.md`, `docs/system/USER_FLOWS.md`, `docs/api-reference.md`, `docs/testing.md` and `results.md`. No migration or new document category was added.
 
 2026-08-12 synchronization: AI Rich Markdown canonical source, parser-level math compatibility v4 (including consumed inline parentheses, scientific standalone brackets, bounded conceptual display labels and heading KaTeX-tree preservation), shared consumers, security, accessibility, overflow, performance, offline KaTeX assets, final production evidence and targeted image cleanup are current in `PROJECT_STATE.md`, `docs/system/AI_RICH_MARKDOWN_CONTRACT.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`.

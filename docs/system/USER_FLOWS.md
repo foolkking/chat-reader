@@ -76,6 +76,20 @@ conversation + reading position 并行加载
 
 全局搜索、当前对话搜索、对话索引、章节 TOC、最近位置和批注复用同一事务；失败时保留当前正文并允许重试。
 
+### 手动更新目录
+
+Owner Reader 右上角“更多”提供“更新目录”：
+
+```text
+更新目录
+  ├─ 对话目录（可独立选择）
+  └─ 章节目录（可独立选择）
+       ├─ 当前对话（默认）
+       └─ 全部对话
+```
+
+至少选择一项才能提交。任务进入统一后台队列并显示排队、进度、完成或失败状态；失败不替换当前目录并保留重试入口。完成后只刷新 dialogue-index/TOC 查询缓存，不重新获取整条 Reader、不改变阅读位置，也不提升 Conversation revision。对话目录直接来自当前 canonical 消息；章节目录从 current MessageVersion 的 heading RenderBlock 重建。Share 与 Offline Reader 保持只读，不显示该入口。
+
 ## 5. 编辑、版本与会话变换
 
 - 消息信息栏在正文上方提供收藏、选择、源码编辑和版本控件；桌面 hover/键盘聚焦显示，移动端进入底部操作菜单，不覆盖 Markdown 标题。

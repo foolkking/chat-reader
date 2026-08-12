@@ -1,13 +1,40 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.toc import TocItem, TocResponse
+from app.schemas.task import BackgroundTaskRead
+from app.schemas.toc import TocItem, TocRefreshRequest, TocResponse
+from app.services.background_jobs import queue_toc_refresh
+from app.services.editing.message_edit_service import MessageEditError
+from app.api.routes.tasks import background_job_read
 from app.services.toc.toc_service import TocServiceError, list_headings_page
 
 router = APIRouter(prefix="/api/conversations", tags=["toc"])
+
+
+@router.post("/{conversation_id}/toc/refresh", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
+def refresh_conversation_toc(
+    conversation_id: uuid.UUID,
+    payload: TocRefreshRequest,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+) -> BackgroundTaskRead:
+    try:
+        job = queue_toc_refresh(
+            db,
+            conversation_id=conversation_id,
+            refresh_dialogue_index=payload.refresh_dialogue_index,
+            refresh_section_toc=payload.refresh_section_toc,
+            section_scope=payload.section_scope,
+            idempotency_key=idempotency_key,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return background_job_read(job)
 
 
 @router.get("/{conversation_id}/toc", response_model=TocResponse)

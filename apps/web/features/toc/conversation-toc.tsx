@@ -31,7 +31,10 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
   useEffect(() => {
     if (!effectiveMessageId || !tocQuery.data) return;
     const matching = tocQuery.data.items.filter((item) => item.message_id === effectiveMessageId);
-    if (matching.length) setCachedItems((current) => ({ ...current, [effectiveMessageId]: matching }));
+    // An empty canonical response is meaningful after a manual TOC rebuild:
+    // replace the previous entry as well so removed headings cannot survive in
+    // the local fallback cache.
+    setCachedItems((current) => ({ ...current, [effectiveMessageId]: matching }));
   }, [effectiveMessageId, tocQuery.data]);
   const visibleItems = useMemo(() => {
     if (!effectiveMessageId) return [];

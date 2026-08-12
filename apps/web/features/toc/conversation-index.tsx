@@ -74,7 +74,7 @@ export function ConversationIndex({
     setRangeMode("around");
     setPanelState(mode === "sheet" ? "pinned" : "rail");
   }, [conversationId, mode, sourceKey]);
-  useEffect(() => { if (indexQuery.data) setRemotePage(indexQuery.data); }, [indexQuery.data]);
+  useEffect(() => { if (indexQuery.data) setRemotePage(indexQuery.data); }, [indexQuery.data, indexQuery.dataUpdatedAt]);
 
   useEffect(() => () => {
     if (openTimerRef.current) window.clearTimeout(openTimerRef.current);

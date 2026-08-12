@@ -24,6 +24,7 @@ from app.services.exporting.attachment_download import create_attachment_downloa
 from app.schemas.export import ExportOptions
 from app.services.offline_packages import build_catalog, build_offline_package, changed_conversations, select_conversations
 from app.services.derived_rebuild import rebuild_conversation_derived_data
+from app.services.toc.toc_refresh import refresh_toc_data
 from app.services.import_pipeline.bundle_import import preview_bundle_import
 from app.services.assets.derivatives import build_asset_derivative
 
@@ -359,6 +360,61 @@ def queue_conversation_derived_rebuild(
     return job
 
 
+def queue_toc_refresh(
+    db: Session,
+    *,
+    conversation_id: uuid.UUID,
+    refresh_dialogue_index: bool,
+    refresh_section_toc: bool,
+    section_scope: str,
+    idempotency_key: str | None,
+) -> BackgroundJob:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None or conversation.deleted_at is not None:
+        raise MessageEditError("Conversation not found.", 404)
+    if not refresh_dialogue_index and not refresh_section_toc:
+        raise MessageEditError("At least one TOC target must be selected.", 422)
+    if section_scope not in {"current_conversation", "all_conversations"}:
+        raise MessageEditError("Unsupported section TOC scope.", 422)
+    if idempotency_key:
+        existing = (
+            db.query(BackgroundJob)
+            .filter(
+                BackgroundJob.job_type == "toc_refresh",
+                BackgroundJob.idempotency_key == idempotency_key,
+                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
+            )
+            .order_by(BackgroundJob.created_at.desc())
+            .first()
+        )
+        if existing is not None:
+            return existing
+    total_items = 1
+    if refresh_section_toc and section_scope == "all_conversations":
+        total_items = db.query(Conversation).filter(Conversation.deleted_at.is_(None)).count()
+    job = BackgroundJob(
+        id=uuid.uuid4(),
+        job_type="toc_refresh",
+        status="queued",
+        phase="queued",
+        progress=0,
+        processed_items=0,
+        total_items=total_items,
+        payload={
+            "conversation_id": str(conversation.id),
+            "title": conversation.display_title,
+            "refresh_dialogue_index": refresh_dialogue_index,
+            "refresh_section_toc": refresh_section_toc,
+            "section_scope": section_scope,
+        },
+        result={},
+        idempotency_key=idempotency_key,
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
 def queue_attachment_derivative(
     db: Session,
     *,
@@ -677,6 +733,27 @@ def process_background_job(
                     "rebuilt_blocks": result.rebuilt_blocks,
                 }
                 processed_items = result.rebuilt_versions
+            elif job.job_type == "toc_refresh":
+                conversation_id = uuid.UUID(payload["conversation_id"])
+                result = refresh_toc_data(
+                    db,
+                    conversation_id,
+                    refresh_dialogue_index=bool(payload.get("refresh_dialogue_index", True)),
+                    refresh_section_toc=bool(payload.get("refresh_section_toc", True)),
+                    section_scope=str(payload.get("section_scope") or "current_conversation"),
+                    progress_callback=report,
+                )
+                job_result = {
+                    "conversation_id": str(conversation_id),
+                    "conversation_ids": [str(conversation_id)],
+                    "refresh_dialogue_index": result.refresh_dialogue_index,
+                    "refresh_section_toc": result.refresh_section_toc,
+                    "section_scope": result.section_scope,
+                    "dialogue_message_count": result.dialogue_message_count,
+                    "section_conversation_count": result.section_conversation_count,
+                    "heading_count": result.heading_count,
+                }
+                processed_items = max(result.section_conversation_count, 1)
             elif job.job_type == "offline_package":
                 package = build_offline_package(
                     db,

@@ -1,6 +1,7 @@
 from uuid import UUID
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class TocItem(BaseModel):
@@ -21,3 +22,15 @@ class TocResponse(BaseModel):
     offset: int = 0
     total: int = 0
     has_more: bool = False
+
+
+class TocRefreshRequest(BaseModel):
+    refresh_dialogue_index: bool = True
+    refresh_section_toc: bool = True
+    section_scope: Literal["current_conversation", "all_conversations"] = "current_conversation"
+
+    @model_validator(mode="after")
+    def require_refresh_target(self) -> "TocRefreshRequest":
+        if not self.refresh_dialogue_index and not self.refresh_section_toc:
+            raise ValueError("At least one TOC target must be selected.")
+        return self

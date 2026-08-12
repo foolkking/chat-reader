@@ -64,6 +64,7 @@ import type {
   ShareUpdateInput,
   SharedConversationBootstrap,
   TocResponse,
+  TocRefreshInput,
   UserPreferenceRead,
   UserPreferenceUpdate,
   SortDirection,
@@ -363,6 +364,24 @@ export async function getConversationDialogueIndex(
   return fetchJson<DialogueIndexResponse>(
     `/api/conversations/${conversationId}/dialogue-index?${params.toString()}`,
   );
+}
+
+export async function queueTocRefresh(
+  conversationId: string,
+  input: TocRefreshInput,
+): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/toc/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": `toc-refresh:${conversationId}:${crypto.randomUUID()}`,
+    },
+    body: JSON.stringify({
+      refresh_dialogue_index: input.refreshDialogueIndex,
+      refresh_section_toc: input.refreshSectionToc,
+      section_scope: input.sectionScope,
+    }),
+  });
 }
 
 export async function getMessageBlocks(
