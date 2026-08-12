@@ -6,6 +6,8 @@ The import regression matrix now covers Prompt-only/Response-only paired Markdow
 
 The user-supplied pair is read directly from `CHAT_READER_IMPORT_PAIR_JSON` and `CHAT_READER_IMPORT_PAIR_MARKDOWN`; the tests perform Preview only and never change the source directory or commit the conversation. Current results: exact supplied-pair compatibility `61 passed / 2 fixture-gated skipped`; isolated production-build file-chooser Preview `1/1 PASS`; real 398-message preview/commit/idempotent-retry matrix `12 passed / 1 fixture-gated skipped`; full API `235 passed / 4 fixture-gated skipped`; Web contract `2/2`; default PWA `57 passed / 36 environment-gated skipped`; Web lint/typecheck/build PASS. Skips are reported separately and are not PASS.
 
+The final production multipart Preview of the supplied pair returned HTTP `200` in about 1.5 seconds with one non-empty exact-match message, `can_commit=true` and no warning. It was not committed. The resulting preview-only ImportRecord is left to the existing TTL because the product does not expose a safe immediate-delete endpoint; tests and cleanup must not substitute direct SQL deletion.
+
 Unique role/timestamp identities use the linear alignment regression in `test_exporter_aligner.py`. The 398-message preview assertion must remain under 20 seconds. Structured logs split JSON parsing, Markdown parsing and alignment so a future proxy timeout can be assigned to the actual stage.
 
 ## Archived project deletion (2026-08-12)
@@ -53,7 +55,9 @@ The reported production ChatGPT fixture adds distinct compatibility regressions:
 
 Current v4 focused results: parser/shared contract `14/14`, Reader/Editor/security/stress `5/5`, two exact reported-source copies `1/1` each, and Markdown attachment shared renderer `1/1`. The default PWA matrix is `58 passed / 36 conditional skipped`; skipped online/fixture-gated cases are not PASS. The first full-source preview rendered 108 display formulas and at least 108 MathML trees. The second renders 41 display formulas/MathML, includes common scientific commands and the eight bounded conceptual labels, and leaves zero formula errors or bracket paragraphs. Earlier v1/v2/v3 evidence remains historical rather than final v4 production proof.
 
-Production Chrome v3 evidence is an intermediate release check: the first reported page rendered one visual heading formula without exposing the hidden MathML/annotation layers, and the second rendered 33 scientific display formulas with zero errors. That check discovered eight standalone conceptual labels still displayed as brackets, so v3 is not the final PASS. The v4 production-equivalent full-source test raises the second source to 41 formulas with no bracket paragraphs; final production proof is recorded only after v4 deployment.
+Production Chrome v3 evidence is an intermediate release check: the first reported page rendered one visual heading formula without exposing the hidden MathML/annotation layers, and the second rendered 33 scientific display formulas with zero errors. That check discovered eight standalone conceptual labels still displayed as brackets, so v3 is not the final PASS.
+
+Final v4 production evidence is PASS. Read-only Source Preview audits began collapsed and were expanded explicitly. The first reported page retained 108 display formulas, zero errors and one semantic/visual heading formula. The second produced `41/41` display formulas and MathML trees, all eight bounded conceptual labels exactly once, zero errors and zero residual literal bracket paragraphs. Both editors were returned to reading mode without saving. The default PWA matrix remains `58 passed / 36 conditional skipped`; those skipped online/fixture-gated cases remain separate verification debt rather than PASS.
 
 ## Offline/context delivery regression coverage (2026-08-11)
 

@@ -1,5 +1,13 @@
 # 生产部署
 
+## Import and Rich Markdown v4 release (2026-08-12)
+
+Current production runtime is commit `3ed9dc75e650223b05663000b6429074e1ba4c1b`, built externally by GitHub Actions run `31614666602`; artifact SHA-256 is `e718641b046edadab0560e84363c4d0e0618e994b461a622c29109443c480b92`. Verified backup `/opt/chat-reader/backups/import-rich-v3-20260812T151526Z-9e3bc99` contains readable business-volume archives and PostgreSQL custom dumps validated with `pg_restore --list`.
+
+King fast-forwarded source, loaded the prebuilt images, ran the existing migration preflight and recreated API/import-worker/Web with `--no-build`. API/Web/PostgreSQL are healthy, the worker runs, Scanner remains stopped and Alembic is the single head `20260806_0021`. Real Chrome read-only acceptance confirmed Rich Markdown v4 on both reported source shapes; the second full source renders `41/41` display formulas/MathML with zero residual bracket paragraphs.
+
+After health and browser acceptance, cleanup removed only the intermediate `e69a510` and superseded `336486b` Chat Reader image sets and the two verified transfer directories. Current `3ed9dc7`, rollback `9e3bc99` and `latest` remain. `/opt/chat-reader/releases` is empty and root free space is about 17 GiB. No business volume, PostgreSQL data, `.env.production`, retained backup, user file or unrelated service image was touched.
+
 ## Archived project and consumed-inline math release (2026-08-12)
 
 Archived-project deletion commit `0f004f7ce79cc6b97e68a8756c6ea21d6a75cc9f` was built by Actions run `31576690022`; artifact SHA-256 is `1d34431be81000854736a1185264a523ec875db5252c3bb0ea8b1c1f4f6a4d67` and verified backup is `/opt/chat-reader/backups/project-delete-20260812T0810Z-0f004f7`. King used migration preflight and `--no-build`. Real Chrome verified the guarded project lifecycle and retained conversation. Cleanup retained current `0f004f7`, rollback `336486b` and `latest`; it removed only obsolete Chat Reader archives/images and left about 5.2 GiB free. Volumes, PostgreSQL, `.env.production` and backups were untouched.
