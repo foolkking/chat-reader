@@ -76,7 +76,9 @@ S_n
 }
 ]`;
 
-const CHATGPT_CONSUMED_INLINE = `根号中最高次是 (n^6)，所以应该提出 (n^6)：
+const CHATGPT_CONSUMED_INLINE = `## 第一步：为什么先提 (n^3)？
+
+根号中最高次是 (n^6)，所以应该提出 (n^6)：
 
 [
 f(x)=x^2.
@@ -244,20 +246,30 @@ test("ChatGPT clipboard source with consumed inline escapes renders bounded math
     await page.goto(`/conversations/${conversationId}`);
     const assistant = page.locator("article[data-message-id]").last();
     await expect(assistant.locator(".katex-display")).toHaveCount(1);
-    await expect(assistant.locator(".katex:not(.katex-display .katex)")).toHaveCount(2);
-    await expect(assistant.locator(".katex-mathml math")).toHaveCount(3);
+    await expect(assistant.locator(".katex:not(.katex-display .katex)")).toHaveCount(3);
+    await expect(assistant.locator(".katex-mathml math")).toHaveCount(4);
     await expect(assistant.locator('[data-math-error="true"]')).toHaveCount(0);
     await expect(assistant).toContainText("普通说明 (Appendix A)、日期 (2026-08-12) 与价格 $20 不应成为公式。");
+
+    const headingMath = assistant.locator("h2 .katex");
+    await expect(headingMath).toHaveCount(1);
+    await expect(headingMath.locator(".katex-mathml math")).toHaveCount(1);
+    await expect(headingMath.locator(".katex-html")).toBeVisible();
+    expect(await headingMath.locator(".katex-mathml").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return style.position === "absolute" && style.width === "1px" && style.height === "1px";
+    })).toBe(true);
 
     await assistant.getByRole("button", { name: /Edit Markdown source|\u7f16\u8f91 Markdown \u6e90\u7801/ }).click();
     await expect(page.getByTestId("source-editor-rich-preview")).toHaveCount(0);
     const editorSource = await page.getByTestId("source-editor-codemirror").locator(".cm-content").innerText();
+    expect(editorSource).toContain("## 第一步：为什么先提 (n^3)？");
     expect(editorSource).toContain("(n^6)");
     expect(editorSource).toContain("[\nf(x)=x^2.\n]");
     await page.getByTestId("source-editor-preview-toggle").click();
     const preview = page.getByTestId("source-editor-rich-preview");
     await expect(preview.locator(".katex-display")).toHaveCount(1);
-    await expect(preview.locator(".katex-mathml math")).toHaveCount(3);
+    await expect(preview.locator(".katex-mathml math")).toHaveCount(4);
   } finally {
     await page.request.delete(`/api/conversations/${conversationId}`);
   }

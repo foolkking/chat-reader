@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 
 from app.services.import_pipeline.canonical_draft import (
     PARSER_VERSION,
@@ -374,11 +375,11 @@ def _alignment_status(
         return "json_only"
     if markdown_section.role != json_message.role:
         return "ambiguous"
-    markdown_text = _comparison_text(markdown_section.role, markdown_section.markdown_text)
-    json_text = _comparison_text(json_message.role, json_message.text)
     if json_message.time and markdown_section.time:
         if normalize_text(json_message.time) != normalize_text(markdown_section.time):
             return "ambiguous"
+    markdown_text = _comparison_text(markdown_section.role, markdown_section.markdown_text)
+    json_text = _comparison_text(json_message.role, json_message.text)
     if json_text == markdown_text:
         return "exact"
     if normalize_text(json_text) == normalize_text(markdown_text):
@@ -401,6 +402,10 @@ def _align_message_sequences(
     column_count = len(markdown_sections)
     if not row_count or not column_count:
         return []
+
+    direct_pairs = _unique_timestamp_pairs(json_messages, markdown_sections)
+    if direct_pairs is not None:
+        return direct_pairs
 
     # This is a message-level LCS, not a character diff. The established
     # importer budget already caps candidate work; retain the same bound here.
@@ -458,6 +463,79 @@ def _align_message_sequences(
         else:
             column += 1
     return pairs
+
+
+def _unique_timestamp_pairs(
+    json_messages: list[ExporterJsonMessage],
+    markdown_sections: list[ExporterMarkdownSection],
+) -> list[_MessagePair] | None:
+    """Pair unique role/timestamp identities in O(n), preserving gaps for diagnostics."""
+    if any(not message.time for message in json_messages) or any(not section.time for section in markdown_sections):
+        return None
+
+    markdown_positions: dict[tuple[str, str], list[int]] = {}
+    for position, section in enumerate(markdown_sections):
+        key = (section.role, normalize_text(section.time or ""))
+        markdown_positions.setdefault(key, []).append(position)
+
+    pairs: list[_MessagePair] = []
+    previous_position = -1
+    seen_json_keys: set[tuple[str, str]] = set()
+    for message in json_messages:
+        key = (message.role, normalize_text(message.time or ""))
+        if key in seen_json_keys:
+            return None
+        seen_json_keys.add(key)
+        positions = markdown_positions.get(key, [])
+        if len(positions) > 1:
+            return None
+        if not positions:
+            continue
+        position = positions[0]
+        if position <= previous_position:
+            return None
+        status = _unique_timestamp_alignment_status(message, markdown_sections[position])
+        if status in {"exact", "normalized", "by_order"}:
+            pairs.append(_MessagePair(message, markdown_sections[position], status))
+            previous_position = position
+    return pairs
+
+
+def _unique_timestamp_alignment_status(
+    json_message: ExporterJsonMessage,
+    markdown_section: ExporterMarkdownSection,
+) -> str:
+    """Validate an already unique identity with bounded text work.
+
+    The role/timestamp key establishes the only possible pair. Content still
+    guards against an unrelated companion file, but this path must not run the
+    full Markdown/thinking cleaner over every multi-megabyte message twice.
+    """
+    json_text = json_message.text
+    markdown_text = markdown_section.plain_text
+    if json_text == markdown_text:
+        return "exact"
+
+    json_normalized = normalize_text(json_text)
+    markdown_normalized = normalize_text(markdown_text)
+    if json_normalized == markdown_normalized:
+        return "normalized"
+    shorter = min(len(json_normalized), len(markdown_normalized))
+    longer = max(len(json_normalized), len(markdown_normalized))
+    if shorter >= 40 and json_normalized[:40] == markdown_normalized[:40]:
+        return "by_order"
+    if _has_semantic_markdown_structure(markdown_section.markdown_text):
+        return "by_order"
+    if shorter and longer <= shorter * 2.5:
+        similarity = SequenceMatcher(
+            None,
+            json_normalized[:1_000],
+            markdown_normalized[:1_000],
+            autojunk=False,
+        ).ratio()
+        if similarity >= 0.85:
+            return "by_order"
+    return "ambiguous"
 
 
 def _has_multiple_optimal_pairings(

@@ -16,7 +16,8 @@ type MarkdownFile = { value?: unknown };
 const DISPLAY_MATH = /^\s*\\\[\s*\r?\n?([\s\S]*?)\r?\n?\s*\\\]\s*$/;
 const BARE_BRACKET_DISPLAY = /^[\t ]*\/?\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\]\/?[\t ]*$/gm;
 const BARE_BRACKET_DISPLAY_EXACT = /^[\t ]*\/?\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\]\/?[\t ]*$/m;
-const LATEX_COMMAND = /\\(?:begin|boxed|cases|cdot|cdots|dfrac|frac|geq?|infty|int|le|leq|left|lim|longrightarrow|matrix|overline|pmatrix|prod|quad|right|sqrt|sum|text|to|vec)(?=[^A-Za-z]|$)/;
+const LATEX_COMMAND = /\\(?:alpha|approx|begin|beta|boxed|cap|cases|cdot|cdots|chi|cup|delta|dfrac|div|dots|epsilon|equiv|eta|exists|forall|frac|gamma|geq?|in|infty|int|iota|kappa|lambda|langle|ldots|left|leq?|lim|ln|log|longrightarrow|mathbb|mathbf|mathcal|mathit|mathrm|mathsf|mathtt|matrix|max|min|mp|mu|nabla|neq|notin|nu|omega|overline|partial|phi|pi|pm|pmatrix|prod|propto|psi|quad|qquad|rangle|rho|right|rightarrow|sigma|sim|sin|sqrt|subset|subseteq|sum|supset|supseteq|tan|tau|text|theta|times|to|upsilon|varphi|varepsilon|varrho|varsigma|vartheta|vec|xrightarrow|xi|zeta)(?=[^A-Za-z]|$)/;
+const LATEX_EXPLICIT_SPACING = /\\[ ,;:!]/;
 const MATH_SIGNAL = /[\\_^=<>+*/{}]|(?:^|\s)-(?=\s|\d)/;
 const CURRENCY_WORDS = /\b(?:and|or|to|usd|eur|gbp|cny|rmb|dollars?|euros?|yuan)\b/i;
 const BARE_MATH_CHARACTERS = /^[A-Za-z0-9\\{}()[\]^_+\-*/=<>.,|!:'\s]+$/;
@@ -249,6 +250,7 @@ function isLikelyMathExpression(value: string, mode: "inline" | "display"): bool
   const normalized = value.trim();
   if (!normalized || (mode === "inline" && normalized.length > 160)) return false;
   if (LATEX_COMMAND.test(normalized)) return true;
+  if (mode === "display" && LATEX_EXPLICIT_SPACING.test(normalized)) return true;
   if (!BARE_MATH_CHARACTERS.test(normalized)) return false;
   if (mode === "inline" && /^[a-z]$/.test(normalized)) return true;
   if (mode === "display" && /^[A-Za-z]{1,3}\d*$/.test(normalized)) return true;

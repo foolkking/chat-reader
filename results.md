@@ -6,7 +6,15 @@ Root cause confirmed: the supplied Markdown contains one `Response` section, and
 
 The preview route now classifies the upload batch with JSON message context. Import v5 ignores blank messages anywhere, aligns every non-empty message with a bounded monotonic sequence algorithm, preserves original source indexes, accepts unique timestamp-bound rich Markdown from historical lossy-JSON exporters, and blocks unmatched/ambiguous/unrelated plain content with visible diagnostics. Structured 422 errors are localized in the Chinese Web UI.
 
-Verification PASS: the exact Downloads pair previews as one non-empty Assistant message through both API and an isolated production-build file-chooser flow; no commit was performed. Focused compatibility is `48 passed / 2 skipped`, full API is `233 passed / 4 skipped`, Web import contract is `2/2`, default PWA is `56 passed / 34 environment-gated skipped`, and lint/typecheck/production build plus Alembic single-head checks pass. Skips are not counted as PASS. No migration or new dependency was added.
+Verification PASS: the exact supplied pair previews as one non-empty Assistant message through both API and an isolated production-build file-chooser flow; no commit was performed. Supplied-pair compatibility is `61 passed / 2 skipped`; the real 398-message preview/commit/idempotent-retry matrix is `12 passed / 1 skipped` and preview remains inside the 20-second assertion. Full API is `235 passed / 4 skipped`, Web import contract is `2/2`, default PWA is `57 passed / 36 environment-gated skipped`, and lint/typecheck/production build plus Alembic single-head checks pass. Skips are not counted as PASS. No migration or new dependency was added.
+
+The 398-message bottleneck was the unique role/timestamp path still running the full Markdown/thinking comparison for every large message. It now pairs unique monotonic identities in O(n) and performs only bounded validation. Preview logs expose JSON parse, Markdown parse and alignment time separately. Duplicate, reordered and unrelated content retains the guarded conflict path.
+
+## Rich Markdown Scientific-inline Closure Candidate - 2026-08-12
+
+Two distinct roots were closed. First, heading rendering applied an element allowlist after KaTeX and unwrapped the semantic tree, making hidden MathML text, TeX annotation and visible HTML appear together. The heading wrapper now retains the shared sanitized KaTeX subtree and suppresses images through its component map. Second, the standalone bracket grammar omitted common scientific commands used by ChatGPT; v3 adds bounded Greek/set/font/product/inner-product/arrow commands without enabling raw HTML or rewriting canonical Markdown.
+
+Production-equivalent verification is PASS: parser/shared contract `13/13`, Reader/Editor/security/stress `5/5`, and both exact reported-source copies `1/1`; neither produced math errors or page-level overflow, and canonical source equality held. Full API is `235 passed / 4 skipped`, default PWA is `57 passed / 36 skipped`, lint/typecheck/build PASS and Alembic remains `20260806_0021`. Production deployment and read-only validation are still pending at this candidate stage.
 
 ## Archived Project Deletion - 2026-08-12
 

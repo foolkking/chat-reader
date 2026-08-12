@@ -699,28 +699,38 @@ def _build_supported_drafts(files: list[UploadedPreviewFile]) -> list[CanonicalD
     if exporter_json is None:
         return []
     markdown_result = None
+    json_started = time.perf_counter()
     try:
         json_result = parse_exporter_json(exporter_json[1])
     except ExporterJsonParseError as exc:
         raise HTTPException(status_code=422, detail={"code": "invalid_exporter_json", "message": str(exc)}) from exc
+    json_parse_ms = round((time.perf_counter() - json_started) * 1000, 2)
 
+    markdown_parse_ms = 0.0
     if exporter_markdown is not None:
-        pairing_started = time.perf_counter()
+        markdown_started = time.perf_counter()
         try:
             markdown_result = parse_exporter_markdown(exporter_markdown[1], json_result.messages)
         except ExporterMarkdownPairingError as exc:
             raise HTTPException(status_code=422, detail={"code": exc.code, "message": str(exc)}) from exc
         finally:
-            logger.info(
-                "import_preview_pairing",
-                extra={
-                    "pairing_ms": round((time.perf_counter() - pairing_started) * 1000, 2),
-                    "json_message_count": len(json_result.messages),
-                    "markdown_bytes": len(exporter_markdown[1]),
-                },
-            )
+            markdown_parse_ms = round((time.perf_counter() - markdown_started) * 1000, 2)
 
+    alignment_started = time.perf_counter()
     alignment = align_exporter_sources(json_result, markdown_result)
+    alignment_ms = round((time.perf_counter() - alignment_started) * 1000, 2)
+    logger.info(
+        "import_preview_parse_timing",
+        extra={
+            "json_parse_ms": json_parse_ms,
+            "markdown_parse_ms": markdown_parse_ms,
+            "alignment_ms": alignment_ms,
+            "json_message_count": len(json_result.messages),
+            "json_bytes": len(exporter_json[1]),
+            "markdown_bytes": len(exporter_markdown[1]) if exporter_markdown is not None else 0,
+            "alignment_status": alignment.alignment_status,
+        },
+    )
     if alignment.conversation is None:
         raise HTTPException(status_code=422, detail={"code": "alignment_failed", "message": "A canonical draft could not be built."})
     return [alignment.conversation]

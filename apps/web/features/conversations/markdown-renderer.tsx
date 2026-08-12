@@ -223,6 +223,10 @@ const inlineMarkdownComponents: Components = {
   code({ children }) {
     return <code className="rounded border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1 py-0.5 font-mono text-[0.88em] text-[var(--inline-code-text)]">{children}</code>;
   },
+  img() {
+    // A heading is navigation text, never a remote-image loading surface.
+    return null;
+  },
   p({ children }) {
     return <>{children}</>;
   },
@@ -269,13 +273,11 @@ export function InlineHeadingMarkdown({ text }: { text: string }) {
   const inlineText = text.replace(/\s*\r?\n\s*/g, " ").trim();
   return (
     <ReactMarkdown
-      allowedElements={["a", "strong", "em", "del", "code", "p"]}
       components={inlineMarkdownComponents}
       rehypePlugins={scopedRichMarkdownRehypePlugins("inline-heading")}
       remarkPlugins={richMarkdownRemarkPlugins()}
       remarkRehypeOptions={richMarkdownRehypeOptions("inline-heading")}
       skipHtml
-      unwrapDisallowed
     >
       {inlineText}
     </ReactMarkdown>

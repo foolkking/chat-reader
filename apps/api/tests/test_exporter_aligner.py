@@ -1,4 +1,5 @@
 import json
+import time
 
 import pytest
 
@@ -260,6 +261,58 @@ def test_nonempty_head_or_tail_gap_is_reported_without_losing_matches(
             "reason": "unmatched",
         }
     ]
+
+
+def test_unique_timestamp_alignment_stays_linear_at_realistic_scale() -> None:
+    messages = [
+        {
+            "role": "Prompt" if index % 2 == 0 else "Response",
+            "say": f"message {index}",
+            "time": f"2026-07-01 10:{index // 60:02d}:{index % 60:02d}",
+        }
+        for index in range(398)
+    ]
+    json_result = parse_exporter_json(_json(messages=messages))
+    sections = ["# Social training"]
+    for message in messages:
+        sections.extend(
+            [
+                "",
+                f"## {message['role']}:",
+                message["time"],
+                "",
+                message["say"],
+            ]
+        )
+
+    started = time.monotonic()
+    result = align_exporter_sources(json_result, parse_exporter_markdown("\n".join(sections), json_result.messages))
+    elapsed = time.monotonic() - started
+
+    assert result.alignment_status == "exact_match"
+    assert result.conversation is not None
+    assert result.conversation.message_count == 398
+    assert elapsed < 3.0
+
+
+def test_unique_timestamp_does_not_pair_unrelated_plain_text() -> None:
+    json_result = parse_exporter_json(
+        _json(messages=[{"role": "Response", "say": "canonical JSON body", "time": "2026-07-01 10:00:00"}])
+    )
+    markdown = """# Social training
+
+## Response:
+2026-07-01 10:00:00
+
+completely unrelated Markdown body
+"""
+
+    result = align_exporter_sources(json_result, parse_exporter_markdown(markdown))
+
+    assert result.alignment_status == "conflict_detected"
+    assert result.conversation is not None
+    assert result.conversation.messages[0].alignment_status == "json_only"
+    assert {issue["reason"] for issue in result.conversation.alignment_issues} == {"content_mismatch"}
 
 
 def test_missing_timestamps_use_unique_normalized_content_match() -> None:

@@ -16,7 +16,7 @@ canonical Markdown source
 -> safe React components
 ```
 
-`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v2` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
+`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v3` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
 
 ## Shared consumers
 
@@ -33,10 +33,12 @@ The same semantic and security configuration is used by Reader message Markdown,
 
 CommonMark consumes backslash punctuation escapes before `remark-math` sees them. `remarkAiMathCompatibility` therefore uses mdast source positions to recover bracket/parenthesis delimiters only in normal Markdown text. It never scans rendered DOM and never performs a blind source string replacement. `code` and `inlineCode` nodes are excluded.
 
-Some ChatGPT clipboard/export paths consume only the outer escapes before ingestion. `ai-rich-markdown-v2` recognizes two bounded compatibility shapes without rewriting source:
+Some ChatGPT clipboard/export paths consume only the outer escapes before ingestion. `ai-rich-markdown-v3` recognizes two bounded compatibility shapes without rewriting source:
 
 - standalone `[` and `]` lines (or `/[` and `]/`) become display math when their body contains a recognized LaTeX command or a conservative mathematical token grammar; compact products such as `kn` are accepted only inside this strong standalone-bracket context;
 - compact parentheses embedded in prose, such as `(n^6)`, `(1/3)`, `(k)` and `(n)`, become inline math when they satisfy the same bounded grammar. Prose phrases, dates, versions, uppercase identifiers such as `A1`, currency and code do not qualify.
+
+The standalone-bracket grammar recognizes a bounded set of common KaTeX scientific commands, including Greek symbols, set relations, `mathbb`/font commands, products, inner products and labeled arrows. Explicit TeX spacing is accepted only inside a standalone display candidate. This does not make arbitrary prose or inline text a formula.
 
 Because canonical API RenderBlocks may split a bracket region at blank lines, Reader presentation may project adjacent paragraph/heading blocks into one semantic Markdown input while preserving every persisted block and the original source. Setext underline/heading artifacts are normalized to an equality only inside an already established formula boundary. Bare prose brackets and ordinary Markdown headings are not math.
 
@@ -69,6 +71,8 @@ Footnote reference/backlink IDs are namespaced with the rendering scope (normall
 
 Inline and fenced code are parsed before the AI math transform. Math delimiters inside code stay code. Existing Shiki/plain-code fallback remains authoritative. Mermaid behavior is unchanged; no new diagram runtime is introduced.
 
+Reader headings use the same sanitized KaTeX subtree as paragraphs. A presentation wrapper must not apply an element allowlist after KaTeX because stripping its wrappers exposes the hidden MathML text, TeX annotation and visual HTML simultaneously. Heading images remain suppressed by the React component map instead of by destructively unwrapping semantic output.
+
 ## HTML, links and images
 
 - Raw user HTML is inert: `skipHtml` and the sanitizer remain enabled.
@@ -96,6 +100,7 @@ Deferred by design: MathJax fallback, AsciiMath, `mhchem`, arbitrary raw HTML, n
 - `ai-rich-markdown-parser.spec.ts`: parser delimiter, consumed inline/bracket compatibility, prose/date/version/code exclusions, currency and canonical-source invariants.
 - `ai-rich-markdown.spec.ts`: real Reader/Editor DOM, golden formula, 109-formula stress, security, MathML and 360px overflow.
 - `production-rich-markdown-copy.spec.ts`: an ephemeral UTF-8 copy of the reported production source, full Source Preview semantic count and cleanup through the product API.
+- `production-rich-markdown-scientific-copy.spec.ts`: an ephemeral copy of a scientific ChatGPT source, common command coverage, canonical-source equality and cleanup through the product API.
 - `ai-rich-markdown-attachment.spec.ts`: real `.md` upload, occurrence save, inline preview and unified Viewer.
 - `library-offline.spec.ts`: deterministic KaTeX font inventory and offline cold start.
 - `reader-restoration.spec.ts`: heavy Reader windowing, scroll, navigation and Share regression.

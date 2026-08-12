@@ -250,3 +250,26 @@ test("standalone bare brackets recover compact products while ordinary prose rem
   expect(rendered[1]).toMatchObject({ type: "math", value: "n^6+kn" });
   expect(rendered[2]).toMatchObject({ type: "paragraph" });
 });
+
+test("standalone ChatGPT brackets recover common scientific LaTeX commands", () => {
+  const sources = [
+    "[\ns=(1-\\lambda)s_{text}\n]",
+    "[\nH_q\\in\\mathbb R^{L_q\\times D}\n]",
+    "[\n\\langle h_q,h_d\\rangle\\neq0\n]",
+    "[\nq\\xrightarrow{\\mathrm{Retriever}}Evidence\n]",
+    "[\nPaper\\ Retrieval\n]",
+  ];
+
+  for (const source of sources) {
+    const tree = {
+      type: "root",
+      children: [{
+        type: "paragraph",
+        position: { start: { offset: 0 }, end: { offset: source.length } },
+        children: [{ type: "text", value: source, position: { start: { offset: 0 }, end: { offset: source.length } } }],
+      }],
+    };
+    remarkAiMathCompatibility()(tree, { value: source });
+    expect(tree.children[0]).toMatchObject({ type: "math", data: { aiMathDelimiter: "bare-bracket" } });
+  }
+});
