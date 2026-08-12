@@ -64,6 +64,18 @@ const INVALID_MATH = String.raw`\[
 \frac{
 \]`;
 
+const CHATGPT_BARE_BRACKET = String.raw`[
+\boxed{
+S_n
+===
+
+\frac1n
+\sum_{k=1}^{n}
+\frac{\left(\frac{k}{n}\right)^2}
+{\sqrt{1+\frac{k}{n^5}}}
+}
+]`;
+
 test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", async ({ page }) => {
   const conversationId = await importFixture(page, RICH_MARKDOWN);
   try {
@@ -94,6 +106,9 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
 
     await assistant.getByRole("button", { name: /Edit Markdown source|\u7f16\u8f91 Markdown \u6e90\u7801/ }).click();
     const preview = page.getByTestId("source-editor-rich-preview");
+    await expect(preview).toHaveCount(0);
+    await expect(page.getByTestId("source-editor-preview-toggle")).toHaveAttribute("aria-pressed", "false");
+    await page.getByTestId("source-editor-preview-toggle").click();
     await expect(preview.locator(".katex-display")).toHaveCount(2);
     await expect(preview.locator("[data-footnote-ref]")).toHaveCount(1);
     const editorSource = await page.getByTestId("source-editor-codemirror").locator(".cm-content").innerText();
@@ -184,6 +199,32 @@ test("invalid and untrusted math is isolated without external fetch", async ({ p
     await expect(assistant.locator('[data-math-error="true"]').first()).toHaveAttribute("aria-label", /\u65e0\u6cd5\u6e32\u67d3\u516c\u5f0f/);
     await expect(assistant.locator('img[src*="example.com"]')).toHaveCount(0);
     expect(externalRequests.filter((url) => url.includes("example.com"))).toEqual([]);
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}`);
+  }
+});
+
+test("ChatGPT clipboard source with consumed outer escapes renders as display math", async ({ page }) => {
+  const conversationId = await importFixture(page, CHATGPT_BARE_BRACKET);
+  try {
+    await page.goto(`/conversations/${conversationId}`);
+    const assistant = page.locator("article[data-message-id]").last();
+    await expect(assistant.locator(".katex-display")).toHaveCount(1);
+    await expect(assistant.locator(".katex-mathml math")).toHaveCount(1);
+    expect(await assistant.evaluate((element) => {
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll(".katex").forEach((node) => node.remove());
+      return clone.textContent?.includes("\\boxed") ?? false;
+    })).toBe(false);
+
+    await assistant.getByRole("button", { name: /Edit Markdown source|\u7f16\u8f91 Markdown \u6e90\u7801/ }).click();
+    await expect(page.getByTestId("source-editor-rich-preview")).toHaveCount(0);
+    await expect(page.getByTestId("source-editor-preview-toggle")).toHaveAttribute("aria-pressed", "false");
+    const source = await page.getByTestId("source-editor-codemirror").locator(".cm-content").innerText();
+    expect(source).toContain("[\n\\boxed{");
+    expect(source).toContain("\n]");
+    await page.getByTestId("source-editor-preview-toggle").click();
+    await expect(page.getByTestId("source-editor-rich-preview").locator(".katex-display")).toHaveCount(1);
   } finally {
     await page.request.delete(`/api/conversations/${conversationId}`);
   }

@@ -17,6 +17,7 @@ import {
   readerBlockLayoutSignature,
   type ReaderBlockLayoutMetrics,
 } from "./reader-block-layout";
+import { extractChatGptBareBracketMath, isChatGptBareBracketMath, normalizeChatGptMathBody } from "../rich-markdown/remark-ai-math-compatibility";
 
 const THINKING_LABEL = "思考过程";
 const THINKING_DURATION_RE =
@@ -62,7 +63,7 @@ export function AssistantMessageRenderer({
   const visibleBlocks = leadingThinking ? blocks.slice(leadingThinking.endIndex + 1) : blocks;
   // Keep this projection outside the hook list. A message can transition from
   // an empty block window to hydrated blocks without changing hook order.
-  const semanticBlocks = resolveCrossBlockFootnotes(visibleBlocks);
+  const semanticBlocks = resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText));
   const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
   const displayUnits = groupAttachmentBlocks(semanticBlocks);
 
@@ -118,6 +119,39 @@ type DisplayUnit = {
   kind: "block" | "attachment-group";
   blocks: RenderBlockRead[];
 };
+
+function resolveCrossBlockBareBracketMath(blocks: RenderBlockRead[], source: string): RenderBlockRead[] {
+  const resolved = blocks.slice();
+  const sourceCandidates = extractChatGptBareBracketMath(source);
+  let candidateIndex = 0;
+  for (let start = 0; start < resolved.length; start += 1) {
+    const first = resolved[start];
+    if (first.block_type !== "paragraph" || !/^\s*\/?\[\s*(?:\r?\n|$)/.test(readBlockText(first))) continue;
+
+    const parts = [readBlockText(first)];
+    let end = start;
+    while (end + 1 < resolved.length && end - start < 64) {
+      if (/(?:^|\r?\n)\s*\]\/?\s*$/.test(parts[parts.length - 1])) break;
+      const next = resolved[end + 1];
+      if (next.block_type !== "paragraph" && next.block_type !== "heading") break;
+      end += 1;
+      parts.push(readBlockText(next));
+    }
+    const markdown = parts.join("\n\n");
+    if (!isChatGptBareBracketMath(markdown)) continue;
+    const sourceBody = sourceCandidates[candidateIndex]
+      ?? normalizeChatGptMathBody(markdown.replace(/^\s*\/?\[\s*/, "").replace(/\s*\]\/?\s*$/, ""));
+    candidateIndex += 1;
+    const semanticMarkdown = `[\n${sourceBody}\n]`;
+
+    resolved[start] = { ...first, plain_text: semanticMarkdown, data: { ...first.data, text: semanticMarkdown } };
+    for (let index = start + 1; index <= end; index += 1) {
+      resolved[index] = { ...resolved[index], plain_text: "", data: { ...resolved[index].data, text: "" } };
+    }
+    start = end;
+  }
+  return resolved;
+}
 
 function resolveCrossBlockFootnotes(blocks: RenderBlockRead[]): RenderBlockRead[] {
   const definitions = new Map<string, { blockIndex: number; markdown: string }>();

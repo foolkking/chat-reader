@@ -33,6 +33,8 @@ The same semantic and security configuration is used by Reader message Markdown,
 
 CommonMark consumes backslash punctuation escapes before `remark-math` sees them. `remarkAiMathCompatibility` therefore uses mdast source positions to recover bracket/parenthesis delimiters only in normal Markdown text. It never scans rendered DOM and never performs a blind source string replacement. `code` and `inlineCode` nodes are excluded.
 
+Some ChatGPT clipboard/export paths consume only the outer escapes before ingestion, producing standalone `[` and `]` lines (or `/[` and `]/`) around intact LaTeX. That legacy shape is accepted only when the multiline body contains a recognized LaTeX command and the range is outside code/HTML. Because canonical API RenderBlocks may split the region at blank lines, Reader presentation may project adjacent paragraph/heading blocks into one semantic Markdown input while preserving every persisted block and the original source. Setext underline/heading artifacts are normalized to an equality only inside an already established formula boundary. Bare prose brackets and ordinary Markdown headings are not math.
+
 Single-dollar parsing is deliberately conservative. Mathematical signals remain math, while pure numeric/currency-like spans such as `$20$`, `$20 and $10$`, and ordinary `USD $20` text remain literal. Use `\(20\)` for an unambiguous numeric formula.
 
 Macros are scoped to one KaTeX render. No macro state is shared across messages or versions. `mhchem`, MathJax fallback and AsciiMath are not enabled.
@@ -72,7 +74,7 @@ Inline and fenced code are parsed before the AI math transform. Math delimiters 
 
 ## Performance and offline assets
 
-Rich Markdown is parsed per mounted message or attachment. There is no whole-Reader DOM scan, KaTeX auto-render pass or post-mount rewrite. `useDeferredValue` keeps Source Editor preview work behind typing, while CodeMirror's external baseline remains independent from preview rendering.
+Rich Markdown is parsed per mounted message or attachment. There is no whole-Reader DOM scan, KaTeX auto-render pass or post-mount rewrite. Source Editor live preview is opt-in and starts collapsed on every workspace open; once opened, `useDeferredValue` keeps preview work behind typing, while CodeMirror's external baseline remains independent from preview rendering.
 
 KaTeX CSS comes from the local package. Offline shell preparation deterministically includes current styles/scripts and same-origin `KaTeX_*` font files referenced by current `@font-face` rules. It does not scan arbitrary historical Performance resources. An offline-ready shell therefore includes math CSS and fonts without a CDN.
 

@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## AI Rich Markdown release candidate (2026-08-12)
+## AI Rich Markdown release (2026-08-12)
 
 The current parser/browser matrix is split by evidence level:
 
@@ -33,7 +33,11 @@ The compatibility matrix covers all four math delimiters, golden boxed limit, al
 
 KaTeX offline readiness requires the active shell record to contain current `KaTeX_Main` and `KaTeX_Math` font URLs. CSS import alone is insufficient evidence. `library-offline.spec.ts` performs a real service-worker cold start after asserting those required assets.
 
-Production deployment and Chrome acceptance must be recorded separately. A local production-equivalent PASS is not a production PASS.
+Production commit `4d07ce4` was exercised with a disposable synthetic Conversation in real Chrome. DOM evidence recorded five KaTeX/MathML expressions, two display expressions, one semantic table, namespaced footnote reference/backlink, code isolation, inert unsafe HTML/link handling, literal currency, and zero page-level horizontal overflow. Source Editor preserved the raw bracket delimiter and selection offset across type/backspace. The QA Conversation was removed through the product API.
+
+The exact 360/390/768 suite remains production-build browser evidence. The external Chrome extension advertised viewport control but did not return a callable override in this session, so it is not relabeled as exact production viewport evidence. A production screenshot timed out; this does not replace the passing DOM/source assertions, and local synthetic screenshots remain the visual evidence. The `/library` DOM reported an active 78-resource offline shell; exact `KaTeX_*` cache membership is asserted by the production-build service-worker cold-start test because Cache Storage is not exposed by the Chrome read-only page evaluator.
+
+The reported production ChatGPT fixture adds a distinct compatibility regression: outer backslashes may already be gone, delimiters may be `/[`/`]/`, and the surviving formula may span paragraph and heading API RenderBlocks after Setext clipboard conversion. `ai-rich-markdown-parser.spec.ts` asserts strict source-range recognition, slash delimiters, bounded Setext normalization and code/prose exclusion; `ai-rich-markdown.spec.ts` asserts the Reader cross-block projection, MathML, canonical bare-bracket source preservation, and Preview-default-collapsed behavior. Current focused result is `10/10 PASS`. A transient local copy of the exact production source rendered 22 display formulas, 22 MathML trees, zero errors, zero visible raw LaTeX and zero page overflow; the QA copy was deleted through the API.
 
 ## Offline/context delivery regression coverage (2026-08-11)
 

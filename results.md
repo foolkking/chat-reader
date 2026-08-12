@@ -1,6 +1,6 @@
 # Implementation Results
 
-## AI Rich Markdown Rendering Candidate - 2026-08-12
+## AI Rich Markdown Rendering Release - 2026-08-12
 
 ### Root cause and implementation
 
@@ -28,7 +28,35 @@
 
 Golden screenshots: `docs/execution/screenshots/ai-rich-markdown-desktop-1440x900.png` and `ai-rich-markdown-mobile-360x800.png`. They contain only synthetic QA content and supplement DOM/source assertions; they are not the sole evidence.
 
-Current candidate statuses: `AI_RICH_MARKDOWN_CORE=PASS`, four delimiter modes PASS, Math error/security/accessibility/overflow PASS, GFM table/task/strike/autolink PASS, footnotes PASS, code isolation PASS, Reader/Editor/Markdown attachment PASS, Long Reader PASS, 360px reflow PASS, and `OFFLINE_KATEX_ASSETS=PASS` in production-equivalent PWA. Production remains `NOT_PRODUCTION_VERIFIED` until the external image is deployed and synthetic Chrome QA is completed.
+Current statuses: `AI_RICH_MARKDOWN_CORE=PASS`, four delimiter modes PASS, Math error/security/accessibility/overflow PASS, GFM table/task/strike/autolink PASS, footnotes PASS, code isolation PASS, Reader/Editor/Markdown attachment PASS, Long Reader PASS, 360px reflow PASS, and `OFFLINE_KATEX_ASSETS=PASS` in production-equivalent PWA.
+
+### Production deployment and Chrome acceptance
+
+| Check | Result |
+| --- | --- |
+| Commit / Actions | `4d07ce40fd8f130c219e8535bcd2c2f8d9910d97` / run `31560459470` PASS |
+| Release archive | SHA-256 `c47168693d2d3efb9aca3ca8fe4b7ff122a08ee511ce9cfeef77f10c0442a2e5` matched locally and on King |
+| Backup | Validated PostgreSQL and import/export/offline/asset archives at `/opt/chat-reader/backups/ai-rich-markdown-20260812T034100Z-4d07ce4` |
+| Migration / health | `20260806_0021`; API/Web/PostgreSQL healthy; worker running; Scanner stopped |
+| Golden formula / delimiters | PASS: 5 KaTeX roots, 2 display roots, 5 MathML trees; currency remained text |
+| GFM / footnotes / code | PASS: semantic table/del/task markers, scoped reference/backlink, fenced and inline code excluded from math |
+| Security / overflow | PASS: no executable unsafe link, no script execution, no document-level horizontal overflow |
+| Source Editor | PASS: raw `\[`/`\boxed` preserved; shared formula preview rendered; type/backspace kept selection offset |
+| Offline shell UI | PASS: `/library` immediately reported `可离线启动 · 78 项资源`; exact font membership is PASS in production-build SW cold-start E2E |
+| Exact 360/390 production Chrome | NOT_PRODUCTION_VERIFIED in the current bridge; exact production-build 360/390/768 is PASS |
+| Production screenshot | NOT_CAPTURED: Chrome capture timed out; production DOM assertions plus synthetic local screenshots are retained |
+| QA cleanup | PASS: disposable synthetic Conversation deleted via product API |
+| Image cleanup | PASS: retained current `4d07ce4` and rollback `3b544fe`; removed obsolete `1cdadc4` and transfer archive |
+
+Production logs contained only the known extension message-channel error. API/Web logs and health contained no new application error. The production formula phase therefore passes its release gate; unrelated unexecuted PWA quota/interruption negative paths remain outside this phase and are not upgraded to PASS.
+
+### ChatGPT bare-bracket follow-up
+
+Read-only inspection of the reported production Conversation found 21 standalone `[`/`]` formula pairs, 6 `\\boxed`, 51 `\\frac` and 15 `\\sqrt` commands, but zero surviving outer `\\[`/`\\]`. The API block builder had also divided formulas at blank lines. The first release correctly handled intact delimiters but could not reconstruct a formula after both delimiter loss and RenderBlock splitting.
+
+The parser now accepts a bare-bracket display only when standalone `[`/`]` or `/[`/`]/` delimiters bound a multiline body containing a recognized LaTeX command and the source range does not intersect code or HTML. It also repairs pasted Setext equality/heading artifacts only after that boundary is established. The Reader adds a UI-only paragraph/heading cross-block projection before the shared parser; canonical Markdown, persisted RenderBlocks and export remain unchanged. Ordinary bracket prose, headings and fenced LaTeX remain ordinary/code. Source Editor preview now starts collapsed at every viewport and keeps an explicit accessible toggle.
+
+Focused parser/Reader/Editor verification is `10 passed`. The exact production canonical source was copied into a transient local QA Conversation: all `22/22` formula groups rendered as display math with `22/22` MathML trees, zero KaTeX error fallbacks, no visible raw `\\boxed`/`\\frac`/`\\sqrt`, and no page-level horizontal overflow. The QA copy was deleted through the product API. Web lint/typecheck/build PASS; API `218 passed / 3 skipped`; Alembic single head `20260806_0021`; default PWA `49 passed / 32 conditional skipped`. Conditional skips are not PASS. Deployment remains pending for this follow-up.
 
 ## Offline Startup, Attachments and Context Skill Delivery - 2026-08-11
 

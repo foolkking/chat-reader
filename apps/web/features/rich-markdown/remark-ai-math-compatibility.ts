@@ -14,6 +14,9 @@ type MarkdownNode = {
 type MarkdownFile = { value?: unknown };
 
 const DISPLAY_MATH = /^\s*\\\[\s*\r?\n?([\s\S]*?)\r?\n?\s*\\\]\s*$/;
+const BARE_BRACKET_DISPLAY = /^[\t ]*\/?\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\]\/?[\t ]*$/gm;
+const BARE_BRACKET_DISPLAY_EXACT = /^[\t ]*\/?\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\]\/?[\t ]*$/m;
+const LATEX_COMMAND = /\\(?:begin|boxed|cases|cdot|cdots|dfrac|frac|geq?|infty|int|le|leq|left|lim|longrightarrow|matrix|overline|pmatrix|prod|quad|right|sqrt|sum|text|to|vec)(?=[^A-Za-z]|$)/;
 const MATH_SIGNAL = /[\\_^=<>+*/{}]|(?:^|\s)-(?=\s|\d)/;
 const CURRENCY_WORDS = /\b(?:and|or|to|usd|eur|gbp|cny|rmb|dollars?|euros?|yuan)\b/i;
 
@@ -30,10 +33,97 @@ const CURRENCY_WORDS = /\b(?:and|or|to|usd|eur|gbp|cny|rmb|dollars?|euros?|yuan)
 export function remarkAiMathCompatibility() {
   return (tree: MarkdownNode, file: MarkdownFile) => {
     const source = typeof file.value === "string" ? file.value : String(file.value ?? "");
+    replaceBareBracketDisplayMath(tree, source);
     replaceDisplayMath(tree, source);
     replaceInlineParenMath(tree, source);
     demoteCurrencyMath(tree);
   };
+}
+
+export function isChatGptBareBracketMath(source: string): boolean {
+  const match = source.match(BARE_BRACKET_DISPLAY_EXACT);
+  return Boolean(match?.[1].trim() && LATEX_COMMAND.test(match[1]));
+}
+
+export function extractChatGptBareBracketMath(source: string): string[] {
+  return Array.from(source.matchAll(BARE_BRACKET_DISPLAY))
+    .map((match) => normalizeChatGptMathBody(match[1]))
+    .filter((value) => value && LATEX_COMMAND.test(value));
+}
+
+export function normalizeChatGptMathBody(source: string): string {
+  // ChatGPT's rendered-Markdown clipboard path can serialize a mathematical
+  // equality as a Setext underline and the following expression as a heading.
+  // Recover that presentation artifact only after a bounded display-math
+  // candidate has been established; ordinary Markdown headings are untouched.
+  return source
+    .replace(/^[\t ]*={3,}[\t ]*$(?:\r?\n[\t ]*)+(?:#[\t ]*)?/gm, "=\n")
+    .trim();
+}
+
+/**
+ * Some ChatGPT clipboard/export paths have already consumed only the outer
+ * `\\[` / `\\]` escapes before Chat Reader receives the canonical source,
+ * leaving standalone `[` and `]` lines around otherwise intact LaTeX. In
+ * CommonMark that body may become several paragraphs or even Setext headings,
+ * so a paragraph-only transform cannot recover it.
+ *
+ * This remains an AST/source-position compatibility rule rather than a source
+ * rewrite: only a standalone multiline bracket pair whose body contains a
+ * known LaTeX command is eligible, and any code/HTML node intersecting the
+ * source range rejects the candidate. Stored Markdown is untouched.
+ */
+function replaceBareBracketDisplayMath(parent: MarkdownNode, source: string): void {
+  if (!parent.children?.length) return;
+
+  const candidates = Array.from(source.matchAll(BARE_BRACKET_DISPLAY))
+    .map((match) => ({
+      start: match.index ?? -1,
+      end: (match.index ?? -1) + match[0].length,
+      value: normalizeChatGptMathBody(match[1]),
+    }))
+    .filter((candidate) => candidate.start >= 0 && candidate.value && LATEX_COMMAND.test(candidate.value));
+
+  if (candidates.length) {
+    const next: MarkdownNode[] = [];
+    let childIndex = 0;
+    for (const candidate of candidates) {
+      while (childIndex < parent.children.length && nodeEnd(parent.children[childIndex]) <= candidate.start) {
+        next.push(parent.children[childIndex]);
+        childIndex += 1;
+      }
+      const rangeStart = childIndex;
+      while (childIndex < parent.children.length && nodeStart(parent.children[childIndex]) < candidate.end) childIndex += 1;
+      const covered = parent.children.slice(rangeStart, childIndex);
+      if (!covered.length || covered.some(isUnsafeBareBracketNode)
+        || nodeStart(covered[0]) > candidate.start || nodeEnd(covered[covered.length - 1]) < candidate.end) {
+        next.push(...covered);
+        continue;
+      }
+      next.push({
+        type: "math",
+        value: candidate.value,
+        data: displayMathData(candidate.value, "bare-bracket"),
+        position: { start: covered[0].position?.start, end: covered[covered.length - 1].position?.end },
+      });
+    }
+    next.push(...parent.children.slice(childIndex));
+    parent.children = next;
+  }
+
+  parent.children.forEach((child) => replaceBareBracketDisplayMath(child, source));
+}
+
+function isUnsafeBareBracketNode(node: MarkdownNode): boolean {
+  return node.type === "code" || node.type === "html" || node.type === "inlineCode";
+}
+
+function nodeStart(node: MarkdownNode): number {
+  return node.position?.start?.offset ?? Number.POSITIVE_INFINITY;
+}
+
+function nodeEnd(node: MarkdownNode): number {
+  return node.position?.end?.offset ?? Number.NEGATIVE_INFINITY;
 }
 
 function replaceDisplayMath(parent: MarkdownNode, source: string): void {

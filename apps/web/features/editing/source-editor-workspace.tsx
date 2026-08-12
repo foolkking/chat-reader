@@ -63,13 +63,13 @@ export function SourceEditorWorkspace({
   const message = target.message;
   const uploadJobsRef = useRef(new Map<string, UploadJob>());
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
+  // Source editing is the primary task. Rich preview is opt-in so opening the
+  // workspace never halves the editor or starts a potentially heavy render
+  // until the user asks for it.
+  const [showPreview, setShowPreview] = useState(false);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
   const [saveBaseVersionId, setSaveBaseVersionId] = useState(message.current_version?.id);
 
-  useEffect(() => {
-    if (window.matchMedia("(max-width: 639px)").matches) setShowPreview(false);
-  }, []);
   const conversationAttachmentsQuery = useQuery({
     queryKey: ["conversation-attachments", message.conversation_id],
     queryFn: () => getConversationAttachments(message.conversation_id),
@@ -211,7 +211,7 @@ export function SourceEditorWorkspace({
             <button type="button" onClick={() => setAttachmentPickerOpen(true)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle"><Paperclip className="h-4 w-4" />{zh ? "选择当前对话文件" : "Choose conversation file"}</button>
           </div>
           <div className="flex items-center gap-1">
-            <button type="button" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{zh ? "\u9884\u89c8" : "Preview"}</button>
+            <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{zh ? "\u9884\u89c8" : "Preview"}</button>
             <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle" title={zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}><LocateFixed className="h-4 w-4" />{zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}</button>
           </div>
         </div>
