@@ -1,5 +1,13 @@
 # 生产部署
 
+## Manual TOC refresh release (2026-08-13)
+
+- Commit `9d338a001c612bfd837de6a9ee5d06cdb684df61`; GitHub Actions run `31621723794`; artifact SHA-256 `8b0123f93a382535d378e16d5d5a046049ba245870d955dc009e1262cbbdca1b` matched locally and on King.
+- Pre-deploy backup `/opt/chat-reader/backups/toc-refresh-20260813T012000Z-9d338a0` contains PostgreSQL plus import/export/offline/asset volumes. SHA-256, `pg_restore --list` and every tar listing passed before image replacement.
+- King fast-forwarded source, loaded external images, ran the existing migration preflight and recreated API/import-worker/Web with `--no-build`. It did not run Next build, overwrite `.env.production`, delete a volume or start Scanner. API/Web/PostgreSQL are healthy, worker runs and Alembic is `20260806_0021`.
+- Production Chrome passed the isolated current-conversation UI/task flow and QA cleanup. All-conversation section rebuilding remains production-unexecuted to avoid rewriting real derived Heading data; the actual worker branch passes API integration tests.
+- After replacement health, only the superseded `9e3bc99` Chat Reader image set and release-transfer archive were removed. Current `9d338a0`, rollback `3ed9dc7` and `latest` remain. `/opt/chat-reader/releases` is 4 KiB and root free space is about 16 GiB. Business volumes, PostgreSQL, `.env.production`, backups and unrelated images were untouched.
+
 ## Import and Rich Markdown v4 release (2026-08-12)
 
 Current production runtime is commit `3ed9dc75e650223b05663000b6429074e1ba4c1b`, built externally by GitHub Actions run `31614666602`; artifact SHA-256 is `e718641b046edadab0560e84363c4d0e0618e994b461a622c29109443c480b92`. Verified backup `/opt/chat-reader/backups/import-rich-v3-20260812T151526Z-9e3bc99` contains readable business-volume archives and PostgreSQL custom dumps validated with `pg_restore --list`.

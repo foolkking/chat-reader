@@ -6,7 +6,10 @@
 - 对话目录继续以当前 canonical Message/current MessageVersion 动态投影为唯一真值，不新增第二份持久化索引。手动更新任务会校验该投影，完成后 Web 精确失效 dialogue-index cache。章节目录由单并发 worker 从当前版本 heading RenderBlock 重建；全部范围逐对话报告进度且整个 job 失败时回滚。
 - 新接口为 `POST /api/conversations/{conversation_id}/toc/refresh`，返回统一 `BackgroundTaskRead`。任务支持 `Idempotency-Key`，不修改 Conversation revision、消息、阅读位置或正文，不新增 migration。
 - UI 使用统一 Dialog focus/close 合同，默认同时选中两类目录、默认章节范围为当前对话；任务状态通过可访问 status/alert 展示，失败时保留重试入口。Share 与 Offline Reader 不暴露 canonical 管理操作。
-- 本地验证：TOC API `4/4`、Web contract `1/1`、Web lint/typecheck/build PASS、完整 API `236 passed / 4 fixture-gated skipped`、默认 PWA `59 passed / 36 environment-gated skipped`、Alembic single head `20260806_0021`。Skip 不计为 PASS。
+- 本地验证：TOC route + builder `4/4`（route `3/3`、builder `1/1`）、Web contract `1/1`、Web lint/typecheck/build PASS、完整 API `236 passed / 4 fixture-gated skipped`、默认 PWA `59 passed / 36 environment-gated skipped`、Alembic single head `20260806_0021`。Skip 不计为 PASS。
+- 生产运行 commit `9d338a001c612bfd837de6a9ee5d06cdb684df61`，由 GitHub Actions run `31621723794` 构建，artifact SHA-256 为 `8b0123f93a382535d378e16d5d5a046049ba245870d955dc009e1262cbbdca1b`。部署前恢复点 `/opt/chat-reader/backups/toc-refresh-20260813T012000Z-9d338a0` 的 PostgreSQL custom dump、四个业务 volume archive、SHA-256、`pg_restore --list` 与 tar listing 均通过。King 仅执行 image load、migration preflight 和 `--no-build` recreate；API/Web/PostgreSQL healthy，worker 运行，Scanner 停止，Alembic 保持 `20260806_0021`。
+- 真实生产 Chrome 的隔离 QA 对话通过：More 中存在“更新目录”；默认两项选中且章节范围为当前对话；可切换“全部对话”；初始焦点在第一项，accessible Close 恰好一个，Esc 恢复 More trigger；combined/current、dialogue-only、section-only 任务均完成，章节结果为 2，刷新后正文/标题仍在，revision 保持 5。全量章节重建未在生产执行，以避免无必要改写真实业务对话的派生 Heading；API/worker 集成测试已覆盖。QA 对话通过产品 API 删除并确认 404。
+- 替换确认后仅删除 superseded `9e3bc99` Chat Reader 镜像标签/层与传输 archive；保留 current `9d338a0`、rollback `3ed9dc7` 和 `latest`。`/opt/chat-reader/releases` 为 4 KiB，root 可用约 16 GiB；volume、业务数据、`.env.production`、恢复点和其他服务镜像未动。
 
 ## 2026-08-12 JSON + Markdown Import Compatibility v5
 

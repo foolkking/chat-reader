@@ -6,7 +6,13 @@ The Owner Reader now exposes `更新目录` in the top-right More menu. Its acce
 
 The implementation preserves one source of truth: dialogue index rows are dynamically projected from current canonical messages, so refresh validates that source and then precisely invalidates the Web query cache. Persisted Heading rows are the only derived materialization rebuilt by the worker. The operation does not bump conversation revision, rewrite messages, reset Reader position, or add a migration. All-conversation rebuilding is idempotently queued and reports per-conversation progress.
 
-Local verification PASS: focused TOC API `4/4`, Web contract `1/1`, lint/typecheck/production build PASS, full API `236 passed / 4 fixture-gated skipped`, default PWA `59 passed / 36 environment-gated skipped`, Alembic `20260806_0021`. Skipped PWA flows are reported separately and are not PASS. Production deployment/Chrome verification is recorded after the external image release.
+Local verification PASS: TOC route + builder `4/4` (route `3/3`, builder `1/1`), Web contract `1/1`, lint/typecheck/production build PASS, full API `236 passed / 4 fixture-gated skipped`, default PWA `59 passed / 36 environment-gated skipped`, Alembic `20260806_0021`. Skipped PWA flows are reported separately and are not PASS.
+
+Production deployment PASS: commit `9d338a001c612bfd837de6a9ee5d06cdb684df61`, Actions run `31621723794`, artifact SHA-256 `8b0123f93a382535d378e16d5d5a046049ba245870d955dc009e1262cbbdca1b`, validated recovery point `/opt/chat-reader/backups/toc-refresh-20260813T012000Z-9d338a0`. API/Web/PostgreSQL are healthy, worker runs, Scanner is stopped and Alembic remains `20260806_0021`.
+
+Real production Chrome PASS for the isolated QA current-conversation flow: More entry, both default targets, current default section scope, all-scope selection, initial focus, exactly one accessible Close, Esc focus restoration, combined/current, dialogue-only and section-only tasks, accessible completion feedback and refresh stability. The current section job produced two headings and the derived operation left revision `5` unchanged. The all-conversations section branch is `NOT_PRODUCTION_VERIFIED` by deliberate data-safety choice; real API/worker integration is PASS. The QA Conversation was deleted through the product API and returned `404` afterward.
+
+Post-acceptance cleanup retained current `9d338a0`, rollback `3ed9dc7` and `latest`; it removed only superseded `9e3bc99` Chat Reader image tags/layers and the transfer archive. Releases are 4 KiB and root free space is about 16 GiB. No business volume, user data, `.env.production`, backup or unrelated image was removed.
 
 ## JSON + Markdown Import Compatibility v5 - 2026-08-12
 
