@@ -20,6 +20,8 @@ Production PASS: commit `9e3bc99595dfc958c0167763a68b95890b98f431`, Actions run 
 
 King cleanup PASS: the deployment archive and superseded `0f004f7` API/worker/migrate/Web layers were removed only after health and Chrome acceptance. Current `9e3bc99`, rollback `336486b` and `latest` remain. `/opt/chat-reader/releases` is 4 KiB and final root free space is about 4.1 GiB after retaining the verified backup. Volumes, PostgreSQL, `.env.production`, historical backups and unrelated images were untouched.
 
+Backup retention cleanup PASS: a read-only audit found `/opt/chat-reader/backups` consuming about 15 GiB. After checksum/archive/PostgreSQL validation of the protected recovery chain and confirmation that no container mounted the directory, 50 redundant historical snapshots (13,701,926,937 bytes) were removed. Retained coverage comprises the July 30/31 baseline, `38c57c1` Release Closure, `336486b` rollback, and `9e3bc99` current release. Backups now use 1.5 GiB; root availability increased from 4.1 GiB at 90% usage to 17 GiB at 56% usage. API/Web/PostgreSQL remained healthy, the import worker remained running, public and same-origin health returned `ok`, and no business volume, database, user file, environment file, current/rollback image, or unrelated service was removed.
+
 ## AI Rich Markdown Rendering Release - 2026-08-12
 
 ### Root cause and implementation
