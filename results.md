@@ -16,6 +16,10 @@ The reported production message retained math bodies but lost additional outer d
 
 Production-build results: parser/core `12/12`, Reader/Editor/security/stress `5/5`, reported full-source copy `1/1`, Markdown attachment `1/1`, lint/typecheck/build PASS, API `220 passed / 3 skipped`, default PWA `54 passed / 34 conditional skipped`, Alembic `20260806_0021`. The explicit full-source preview rendered 108 display formulas and at least 108 MathML nodes with zero math errors and no document horizontal overflow. The ephemeral QA copies were deleted through the product API. Conditional PWA skips are not counted as PASS. Production deployment and read-only verification are appended after the external release.
 
+Production PASS: commit `9e3bc99595dfc958c0167763a68b95890b98f431`, Actions run `31580890665`, artifact SHA-256 `493f080d973c7b2aedcf3e61f18762471f613a04599b0bd051943afe16de4dba`, validated 434 MiB backup `/opt/chat-reader/backups/rich-inline-20260812T090711Z-9e3bc99`. Real Chrome on the reported Conversation confirmed renderer v2, default-collapsed preview, 108 display formulas, 130 MathML trees, recovered `n^6`/`k`/`f(x)=x^2`, zero math errors and no page overflow. The source editor was closed without saving.
+
+King cleanup PASS: the deployment archive and superseded `0f004f7` API/worker/migrate/Web layers were removed only after health and Chrome acceptance. Current `9e3bc99`, rollback `336486b` and `latest` remain. `/opt/chat-reader/releases` is 4 KiB and final root free space is about 4.1 GiB after retaining the verified backup. Volumes, PostgreSQL, `.env.production`, historical backups and unrelated images were untouched.
+
 ## AI Rich Markdown Rendering Release - 2026-08-12
 
 ### Root cause and implementation

@@ -45,6 +45,8 @@ The reported production ChatGPT fixture adds distinct compatibility regressions:
 
 Current v2 focused results: parser/shared contract `12/12`, Reader/Editor/security/stress `5/5`, exact production-source copy `1/1`, and Markdown attachment shared renderer `1/1`. The default PWA matrix is `54 passed / 34 conditional skipped`; skipped online/fixture-gated cases are not PASS. The explicit full-source preview rendered 108 display formulas, at least 108 MathML trees, zero math errors and no page-level overflow. Earlier v1 production evidence of 22/22 remains historical evidence rather than the v2 completeness count.
 
+Production Chrome v2 evidence is higher level than the local count: the reported Conversation exposed `data-rich-markdown-version=ai-rich-markdown-v2`; Source Preview was absent and its toggle false before expansion, then exposed 108 display formulas and 130 MathML trees, including the reported inline and command-free bracket expressions, with zero math errors and no page overflow. The editor returned to reading mode without saving.
+
 ## Offline/context delivery regression coverage (2026-08-11)
 
 `apps/web/e2e/library-offline.spec.ts` covers active-shell immediate startup, failed update preservation, deterministic Skill asset caching, read-only current-conversation files, cached/missing attachment handling, local CanJSON/Markdown/`.context.zip` export, both Chinese and English Skill SHA-256 values, download-plus-copy clipboard rejection, inert Skill viewing/download and exact 360x800, 390x844 and 768x1024 reflow.
