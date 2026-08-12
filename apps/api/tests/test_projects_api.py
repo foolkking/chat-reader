@@ -98,6 +98,37 @@ def test_archived_project_conversations_temporarily_return_to_history(client: Te
     assert [item["id"] for item in client.get(f"/api/projects/{project_id}/conversations").json()] == [conversation_id]
 
 
+def test_delete_archived_project_keeps_conversations_in_unclassified(client: TestClient) -> None:
+    conversation_id = _commit_conversation(client, "Delete Archived Project")
+    project = client.post("/api/projects", json={"name": "Delete Archived Container"}).json()
+    project_id = project["id"]
+    assert client.put(f"/api/conversations/{conversation_id}/project", json={"project_id": project_id}).status_code == 200
+
+    active_delete = client.delete(project_id_path(project_id))
+    assert active_delete.status_code == 422
+    assert "must be archived" in active_delete.json()["detail"]
+
+    before_revision = client.get(f"/api/conversations/{conversation_id}").json()["offline_revision"]
+    assert client.patch(project_id_path(project_id), json={"is_archived": True}).status_code == 200
+    deleted = client.delete(project_id_path(project_id))
+    assert deleted.status_code == 204
+
+    projects = client.get("/api/projects", params={"include_archived": True}).json()
+    assert project_id not in {item["id"] for item in projects}
+    assert conversation_id in {item["id"] for item in client.get("/api/conversations", params={"scope": "history"}).json()}
+    inbox = next(item for item in projects if item["is_default"])
+    assert conversation_id in {item["id"] for item in client.get(f"/api/projects/{inbox['id']}/conversations").json()}
+    assert client.get(f"/api/conversations/{conversation_id}").json()["offline_revision"] == before_revision + 2
+    assert client.delete(project_id_path(project_id)).status_code == 404
+
+
+def test_default_project_cannot_be_deleted(client: TestClient) -> None:
+    inbox = next(item for item in client.get("/api/projects").json() if item["is_default"])
+    response = client.delete(project_id_path(inbox["id"]))
+    assert response.status_code == 422
+    assert "Default project" in response.json()["detail"]
+
+
 def test_project_conversation_list_supports_bulk_management_limit(client: TestClient) -> None:
     project_id = client.post("/api/projects", json={"name": "Bulk management"}).json()["id"]
 

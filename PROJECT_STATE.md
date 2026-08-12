@@ -1,5 +1,13 @@
 # Project State
 
+## 2026-08-12 Archived Project Deletion Closure
+
+- Archived projects now have a complete terminal lifecycle. `DELETE /api/projects/{project_id}` accepts only non-default archived projects; active and default projects are rejected. Deletion removes the project container, not its conversations or messages.
+- Before deleting the container, every project conversation is atomically moved to the internal default/Unclassified project, project pins are cleared, Reader/offline revisions and recent placement are updated, and a placement event records `reason=project_deleted`. No migration is required.
+- The Archived page exposes both a guarded per-project delete action and batch deletion. Its confirmation explicitly states that project deletion is irreversible while conversations/messages remain in Unclassified. Partial batch failures remain selected and visible.
+- Local verification: project API `9/9`, archived-project Web contract `1/1`, Web lint/typecheck/build PASS, full API `220 passed / 3 fixture-gated skipped`, Alembic single head `20260806_0021`.
+- King storage cleanup removed only obsolete Chat Reader image archives: 18 top-level release tarballs plus six legacy release directories containing only image tar/checksum pairs. `/opt/chat-reader/releases` is now 4 KiB and root free space increased from about 1.9 GiB to 5.7 GiB. Current `336486b` and rollback `4d07ce4` Docker images, business volumes, PostgreSQL, `.env.production` and backups remain untouched.
+
 ## 2026-08-12 AI Rich Markdown Rendering Release
 
 - Message Markdown now uses one parser-level semantic core for Reader, Source Editor live preview and Markdown attachment inline/Viewer rendering. GFM, footnotes, code isolation and all four math delimiters (`\(...\)`, `$...$`, `\[...\]`, `$$...$$`) share the same plugin/security configuration.

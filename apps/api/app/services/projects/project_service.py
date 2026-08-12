@@ -143,6 +143,62 @@ def archive_project(db: Session, project: Project) -> Project:
     return update_project(db, project, {"is_archived": True})
 
 
+def delete_archived_project(db: Session, project: Project) -> None:
+    """Delete an archived project container without deleting its conversations."""
+    if project.is_default:
+        raise ProjectServiceError("Default project cannot be deleted.")
+    if not project.is_archived:
+        raise ProjectServiceError("Project must be archived before deletion.")
+
+    default_project = ensure_default_project(db)
+    relations = (
+        db.query(ProjectConversation)
+        .filter(ProjectConversation.project_id == project.id)
+        .with_for_update()
+        .order_by(ProjectConversation.sort_order.asc(), ProjectConversation.id.asc())
+        .all()
+    )
+    next_order = _append_sort_order(db, default_project.id, False)
+    now = utc_now()
+    for relation in relations:
+        relation.project_id = default_project.id
+        relation.sort_order = next_order
+        relation.is_pinned = False
+        relation.pinned_at = None
+        relation.added_at = now
+        relation.added_by = "project_delete"
+        next_order += PLACEMENT_GAP
+
+        conversation = relation.conversation
+        conversation.offline_revision += 1
+        conversation.updated_at = now
+        recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation.id).one_or_none()
+        if recent is not None:
+            recent.project_id = None
+        db.add(
+            ConversationEvent(
+                id=uuid.uuid4(),
+                conversation_id=conversation.id,
+                event_type="project_placement_changed",
+                payload={
+                    "source_project_id": str(project.id),
+                    "target_project_id": None,
+                    "target_section": "normal",
+                    "sort_order": relation.sort_order,
+                    "reason": "project_deleted",
+                },
+                created_by="user",
+            )
+        )
+
+    db.query(RecentItem).filter(RecentItem.project_id == project.id).update(
+        {RecentItem.project_id: None}, synchronize_session=False
+    )
+    db.flush()
+    db.query(Project).filter(Project.id == project.id).delete(synchronize_session=False)
+    db.flush()
+
+
 def add_conversation_to_project(
     db: Session,
     project_id: uuid.UUID,

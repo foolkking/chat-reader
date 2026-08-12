@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-08-12 synchronization: archived-project deletion lifecycle, retained-conversation semantics, API/UI regression coverage and image-archive cleanup are current in `PROJECT_STATE.md`, `docs/system/USER_FLOWS.md`, `docs/api-reference.md`, `docs/testing.md` and `results.md`. No migration or new document category was added.
+
 2026-08-12 synchronization: AI Rich Markdown canonical source, parser-level math compatibility, shared consumers, security, accessibility, overflow, performance and offline KaTeX assets are current in `PROJECT_STATE.md`, `docs/system/AI_RICH_MARKDOWN_CONTRACT.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md` and `results.md`.
 
 | Path | Lifecycle | Responsibility |

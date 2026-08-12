@@ -24,6 +24,7 @@ from app.services.projects.project_service import (
     ProjectServiceError,
     add_conversation_to_project,
     create_project,
+    delete_archived_project,
     list_project_conversations,
     list_projects,
     place_project,
@@ -79,6 +80,17 @@ def update_project_route(project_id: uuid.UUID, payload: ProjectUpdate, db: Sess
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return _project_read(project, db)
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_route(project_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
+    project = _get_project_or_404(project_id, db)
+    try:
+        delete_archived_project(db, project)
+        db.commit()
+    except ProjectServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 
 @router.put("/{project_id}/placement", response_model=ProjectRead)

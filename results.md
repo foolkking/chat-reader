@@ -1,5 +1,13 @@
 # Implementation Results
 
+## Archived Project Deletion - 2026-08-12
+
+Root cause: the product implemented archive/restore but had neither a project-delete API nor a delete action on the Archived page. The closure adds a guarded terminal operation for archived non-default projects. It preserves every conversation/message by moving project relations to the internal Unclassified project before deleting only the Project row; pins, recent placement, offline revision and placement events are reconciled in the same transaction.
+
+The Archived page now supports per-row and batch permanent deletion with explicit retained-data copy and partial-failure feedback. Verification: project API `9/9`, Web contract `1/1`, lint/typecheck/build PASS, full API `220 passed / 3 skipped`, Alembic `20260806_0021`. Production deployment and real QA flow are recorded after the external image release.
+
+King image-package cleanup is complete: 18 legacy top-level archives and six legacy release directories containing only Chat Reader image tar/checksum pairs were deleted. `/opt/chat-reader/releases` fell from about 3.8 GiB to 4 KiB; root free space rose from about 1.9 GiB to 5.7 GiB. Current `336486b`, rollback `4d07ce4`, volumes, PostgreSQL, `.env.production` and validated backups were retained.
+
 ## AI Rich Markdown Rendering Release - 2026-08-12
 
 ### Root cause and implementation

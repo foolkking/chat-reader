@@ -249,3 +249,6 @@ TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、b
 All mutations are transactional and return `409` for an old conversation revision. No Trash endpoint or recovery list is added.
 
 Message edit, task toggle, current-version selection and version deletion responses also include the post-commit `conversation_revision`; Web must use it as the next mutation's base revision.
+# Archived project deletion (2026-08-12)
+
+`DELETE /api/projects/{project_id}` permanently deletes a non-default archived Project container and returns `204`. Its conversations are atomically retained under the internal default/Unclassified project. Active or default projects return `422`; missing projects return `404`. The operation does not delete conversations, messages or attachments and requires no schema migration.

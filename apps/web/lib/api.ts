@@ -620,6 +620,10 @@ export async function updateProject(projectId: string, input: ProjectUpdate): Pr
   return fetchJson<ProjectRead>(`/api/projects/${projectId}`, jsonRequest("PATCH", input));
 }
 
+export async function deleteProject(projectId: string): Promise<void> {
+  await fetchJson<void>(`/api/projects/${projectId}`, { method: "DELETE" });
+}
+
 export async function placeProject(projectId: string, input: ProjectPlacementInput): Promise<ProjectRead> {
   return fetchJson<ProjectRead>(`/api/projects/${projectId}/placement`, jsonRequest("PUT", input));
 }

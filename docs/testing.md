@@ -1,5 +1,9 @@
 # Testing Addendum 2026-08-09
 
+## Archived project deletion (2026-08-12)
+
+`test_projects_api.py` verifies that active/default projects cannot be deleted, an archived project can be deleted, its conversations remain under Unclassified with a new offline revision, and a repeated delete returns `404`. `archived-project-delete.spec.ts` freezes the single/batch UI, irreversible confirmation copy, retained-conversation wording, API call and cache refresh contract. Current results: focused API `9/9`, Web contract `1/1`, lint/typecheck/build PASS, full API `220 passed / 3 fixture-gated skipped`, Alembic head `20260806_0021`.
+
 ## AI Rich Markdown release (2026-08-12)
 
 The current parser/browser matrix is split by evidence level:
