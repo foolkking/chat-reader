@@ -161,3 +161,92 @@ test("ChatGPT Setext clipboard artifacts are normalized only inside display math
 =
 \int_0^1x^2\,dx`);
 });
+
+test("ChatGPT clipboard bare inline parentheses recover compact math in prose", () => {
+  const source = "对 (k) 求和，根号中最高次是 (n^6)，所以应该提出 (n^6)，极限为 (1/3)。";
+  const tree = {
+    type: "root",
+    children: [{
+      type: "paragraph",
+      position: { start: { offset: 0 }, end: { offset: source.length } },
+      children: [{ type: "text", value: source, position: { start: { offset: 0 }, end: { offset: source.length } } }],
+    }],
+  };
+
+  remarkAiMathCompatibility()(tree, { value: source });
+
+  expect(tree.children[0].children).toMatchObject([
+    { type: "text", value: "对 " },
+    { type: "inlineMath", value: "k", data: { aiMathDelimiter: "bare-paren" } },
+    { type: "text", value: " 求和，根号中最高次是 " },
+    { type: "inlineMath", value: "n^6", data: { aiMathDelimiter: "bare-paren" } },
+    { type: "text", value: "，所以应该提出 " },
+    { type: "inlineMath", value: "n^6", data: { aiMathDelimiter: "bare-paren" } },
+    { type: "text", value: "，极限为 " },
+    { type: "inlineMath", value: "1/3", data: { aiMathDelimiter: "bare-paren" } },
+    { type: "text", value: "。" },
+  ]);
+  expect(source).toContain("(n^6)");
+});
+
+test("bare parenthetical prose, dates, versions, and code remain text", () => {
+  const source = "说明 (Appendix A)、接口 (API/v1)、日期 (2026-08-12) 与 `代码 (n^6)`。";
+  const codeStart = source.indexOf("`代码");
+  const textEnd = codeStart - 1;
+  const tree = {
+    type: "root",
+    children: [{
+      type: "paragraph",
+      children: [
+        { type: "text", value: source.slice(0, textEnd), position: { start: { offset: 0 }, end: { offset: textEnd } } },
+        { type: "inlineCode", value: "代码 (n^6)" },
+        { type: "text", value: "。", position: { start: { offset: source.length - 1 }, end: { offset: source.length } } },
+      ],
+    }],
+  };
+
+  remarkAiMathCompatibility()(tree, { value: source });
+
+  expect(tree.children[0].children?.filter((node) => node.type === "inlineMath")).toHaveLength(0);
+  expect(tree.children[0].children?.[1]).toMatchObject({ type: "inlineCode", value: "代码 (n^6)" });
+});
+
+test("standalone bare brackets accept a pure mathematical expression without a LaTeX command", () => {
+  const source = "[\nf(x)=x^2.\n]";
+  const tree = {
+    type: "root",
+    children: [{
+      type: "paragraph",
+      position: { start: { offset: 0 }, end: { offset: source.length } },
+      children: [{ type: "text", value: source, position: { start: { offset: 0 }, end: { offset: source.length } } }],
+    }],
+  };
+
+  remarkAiMathCompatibility()(tree, { value: source });
+
+  expect(tree.children[0]).toMatchObject({
+    type: "math",
+    value: "f(x)=x^2.",
+    data: { aiMathDelimiter: "bare-bracket" },
+  });
+});
+
+test("standalone bare brackets recover compact products while ordinary prose remains text", () => {
+  const sources = ["[\nkn\n]", "[\nn^6+kn\n]", "[\nordinary prose\n]"];
+  const rendered = sources.map((source) => {
+    const tree = {
+      type: "root",
+      children: [{
+        type: "paragraph",
+        position: { start: { offset: 0 }, end: { offset: source.length } },
+        children: [{ type: "text", value: source, position: { start: { offset: 0 }, end: { offset: source.length } } }],
+      }],
+    };
+    remarkAiMathCompatibility()(tree, { value: source });
+    return tree.children[0];
+  });
+
+  expect(rendered[0]).toMatchObject({ type: "math", value: "kn" });
+  expect(rendered[1]).toMatchObject({ type: "math", value: "n^6+kn" });
+  expect(rendered[2]).toMatchObject({ type: "paragraph" });
+});

@@ -16,7 +16,7 @@ canonical Markdown source
 -> safe React components
 ```
 
-`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v1` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
+`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v2` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
 
 ## Shared consumers
 
@@ -33,7 +33,12 @@ The same semantic and security configuration is used by Reader message Markdown,
 
 CommonMark consumes backslash punctuation escapes before `remark-math` sees them. `remarkAiMathCompatibility` therefore uses mdast source positions to recover bracket/parenthesis delimiters only in normal Markdown text. It never scans rendered DOM and never performs a blind source string replacement. `code` and `inlineCode` nodes are excluded.
 
-Some ChatGPT clipboard/export paths consume only the outer escapes before ingestion, producing standalone `[` and `]` lines (or `/[` and `]/`) around intact LaTeX. That legacy shape is accepted only when the multiline body contains a recognized LaTeX command and the range is outside code/HTML. Because canonical API RenderBlocks may split the region at blank lines, Reader presentation may project adjacent paragraph/heading blocks into one semantic Markdown input while preserving every persisted block and the original source. Setext underline/heading artifacts are normalized to an equality only inside an already established formula boundary. Bare prose brackets and ordinary Markdown headings are not math.
+Some ChatGPT clipboard/export paths consume only the outer escapes before ingestion. `ai-rich-markdown-v2` recognizes two bounded compatibility shapes without rewriting source:
+
+- standalone `[` and `]` lines (or `/[` and `]/`) become display math when their body contains a recognized LaTeX command or a conservative mathematical token grammar; compact products such as `kn` are accepted only inside this strong standalone-bracket context;
+- compact parentheses embedded in prose, such as `(n^6)`, `(1/3)`, `(k)` and `(n)`, become inline math when they satisfy the same bounded grammar. Prose phrases, dates, versions, uppercase identifiers such as `A1`, currency and code do not qualify.
+
+Because canonical API RenderBlocks may split a bracket region at blank lines, Reader presentation may project adjacent paragraph/heading blocks into one semantic Markdown input while preserving every persisted block and the original source. Setext underline/heading artifacts are normalized to an equality only inside an already established formula boundary. Bare prose brackets and ordinary Markdown headings are not math.
 
 Single-dollar parsing is deliberately conservative. Mathematical signals remain math, while pure numeric/currency-like spans such as `$20$`, `$20 and $10$`, and ordinary `USD $20` text remain literal. Use `\(20\)` for an unambiguous numeric formula.
 
@@ -88,8 +93,9 @@ Deferred by design: MathJax fallback, AsciiMath, `mhchem`, arbitrary raw HTML, n
 
 ## Regression evidence
 
-- `ai-rich-markdown-parser.spec.ts`: parser delimiter, code, currency and canonical-source invariants.
+- `ai-rich-markdown-parser.spec.ts`: parser delimiter, consumed inline/bracket compatibility, prose/date/version/code exclusions, currency and canonical-source invariants.
 - `ai-rich-markdown.spec.ts`: real Reader/Editor DOM, golden formula, 109-formula stress, security, MathML and 360px overflow.
+- `production-rich-markdown-copy.spec.ts`: an ephemeral UTF-8 copy of the reported production source, full Source Preview semantic count and cleanup through the product API.
 - `ai-rich-markdown-attachment.spec.ts`: real `.md` upload, occurrence save, inline preview and unified Viewer.
 - `library-offline.spec.ts`: deterministic KaTeX font inventory and offline cold start.
 - `reader-restoration.spec.ts`: heavy Reader windowing, scroll, navigation and Share regression.

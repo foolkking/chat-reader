@@ -1,5 +1,11 @@
 # 生产部署
 
+## Archived project and consumed-inline math release (2026-08-12)
+
+Archived-project deletion commit `0f004f7ce79cc6b97e68a8756c6ea21d6a75cc9f` was built by Actions run `31576690022`; artifact SHA-256 is `1d34431be81000854736a1185264a523ec875db5252c3bb0ea8b1c1f4f6a4d67` and verified backup is `/opt/chat-reader/backups/project-delete-20260812T0810Z-0f004f7`. King used migration preflight and `--no-build`. Real Chrome verified the guarded project lifecycle and retained conversation. Cleanup retained current `0f004f7`, rollback `336486b` and `latest`; it removed only obsolete Chat Reader archives/images and left about 5.2 GiB free. Volumes, PostgreSQL, `.env.production` and backups were untouched.
+
+The follow-up Rich Markdown candidate upgrades only the Web AST compatibility policy to `ai-rich-markdown-v2`; no API, model, export field or migration changes. After external build/deploy, verify the reported page read-only: prose `(n^6)`/`(k)` must have inline KaTeX, `[f(x)=x^2]`/`[kn]`/`[n^6+kn]` must have display KaTeX, ordinary parentheses/brackets must remain text, Source Preview must still start collapsed, and no document horizontal overflow or math error may appear. Build/deployment evidence is appended after release.
+
 ## AI Rich Markdown rollout (2026-08-12)
 
 This release changes only the Web Markdown parser/render pipeline, Source Editor preview, deterministic offline KaTeX font inventory and an attachment-draft state handoff. It adds no dependency, API contract, export field, database model or migration. Build the Web/API images in GitHub Actions or another external Linux builder; King must only verify/load the artifact, run the existing migration preflight and recreate services with `--no-build`.

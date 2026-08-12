@@ -2,14 +2,15 @@
 
 2026-08-12 synchronization: archived-project deletion lifecycle, retained-conversation semantics, API/UI regression coverage and image-archive cleanup are current in `PROJECT_STATE.md`, `docs/system/USER_FLOWS.md`, `docs/api-reference.md`, `docs/testing.md` and `results.md`. No migration or new document category was added.
 
-2026-08-12 synchronization: AI Rich Markdown canonical source, parser-level math compatibility, shared consumers, security, accessibility, overflow, performance and offline KaTeX assets are current in `PROJECT_STATE.md`, `docs/system/AI_RICH_MARKDOWN_CONTRACT.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md` and `results.md`.
+2026-08-12 synchronization: AI Rich Markdown canonical source, parser-level math compatibility v2 (including consumed inline parentheses and compact standalone bracket expressions), shared consumers, security, accessibility, overflow, performance and offline KaTeX assets are current in `PROJECT_STATE.md`, `docs/system/AI_RICH_MARKDOWN_CONTRACT.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md` and `results.md`.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
 | `docs/system/AI_RICH_MARKDOWN_CONTRACT.md` | Current | Canonical Markdown, Math/GFM/footnote/code semantics, safety, accessibility, overflow, performance and PWA asset policy. |
 | `apps/web/features/rich-markdown/rich-markdown-config.ts` | Current | Shared remark/rehype/KaTeX policy and renderer version. |
-| `apps/web/features/rich-markdown/remark-ai-math-compatibility.ts` | Current | Parser-level ChatGPT `\(`/`\[` compatibility and conservative currency demotion. |
+| `apps/web/features/rich-markdown/remark-ai-math-compatibility.ts` | Current | Parser-level ChatGPT escaped/bare delimiter compatibility, bounded math-token grammar and conservative currency demotion. |
 | `apps/web/e2e/ai-rich-markdown*.spec.ts` | Current test | Parser, Reader, Editor, attachment, security, stress and reflow regression. |
+| `apps/web/e2e/production-rich-markdown-copy.spec.ts` | Current test | Ephemeral full-source compatibility count using QA-only data and product-API cleanup. |
 
 2026-08-11 synchronization: Offline shell availability/background update, offline read-only attachment files, local snapshot export and bilingual Context Acquisition Skill delivery are current in `PROJECT_STATE.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/system/USER_FLOWS.md`, `docs/system/ATTACHMENT_RENDERER_CONTRACT.md`, `docs/testing.md` and `docs/deployment.md`.
 

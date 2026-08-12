@@ -14,7 +14,7 @@ type HastNode = {
   children?: HastNode[];
 };
 
-export const RICH_MARKDOWN_RENDERER_VERSION = "ai-rich-markdown-v1";
+export const RICH_MARKDOWN_RENDERER_VERSION = "ai-rich-markdown-v2";
 
 const BASE_REMARK_PLUGINS: NonNullable<Options["remarkPlugins"]> = [
   remarkGfm,

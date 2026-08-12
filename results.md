@@ -6,7 +6,15 @@ Root cause: the product implemented archive/restore but had neither a project-de
 
 The Archived page now supports per-row and batch permanent deletion with explicit retained-data copy and partial-failure feedback. Verification: project API `9/9`, Web contract `1/1`, lint/typecheck/build PASS, full API `220 passed / 3 skipped`, Alembic `20260806_0021`. Production deployment and real QA flow are recorded after the external image release.
 
-King image-package cleanup is complete: 18 legacy top-level archives and six legacy release directories containing only Chat Reader image tar/checksum pairs were deleted. `/opt/chat-reader/releases` fell from about 3.8 GiB to 4 KiB; root free space rose from about 1.9 GiB to 5.7 GiB. Current `336486b`, rollback `4d07ce4`, volumes, PostgreSQL, `.env.production` and validated backups were retained.
+Production PASS: commit `0f004f7ce79cc6b97e68a8756c6ea21d6a75cc9f`, Actions run `31576690022`, artifact SHA-256 `1d34431be81000854736a1185264a523ec875db5252c3bb0ea8b1c1f4f6a4d67`, validated backup `/opt/chat-reader/backups/project-delete-20260812T0810Z-0f004f7`. Real Chrome completed create -> archive -> delete -> project absent -> conversation retained under Unclassified -> refresh, then removed the disposable QA conversation through the product API.
+
+King image-package cleanup is complete: 18 legacy top-level archives, six legacy release directories containing only Chat Reader image tar/checksum pairs, the transfer archive and superseded `4d07ce4` images were deleted. `/opt/chat-reader/releases` fell from about 3.8 GiB to 4 KiB; final root free space is about 5.2 GiB. Current `0f004f7`, rollback `336486b`, `latest`, volumes, PostgreSQL, `.env.production` and validated backups were retained.
+
+## Rich Markdown Consumed-inline Closure - 2026-08-12
+
+The reported production message retained math bodies but lost additional outer delimiters during ChatGPT clipboard ingestion: `\(n^6\)` became `(n^6)`, while `[\nf(x)=x^2.\n]` lacked a named LaTeX command and failed the v1 bare-bracket gate. The shared parser now uses `ai-rich-markdown-v2`: compact mathematical parentheses and standalone bracket expressions become semantic `inlineMath`/`math` nodes, while prose, dates, versions, uppercase identifiers, currency and code remain unchanged. This is an AST presentation rule; canonical source and persisted data are untouched.
+
+Production-build results: parser/core `12/12`, Reader/Editor/security/stress `5/5`, reported full-source copy `1/1`, Markdown attachment `1/1`, lint/typecheck/build PASS, API `220 passed / 3 skipped`, default PWA `54 passed / 34 conditional skipped`, Alembic `20260806_0021`. The explicit full-source preview rendered 108 display formulas and at least 108 MathML nodes with zero math errors and no document horizontal overflow. The ephemeral QA copies were deleted through the product API. Conditional PWA skips are not counted as PASS. Production deployment and read-only verification are appended after the external release.
 
 ## AI Rich Markdown Rendering Release - 2026-08-12
 

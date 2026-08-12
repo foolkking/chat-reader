@@ -19,6 +19,8 @@ const BARE_BRACKET_DISPLAY_EXACT = /^[\t ]*\/?\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\]\/
 const LATEX_COMMAND = /\\(?:begin|boxed|cases|cdot|cdots|dfrac|frac|geq?|infty|int|le|leq|left|lim|longrightarrow|matrix|overline|pmatrix|prod|quad|right|sqrt|sum|text|to|vec)(?=[^A-Za-z]|$)/;
 const MATH_SIGNAL = /[\\_^=<>+*/{}]|(?:^|\s)-(?=\s|\d)/;
 const CURRENCY_WORDS = /\b(?:and|or|to|usd|eur|gbp|cny|rmb|dollars?|euros?|yuan)\b/i;
+const BARE_MATH_CHARACTERS = /^[A-Za-z0-9\\{}()[\]^_+\-*/=<>.,|!:'\s]+$/;
+const BARE_MATH_WORDS = new Set(["cos", "det", "exp", "gcd", "lim", "ln", "log", "max", "min", "mod", "sin", "tan"]);
 
 /**
  * ChatGPT emits LaTeX using \(...\) and \[...\]. CommonMark consumes the
@@ -36,19 +38,20 @@ export function remarkAiMathCompatibility() {
     replaceBareBracketDisplayMath(tree, source);
     replaceDisplayMath(tree, source);
     replaceInlineParenMath(tree, source);
+    replaceBareInlineParenMath(tree, source);
     demoteCurrencyMath(tree);
   };
 }
 
 export function isChatGptBareBracketMath(source: string): boolean {
   const match = source.match(BARE_BRACKET_DISPLAY_EXACT);
-  return Boolean(match?.[1].trim() && LATEX_COMMAND.test(match[1]));
+  return Boolean(match?.[1].trim() && isLikelyMathExpression(normalizeChatGptMathBody(match[1]), "display"));
 }
 
 export function extractChatGptBareBracketMath(source: string): string[] {
   return Array.from(source.matchAll(BARE_BRACKET_DISPLAY))
     .map((match) => normalizeChatGptMathBody(match[1]))
-    .filter((value) => value && LATEX_COMMAND.test(value));
+    .filter((value) => value && isLikelyMathExpression(value, "display"));
 }
 
 export function normalizeChatGptMathBody(source: string): string {
@@ -82,7 +85,7 @@ function replaceBareBracketDisplayMath(parent: MarkdownNode, source: string): vo
       end: (match.index ?? -1) + match[0].length,
       value: normalizeChatGptMathBody(match[1]),
     }))
-    .filter((candidate) => candidate.start >= 0 && candidate.value && LATEX_COMMAND.test(candidate.value));
+    .filter((candidate) => candidate.start >= 0 && candidate.value && isLikelyMathExpression(candidate.value, "display"));
 
   if (candidates.length) {
     const next: MarkdownNode[] = [];
@@ -186,6 +189,77 @@ function splitInlineParenMath(raw: string): MarkdownNode[] | null {
   if (!changed) return null;
   appendText(result, decodeCommonMarkEscapes(raw.slice(cursor)));
   return result;
+}
+
+/**
+ * ChatGPT's rendered-text clipboard can consume only the backslashes around
+ * inline math, leaving `(n^6)` or `(1/3)` in otherwise normal prose. Recover
+ * those compact expressions at the text-node level. The bounded grammar is
+ * intentionally conservative: prose words, dates, versions and code nodes do
+ * not qualify, and canonical source remains unchanged.
+ */
+function replaceBareInlineParenMath(node: MarkdownNode, source: string): void {
+  if (!node.children) return;
+  node.children = node.children.flatMap((child) => {
+    if (child.type !== "text") {
+      replaceBareInlineParenMath(child, source);
+      return [child];
+    }
+    const raw = sourceSlice(child, source);
+    if (!raw?.includes("(")) return [child];
+    return splitBareInlineParenMath(raw) ?? [child];
+  });
+}
+
+function splitBareInlineParenMath(raw: string): MarkdownNode[] | null {
+  const result: MarkdownNode[] = [];
+  let cursor = 0;
+  let searchFrom = 0;
+  let changed = false;
+  while (searchFrom < raw.length) {
+    const open = raw.indexOf("(", searchFrom);
+    if (open < 0) break;
+    if (open > 0 && raw[open - 1] === "\\") {
+      searchFrom = open + 1;
+      continue;
+    }
+    const close = raw.indexOf(")", open + 1);
+    if (close < 0) break;
+    const value = raw.slice(open + 1, close).trim();
+    if (!isLikelyMathExpression(value, "inline")) {
+      searchFrom = close + 1;
+      continue;
+    }
+    appendText(result, decodeCommonMarkEscapes(raw.slice(cursor, open)));
+    result.push({
+      type: "inlineMath",
+      value,
+      data: inlineMathData(value, "bare-paren"),
+    });
+    cursor = close + 1;
+    searchFrom = cursor;
+    changed = true;
+  }
+  if (!changed) return null;
+  appendText(result, decodeCommonMarkEscapes(raw.slice(cursor)));
+  return result;
+}
+
+function isLikelyMathExpression(value: string, mode: "inline" | "display"): boolean {
+  const normalized = value.trim();
+  if (!normalized || (mode === "inline" && normalized.length > 160)) return false;
+  if (LATEX_COMMAND.test(normalized)) return true;
+  if (!BARE_MATH_CHARACTERS.test(normalized)) return false;
+  if (mode === "inline" && /^[a-z]$/.test(normalized)) return true;
+  if (mode === "display" && /^[A-Za-z]{1,3}\d*$/.test(normalized)) return true;
+  if (!MATH_SIGNAL.test(normalized)) return false;
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(normalized) || /^\d+(?:\.\d+){2,}$/.test(normalized)) return false;
+  if (/[A-Z]\d/.test(normalized)) return false;
+  const words = normalized.match(/[A-Za-z]+/g) ?? [];
+  if (words.some((word) => word.length > 1
+    && !(mode === "display" && /^[a-z]{2}$/.test(word))
+    && !BARE_MATH_WORDS.has(word.toLowerCase()))) return false;
+  return true;
 }
 
 function findDelimiter(source: string, delimiter: "\\(" | "\\)", from: number): number {
