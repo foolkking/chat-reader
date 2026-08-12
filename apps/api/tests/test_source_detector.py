@@ -4,6 +4,7 @@ import json
 import pytest
 
 from app.schemas.import_schema import SourceProfile
+from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
 from app.services.import_pipeline.source_detector import detect_source_profile
 
 
@@ -51,6 +52,42 @@ Hi
     result = detect_source_profile("conversation.md", content)
 
     assert result.source_profile == SourceProfile.chatgpt_exporter_markdown
+
+
+@pytest.mark.parametrize(("heading", "role"), [("Response", "Response"), ("prompt", "Prompt")])
+def test_detect_single_role_exporter_markdown_with_json_context(heading: str, role: str) -> None:
+    expected = parse_exporter_json(
+        json.dumps(
+            {
+                "metadata": {},
+                "messages": [{"role": role, "say": "Matched body", "time": "2026/8/7 20:05:18"}],
+            }
+        ).encode()
+    ).messages
+    content = f"""# Fixture
+
+## {heading}
+2026/8/7 20:05:18
+
+Matched body
+""".encode()
+
+    result = detect_source_profile("conversation.md", content, expected)
+
+    assert result.source_profile == SourceProfile.chatgpt_exporter_markdown
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        b"# Notes\n\n## Response\n\nExample without exporter timestamp",
+        b"# Notes\n\n## Response\n2026/8/7 20:05:18\n\nDated notes are still not an exporter pair",
+    ],
+)
+def test_single_role_or_ordinary_markdown_without_json_context_is_not_misdetected(content: bytes) -> None:
+    result = detect_source_profile("notes.md", content)
+
+    assert result.source_profile == SourceProfile.unknown
 
 
 def test_detect_canjson_v1() -> None:

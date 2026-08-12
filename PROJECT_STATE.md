@@ -1,5 +1,14 @@
 # Project State
 
+## 2026-08-12 JSON + Markdown Import Compatibility v5
+
+- The reported `ChatGPT-网页缺陷探索方法.json` + `.md` pair failed before parsing with HTTP `422 unsupported_source_profile`: its Markdown export contains only one `Response` section, while the old source detector required both `Prompt` and `Response` headings.
+- Import v5 detects the files as a batch. JSON remains the authority for message identity, role, timestamp and ordering; its non-empty messages provide context for recognizing Prompt-only or Response-only Markdown. A single-role Markdown file without matching JSON context remains unsupported, including dated ordinary notes.
+- Blank JSON and Markdown messages are ignored at any position while their source indexes remain traceable. Non-empty sequences use a bounded monotonic message-level alignment. Unmatched, ambiguous or plain-text content mismatches are reported with source/index/role/time diagnostics and block commit; nothing is silently dropped.
+- Historical exporters may store a lossy plain fallback in JSON and authoritative rich structure in Markdown. With unique matching role/timestamp, recognizable Markdown headings/lists/code/tables/links are accepted as `by_order`; two unrelated plain-text bodies remain a blocking mismatch.
+- Structured import `422` codes now have Chinese UI messages. Preview shows ignored-blank counts and exact mismatch locations instead of exposing `/api/imports/preview returned 422`.
+- Verification: exact Downloads pair API preview `1/1 PASS` and isolated production-build file-chooser Preview `1/1 PASS`; focused import/parser/repair compatibility `48 passed / 2 fixture-gated skipped`; full API `233 passed / 4 fixture-gated skipped`; Web import contract `2/2`; default PWA `56 passed / 34 environment-gated skipped`; lint/typecheck/build PASS; Alembic remains the single head `20260806_0021`. Preview was exercised only; source files were not modified and the pair was not committed.
+
 ## 2026-08-12 Archived Project Deletion Closure
 
 - Archived projects now have a complete terminal lifecycle. `DELETE /api/projects/{project_id}` accepts only non-default archived projects; active and default projects are rejected. Deletion removes the project container, not its conversations or messages.

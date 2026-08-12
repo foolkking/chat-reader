@@ -1,5 +1,9 @@
 # API 参考
 
+## Import compatibility v5 (2026-08-12)
+
+Importer v5 treats exporter JSON and its optional Markdown as one upload batch. JSON provides canonical message identity/role/time/order and allows a matching Prompt-only or Response-only Markdown export to be recognized; a standalone single-role Markdown file is still rejected. Empty messages may occur anywhere and are reported as ignored. Every non-empty message must have one reliable monotonic counterpart or Preview returns a non-committable conflict with per-source alignment diagnostics. Historical JSON plain fallbacks may pair with rich Markdown only under a unique matching role/timestamp identity.
+
 ## Attachment Renderer supporting APIs (2026-08-09)
 
 | Method | Path | Contract |

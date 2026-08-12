@@ -1,4 +1,4 @@
-import type { ImportPreviewResponse } from "../../lib/types";
+import type { ImportAlignmentIssue, ImportPreviewResponse } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 
 export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse }) {
@@ -22,7 +22,7 @@ export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse 
 
       <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
         <PreviewStat label="文件" value={String(preview.files.length)} />
-        <PreviewStat label="消息" value={String(conversation?.message_count ?? readArchiveNumber(archive, "message_count") ?? 0)} />
+        <PreviewStat label="消息" value={String(conversation?.message_count ?? readArchiveNumber(archive, "message_count") ?? 0)} testId="import-message-count" />
         <PreviewStat label="格式" value={bundle ? "附件对话包 v1" : archive ? `.cr v${readArchiveNumber(archive, "format_version") ?? 2}` : sourceProfileLabel(conversation?.source_profile)} />
       </dl>
 
@@ -56,6 +56,23 @@ export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse 
               <span className="font-medium text-primary">配对校验：</span>{formatAlignmentSummary(conversation.alignment_summary)}
             </div>
           ) : null}
+          {(conversation.ignored_json_empty_count || conversation.ignored_markdown_empty_count) ? (
+            <p className="mt-2 text-xs leading-5 text-secondary" data-testid="import-empty-message-summary">
+              已忽略空白消息：JSON {conversation.ignored_json_empty_count ?? 0} 条，Markdown {conversation.ignored_markdown_empty_count ?? 0} 条。
+            </p>
+          ) : null}
+          {conversation.alignment_issues?.length ? (
+            <div className="mt-4 border-l-2 border-[var(--danger)] pl-3" data-testid="import-alignment-issues">
+              <p className="text-sm font-medium text-[var(--danger)]">存在未匹配的非空消息，当前预览不能提交。</p>
+              <ul className="mt-2 space-y-1 text-xs leading-5 text-secondary">
+                {conversation.alignment_issues.map((issue) => (
+                  <li key={`${issue.source}-${issue.source_index}-${issue.reason}`}>
+                    {formatAlignmentIssue(issue)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </>
       ) : (
         <p className="mt-4 text-sm leading-6 text-secondary">
@@ -72,6 +89,14 @@ export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse 
       ) : null}
     </div>
   );
+}
+
+function formatAlignmentIssue(issue: ImportAlignmentIssue): string {
+  const source = issue.source === "json" ? "JSON" : "Markdown";
+  const role = issue.role === "user" ? "用户" : issue.role === "assistant" ? "助手" : issue.role;
+  const reason = issue.reason === "content_mismatch" ? "正文不一致" : issue.reason === "ambiguous" ? "对应关系不唯一" : "未找到对应消息";
+  const timestamp = issue.timestamp ? ` · ${issue.timestamp}` : "";
+  return `${source} 第 ${issue.source_index + 1} 项 · ${role}${timestamp} · ${reason}`;
 }
 
 function readArchiveString(archive: Record<string, unknown> | null | undefined, key: string): string | null {

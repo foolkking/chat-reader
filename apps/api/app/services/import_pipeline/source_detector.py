@@ -7,9 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from app.schemas.import_schema import SourceDetectionResult, SourceProfile
+from app.services.import_pipeline.exporter_json_parser import ExporterJsonMessage
+from app.services.import_pipeline.exporter_markdown_parser import has_exporter_markdown_structure
 
 
-def detect_source_profile(filename: str, content: bytes) -> SourceDetectionResult:
+def detect_source_profile(
+    filename: str,
+    content: bytes,
+    expected_messages: list[ExporterJsonMessage] | None = None,
+) -> SourceDetectionResult:
     extension = _compound_extension(filename)
     mime_guess, _ = mimetypes.guess_type(filename)
     size_bytes = len(content)
@@ -77,7 +83,7 @@ def detect_source_profile(filename: str, content: bytes) -> SourceDetectionResul
 
     if extension in {".md", ".markdown"}:
         text = _decode_text(content, warnings)
-        if _looks_like_chatgpt_exporter_markdown(text):
+        if has_exporter_markdown_structure(text, expected_messages):
             return _result(
                 SourceProfile.chatgpt_exporter_markdown,
                 0.95,
@@ -160,10 +166,6 @@ def _decode_text(content: bytes, warnings: list[str]) -> str:
 def _looks_like_json(content: bytes) -> bool:
     stripped = content.lstrip()
     return stripped.startswith(b"{") or stripped.startswith(b"[")
-
-
-def _looks_like_chatgpt_exporter_markdown(text: str) -> bool:
-    return "## Prompt:" in text and "## Response:" in text
 
 
 def _compound_extension(filename: str) -> str:

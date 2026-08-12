@@ -93,8 +93,9 @@ def parse_exporter_markdown(
     marker_sections = _marker_message_sections(text)
     paired_sections: list[_MarkerSection] | None = None
     ignored_candidate_count = 0
+    ignored_empty_section_count = 0
     if not marker_sections and expected_messages is not None:
-        paired_sections, ignored_candidate_count = _paired_message_sections(text, expected_messages)
+        paired_sections, ignored_candidate_count, ignored_empty_section_count = _paired_message_sections(text, expected_messages)
 
     if not matches and not marker_sections and not paired_sections:
         warnings.append("No Prompt/Response sections found.")
@@ -102,6 +103,8 @@ def parse_exporter_markdown(
         warnings.append(
             f"Ignored {ignored_candidate_count} embedded Prompt/Response heading candidates while reconstructing paired Markdown."
         )
+    if ignored_empty_section_count:
+        warnings.append(f"Ignored {ignored_empty_section_count} empty Markdown message sections.")
 
     sections: list[ExporterMarkdownSection] = []
     prompt_count = 0
@@ -162,17 +165,54 @@ def parse_exporter_markdown(
         prompt_count=prompt_count,
         response_count=response_count,
         section_count=len(sections),
-        empty_message_count=empty_count,
+        empty_message_count=empty_count + ignored_empty_section_count,
     )
+
+
+def has_exporter_markdown_structure(
+    content: bytes | str,
+    expected_messages: list[ExporterJsonMessage] | None = None,
+) -> bool:
+    """Recognize exporter Markdown without requiring both conversation roles."""
+    text = content.decode("utf-8", errors="replace") if isinstance(content, bytes) else content
+    marker_sections = _marker_message_sections(text)
+    if marker_sections:
+        return any(normalize_text(section.markdown_text) for section in marker_sections)
+
+    boundaries = _section_boundaries(text)
+    if not boundaries:
+        return False
+    parsed = parse_exporter_markdown(text)
+    sections = [section for section in parsed.sections if not section.is_empty]
+    if not sections:
+        return False
+
+    expected = [message for message in expected_messages or [] if not message.is_empty]
+    if expected:
+        for section in sections:
+            for message in expected:
+                if section.role != message.role:
+                    continue
+                if section.time and message.time and normalize_text(section.time) == normalize_text(message.time):
+                    return True
+                if _paired_section_is_reliable(message, section.markdown_text):
+                    return True
+        return False
+
+    # Preserve the legacy two-role exporter profile even when an older export
+    # omitted per-message timestamps. A single-role export requires the paired
+    # JSON context above so dated notes do not become Markdown-only imports.
+    roles = {section.role for section in sections}
+    return roles == {"user", "assistant"}
 
 
 def _paired_message_sections(
     text: str,
     expected_messages: list[ExporterJsonMessage],
-) -> tuple[list[_MarkerSection] | None, int]:
+) -> tuple[list[_MarkerSection] | None, int, int]:
     expected = [message for message in expected_messages if not message.is_empty]
     if not expected or any(message.time is None for message in expected):
-        return None, 0
+        return None, 0, 0
 
     started = time.monotonic()
     candidates = _all_heading_candidates(text)
@@ -188,7 +228,7 @@ def _paired_message_sections(
             and normalize_text(candidate.time) == normalize_text(message.time or "")
         ]
         if not matches:
-            return None, 0
+            return None, 0, 0
         candidate_indexes.append(matches)
     if sum(len(indexes) for indexes in candidate_indexes) > PAIRING_MAX_MATCH_OPTIONS:
         raise ExporterMarkdownPairingError("pairing_candidate_limit", "JSON/Markdown pairing has too many ambiguous candidates.")
@@ -204,9 +244,10 @@ def _paired_message_sections(
         and len(candidates) == len(expected)
         and all(left < right for left, right in zip(direct_path, direct_path[1:]))
     ):
-        sections = _sections_from_candidate_path(text, expected, candidates, direct_path, require_text_check=False)
-        if sections is not None:
-            return sections, len(candidates) - len(direct_path)
+        section_result = _sections_from_candidate_path(text, expected, candidates, direct_path, require_text_check=False)
+        if section_result is not None:
+            sections, ignored_empty_count = section_result
+            return sections, len(candidates) - len(direct_path), ignored_empty_count
 
     states: list[dict[int, tuple[int, int | None, int]]] = [{} for _ in expected]
     transitions = 0
@@ -259,18 +300,21 @@ def _paired_message_sections(
     if overall_count != 1 and overall_score is not None:
         raise ExporterMarkdownPairingError("pairing_ambiguous", "JSON/Markdown pairing has multiple equally reliable solutions.")
     if overall_score is None or first_candidate is None:
-        return None, 0
+        return None, 0, 0
 
     path: list[int] = []
     candidate_index: int | None = first_candidate
     for message_index in range(len(expected)):
         if candidate_index is None:
-            return None, 0
+            return None, 0, 0
         path.append(candidate_index)
         candidate_index = states[message_index][candidate_index][1]
 
-    sections = _sections_from_candidate_path(text, expected, candidates, path, require_text_check=True)
-    return (sections, len(candidates) - len(path)) if sections is not None else (None, 0)
+    section_result = _sections_from_candidate_path(text, expected, candidates, path, require_text_check=True)
+    if section_result is None:
+        return None, 0, 0
+    sections, ignored_empty_count = section_result
+    return sections, len(candidates) - len(path), ignored_empty_count
 
 
 def _sections_from_candidate_path(
@@ -280,12 +324,22 @@ def _sections_from_candidate_path(
     path: list[int],
     *,
     require_text_check: bool,
-) -> list[_MarkerSection] | None:
+) -> tuple[list[_MarkerSection], int] | None:
     sections: list[_MarkerSection] = []
+    selected_candidates = set(path)
+    ignored_empty_count = 0
     for index, candidate_index in enumerate(path):
         candidate = candidates[candidate_index]
         next_start = candidates[path[index + 1]].start if index + 1 < len(path) else len(text)
-        markdown_text = text[candidate.body_start : next_start].strip()
+        markdown_text, removed_count = _remove_empty_unselected_candidate_ranges(
+            text,
+            candidate.body_start,
+            next_start,
+            candidates,
+            selected_candidates,
+        )
+        ignored_empty_count += removed_count
+        markdown_text = markdown_text.strip()
         if require_text_check and not _paired_section_is_reliable(expected[index], markdown_text):
             return None
         sections.append(
@@ -296,7 +350,32 @@ def _sections_from_candidate_path(
                 markdown_text=markdown_text,
             )
         )
-    return sections
+    return sections, ignored_empty_count
+
+
+def _remove_empty_unselected_candidate_ranges(
+    text: str,
+    start: int,
+    end: int,
+    candidates: list[_HeadingCandidate],
+    selected_candidates: set[int],
+) -> tuple[str, int]:
+    removals: list[tuple[int, int]] = []
+    for index, candidate in enumerate(candidates):
+        if index in selected_candidates or not (start <= candidate.start < end):
+            continue
+        candidate_end = candidates[index + 1].start if index + 1 < len(candidates) else len(text)
+        candidate_end = min(candidate_end, end)
+        body = text[candidate.body_start : candidate_end]
+        if normalize_text(_plain_text(body)) == "":
+            removals.append((candidate.start, candidate_end))
+
+    result = text[start:end]
+    for removal_start, removal_end in reversed(removals):
+        relative_start = removal_start - start
+        relative_end = removal_end - start
+        result = result[:relative_start] + result[relative_end:]
+    return result, len(removals)
 
 
 def _all_heading_candidates(text: str) -> list[_HeadingCandidate]:
@@ -368,6 +447,23 @@ def _paired_section_is_reliable(message: ExporterJsonMessage, markdown_text: str
     if prefix_length >= 16 and json_text[:prefix_length] == markdown_normalized[:prefix_length]:
         return True
     return SequenceMatcher(None, json_text[:4_000], markdown_normalized[:4_000], autojunk=False).ratio() >= 0.45
+
+
+def _has_semantic_markdown_structure(markdown_text: str) -> bool:
+    """Return whether a section carries exporter display structure absent from plain JSON.
+
+    Some exporter versions keep a lossy plain-text fallback in JSON while the
+    paired Markdown contains the authoritative heading/list/code structure.
+    This signal is only used after role and timestamp identity have matched.
+    """
+    if re.search(r"(?m)^\s*(?:#{1,6}\s+|```|~~~|>|[-+*]\s+|\d+[.)]\s+)", markdown_text):
+        return True
+    if re.search(r"(?m)^\s*\|.*\|\s*$", markdown_text) and re.search(
+        r"(?m)^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$",
+        markdown_text,
+    ):
+        return True
+    return bool(re.search(r"(?:!\[[^\]]*\]|\[[^\]]+\]\([^\s)]+\)|\*\*[^*]+\*\*|__[^_]+__)", markdown_text))
 
 
 def _paired_comparison_texts(message: ExporterJsonMessage, markdown_text: str) -> tuple[str, str]:

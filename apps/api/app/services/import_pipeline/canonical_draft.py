@@ -2,9 +2,9 @@ import hashlib
 import re
 from dataclasses import dataclass, field
 
-PARSER_VERSION = "chat-reader-import-v4"
+PARSER_VERSION = "chat-reader-import-v5"
 NORMALIZER_VERSION = "markdown-normalizer-v2"
-MARKDOWN_PARSER_VERSION = "markdown-parser-v4"
+MARKDOWN_PARSER_VERSION = "markdown-parser-v5"
 BLOCK_BUILDER_VERSION = "render-block-builder-v3"
 SEARCH_DOCUMENT_VERSION = "search-document-v2"
 
@@ -72,6 +72,9 @@ class CanonicalDraftConversation:
     empty_message_count: int
     cleaned_thinking_summary_count: int
     messages: list[CanonicalDraftMessage]
+    alignment_issues: list[dict] = field(default_factory=list)
+    ignored_json_empty_count: int = 0
+    ignored_markdown_empty_count: int = 0
     annotations: list[dict] = field(default_factory=list)
     notebooks: list[dict] = field(default_factory=list)
     source_refs: list[dict] = field(default_factory=list)

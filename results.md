@@ -1,5 +1,13 @@
 # Implementation Results
 
+## JSON + Markdown Import Compatibility v5 - 2026-08-12
+
+Root cause confirmed: the supplied Markdown contains one `Response` section, and the old detector recognized exporter Markdown only when both literal `## Prompt:` and `## Response:` existed. The route therefore returned `422 unsupported_source_profile` before the existing JSON-aware parser/alignment logic could run; file size was not the cause.
+
+The preview route now classifies the upload batch with JSON message context. Import v5 ignores blank messages anywhere, aligns every non-empty message with a bounded monotonic sequence algorithm, preserves original source indexes, accepts unique timestamp-bound rich Markdown from historical lossy-JSON exporters, and blocks unmatched/ambiguous/unrelated plain content with visible diagnostics. Structured 422 errors are localized in the Chinese Web UI.
+
+Verification PASS: the exact Downloads pair previews as one non-empty Assistant message through both API and an isolated production-build file-chooser flow; no commit was performed. Focused compatibility is `48 passed / 2 skipped`, full API is `233 passed / 4 skipped`, Web import contract is `2/2`, default PWA is `56 passed / 34 environment-gated skipped`, and lint/typecheck/production build plus Alembic single-head checks pass. Skips are not counted as PASS. No migration or new dependency was added.
+
 ## Archived Project Deletion - 2026-08-12
 
 Root cause: the product implemented archive/restore but had neither a project-delete API nor a delete action on the Archived page. The closure adds a guarded terminal operation for archived non-default projects. It preserves every conversation/message by moving project relations to the internal Unclassified project before deleting only the Project row; pins, recent placement, offline revision and placement events are reconciled in the same transaction.

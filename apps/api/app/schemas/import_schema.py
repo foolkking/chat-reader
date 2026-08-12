@@ -57,6 +57,14 @@ class MessagePreview(BaseModel):
     alignment_status: str = "json_only"
 
 
+class ImportAlignmentIssue(BaseModel):
+    source: str
+    source_index: int
+    role: str
+    timestamp: str | None = None
+    reason: str
+
+
 class ConversationPreview(BaseModel):
     title: str
     source_type: str
@@ -78,6 +86,9 @@ class ConversationPreview(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     messages: list[MessagePreview] = Field(default_factory=list)
     alignment_summary: dict[str, int] = Field(default_factory=dict)
+    alignment_issues: list[ImportAlignmentIssue] = Field(default_factory=list)
+    ignored_json_empty_count: int = 0
+    ignored_markdown_empty_count: int = 0
 
 
 class ImportPreviewResponse(BaseModel):

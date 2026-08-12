@@ -1,9 +1,11 @@
 import json
 
+import pytest
+
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.canonical_draft import preview_markdown
 from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
-from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
+from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdownPairingError, parse_exporter_markdown
 
 
 def _json(title: str = "Social training", messages: list[dict] | None = None, link: str = "https://chatgpt.com/c/test-id") -> bytes:
@@ -80,7 +82,7 @@ def test_json_markdown_count_mismatch_blocks_commit() -> None:
     assert any("blocks commit" in warning for warning in result.warnings)
 
 
-def test_structurally_paired_markdown_is_the_display_body() -> None:
+def test_same_timestamp_with_unrelated_markdown_blocks_commit() -> None:
     json_result = parse_exporter_json(
         _json(messages=[{"role": "Prompt", "say": "JSON is canonical", "time": "2026-07-01 10:00:00"}])
     )
@@ -94,16 +96,25 @@ Different Markdown validation text
 
     result = align_exporter_sources(json_result, parse_exporter_markdown(markdown))
 
-    assert result.alignment_status == "exact_match"
+    assert result.alignment_status == "conflict_detected"
     assert result.conversation is not None
-    assert result.conversation.messages[0].display_source == "markdown"
-    assert result.conversation.messages[0].display_text == "Different Markdown validation text"
-    assert result.conversation.messages[0].alignment_status == "by_order"
+    assert result.conversation.messages[0].display_source == "json"
+    assert result.conversation.messages[0].alignment_status == "json_only"
+    assert {issue["source"] for issue in result.conversation.alignment_issues} == {"json", "markdown"}
+    assert {issue["reason"] for issue in result.conversation.alignment_issues} == {"content_mismatch"}
 
 
 def test_structurally_paired_markdown_preserves_rendering_constructs() -> None:
     json_result = parse_exporter_json(
-        _json(messages=[{"role": "Response", "say": "JSON body", "time": "2026-07-01 10:00:00"}])
+        _json(
+            messages=[
+                {
+                    "role": "Response",
+                    "say": "Rendered heading rendered list item print rendered",
+                    "time": "2026-07-01 10:00:00",
+                }
+            ]
+        )
     )
     markdown = """# Social training
 
@@ -128,6 +139,200 @@ print("rendered")
     assert "```python" in result.conversation.messages[0].display_text
 
 
+def test_same_timestamp_allows_rich_markdown_when_json_is_a_lossy_fallback() -> None:
+    json_result = parse_exporter_json(
+        _json(
+            messages=[
+                {
+                    "role": "Response",
+                    "say": "JSON fallback body",
+                    "time": "2026-07-01 10:00:00",
+                }
+            ]
+        )
+    )
+    markdown = """# Social training
+
+## Response:
+2026-07-01 10:00:00
+
+### Authoritative Markdown
+
+- structured display body
+"""
+
+    result = align_exporter_sources(json_result, parse_exporter_markdown(markdown))
+
+    assert result.alignment_status == "exact_match"
+    assert result.conversation is not None
+    assert result.conversation.messages[0].alignment_status == "by_order"
+    assert result.conversation.messages[0].display_source == "markdown"
+
+
+def test_empty_json_messages_in_any_position_do_not_shift_alignment() -> None:
+    json_result = parse_exporter_json(
+        _json(
+            messages=[
+                {"role": "Prompt", "say": "", "time": "2026-07-01 09:59:00"},
+                {"role": "Prompt", "say": "Can you help?", "time": "2026-07-01 10:00:00"},
+                {"role": "Response", "say": "   \n", "time": "2026-07-01 10:00:30"},
+                {"role": "Response", "say": "Yes, I can.", "time": "2026-07-01 10:01:00"},
+                {"role": "Prompt", "say": "", "time": "2026-07-01 10:02:00"},
+            ]
+        )
+    )
+
+    result = align_exporter_sources(json_result, parse_exporter_markdown(_markdown(), json_result.messages))
+
+    assert result.alignment_status == "exact_match"
+    assert result.conversation is not None
+    assert [message.source_json_index for message in result.conversation.messages] == [1, 3]
+    assert result.conversation.ignored_json_empty_count == 3
+    assert result.conversation.ignored_markdown_empty_count == 0
+    assert result.conversation.alignment_issues == []
+
+
+def test_nonempty_middle_gap_is_reported_without_shifting_later_match() -> None:
+    json_result = parse_exporter_json(
+        _json(
+            messages=[
+                {"role": "Prompt", "say": "Can you help?", "time": "2026-07-01 10:00:00"},
+                {"role": "Response", "say": "Missing middle", "time": "2026-07-01 10:00:30"},
+                {"role": "Response", "say": "Yes, I can.", "time": "2026-07-01 10:01:00"},
+            ]
+        )
+    )
+
+    result = align_exporter_sources(json_result, parse_exporter_markdown(_markdown(), json_result.messages))
+
+    assert result.alignment_status == "conflict_detected"
+    assert result.conversation is not None
+    assert [message.alignment_status for message in result.conversation.messages] == ["exact", "json_only", "exact"]
+    assert result.conversation.alignment_issues == [
+        {
+            "source": "json",
+            "source_index": 1,
+            "role": "assistant",
+            "timestamp": "2026-07-01 10:00:30",
+            "reason": "unmatched",
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    ("messages", "expected_issue_index"),
+    [
+        (
+            [
+                {"role": "Prompt", "say": "Missing head", "time": "2026-07-01 09:59:00"},
+                {"role": "Prompt", "say": "Can you help?", "time": "2026-07-01 10:00:00"},
+                {"role": "Response", "say": "Yes, I can.", "time": "2026-07-01 10:01:00"},
+            ],
+            0,
+        ),
+        (
+            [
+                {"role": "Prompt", "say": "Can you help?", "time": "2026-07-01 10:00:00"},
+                {"role": "Response", "say": "Yes, I can.", "time": "2026-07-01 10:01:00"},
+                {"role": "Response", "say": "Missing tail", "time": "2026-07-01 10:02:00"},
+            ],
+            2,
+        ),
+    ],
+)
+def test_nonempty_head_or_tail_gap_is_reported_without_losing_matches(
+    messages: list[dict],
+    expected_issue_index: int,
+) -> None:
+    json_result = parse_exporter_json(_json(messages=messages))
+
+    result = align_exporter_sources(json_result, parse_exporter_markdown(_markdown(), json_result.messages))
+
+    assert result.alignment_status == "conflict_detected"
+    assert result.conversation is not None
+    assert sum(message.alignment_status == "exact" for message in result.conversation.messages) == 2
+    assert result.conversation.alignment_issues == [
+        {
+            "source": "json",
+            "source_index": expected_issue_index,
+            "role": "user" if expected_issue_index == 0 else "assistant",
+            "timestamp": messages[expected_issue_index]["time"],
+            "reason": "unmatched",
+        }
+    ]
+
+
+def test_missing_timestamps_use_unique_normalized_content_match() -> None:
+    json_result = parse_exporter_json(
+        _json(messages=[{"role": "Response", "say": "  Same   response  ", "time": None}])
+    )
+    markdown_result = parse_exporter_markdown("""# Social training
+
+## Response
+
+Same response
+""")
+
+    result = align_exporter_sources(json_result, markdown_result)
+
+    assert result.alignment_status == "exact_match"
+    assert result.conversation is not None
+    assert result.conversation.messages[0].alignment_status == "normalized"
+
+
+def test_empty_markdown_section_is_counted_and_does_not_pollute_previous_body() -> None:
+    json_result = parse_exporter_json(
+        _json(messages=[{"role": "Prompt", "say": "Can you help?", "time": "2026-07-01 10:00:00"}])
+    )
+    markdown = """# Social training
+
+## Prompt
+2026-07-01 10:00:00
+
+Can you help?
+
+## Response
+2026-07-01 10:01:00
+"""
+
+    result = align_exporter_sources(json_result, parse_exporter_markdown(markdown, json_result.messages))
+
+    assert result.alignment_status == "exact_match"
+    assert result.conversation is not None
+    assert result.conversation.messages[0].display_text == "Can you help?"
+    assert result.conversation.ignored_markdown_empty_count == 1
+
+
+def test_missing_timestamp_duplicate_content_is_ambiguous() -> None:
+    json_result = parse_exporter_json(
+        _json(
+            messages=[
+                {"role": "Response", "say": "Repeated", "time": None},
+                {"role": "Response", "say": "Repeated", "time": None},
+            ]
+        )
+    )
+    markdown_result = parse_exporter_markdown("""# Fixture
+
+## Response
+
+Repeated
+
+## Response
+
+Repeated
+
+## Response
+
+Repeated
+""")
+
+    with pytest.raises(ExporterMarkdownPairingError, match="multiple equally reliable") as caught:
+        align_exporter_sources(json_result, markdown_result)
+
+    assert caught.value.code == "pairing_ambiguous"
+
+
 def test_timestamp_mismatch_remains_ambiguous() -> None:
     json_result = parse_exporter_json(
         _json(messages=[{"role": "Prompt", "say": "JSON is canonical", "time": "2026-07-01 10:00:00"}])
@@ -144,7 +349,8 @@ Different Markdown validation text
 
     assert result.alignment_status == "conflict_detected"
     assert result.conversation is not None
-    assert result.conversation.messages[0].alignment_status == "ambiguous"
+    assert result.conversation.messages[0].alignment_status == "json_only"
+    assert {issue["reason"] for issue in result.conversation.alignment_issues} == {"unmatched"}
 
 
 def test_trailing_empty_json_messages_do_not_block_structural_pairing() -> None:
@@ -357,7 +563,8 @@ def test_json_context_does_not_use_an_incomplete_timestamp_sequence() -> None:
 
     assert result.alignment_status == "conflict_detected"
     assert result.conversation is not None
-    assert any(message.alignment_status == "ambiguous" for message in result.conversation.messages)
+    assert any(message.alignment_status == "json_only" for message in result.conversation.messages)
+    assert result.conversation.alignment_issues
 
 
 def test_markdown_preview_preserves_lines_and_closes_a_truncated_fence() -> None:

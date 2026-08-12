@@ -1,5 +1,19 @@
 # 后端与 API
 
+## JSON + Markdown pairing v5 (2026-08-12)
+
+`POST /api/imports/preview` reads the multipart batch before final source classification. A compatible exporter JSON supplies the expected non-empty message identities to Markdown detection, so Prompt-only and Response-only exporter Markdown can be paired without making arbitrary Markdown importable by itself.
+
+The pairing contract is:
+
+1. JSON owns metadata, role, timestamp, source index and order.
+2. Empty messages on either side are ignored at any position and counted separately.
+3. Non-empty messages are matched by a bounded monotonic message-level alignment; exact and normalized text are strongest, and unique role/timestamp plus recognizable rich Markdown supports historical lossy-JSON exports.
+4. Missing head/middle/tail messages, competing optimal paths and unrelated plain bodies produce explicit alignment issues and block commit. Source artifacts stay intact.
+5. Valid paired Markdown owns canonical display Markdown; canonical JSON remains the identity/provenance authority.
+
+Parser identities are `chat-reader-import-v5` and `markdown-parser-v5`. Alignment diagnostics include `source`, zero-based `source_index`, `role`, optional `timestamp` and `reason`. Bounded pairing errors remain structured HTTP 422 responses (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, `pairing_ambiguous`, `alignment_failed`).
+
 ## Conversation merge execution (current)
 
 - Merge is an atomic background job that creates an independent target conversation. It copies all active source messages, every `MessageVersion`, every canonical `RenderBlock`, source refs, and non-deleted annotations (including conflict copies) through bounded bulk batches. ID maps preserve `based_on_version_id`, current-version pointers, block indexes, quotes, offsets, and context anchors.

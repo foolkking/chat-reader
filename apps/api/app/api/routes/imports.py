@@ -22,6 +22,7 @@ from app.schemas.import_schema import (
     ImportPreviewFile,
     ImportPreviewResponse,
     ImportCommitOptions,
+    ImportAlignmentIssue,
     ImportWarningsResponse,
     ImportStatusResponse,
     MessagePreview,
@@ -153,6 +154,7 @@ async def preview_import(
     total_bytes = 0
     source_profiles: list[str] = []
     uploaded_files: list[UploadedPreviewFile] = []
+    pending_files: list[tuple[str, bytes]] = []
     conversation_preview: ConversationPreview | None = None
     conversation_previews: list[ConversationPreview] = []
     drafts = []
@@ -183,7 +185,28 @@ async def preview_import(
                     detail=f"File exceeds {settings.max_import_file_size_mb}MB limit.",
                 )
 
-            detection = detect_source_profile(filename, content)
+            pending_files.append((filename, content))
+
+        initial_detections = [
+            (filename, content, detect_source_profile(filename, content))
+            for filename, content in pending_files
+        ]
+        exporter_json = next(
+            ((filename, content) for filename, content, detection in initial_detections if detection.source_profile == SourceProfile.chatgpt_exporter_json),
+            None,
+        )
+        expected_messages = None
+        if exporter_json is not None:
+            try:
+                expected_messages = parse_exporter_json(exporter_json[1]).messages
+            except ExporterJsonParseError:
+                # The canonical parser below returns the structured JSON error.
+                expected_messages = None
+
+        for filename, content, initial_detection in initial_detections:
+            detection = initial_detection
+            if detection.source_profile == SourceProfile.unknown and _extension(filename) in {".md", ".markdown"}:
+                detection = detect_source_profile(filename, content, expected_messages)
             if detection.source_profile == SourceProfile.unknown:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -736,4 +759,7 @@ def _preview_from_draft(conversation: CanonicalDraftConversation) -> Conversatio
             for message in conversation.messages[:PREVIEW_MESSAGE_LIMIT]
         ],
         alignment_summary=summary,
+        alignment_issues=[ImportAlignmentIssue(**issue) for issue in conversation.alignment_issues],
+        ignored_json_empty_count=conversation.ignored_json_empty_count,
+        ignored_markdown_empty_count=conversation.ignored_markdown_empty_count,
     )

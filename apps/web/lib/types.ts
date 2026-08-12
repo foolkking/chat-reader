@@ -322,6 +322,14 @@ export type MessagePreview = {
   warnings: string[];
 };
 
+export type ImportAlignmentIssue = {
+  source: "json" | "markdown";
+  source_index: number;
+  role: string;
+  timestamp?: string | null;
+  reason: "unmatched" | "ambiguous" | "content_mismatch" | string;
+};
+
 export type ConversationPreview = {
   title: string;
   source_type: string;
@@ -341,6 +349,9 @@ export type ConversationPreview = {
   branch_node_count?: number;
   has_branches?: boolean;
   alignment_summary?: Record<string, number>;
+  alignment_issues?: ImportAlignmentIssue[];
+  ignored_json_empty_count?: number;
+  ignored_markdown_empty_count?: number;
   warnings: string[];
   messages: MessagePreview[];
 };

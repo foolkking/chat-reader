@@ -1,5 +1,11 @@
 # Testing Addendum 2026-08-09
 
+## Import compatibility v5 (2026-08-12)
+
+The import regression matrix now covers Prompt-only/Response-only paired Markdown, arbitrary single-role Markdown rejection, blank JSON messages at head/middle/tail, empty Markdown sections, missing non-empty messages at head/middle/tail, normalized matches without timestamps, duplicate ambiguity, timestamp mismatch, lossy JSON plus rich Markdown, old Markdown repair and the existing full-flow contract.
+
+The user-supplied pair is read directly from `CHAT_READER_IMPORT_PAIR_JSON` and `CHAT_READER_IMPORT_PAIR_MARKDOWN`; the tests perform Preview only and never change the source directory or commit the conversation. Current results: exact API pair `1/1 PASS`; isolated production-build file-chooser Preview `1/1 PASS`; focused import/parser/repair `48 passed / 2 fixture-gated skipped`; full API `233 passed / 4 fixture-gated skipped`; Web contract `2/2`; default PWA `56 passed / 34 environment-gated skipped`; Web lint/typecheck/build PASS. Skips are reported separately and are not PASS.
+
 ## Archived project deletion (2026-08-12)
 
 `test_projects_api.py` verifies that active/default projects cannot be deleted, an archived project can be deleted, its conversations remain under Unclassified with a new offline revision, and a repeated delete returns `404`. `archived-project-delete.spec.ts` freezes the single/batch UI, irreversible confirmation copy, retained-conversation wording, API call and cache refresh contract. Current results: focused API `9/9`, Web contract `1/1`, lint/typecheck/build PASS, full API `220 passed / 3 fixture-gated skipped`, Alembic head `20260806_0021`.

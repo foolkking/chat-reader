@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { resolve } from "node:path";
 
 const runImportFlow = process.env.E2E_IMPORT_FLOW === "1";
 
@@ -53,4 +54,22 @@ print("paired markdown")
   await expect(page.getByRole("dialog", { name: /Import data|导入数据/ })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Reader structure" })).toBeVisible();
   await expect(page.locator("code", { hasText: 'print("paired markdown")' })).toBeVisible();
+});
+
+test("previews a real response-only JSON and Markdown pair without dropping content", async ({ page }) => {
+  const jsonPath = process.env.E2E_IMPORT_PAIR_JSON;
+  const markdownPath = process.env.E2E_IMPORT_PAIR_MARKDOWN;
+  test.skip(!jsonPath || !markdownPath, "E2E_IMPORT_PAIR_JSON and E2E_IMPORT_PAIR_MARKDOWN are required");
+
+  await page.goto("/");
+  await page.getByRole("button", { name: /Import data|瀵煎叆鏁版嵁/ }).click();
+  await page.getByTestId("import-file-input").setInputFiles([
+    resolve(jsonPath!),
+    resolve(markdownPath!),
+  ]);
+  await page.getByTestId("preview-import-button").click();
+
+  await expect(page.getByTestId("commit-import-button")).toBeEnabled();
+  await expect(page.getByTestId("import-alignment-issues")).toHaveCount(0);
+  await expect(page.getByTestId("import-message-count")).toHaveText("1");
 });

@@ -1129,11 +1129,34 @@ async function getErrorMessage(response: Response, path: string): Promise<string
       }
       return payload.detail;
     }
+    if (payload.detail && typeof payload.detail === "object") {
+      const detail = payload.detail as { code?: unknown; message?: unknown };
+      if (typeof detail.code === "string") {
+        const localized = localizedImportError(detail.code);
+        if (localized) return localized;
+      }
+      if (typeof detail.message === "string") return detail.message;
+    }
   } catch {
     // The response body is not guaranteed to be JSON.
   }
 
   return `${path} returned ${response.status}`;
+}
+
+function localizedImportError(code: string): string | null {
+  const messages: Record<string, string> = {
+    unsupported_source_profile: "文件不是受支持的对话导出格式。请选择标准化 JSON，并可同时选择对应的 Markdown。",
+    json_required: "导入需要一个标准化 JSON 文件；Markdown 只能作为可选的正文配对文件。",
+    invalid_import_form: "请选择一个 JSON 文件，并且最多选择一个对应的 Markdown 文件。",
+    invalid_exporter_json: "JSON 无法解析为受支持的对话导出，请检查文件是否完整。",
+    pairing_candidate_limit: "Markdown 中可疑的消息边界过多，无法在安全范围内完成配对。",
+    pairing_complexity_limit: "JSON 与 Markdown 的差异过于复杂，无法在安全范围内完成配对。",
+    pairing_timeout: "JSON 与 Markdown 配对超时，请检查是否选择了同一段对话的文件。",
+    pairing_ambiguous: "JSON 与 Markdown 存在多个同等可靠的配对结果，无法确定消息对应关系。",
+    alignment_failed: "无法建立可靠的 JSON 与 Markdown 消息对应关系。",
+  };
+  return messages[code] ?? null;
 }
 
 function readApiError(payload: unknown, statusCode: number): string {
