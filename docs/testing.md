@@ -1,5 +1,40 @@
 # Testing Addendum 2026-08-09
 
+## AI Rich Markdown release candidate (2026-08-12)
+
+The current parser/browser matrix is split by evidence level:
+
+| Suite | Current result |
+| --- | --- |
+| `ai-rich-markdown-parser.spec.ts` + static contract | `4/4 PASS` |
+| Reader/Editor/security/109-formula stress + attachment flow | `8/8 PASS` |
+| Real `.md` chooser/upload/save/inline/Viewer | `1/1 PASS` |
+| Heavy Owner/Share Reader restoration and wheel regression | `8/8 PASS` |
+| Offline KaTeX font inventory + cold start | `1/1 PASS` |
+| Default PWA matrix | `45 passed / 31 conditional skipped`; skips are not PASS |
+
+Release browser command (API and production Web server must already be running):
+
+```powershell
+$env:PLAYWRIGHT_REUSE_EXISTING_SERVER='1'
+$env:E2E_RICH_MARKDOWN='1'
+$env:E2E_RICH_MARKDOWN_ATTACHMENT='1'
+corepack pnpm --filter web exec playwright test `
+  e2e/ai-rich-markdown.spec.ts `
+  e2e/ai-rich-markdown-attachment.spec.ts `
+  e2e/ai-rich-markdown-parser.spec.ts `
+  e2e/ai-rich-markdown-contract.spec.ts `
+  --config=playwright.config.ts
+```
+
+The browser fixture creates a QA-only two-message Conversation through the canonical create API, validates Reader and Source Editor semantics, and deletes the Conversation through the product API. The attachment fixture waits for upload resolution, then requires the first message PATCH to return 2xx before asserting inline and Viewer semantics. This specifically guards the resolved-draft race where CodeMirror had replaced `cr-upload://` but React still held the stale marker.
+
+The compatibility matrix covers all four math delimiters, golden boxed limit, aligned/matrix/cases/Chinese text, invalid LaTeX, 109 formulas in one message, currency, inline/fenced code exclusion, GFM table/task/strike/autolink, cross-block footnotes, unsafe HTML/URL, untrusted KaTeX command, remote image non-fetch, MathML and 360px local overflow. Screenshot evidence is synthetic QA data only.
+
+KaTeX offline readiness requires the active shell record to contain current `KaTeX_Main` and `KaTeX_Math` font URLs. CSS import alone is insufficient evidence. `library-offline.spec.ts` performs a real service-worker cold start after asserting those required assets.
+
+Production deployment and Chrome acceptance must be recorded separately. A local production-equivalent PASS is not a production PASS.
+
 ## Offline/context delivery regression coverage (2026-08-11)
 
 `apps/web/e2e/library-offline.spec.ts` covers active-shell immediate startup, failed update preservation, deterministic Skill asset caching, read-only current-conversation files, cached/missing attachment handling, local CanJSON/Markdown/`.context.zip` export, both Chinese and English Skill SHA-256 values, download-plus-copy clipboard rejection, inert Skill viewing/download and exact 360x800, 390x844 and 768x1024 reflow.

@@ -1,5 +1,35 @@
 # Implementation Results
 
+## AI Rich Markdown Rendering Candidate - 2026-08-12
+
+### Root cause and implementation
+
+- The previous pipeline already had `remark-math` and KaTeX, but CommonMark consumed the backslashes in ChatGPT `\[`/`\]` and `\(`/`\)` before `remark-math`; the parser therefore produced literal brackets/text instead of math nodes. Dollar parsing also interpreted currency ranges too aggressively.
+- `remarkAiMathCompatibility` now recovers ChatGPT delimiters from mdast source positions only in ordinary text, produces `math`/`inlineMath` nodes, excludes code, and demotes currency-like single-dollar nodes. There is no regex source rewrite and no DOM auto-render pass.
+- Reader, Source Editor preview and Markdown attachment inline/Viewer use one shared GFM/Math/footnote/security core. Source is not changed or persisted as generated HTML. No migration, API or export format changed.
+- KaTeX uses local `htmlAndMathml`, `trust=false`, `maxExpand=1000`, `maxSize=20`; malformed math is isolated. Math/table/code own overflow. Unsafe HTML/links stay inert and remote Markdown images are not fetched automatically.
+- Offline shell revisions now explicitly include current same-origin `KaTeX_*` font assets rather than depending on an incidental online font request.
+- The real Markdown attachment flow exposed an upload-completion race: the draft could become `ready` before React received CodeMirror's `cr-asset://` replacement. Completion now seeds the canonical editor document before enabling save; the regression requires the first PATCH to return 2xx.
+
+### Verification before deployment
+
+| Check | Result |
+| --- | --- |
+| Web lint / typecheck / production build | PASS |
+| Rich parser + shared-core static tests | `4/4 PASS` |
+| Reader/Editor/security/109-formula stress/attachment matrix | `8/8 PASS` |
+| Real Markdown attachment upload/save/inline/Viewer | `1/1 PASS` |
+| Heavy Reader Owner/Share regression | `8/8 PASS` |
+| Default PWA matrix | `45 passed / 31 conditional skipped` (`PARTIAL_PASS`; skips not PASS) |
+| Offline KaTeX inventory and cold start | `1/1 PASS` |
+| API suite | `218 passed / 3 skipped` |
+| Alembic | one head `20260806_0021`; no migration |
+| Production deployment / Chrome | PENDING at candidate stage; appended after release |
+
+Golden screenshots: `docs/execution/screenshots/ai-rich-markdown-desktop-1440x900.png` and `ai-rich-markdown-mobile-360x800.png`. They contain only synthetic QA content and supplement DOM/source assertions; they are not the sole evidence.
+
+Current candidate statuses: `AI_RICH_MARKDOWN_CORE=PASS`, four delimiter modes PASS, Math error/security/accessibility/overflow PASS, GFM table/task/strike/autolink PASS, footnotes PASS, code isolation PASS, Reader/Editor/Markdown attachment PASS, Long Reader PASS, 360px reflow PASS, and `OFFLINE_KATEX_ASSETS=PASS` in production-equivalent PWA. Production remains `NOT_PRODUCTION_VERIFIED` until the external image is deployed and synthetic Chrome QA is completed.
+
 ## Offline Startup, Attachments and Context Skill Delivery - 2026-08-11
 
 ### Root causes closed

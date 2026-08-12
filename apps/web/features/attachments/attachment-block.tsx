@@ -192,7 +192,7 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, prese
     <figure className={`attachment-preview attachment-preview--${presentation}`} data-testid="attachment-block" data-attachment-id={attachment.id} data-attachment-mode="preview-panel">
       <AttachmentMeta attachment={attachment} kind={kind} onOpen={onOpen} />
       <div className={`attachment-preview-body ${expanded ? "attachment-preview-body--expanded" : ""}`}>
-        {text === null ? <div className="flex min-h-20 items-center justify-center text-secondary"><Loader2 className="h-4 w-4 animate-spin" /></div> : renderBoundedText(text, kind, attachment.display_name, expanded)}
+        {text === null ? <div className="flex min-h-20 items-center justify-center text-secondary"><Loader2 className="h-4 w-4 animate-spin" /></div> : renderBoundedText(text, kind, attachment.display_name, attachment.id, expanded)}
         {isLong && !expanded ? <div className="attachment-preview-fade" /> : null}
       </div>
       <footer className="attachment-preview-footer">
@@ -286,9 +286,9 @@ function KindIcon({ kind, warning = false }: { kind: AttachmentViewerKind | null
   return <span className="attachment-kind-icon">{icon}</span>;
 }
 
-function renderBoundedText(text: string, kind: AttachmentViewerKind, filename: string, expanded = false): ReactNode {
+function renderBoundedText(text: string, kind: AttachmentViewerKind, filename: string, scopeId: string, expanded = false): ReactNode {
   if (!text) return <p className="text-sm text-secondary">空文件 · 0 B</p>;
-  if (kind === "markdown") return <MarkdownRenderer text={limitLines(text, expanded ? 28 : 14)} isAssistant={false} />;
+  if (kind === "markdown") return <MarkdownRenderer text={limitLines(text, expanded ? 28 : 14)} isAssistant={false} scopeId={`attachment-${scopeId}`} />;
   if (kind === "table") return <DelimitedPreview text={text} delimiter={filename.toLowerCase().endsWith(".tsv") ? "\t" : ","} />;
   const lines = expanded ? 28 : kind === "text" ? 10 : 14;
   return <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm leading-6 text-primary">{limitLines(text, lines)}</pre>;

@@ -304,11 +304,42 @@ function collectLibraryShellAssets(runtimeAssets: string[] = []): string[] {
     const value = element instanceof HTMLScriptElement ? element.src : element.href;
     if (value) urls.add(value);
   });
+  collectBundledKatexAssets().forEach((asset) => urls.add(asset));
   runtimeAssets.forEach((asset) => urls.add(asset));
   return Array.from(urls)
     .map(normalizeShellAsset)
     .filter((value): value is string => Boolean(value))
     .sort();
+}
+
+function collectBundledKatexAssets(): string[] {
+  const assets = new Set<string>();
+  for (const sheet of Array.from(document.styleSheets)) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      // Cross-origin stylesheets are never part of the offline shell contract.
+      continue;
+    }
+    collectKatexAssetsFromRules(rules, assets);
+  }
+  return Array.from(assets).sort();
+}
+
+function collectKatexAssetsFromRules(rules: CSSRuleList, assets: Set<string>): void {
+  for (const rule of Array.from(rules)) {
+    if (rule.type === CSSRule.FONT_FACE_RULE) {
+      const source = (rule as CSSFontFaceRule).style.getPropertyValue("src");
+      for (const match of source.matchAll(/url\(["']?([^"')]+)["']?\)/g)) {
+        const asset = normalizeShellAsset(match[1]);
+        if (asset?.startsWith("/_next/static/media/KaTeX_")) assets.add(asset);
+      }
+      continue;
+    }
+    const nestedRules = "cssRules" in rule ? (rule as CSSGroupingRule).cssRules : null;
+    if (nestedRules) collectKatexAssetsFromRules(nestedRules, assets);
+  }
 }
 
 function normalizeShellAsset(value: string): string | null {

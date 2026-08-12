@@ -1,5 +1,7 @@
 # 文档导航
 
+当前渲染合同：[AI Rich Markdown Renderer](system/AI_RICH_MARKDOWN_CONTRACT.md)，定义 Reader、源码预览和 Markdown 附件共享的 Math/GFM/Footnote、安全、无障碍、溢出与离线资源行为。
+
 ## 2026-08-11 current implementation notes
 
 - [2026-08-11 Final Release Closure](evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md#final-release-closure-2026-08-11): current production lifecycle evidence, release matrix and remaining verification debt.

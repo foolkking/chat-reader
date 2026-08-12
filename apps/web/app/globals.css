@@ -782,3 +782,47 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   overflow-y: hidden;
   padding: 0.5rem 0;
 }
+
+.aui-chat-markdown .katex-display > .katex {
+  min-width: max-content;
+  max-width: none;
+}
+
+.aui-chat-markdown .katex-error[data-math-error="true"] {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-radius: 0.375rem;
+  background: var(--danger-soft);
+  padding: 0.125rem 0.375rem;
+  color: var(--danger);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+.aui-chat-markdown [data-footnotes] {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.875em;
+}
+
+.aui-chat-markdown [data-footnote-ref],
+.aui-chat-markdown [data-footnote-backref] {
+  scroll-margin-top: 7rem;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.aui-chat-markdown [data-footnote-ref]:focus-visible,
+.aui-chat-markdown [data-footnote-backref]:focus-visible {
+  border-radius: 0.25rem;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.aui-chat-markdown [data-markdown-task-list="true"] > li {
+  list-style: none;
+}

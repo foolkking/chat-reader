@@ -70,6 +70,8 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   expect(activeBefore.assets).toContain("/library");
   expect(activeBefore.assets).toContain("/skills/chat-reader-conversation-context-acquisition-skill.v1.md");
   expect(activeBefore.assets).toContain("/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md");
+  expect(activeBefore.assets.some((asset) => asset.startsWith("/_next/static/media/KaTeX_Main-Regular."))).toBe(true);
+  expect(activeBefore.assets.some((asset) => asset.startsWith("/_next/static/media/KaTeX_Math-Italic."))).toBe(true);
 
   const failedUpdate = await page.evaluate(async (record) => {
     const registration = await navigator.serviceWorker.getRegistration("/library");

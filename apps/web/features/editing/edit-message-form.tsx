@@ -7,9 +7,10 @@ import { Compartment } from "@codemirror/state";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { ChevronDown, Save, SaveAll, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { AttachmentRead } from "../../lib/types";
+import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import {
   insertPendingMarkers,
   removePendingMarker,
@@ -43,6 +44,7 @@ export function EditMessageForm({
   onAttachmentCancel,
   onExistingAttachment,
   conversationAttachments = [],
+  showPreview = true,
 }: {
   formId?: string;
   initialText: string;
@@ -63,6 +65,7 @@ export function EditMessageForm({
   onAttachmentCancel?: (preserve: boolean, itemIds: string[]) => Promise<void> | void;
   onExistingAttachment?: (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void;
   conversationAttachments?: AttachmentRead[];
+  showPreview?: boolean;
 }) {
   const { t, resolvedLocale, resolvedTheme } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -96,6 +99,7 @@ export function EditMessageForm({
   } | null>(null);
   const [removedConfirmMode, setRemovedConfirmMode] = useState<"create_version" | "replace_current" | null>(null);
   const [removedActions, setRemovedActions] = useState<Record<string, "keep_in_conversation" | "detach_from_conversation">>({});
+  const previewText = useDeferredValue(text);
   const trimmedText = text.trim();
   const isUnchanged = trimmedText === baselineText.trim();
   const hasAttachmentWork = Object.values(attachmentDrafts).some((draft) => draft.status !== "removed");
@@ -118,7 +122,14 @@ export function EditMessageForm({
       onComplete: (token, item) => {
         const view = editorViewRef.current;
         const canonicalId = item.attachmentId ?? item.id;
-        if (!view || !replacePendingMarker(view, token, canonicalId)) completedUploadItemsRef.current.set(token, canonicalId);
+        if (!view || !replacePendingMarker(view, token, canonicalId)) {
+          completedUploadItemsRef.current.set(token, canonicalId);
+        } else {
+          // CodeMirror dispatch and React state may be batched separately.
+          // Seed the canonical document before enabling save so a resolved
+          // upload cannot submit its stale cr-upload:// marker.
+          setText(view.state.doc.toString());
+        }
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
       onError: (token, message) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current),
@@ -135,6 +146,7 @@ export function EditMessageForm({
         const itemId = completedUploadItemsRef.current.get(draft.token);
         if (itemId && replacePendingMarker(view, draft.token, itemId)) completedUploadItemsRef.current.delete(draft.token);
       }
+      setText(view.state.doc.toString());
     }
   };
   const performExistingAttachmentInsert = (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number) => {
@@ -363,8 +375,9 @@ export function EditMessageForm({
           insertFilesAtCurrentPosition(view, files);
         }}
       />
-      <div ref={editorHostRef} className="min-h-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror">
-        <CodeMirror
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div ref={editorHostRef} className={`min-h-0 min-w-0 flex-1 overflow-hidden ${showPreview ? "border-r border-ui" : ""}`} data-testid="source-editor-codemirror">
+          <CodeMirror
           value={editorDocument}
           height="100%"
           extensions={extensions}
@@ -387,7 +400,11 @@ export function EditMessageForm({
           onUpdate={handleEditorUpdate}
           onChange={setText}
           className="h-full text-sm [&_.cm-editor]:h-full"
-        />
+          />
+        </div>
+        {showPreview ? <aside className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-page p-4" data-testid="source-editor-rich-preview" aria-label={zh ? "Markdown 实时预览" : "Live Markdown preview"}>
+          <MarkdownRenderer text={previewText} isAssistant={false} scopeId={`editor-${messageId ?? formId}`} />
+        </aside> : null}
       </div>
       <footer className="shrink-0 space-y-2 border-t border-ui bg-raised p-3">
         {pendingCodeDrop ? <div className="rounded-lg border border-[var(--mark-border)] bg-[var(--mark-bg)] p-3 text-xs text-primary" role="status" data-testid="source-editor-code-drop-choice">

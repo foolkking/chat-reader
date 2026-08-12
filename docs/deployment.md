@@ -1,5 +1,11 @@
 # 生产部署
 
+## AI Rich Markdown rollout (2026-08-12)
+
+This release changes only the Web Markdown parser/render pipeline, Source Editor preview, deterministic offline KaTeX font inventory and an attachment-draft state handoff. It adds no dependency, API contract, export field, database model or migration. Build the Web/API images in GitHub Actions or another external Linux builder; King must only verify/load the artifact, run the existing migration preflight and recreate services with `--no-build`.
+
+After deployment, use a synthetic QA Conversation to verify `\(...\)`, `$...$`, `\[...\]` and `$$...$$`, currency/code exclusion, GFM/footnotes, Source Editor canonical-source preservation and Markdown attachment inline/Viewer rendering. Verify `/library` prepares an active shell containing same-origin `KaTeX_*` fonts. Do not use real conversation content for screenshots. Remove obsolete image tags only after API/Web/PostgreSQL health, worker state, migration head and Chrome acceptance pass, while retaining the previous release as rollback.
+
 ## Offline shell and static Skill rollout (2026-08-11)
 
 The release adds only static Skill files and browser-local offline export code; no migration is required. The service-worker allowlist must include `/skills/` so both Skill files participate in the deterministic shell revision. Build the Web image on the external Linux/GitHub Actions builder. On King, verify the artifact checksum, back up PostgreSQL and business volumes, run migration preflight, and recreate with `up -d --no-build`. Do not build Next on King, overwrite `.env.production`, remove volumes, run `down -v`, or start Scanner.

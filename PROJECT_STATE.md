@@ -1,5 +1,16 @@
 # Project State
 
+## 2026-08-12 AI Rich Markdown Rendering Candidate
+
+- Message Markdown now uses one parser-level semantic core for Reader, Source Editor live preview and Markdown attachment inline/Viewer rendering. GFM, footnotes, code isolation and all four math delimiters (`\(...\)`, `$...$`, `\[...\]`, `$$...$$`) share the same plugin/security configuration.
+- Root cause of the production formula defect was confirmed: CommonMark consumed the backslashes in `\[`/`\]` as punctuation escapes before `remark-math`, which only recognized dollar delimiters. The new mdast compatibility transform recovers ChatGPT bracket/parenthesis delimiters from node source positions without rewriting canonical Markdown or scanning rendered DOM.
+- KaTeX remains locally bundled and renders `htmlAndMathml` with `trust=false`, `maxExpand=1000`, `maxSize=20` and local formula-error isolation. Math/table/code own horizontal overflow; Reader width is unchanged. Raw HTML remains inert, unsafe link schemes are rejected, and remote Markdown images are not automatically fetched.
+- Source Editor has a deferred shared preview while CodeMirror retains its independent external document baseline. Cross-block current-version footnotes are projected into one semantic parse without mutating stored text. Footnote IDs are scoped per MessageVersion or attachment.
+- Attachment draft completion now seeds React state from CodeMirror's canonical document before enabling save. This closes the upload-completion race where the first save could submit a stale `cr-upload://` marker after the UI already showed the draft as ready.
+- Offline shell preparation adds same-origin `KaTeX_*` font URLs from current `@font-face` rules to its deterministic revision and required cache. No CDN or historical Performance scan is used.
+- Local release-candidate verification: Web lint/typecheck/build PASS; Rich Markdown parser/Reader/Editor/security/stress/attachment suite `8/8`; Markdown attachment real upload/save/Viewer `1/1`; heavy Reader Owner/Share regression `8/8`; default PWA `45 passed / 31 conditional skipped`; offline KaTeX inventory/cold start `1/1`; API `218 passed / 3 skipped`; Alembic single head `20260806_0021`. Conditional skips are not PASS. Deployment and production Chrome acceptance are recorded only after the external image release.
+- Durable contract: [AI Rich Markdown Renderer Contract](docs/system/AI_RICH_MARKDOWN_CONTRACT.md). No dependency, API, export format, persisted model or migration was added.
+
 ## 2026-08-11 Offline Startup, Read-only Attachments And Context Skill Delivery
 
 - Offline shell startup no longer blocks Library, Reader, or package downloads. An existing active shell is marked `ready` immediately; viewer runtime warming and shell reconciliation run as a background update. A failed update preserves the previous ready shell. The shell inventory is deterministic and includes the Chinese and English Context Acquisition Skill assets without scanning historical Performance entries.

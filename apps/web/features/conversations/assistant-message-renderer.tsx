@@ -52,7 +52,7 @@ export function AssistantMessageRenderer({
 
   if (blocks.length === 0) {
     return currentText.trim() ? (
-      <MarkdownRenderer text={currentText} isAssistant={isAssistant} taskItems={applyTaskOverrides(allTasks, taskCheckedOverrides)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+      <MarkdownRenderer text={currentText} isAssistant={isAssistant} taskItems={applyTaskOverrides(allTasks, taskCheckedOverrides)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={message.current_version?.id ?? message.id} />
     ) : (
       <p className="text-sm text-secondary">{t("noDisplayableContent")}</p>
     );
@@ -60,8 +60,11 @@ export function AssistantMessageRenderer({
 
   const leadingThinking = isAssistant ? findLeadingThinkingBlocks(blocks) : null;
   const visibleBlocks = leadingThinking ? blocks.slice(leadingThinking.endIndex + 1) : blocks;
+  // Keep this projection outside the hook list. A message can transition from
+  // an empty block window to hydrated blocks without changing hook order.
+  const semanticBlocks = resolveCrossBlockFootnotes(visibleBlocks);
   const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
-  const displayUnits = groupAttachmentBlocks(visibleBlocks);
+  const displayUnits = groupAttachmentBlocks(semanticBlocks);
 
   return (
     <div className="reader-block-flow break-words">
@@ -69,11 +72,11 @@ export function AssistantMessageRenderer({
         <div className="reader-block-slot"><ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} /></div>
       ) : null}
       {shouldVirtualize ? (
-        <div className="reader-block-slot" style={leadingThinking ? slotGapStyle(blockGapVariable(null, visibleBlocks[0])) : undefined}>
+        <div className="reader-block-slot" style={leadingThinking ? slotGapStyle(blockGapVariable(null, semanticBlocks[0])) : undefined}>
           {scrollRootMode === "window" ? (
-            <WindowVirtualizedBlocks messageId={message.id} blocks={visibleBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+            <WindowVirtualizedBlocks messageId={message.id} blocks={semanticBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
           ) : (
-            <ElementVirtualizedBlocks messageId={message.id} blocks={visibleBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+            <ElementVirtualizedBlocks messageId={message.id} blocks={semanticBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
           )}
         </div>
       ) : displayUnits.map((unit, index) => {
@@ -115,6 +118,45 @@ type DisplayUnit = {
   kind: "block" | "attachment-group";
   blocks: RenderBlockRead[];
 };
+
+function resolveCrossBlockFootnotes(blocks: RenderBlockRead[]): RenderBlockRead[] {
+  const definitions = new Map<string, { blockIndex: number; markdown: string }>();
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index];
+    if (block.block_type !== "paragraph") continue;
+    const markdown = readBlockText(block);
+    const match = markdown.match(/^\s*\[\^([^\]]+)\]:\s+[\s\S]+$/);
+    if (match) definitions.set(match[1].toLowerCase(), { blockIndex: index, markdown });
+  }
+  if (!definitions.size) return blocks;
+
+  const additions = new Map<number, string[]>();
+  const consumedDefinitions = new Set<number>();
+  for (const [label, definition] of definitions) {
+    const referencePattern = new RegExp(`\\[\\^${escapeRegExp(label)}\\]`, "i");
+    const referenceIndex = blocks.findIndex((block, index) => index !== definition.blockIndex
+      && block.block_type === "paragraph"
+      && referencePattern.test(readBlockText(block)));
+    if (referenceIndex < 0) continue;
+    additions.set(referenceIndex, [...(additions.get(referenceIndex) ?? []), definition.markdown]);
+    consumedDefinitions.add(definition.blockIndex);
+  }
+  if (!additions.size) return blocks;
+  return blocks.map((block, index) => {
+    if (consumedDefinitions.has(index)) {
+      return { ...block, plain_text: "", data: { ...block.data, text: "" } };
+    }
+    const appended = additions.get(index);
+    if (!appended?.length) return block;
+    const text = readBlockText(block);
+    const markdown = `${text}\n\n${appended.join("\n\n")}`;
+    return { ...block, plain_text: markdown, data: { ...block.data, text: markdown } };
+  });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function groupAttachmentBlocks(blocks: RenderBlockRead[]): DisplayUnit[] {
   const units: DisplayUnit[] = [];

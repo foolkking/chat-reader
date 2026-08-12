@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+2026-08-12 synchronization: AI Rich Markdown canonical source, parser-level math compatibility, shared consumers, security, accessibility, overflow, performance and offline KaTeX assets are current in `PROJECT_STATE.md`, `docs/system/AI_RICH_MARKDOWN_CONTRACT.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md` and `results.md`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/AI_RICH_MARKDOWN_CONTRACT.md` | Current | Canonical Markdown, Math/GFM/footnote/code semantics, safety, accessibility, overflow, performance and PWA asset policy. |
+| `apps/web/features/rich-markdown/rich-markdown-config.ts` | Current | Shared remark/rehype/KaTeX policy and renderer version. |
+| `apps/web/features/rich-markdown/remark-ai-math-compatibility.ts` | Current | Parser-level ChatGPT `\(`/`\[` compatibility and conservative currency demotion. |
+| `apps/web/e2e/ai-rich-markdown*.spec.ts` | Current test | Parser, Reader, Editor, attachment, security, stress and reflow regression. |
+
 2026-08-11 synchronization: Offline shell availability/background update, offline read-only attachment files, local snapshot export and bilingual Context Acquisition Skill delivery are current in `PROJECT_STATE.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/system/USER_FLOWS.md`, `docs/system/ATTACHMENT_RENDERER_CONTRACT.md`, `docs/testing.md` and `docs/deployment.md`.
 
 | Path | Lifecycle | Responsibility |

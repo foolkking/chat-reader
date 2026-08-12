@@ -330,7 +330,7 @@ function TextualViewer({ attachment, mode, onModeChange: _onModeChange, markdown
   }, [attachment.content_url, attempt]);
   if (error) return <ViewerError message="预览加载失败，原文件仍可下载。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
   if (text === null) return <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div>;
-  if (markdown && mode === "rendered") return <div className="h-full overflow-y-auto overscroll-contain bg-page p-5"><div className="mx-auto max-w-[900px]"><MarkdownRenderer text={text} isAssistant={false} /></div></div>;
+  if (markdown && mode === "rendered") return <div className="h-full overflow-y-auto overscroll-contain bg-page p-5"><div className="mx-auto max-w-[900px]"><MarkdownRenderer text={text} isAssistant={false} scopeId={`attachment-${attachment.id}`} /></div></div>;
   if (table && mode === "rendered") return <DelimitedTableViewer text={text} delimiter={attachment.display_name.toLowerCase().endsWith(".tsv") ? "\t" : ","} />;
   return <pre className={`h-full overflow-auto overscroll-contain whitespace-pre-wrap break-words bg-page p-5 text-sm text-primary ${code || !markdown ? "font-mono" : ""}`}>{text}</pre>;
 }

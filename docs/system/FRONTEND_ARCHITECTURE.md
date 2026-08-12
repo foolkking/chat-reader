@@ -93,6 +93,8 @@ RootLayout + providers
 
 ## Reader 与渲染
 
+AI Rich Markdown 使用一个共享 semantic core：Reader、Source Editor live preview 与 Markdown 附件 inline/Viewer 均复用 `rich-markdown-config.ts`。`remarkAiMathCompatibility` 在 mdast 阶段恢复 ChatGPT `\(...\)` / `\[...\]`，`remark-math` 处理 dollar delimiters，GFM/footnote/code/link 安全策略保持一致。canonical Markdown 不改写；KaTeX 使用本地 CSS/font、MathML、`trust=false` 与有界 expansion/size。详细合同见 [AI_RICH_MARKDOWN_CONTRACT.md](AI_RICH_MARKDOWN_CONTRACT.md)。
+
 - 在线/Share 读取 `reader-turn`；Offline 从 Dexie 组装同一 response。完整轮次水合后才加入 DOM。
 - 初始/位置恢复窗口最多 5 轮，用真实相邻正文为短消息目标提供阅读线对齐空间；边缘滑动 settled 后通常裁剪为 3 轮。用户进入首/末已加载轮次或接近 sentinel 时预取，返回轮次先按 `turn_key` 合并，锚点恢复后再按整轮裁剪。边缘事务持有阅读 block lease，继续同方向滚动不会取消事务，反向滚动才取消。
 - 上下边缘都保留已加载正文直到新轮次挂载完成；加载中不伪造大块空白，只有 `has_more=false` 的真实会话末尾保留底部阅读留白。

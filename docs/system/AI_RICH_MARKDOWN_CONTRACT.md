@@ -1,0 +1,95 @@
+# AI Rich Markdown Renderer Contract
+
+Last synchronized: 2026-08-12
+
+## Purpose and canonical source
+
+Chat Reader renders modern AI conversation Markdown through one semantic core. PostgreSQL `MessageVersion` Markdown remains canonical. Rendering never rewrites `\[...\]` to `$$...$$`, never persists KaTeX HTML, and does not add a database migration or export field.
+
+```text
+canonical Markdown source
+-> react-markdown / unified parser
+-> remark-gfm + frozen AI soft breaks + remark-math
+-> AI math compatibility AST transform
+-> sanitized HAST
+-> KaTeX semantic renderer
+-> safe React components
+```
+
+`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v1` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
+
+## Shared consumers
+
+The same semantic and security configuration is used by Reader message Markdown, Source Editor live preview, Markdown attachment inline/Viewer rendering, and existing annotation/import surfaces that consume `MarkdownRenderer`. Presentation wrappers may differ; Math/GFM/footnote/code/link semantics must not diverge.
+
+## Math delimiter profile
+
+| Source delimiter | Semantic node |
+| --- | --- |
+| `\(...\)` | `inlineMath` |
+| `$...$` | `inlineMath` |
+| `\[...\]` | `math` |
+| `$$...$$` | `math` |
+
+CommonMark consumes backslash punctuation escapes before `remark-math` sees them. `remarkAiMathCompatibility` therefore uses mdast source positions to recover bracket/parenthesis delimiters only in normal Markdown text. It never scans rendered DOM and never performs a blind source string replacement. `code` and `inlineCode` nodes are excluded.
+
+Single-dollar parsing is deliberately conservative. Mathematical signals remain math, while pure numeric/currency-like spans such as `$20$`, `$20 and $10$`, and ordinary `USD $20` text remain literal. Use `\(20\)` for an unambiguous numeric formula.
+
+Macros are scoped to one KaTeX render. No macro state is shared across messages or versions. `mhchem`, MathJax fallback and AsciiMath are not enabled.
+
+## KaTeX, errors and accessibility
+
+KaTeX is locally bundled and configured as follows:
+
+```text
+output = htmlAndMathml
+trust = false
+throwOnError = false
+strict = warn
+maxExpand = 1000
+maxSize = 20
+```
+
+MathML remains present for assistive technology. A malformed formula becomes a local escaped `data-math-error` fallback with status text; other Markdown continues rendering. Arbitrary trusted commands and external resource loading are disabled. Formula failures must not blank a Message, Reader or Viewer.
+
+Display formula containers own `overflow-x: auto`. The Reader page width is unchanged. Tables and code blocks likewise own their two-dimensional overflow.
+
+## GFM, footnotes and code
+
+The supported profile includes CommonMark headings/lists/quotes/code plus GFM tables, task-list presentation, strikethrough and autolinks. Markdown task-list checkboxes remain presentation unless the existing owner task-binding contract supplies stable business task keys.
+
+Footnote reference/backlink IDs are namespaced with the rendering scope (normally MessageVersion or attachment identity), preventing repeated `[^1]` labels from colliding. Canonical blocks may split a reference and standalone definition; Reader projects current-version blocks back into one semantic parse without changing stored text.
+
+Inline and fenced code are parsed before the AI math transform. Math delimiters inside code stay code. Existing Shiki/plain-code fallback remains authoritative. Mermaid behavior is unchanged; no new diagram runtime is introduced.
+
+## HTML, links and images
+
+- Raw user HTML is inert: `skipHtml` and the sanitizer remain enabled.
+- Links allow existing safe anchors/paths and approved `http`, `https`, and `mailto` schemes. External links use `noopener noreferrer`.
+- `javascript:`, `vbscript:` and unsafe `data:` targets are not executable links.
+- Remote Markdown images are not auto-loaded. The renderer shows an inert placeholder and explicit safe link where allowed.
+- Attachment-backed images continue through the Attachment Renderer contract; this phase does not change attachment identity or Viewer architecture.
+
+## Performance and offline assets
+
+Rich Markdown is parsed per mounted message or attachment. There is no whole-Reader DOM scan, KaTeX auto-render pass or post-mount rewrite. `useDeferredValue` keeps Source Editor preview work behind typing, while CodeMirror's external baseline remains independent from preview rendering.
+
+KaTeX CSS comes from the local package. Offline shell preparation deterministically includes current styles/scripts and same-origin `KaTeX_*` font files referenced by current `@font-face` rules. It does not scan arbitrary historical Performance resources. An offline-ready shell therefore includes math CSS and fonts without a CDN.
+
+Search and exports continue using canonical Markdown/searchable text. KaTeX spans and MathML never enter search indexes, Markdown/CanJSON exports or `.cr` canonical records.
+
+## Supported and deferred syntax
+
+Supported now: four math delimiters, common KaTeX aligned/matrix/cases environments, GFM tables/tasks/strike/autolinks, footnotes, fenced/inline code, headings, blockquotes and the frozen existing single-newline visual-break policy.
+
+Deferred by design: MathJax fallback, AsciiMath, `mhchem`, arbitrary raw HTML, new callout syntax and new Mermaid behavior. Unsupported KaTeX commands use the bounded local fallback.
+
+## Regression evidence
+
+- `ai-rich-markdown-parser.spec.ts`: parser delimiter, code, currency and canonical-source invariants.
+- `ai-rich-markdown.spec.ts`: real Reader/Editor DOM, golden formula, 109-formula stress, security, MathML and 360px overflow.
+- `ai-rich-markdown-attachment.spec.ts`: real `.md` upload, occurrence save, inline preview and unified Viewer.
+- `library-offline.spec.ts`: deterministic KaTeX font inventory and offline cold start.
+- `reader-restoration.spec.ts`: heavy Reader windowing, scroll, navigation and Share regression.
+
+API success alone is not Rich Markdown user-flow PASS. Production-equivalent browser results and the latest production Chrome result are higher-level evidence.

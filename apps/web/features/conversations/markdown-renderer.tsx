@@ -6,17 +6,18 @@ import {
   type CodeHeaderProps,
   type SyntaxHighlighterProps,
 } from "@assistant-ui/react-markdown";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type ReactNode } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
-import rehypeKatex from "rehype-katex";
-import rehypeSanitize from "rehype-sanitize";
-import remarkBreaks from "remark-breaks";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 import type { BundledLanguage, ThemedToken } from "shiki";
+import {
+  RICH_MARKDOWN_RENDERER_VERSION,
+  richMarkdownRehypeOptions,
+  richMarkdownRemarkPlugins,
+  scopedRichMarkdownRehypePlugins,
+} from "../rich-markdown/rich-markdown-config";
 
 export type MarkdownTaskItem = {
   taskKey: string;
@@ -109,8 +110,8 @@ const markdownComponents: Components & {
   CodeHeader?: React.ComponentType<CodeHeaderProps>;
   SyntaxHighlighter?: React.ComponentType<SyntaxHighlighterProps>;
 } = {
-  a({ href, children }) {
-    return <SafeMarkdownLink href={href}>{children}</SafeMarkdownLink>;
+  a({ href, children, node: _node, ...props }) {
+    return <SafeMarkdownLink href={href} {...props}>{children}</SafeMarkdownLink>;
   },
   blockquote({ node, children }) {
     const rawText = collectNodeText(node);
@@ -134,17 +135,18 @@ const markdownComponents: Components & {
   code({ children }) {
     return <code className="rounded-md border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1.5 py-0.5 font-mono text-[0.9em] text-[var(--inline-code-text)]">{children}</code>;
   },
-  h1({ children }) {
-    return <h1 className="reader-heading reader-heading-1 border-b border-ui pb-2 font-semibold text-primary">{children}</h1>;
+  h1({ children, id, className }) {
+    return <h1 id={id} className={`reader-heading reader-heading-1 border-b border-ui pb-2 font-semibold text-primary ${className ?? ""}`}>{children}</h1>;
   },
-  h2({ children }) {
-    return <h2 className="reader-heading reader-heading-2 font-semibold text-primary">{children}</h2>;
+  h2({ children, id, className }) {
+    if (className?.includes("sr-only")) return <h2 id={id} className={className}>{children}</h2>;
+    return <h2 id={id} className={`reader-heading reader-heading-2 font-semibold text-primary ${className ?? ""}`}>{children}</h2>;
   },
-  h3({ children }) {
-    return <h3 className="reader-heading reader-heading-3 font-semibold text-primary">{children}</h3>;
+  h3({ children, id, className }) {
+    return <h3 id={id} className={`reader-heading reader-heading-3 font-semibold text-primary ${className ?? ""}`}>{children}</h3>;
   },
-  h4({ children }) {
-    return <h4 className="reader-heading reader-heading-4 font-semibold text-primary">{children}</h4>;
+  h4({ children, id, className }) {
+    return <h4 id={id} className={`reader-heading reader-heading-4 font-semibold text-primary ${className ?? ""}`}>{children}</h4>;
   },
   hr() {
     return <hr className="border-ui" />;
@@ -176,8 +178,9 @@ const markdownComponents: Components & {
       />
     );
   },
-  li({ children, className }) {
-    return <li className={`pl-[0.375em] marker:text-secondary ${className ?? ""}`}>{children}</li>;
+  li({ children, className, node }) {
+    const task = className?.includes("task-list-item") || hastContainsCheckbox(node);
+    return <li className={`pl-[0.375em] marker:text-secondary ${task ? "list-none" : ""} ${className ?? ""}`}>{children}</li>;
   },
   ol({ children, start }) {
     return <ol start={start} className="list-decimal pl-[1.625em]">{children}</ol>;
@@ -207,8 +210,9 @@ const markdownComponents: Components & {
   thead({ children }) {
     return <thead className="border-b border-ui">{children}</thead>;
   },
-  ul({ children }) {
-    return <ul className="list-disc pl-[1.625em]">{children}</ul>;
+  ul({ children, className, node }) {
+    const task = className?.includes("contains-task-list") || hastContainsCheckbox(node);
+    return <ul className={`${task ? "list-none pl-0" : "list-disc pl-[1.625em]"} ${className ?? ""}`} data-markdown-task-list={task || undefined}>{children}</ul>;
   },
 };
 
@@ -231,6 +235,7 @@ export function MarkdownRenderer({
   taskItems = [],
   pendingTaskKeys,
   onTaskToggle,
+  scopeId,
 }: {
   text: string;
   className?: string;
@@ -238,11 +243,14 @@ export function MarkdownRenderer({
   taskItems?: MarkdownTaskItem[];
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
+  scopeId?: string;
 }) {
+  const generatedScopeId = useId();
+  const resolvedScopeId = scopeId ?? generatedScopeId;
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
   const tasksByPart = useMemo(() => assignTasksToParts(parts, taskItems), [parts, taskItems]);
   return (
-    <div className={`aui-chat-markdown max-w-full break-words text-primary ${className}`}>
+    <div className={`aui-chat-markdown max-w-full break-words text-primary ${className}`} data-rich-markdown-version={RICH_MARKDOWN_RENDERER_VERSION}>
       {parts.map((part, index) => (
         <CanonicalPartRenderer
           key={`${part.type}-${index}`}
@@ -250,6 +258,7 @@ export function MarkdownRenderer({
           taskItems={tasksByPart[index] ?? []}
           pendingTaskKeys={pendingTaskKeys}
           onTaskToggle={onTaskToggle}
+          scopeId={`${resolvedScopeId}-part-${index}`}
         />
       ))}
     </div>
@@ -262,8 +271,9 @@ export function InlineHeadingMarkdown({ text }: { text: string }) {
     <ReactMarkdown
       allowedElements={["a", "strong", "em", "del", "code", "p"]}
       components={inlineMarkdownComponents}
-      rehypePlugins={[rehypeSanitize]}
-      remarkPlugins={[remarkGfm]}
+      rehypePlugins={scopedRichMarkdownRehypePlugins("inline-heading")}
+      remarkPlugins={richMarkdownRemarkPlugins()}
+      remarkRehypeOptions={richMarkdownRehypeOptions("inline-heading")}
       skipHtml
       unwrapDisallowed
     >
@@ -310,13 +320,17 @@ export function AssistantMarkdownPart({
   taskItems = [],
   pendingTaskKeys,
   onTaskToggle,
+  scopeId,
 }: {
   text: string;
   className?: string;
   taskItems?: MarkdownTaskItem[];
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
+  scopeId?: string;
 }) {
+  const generatedScopeId = useId();
+  const resolvedScopeId = scopeId ?? generatedScopeId;
   if (!text.trim()) {
     return null;
   }
@@ -327,8 +341,9 @@ export function AssistantMarkdownPart({
       <div className={`reader-prose ${className}`}>
         <ReactMarkdown
           components={interactiveComponents as Components}
-          remarkPlugins={[remarkGfm, remarkBreaks, remarkMath, ...(taskPlugin ? [taskPlugin] : [])]}
-          rehypePlugins={[rehypeSanitize, rehypeKatex]}
+          remarkPlugins={richMarkdownRemarkPlugins(taskPlugin ? [taskPlugin] : [])}
+          rehypePlugins={scopedRichMarkdownRehypePlugins(resolvedScopeId)}
+          remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
           skipHtml
         >
           {text}
@@ -340,8 +355,9 @@ export function AssistantMarkdownPart({
     <TextMessagePartProvider text={text}>
       <MarkdownTextPrimitive
         className={`reader-prose ${className}`}
-        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath, ...(taskPlugin ? [taskPlugin] : [])]}
-        rehypePlugins={[rehypeSanitize, rehypeKatex]}
+        remarkPlugins={richMarkdownRemarkPlugins(taskPlugin ? [taskPlugin] : [])}
+        rehypePlugins={scopedRichMarkdownRehypePlugins(resolvedScopeId)}
+        remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
         components={interactiveComponents}
         componentsByLanguage={{ mermaid: { SyntaxHighlighter: MermaidDiagram, CodeHeader: MermaidCodeHeader } }}
         skipHtml
@@ -386,17 +402,19 @@ function CanonicalPartRenderer({
   taskItems,
   pendingTaskKeys,
   onTaskToggle,
+  scopeId,
 }: {
   part: CanonicalMessagePart;
   taskItems: MarkdownTaskItem[];
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
+  scopeId: string;
 }) {
   if (part.type === "reasoning") {
     return <ThinkingDisclosure label={part.label} text={part.text} />;
   }
   if (part.type === "text") {
-    return <AssistantMarkdownPart text={part.text} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />;
+    return <AssistantMarkdownPart text={part.text} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={scopeId} />;
   }
   if (part.type === "source") {
     return <CitationPart part={part} />;
@@ -488,7 +506,7 @@ function createTaskAwareComponents(
       const pending = Boolean(resolvedTaskKey && pendingTaskKeys?.has(resolvedTaskKey));
       return (
         <li
-          className={`pl-[0.375em] marker:text-secondary ${task ? "task-list-interactive" : ""} ${pending ? "opacity-60" : ""} ${className ?? ""}`}
+          className={`pl-[0.375em] marker:text-secondary ${task ? "task-list-interactive list-none" : ""} ${pending ? "opacity-60" : ""} ${className ?? ""}`}
           data-task-key={resolvedTaskKey ?? undefined}
           aria-busy={pending || undefined}
         >
@@ -580,7 +598,7 @@ function EmptyCodeHeader(_: CodeHeaderProps) {
   return null;
 }
 
-function SafeMarkdownLink({ href, children }: { href?: string; children: ReactNode }) {
+function SafeMarkdownLink({ href, children, ...props }: { href?: string; children: ReactNode } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "children">) {
   const safeHref = typeof href === "string" && isSafeHref(href) ? href : undefined;
   if (!safeHref) {
     return <span className="text-secondary">{children}</span>;
@@ -589,8 +607,9 @@ function SafeMarkdownLink({ href, children }: { href?: string; children: ReactNo
   return (
     <a
       href={safeHref}
+      {...props}
       target={local ? undefined : "_blank"}
-      rel={local ? undefined : "noreferrer"}
+      rel={local ? undefined : "noopener noreferrer"}
       className="font-medium text-[var(--link)] underline decoration-[var(--link-decoration)] underline-offset-2 hover:text-[var(--link-hover)]"
     >
       {children}
@@ -991,6 +1010,13 @@ function collectNodeText(node: unknown): string {
     return "";
   }
   return children.map((child) => collectNodeText(child)).join("");
+}
+
+function hastContainsCheckbox(node: unknown): boolean {
+  if (!node || typeof node !== "object") return false;
+  const candidate = node as { tagName?: unknown; properties?: Record<string, unknown>; children?: unknown[] };
+  if (candidate.tagName === "input" && candidate.properties?.type === "checkbox") return true;
+  return candidate.children?.some(hastContainsCheckbox) ?? false;
 }
 
 function normalizeLanguage(language: string): BundledLanguage | null {

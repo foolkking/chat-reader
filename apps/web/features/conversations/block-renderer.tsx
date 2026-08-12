@@ -70,10 +70,10 @@ export function BlockRenderer({
   if (block.block_type === "code") {
     const code = readString(block.data.code) ?? text;
     const language = readString(block.data.language);
-    return <MarkdownRenderer text={`\`\`\`${language ?? ""}\n${code}\n\`\`\``} isAssistant={false} />;
+    return <MarkdownRenderer text={`\`\`\`${language ?? ""}\n${code}\n\`\`\``} isAssistant={false} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
   }
 
-  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />;
+  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
 }
 
 function readNumber(value: unknown): number | null {
