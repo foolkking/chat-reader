@@ -1,5 +1,26 @@
 # Project State
 
+## 2026-08-13 Release A Production Closure (Current)
+
+- Release A is deployed from runtime commit `1d366fb0b3e74f865f1cbc455e3f5d6afeaa5911`, after the approved policy change removed only the cursor-secret length threshold. The deployment guard still rejects a missing, empty, development-default, or known-placeholder `ATTACHMENT_CURSOR_SECRET`.
+- Value-safe production preflight passed without exposing the secret: `configured=true`, `not_default=true`, `not_placeholder=true`. The value was neither printed, copied, committed, nor changed by the release process.
+- GitHub Actions run `31713379831` reran the complete `quality -> build-images -> inspect -> package -> checksum -> artifact` chain from the final source commit. Quality, image inspection and artifact publication passed. Earlier controlled quality failures (`31705576354`, `31706041697`) remain evidence that `build-images` cannot publish a deployable artifact after a failed gate.
+- Official npm-registry provenance recheck passed: Mermaid `11.16.1` and PostCSS `8.5.26` match their exact lockfile `dist.integrity` values and official tarballs. No registry credential was recorded.
+- The externally built archive SHA-256 is `52b809f4b484db3a180c06f46587130b79d6c3f6a999f1f8651eb12411910b59`. Running API/worker/migrate image digest: `sha256:650d9c9fdcd1f686c7adb1c34f27f37c5cb961206202cc2a0b60519fe5aa3a6f`; Web image digest: `sha256:6a273fc0bed72217b6307be2c3a8fd55ee2839a9b8efaebf11f85bf35d8579e1`.
+- King verified the archive checksum, created and validated backup `/opt/chat-reader/backups/release-a-closure-20260813T151932Z-1d366fb` (PostgreSQL custom dump plus import/export/offline/asset archives), ran `alembic upgrade head`, then recreated only migrate/API/worker/Web with explicit production compose/env and `--no-build`. No volume was deleted, no secret was shown or overwritten, no local Next build ran, and Scanner remains disabled.
+- Production health is PASS: API, Web and PostgreSQL are healthy; worker runs; public `/api/health` is `ok`; Alembic current/head is the single `20260806_0021`; capabilities report `scanner_provider=disabled` and `scanner_enabled=false`.
+- Actual production headers are PASS: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, bounded `Permissions-Policy`, and the documented CSP Report-Only policy. `X-Powered-By` is absent. The external gateway still identifies itself as `nginx/1.23.1`; gateway banner/TLS/access control remain external responsibilities.
+- Production Chrome smoke passed for Library/PWA availability, Reader Rich Markdown/KaTeX (MathML present, no math error or page overflow), PDF Viewer (canvas rendered, one accessible close, Esc restored the opener), and the Share owner drawer opening. No CSP Report-Only violation was captured in Library, Reader/KaTeX, or PDF Viewer. Mermaid has a strict-mode CI regression but no safe current production fixture, so its browser renderer remains `NOT_PRODUCTION_VERIFIED`.
+- A separate real finding is deferred by user direction: closing the desktop Share utility drawer with Esc leaves focus on `body`. Root cause is that `ReaderUtilityDrawer` stores/restores a transient active element rather than the toolbar trigger. This is a documented next-round P2 accessibility fix and is outside Release A's security/provenance scope.
+- The verified transfer archive was removed only after replacement health checks. Current/rollback images and the validated backup remain; no user data, volume, database, `.env.production`, or unrelated image was removed. King root free space is approximately 16 GiB.
+
+```text
+RELEASE_A = PASS
+NEXT_SUPPORTED_LTS_BASELINE = MIGRATION_REQUIRED
+PDFJS_SUPPORTED_LINE_MIGRATION_REQUIRED = YES
+CSP_ENFORCING = NOT_IMPLEMENTED
+```
+
 ## 2026-08-13 Release A Safety Baseline
 
 - Release artifacts are now gated by locked install, Web lint/typecheck/production build, API full suite, Alembic current/single-head validation, an official npm-registry security audit, focused online browser checks and the default PWA matrix. `build-images` has a hard dependency on successful quality; failed quality may upload non-deployable evidence but cannot publish the image archive.

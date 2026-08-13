@@ -198,3 +198,21 @@ Actual browser zoom and the Offline negative matrix (runtime chunk miss, origina
 - `release-mutation-lifecycle.spec.ts` reads the real CodeMirror selection through the host's `data-cursor-offset`. DOM `Range` is not valid evidence for the whole source because CodeMirror virtualizes lines. The test moves to the bottom of a long source, types one character, deletes it and asserts exact cursor restoration plus no backward scroll correction.
 - Current release results: API `218 passed / 3 skipped`; Alembic one head `20260806_0021`; default PWA/Playwright `39 passed / 27 conditional skipped`; static stabilization contract `6/6` PASS; production-equivalent source cursor/mutation flow `2/2` PASS. Production Chrome repeated the type/delete path at source offset 21860 with an unchanged 41091px scrollTop and unchanged active message.
 - Production Chrome verified the attachment workspace default geometry, visible accent icon and computed `cursor: grab`. The bridge does not expose a physical pointer API; real drag/persistence/reset remains covered by the Playwright `reader-layout` mouse test and must not be reported as a production-bridge pointer PASS.
+
+## Release A Production Closure 2026-08-13
+
+| Evidence | Result |
+| --- | --- |
+| Final GitHub Actions quality and image gate | PASS, run `31713379831` from `1d366fb` |
+| Quality-failure artifact block | PASS, retained controlled-failure runs `31705576354` and `31706041697` did not publish deployable images |
+| Official registry provenance | PASS, exact Mermaid `11.16.1` and PostCSS `8.5.26` lockfile integrities match npm registry metadata |
+| Production secret guard | PASS, tests and value-safe production preflight; no secret value observed |
+| Alembic percent-URL handling | PASS, focused encoded URL tests and production current/head `20260806_0021` |
+| Production HTTP headers | PASS, `nosniff`, referrer, permissions, CSP Report-Only; no `X-Powered-By` |
+| Production Library/PWA availability | PASS, Library reports a ready offline shell and no page overflow |
+| Production Rich Markdown/KaTeX | PASS, KaTeX/MathML present, no math error or page overflow |
+| Production PDF Viewer | PASS, canvas rendered; one accessible close; Esc returned focus to `打开 sample.pdf` |
+| CSP Report-Only browser smoke | PASS, no CSP violation in Library, Reader/KaTeX or PDF Viewer |
+| Production Mermaid renderer | NOT_PRODUCTION_VERIFIED, no safe Mermaid QA fixture; strict-mode CI regression remains PASS |
+
+The desktop Share utility drawer opened successfully, but Esc restoration landed on `body` rather than the Share trigger. This is an observed P2 accessibility defect, deferred by user direction to the next round. It is not counted as a Share-focus PASS and does not alter the Release A security/provenance gate.

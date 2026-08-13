@@ -619,3 +619,35 @@ NEXT_SUPPORTED_LTS_BASELINE = MIGRATION_REQUIRED
 PDFJS_SUPPORTED_LINE_MIGRATION_REQUIRED = YES
 CSP_ENFORCING = NOT_IMPLEMENTED
 ```
+
+## Release A Production Closure - 2026-08-13
+
+Historical `BLOCKED` evidence above is retained. The user later approved removing only the production cursor-secret length threshold. The new guard still rejects missing, empty, development-default and known-placeholder values. A value-safe production preflight returned `configured=true`, `not_default=true` and `not_placeholder=true`; the value itself was never displayed, copied, committed or modified.
+
+Final source commit: `1d366fb0b3e74f865f1cbc455e3f5d6afeaa5911`. Final GitHub Actions run: `31713379831`, which reran `quality -> build-images -> inspect -> package -> checksum -> artifact`. Archive SHA-256: `52b809f4b484db3a180c06f46587130b79d6c3f6a999f1f8651eb12411910b59`. API/worker/migrate digest: `sha256:650d9c9fdcd1f686c7adb1c34f27f37c5cb961206202cc2a0b60519fe5aa3a6f`; Web digest: `sha256:6a273fc0bed72217b6307be2c3a8fd55ee2839a9b8efaebf11f85bf35d8579e1`. Official npm registry provenance matched the exact Mermaid `11.16.1` and PostCSS `8.5.26` lockfile integrity records.
+
+King verified the archive checksum, validated backup `/opt/chat-reader/backups/release-a-closure-20260813T151932Z-1d366fb`, ran the explicit production compose/env migration preflight, and recreated API/import-worker/Web with `--no-build`. API/Web/PostgreSQL are healthy, worker runs, Scanner is disabled, and Alembic current/head is `20260806_0021`. The deployed public response contains `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, the documented Permissions Policy and CSP Report-Only policy; `X-Powered-By` is absent.
+
+Read-only production Chrome smoke passed for Library/PWA shell availability, Rich Markdown/KaTeX (MathML present, no error or page overflow), and the PDF Viewer (canvas rendered; exactly one accessible close; Esc restored `打开 sample.pdf`). No CSP Report-Only violation was observed in Library, Reader/KaTeX or PDF Viewer. The owner Share drawer opens, but its Esc close currently restores focus to `body`; user direction defers this confirmed P2 accessibility defect to the next round. Mermaid's strict-mode regression is covered in CI, but no safe current production Mermaid fixture was available, so browser Mermaid rendering remains `NOT_PRODUCTION_VERIFIED`.
+
+After replacement checks, only the 167 MB transfer archive and its release transfer directory were removed. Current and rollback images plus the validated backup remain. No user data, PostgreSQL, business volume, `.env.production`, or unrelated image was deleted; King root free space is about 16 GiB.
+
+| Status | Final result |
+| --- | --- |
+| Production secret provisioning | PASS |
+| Dependency provenance | PASS |
+| Release quality gate | PASS |
+| Artifact SHA-256 / image inspection | PASS |
+| Alembic percent URL / production head | PASS |
+| Production health | PASS |
+| Security headers | PASS |
+| CSP Report-Only | PASS |
+| CSP enforcing | NOT_IMPLEMENTED |
+| Next supported LTS baseline | MIGRATION_REQUIRED |
+| PDF.js supported-line baseline | MIGRATION_REQUIRED |
+| Mermaid production browser fixture | NOT_PRODUCTION_VERIFIED |
+| Share drawer Esc focus restoration | P2 DEFERRED |
+
+```text
+RELEASE_A = PASS
+```

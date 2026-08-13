@@ -260,3 +260,14 @@ Actions run `31706522862` produced the inspected `linux/amd64` candidate for com
 Deployment is intentionally blocked before backup/load/recreation because the production environment does not currently configure `ATTACHMENT_CURSOR_SECRET`. No secret was generated, displayed or written; no image, volume, `.env.production` or production service was changed. The current release remains healthy. Provision the secret manually outside the repository, then rerun the workflow from the current commit and resume at backup/checksum/migration/`--no-build` deployment. The Release A candidate is evidence of a valid build, not evidence that its headers or fail-fast behavior are live in production.
 
 The subsequent preflight found a configured custom value but it failed the then-current 32-character minimum. The user explicitly removed only that minimum-length rule. Continue to reject missing, development-default and known-placeholder values; never expose the configured value in logs or evidence.
+
+### Release A production closure (2026-08-13)
+
+- Runtime commit: `1d366fb0b3e74f865f1cbc455e3f5d6afeaa5911`; GitHub Actions run: `31713379831`.
+- Final archive SHA-256: `52b809f4b484db3a180c06f46587130b79d6c3f6a999f1f8651eb12411910b59`. King recomputed the same value before loading the external images.
+- Image digests: API/worker/migrate `sha256:650d9c9fdcd1f686c7adb1c34f27f37c5cb961206202cc2a0b60519fe5aa3a6f`; Web `sha256:6a273fc0bed72217b6307be2c3a8fd55ee2839a9b8efaebf11f85bf35d8579e1`.
+- Backup: `/opt/chat-reader/backups/release-a-closure-20260813T151932Z-1d366fb`. PostgreSQL custom dump, import/export/offline/asset archives, checksums, and archive listings passed validation. The recorded rollback source is `0645a846766d3bdc19d33c7ce2211f1f4f7172d0`; its retained image set remains available.
+- Secret preflight was boolean-only: configured, non-default and non-placeholder all passed. The secret value was never emitted, stored, or modified. The guard no longer requires a minimum length.
+- Deployment used `docker compose -f docker-compose.production.yml --env-file .env.production`, migration preflight and `--no-build` recreation. It did not build Next on King, remove volumes, replace `.env.production`, start Scanner, or change schema.
+- Post-deploy API/Web/PostgreSQL are healthy, worker runs, Scanner is disabled, and Alembic current/head is `20260806_0021`. Public headers are present: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, the documented Permissions Policy and CSP Report-Only; `X-Powered-By` is absent.
+- The release transfer archive was removed after health and browser acceptance. Current and rollback images plus the validated backup remain. No business volume, database data, user import, `.env.production`, or unrelated image was removed; root free space is about 16 GiB.
