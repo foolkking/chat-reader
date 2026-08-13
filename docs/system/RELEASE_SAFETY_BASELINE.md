@@ -19,6 +19,8 @@ locked install without lifecycle scripts
 
 Quality evidence may be uploaded after a failed gate for diagnosis. It is explicitly non-deployable. A deployable artifact must include the source commit, workflow run, image identifiers, build time, archive name, SHA-256, and image inspection report.
 
+CI installs pinned pnpm `9.15.4` through `pnpm/action-setup`. The Web image pins a Node-20-compatible Corepack before activating the same package-manager version. Do not bypass package-manager signature validation with `COREPACK_INTEGRITY_KEYS=0`.
+
 ## Dependency policy
 
 The audit source is `https://registry.npmjs.org`. Critical and high advisories fail the release unless an exact, unexpired record exists in `security/dependency-exceptions.json`. The gate rejects unknown advisories, mismatched severity, duplicate records, expired records, and unused broad exceptions. Exceptions identify runtime, build supply-chain, or development exposure and include a mitigation, remediation track, and review date.

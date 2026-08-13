@@ -39,8 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
 
       - uses: actions/setup-node@v4
         with:
@@ -55,8 +57,7 @@ jobs:
 
       - name: Install locked dependencies without lifecycle scripts
         run: |
-          corepack enable
-          corepack pnpm install --frozen-lockfile --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
           python -m pip install --upgrade pip
           python -m pip install -e apps/api
 
@@ -67,16 +68,16 @@ jobs:
           python -m alembic upgrade head
 
       - name: Web lint
-        run: corepack pnpm run lint
+        run: pnpm --filter web lint
 
       - name: Web typecheck
-        run: corepack pnpm run typecheck
+        run: pnpm --filter web typecheck
 
       - name: Web production build
-        run: corepack pnpm --filter web build
+        run: pnpm --filter web build
 
       - name: API full suite
-        run: corepack pnpm run test:api
+        run: pnpm run test:api
 
       - name: Alembic single-head and current validation
         run: |
@@ -87,7 +88,7 @@ jobs:
       - name: Dependency audit from official npm registry
         run: |
           set +e
-          corepack pnpm audit --registry=https://registry.npmjs.org --json > "$RUNNER_TEMP/dependency-audit.json"
+          pnpm audit --registry=https://registry.npmjs.org --json > "$RUNNER_TEMP/dependency-audit.json"
           audit_status=$?
           set -e
           if [ "$audit_status" -gt 1 ]; then
@@ -116,7 +117,7 @@ jobs:
           exit 1
 
       - name: Install Playwright Chromium
-        run: corepack pnpm --filter web exec playwright install --with-deps chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium
 
       - name: Focused online browser and security checks
         env:
@@ -124,7 +125,7 @@ jobs:
           E2E_RICH_MARKDOWN: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: >-
-          corepack pnpm --filter web exec playwright test --config=playwright.config.ts
+          pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/release-security-baseline.spec.ts
           e2e/ai-rich-markdown-contract.spec.ts
           e2e/ai-rich-markdown.spec.ts
@@ -135,7 +136,7 @@ jobs:
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
-        run: corepack pnpm --filter web exec playwright test --config=playwright.config.ts
+        run: pnpm --filter web exec playwright test --config=playwright.config.ts
 
       - name: Upload non-deployable quality evidence
         if: always()

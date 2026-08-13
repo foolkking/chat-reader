@@ -2,7 +2,9 @@ FROM node:20-alpine AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable
+RUN npm install --global corepack@0.34.0 \
+    && corepack enable \
+    && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
