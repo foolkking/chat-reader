@@ -50,6 +50,30 @@ test.describe("Reader virtual block height estimator", () => {
     expect(resolveReaderLineHeight(20, 32, 30)).toBe(32);
     expect(resolveReaderLineHeight(20, null, 30)).toBe(30);
   });
+
+  test("treats display math as a bounded horizontal surface", () => {
+    const short = estimateReaderBlockSize(block("paragraph", "\\[x^2+y^2=z^2\\]"), metrics);
+    const long = estimateReaderBlockSize(block("paragraph", `\\[${"\\frac{x^2+y^2}{z}".repeat(80)}\\]`), metrics);
+    const aligned = estimateReaderBlockSize(block("paragraph", String.raw`\[
+\begin{aligned}
+a &= b + c \\
+d &= e + f \\
+g &= h + i
+\end{aligned}
+\]`), metrics);
+
+    expect(short).toBeGreaterThanOrEqual(68);
+    expect(long).toBe(short);
+    expect(aligned).toBeGreaterThan(short);
+    expect(aligned).toBeLessThan(260);
+  });
+
+  test("ignores math delimiters in code and does not treat currency as math", () => {
+    const code = estimateReaderBlockSize(block("paragraph", "`\\(x^2\\)` and ```latex\n\\[x^2\\]\n```"), metrics);
+    const currency = estimateReaderBlockSize(block("paragraph", "The price is $20."), metrics);
+    expect(code).toBeGreaterThan(metrics.lineHeight);
+    expect(currency).toBe(Math.round(metrics.lineHeight));
+  });
 });
 
 function block(blockType: string, plainText: string, data: Record<string, unknown> = {}): RenderBlockRead {

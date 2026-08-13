@@ -6,7 +6,7 @@ import {
   type CodeHeaderProps,
   type SyntaxHighlighterProps,
 } from "@assistant-ui/react-markdown";
-import { useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type ReactNode } from "react";
+import { memo, useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type ReactNode } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { Components } from "react-markdown";
@@ -232,7 +232,7 @@ const inlineMarkdownComponents: Components = {
   },
 };
 
-export function MarkdownRenderer({
+export const MarkdownRenderer = memo(function MarkdownRenderer({
   text,
   className = "",
   isAssistant = true,
@@ -267,7 +267,13 @@ export function MarkdownRenderer({
       ))}
     </div>
   );
-}
+}, (previous, next) => previous.text === next.text
+  && previous.className === next.className
+  && previous.isAssistant === next.isAssistant
+  && previous.scopeId === next.scopeId
+  && previous.pendingTaskKeys === next.pendingTaskKeys
+  && previous.taskItems === next.taskItems
+  && previous.onTaskToggle === next.onTaskToggle);
 
 export function InlineHeadingMarkdown({ text }: { text: string }) {
   const inlineText = text.replace(/\s*\r?\n\s*/g, " ").trim();

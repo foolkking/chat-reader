@@ -116,6 +116,10 @@ AI Rich Markdown 使用一个共享 semantic core：Reader、Source Editor live 
 
 ## 浏览器持久化
 
+### Formula-heavy Reader performance
+
+Formula rendering continues to use the shared AI Rich Markdown pipeline with local KaTeX `htmlAndMathml`, `trust=false`, bounded expansion and local error isolation. The Reader now memoizes cross-block math projections and block/rendering subtrees so ordinary scroll updates do not re-run Markdown parsing for unchanged formula blocks. Virtual block estimation recognizes display math separately from code and currency, caps multi-row environments, and treats long display formulas as local horizontal surfaces. `.katex-display` owns horizontal overflow and uses layout/paint containment; the Reader body width and MathML accessibility output are unchanged.
+
 | Key/存储 | 用途 |
 | --- | --- |
 | `chat-reader:user-preferences` | 服务器偏好的启动缓存 |

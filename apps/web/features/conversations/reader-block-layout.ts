@@ -32,6 +32,12 @@ export function estimateReaderBlockSize(
   if (block.block_type === "image" || block.block_type === "mermaid") return 420;
   if (block.block_type === "attachment") return 68;
 
+  const mathShape = estimateMathShape(text);
+  if (mathShape) {
+    const base = Math.max(32, Math.round(metrics.lineHeight * 1.35));
+    return Math.min(520, base + mathShape.displayLines * Math.round(metrics.lineHeight * 1.2));
+  }
+
   const visualLines = estimateVisualLineCount(text, metrics.estimatedColumns);
   if (block.block_type === "heading") {
     const level = numericValue(block.data.level) ?? 3;
@@ -106,6 +112,21 @@ function estimateVisualLineCount(text: string, columns: number): number {
     const units = displayUnits(line);
     return total + Math.max(1, Math.ceil(units / Math.max(1, columns)));
   }, 0);
+}
+
+function estimateMathShape(text: string): { displayLines: number } | null {
+  const normalized = text.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
+  const display = normalized.match(/(?:^|\n)\s*(?:\\\[|\$\$)([\s\S]*?)(?:\\\]|\$\$)\s*(?:\n|$)/g);
+  const inline = normalized.match(/(?:\\\([^\n]*?\\\)|(?<!\\)\$[^$\n]+(?<!\\)\$)/g);
+  if (!display?.length && !inline?.length) return null;
+  let displayLines = 0;
+  for (const candidate of display ?? []) {
+    const body = candidate.replace(/^\s*(?:\\\[|\$\$)/, "").replace(/(?:\\\]|\$\$)\s*$/, "");
+    const environmentRows = body.match(/\\begin\{(?:aligned|array|cases|matrix|pmatrix|bmatrix|vmatrix)[^}]*\}([\s\S]*?)\\end\{/);
+    const rows = environmentRows?.[1]?.split(/\\\\/).length ?? body.split(/\r?\n/).filter((line) => line.trim()).length;
+    displayLines += Math.max(1, Math.min(8, rows));
+  }
+  return { displayLines: Math.max(1, Math.min(12, displayLines + (inline?.length ? 1 : 0))) };
 }
 
 function displayUnits(value: string): number {

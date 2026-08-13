@@ -1,5 +1,12 @@
 # Project State
 
+## 2026-08-13 Formula Dense Reader Scroll Stabilization
+
+- Root cause: formula-heavy blocks were re-rendered across parent Reader updates without stable memo boundaries. Each mounted block could re-enter the shared ReactMarkdown/remark/rehype-KaTeX pipeline, while virtual height estimation treated LaTeX source width like ordinary wrapped text. KaTeX `htmlAndMathml` remains intentionally enabled, so the DOM/layout cost was amplified by visual HTML plus MathML and annotation nodes.
+- Reader stability now memoizes the cross-block math projection and display-unit grouping, and uses custom `memo` comparators for `BlockSlot`, `BlockElement`, `BlockRenderer` and `MarkdownRenderer`. Unchanged formula blocks remain mounted without re-running the parser during ordinary scroll updates.
+- Math-aware block estimates ignore fenced/inline code, treat display formulas as bounded horizontal surfaces, and add capped row estimates for aligned/cases/matrix-like environments. Formula overflow remains local to `.katex-display`; `contain: layout paint` limits layout propagation without changing Reader width or MathML accessibility.
+- Verification: Web typecheck, production build, focused ESLint and parser/layout tests pass; focused parser/layout suite is `17/17`. Rich Markdown browser cases were fixture/server-gated in this local run and remain separate verification debt. No API, database, migration, canonical Markdown, attachment or Viewer contract changed.
+
 ## 2026-08-13 Manual TOC Refresh
 
 - Owner Reader 的右上角“更多”新增“更新目录”。用户可分别选择“对话目录”“章节目录”或同时更新；章节目录范围默认当前对话，也可显式选择全部未删除对话。

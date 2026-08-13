@@ -1,5 +1,11 @@
 # Implementation Results
 
+## Formula Dense Reader Scroll Stabilization - 2026-08-13
+
+The reported slowdown after formulas had already loaded was traced to repeated ReactMarkdown/remark/rehype-KaTeX work on unchanged virtual blocks, compounded by ordinary-text height estimation for long display LaTeX and layout propagation from the full `htmlAndMathml` subtree. The fix keeps complete MathML and all existing KaTeX security settings, but memoizes cross-block projections and block/rendering subtrees, adds formula-aware bounded virtual estimates, and applies local `contain: layout paint` to display math.
+
+Verification: Web typecheck PASS, production build PASS, focused ESLint PASS, parser/layout/browser-independent tests `17/17 PASS`. The full Rich Markdown browser suite was fixture/server-gated in this local run and is not counted as PASS. No database/API/migration/canonical source/attachment/Viewer changes were made. Production wheel trace, frame interval, long-task and real formula-heavy conversation metrics remain `NOT_PRODUCTION_VERIFIED`.
+
 ## Manual TOC Refresh - 2026-08-13
 
 The Owner Reader now exposes `更新目录` in the top-right More menu. Its accessible dialog allows dialogue index, section contents, or both; section rebuilding defaults to the current conversation and can explicitly target every non-deleted conversation. At least one target is required.

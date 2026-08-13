@@ -1,10 +1,11 @@
+import { memo } from "react";
 import type { RenderBlockRead } from "../../lib/types";
 import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
 import { AttachmentBlock } from "../attachments/attachment-block";
 
 const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 
-export function BlockRenderer({
+export const BlockRenderer = memo(function BlockRenderer({
   block,
   messageId,
   galleryItems,
@@ -74,7 +75,13 @@ export function BlockRenderer({
   }
 
   return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
-}
+}, (previous, next) => previous.block === next.block
+  && previous.messageId === next.messageId
+  && previous.galleryItems === next.galleryItems
+  && previous.isAssistant === next.isAssistant
+  && previous.taskItems === next.taskItems
+  && previous.pendingTaskKeys === next.pendingTaskKeys
+  && previous.onTaskToggle === next.onTaskToggle);
 
 function readNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;

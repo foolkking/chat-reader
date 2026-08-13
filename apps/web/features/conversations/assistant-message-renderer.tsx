@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { defaultRangeExtractor, useVirtualizer, useWindowVirtualizer } from "@tanstack/react-virtual";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { BlockRenderer } from "./block-renderer";
@@ -59,13 +59,16 @@ export function AssistantMessageRenderer({
     );
   }
 
-  const leadingThinking = isAssistant ? findLeadingThinkingBlocks(blocks) : null;
-  const visibleBlocks = leadingThinking ? blocks.slice(leadingThinking.endIndex + 1) : blocks;
+  const leadingThinking = useMemo(() => isAssistant ? findLeadingThinkingBlocks(blocks) : null, [blocks, isAssistant]);
+  const visibleBlocks = useMemo(() => leadingThinking ? blocks.slice(leadingThinking.endIndex + 1) : blocks, [blocks, leadingThinking]);
   // Keep this projection outside the hook list. A message can transition from
   // an empty block window to hydrated blocks without changing hook order.
-  const semanticBlocks = resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText));
+  const semanticBlocks = useMemo(
+    () => resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText)),
+    [currentText, visibleBlocks],
+  );
   const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
-  const displayUnits = groupAttachmentBlocks(semanticBlocks);
+  const displayUnits = useMemo(() => groupAttachmentBlocks(semanticBlocks), [semanticBlocks]);
 
   return (
     <div className="reader-block-flow break-words">
@@ -680,7 +683,7 @@ function VirtualBlockRow({ itemIndex, measureElement, gapAfter, children }: {
   );
 }
 
-function BlockSlot({ messageId, block, previousBlock, hasLeadingContent, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle }: {
+const BlockSlot = memo(function BlockSlot({ messageId, block, previousBlock, hasLeadingContent, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle }: {
   messageId: string;
   block: RenderBlockRead;
   previousBlock: RenderBlockRead | null;
@@ -696,7 +699,15 @@ function BlockSlot({ messageId, block, previousBlock, hasLeadingContent, isAssis
       <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
     </div>
   );
-}
+}, (previous, next) => previous.messageId === next.messageId
+  && previous.block === next.block
+  && previous.previousBlock === next.previousBlock
+  && previous.hasLeadingContent === next.hasLeadingContent
+  && previous.isAssistant === next.isAssistant
+  && previous.highlightTargetId === next.highlightTargetId
+  && previous.taskItems === next.taskItems
+  && previous.pendingTaskKeys === next.pendingTaskKeys
+  && previous.onTaskToggle === next.onTaskToggle);
 
 function slotGapStyle(variable: string): React.CSSProperties {
   return { marginBlockStart: `var(${variable})` };
@@ -719,7 +730,7 @@ function isRichBlock(block: RenderBlockRead | null): boolean {
   return Boolean(block && ["blockquote", "code", "table", "image", "attachment", "mermaid", "math"].includes(block.block_type));
 }
 
-function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle, galleryItems }: {
+const BlockElement = memo(function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskItems, pendingTaskKeys, onTaskToggle, galleryItems }: {
   messageId: string;
   block: RenderBlockRead;
   isAssistant: boolean;
@@ -754,7 +765,14 @@ function BlockElement({ messageId, block, isAssistant, highlightTargetId, taskIt
       <BlockRenderer block={block} messageId={messageId} galleryItems={galleryItems} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
     </div>
   );
-}
+}, (previous, next) => previous.messageId === next.messageId
+  && previous.block === next.block
+  && previous.isAssistant === next.isAssistant
+  && previous.highlightTargetId === next.highlightTargetId
+  && previous.taskItems === next.taskItems
+  && previous.pendingTaskKeys === next.pendingTaskKeys
+  && previous.onTaskToggle === next.onTaskToggle
+  && previous.galleryItems === next.galleryItems);
 
 function attachmentViewerItem(messageId: string, block: RenderBlockRead): AttachmentViewerItem {
   const attachmentId = typeof block.data.attachmentId === "string" ? block.data.attachmentId : "";

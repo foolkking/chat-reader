@@ -780,6 +780,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  contain: layout paint;
   padding: 0.5rem 0;
 }
 

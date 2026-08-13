@@ -1,10 +1,10 @@
-import rehypeKatex from "rehype-katex";
 import rehypeSanitize from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { Options } from "react-markdown";
 import { remarkAiMathCompatibility } from "./remark-ai-math-compatibility";
+import rehypeKatex from "rehype-katex";
 
 type HastNode = {
   type?: string;
