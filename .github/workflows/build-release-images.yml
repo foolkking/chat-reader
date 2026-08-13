@@ -17,6 +17,7 @@ env:
   EXPORT_STORAGE_DIR: /tmp/chat-reader/exports
   OFFLINE_STORAGE_DIR: /tmp/chat-reader/offline
   ASSET_STORAGE_DIR: /tmp/chat-reader/assets
+  POSTGRES_EXPORT_INTEGRATION: "1"
 
 jobs:
   quality:

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -119,15 +120,11 @@ def create_cr_archive(
         "source_refs": db.query(SourceMessageRef).filter(SourceMessageRef.message_id.in_(message_ids)).count() if message_ids else 0,
         "events": db.query(ConversationEvent).filter(ConversationEvent.conversation_id == conversation.id).count(),
     }
-    attachment_rows = (
-        db.query(Attachment)
-        .join(MessageVersionAttachment, MessageVersionAttachment.attachment_id == Attachment.id)
-        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
-        .join(Message, Message.id == MessageVersion.message_id)
-        .filter(Message.conversation_id == conversation.id, Attachment.deleted_at.is_(None))
-        .distinct()
-        .all()
-    )
+    # Attachment is conversation-owned business state. It must not be inferred
+    # from current or historical occurrences: active unreferenced files are part
+    # of a canonical archive too. This also avoids PostgreSQL DISTINCT over the
+    # Attachment JSON metadata column, which has no equality operator.
+    attachment_rows = _conversation_archive_attachments(db, conversation.id)
     attachment_ids = [row.id for row in attachment_rows]
     asset_ids = [row.asset_object_id for row in attachment_rows if row.asset_object_id]
     counts.update({
@@ -873,6 +870,30 @@ def _attachment_archive_rows(db: Session, rows: list[Attachment]):
             "source_attachment_id": row.source_attachment_id,
             "metadata": row.metadata_ or {},
         }
+
+
+def _conversation_archive_attachments(db: Session, conversation_id: uuid.UUID) -> list[Attachment]:
+    """Return active files plus detached files needed by historical versions."""
+    has_historical_occurrence = (
+        db.query(MessageVersionAttachment.id)
+        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+        .join(Message, Message.id == MessageVersion.message_id)
+        .filter(
+            MessageVersionAttachment.attachment_id == Attachment.id,
+            Message.conversation_id == conversation_id,
+        )
+        .exists()
+    )
+    return (
+        db.query(Attachment)
+        .filter(
+            Attachment.conversation_id == conversation_id,
+            Attachment.deleted_at.is_(None),
+            or_(Attachment.status != "detached", has_historical_occurrence),
+        )
+        .order_by(Attachment.created_at.asc(), Attachment.id.asc())
+        .all()
+    )
 
 
 def _attachment_payload(row: Attachment) -> dict[str, Any]:

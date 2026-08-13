@@ -1,9 +1,13 @@
+import io
 import json
 import uuid
+import zipfile
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.main import app
 from app.models.conversation_event import ConversationEvent
@@ -123,6 +127,112 @@ def test_cr_archive_export_import_round_trip_and_duplicate_policies(client: Test
     )
     assert copied.status_code == 200
     assert copied.json()["conversation_ids"][0] not in {imported_id, cloned.json()["conversation_ids"][0]}
+
+
+def test_cr_archive_includes_active_unreferenced_attachment(client: TestClient, monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+    conversation_id = _commit_source(client)
+
+    session = client.post(f"/api/conversations/{conversation_id}/attachment-upload-sessions", json={})
+    assert session.status_code == 201, session.text
+    item = client.post(
+        f"/api/attachment-upload-sessions/{session.json()['id']}/items",
+        files={"file": ("archive-unreferenced.txt", b"archive-only attachment\n", "text/plain")},
+    )
+    assert item.status_code == 201, item.text
+    finalized = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [item.json()["id"]]},
+    )
+    assert finalized.status_code == 201, finalized.text
+    attachment_id = finalized.json()["items"][0]["id"]
+    assert finalized.json()["items"][0]["current_occurrence_count"] == 0
+
+    queued = client.post(
+        f"/api/conversations/{conversation_id}/exports",
+        headers={"Idempotency-Key": "cr-unreferenced-attachment"},
+    )
+    assert queued.status_code == 202, queued.text
+    _run_job(queued.json()["job_id"])
+    task = client.get(f"/api/tasks/{queued.json()['job_id']}").json()
+    assert task["status"] == "committed", task
+    archive = client.get(task["result"]["download_url"])
+    assert archive.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(archive.content)) as package:
+        attachment_rows = [
+            json.loads(line)
+            for line in package.read("attachments.jsonl").splitlines()
+            if json.loads(line).get("record_type") == "attachment"
+        ]
+        assert [row["id"] for row in attachment_rows] == [attachment_id]
+        refs = [json.loads(line) for line in package.read("attachment_refs.jsonl").splitlines()]
+        assert refs == []
+
+
+def test_cr_archive_retains_detached_attachment_referenced_by_history(client: TestClient, monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+    conversation_id = _commit_source(client)
+    message = client.get(f"/api/conversations/{conversation_id}/messages").json()[1]
+
+    session = client.post(f"/api/conversations/{conversation_id}/attachment-upload-sessions", json={})
+    assert session.status_code == 201, session.text
+    item = client.post(
+        f"/api/attachment-upload-sessions/{session.json()['id']}/items",
+        files={"file": ("archive-history.txt", b"historical attachment\n", "text/plain")},
+    )
+    assert item.status_code == 201, item.text
+    finalized = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [item.json()["id"]]},
+    )
+    assert finalized.status_code == 201, finalized.text
+    attachment_id = finalized.json()["items"][0]["id"]
+
+    referenced = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": message["current_version"]["display_text"] + f"\n\n[Attachment](cr-asset://{attachment_id})",
+            "base_version_id": message["current_version"]["id"],
+        },
+    )
+    assert referenced.status_code == 200, referenced.text
+    detached = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": "The current version no longer references this attachment.",
+            "base_version_id": referenced.json()["current_version_id"],
+            "removed_attachment_actions": [{"attachment_id": attachment_id, "action": "detach_from_conversation"}],
+        },
+    )
+    assert detached.status_code == 200, detached.text
+
+    queued = client.post(
+        f"/api/conversations/{conversation_id}/exports",
+        headers={"Idempotency-Key": "cr-historical-detached-attachment"},
+    )
+    assert queued.status_code == 202, queued.text
+    _run_job(queued.json()["job_id"])
+    task = client.get(f"/api/tasks/{queued.json()['job_id']}").json()
+    assert task["status"] == "committed", task
+    archive = client.get(task["result"]["download_url"])
+    assert archive.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(archive.content)) as package:
+        attachment_rows = [
+            json.loads(line)
+            for line in package.read("attachments.jsonl").splitlines()
+            if json.loads(line).get("record_type") == "attachment"
+        ]
+        assert [row["id"] for row in attachment_rows] == [attachment_id]
+        refs = [json.loads(line) for line in package.read("attachment_refs.jsonl").splitlines()]
+        assert any(row["attachment_id"] == attachment_id for row in refs)
 
 
 def test_auto_clean_job_creates_new_version_and_preserves_history(client: TestClient) -> None:
