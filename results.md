@@ -630,7 +630,7 @@ King verified the archive checksum, validated backup `/opt/chat-reader/backups/r
 
 Read-only production Chrome smoke passed for Library/PWA shell availability, Rich Markdown/KaTeX (MathML present, no error or page overflow), and the PDF Viewer (canvas rendered; exactly one accessible close; Esc restored `打开 sample.pdf`). No CSP Report-Only violation was observed in Library, Reader/KaTeX or PDF Viewer. The owner Share drawer opens, but its Esc close currently restores focus to `body`; user direction defers this confirmed P2 accessibility defect to the next round. Mermaid's strict-mode regression is covered in CI, but no safe current production Mermaid fixture was available, so browser Mermaid rendering remains `NOT_PRODUCTION_VERIFIED`.
 
-After replacement checks, only the 167 MB transfer archive and its release transfer directory were removed. Current and rollback images plus the validated backup remain. No user data, PostgreSQL, business volume, `.env.production`, or unrelated image was deleted; King root free space is about 16 GiB.
+After replacement checks, the 167 MB transfer archive and its release transfer directory were removed. An exact image audit found one extra superseded `9d338a0` Chat Reader set beyond current and direct rollback; only those four service tags/layers were removed. Current `1d366fb`, `latest`, direct rollback `0645a84`, and the validated backup remain. API/Web/PostgreSQL stayed healthy and the worker stayed running. No user data, PostgreSQL, business volume, `.env.production`, backup, or unrelated image was deleted; King root free space is about 16 GiB.
 
 | Status | Final result |
 | --- | --- |
