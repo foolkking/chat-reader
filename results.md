@@ -580,3 +580,40 @@ Local gates: lint PASS; typecheck PASS; production build PASS; API `251 passed /
 Controlled failure evidence: Actions run `31705576354` stopped at package-manager bootstrap because the runner's bundled Corepack trust store did not contain the current pnpm signing key. The `quality` job failed, `build-images` was skipped, and no deployable artifact was produced. The remediation pins pnpm through `pnpm/action-setup` and updates the Web image's Corepack without disabling integrity checks.
 
 Actions run `31706041697` then passed bootstrap, locked install, lint, typecheck and production build. API ended at `249 passed / 4 skipped / 2 failed` because two default-value tests inherited the workflow's synthetic cursor secret. The tests now clear that variable only for the default-value assertion. `build-images` was again skipped, proving that a late quality failure also cannot produce the deployable artifact.
+
+## Release A final candidate and production gate - 2026-08-13
+
+Actions run `31706522862` passed locked installation, migration setup, Web lint/typecheck/production build, API full suite, Alembic validation, official-registry audit policy, live API/worker startup, focused browser checks and the default PWA baseline before image construction. The downstream image job then passed API/Web build, inspection, packaging and upload. Candidate commit: `08df7a1a880c63a4d05df46b8e0a271b16088c7f`; archive SHA-256: `25687fa7b91db5a518d42ccb61892015ff5fb90fc717f820de03a2719846a6b5`; API/worker/migrate image: `sha256:7eec3604e1b9ef31b93b9fda867f9967e62e025747a235fe1ab1058c89ea9edb`; Web image: `sha256:201c867b3259fef2020b8a84708c0964e5361e32b32a0be293b76868cb90ef02`. Independent download verification matched the checksum/manifest, all four inspected entries were `amd64`, and `forbidden_paths_present=false`.
+
+Production deployment is `BLOCKED`. A non-value-disclosing check found `ATTACHMENT_CURSOR_SECRET` absent, classified as default/placeholder, and shorter than the required minimum. Per the Release A contract, no agent-generated secret was written and deployment did not proceed. The existing production Web/API/PostgreSQL remain healthy, worker is running, and Alembic is `20260806_0021 (head)`; no backup, image load, service recreation, data mutation or image cleanup was required because the gate stopped before those operations.
+
+| Capability | Status | Evidence |
+| --- | --- | --- |
+| Next immediate patch | PASS | `14.2.23 -> 14.2.35` plus build/browser baseline |
+| Next supported baseline | MIGRATION_REQUIRED | Next 14 remains unsupported |
+| PostCSS patch | PASS | resolves to `8.5.26` |
+| Mermaid status | PASS | `11.16.1`, strict mode regression |
+| PDF.js mitigation | PASS | sole initialization keeps `isEvalSupported=false` |
+| PDF.js supported baseline | MIGRATION_REQUIRED | legacy `3.11.174` retained by scope |
+| Production secret guard | PASS | configuration tests and Compose guard pass |
+| Production secret provisioning | BLOCKED | production variable absent; value not disclosed |
+| Alembic percent URL | PASS | encoded `%`, `%25`, `%3D`, `%40` tests |
+| Security headers | NOT_VERIFIED | production-equivalent browser PASS; candidate not deployed |
+| CSP Report-Only | NOT_VERIFIED | production-equivalent browser PASS; candidate not deployed |
+| CSP enforcing | NOT_IMPLEMENTED | explicitly outside Release A |
+| Dependency audit | PASS | 17 exact approved high/critical exceptions; 0 unapproved/policy errors |
+| Runtime dependency risk | PARTIAL_PASS | Next/PDF.js time-bounded migration debt |
+| Build supply-chain risk | PARTIAL_PASS | legacy optional PDF chain has exact exception and disabled lifecycle scripts |
+| Release quality gate | PASS | final successful run plus two blocked-artifact failure runs |
+| Quality failure blocks artifact | PASS | runs `31705576354` and `31706041697` |
+| Image inspection | PASS | provenance/architecture/entrypoint/forbidden-path checks |
+| Artifact SHA-256 | PASS | independent verification matched manifest |
+| Current production health | PASS | old release remains healthy and unchanged |
+| Release A deployment | BLOCKED | manual secret provisioning required |
+
+```text
+RELEASE_A = BLOCKED
+NEXT_SUPPORTED_LTS_BASELINE = MIGRATION_REQUIRED
+PDFJS_SUPPORTED_LINE_MIGRATION_REQUIRED = YES
+CSP_ENFORCING = NOT_IMPLEMENTED
+```

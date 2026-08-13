@@ -62,3 +62,12 @@ The application has no account system. TLS and owner access control remain the r
 ## Current verification rules
 
 API or source inspection alone does not establish a browser-flow PASS. Skipped tests are reported separately. Release A can be complete while supported Next/PDF.js migrations and CSP enforcement remain `MIGRATION_REQUIRED` or `NOT_IMPLEMENTED`, provided all residual risk is explicit and the quality/artifact gate passes.
+
+## Release A execution evidence
+
+- Actions run `31705576354` failed during package-manager bootstrap. `build-images` was skipped and no deployable artifact existed.
+- Actions run `31706041697` passed through Web production build but failed two API environment-isolation tests. `build-images` was again skipped and no deployable artifact existed.
+- Actions run `31706522862` completed every quality and image step for commit `08df7a1a880c63a4d05df46b8e0a271b16088c7f`. The independently downloaded archive matches SHA-256 `25687fa7b91db5a518d42ccb61892015ff5fb90fc717f820de03a2719846a6b5`; its manifest and image inspection report match the same commit/run, all images are `linux/amd64`, and no forbidden path was found.
+- Production deployment did not start because `ATTACHMENT_CURSOR_SECRET` was absent. The current production release remains healthy and unchanged. Release A is therefore `BLOCKED`, not a production PASS; application security headers and CSP Report-Only are production-equivalent verified but production `NOT_VERIFIED`.
+
+An operator must provision a non-placeholder secret of at least 32 characters outside source control. After that change, rerun the release workflow from the current committed source, verify the new archive SHA-256, complete backups and deployment, and perform HTTP/browser acceptance. Do not reuse the validated candidate as evidence for a later source commit without an explicit provenance decision.
