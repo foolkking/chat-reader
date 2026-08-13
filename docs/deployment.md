@@ -8,6 +8,10 @@
 - Artifact publication contract is documented in `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`: staging -> validation -> unique final publish -> worker transaction commit -> old cleanup. Cleanup is dry-run only in Release B.
 - After health checks, run isolated QA Share focus, Offline package replace/previous-package continuity, Export immediate download and normal Import smoke. Production must not receive injected commit failures; those are production-equivalent tests.
 
+Final evidence: source `32a980bb7cc6ab5a30dc2b3a47d6f6c19acfa8da`, Actions run `31736593196`, archive SHA-256 `aa1bd95a4567be87c43d5e86a5bd17602d738402b37bef7922ca93d87f8b4088`, API image `sha256:14478427325f395be4d54ce6cccb2fdcff8de7fcf97503a547e11cd57c4696aa`, Web image `sha256:0f544a7c39c735a84d59b81b4d08abb5cd7061f8f41c613f74ef72b4a59062e4`, backup `/opt/chat-reader/backups/release-b-final-20260813T194413Z-32a980b`. King checksum, custom dump listing and four volume archive checks passed before `--no-build` replacement.
+
+The production dry-run reported four unreferenced final candidates totaling 659,673 bytes and 29 protected artifacts totaling 236,546,674 bytes. Release B did not delete artifacts. Image cleanup retained current `32a980b`, rollback `1d366fb` and `latest`; no backup, volume, PostgreSQL data or production environment file was changed.
+
 ## Manual TOC refresh release (2026-08-13)
 
 - Commit `9d338a001c612bfd837de6a9ee5d06cdb684df61`; GitHub Actions run `31621723794`; artifact SHA-256 `8b0123f93a382535d378e16d5d5a046049ba245870d955dc009e1262cbbdca1b` matched locally and on King.

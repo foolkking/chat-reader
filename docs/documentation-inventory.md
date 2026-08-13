@@ -258,6 +258,8 @@ No new documentation category, public API, migration or persisted Reader contrac
 
 2026-08-14 synchronization: Release B artifact publication, outer-transaction safety, bounded Import stale recovery, Share Drawer focus restoration and dry-run cleanup classification are current in `PROJECT_STATE.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/testing.md` and `docs/deployment.md`.
 
+2026-08-14 final synchronization: PostgreSQL `.cr` attachment enumeration, final Actions/artifact/backup/deployment evidence, production Offline/Export/Import QA, dry-run counts and the remaining production Chrome focus debt are recorded without removing Release A history. Automatic cleanup remains disabled.
+
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
 | `docs/system/RELEASE_SAFETY_BASELINE.md` | Current contract | Dependency/security policy, release gate, HTTP baseline, image provenance and deployment boundary. |

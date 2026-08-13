@@ -1,13 +1,22 @@
 # Project State
 
-## 2026-08-14 Release B Artifact Integrity Closure (implementation current)
+## 2026-08-14 Release B Artifact Integrity Closure (current production)
 
-- Root-cause audit confirmed that Offline Package publication previously deleted prior files before the outer BackgroundJob transaction committed. Release B now writes same-volume UUID staging files, validates ZIP structure and required entries, publishes a unique final path, flushes the new row, commits through the worker-owned transaction, and only then attempts prior-file cleanup.
-- All Export ZIP builders use the same staging/validation/publish helper. Download endpoints require the owning job to be `committed`, a controlled storage root and a present file with the declared size. Publication computes a streaming SHA-256; downloads do not re-hash large artifacts on every request.
-- Outer commit failure tests prove the old Offline row and file remain available; a newly published file may remain an unreferenced orphan. Cleanup failures are logged/classified as debt and never turn a committed publication into failure.
-- Import stale recovery now shares the BackgroundJob automatic-attempt ceiling of 3. At the ceiling the ImportRecord becomes terminal failed and is not requeued by the stale scanner; explicit retry starts a new bounded lifecycle.
-- Share Drawer now uses the existing `useDialogFocus` contract. Esc, X and pointer backdrop close share the same restoration path; a remounted Share trigger falls back to the stable More-actions trigger instead of `body`.
-- Release B focused verification is currently local: artifact transaction/lifecycle and import retry tests `13 passed`; the full API suite is `260 passed / 4 skipped`; Web lint/typecheck pass; no migration. Production deployment and Chrome QA remain pending until the committed Release B artifact is built and deployed.
+- Offline Package publication now writes same-volume UUID staging files, validates and publishes a unique final path, commits through the worker-owned transaction, and only then attempts prior-file cleanup. Commit failure preserves the prior row/file; cleanup failure is debt. Automatic cleanup remains disabled.
+- All asynchronous Export ZIP builders share that lifecycle. A production QA `.cr` export exposed a PostgreSQL-only defect: `DISTINCT attachments.*` included a JSON column without an equality operator. The final query is rooted in conversation-owned Attachments and uses a correlated historical-occurrence predicate, preserving active unreferenced and historically referenced detached Attachments without entity-level `DISTINCT`.
+- Import stale recovery uses the shared automatic-attempt ceiling of 3. Exhausted ImportRecords become terminal failed; manual retry starts a new bounded lifecycle.
+- Share Drawer uses `useDialogFocus` for Esc/X/backdrop and a stable More-actions fallback. Production-equivalent browser E2E is PASS. Actual production Chrome is `NOT_VERIFIED` because Chrome was not running; Release A's historical production failure remains preserved.
+- Final source `32a980bb7cc6ab5a30dc2b3a47d6f6c19acfa8da`; Actions run `31736593196`; CI API `265 passed / 4 skipped`, focused browser `28 passed`, default PWA `67 passed / 37 skipped`. Local API `264 passed / 5 skipped`; lint/typecheck/build PASS. Skips are not PASS.
+- Artifact SHA-256 `aa1bd95a4567be87c43d5e86a5bd17602d738402b37bef7922ca93d87f8b4088`; API image `sha256:14478427325f395be4d54ce6cccb2fdcff8de7fcf97503a547e11cd57c4696aa`; Web image `sha256:0f544a7c39c735a84d59b81b4d08abb5cd7061f8f41c613f74ef72b4a59062e4`.
+- Verified backup `/opt/chat-reader/backups/release-b-final-20260813T194413Z-32a980b`; explicit production compose/migration preflight/`--no-build` deployment. API/Web/PostgreSQL healthy, worker running, Scanner disabled, Alembic `20260806_0021`.
+- Production QA PASS: two distinct Offline packages committed and downloaded; `.cr` committed, immediately downloaded and opened; normal Import preview/commit completed. QA Conversations were deleted through the API. The committed ImportRecord/source artifact remains under product retention because no safe immediate-delete endpoint exists.
+- Cleanup dry-run only: `SAFE_TEMP=0`, `SUPERSEDED_ARTIFACT=0`, `ORPHAN_FINAL=4` (659,673 bytes), `UNSAFE_PROTECTED=29` (236,546,674 bytes). Image cleanup retained current `32a980b`, rollback `1d366fb` and `latest`; only superseded `ae4f498`/`0645a84` images and the old candidate transfer package were removed.
+
+```text
+RELEASE_B = PARTIAL_PASS (production Chrome Share focus verification pending)
+AUTOMATIC_CLEANUP = NOT_IMPLEMENTED
+NEW_ALEMBIC_MIGRATION = NONE
+```
 
 ## 2026-08-13 Release A Production Closure (Current)
 

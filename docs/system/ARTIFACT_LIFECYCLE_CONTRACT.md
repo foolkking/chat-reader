@@ -47,6 +47,13 @@ They are never deleted before the new DB state commits. All Offline and Export
 ZIP builders use the same staging/validation/publish helper, and download
 rejects a processing/failed job or a missing/mismatched final file.
 
+Conversation `.cr` attachment enumeration is rooted in conversation-owned
+Attachment rows, not occurrences or `DISTINCT` whole entities. Active
+unreferenced rows remain canonical exports. A detached Attachment is included
+only when a historical MessageVersion occurrence still references it. This
+avoids PostgreSQL equality operations on JSON metadata while preserving
+historical version readability.
+
 ## Crash matrix
 
 | Point | Canonical DB | Files | Recovery |
