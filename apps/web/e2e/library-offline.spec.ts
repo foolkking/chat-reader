@@ -43,7 +43,7 @@ test("upgrades an active legacy library worker before preparing the shell", asyn
   });
 
   await page.goto("/library");
-  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/ })).toBeVisible();
   const registration = await page.evaluate(async () => {
     const current = await navigator.serviceWorker.getRegistration("/library");
     return { scriptURL: current?.active?.scriptURL ?? null };
@@ -53,7 +53,7 @@ test("upgrades an active legacy library worker before preparing the shell", asyn
 
 test("keeps the active revision after a failed update and cold-starts offline", async ({ page, context }) => {
   await page.goto("/library");
-  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/ })).toBeVisible();
   await seedOfflineFixture(page);
   await page.reload();
   await expect(page.locator("p:visible", { hasText: /^离线测试对话$/ })).toBeVisible();
@@ -97,7 +97,7 @@ test("keeps the active revision after a failed update and cold-starts offline", 
 
   const activeAfter = await readActiveRecord(page);
   expect(activeAfter.revision).toBe(activeBefore.revision);
-  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/ })).toBeVisible();
 
   const scopes = await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).map((item) => item.scope));
   expect(scopes).toEqual(["http://127.0.0.1:3107/library"]);
@@ -107,7 +107,7 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   const response = await offlinePage.goto("/library?conversationId=offline-fixture", { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
   await expect(offlinePage.locator("h1:visible", { hasText: /离线资料库|Offline library/ }).first()).toBeVisible();
-  await expect(offlinePage.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
+  await expect(offlinePage.locator("p:visible", { hasText: /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/ })).toBeVisible();
   await offlinePage.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]').fill("quantumfixture");
   await expect(offlinePage.locator("button:visible", { hasText: /quantumfixture 正文内容/ })).toBeVisible();
 
@@ -125,7 +125,7 @@ test("prepares and cold-starts the library at the mobile PWA viewport", async ({
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   await page.goto("/library");
-  await expect(page.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
+  await expect(page.locator("p:visible", { hasText: /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/ })).toBeVisible();
   const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
   expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
 
@@ -134,7 +134,7 @@ test("prepares and cold-starts the library at the mobile PWA viewport", async ({
   const response = await offlinePage.goto("/library", { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
   await expect(offlinePage.locator("h1:visible", { hasText: /离线资料库|Offline library/ }).first()).toBeVisible();
-  await expect(offlinePage.locator("p:visible", { hasText: /^(可离线启动|Offline ready)/ })).toBeVisible();
+  await expect(offlinePage.locator("p:visible", { hasText: /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/ })).toBeVisible();
   await context.close();
 });
 
