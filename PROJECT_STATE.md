@@ -1,5 +1,15 @@
 # Project State
 
+## 2026-08-13 Release A Safety Baseline
+
+- Release artifacts are now gated by locked install, Web lint/typecheck/production build, API full suite, Alembic current/single-head validation, an official npm-registry security audit, focused online browser checks and the default PWA matrix. `build-images` has a hard dependency on successful quality; failed quality may upload non-deployable evidence but cannot publish the image archive.
+- Runtime/build dependencies are patched within the approved scope: Next `14.2.23 -> 14.2.35`, Mermaid `11.16.0 -> 11.16.1`, PostCSS `8.5.26`, plus compatible transitive overrides. The current official audit reports 36 advisories; all 17 critical/high findings are matched by exact, expiring records and there are no unapproved or unused exceptions. Next 14 and PDF.js 3 remain unsupported-line migration debt rather than a false security PASS.
+- Production now fails before migration/API/worker startup when `ATTACHMENT_CURSOR_SECRET` is missing, empty, a known placeholder/default, or shorter than 32 characters. Local/test startup remains available. Alembic percent escaping is confined to ConfigParser and preserves the canonical database URL.
+- Web responses define `nosniff`, a strict referrer policy, a bounded Permissions Policy, no `X-Powered-By`, and CSP Report-Only with `frame-ancestors 'none'`. CSP enforcement is intentionally not implemented in Release A.
+- Next 14.2.35 exposed an upstream dynamic App Route build incompatibility for the five-minute import commit proxy. The same public `POST /api/imports/[importId]/commit` contract now uses a Pages API handler; all other `/api/*` requests remain rewrite-proxied to FastAPI. Runtime proxy evidence confirms its dedicated marker, no-store response, and upstream status propagation.
+- Local gate evidence: lint PASS, typecheck PASS, production build PASS, API `251 passed / 4 skipped`, Alembic `head=current=20260806_0021`, Release A browser `6/6`, default PWA `67 passed / 36 skipped`, official audit policy PASS. Skips remain separate verification debt. GitHub image inspection, artifact SHA-256 and production response/health verification are pending the committed workflow run and deployment.
+- Durable contract: [Release Safety Baseline](docs/system/RELEASE_SAFETY_BASELINE.md). No database migration or business-data change was added.
+
 ## 2026-08-13 Formula Dense Reader Scroll Stabilization
 
 - Root cause: formula-heavy blocks were re-rendered across parent Reader updates without stable memo boundaries. Each mounted block could re-enter the shared ReactMarkdown/remark/rehype-KaTeX pipeline, while virtual height estimation treated LaTeX source width like ordinary wrapped text. KaTeX `htmlAndMathml` remains intentionally enabled, so the DOM/layout cost was amplified by visual HTML plus MathML and annotation nodes.

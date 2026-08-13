@@ -1,10 +1,20 @@
 from functools import lru_cache
+from typing import ClassVar
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    _DEVELOPMENT_ATTACHMENT_CURSOR_SECRET: ClassVar[str] = "chat-reader-local-cursor-v1"
+    _PRODUCTION_SECRET_PLACEHOLDERS: ClassVar[set[str]] = {
+        "change-me",
+        "changeme",
+        "placeholder",
+        "replace-me",
+        "replace-with-a-production-secret",
+    }
+
     app_name: str = Field(default="chat-reader", alias="APP_NAME")
     app_env: str = Field(default="development", alias="APP_ENV")
     database_url: str = Field(
@@ -47,7 +57,7 @@ class Settings(BaseSettings):
     attachment_upload_ttl_hours: int = Field(default=24, alias="ATTACHMENT_UPLOAD_TTL_HOURS")
     complex_attachment_preview_enabled: bool = Field(default=False, alias="COMPLEX_ATTACHMENT_PREVIEW_ENABLED")
     attachment_preview_origin: str | None = Field(default=None, alias="ATTACHMENT_PREVIEW_ORIGIN")
-    attachment_cursor_secret: str = Field(default="chat-reader-local-cursor-v1", alias="ATTACHMENT_CURSOR_SECRET")
+    attachment_cursor_secret: str = Field(default=_DEVELOPMENT_ATTACHMENT_CURSOR_SECRET, alias="ATTACHMENT_CURSOR_SECRET")
     bundle_max_compressed_bytes: int = Field(default=512 * 1024 * 1024, alias="BUNDLE_MAX_COMPRESSED_BYTES")
     bundle_max_expanded_bytes: int = Field(default=2 * 1024 * 1024 * 1024, alias="BUNDLE_MAX_EXPANDED_BYTES")
     bundle_max_object_bytes: int = Field(default=256 * 1024 * 1024, alias="BUNDLE_MAX_OBJECT_BYTES")
@@ -79,6 +89,24 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def reject_unsafe_production_attachment_cursor_secret(self) -> "Settings":
+        if self.app_env.strip().casefold() not in {"production", "prod"}:
+            return self
+
+        secret = self.attachment_cursor_secret.strip()
+        if (
+            not secret
+            or secret == self._DEVELOPMENT_ATTACHMENT_CURSOR_SECRET
+            or secret.casefold() in self._PRODUCTION_SECRET_PLACEHOLDERS
+            or len(secret) < 32
+        ):
+            raise ValueError(
+                "Refusing to start in production with a missing, placeholder, or weak attachment cursor secret. "
+                "Configure ATTACHMENT_CURSOR_SECRET with a production secret of at least 32 characters."
+            )
+        return self
 
 
 @lru_cache

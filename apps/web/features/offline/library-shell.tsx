@@ -38,7 +38,7 @@ export function LibraryShell() {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [conversations, setConversations] = useState<OfflineConversationRecord[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("conversationId"));
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("conversationId") ?? null);
   const [mobileOpen, setMobileOpen] = useState(!selectedId);
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [download, setDownload] = useState<DownloadState>(null);
@@ -326,7 +326,7 @@ export function LibraryShell() {
     />
   );
   const readerContent = selectedId && selectedConversation ? (
-    <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams.get("messageId") ?? ""}:${searchParams.get("blockIndex") ?? ""}:${searchParams.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={() => setMobileOpen(true)} onFocusModeChange={setReaderFocusMode} />
+    <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams?.get("messageId") ?? ""}:${searchParams?.get("blockIndex") ?? ""}:${searchParams?.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={() => setMobileOpen(true)} onFocusModeChange={setReaderFocusMode} />
   ) : requestedCatalogConversation ? (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Library className="h-10 w-10 text-accent" /><h1 className="mt-4 max-w-xl text-xl font-semibold">{requestedCatalogConversation.display_title}</h1><p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "该对话尚未下载到离线资料库。联网后可从资料库下载，下载完成后会在这里离线阅读。" : "This conversation has not been downloaded. Connect to download it for offline reading."}</p><button type="button" disabled={!online || Boolean(download)} onClick={() => { setError(null); void runDownload("conversation", requestedCatalogConversation.id).catch((reason: Error) => { setError(reason.message); setDownload(null); }); }} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{zh ? "下载离线副本" : "Download offline copy"}</button><button type="button" onClick={() => setMobileOpen(true)} className="mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary">{zh ? "打开资料库" : "Open library"}</button></div>
   ) : selectedId ? (

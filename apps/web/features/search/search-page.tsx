@@ -19,13 +19,13 @@ export function SearchPage() {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
-  const query = params.get("q") ?? "";
-  const documentType = params.get("document_type") ?? "all";
-  const role = params.get("role") ?? "all";
-  const projectId = params.get("project_id") ?? "all";
-  const statusScope = params.get("status_scope") ?? "active";
-  const dateFrom = params.get("date_from") ?? "";
-  const dateTo = params.get("date_to") ?? "";
+  const query = params?.get("q") ?? "";
+  const documentType = params?.get("document_type") ?? "all";
+  const role = params?.get("role") ?? "all";
+  const projectId = params?.get("project_id") ?? "all";
+  const statusScope = params?.get("status_scope") ?? "active";
+  const dateFrom = params?.get("date_from") ?? "";
+  const dateTo = params?.get("date_to") ?? "";
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<SearchResultItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -55,7 +55,7 @@ export function SearchPage() {
     });
   }, [offset, result.data]);
   const update = (changes: Record<string, string>) => {
-    const next = new URLSearchParams(params.toString());
+    const next = new URLSearchParams(params?.toString() ?? "");
     for (const [key, value] of Object.entries(changes)) {
       if (value && value !== "all") next.set(key, value);
       else next.delete(key);

@@ -1,0 +1,55 @@
+from alembic.config import Config
+from pydantic import ValidationError
+import pytest
+
+from app.core.alembic_config import escape_alembic_config_value
+from app.core.config import Settings
+
+
+@pytest.mark.parametrize("app_env", ["development", "test"])
+def test_development_and_test_allow_local_attachment_cursor_secret(app_env: str) -> None:
+    settings = Settings(_env_file=None, APP_ENV=app_env)
+    assert settings.attachment_cursor_secret == "chat-reader-local-cursor-v1"
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [None, "", "chat-reader-local-cursor-v1", "change-me", "replace-with-a-production-secret", "too-short"],
+)
+def test_production_rejects_missing_default_placeholder_or_weak_attachment_cursor_secret(
+    secret: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ATTACHMENT_CURSOR_SECRET", raising=False)
+    values: dict[str, str] = {"APP_ENV": "production"}
+    if secret is not None:
+        values["ATTACHMENT_CURSOR_SECRET"] = secret
+
+    with pytest.raises(ValidationError, match="ATTACHMENT_CURSOR_SECRET"):
+        Settings(_env_file=None, **values)
+
+
+def test_production_accepts_non_default_attachment_cursor_secret() -> None:
+    settings = Settings(
+        _env_file=None,
+        APP_ENV="production",
+        ATTACHMENT_CURSOR_SECRET="synthetic-release-test-secret-32-chars-minimum",
+    )
+    assert settings.attachment_cursor_secret.startswith("synthetic-release-test")
+
+
+@pytest.mark.parametrize(
+    "database_url",
+    [
+        "postgresql+psycopg://user:simple@db/chat_reader",
+        "postgresql+psycopg://user:p%word@db/chat_reader",
+        "postgresql+psycopg://user:p%25word@db/chat_reader",
+        "postgresql+psycopg://user:p%3Dword@db/chat_reader",
+        "postgresql+psycopg://user:p%40word@db/chat_reader",
+        "postgresql+psycopg://user:p%25%3D%40word@db/chat_reader",
+    ],
+)
+def test_alembic_config_preserves_percent_encoded_database_url(database_url: str) -> None:
+    config = Config()
+    config.set_main_option("sqlalchemy.url", escape_alembic_config_value(database_url))
+    assert config.get_main_option("sqlalchemy.url") == database_url

@@ -50,3 +50,4 @@
 - [evidence/](../evidence/README.md)：2026-07-26 基线截图和只读请求快照。
 
 不得在事实文档中保存真实会话正文、标题、ID、Share token、Cookie、凭据、数据库 URL 或 `.env` 值。
+Current release contract: [Release Safety Baseline](RELEASE_SAFETY_BASELINE.md).

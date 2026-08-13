@@ -8,8 +8,34 @@ const standaloneBuildCpus = Math.max(1, Number.parseInt(process.env.NEXT_BUILD_C
 
 const apiInternalUrl = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 
+const contentSecurityPolicyReportOnly = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "media-src 'self' blob:",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const securityHeaders = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "browsing-topics=(), camera=(), geolocation=(), microphone=(), payment=(), usb=(), serial=(), bluetooth=()",
+  },
+  { key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicyReportOnly },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  poweredByHeader: false,
   ...(standaloneBuild
     ? {
         output: "standalone",
@@ -31,6 +57,7 @@ const nextConfig = {
   },
   async headers() {
     return [
+      { source: "/:path*", headers: securityHeaders },
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
       { source: "/library-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
       { source: "/library/manifest.webmanifest", headers: [

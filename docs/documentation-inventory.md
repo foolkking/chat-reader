@@ -254,3 +254,11 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `docs/evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md` | historical evidence | 2026-08-10 release-readiness audit, redacted QA evidence and verification limits |
 
 2026-08-11 Final Release Closure 文档同步：最终生产生命周期、mutation revision、Attachment 对账、精确窄屏、Share expiry、`.cr v4`、部署与 QA 清理证据已追加到当前事实和历史审计。真实浏览器 Zoom 与完整 Offline 负向矩阵保持 `NOT_PRODUCTION_VERIFIED/PARTIAL_PASS`，没有被默认 PWA 条件跳过覆盖。
+2026-08-13 synchronization: Release A dependency policy, production secret guard, Alembic percent handling, security headers, CSP Report-Only, quality-to-image gate, image inspection and artifact provenance are current in `PROJECT_STATE.md`, `docs/system/RELEASE_SAFETY_BASELINE.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/RELEASE_SAFETY_BASELINE.md` | Current contract | Dependency/security policy, release gate, HTTP baseline, image provenance and deployment boundary. |
+| `security/dependency-exceptions.json` | Current policy data | Exact, expiring critical/high advisory dispositions. |
+| `scripts/check-dependency-audit.mjs` | Current release check | Fails unapproved, expired, mismatched, duplicate or unused exceptions. |
+| `scripts/inspect-release-images.sh` | Current release check | OCI revision/architecture/entrypoint and forbidden-path inspection. |

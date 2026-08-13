@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
+const useBundledChromium = process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -11,7 +12,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:3107",
-    channel: "chrome",
+    ...(useBundledChromium ? {} : { channel: "chrome" }),
     serviceWorkers: "allow",
     trace: "retain-on-failure",
   },

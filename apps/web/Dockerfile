@@ -9,7 +9,10 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
-RUN pnpm install --frozen-lockfile
+# Browser PDF rendering does not require pdfjs-dist's optional native canvas.
+# Disabling lifecycle scripts prevents its legacy node-pre-gyp/tar chain from
+# executing during the release build while the supported PDF.js migration is pending.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM dependencies AS builder
 

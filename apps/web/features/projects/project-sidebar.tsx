@@ -414,7 +414,7 @@ export function ProjectSidebar({
 
   const content = (
     <SidebarContent
-      pathname={pathname}
+      pathname={pathname ?? ""}
       currentProjectId={currentProjectId}
       projects={projects}
       projectsLoading={projectsQuery.isLoading}

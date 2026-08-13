@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -9,9 +10,12 @@ from app.models.search_document import SearchDocument
 
 def test_alembic_current_matches_repository_head() -> None:
     env = os.environ.copy()
-    env["PATH"] = r"E:\PostgreSQL\17\bin;" + env.get("PATH", "")
+    windows_postgres_bin = Path(r"E:\PostgreSQL\17\bin")
+    if os.name == "nt" and windows_postgres_bin.exists():
+        env["PATH"] = str(windows_postgres_bin) + os.pathsep + env.get("PATH", "")
+    alembic = shutil.which("alembic", path=env.get("PATH")) or "alembic"
     current = subprocess.run(
-        ["alembic", "current"],
+        [alembic, "current"],
         cwd=Path(__file__).resolve().parents[1],
         env=env,
         text=True,
@@ -19,7 +23,7 @@ def test_alembic_current_matches_repository_head() -> None:
         check=True,
     )
     heads = subprocess.run(
-        ["alembic", "heads"],
+        [alembic, "heads"],
         cwd=Path(__file__).resolve().parents[1],
         env=env,
         text=True,

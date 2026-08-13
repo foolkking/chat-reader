@@ -56,3 +56,4 @@
 ## Markdown 数据资产
 
 `apps/api/storage/imports/**/*.md` 与 `examples/**/*.md` 是用户导入内容或解析 fixture，不属于文档系统。不要自动改写、移动或纳入文档链接校验；详细边界见 [文档台账](documentation-inventory.md)。
+Current release contract: [Release Safety Baseline](system/RELEASE_SAFETY_BASELINE.md), covering dependency risk, production secret fail-fast, security headers, CSP Report-Only, quality gating, image inspection and artifact provenance.

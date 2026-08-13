@@ -74,11 +74,11 @@ export function ConversationReader({
   const { readerDensityMode, readerFontSizePx, readerWidthMode, resolvedLocale } = usePreferences();
   const dialog = useInteractionDialog();
   const searchParams = useSearchParams();
-  const projectContextId = searchParams.get("projectId") ?? undefined;
+  const projectContextId = searchParams?.get("projectId") ?? undefined;
   const queryClient = useQueryClient();
-  const targetMessageId = searchParams.get("messageId");
-  const targetBlockIndex = numberOrNull(searchParams.get("blockIndex"));
-  const targetCharacterOffset = numberOrNull(searchParams.get("characterOffset"));
+  const targetMessageId = searchParams?.get("messageId") ?? null;
+  const targetBlockIndex = numberOrNull(searchParams?.get("blockIndex") ?? null);
+  const targetCharacterOffset = numberOrNull(searchParams?.get("characterOffset") ?? null);
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
   const messages = loadedWindow.items;
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
@@ -91,7 +91,7 @@ export function ConversationReader({
   const filesPreferenceReadyRef = useRef(false);
   const recordedRecentConversationRef = useRef<string | null>(null);
   const [splitWorkspaceOpen, setSplitWorkspaceOpen] = useState(false);
-  const [annotationsOpen, setAnnotationsOpen] = useState(searchParams.get("annotations") === "open");
+  const [annotationsOpen, setAnnotationsOpen] = useState(searchParams?.get("annotations") === "open");
   const [focusMode, setFocusMode] = useState(false);
   const [desktopActionsExpanded, setDesktopActionsExpanded] = useState(false);
   const [mobileActionsExpanded, setMobileActionsExpanded] = useState(false);
@@ -2061,7 +2061,7 @@ export function ConversationReader({
         conversationId={conversation.id}
         messages={messages}
         activeMessageId={activeMessageId}
-        initialAnnotationId={searchParams.get("annotationId")}
+        initialAnnotationId={searchParams?.get("annotationId") ?? null}
         repository={annotationRepository}
         open={annotationsOpen && !focusMode && !sourceEditorTarget}
         onOpenChange={setAnnotationsOpenPreservingAnchor}

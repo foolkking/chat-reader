@@ -61,3 +61,4 @@ Connection state /offline
 - 目标可包含 `messageId`、`blockIndex`、`characterOffset`、quote 和 annotation ID。
 - 在线与离线互跳时保留 conversation/message/block/offset；Library 中“返回在线版”位于外观与语言，不在 Reader 更多菜单重复。
 - Share 页面不进入 canonical 编辑/Project 管理 API。
+Current proxy note (2026-08-13): `POST /api/imports/[importId]/commit` is a Pages API handler with a bounded 300-second upstream timeout. Its public path is unchanged. All other `/api/*` requests continue through the Next rewrite to FastAPI.
