@@ -7,7 +7,11 @@ from app.core.config import Settings
 
 
 @pytest.mark.parametrize("app_env", ["development", "test"])
-def test_development_and_test_allow_local_attachment_cursor_secret(app_env: str) -> None:
+def test_development_and_test_allow_local_attachment_cursor_secret(
+    app_env: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("ATTACHMENT_CURSOR_SECRET", raising=False)
     settings = Settings(_env_file=None, APP_ENV=app_env)
     assert settings.attachment_cursor_secret == "chat-reader-local-cursor-v1"
 
