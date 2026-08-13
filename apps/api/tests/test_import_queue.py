@@ -8,7 +8,8 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import get_settings
 from app.core.database import Base
 from app.models.import_record import ImportRecord
-from app.services.import_queue import claim_next_import, queue_import, recover_stale_imports
+from app.services.import_queue import claim_next_import, queue_import, recover_stale_imports, retry_import_manually
+from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -65,6 +66,56 @@ def test_claim_order_and_stale_recovery(tmp_path) -> None:
         assert first is not None
         assert first.status == "queued"
         assert first.error_message is not None
+
+
+def test_stale_import_recovery_is_bounded_and_manual_retry_starts_a_new_bounded_lifecycle(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'bounded.db'}")
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    import_id = uuid.uuid4()
+    with factory() as db:
+        record = _record(import_id)
+        record.status = "processing"
+        record.phase = "parsing"
+        record.attempt_count = MAX_AUTOMATIC_ATTEMPTS
+        record.heartbeat_at = datetime.now(timezone.utc) - timedelta(minutes=6)
+        db.add(record)
+        db.commit()
+
+    with factory() as db:
+        assert recover_stale_imports(db, 300) == 0
+        db.commit()
+        record = db.get(ImportRecord, import_id)
+        assert record is not None
+        assert record.status == "failed"
+        assert "Automatic recovery stopped" in (record.error_message or "")
+
+    with factory() as db:
+        assert recover_stale_imports(db, 300) == 0
+        record = db.get(ImportRecord, import_id)
+        assert record is not None
+        retry_import_manually(record, db)
+        db.commit()
+        assert record.status == "queued"
+        assert record.attempt_count == 0
+
+    for expected_attempt in range(1, MAX_AUTOMATIC_ATTEMPTS + 1):
+        with factory() as db:
+            assert claim_next_import(db) == import_id
+            record = db.get(ImportRecord, import_id)
+            assert record is not None
+            assert record.attempt_count == expected_attempt
+            record.heartbeat_at = datetime.now(timezone.utc) - timedelta(minutes=6)
+            db.commit()
+        with factory() as db:
+            assert recover_stale_imports(db, 300) == (1 if expected_attempt < MAX_AUTOMATIC_ATTEMPTS else 0)
+            db.commit()
+
+    with factory() as db:
+        record = db.get(ImportRecord, import_id)
+        assert record is not None
+        assert record.status == "failed"
+        assert record.attempt_count == MAX_AUTOMATIC_ATTEMPTS
 
 
 def _record(import_id: uuid.UUID) -> ImportRecord:

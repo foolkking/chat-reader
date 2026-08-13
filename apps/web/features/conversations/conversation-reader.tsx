@@ -117,6 +117,8 @@ export function ConversationReader({
     status: "deleted" | "restoring" | "restore_failed";
     error?: string;
   } | null>(null);
+  const desktopUtilityOpenerRef = useRef<HTMLElement | null>(null);
+  const desktopUtilityPanelRef = useRef<"search" | "share" | "export" | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("chat-reader:conversation-files-open");
@@ -1513,6 +1515,10 @@ export function ConversationReader({
   }
 
   const openUtilityPanel = useCallback(async (panel: Exclude<ReaderUtilityPanel, null | "navigation">) => {
+    if (window.innerWidth >= 768 && document.activeElement instanceof HTMLElement) {
+      desktopUtilityOpenerRef.current = document.activeElement;
+      desktopUtilityPanelRef.current = panel === "files" ? null : panel;
+    }
     const alreadyOpen = panel === "search" ? showSearch : panel === "share" ? showShare : panel === "export" ? showExport : showFiles;
     if (alreadyOpen) {
       setShowSearch(false);
@@ -1546,6 +1552,20 @@ export function ConversationReader({
     setShowExport(false);
     setShowSearch(false);
     setShowFiles(false);
+  }, []);
+
+  const restoreDesktopUtilityFocus = useCallback(() => {
+    const opener = desktopUtilityOpenerRef.current;
+    // Header actions are retained while their rail closes, but are then inside
+    // an aria-hidden container. Do not restore focus into that hidden subtree.
+    if (opener?.isConnected && !opener.closest("[aria-hidden='true']")) return opener;
+    const panel = desktopUtilityPanelRef.current;
+    const replacement = panel
+      ? document.querySelector<HTMLElement>(`[data-reader-header-action="${panel}"]`)
+      : null;
+    return replacement?.isConnected && !replacement.closest("[aria-hidden='true']")
+      ? replacement
+      : document.querySelector<HTMLElement>("[data-reader-more-actions='true']");
   }, []);
 
   const setAnnotationsOpenPreservingAnchor = useCallback((nextOpen: boolean) => {
@@ -1649,7 +1669,7 @@ export function ConversationReader({
     const closeTopSurface = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (utilityPanel !== null) { setUtilityPanel(null); event.preventDefault(); return; }
-      if (showSearch || showShare || showExport || showFiles) { setShowSearch(false); setShowShare(false); setShowExport(false); setShowFiles(false); event.preventDefault(); return; }
+      if (showFiles) { setShowFiles(false); event.preventDefault(); return; }
       if (mobileActionsExpanded || desktopActionsExpanded) { setMobileActionsExpanded(false); setDesktopActionsExpanded(false); event.preventDefault(); }
     };
     window.addEventListener("keydown", closeTopSurface);
@@ -2031,7 +2051,7 @@ export function ConversationReader({
         {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} />}
       </MobileReaderSheet>
       {!focusMode && (showShare || showExport || showSearch) ? (
-        <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels}>
+        <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels} restoreFocus={restoreDesktopUtilityFocus}>
             <div className="flex h-full min-w-0 w-full overflow-hidden">
               {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}

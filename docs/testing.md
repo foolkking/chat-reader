@@ -216,3 +216,11 @@ Actual browser zoom and the Offline negative matrix (runtime chunk miss, origina
 | Production Mermaid renderer | NOT_PRODUCTION_VERIFIED, no safe Mermaid QA fixture; strict-mode CI regression remains PASS |
 
 The desktop Share utility drawer opened successfully, but Esc restoration landed on `body` rather than the Share trigger. This is an observed P2 accessibility defect, deferred by user direction to the next round. It is not counted as a Share-focus PASS and does not alter the Release A security/provenance gate.
+
+## Release B Artifact Integrity Closure 2026-08-14
+
+- `tests/test_artifact_lifecycle.py` covers same-filesystem staging, ZIP validation, atomic rename failure, outer rollback preservation, cleanup debt and protected dry-run classification.
+- `tests/test_artifact_transaction_boundary.py` invokes the real BackgroundJob publication path with an injected outer commit failure. The previous Offline package remains referenced and downloadable; the new published file is allowed to remain an unreferenced orphan. Export commit failure leaves no committed artifact row and does not expose a download.
+- `tests/test_import_queue.py` covers stale recovery below the ceiling, terminal failure at three attempts, scanner non-recovery of terminal records and an explicit bounded manual retry lifecycle.
+- Current local result: lifecycle/retry suite `13 passed`; full API `260 passed / 4 skipped`; Web lint/typecheck pass; Alembic remains `20260806_0021`. A local isolated Next production build remains environment-blocked by an external React element-runtime resolution error, so Linux CI is the authoritative build/PWA/browser evidence. Skips remain separate from PASS.
+- `share-drawer-focus.spec.ts` creates and deletes its own QA Conversation and asserts initial focus plus `document.activeElement` after Esc, X and backdrop. It runs only in the full online matrix via `E2E_SHARE_DRAWER_FOCUS=1`, never in the lightweight PWA matrix. The previous Release A production failure is preserved as historical evidence and is not overwritten.

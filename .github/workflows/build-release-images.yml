@@ -123,6 +123,7 @@ jobs:
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           E2E_RICH_MARKDOWN: "1"
+          E2E_SHARE_DRAWER_FOCUS: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
@@ -131,6 +132,7 @@ jobs:
           e2e/ai-rich-markdown.spec.ts
           e2e/attachment-viewer-presentation.spec.ts
           e2e/release-stabilization-contract.spec.ts
+          e2e/share-drawer-focus.spec.ts
 
       - name: Default PWA baseline
         env:

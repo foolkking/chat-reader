@@ -30,6 +30,12 @@ Parser identities are `chat-reader-import-v5` and `markdown-parser-v5`. Alignmen
 
 `BackgroundTaskRead` includes `cancellable` and `attempt_count`. Production Compose limits the worker to `${IMPORT_WORKER_MEMORY_LIMIT:-640m}`.
 
+### Artifact publication and import recovery
+
+Offline packages and asynchronous export archives use the shared artifact lifecycle: same-volume server-owned staging file, ZIP validation, atomic publication to the job-owned final path, database flush, worker-owned outer commit, then best-effort cleanup of superseded Offline files. A download endpoint only exposes a job in `committed` state whose DB row resolves inside the controlled storage root to a final file of the declared size. A failed commit may leave an unreferenced final file for future dry-run cleanup, but never removes the previously committed Offline artifact.
+
+ImportRecord stale recovery shares `MAX_AUTOMATIC_ATTEMPTS = 3` with BackgroundJob. A terminal ImportRecord remains failed until explicit `POST /api/tasks/{import_id}/retry`; that action starts a fresh bounded lifecycle and cannot be requeued indefinitely by the stale scanner. See [Artifact Lifecycle Contract](ARTIFACT_LIFECYCLE_CONTRACT.md) for the crash matrix and dry-run-only cleanup taxonomy.
+
 The ten-fixture isolated regression baseline contains 398 effective messages and 51,866 canonical render blocks. It merged in 7.26 seconds with 132.9 MiB peak process RSS; the paired import reported 13 trailing-empty messages and no blocking alignment ambiguity.
 
 最后核验：2026-08-04

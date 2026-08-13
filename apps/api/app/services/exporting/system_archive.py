@@ -24,6 +24,7 @@ from app.models.reading_position import ReadingPosition
 from app.models.source_message_ref import SourceMessageRef
 from app.services.assets.asset_store import get_asset_store
 from app.services.derived_rebuild import rebuild_conversation_derived_data
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 
 
 SYSTEM_ARCHIVE_FORMAT = "chat-reader-system-archive"
@@ -110,6 +111,7 @@ def create_system_archive(
         raise SystemArchiveError("Invalid export storage path.")
     export_dir.mkdir(parents=True, exist_ok=True)
     destination = export_dir / f"chat-reader-system-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}.cr"
+    temporary = staging_path(destination)
     asset_entries: dict[str, tuple[AssetObject, Path]] = {}
     missing_assets = 0
     for asset in rows["asset_objects"]:
@@ -124,7 +126,7 @@ def create_system_archive(
         asset_entries.setdefault(f"assets/objects/{asset.sha256[:2]}/{asset.sha256}", (asset, path))
 
     files: list[dict[str, Any]] = []
-    with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+    with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
         for index, (name, model_rows) in enumerate(rows.items(), start=1):
             entry = f"data/{name}.jsonl"
             digest = hashlib.sha256()
@@ -175,17 +177,27 @@ def create_system_archive(
         }
         archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
 
-    digest, size = _hash_file(destination)
+    artifact_id = uuid.uuid4()
+    try:
+        published = publish_zip_artifact(
+            temporary,
+            destination,
+            category="export",
+            artifact_id=artifact_id,
+            required_entries=("manifest.json",),
+        )
+    finally:
+        temporary.unlink(missing_ok=True)
     artifact = ExportArtifact(
-        id=uuid.uuid4(),
+        id=artifact_id,
         job_id=job_id,
         conversation_id=None,
         scope_type="system",
         format=SYSTEM_ARCHIVE_FORMAT,
         filename=destination.name,
         storage_uri=str(destination),
-        sha256=digest,
-        byte_size=size,
+        sha256=published.sha256,
+        byte_size=published.byte_size,
         expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
     )
     db.add(artifact)

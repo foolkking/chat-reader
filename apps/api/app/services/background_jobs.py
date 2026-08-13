@@ -2,11 +2,13 @@ import logging
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import SessionLocal
+from app.core.config import get_settings
 from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.models.import_record import ImportRecord
@@ -23,15 +25,16 @@ from app.services.exporting.system_archive import create_system_archive
 from app.services.exporting.attachment_download import create_attachment_download, validate_attachment_download
 from app.schemas.export import ExportOptions
 from app.services.offline_packages import build_catalog, build_offline_package, changed_conversations, select_conversations
+from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
 from app.services.import_pipeline.bundle_import import preview_bundle_import
 from app.services.assets.derivatives import build_asset_derivative
+from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 
 logger = logging.getLogger(__name__)
 
 ACTIVE_JOB_STATUSES = ("queued", "processing", "cancelling")
-MAX_AUTOMATIC_ATTEMPTS = 3
 ProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -833,6 +836,11 @@ def process_background_job(
                 "completed_at": now,
                 "error_message": None,
             }
+            post_commit_cleanup: list[tuple[str, list[Path], Path]] = []
+            if job.job_type == "offline_package":
+                cleanup_paths = list(getattr(package, "_cleanup_paths", []))
+                if cleanup_paths:
+                    post_commit_cleanup.append(("offline", cleanup_paths, Path(get_settings().offline_storage_dir)))
             if is_sqlite:
                 for key, value in committed_values.items():
                     setattr(job, key, value)
@@ -845,6 +853,12 @@ def process_background_job(
                 if updated != 1:
                     raise BackgroundJobCancelled("Background job cancellation won the publish race.")
             db.commit()
+            if job.job_type in {"system_archive_export", "conversation_export", "attachment_batch_download"}:
+                logger.info("artifact_db_committed category=export job_id=%s", job_id)
+            elif job.job_type == "offline_package":
+                logger.info("artifact_db_committed category=offline job_id=%s", job_id)
+            for category, paths, root in post_commit_cleanup:
+                cleanup_committed_artifacts(paths, root=root, category=category)
     except BackgroundJobCancelled:
         logger.info("Background job %s cancelled", job_id)
         with session_factory() as db:

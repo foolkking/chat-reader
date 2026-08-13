@@ -55,6 +55,14 @@ test("managed dialogs have one pointer-only backdrop and shared focus lifecycle"
   const focusSource = source("components/use-dialog-focus.ts");
   expect(focusSource).toContain("useLayoutEffect");
   expect(focusSource).toContain("logicalTarget?.isConnected");
+  const utilityDrawer = source("components/reader-utility-drawer.tsx");
+  expect(utilityDrawer).toContain("useDialogFocus");
+  expect(utilityDrawer).toContain("data-dialog-backdrop");
+  expect(utilityDrawer).toContain("restoreFocus");
+  const reader = source("features/conversations/conversation-reader.tsx");
+  expect(reader).toContain("desktopUtilityOpenerRef");
+  expect(reader).toContain("!opener.closest(\"[aria-hidden='true']\")");
+  expect(reader).toContain("[data-reader-more-actions='true']");
 });
 
 test("attachment usage count remains a current-version projection", () => {

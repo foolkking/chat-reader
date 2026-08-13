@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -34,6 +33,7 @@ from app.schemas.offline import (
 from app.services.annotations import annotation_read, notebook_read
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import allowed_scan_statuses
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 
 ProgressCallback = Callable[[str, int, int, int], None]
 MessageProgressCallback = Callable[[int, int], None]
@@ -212,7 +212,7 @@ def build_offline_package(
     destination = (root / filename).resolve()
     if not destination.is_relative_to(root):
         raise OfflinePackageError("Invalid offline package path.")
-    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    temporary = staging_path(destination)
     try:
         with ZipFile(temporary, "w", compression=ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
             with archive.open("package.json", "w", force_zip64=True) as output:
@@ -226,11 +226,17 @@ def build_offline_package(
             for asset in _offline_asset_objects(db, conversations, include_assets):
                 path = get_asset_store().resolve_key(asset.storage_key)
                 archive.write(path, f"assets/objects/{asset.id}")
-        os.replace(temporary, destination)
+        published = publish_zip_artifact(
+            temporary,
+            destination,
+            category="offline",
+            artifact_id=package_id,
+            required_entries=("package.json",),
+        )
     finally:
         if temporary.exists():
             temporary.unlink()
-    digest = _sha256(destination)
+    digest = published.sha256
     artifact = OfflinePackageArtifact(
         id=package_id,
         job_id=job_id,
@@ -241,7 +247,7 @@ def build_offline_package(
         filename=filename,
         storage_uri=str(destination),
         sha256=digest,
-        byte_size=destination.stat().st_size,
+        byte_size=published.byte_size,
         conversation_count=len(conversations),
         created_at=utc_now(),
     )
@@ -254,13 +260,17 @@ def build_offline_package(
         )
         .all()
     )
+    cleanup_paths: list[Path] = []
     for previous in previous_artifacts:
         previous_path = Path(previous.storage_uri).resolve()
         if previous_path.is_relative_to(root) and previous_path.is_file():
-            previous_path.unlink()
+            cleanup_paths.append(previous_path)
         db.delete(previous)
     db.add(artifact)
     db.flush()
+    # The worker owns the outer transaction. Cleanup is deliberately deferred
+    # until that transaction has committed successfully.
+    setattr(artifact, "_cleanup_paths", cleanup_paths)
     _report(progress_callback, "publishing", 99, total, total)
     return artifact
 
@@ -683,14 +693,6 @@ def _revision_for(project: Project, ids: list[uuid.UUID], items: list[OfflineCat
     revisions = {item.id: item.revision for item in items}
     raw = f"{project.id}:{project.updated_at.isoformat()}:{','.join(f'{item}:{revisions.get(item, 0)}' for item in ids)}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _json_value(value: Any) -> Any:

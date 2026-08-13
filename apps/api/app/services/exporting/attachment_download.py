@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import re
 import uuid
 import zipfile
@@ -14,6 +13,7 @@ from app.models.attachment import AssetObject, Attachment
 from app.models.conversation import Conversation
 from app.models.export_artifact import ExportArtifact
 from app.services.assets.asset_store import get_asset_store
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 
 MAX_ATTACHMENTS = 500
 MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
@@ -70,16 +70,24 @@ def create_attachment_download(db: Session, *, conversation_id: uuid.UUID, attac
         raise AttachmentDownloadError("Invalid export path.")
     export_dir.mkdir(parents=True, exist_ok=True)
     destination = export_dir / f"{_safe_name(conversation.display_title if conversation else 'attachments')}-attachments.zip"
+    temporary = staging_path(destination)
     names = _entry_names(rows)
-    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
-        for index, ((attachment, _asset, path), entry_name) in enumerate(zip(rows, names, strict=True), start=1):
-            archive.write(path, entry_name)
-            if progress_callback:
-                progress_callback("assets", min(98, int(index * 98 / len(rows))), index, len(rows))
+    artifact_id = uuid.uuid4()
+    try:
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+            for index, ((attachment, _asset, path), entry_name) in enumerate(zip(rows, names, strict=True), start=1):
+                archive.write(path, entry_name)
+                if progress_callback:
+                    progress_callback("assets", min(98, int(index * 98 / len(rows))), index, len(rows))
+        published = publish_zip_artifact(
+            temporary, destination, category="export", artifact_id=artifact_id, required_entries=(names[0],)
+        )
+    finally:
+        temporary.unlink(missing_ok=True)
     artifact = ExportArtifact(
-        id=uuid.uuid4(), job_id=job_id, conversation_id=conversation_id, scope_type="conversation",
+        id=artifact_id, job_id=job_id, conversation_id=conversation_id, scope_type="conversation",
         format="attachment-batch-zip", filename=destination.name, storage_uri=str(destination),
-        sha256=_sha256(destination), byte_size=destination.stat().st_size,
+        sha256=published.sha256, byte_size=published.byte_size,
         expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
     )
     db.add(artifact)
@@ -110,11 +118,3 @@ def _safe_name(value: str) -> str:
     name = Path(value.replace("\\", "/")).name.strip().replace("\r", "_").replace("\n", "_")
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip(" .")
     return name[:220] or "attachment.bin"
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()

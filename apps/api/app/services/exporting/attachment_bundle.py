@@ -20,6 +20,7 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import scan_status_allows_use
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 from app.services.exporting.export_service import ExportOptions, ExportError, export_conversation_canjson_v2, export_conversation_markdown_v2
 
 
@@ -75,9 +76,10 @@ def create_attachment_bundle(
     export_dir.mkdir(parents=True, exist_ok=True)
     suffix = "-markdown.zip" if bundle_format == MARKDOWN_BUNDLE_FORMAT else ".context.zip"
     destination = export_dir / f"{_safe_filename(conversation.display_title)}{suffix}"
+    temporary = staging_path(destination)
     checksums: dict[str, dict[str, Any]] = {}
 
-    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
         if bundle_format == MARKDOWN_BUNDLE_FORMAT:
             export_options = options or ExportOptions(format="markdown_v2", message_ids=[])
             export_options = ExportOptions(**{**export_options.__dict__, "format": "markdown_v2", "preserve_attachment_uris": True})
@@ -161,16 +163,26 @@ def create_attachment_bundle(
             }
             _write_json(archive, "manifest.json", manifest)
 
-    digest = _sha256_file(destination)
+    artifact_id = uuid.uuid4()
+    try:
+        published = publish_zip_artifact(
+            temporary,
+            destination,
+            category="export",
+            artifact_id=artifact_id,
+            required_entries=(("conversation.md",) if bundle_format == MARKDOWN_BUNDLE_FORMAT else ("manifest.json", "conversation.canjsonl")),
+        )
+    finally:
+        temporary.unlink(missing_ok=True)
     artifact = ExportArtifact(
-        id=uuid.uuid4(),
+        id=artifact_id,
         job_id=job_id,
         conversation_id=conversation.id,
         format=bundle_format,
         filename=destination.name,
         storage_uri=str(destination),
-        sha256=digest,
-        byte_size=destination.stat().st_size,
+        sha256=published.sha256,
+        byte_size=published.byte_size,
         expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
     )
     db.add(artifact)

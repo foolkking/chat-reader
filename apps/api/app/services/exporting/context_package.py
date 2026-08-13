@@ -23,6 +23,7 @@ from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import scan_status_allows_use
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 
 
 CONTEXT_PACKAGE_FORMAT = "chat-reader-context-package"
@@ -80,7 +81,8 @@ def create_context_package(
     export_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{_safe_filename(conversation.display_title)}.context.zip"
     destination = export_dir / filename
-    jsonl_path = export_dir / "conversation.canjsonl.tmp"
+    temporary = staging_path(destination)
+    jsonl_path = staging_path(export_dir / "conversation.canjsonl")
 
     links = (
         db.query(MessageVersionAttachment)
@@ -318,7 +320,7 @@ def create_context_package(
         },
     }
     try:
-        with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
             archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"))
             archive.write(jsonl_path, "conversation.canjsonl")
             for index, (object_path, (_, source_path)) in enumerate(asset_entries.items(), start=1):
@@ -327,16 +329,26 @@ def create_context_package(
     finally:
         jsonl_path.unlink(missing_ok=True)
 
-    digest, byte_size = _hash_file(destination)
+    artifact_id = uuid.uuid4()
+    try:
+        published = publish_zip_artifact(
+            temporary,
+            destination,
+            category="export",
+            artifact_id=artifact_id,
+            required_entries=("manifest.json", "conversation.canjsonl"),
+        )
+    finally:
+        temporary.unlink(missing_ok=True)
     artifact = ExportArtifact(
-        id=uuid.uuid4(),
+        id=artifact_id,
         job_id=job_id,
         conversation_id=conversation.id,
         format=CONTEXT_PACKAGE_FORMAT,
         filename=filename,
         storage_uri=str(destination),
-        sha256=digest,
-        byte_size=byte_size,
+        sha256=published.sha256,
+        byte_size=published.byte_size,
         expires_at=exported_at + timedelta(hours=24),
     )
     db.add(artifact)

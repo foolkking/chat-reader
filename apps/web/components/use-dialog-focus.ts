@@ -42,6 +42,7 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        event.stopPropagation();
         closeRef.current();
         return;
       }

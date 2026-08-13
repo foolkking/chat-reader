@@ -1,5 +1,14 @@
 # Project State
 
+## 2026-08-14 Release B Artifact Integrity Closure (implementation current)
+
+- Root-cause audit confirmed that Offline Package publication previously deleted prior files before the outer BackgroundJob transaction committed. Release B now writes same-volume UUID staging files, validates ZIP structure and required entries, publishes a unique final path, flushes the new row, commits through the worker-owned transaction, and only then attempts prior-file cleanup.
+- All Export ZIP builders use the same staging/validation/publish helper. Download endpoints require the owning job to be `committed`, a controlled storage root and a present file with the declared size. Publication computes a streaming SHA-256; downloads do not re-hash large artifacts on every request.
+- Outer commit failure tests prove the old Offline row and file remain available; a newly published file may remain an unreferenced orphan. Cleanup failures are logged/classified as debt and never turn a committed publication into failure.
+- Import stale recovery now shares the BackgroundJob automatic-attempt ceiling of 3. At the ceiling the ImportRecord becomes terminal failed and is not requeued by the stale scanner; explicit retry starts a new bounded lifecycle.
+- Share Drawer now uses the existing `useDialogFocus` contract. Esc, X and pointer backdrop close share the same restoration path; a remounted Share trigger falls back to the stable More-actions trigger instead of `body`.
+- Release B focused verification is currently local: artifact transaction/lifecycle and import retry tests `13 passed`; the full API suite is `260 passed / 4 skipped`; Web lint/typecheck pass; no migration. Production deployment and Chrome QA remain pending until the committed Release B artifact is built and deployed.
+
 ## 2026-08-13 Release A Production Closure (Current)
 
 - Release A is deployed from runtime commit `1d366fb0b3e74f865f1cbc455e3f5d6afeaa5911`, after the approved policy change removed only the cursor-secret length threshold. The deployment guard still rejects a missing, empty, development-default, or known-placeholder `ATTACHMENT_CURSOR_SECRET`.

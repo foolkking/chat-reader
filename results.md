@@ -1,5 +1,21 @@
 # Implementation Results
 
+## Release B Artifact Integrity Closure (implementation current, 2026-08-14)
+
+- Offline and all asynchronous Export ZIP builders now stage on the final artifact volume, validate required ZIP entries and a streaming SHA-256, atomically publish a job-owned final file, then rely on the existing worker-owned outer transaction to commit the DB row and job status. Superseded Offline artifacts are cleaned only after that commit; cleanup failure is logged as debt and does not reverse a successful publication.
+- Download endpoints reject uncommitted jobs and rows that do not resolve to a controlled, present final artifact with the declared size. New staging/final artifacts with no committed row are explicitly permitted cleanup debt, never canonical state.
+- Import stale recovery is bounded at the shared three-attempt ceiling; exhausted records stay terminal failed until the existing task retry route starts a new bounded manual lifecycle.
+- Share Drawer now uses the shared focus contract for Esc/X/backdrop and restores a logical More-trigger fallback after its transient Share trigger is unmounted.
+- Local verification: artifact/retry `13 passed`; full API `260 passed / 4 skipped`; Web lint/typecheck and Alembic head pass. CI image/build/browser, deployment and production QA remain pending.
+
+## Release B Artifact Integrity Closure (2026-08-14)
+
+Implementation status: focused local regression PASS (`9 passed`), lint PASS, typecheck PASS. No database migration. Production deployment, external artifact provenance, production headers/health and Chrome QA are not yet verified for this source revision.
+
+Historical Release A Share Drawer Esc->body evidence remains preserved. The Release B implementation routes the drawer through the shared focus controller and adds logical More-actions fallback for a trigger unmounted by the action rail.
+
+Offline/Export now publish validated same-volume unique files before the worker-owned database commit, and defer old-file cleanup until after commit. Commit failure preserves prior canonical state; cleanup failure is debt. Import stale recovery is bounded at three automatic attempts. `apps/api/scripts/artifact_cleanup_dry_run.py` is read-only and automatic cleanup remains disabled.
+
 ## Formula Dense Reader Scroll Stabilization - 2026-08-13
 
 The reported slowdown after formulas had already loaded was traced to repeated ReactMarkdown/remark/rehype-KaTeX work on unchanged virtual blocks, compounded by ordinary-text height estimation for long display LaTeX and layout propagation from the full `htmlAndMathml` subtree. The fix keeps complete MathML and all existing KaTeX security settings, but memoizes cross-block projections and block/rendering subtrees, adds formula-aware bounded virtual estimates, and applies local `contain: layout paint` to display math.

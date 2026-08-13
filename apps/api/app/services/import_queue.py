@@ -12,6 +12,7 @@ from app.core.database import SessionLocal
 from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
 from app.services.canonical.persistence import CommitImportResult, commit_import_preview
+from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,14 @@ def queue_import(record: ImportRecord, db: Session) -> ImportRecord:
     return record
 
 
+def retry_import_manually(record: ImportRecord, db: Session) -> ImportRecord:
+    if record.status != "failed":
+        return record
+    record.attempt_count = 0
+    logger.info("import_manual_retry import_id=%s", record.id)
+    return queue_import(record, db)
+
+
 def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=stale_after_seconds)
     stale = (
@@ -46,15 +55,33 @@ def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
         .all()
     )
     now = datetime.now(timezone.utc)
+    requeued = 0
     for record in stale:
+        if record.attempt_count >= MAX_AUTOMATIC_ATTEMPTS:
+            record.status = "failed"
+            record.phase = "failed"
+            record.heartbeat_at = now
+            record.completed_at = now
+            record.error_message = (
+                f"Automatic recovery stopped after {MAX_AUTOMATIC_ATTEMPTS} attempts. "
+                "The import can be retried manually."
+            )
+            logger.warning(
+                "import_auto_retry_exhausted import_id=%s attempt=%s",
+                record.id,
+                record.attempt_count,
+            )
+            continue
         record.status = "queued"
         record.phase = "queued"
         record.queued_at = now
         record.started_at = None
         record.heartbeat_at = None
         record.error_message = "Previous worker stopped before completing; task requeued."
+        logger.warning("import_stale_recovered import_id=%s attempt=%s", record.id, record.attempt_count)
+        requeued += 1
     db.flush()
-    return len(stale)
+    return requeued
 
 
 def claim_next_import(db: Session) -> uuid.UUID | None:

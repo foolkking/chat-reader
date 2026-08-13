@@ -12,7 +12,7 @@ from app.services.background_jobs import (
     request_background_job_cancellation,
     retry_background_job,
 )
-from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_for_import, primary_filename, queue_import
+from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_for_import, primary_filename, retry_import_manually
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -59,7 +59,7 @@ def retry_task(job_id: uuid.UUID, db: Session = Depends(get_db)) -> BackgroundTa
     if record is not None:
         if record.status != "failed":
             return _import_task(record, db)
-        queue_import(record, db)
+        retry_import_manually(record, db)
         db.commit()
         return _import_task(record, db)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")

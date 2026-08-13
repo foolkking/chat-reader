@@ -31,6 +31,7 @@ from app.services.projects.project_service import add_conversation_to_project, e
 from app.services.search.search_indexer import _refresh_postgres_tsv
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import AssetScanError, scan_attachment, scan_status_allows_use
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 
 ARCHIVE_FORMAT = "chat-reader-archive"
 ARCHIVE_VERSION = 3
@@ -96,6 +97,7 @@ def create_cr_archive(
     export_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{_safe_filename(conversation.display_title)}.cr"
     destination = export_dir / filename
+    temporary = staging_path(destination)
 
     message_rows = db.query(Message).filter(Message.conversation_id == conversation.id).order_by(Message.order_key).all()
     message_ids = [message.id for message in message_rows]
@@ -139,7 +141,7 @@ def create_cr_archive(
     processed = 0
     checksums: dict[str, dict[str, Any]] = {}
 
-    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
         conversation_payload = _conversation_payload(db, conversation)
         if include_description:
             conversation_payload["description_markdown"] = conversation.description_markdown
@@ -240,16 +242,26 @@ def create_cr_archive(
         }
         _write_json(archive, "manifest.json", manifest)
 
-    digest = _sha256_file(destination)
+    artifact_id = uuid.uuid4()
+    try:
+        published = publish_zip_artifact(
+            temporary,
+            destination,
+            category="export",
+            artifact_id=artifact_id,
+            required_entries=("manifest.json", "conversation.json"),
+        )
+    finally:
+        temporary.unlink(missing_ok=True)
     artifact = ExportArtifact(
-        id=uuid.uuid4(),
+        id=artifact_id,
         job_id=job_id,
         conversation_id=conversation.id,
         format="chat_reader_archive",
         filename=filename,
         storage_uri=str(destination),
-        sha256=digest,
-        byte_size=destination.stat().st_size,
+        sha256=published.sha256,
+        byte_size=published.byte_size,
         expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
     )
     db.add(artifact)

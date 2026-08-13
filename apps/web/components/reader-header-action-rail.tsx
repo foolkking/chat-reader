@@ -87,6 +87,7 @@ export function ReaderHeaderActionRail({
               ref={(node) => { actionRefs.current[index] = node; }}
               type="button"
               title={action.label}
+              data-reader-header-action={action.id}
               aria-label={action.label}
               disabled={action.disabled}
               tabIndex={expanded ? 0 : -1}

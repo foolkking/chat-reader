@@ -1,5 +1,13 @@
 # 生产部署
 
+## Release B deployment checklist (2026-08-14)
+
+- Build Release B only from a committed source revision through the existing external quality -> image -> inspect -> checksum -> artifact workflow. King must not run a Next build.
+- Before deployment back up PostgreSQL and the current import/export/offline/asset business volumes. Verify the dump with `pg_restore --list`, archive readability and checksums; retain the current release as rollback.
+- Use the explicit production compose/env target and `--no-build`. Never run `down -v`, delete volumes, overwrite `.env.production`, start Scanner or perform a migration unless separately approved.
+- Artifact publication contract is documented in `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`: staging -> validation -> unique final publish -> worker transaction commit -> old cleanup. Cleanup is dry-run only in Release B.
+- After health checks, run isolated QA Share focus, Offline package replace/previous-package continuity, Export immediate download and normal Import smoke. Production must not receive injected commit failures; those are production-equivalent tests.
+
 ## Manual TOC refresh release (2026-08-13)
 
 - Commit `9d338a001c612bfd837de6a9ee5d06cdb684df61`; GitHub Actions run `31621723794`; artifact SHA-256 `8b0123f93a382535d378e16d5d5a046049ba245870d955dc009e1262cbbdca1b` matched locally and on King.

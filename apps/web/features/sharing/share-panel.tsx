@@ -82,6 +82,7 @@ export function SharePanel({
           <label className="text-sm text-secondary">{t("shareLanguage")}<select value={shareLocale} onChange={(event) => setShareLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label>
         </div>
         <input
+          data-dialog-initial-focus
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder={zh ? "分享标题（可选）" : "Share title (optional)"}

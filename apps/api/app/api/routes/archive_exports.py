@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.export_artifact import ExportArtifact
+from app.models.background_job import BackgroundJob
 from app.schemas.task import BackgroundTaskRead
 from app.schemas.export import ExportRequest
 from app.services.background_jobs import queue_conversation_auto_clean, queue_conversation_derived_rebuild, queue_conversation_export
@@ -17,6 +18,7 @@ from app.api.routes.tasks import background_job_read
 from app.services.exporting.cr_archive import ARCHIVE_MIME
 from app.services.exporting.attachment_bundle import BUNDLE_MIME, CANJSON_BUNDLE_FORMAT, MARKDOWN_BUNDLE_FORMAT
 from app.services.exporting.context_package import CONTEXT_PACKAGE_FORMAT, CONTEXT_PACKAGE_MIME
+from app.services.artifact_lifecycle import validate_final_artifact
 from app.services.exporting.export_service import (
     ExportError,
     content_disposition,
@@ -135,6 +137,9 @@ def download_archive(artifact_id: uuid.UUID, db: Session = Depends(get_db)) -> F
     artifact = db.get(ExportArtifact, artifact_id)
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export not found.")
+    job = db.get(BackgroundJob, artifact.job_id)
+    if job is None or job.status != "committed":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Export artifact is not ready.")
     expires_at = artifact.expires_at
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
@@ -142,7 +147,7 @@ def download_archive(artifact_id: uuid.UUID, db: Session = Depends(get_db)) -> F
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Export has expired.")
     export_root = Path(get_settings().export_storage_dir).resolve()
     path = Path(artifact.storage_uri).resolve()
-    if not path.is_relative_to(export_root) or not path.is_file():
+    if not path.is_relative_to(export_root) or not validate_final_artifact(path, expected_sha256=artifact.sha256, expected_size=artifact.byte_size):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export file is missing.")
     artifact.download_count += 1
     db.commit()

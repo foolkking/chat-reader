@@ -256,6 +256,8 @@ No new documentation category, public API, migration or persisted Reader contrac
 2026-08-11 Final Release Closure 文档同步：最终生产生命周期、mutation revision、Attachment 对账、精确窄屏、Share expiry、`.cr v4`、部署与 QA 清理证据已追加到当前事实和历史审计。真实浏览器 Zoom 与完整 Offline 负向矩阵保持 `NOT_PRODUCTION_VERIFIED/PARTIAL_PASS`，没有被默认 PWA 条件跳过覆盖。
 2026-08-13 synchronization: Release A dependency policy, production secret guard, Alembic percent handling, security headers, CSP Report-Only, quality-to-image gate, image inspection and artifact provenance are current in `PROJECT_STATE.md`, `docs/system/RELEASE_SAFETY_BASELINE.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`.
 
+2026-08-14 synchronization: Release B artifact publication, outer-transaction safety, bounded Import stale recovery, Share Drawer focus restoration and dry-run cleanup classification are current in `PROJECT_STATE.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/testing.md` and `docs/deployment.md`.
+
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
 | `docs/system/RELEASE_SAFETY_BASELINE.md` | Current contract | Dependency/security policy, release gate, HTTP baseline, image provenance and deployment boundary. |
