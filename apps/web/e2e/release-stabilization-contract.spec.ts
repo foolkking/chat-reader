@@ -62,7 +62,7 @@ test("managed dialogs have one pointer-only backdrop and shared focus lifecycle"
   const reader = source("features/conversations/conversation-reader.tsx");
   expect(reader).toContain("desktopUtilityOpenerRef");
   expect(reader).toContain("!opener.closest(\"[aria-hidden='true']\")");
-  expect(reader).toContain("[data-reader-more-actions='true']");
+  expect(reader).toContain("[data-reader-header-more-actions='true']");
 });
 
 test("attachment usage count remains a current-version projection", () => {

@@ -114,6 +114,7 @@ export function ReaderHeaderActionRail({
       <button
         ref={triggerRef}
         data-reader-more-actions="true"
+        data-reader-header-more-actions="true"
         type="button"
         aria-label={expanded ? closeLabel : triggerLabel}
         title={expanded ? closeLabel : triggerLabel}

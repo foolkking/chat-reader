@@ -1565,7 +1565,7 @@ export function ConversationReader({
       : null;
     return replacement?.isConnected && !replacement.closest("[aria-hidden='true']")
       ? replacement
-      : document.querySelector<HTMLElement>("[data-reader-more-actions='true']");
+      : document.querySelector<HTMLElement>("[data-reader-header-more-actions='true']");
   }, []);
 
   const setAnnotationsOpenPreservingAnchor = useCallback((nextOpen: boolean) => {
