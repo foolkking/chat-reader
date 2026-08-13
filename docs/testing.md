@@ -6,6 +6,8 @@ The release workflow runs the default commands plus a real PostgreSQL service, `
 
 Focused regressions cover production secret rejection/acceptance, Alembic `%` and encoded credentials, actual HTTP security headers, absence of `X-Powered-By`, CSP Report-Only, the single PDF.js `isEvalSupported=false` path, Mermaid strict mode, the long import commit proxy, and workflow ordering. Local results are lint PASS, typecheck PASS, build PASS, API `251 passed / 4 skipped`, Alembic `20260806_0021 (head/current)`, focused browser `6/6`, and default PWA `67 passed / 36 skipped`. The 36 Playwright skips are conditional online-write/fixture/production-copy flows and are not counted as PASS; the release workflow explicitly enables its focused online subset.
 
+The production secret regression rejects missing, empty, development-default and known-placeholder values. It accepts custom values without imposing a length threshold, following the approved Release A policy revision. Tests use synthetic values and never read a production secret.
+
 Release workflow evidence is three-layered rather than inferred from YAML. Runs `31705576354` and `31706041697` failed at early and late quality stages respectively; both skipped `build-images` and produced no deployable archive. Run `31706522862` passed every quality step and only then built, inspected, checksummed and uploaded the release archive. Production headers are not marked PASS because deployment was stopped by the production-secret gate.
 
 ## Manual TOC refresh (2026-08-13)

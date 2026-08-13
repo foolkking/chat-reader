@@ -100,11 +100,10 @@ class Settings(BaseSettings):
             not secret
             or secret == self._DEVELOPMENT_ATTACHMENT_CURSOR_SECRET
             or secret.casefold() in self._PRODUCTION_SECRET_PLACEHOLDERS
-            or len(secret) < 32
         ):
             raise ValueError(
-                "Refusing to start in production with a missing, placeholder, or weak attachment cursor secret. "
-                "Configure ATTACHMENT_CURSOR_SECRET with a production secret of at least 32 characters."
+                "Refusing to start in production with a missing, default, or placeholder attachment cursor secret. "
+                "Configure ATTACHMENT_CURSOR_SECRET with a production-specific value."
             )
         return self
 

@@ -587,6 +587,8 @@ Actions run `31706522862` passed locked installation, migration setup, Web lint/
 
 Production deployment is `BLOCKED`. A non-value-disclosing check found `ATTACHMENT_CURSOR_SECRET` absent, classified as default/placeholder, and shorter than the required minimum. Per the Release A contract, no agent-generated secret was written and deployment did not proceed. The existing production Web/API/PostgreSQL remain healthy, worker is running, and Alembic is `20260806_0021 (head)`; no backup, image load, service recreation, data mutation or image cleanup was required because the gate stopped before those operations.
 
+The next read-only preflight found the production value configured, non-default and non-placeholder, but shorter than the former 32-character minimum. The user explicitly approved removing the length requirement so the existing custom value can satisfy the guard. The guard continues to reject missing, empty, development-default and known-placeholder values. No secret value was displayed, copied, recorded or modified; a new workflow and artifact are required before deployment because this policy change occurred after candidate `08df7a1`.
+
 | Capability | Status | Evidence |
 | --- | --- | --- |
 | Next immediate patch | PASS | `14.2.23 -> 14.2.35` plus build/browser baseline |

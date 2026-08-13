@@ -33,7 +33,7 @@ The audit source is `https://registry.npmjs.org`. Critical and high advisories f
 
 ## Configuration guard
 
-`APP_ENV=production` or `prod` requires a non-empty, non-placeholder `ATTACHMENT_CURSOR_SECRET` of at least 32 characters. The local default remains valid only for development/test. Compose also requires the variable before migrate, API, or worker starts. Errors identify the variable but never print its value.
+`APP_ENV=production` or `prod` requires a non-empty `ATTACHMENT_CURSOR_SECRET` that is neither the development default nor a known placeholder. There is no minimum-length requirement. The local default remains valid only for development/test. Compose also requires the variable before migrate, API, or worker starts. Errors identify the variable but never print its value.
 
 Production secret provisioning is operator-owned. A release agent may verify configured/non-default status, but must not generate a committed secret, print it, or overwrite `.env.production`.
 
@@ -70,4 +70,4 @@ API or source inspection alone does not establish a browser-flow PASS. Skipped t
 - Actions run `31706522862` completed every quality and image step for commit `08df7a1a880c63a4d05df46b8e0a271b16088c7f`. The independently downloaded archive matches SHA-256 `25687fa7b91db5a518d42ccb61892015ff5fb90fc717f820de03a2719846a6b5`; its manifest and image inspection report match the same commit/run, all images are `linux/amd64`, and no forbidden path was found.
 - Production deployment did not start because `ATTACHMENT_CURSOR_SECRET` was absent. The current production release remains healthy and unchanged. Release A is therefore `BLOCKED`, not a production PASS; application security headers and CSP Report-Only are production-equivalent verified but production `NOT_VERIFIED`.
 
-An operator must provision a non-placeholder secret of at least 32 characters outside source control. After that change, rerun the release workflow from the current committed source, verify the new archive SHA-256, complete backups and deployment, and perform HTTP/browser acceptance. Do not reuse the validated candidate as evidence for a later source commit without an explicit provenance decision.
+The first closure remained blocked because the production value did not satisfy the former 32-character policy. The user subsequently approved removing that length constraint while retaining the non-empty, non-default and non-placeholder checks. This is a policy change, not a secret change: the value itself was never displayed, copied, recorded or written by the release agent. Rerun the release workflow from the resulting committed source, verify the new archive SHA-256, complete backups and deployment, and perform HTTP/browser acceptance. Do not reuse the validated candidate as evidence for a later source commit without an explicit provenance decision.

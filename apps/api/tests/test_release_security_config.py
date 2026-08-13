@@ -18,9 +18,9 @@ def test_development_and_test_allow_local_attachment_cursor_secret(
 
 @pytest.mark.parametrize(
     "secret",
-    [None, "", "chat-reader-local-cursor-v1", "change-me", "replace-with-a-production-secret", "too-short"],
+    [None, "", "chat-reader-local-cursor-v1", "change-me", "replace-with-a-production-secret"],
 )
-def test_production_rejects_missing_default_placeholder_or_weak_attachment_cursor_secret(
+def test_production_rejects_missing_default_or_placeholder_attachment_cursor_secret(
     secret: str | None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -33,13 +33,14 @@ def test_production_rejects_missing_default_placeholder_or_weak_attachment_curso
         Settings(_env_file=None, **values)
 
 
-def test_production_accepts_non_default_attachment_cursor_secret() -> None:
+@pytest.mark.parametrize("secret", ["custom", "synthetic-release-test-secret"])
+def test_production_accepts_non_default_attachment_cursor_secret(secret: str) -> None:
     settings = Settings(
         _env_file=None,
         APP_ENV="production",
-        ATTACHMENT_CURSOR_SECRET="synthetic-release-test-secret-32-chars-minimum",
+        ATTACHMENT_CURSOR_SECRET=secret,
     )
-    assert settings.attachment_cursor_secret.startswith("synthetic-release-test")
+    assert settings.attachment_cursor_secret == secret
 
 
 @pytest.mark.parametrize(
