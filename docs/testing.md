@@ -25,6 +25,16 @@ the single `20260806_0021` head; default PWA is `67 passed / 37 conditional
 skipped`. The focused skip is symlink path-escape coverage because this host
 cannot create the test symlink. Linux CI must execute it; no skip is a PASS.
 
+Final Release C workflow run `31789905868` passed quality, image inspection,
+artifact packaging/checksum, full API, focused browser and default PWA jobs for
+source `8d0ad66`. Production recheck verified one request-completion event for
+both a successful request and a controlled 404, with no raw query marker or
+Uvicorn access line. The first post-deploy check found that production INFO
+events were not emitted by the unconfigured application logger; the bounded
+logger-handler fix added a subprocess regression and was rebuilt before final
+deployment. Production dry-run was repeated twice with no deletion and stable
+aggregate counts; manual apply remains unexecuted.
+
 ## Release A safety baseline (2026-08-13)
 
 The release workflow runs the default commands plus a real PostgreSQL service, `alembic upgrade/current`, the official npm-registry audit policy, a live API/worker, focused production-build browser tests, and the default PWA baseline before any image build. `build-images` requires successful `quality`; diagnostic quality evidence is explicitly non-deployable.

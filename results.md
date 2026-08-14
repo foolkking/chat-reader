@@ -1,5 +1,60 @@
 # Implementation Results
 
+## Release C Production Closure - 2026-08-14
+
+### Executive result
+
+```text
+RELEASE_B_PRODUCTION_FOCUS_CLOSURE = PASS (manual operator production Chrome Share focus evidence)
+REQUEST_ID = PASS
+STRUCTURED_API_LOGGING = PASS
+SENSITIVE_LOG_REDACTION = PASS
+JOB_METRICS = PARTIAL_PASS (idle worker heartbeat is not independently derivable)
+ARTIFACT_METRICS = PASS
+STORAGE_AGGREGATES = PASS
+INTERNAL_DIAGNOSTICS_IMPLEMENTATION = PASS
+INTERNAL_DIAGNOSTICS_PRODUCTION = NOT_ENABLED
+CLEANUP_CLASSIFIER = PASS
+CLEANUP_DRY_RUN = PASS
+CLEANUP_RECHECK = PASS
+CLEANUP_MANUAL_APPLY = NOT_EXECUTED
+AUTOMATIC_CLEANUP = DISABLED
+ASSET_OBJECT_GC = NOT_IMPLEMENTED
+RELEASE_A_REGRESSION = PASS
+RELEASE_B_REGRESSION = PASS
+NEW_ALEMBIC_MIGRATION = NONE
+RELEASE_C = PASS
+```
+
+### Final deployment evidence
+
+- Runtime source: `8d0ad66d65bb069176970ea814d9a6b08e04322c`.
+- GitHub Actions: `31789905868`, complete quality/build/inspect/package/checksum chain PASS. The earlier `31778569056` candidate is superseded; its first quality-gate failure remains preserved evidence that no image artifact is published after a failed browser quality step.
+- Artifact SHA-256: `577594e63ed351de39cdfb56c02e385bff1ef0bbfe90285ddd9d0441aaabedd7`.
+- API/worker/migrate image: `sha256:dfc11cda21f78ce77b9b451e886689f97842e1929a6e6618bfcaf8626a312c2a`.
+- Web image: `sha256:69d228b578c35626f37577102afcbd7ad40c7e61191edafe6e14747379ab38b6`.
+- Verified backup: `/opt/chat-reader/backups/release-c-final-20260814T100144Z-8d0ad66`.
+- Production: API/Web/PostgreSQL healthy, worker running, Scanner disabled, Alembic current/head `20260806_0021`.
+
+### Production request and diagnostics evidence
+
+The public `/api/health` response returned 200 and a server-owned UUID v4 `X-Request-ID`; the controlled public diagnostics request returned 404 with its own UUID. Both IDs correlated to one `api_request_completed` structured log event. The synthetic query marker never appeared in logs and raw Uvicorn access-log lines were absent. This was reverified after fixing the production logger handler/level gap discovered during the first post-deploy check.
+
+The diagnostics CLI returned aggregates only. It reported jobs `committed=130, failed=3, cancelled=1`, imports `committed=31, failed=2, previewed=14`, no stale/retry-exhausted items, bounded recent timing samples, and storage aggregates without content/filename output. The HTTP diagnostics route remains disabled/not enabled pending gateway proof.
+
+### Cleanup evidence
+
+Release B baseline was `ORPHAN_FINAL=4 / 659,673 bytes`, `SAFE_TEMP=0`, `SUPERSEDED_ARTIFACT=0`, `UNSAFE_PROTECTED=29 / 236,546,674 bytes`. Release C ran the classifier twice in production dry-run mode. Both runs were identical: `ORPHAN_FINAL=3 / 655,810 bytes`, `SAFE_TEMP=0`, `SUPERSEDED_ARTIFACT=0`, `UNSAFE_PROTECTED=30 / 236,550,537 bytes`, scan complete. Release B did not preserve opaque candidate identities and Release C did not delete artifacts, so the aggregate change is disclosed as an unresolved candidate-set change rather than treated as a safe deletion. No production cleanup apply was approved or executed.
+
+Only exact superseded Chat Reader image tags (`1d366fb`, intermediate `2d2ad36`) and the two verified release-transfer directories were removed after final health. Current `8d0ad66`, direct rollback `32a980b`, all business volumes, PostgreSQL, backups and `.env.production` were retained.
+
+### Remaining debt
+
+- `INTERNAL_DIAGNOSTICS_PRODUCTION = NOT_ENABLED` until reverse-proxy/VPN protection is independently evidenced.
+- `CLEANUP_MANUAL_APPLY = NOT_EXECUTED`; stable ORPHAN_FINAL candidates remain pending separate operator approval.
+- `AUTOMATIC_CLEANUP = DISABLED`; `ASSET_OBJECT_GC = NOT_IMPLEMENTED`.
+- Next supported LTS migration, PDF.js supported-line migration, CSP enforcing, PWA negative matrix and dedicated Reader/Import/.cr performance benchmark remain separate tracks.
+
 ## Release C Observability and Safe Cleanup (implementation, 2026-08-14)
 
 Release B closure is now `PASS` based on the operator's manual production Chrome verification of Share Drawer Esc/X/backdrop/remounted-trigger focus restoration. It is explicitly manual user evidence, not a browser-bridge automation claim.

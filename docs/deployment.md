@@ -1,5 +1,14 @@
 # 生产部署
 
+## Release C final deployment (2026-08-14)
+
+- Source `8d0ad66d65bb069176970ea814d9a6b08e04322c`; Actions `31789905868`; artifact SHA-256 `577594e63ed351de39cdfb56c02e385bff1ef0bbfe90285ddd9d0441aaabedd7`.
+- Image digests: API/worker/migrate `sha256:dfc11cda21f78ce77b9b451e886689f97842e1929a6e6618bfcaf8626a312c2a`; Web `sha256:69d228b578c35626f37577102afcbd7ad40c7e61191edafe6e14747379ab38b6`.
+- Backup `/opt/chat-reader/backups/release-c-final-20260814T100144Z-8d0ad66` passed PostgreSQL custom-dump listing, four business-volume tar listings and checksum verification. King used explicit production compose/env, migration preflight and `--no-build`; no Next build, volume deletion, environment overwrite or Scanner start occurred.
+- Post-deploy API/Web/PostgreSQL health, worker, Scanner-disabled state and Alembic `20260806_0021` passed. Production headers were verified: `nosniff`, strict referrer policy, bounded Permissions Policy, CSP Report-Only, and no `X-Powered-By`.
+- Request ID production verification passed after a first post-deploy logger-level finding was fixed in `8d0ad66`: success and controlled 404 IDs correlate to structured request events; raw query markers and raw access-log lines are absent. Public diagnostics remains disabled/404; internal CLI diagnostics is the safe fallback.
+- Cleanup dry-run twice: `SAFE_TEMP=0`, `ORPHAN_FINAL=3 / 655,810 bytes`, `SUPERSEDED_ARTIFACT=0`, `UNSAFE_PROTECTED=30 / 236,550,537 bytes`, stable and complete. No application artifact was deleted and manual cleanup approval was not requested. Exact old/intermediate image tags and release-transfer directories were removed only after health, retaining current `8d0ad66`, rollback `32a980b`, all volumes and backups.
+
 ## Release C deployment and cleanup checklist (2026-08-14)
 
 - Build only from committed source through `quality -> build-images -> inspect -> checksum -> artifact`. King never runs a Next build.

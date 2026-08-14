@@ -1,6 +1,6 @@
 # Markdown 文档台账
 
-2026-08-14 Release C synchronization: request correlation, redacted structured logging, aggregate diagnostics, storage visibility and explicit safe cleanup are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`, `docs/system/CLEANUP_CONTRACT.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/api-reference.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`. No migration or business-data cleanup is introduced.
+2026-08-14 Release C synchronization: request correlation, production-emitted redacted structured logging, aggregate diagnostics, storage visibility and explicit safe cleanup are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`, `docs/system/CLEANUP_CONTRACT.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/api-reference.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`. Final source `8d0ad66` is deployed; no migration or business-data cleanup is introduced.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
