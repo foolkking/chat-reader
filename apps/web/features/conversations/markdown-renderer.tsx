@@ -269,7 +269,6 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId?: string;
 }) {
-  recordRichMarkdownPerformance(text);
   const generatedScopeId = useId();
   const resolvedScopeId = scopeId ?? generatedScopeId;
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);

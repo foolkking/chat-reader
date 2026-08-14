@@ -119,8 +119,6 @@ jobs:
           mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR" benchmark-results
           cd apps/api
           python -m alembic upgrade head
-      - name: Build Web for browser characterization
-        run: pnpm --filter web build
       - name: Start API and worker
         run: |
           cd apps/api
@@ -146,31 +144,6 @@ jobs:
                 --output "benchmark-results/api-${profile}-${messages}.json"
             done
           done
-          for messages in 398 1000 10000; do
-            psql "postgresql://chat_reader:chat_reader_ci@127.0.0.1:5432/chat_reader" \
-              -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-            (cd apps/api && python -m alembic upgrade head)
-            python scripts/performance/run_backend_benchmark.py \
-              --profile plain --messages "$messages" --system-archive \
-              --api-pid "$BENCHMARK_API_PID" --worker-pid "$BENCHMARK_WORKER_PID" \
-              --output "benchmark-results/cr-v4-${messages}.json"
-            restore_db="chat_reader_restore_${messages}"
-            psql "postgresql://chat_reader:chat_reader_ci@127.0.0.1:5432/postgres" \
-              -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS $restore_db; CREATE DATABASE $restore_db;"
-            DATABASE_URL="postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:5432/$restore_db" \
-              bash -c 'cd apps/api && python -m alembic upgrade head'
-            DATABASE_URL="postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:5432/$restore_db" \
-              python scripts/performance/restore_cr_benchmark.py \
-                --archive "benchmark-results/cr-v4-${messages}.cr" \
-                --output "benchmark-results/cr-v4-restore-${messages}.json"
-          done
-      - name: Install Playwright Chromium
-        run: pnpm --filter web exec playwright install --with-deps chromium
-      - name: Run Reader capacity characterization
-        env:
-          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
-          E2E_READER_CAPACITY: "1"
-        run: pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts
       - name: Query characterization
         run: |
           psql "postgresql://chat_reader:chat_reader_ci@127.0.0.1:5432/chat_reader" -c "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT id, conversation_id, order_key FROM messages ORDER BY created_at DESC LIMIT 50" > benchmark-results/explain-reader.json
@@ -186,5 +159,158 @@ jobs:
             apps/web/test-results
             ${{ runner.temp }}/perf-api.log
             ${{ runner.temp }}/perf-worker.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  reader-capacity:
+    needs: quality
+    if: ${{ needs.quality.result == 'success' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chat_reader
+          POSTGRES_USER: chat_reader
+          POSTGRES_PASSWORD: chat_reader_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chat_reader -d chat_reader"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.13.1"
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+      - name: Install locked dependencies
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          python -m pip install --upgrade pip
+          python -m pip install -e apps/api
+      - name: Prepare schema and build Web
+        run: |
+          mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
+          (cd apps/api && python -m alembic upgrade head)
+          pnpm --filter web build
+      - name: Start API and worker
+        run: |
+          cd apps/api
+          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/reader-api.log" 2>&1 &
+          nohup python -m app.workers.import_worker > "$RUNNER_TEMP/reader-worker.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Install Playwright Chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: Run Reader capacity characterization
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_READER_CAPACITY: "1"
+        run: pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts
+      - name: Upload Reader evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reader-capacity-${{ github.sha }}
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+            ${{ runner.temp }}/reader-api.log
+            ${{ runner.temp }}/reader-worker.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  cr-capacity:
+    needs: quality
+    if: ${{ needs.quality.result == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scale: current
+            messages: 398
+          - scale: 2x
+            messages: 796
+          - scale: 10x
+            messages: 3980
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chat_reader
+          POSTGRES_USER: chat_reader
+          POSTGRES_PASSWORD: chat_reader_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chat_reader -d chat_reader"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+      - name: Install API and prepare isolated databases
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e apps/api
+          mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR" benchmark-results
+          (cd apps/api && python -m alembic upgrade head)
+          createdb -h 127.0.0.1 -U chat_reader "chat_reader_restore_${{ matrix.messages }}"
+          DATABASE_URL="postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:5432/chat_reader_restore_${{ matrix.messages }}" \
+            bash -c 'cd apps/api && python -m alembic upgrade head'
+        env:
+          PGPASSWORD: chat_reader_ci
+      - name: Start isolated API and worker
+        run: |
+          cd apps/api
+          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/cr-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/cr-api.pid"
+          nohup python -m app.workers.import_worker > "$RUNNER_TEMP/cr-worker.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/cr-worker.pid"
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Measure system archive export and restore
+        run: |
+          python scripts/performance/run_backend_benchmark.py \
+            --profile plain --messages "${{ matrix.messages }}" --system-archive \
+            --api-pid "$(cat "$RUNNER_TEMP/cr-api.pid")" --worker-pid "$(cat "$RUNNER_TEMP/cr-worker.pid")" \
+            --output "benchmark-results/cr-v4-${{ matrix.scale }}.json"
+          DATABASE_URL="postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:5432/chat_reader_restore_${{ matrix.messages }}" \
+            python scripts/performance/restore_cr_benchmark.py \
+              --archive "benchmark-results/cr-v4-${{ matrix.scale }}.cr" \
+              --output "benchmark-results/cr-v4-restore-${{ matrix.scale }}.json"
+      - name: Upload system archive evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cr-capacity-${{ matrix.scale }}-${{ github.sha }}
+          path: |
+            benchmark-results
+            ${{ runner.temp }}/cr-api.log
+            ${{ runner.temp }}/cr-worker.log
           if-no-files-found: warn
           retention-days: 14
