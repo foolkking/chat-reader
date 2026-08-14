@@ -311,6 +311,28 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     result["operations"].append(commit_metric)
     conversation_id = status["conversation_ids"][0]
     result["conversation_id"] = conversation_id
+    if args.profile == "attachment_metadata":
+        attachments_response = client.get(f"/api/conversations/{conversation_id}/attachments")
+        attachments_response.raise_for_status()
+        attachments = attachments_response.json()["items"]
+        asset_object_ids = {
+            item["asset_object"]["id"]
+            for item in attachments
+            if item.get("asset_object")
+        }
+        summary = {
+            "attachment_count": len(attachments),
+            "asset_object_count": len(asset_object_ids),
+            "current_occurrence_count": sum(int(item["current_occurrence_count"]) for item in attachments),
+        }
+        expected = {
+            "attachment_count": spec["attachment_count"],
+            "asset_object_count": spec["asset_object_count"],
+            "current_occurrence_count": spec["occurrence_count"],
+        }
+        if summary != expected:
+            raise RuntimeError(f"attachment fixture reconciliation failed: {summary!r} != {expected!r}")
+        result["attachment_reconciliation"] = summary
 
     for export_name, path in (("markdown", f"/api/conversations/{conversation_id}/exports/markdown"), ("canjson", f"/api/conversations/{conversation_id}/exports/canjson?compression=gzip")):
         def download(url: str = path) -> int:

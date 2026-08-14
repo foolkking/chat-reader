@@ -65,7 +65,17 @@ async function seedConversation(request: APIRequestContext, messages: number, pr
     expect(preview.ok()).toBe(true);
     const accepted = await preview.json() as { import_id: string; status_url: string };
     await waitForTask(request, accepted.status_url);
-    return commitImport(request, accepted.import_id);
+    const conversationId = await commitImport(request, accepted.import_id);
+    const attachmentsResponse = await request.get(`/api/conversations/${conversationId}/attachments`);
+    expect(attachmentsResponse.ok()).toBe(true);
+    const attachments = (await attachmentsResponse.json()) as {
+      items: Array<{ asset_object: { id: string } | null; current_occurrence_count: number }>;
+    };
+    const expectedCount = Math.ceil(messages / 100);
+    expect(attachments.items).toHaveLength(expectedCount);
+    expect(new Set(attachments.items.map((item) => item.asset_object?.id).filter(Boolean)).size).toBe(1);
+    expect(attachments.items.reduce((sum, item) => sum + item.current_occurrence_count, 0)).toBe(expectedCount);
+    return conversationId;
   }
   const source = JSON.stringify({
     metadata: { title: `Release D ${profile} ${messages}`, powered_by: "ChatGPT Exporter" },
