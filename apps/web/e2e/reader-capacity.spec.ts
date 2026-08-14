@@ -1,4 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
 
 const enabled = process.env.E2E_READER_CAPACITY === "1";
 test.skip(!enabled, "E2E_READER_CAPACITY=1 is required");
@@ -47,6 +49,24 @@ for (const profile of profiles) {
 }
 
 async function seedConversation(request: APIRequestContext, messages: number, profile: Profile): Promise<string> {
+  if (profile === "attachment_metadata") {
+    const fixtureRoot = process.env.E2E_READER_ATTACHMENT_FIXTURE_DIR;
+    if (!fixtureRoot) throw new Error("E2E_READER_ATTACHMENT_FIXTURE_DIR is required for attachment capacity");
+    const bundle = fs.readFileSync(path.join(fixtureRoot, `attachment-${messages}.crbundle`));
+    const preview = await request.post("/api/imports/bundles/preview", {
+      multipart: {
+        file: {
+          name: `release-d-attachment-${messages}.crbundle`,
+          mimeType: "application/vnd.chat-reader.bundle+zip",
+          buffer: bundle,
+        },
+      },
+    });
+    expect(preview.ok()).toBe(true);
+    const accepted = await preview.json() as { import_id: string; status_url: string };
+    await waitForTask(request, accepted.status_url);
+    return commitImport(request, accepted.import_id);
+  }
   const source = JSON.stringify({
     metadata: { title: `Release D ${profile} ${messages}`, powered_by: "ChatGPT Exporter" },
     messages: Array.from({ length: messages }, (_, index) => ({
@@ -65,6 +85,10 @@ async function seedConversation(request: APIRequestContext, messages: number, pr
   });
   expect(preview.ok()).toBe(true);
   const importId = (await preview.json()).import_id as string;
+  return commitImport(request, importId);
+}
+
+async function commitImport(request: APIRequestContext, importId: string): Promise<string> {
   const commit = await request.post(`/api/imports/${importId}/commit`);
   expect(commit.ok()).toBe(true);
   const deadline = Date.now() + 900_000;
@@ -77,6 +101,19 @@ async function seedConversation(request: APIRequestContext, messages: number, pr
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error("capacity fixture import timed out");
+}
+
+async function waitForTask(request: APIRequestContext, statusUrl: string): Promise<void> {
+  const deadline = Date.now() + 900_000;
+  while (Date.now() < deadline) {
+    const response = await request.get(statusUrl);
+    expect(response.ok()).toBe(true);
+    const task = await response.json() as { status: string; error?: string; error_message?: string };
+    if (task.status === "committed") return;
+    if (task.status === "failed") throw new Error(task.error_message ?? task.error ?? "attachment fixture validation failed");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error("attachment fixture validation timed out");
 }
 
 function buildMessage(index: number, messages: number, profile: Profile): string {
