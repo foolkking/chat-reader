@@ -35,6 +35,11 @@ for (const profile of profiles) {
         // The historical far-target fixture retains its stricter <=6 settled
         // budget. Default first-window capacity is a separate bounded workload.
         expect(run.mountedMessagesMax, "virtualized message working set grew with the fixture").toBeLessThanOrEqual(40);
+        expect(run.mountedBlocksMax, "virtual block working set grew without bound").toBeLessThanOrEqual(120);
+        expect(run.p95FrameInterval).not.toBeNull();
+        expect(run.p95FrameInterval!).toBeLessThanOrEqual(34);
+        expect(run.longestTask).toBeLessThanOrEqual(150);
+        expect(run.longTaskTotal).toBeLessThanOrEqual(250);
       }
       expect(warm.scrollMonotonic).toBe(true);
     });

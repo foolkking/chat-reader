@@ -59,6 +59,11 @@ def fixture(messages: int, profile: str) -> tuple[bytes, dict[str, Any]]:
                 f"![synthetic-{index}](attachment://synthetic-{index})\n\n"
                 "The binary payload is intentionally not part of this benchmark."
             )
+        elif profile == "large_message":
+            text = (
+                f"Large message {index}.\n\n"
+                + ("bounded-large-message-payload " * 45_000 if role == "Response" else "")
+            )
         else:
             raise ValueError(f"unsupported profile: {profile}")
         rows.append({"role": role, "say": text})
@@ -238,7 +243,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default=os.getenv("BENCHMARK_BASE_URL", "http://127.0.0.1:8000"))
     parser.add_argument("--messages", type=int, required=True)
-    parser.add_argument("--profile", choices=["plain", "math", "mixed", "attachment_metadata"], default="plain")
+    parser.add_argument(
+        "--profile",
+        choices=["plain", "math", "mixed", "attachment_metadata", "large_message"],
+        default="plain",
+    )
     parser.add_argument("--api-pid", default=os.getenv("BENCHMARK_API_PID"))
     parser.add_argument("--worker-pid", default=os.getenv("BENCHMARK_WORKER_PID"))
     parser.add_argument("--import-root", default=os.getenv("IMPORT_STORAGE_DIR"))
