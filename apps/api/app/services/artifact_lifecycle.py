@@ -21,6 +21,7 @@ _OFFLINE_FINAL_NAME = re.compile(
 _EXPORT_JOB_TYPES = {"system_archive_export", "conversation_export", "attachment_batch_download"}
 _ELIGIBLE_CATEGORIES = {"SAFE_TEMP", "ORPHAN_FINAL", "SUPERSEDED_ARTIFACT"}
 _MANAGED_ROOTS = {"export", "offline"}
+_REFERENCE_QUERY_CHUNK_SIZE = 500
 
 
 class ArtifactLifecycleError(RuntimeError):
@@ -77,6 +78,19 @@ class CleanupApplyResult:
         return result
 
 
+@dataclass(frozen=True)
+class _ScannedArtifactFile:
+    category: str
+    root: Path
+    path: Path
+    relative: Path | None
+    stat_size: int
+    mtime_ns: int
+    age_seconds: float
+    job_id: uuid.UUID | None
+    is_symlink: bool
+
+
 def validate_final_artifact(
     path: Path,
     *,
@@ -120,34 +134,9 @@ def scan_cleanup_candidates(
     from app.models.offline_package_artifact import OfflinePackageArtifact
     from app.models.background_job import BackgroundJob
 
-    referenced: dict[str, set[Path]] = {category: set() for category in roots}
-    superseded: set[Path] = set()
-    for (storage_uri,) in db.query(ExportArtifact.storage_uri):
-        referenced.setdefault("export", set()).add(Path(storage_uri).resolve())
-    for (storage_uri,) in db.query(OfflinePackageArtifact.storage_uri):
-        referenced.setdefault("offline", set()).add(Path(storage_uri).resolve())
-
-    active_job_ids: dict[str, set[uuid.UUID]] = {"export": set(), "offline": set()}
-    active_rows = (
-        db.query(BackgroundJob.id, BackgroundJob.job_type)
-        .filter(BackgroundJob.status.in_(("queued", "processing", "cancelling")))
-    )
-    for job_id, job_type in active_rows:
-        if job_type in _EXPORT_JOB_TYPES:
-            active_job_ids["export"].add(job_id)
-        elif job_type == "offline_package":
-            active_job_ids["offline"].add(job_id)
-
-    offline_root = Path(roots.get("offline", Path("."))).resolve()
-    for (result,) in (
-        db.query(BackgroundJob.result)
-        .filter(BackgroundJob.job_type == "offline_package", BackgroundJob.status == "committed")
-    ):
-        filename = (result or {}).get("filename")
-        if isinstance(filename, str) and filename:
-            candidate = (offline_root / filename).resolve()
-            if candidate.is_relative_to(offline_root) and candidate.name == filename and candidate not in referenced.get("offline", set()):
-                superseded.add(candidate)
+    # Scan the managed roots first. Database lookups are then scoped to the
+    # paths/jobs that actually exist in this bounded filesystem snapshot. This
+    # prevents diagnostics from loading every historical artifact/job row.
     result = {
         "SAFE_TEMP": {"candidate_count": 0, "candidate_bytes": 0},
         "ORPHAN_FINAL": {"candidate_count": 0, "candidate_bytes": 0},
@@ -155,10 +144,11 @@ def scan_cleanup_candidates(
         "UNSAFE_PROTECTED": {"candidate_count": 0, "candidate_bytes": 0},
     }
     candidates: list[CleanupCandidate] = []
-    scanned_files = 0
     complete = True
     now = now or datetime.now(timezone.utc)
     now_timestamp = now.timestamp()
+    scanned: list[_ScannedArtifactFile] = []
+    scanned_files = 0
     for category, root_value in roots.items():
         root = Path(root_value).resolve()
         if not root.exists():
@@ -178,44 +168,148 @@ def scan_cleanup_candidates(
             age_seconds = max(0.0, now_timestamp - stat.st_mtime)
             relative = resolved.relative_to(root) if resolved.is_relative_to(root) else None
             job_id = _artifact_job_id(category, relative, path.name) if relative is not None else None
-            active = job_id in active_job_ids.get(category, set()) if job_id is not None else bool(active_job_ids.get(category))
-            if category not in _MANAGED_ROOTS or path.is_symlink() or relative is None:
-                bucket = "UNSAFE_PROTECTED"
-            elif resolved in referenced.get(category, set()):
-                bucket = "UNSAFE_PROTECTED"
-            elif active or age_seconds < grace_seconds:
-                bucket = "UNSAFE_PROTECTED"
-            elif _STAGING_NAME.fullmatch(path.name) and _is_server_controlled_path(category, relative, path.name):
-                bucket = "SAFE_TEMP"
-            elif resolved in superseded:
-                bucket = "SUPERSEDED_ARTIFACT"
-            elif category == "export" and _is_server_controlled_path(category, relative, path.name) and (
-                path.suffix in {".zip", ".cr"} or path.name.endswith(".context.zip")
-            ):
-                bucket = "ORPHAN_FINAL"
-            elif category == "offline" and _is_server_controlled_path(category, relative, path.name) and path.suffix == ".crpkg":
-                bucket = "ORPHAN_FINAL"
-            else:
-                bucket = "UNSAFE_PROTECTED"
-            if bucket in _ELIGIBLE_CATEGORIES:
-                token = _candidate_token(category, relative, bucket, stat.st_size, stat.st_mtime_ns)
-                candidates.append(
-                    CleanupCandidate(
-                        storage_category=category,
-                        candidate_type=bucket,
-                        root=root,
-                        path=resolved,
-                        byte_size=stat.st_size,
-                        mtime_ns=stat.st_mtime_ns,
-                        age_seconds=age_seconds,
-                        token=token,
-                    )
+            scanned.append(
+                _ScannedArtifactFile(
+                    category=category,
+                    root=root,
+                    path=resolved,
+                    relative=relative,
+                    stat_size=stat.st_size,
+                    mtime_ns=stat.st_mtime_ns,
+                    age_seconds=age_seconds,
+                    job_id=job_id,
+                    is_symlink=path.is_symlink(),
                 )
-            result[bucket]["candidate_count"] += 1
-            result[bucket]["candidate_bytes"] += stat.st_size
+            )
         if not complete:
             break
+
+    scanned_paths: dict[str, set[Path]] = {category: set() for category in roots}
+    for item in scanned:
+        scanned_paths.setdefault(item.category, set()).add(item.path)
+    referenced = _referenced_paths_for_snapshot(db, scanned_paths, ExportArtifact, OfflinePackageArtifact)
+    active_job_ids = _active_job_ids_for_snapshot(db, scanned, BackgroundJob)
+    superseded = _superseded_paths_for_snapshot(db, scanned, referenced, BackgroundJob)
+
+    for item in scanned:
+        category = item.category
+        root = item.root
+        path = item.path
+        relative = item.relative
+        stat_size = item.stat_size
+        active = item.job_id in active_job_ids.get(category, set()) if item.job_id is not None else bool(active_job_ids.get(category))
+        if category not in _MANAGED_ROOTS or item.is_symlink or relative is None:
+            bucket = "UNSAFE_PROTECTED"
+        elif path in referenced.get(category, set()):
+            bucket = "UNSAFE_PROTECTED"
+        elif active or item.age_seconds < grace_seconds:
+            bucket = "UNSAFE_PROTECTED"
+        elif _STAGING_NAME.fullmatch(path.name) and _is_server_controlled_path(category, relative, path.name):
+            bucket = "SAFE_TEMP"
+        elif path in superseded:
+            bucket = "SUPERSEDED_ARTIFACT"
+        elif category == "export" and _is_server_controlled_path(category, relative, path.name) and (
+            path.suffix in {".zip", ".cr"} or path.name.endswith(".context.zip")
+        ):
+            bucket = "ORPHAN_FINAL"
+        elif category == "offline" and _is_server_controlled_path(category, relative, path.name) and path.suffix == ".crpkg":
+            bucket = "ORPHAN_FINAL"
+        else:
+            bucket = "UNSAFE_PROTECTED"
+        if bucket in _ELIGIBLE_CATEGORIES:
+            token = _candidate_token(category, relative, bucket, stat_size, item.mtime_ns)
+            candidates.append(
+                CleanupCandidate(
+                    storage_category=category,
+                    candidate_type=bucket,
+                    root=root,
+                    path=path,
+                    byte_size=stat_size,
+                    mtime_ns=item.mtime_ns,
+                    age_seconds=item.age_seconds,
+                    token=token,
+                )
+            )
+        result[bucket]["candidate_count"] += 1
+        result[bucket]["candidate_bytes"] += stat_size
     return CleanupScan(summary=result, candidates=tuple(candidates), complete=complete)
+
+
+def _chunks(values: Iterable[Any], size: int = _REFERENCE_QUERY_CHUNK_SIZE) -> Iterable[list[Any]]:
+    chunk: list[Any] = []
+    for value in values:
+        chunk.append(value)
+        if len(chunk) == size:
+            yield chunk
+            chunk = []
+    if chunk:
+        yield chunk
+
+
+def _referenced_paths_for_snapshot(db, scanned_paths, export_model, offline_model) -> dict[str, set[Path]]:
+    referenced: dict[str, set[Path]] = {category: set() for category in scanned_paths}
+    for category, model in (("export", export_model), ("offline", offline_model)):
+        values = [str(path) for path in scanned_paths.get(category, set())]
+        for chunk in _chunks(values):
+            for (storage_uri,) in db.query(model.storage_uri).filter(model.storage_uri.in_(chunk)).all():
+                referenced.setdefault(category, set()).add(Path(storage_uri).resolve())
+    return referenced
+
+
+def _active_job_ids_for_snapshot(db, scanned: list[_ScannedArtifactFile], background_job_model) -> dict[str, set[uuid.UUID]]:
+    active_job_ids: dict[str, set[uuid.UUID]] = {"export": set(), "offline": set()}
+    job_ids = {item.job_id for item in scanned if item.job_id is not None}
+    if not job_ids:
+        return active_job_ids
+    for chunk in _chunks(job_ids):
+        rows = (
+            db.query(background_job_model.id, background_job_model.job_type)
+            .filter(
+                background_job_model.id.in_(chunk),
+                background_job_model.status.in_(("queued", "processing", "cancelling")),
+            )
+            .all()
+        )
+        for job_id, job_type in rows:
+            if job_type in _EXPORT_JOB_TYPES:
+                active_job_ids["export"].add(job_id)
+            elif job_type == "offline_package":
+                active_job_ids["offline"].add(job_id)
+    return active_job_ids
+
+
+def _superseded_paths_for_snapshot(db, scanned, referenced, background_job_model) -> set[Path]:
+    offline_root = next((item.root for item in scanned if item.category == "offline"), None)
+    if offline_root is None:
+        return set()
+    job_ids = {
+        item.job_id
+        for item in scanned
+        if item.category == "offline" and item.job_id is not None
+    }
+    superseded: set[Path] = set()
+    for chunk in _chunks(job_ids):
+        rows = (
+            db.query(background_job_model.id, background_job_model.result)
+            .filter(
+                background_job_model.id.in_(chunk),
+                background_job_model.job_type == "offline_package",
+                background_job_model.status == "committed",
+            )
+            .all()
+        )
+        for _, result in rows:
+            filename = (result or {}).get("filename")
+            if not isinstance(filename, str) or not filename:
+                continue
+            candidate = (offline_root / filename).resolve()
+            if (
+                candidate.is_relative_to(offline_root)
+                and candidate.name == filename
+                and candidate not in referenced.get("offline", set())
+            ):
+                superseded.add(candidate)
+    return superseded
 
 
 def execute_cleanup_candidates(
