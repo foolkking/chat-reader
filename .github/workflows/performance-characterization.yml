@@ -408,7 +408,7 @@ jobs:
       - name: Measure system archive export and restore
         run: |
           python scripts/performance/run_backend_benchmark.py \
-            --profile plain --messages "${{ matrix.messages }}" --system-archive \
+            --profile attachment_metadata --messages "${{ matrix.messages }}" --system-archive \
             --api-pid "$(cat "$RUNNER_TEMP/cr-api.pid")" --worker-pid "$(cat "$RUNNER_TEMP/cr-worker.pid")" \
             --output "benchmark-results/cr-v4-${{ matrix.scale }}.json"
           DATABASE_URL="postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:5432/chat_reader_restore_${{ matrix.messages }}" \
