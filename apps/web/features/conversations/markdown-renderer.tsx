@@ -27,6 +27,26 @@ export type MarkdownTaskItem = {
   ordinal: number;
 };
 
+type RichMarkdownPerformanceProbe = {
+  markdownRenderTotal?: number;
+  mathSourceTotal?: number;
+};
+
+/** Test-only counters. The probe is installed by the capacity Playwright run and
+ * never sends source text or enables production telemetry. */
+function recordRichMarkdownPerformance(text: string): void {
+  if (typeof window === "undefined") return;
+  const probe = (window as typeof window & { __chatReaderPerfProbe?: RichMarkdownPerformanceProbe }).__chatReaderPerfProbe;
+  if (!probe) return;
+  probe.markdownRenderTotal = (probe.markdownRenderTotal ?? 0) + 1;
+  const withoutFences = text.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
+  probe.mathSourceTotal = (probe.mathSourceTotal ?? 0) + (
+    (withoutFences.match(/\\\[[\s\S]*?\\\]/g) ?? []).length
+    + (withoutFences.match(/\$\$[\s\S]*?\$\$/g) ?? []).length
+    + (withoutFences.match(/\\\([\s\S]*?\\\)/g) ?? []).length
+  );
+}
+
 const shikiTokenCache = new Map<string, ThemedToken[][]>();
 let shikiHighlighterPromise: ReturnType<typeof createCachedHighlighter> | null = null;
 const shikiLanguagePromises = new Map<BundledLanguage, Promise<void>>();
@@ -249,6 +269,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId?: string;
 }) {
+  recordRichMarkdownPerformance(text);
   const generatedScopeId = useId();
   const resolvedScopeId = scopeId ?? generatedScopeId;
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
@@ -277,6 +298,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
 export function InlineHeadingMarkdown({ text }: { text: string }) {
   const inlineText = text.replace(/\s*\r?\n\s*/g, " ").trim();
+  recordRichMarkdownPerformance(inlineText);
   return (
     <ReactMarkdown
       components={inlineMarkdownComponents}
@@ -342,6 +364,7 @@ export function AssistantMarkdownPart({
   if (!text.trim()) {
     return null;
   }
+  recordRichMarkdownPerformance(text);
   const interactiveComponents = createTaskAwareComponents(taskItems, pendingTaskKeys, onTaskToggle);
   const taskPlugin = taskItems.length > 0 ? remarkTaskKeys(taskItems) : null;
   if (onTaskToggle && taskItems.length > 0) {
