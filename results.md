@@ -35,6 +35,7 @@ RELEASE_C = PASS
 - Web image: `sha256:69d228b578c35626f37577102afcbd7ad40c7e61191edafe6e14747379ab38b6`.
 - Verified backup: `/opt/chat-reader/backups/release-c-final-20260814T100144Z-8d0ad66`.
 - Production: API/Web/PostgreSQL healthy, worker running, Scanner disabled, Alembic current/head `20260806_0021`.
+- Final CI counts: Release C focused `30 passed`; API `282 passed / 4 skipped`; focused browser `28 passed`; default PWA `67 passed / 37 skipped`. Skips are conditional/fixture paths and are not counted as PASS.
 
 ### Production request and diagnostics evidence
 

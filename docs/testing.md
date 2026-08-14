@@ -27,7 +27,9 @@ cannot create the test symlink. Linux CI must execute it; no skip is a PASS.
 
 Final Release C workflow run `31789905868` passed quality, image inspection,
 artifact packaging/checksum, full API, focused browser and default PWA jobs for
-source `8d0ad66`. Production recheck verified one request-completion event for
+source `8d0ad66`: Release C focused `30 passed`, API `282 passed / 4 skipped`,
+focused browser `28 passed`, and PWA `67 passed / 37 skipped`. Production
+recheck verified one request-completion event for
 both a successful request and a controlled 404, with no raw query marker or
 Uvicorn access line. The first post-deploy check found that production INFO
 events were not emitted by the unconfigured application logger; the bounded
