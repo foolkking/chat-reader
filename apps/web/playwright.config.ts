@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
 const useBundledChromium = process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1";
+const pnpmCommand = process.env.PNPM_HOME ? "pnpm" : "corepack pnpm";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -17,7 +18,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "corepack pnpm exec next start -p 3107",
+    command: `${pnpmCommand} exec next start -p 3107`,
     url: "http://127.0.0.1:3107/library",
     timeout: 180_000,
     reuseExistingServer,
