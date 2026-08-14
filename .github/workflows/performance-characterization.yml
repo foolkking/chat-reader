@@ -63,13 +63,13 @@ jobs:
           cd apps/api
           python -m alembic upgrade head
       - name: Web lint
-        run: pnpm run lint
+        run: pnpm --filter web lint
       - name: Web typecheck
-        run: pnpm run typecheck
+        run: pnpm --filter web typecheck
       - name: Web production build
         run: pnpm --filter web build
       - name: API full suite
-        run: pnpm run test:api
+        run: cd apps/api && pytest
       - name: Alembic single head
         run: |
           cd apps/api
