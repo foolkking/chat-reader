@@ -14,6 +14,22 @@ from starlette.responses import JSONResponse, Response
 
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 request_logger = logging.getLogger("chat_reader.request")
+_structured_handler = logging.StreamHandler()
+_structured_handler.setFormatter(logging.Formatter("%(message)s"))
+
+
+def _ensure_structured_log_output(logger: logging.Logger) -> None:
+    """Make application events visible without enabling raw HTTP access logs."""
+    logger.setLevel(logging.INFO)
+    current: logging.Logger | None = logger
+    while current is not None:
+        if current.handlers:
+            return
+        if not current.propagate:
+            break
+        current = current.parent
+    logger.addHandler(_structured_handler)
+    logger.propagate = False
 
 
 def current_request_id() -> str | None:
@@ -23,6 +39,7 @@ def current_request_id() -> str | None:
 def structured_event(logger: logging.Logger, level: int, event: str, **fields: Any) -> None:
     # Observability is best-effort and must never turn a business operation into a failure.
     try:
+        _ensure_structured_log_output(logger)
         payload: dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,

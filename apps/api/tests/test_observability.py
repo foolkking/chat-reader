@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
+import sys
 import uuid
 from pathlib import Path
 
@@ -84,6 +86,27 @@ def test_logging_failure_does_not_block_business_request(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert response.headers["X-Request-ID"]
+
+
+def test_structured_event_is_emitted_without_preconfigured_root_logger() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import logging; "
+                "from app.core.observability import structured_event; "
+                "structured_event(logging.getLogger('release_c.production'), logging.INFO, "
+                "'production_event', status='ok')"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert '\"event\":\"production_event\"' in result.stderr
+    assert '\"status\":\"ok\"' in result.stderr
 
 
 def test_api_image_disables_uvicorn_raw_access_log() -> None:
