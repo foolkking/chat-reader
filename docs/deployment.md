@@ -1,5 +1,15 @@
 # 生产部署
 
+## Release C deployment and cleanup checklist (2026-08-14)
+
+- Build only from committed source through `quality -> build-images -> inspect -> checksum -> artifact`. King never runs a Next build.
+- Back up and verify PostgreSQL plus imports, exports, offline and assets before replacement. Use explicit production compose/env and `--no-build`; never use `down -v` or overwrite `.env.production`.
+- Keep `ENABLE_INTERNAL_DIAGNOSTICS=false` unless the gateway/VPN is proven to block the public route. When it stays disabled, use `python -m scripts.internal_diagnostics` inside the API environment.
+- Confirm production success and controlled 404 responses contain `X-Request-ID`, and correlate the same ID with the redacted `api_request_completed` log. Do not inject destructive 500 failures in production.
+- Run `python -m scripts.artifact_cleanup` twice in dry-run mode. Compare category counts/bytes and opaque tokens with the Release B baseline. No path, filename or user content belongs in release evidence.
+- Deployment does not authorize deletion. Present any stable eligible category/count/bytes for separate operator approval. Apply only explicit approved tokens, then rerun dry-run, health, current Offline download and current Export download checks.
+- Automatic cleanup remains disabled. AssetObject, Attachment, successful retained Export, Import source, backup and unknown path deletion is prohibited.
+
 ## Release B deployment checklist (2026-08-14)
 
 - Build Release B only from a committed source revision through the existing external quality -> image -> inspect -> checksum -> artifact workflow. King must not run a Next build.

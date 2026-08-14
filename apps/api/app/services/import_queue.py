@@ -13,6 +13,7 @@ from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
 from app.services.canonical.persistence import CommitImportResult, commit_import_preview
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
+from app.core.observability import structured_event
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ def queue_import(record: ImportRecord, db: Session) -> ImportRecord:
     record.completed_at = None
     record.error_message = None
     db.flush()
+    structured_event(logger, logging.INFO, "import_queued", import_id=str(record.id))
     return record
 
 
@@ -40,7 +42,7 @@ def retry_import_manually(record: ImportRecord, db: Session) -> ImportRecord:
     if record.status != "failed":
         return record
     record.attempt_count = 0
-    logger.info("import_manual_retry import_id=%s", record.id)
+    structured_event(logger, logging.INFO, "import_manual_retry", import_id=str(record.id))
     return queue_import(record, db)
 
 
@@ -66,10 +68,12 @@ def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
                 f"Automatic recovery stopped after {MAX_AUTOMATIC_ATTEMPTS} attempts. "
                 "The import can be retried manually."
             )
-            logger.warning(
-                "import_auto_retry_exhausted import_id=%s attempt=%s",
-                record.id,
-                record.attempt_count,
+            structured_event(
+                logger,
+                logging.WARNING,
+                "import_auto_retry_exhausted",
+                import_id=str(record.id),
+                attempt=record.attempt_count,
             )
             continue
         record.status = "queued"
@@ -78,7 +82,13 @@ def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
         record.started_at = None
         record.heartbeat_at = None
         record.error_message = "Previous worker stopped before completing; task requeued."
-        logger.warning("import_stale_recovered import_id=%s attempt=%s", record.id, record.attempt_count)
+        structured_event(
+            logger,
+            logging.WARNING,
+            "import_stale_recovered",
+            import_id=str(record.id),
+            attempt=record.attempt_count,
+        )
         requeued += 1
     db.flush()
     return requeued
@@ -103,6 +113,13 @@ def claim_next_import(db: Session) -> uuid.UUID | None:
     record.error_message = None
     record.attempt_count += 1
     db.flush()
+    structured_event(
+        logger,
+        logging.INFO,
+        "import_started",
+        import_id=str(record.id),
+        attempt=record.attempt_count,
+    )
     return record.id
 
 
@@ -125,9 +142,16 @@ def process_import(
     try:
         with session_factory() as db:
             result = commit_import_preview(import_id, db, progress_callback=report)
+            structured_event(logger, logging.INFO, "import_committed", import_id=str(import_id))
             return result
     except Exception as exc:
-        logger.exception("Import %s failed", import_id)
+        structured_event(
+            logger,
+            logging.ERROR,
+            "import_failed",
+            import_id=str(import_id),
+            error_class=type(exc).__name__,
+        )
         with session_factory() as db:
             record = db.get(ImportRecord, import_id)
             if record is not None:
@@ -142,14 +166,14 @@ def process_import(
 
 def run_worker_forever() -> None:
     settings = get_settings()
-    logger.info("Import worker started with single-task concurrency")
+    structured_event(logger, logging.INFO, "import_worker_started", concurrency=1)
     while True:
         with SessionLocal() as db:
             recovered = recover_stale_imports(db, settings.import_stale_after_seconds)
             import_id = claim_next_import(db)
             db.commit()
         if recovered:
-            logger.warning("Requeued %s stale import task(s)", recovered)
+            structured_event(logger, logging.WARNING, "import_stale_recovery_batch", recovered_count=recovered)
         if import_id is None:
             time.sleep(settings.import_worker_poll_seconds)
             continue

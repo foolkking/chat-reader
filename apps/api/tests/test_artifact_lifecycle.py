@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import logging
 import uuid
 import zipfile
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -28,7 +31,8 @@ def _zip(path: Path, entry: str = "manifest.json", payload: bytes = b"{}") -> No
         archive.writestr(entry, payload)
 
 
-def test_staging_validation_publish_and_download_integrity(tmp_path: Path) -> None:
+def test_staging_validation_publish_and_download_integrity(tmp_path: Path, caplog) -> None:
+    caplog.set_level(logging.INFO, logger="app.services.artifact_lifecycle")
     final = tmp_path / "artifact.cr"
     temporary = staging_path(final)
     assert temporary.parent == final.parent
@@ -48,6 +52,9 @@ def test_staging_validation_publish_and_download_integrity(tmp_path: Path) -> No
         expected_size=published.byte_size,
         verify_hash=True,
     )
+    events = [json.loads(record.message)["event"] for record in caplog.records if record.message.startswith("{")]
+    assert events == ["artifact_staging", "artifact_validated", "artifact_published"]
+    assert str(final) not in caplog.text
 
 
 def test_validation_and_rename_failures_never_publish(monkeypatch, tmp_path: Path) -> None:
@@ -123,15 +130,20 @@ def test_cleanup_failure_is_debt_and_classifier_protects_references(monkeypatch,
     offline_root = tmp_path / "offline"
     export_root.mkdir()
     offline_root.mkdir()
-    current = export_root / "current.cr"
-    orphan = export_root / "orphan.zip"
-    temporary = staging_path(offline_root / "package.crpkg")
+    job = BackgroundJob(id=uuid.uuid4(), job_type="conversation_export", status="committed")
+    current = export_root / str(job.id) / "current.cr"
+    orphan = export_root / str(uuid.uuid4()) / "orphan.zip"
+    temporary = staging_path(offline_root / f"offline-all-{uuid.uuid4()}.crpkg")
     user_named = export_root / "user.tmp.final.cr"
+    current.parent.mkdir()
+    orphan.parent.mkdir()
     _zip(current)
     _zip(orphan)
     temporary.write_bytes(b"temp")
     _zip(user_named)
-    job = BackgroundJob(id=uuid.uuid4(), job_type="conversation_export", status="committed")
+    old = (datetime.now(timezone.utc) - timedelta(days=2)).timestamp()
+    for path in (orphan, temporary, user_named):
+        os.utime(path, (old, old))
     artifact = ExportArtifact(
         id=uuid.uuid4(),
         job_id=job.id,
@@ -148,10 +160,9 @@ def test_cleanup_failure_is_debt_and_classifier_protects_references(monkeypatch,
         db.add_all([job, artifact])
         db.commit()
         result = classify_artifact_files(db, roots={"export": export_root, "offline": offline_root})
-    assert result["UNSAFE_PROTECTED"]["candidate_count"] == 1
-    assert result["ORPHAN_FINAL"]["candidate_count"] == 2
+    assert result["UNSAFE_PROTECTED"]["candidate_count"] == 2
+    assert result["ORPHAN_FINAL"]["candidate_count"] == 1
     assert result["SAFE_TEMP"]["candidate_count"] == 1
-    assert result["UNSAFE_PROTECTED"]["candidate_count"] == 1
 
     monkeypatch.setattr(Path, "unlink", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("injected")))
     assert cleanup_committed_artifacts([orphan], root=export_root, category="export") == 1

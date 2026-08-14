@@ -1,11 +1,22 @@
 # Project State
 
+## 2026-08-14 Release C Observability and Safe Cleanup (implementation)
+
+- Release B is closed as `PASS`: the operator manually verified production Chrome Share Drawer focus restoration for Esc, X, backdrop, and the remounted-trigger fallback. This is user-provided production evidence, not an automated browser-bridge result.
+- FastAPI now generates a server-owned UUID request ID, returns it in `X-Request-ID`, and emits one duration/status event keyed by the matched route template. Uvicorn raw access logging is disabled so query strings do not bypass the redaction contract. Logging failures are isolated from business operations.
+- BackgroundJob, Import, Export and Offline lifecycle transitions emit bounded structured events. Current job/import state, retry exhaustion, recent timing, cleanup debt and storage bytes are available through aggregate diagnostics without reading messages, filenames or artifact contents.
+- `/api/internal/diagnostics` is implemented but disabled by default. Production enablement requires a separately proven gateway/VPN restriction; the safe operational fallback is the internal CLI.
+- Cleanup remains dry-run by default. Manual apply requires one eligible category plus exact opaque candidate tokens, then repeats canonical-reference, active-job, path, age, size and mtime checks before each unlink. AssetObject, user Attachments, imports, backups, current artifacts and successful retained Exports are never eligible.
+- The technical cleanup grace defaults to 24 hours and does not change user Export retention. Automatic cleanup and AssetObject GC remain disabled/not implemented. No Alembic migration is added.
+- The Release B production baseline was re-read twice without deletion and remained stable at `ORPHAN_FINAL=4 / 659,673 bytes`, `SAFE_TEMP=0`, `SUPERSEDED_ARTIFACT=0`, `UNSAFE_PROTECTED=29 / 236,546,674 bytes`. Exact candidate identities were not persisted by Release B; Release C adds opaque stable tokens for future two-pass comparison.
+- Current local results: focused `28 passed / 1 skipped`, full API `279 passed / 6 skipped`, Web lint/typecheck/production build PASS, Alembic single head `20260806_0021`, and default PWA `67 passed / 37 conditional skipped`. The focused Windows skip is the symlink path-escape case and will run on Linux CI. Skips are not PASS. CI artifact, deployment and final production dry-run remain pending for this source revision.
+
 ## 2026-08-14 Release B Artifact Integrity Closure (current production)
 
 - Offline Package publication now writes same-volume UUID staging files, validates and publishes a unique final path, commits through the worker-owned transaction, and only then attempts prior-file cleanup. Commit failure preserves the prior row/file; cleanup failure is debt. Automatic cleanup remains disabled.
 - All asynchronous Export ZIP builders share that lifecycle. A production QA `.cr` export exposed a PostgreSQL-only defect: `DISTINCT attachments.*` included a JSON column without an equality operator. The final query is rooted in conversation-owned Attachments and uses a correlated historical-occurrence predicate, preserving active unreferenced and historically referenced detached Attachments without entity-level `DISTINCT`.
 - Import stale recovery uses the shared automatic-attempt ceiling of 3. Exhausted ImportRecords become terminal failed; manual retry starts a new bounded lifecycle.
-- Share Drawer uses `useDialogFocus` for Esc/X/backdrop and a stable More-actions fallback. Production-equivalent browser E2E is PASS. Actual production Chrome is `NOT_VERIFIED` because Chrome was not running; Release A's historical production failure remains preserved.
+- Share Drawer uses `useDialogFocus` for Esc/X/backdrop and a stable More-actions fallback. Production-equivalent browser E2E is PASS. The operator subsequently completed manual production Chrome verification for Esc, X, backdrop, and remounted-trigger focus restoration; Release A's historical failure remains preserved as superseded evidence.
 - Final source `32a980bb7cc6ab5a30dc2b3a47d6f6c19acfa8da`; Actions run `31736593196`; CI API `265 passed / 4 skipped`, focused browser `28 passed`, default PWA `67 passed / 37 skipped`. Local API `264 passed / 5 skipped`; lint/typecheck/build PASS. Skips are not PASS.
 - Artifact SHA-256 `aa1bd95a4567be87c43d5e86a5bd17602d738402b37bef7922ca93d87f8b4088`; API image `sha256:14478427325f395be4d54ce6cccb2fdcff8de7fcf97503a547e11cd57c4696aa`; Web image `sha256:0f544a7c39c735a84d59b81b4d08abb5cd7061f8f41c613f74ef72b4a59062e4`.
 - Verified backup `/opt/chat-reader/backups/release-b-final-20260813T194413Z-32a980b`; explicit production compose/migration preflight/`--no-build` deployment. API/Web/PostgreSQL healthy, worker running, Scanner disabled, Alembic `20260806_0021`.
@@ -13,7 +24,7 @@
 - Cleanup dry-run only: `SAFE_TEMP=0`, `SUPERSEDED_ARTIFACT=0`, `ORPHAN_FINAL=4` (659,673 bytes), `UNSAFE_PROTECTED=29` (236,546,674 bytes). Image cleanup retained current `32a980b`, rollback `1d366fb` and `latest`; only superseded `ae4f498`/`0645a84` images and the old candidate transfer package were removed.
 
 ```text
-RELEASE_B = PARTIAL_PASS (production Chrome Share focus verification pending)
+RELEASE_B = PASS (manual production Chrome Share focus verification completed by the operator)
 AUTOMATIC_CLEANUP = NOT_IMPLEMENTED
 NEW_ALEMBIC_MIGRATION = NONE
 ```

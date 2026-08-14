@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     import_worker_poll_seconds: float = Field(default=1.0, alias="IMPORT_WORKER_POLL_SECONDS")
     import_stale_after_seconds: int = Field(default=300, alias="IMPORT_STALE_AFTER_SECONDS")
     import_draft_ttl_hours: int = Field(default=24, alias="IMPORT_DRAFT_TTL_HOURS")
+    enable_internal_diagnostics: bool = Field(default=False, alias="ENABLE_INTERNAL_DIAGNOSTICS")
+    artifact_cleanup_grace_hours: int = Field(default=24, alias="ARTIFACT_CLEANUP_GRACE_HOURS", ge=1)
     canjson_max_line_bytes: int = Field(default=32 * 1024 * 1024, alias="CANJSON_MAX_LINE_BYTES")
     canjson_max_messages: int = Field(default=100_000, alias="CANJSON_MAX_MESSAGES")
     canjson_max_json_depth: int = Field(default=64, alias="CANJSON_MAX_JSON_DEPTH")

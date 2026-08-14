@@ -77,16 +77,33 @@ ceiling it becomes terminal `failed` with a manual-retry message and is never
 recovered again by the stale scanner. An explicit retry starts a new bounded
 lifecycle; it does not create an unbounded automatic loop.
 
-## Cleanup dry-run
+## Cleanup eligibility and execution
 
-`python -m scripts.artifact_cleanup_dry_run` (from `apps/api`) reports aggregate
-counts and bytes only. It classifies system-controlled artifact roots as
-`SAFE_TEMP`, `ORPHAN_FINAL`, `SUPERSEDED_ARTIFACT`, or `UNSAFE_PROTECTED`.
-Current DB references are always protected. Automatic deletion is not
-implemented in Release B.
+Release C retains the Release B categories `SAFE_TEMP`, `ORPHAN_FINAL`,
+`SUPERSEDED_ARTIFACT` and `UNSAFE_PROTECTED`, but makes their predicates and
+execution contract explicit. Classification combines canonical DB references,
+active job identity, server-controlled path shape and a configurable technical
+grace window. Unknown paths, current artifacts, successful retained user
+Exports and anything under AssetObject storage are protected.
+
+`python -m scripts.artifact_cleanup` (from `apps/api`) is dry-run by default.
+It reports aggregate counts/bytes plus opaque candidate tokens, never paths or
+user filenames. Apply requires `--apply`, one eligible `--category` and one or
+more exact `--confirm-token` values. Before each unlink the engine repeats the
+full classification with fresh ORM state. Changed, referenced, active, recent
+or absent objects are skipped safely. Deletion errors are reported as cleanup
+debt and never change the committed publication result.
+
+The detailed grace, two-pass evidence, idempotency, partial failure and
+operator-approval rules are frozen in [Cleanup Contract](CLEANUP_CONTRACT.md).
+Automatic cleanup remains disabled by default.
 
 ## Logging
 
 Structured lifecycle events contain category, opaque artifact/job id, size,
 attempt and state only. They never include message text, attachment content,
 tokens, cookies, filenames supplied by users, or secrets.
+
+Request correlation and aggregate diagnostics are defined in
+[Observability Contract](OBSERVABILITY_CONTRACT.md). Historical lifecycle
+counters are log-derived; no metrics table or migration is introduced.

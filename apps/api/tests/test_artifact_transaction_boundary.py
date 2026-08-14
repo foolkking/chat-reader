@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from pathlib import Path
 
@@ -91,7 +92,8 @@ def test_offline_outer_commit_failure_preserves_previous_committed_package(clien
     assert client.get(f"/api/offline/packages/{first['package_id']}/download").status_code == 200
 
 
-def test_export_outer_commit_failure_never_exposes_uncommitted_artifact(client, tmp_path: Path) -> None:
+def test_export_outer_commit_failure_never_exposes_uncommitted_artifact(client, tmp_path: Path, caplog) -> None:
+    caplog.set_level(logging.INFO, logger="app.services.background_jobs")
     conversation_id = commit_edit_sample(client)["conversation_id"]
     factory = _factory_from_client()
     queued = client.post(
@@ -108,6 +110,9 @@ def test_export_outer_commit_failure_never_exposes_uncommitted_artifact(client, 
         assert failed is not None and failed.status == "failed"
     published_files = list((tmp_path / "storage" / "exports" / str(job_id)).glob("*.cr"))
     assert len(published_files) == 1  # Allowed orphan; no committed DB reference exists.
+    assert '"event":"background_job_failed"' in caplog.text
+    assert '"error_class":"RuntimeError"' in caplog.text
+    assert "injected outer commit failure" not in caplog.text
 
 
 def test_offline_replacement_cleans_old_artifact_only_after_commit(client, monkeypatch, tmp_path: Path) -> None:

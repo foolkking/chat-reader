@@ -31,6 +31,7 @@ from app.services.toc.toc_refresh import refresh_toc_data
 from app.services.import_pipeline.bundle_import import preview_bundle_import
 from app.services.assets.derivatives import build_asset_derivative
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
+from app.core.observability import structured_event
 
 logger = logging.getLogger(__name__)
 
@@ -525,6 +526,7 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
             job.heartbeat_at = now
             job.completed_at = now
             job.error_message = None
+            structured_event(logger, logging.INFO, "background_job_cancelled", job_id=str(job.id), job_type=job.job_type)
             continue
         if job.attempt_count >= MAX_AUTOMATIC_ATTEMPTS:
             job.status = "failed"
@@ -535,6 +537,14 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
                 f"Worker stopped before completing {MAX_AUTOMATIC_ATTEMPTS} times; "
                 "automatic retries stopped."
             )
+            structured_event(
+                logger,
+                logging.WARNING,
+                "background_job_auto_retry_exhausted",
+                job_id=str(job.id),
+                job_type=job.job_type,
+                attempt=job.attempt_count,
+            )
             continue
         job.status = "queued"
         job.phase = "queued"
@@ -542,6 +552,14 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
         job.started_at = None
         job.heartbeat_at = None
         job.error_message = "Previous worker stopped before completing; task requeued."
+        structured_event(
+            logger,
+            logging.WARNING,
+            "background_job_stale_recovered",
+            job_id=str(job.id),
+            job_type=job.job_type,
+            attempt=job.attempt_count,
+        )
     db.flush()
     return len(jobs)
 
@@ -565,6 +583,14 @@ def claim_next_job(db: Session) -> uuid.UUID | None:
     job.error_message = None
     job.attempt_count += 1
     db.flush()
+    structured_event(
+        logger,
+        logging.INFO,
+        "background_job_started",
+        job_id=str(job.id),
+        job_type=job.job_type,
+        attempt=job.attempt_count,
+    )
     return job.id
 
 
@@ -854,13 +880,21 @@ def process_background_job(
                     raise BackgroundJobCancelled("Background job cancellation won the publish race.")
             db.commit()
             if job.job_type in {"system_archive_export", "conversation_export", "attachment_batch_download"}:
-                logger.info("artifact_db_committed category=export job_id=%s", job_id)
+                structured_event(logger, logging.INFO, "artifact_db_committed", category="export", job_id=str(job_id))
             elif job.job_type == "offline_package":
-                logger.info("artifact_db_committed category=offline job_id=%s", job_id)
+                structured_event(logger, logging.INFO, "artifact_db_committed", category="offline", job_id=str(job_id))
+            structured_event(
+                logger,
+                logging.INFO,
+                "background_job_committed",
+                job_id=str(job_id),
+                job_type=job.job_type,
+                attempt=job.attempt_count,
+            )
             for category, paths, root in post_commit_cleanup:
                 cleanup_committed_artifacts(paths, root=root, category=category)
     except BackgroundJobCancelled:
-        logger.info("Background job %s cancelled", job_id)
+        structured_event(logger, logging.INFO, "background_job_cancelled", job_id=str(job_id))
         with session_factory() as db:
             job = db.get(BackgroundJob, job_id)
             if job is not None and job.status in {"processing", "cancelling"}:
@@ -872,7 +906,13 @@ def process_background_job(
                 job.error_message = None
                 db.commit()
     except Exception as exc:
-        logger.exception("Background job %s failed", job_id)
+        structured_event(
+            logger,
+            logging.ERROR,
+            "background_job_failed",
+            job_id=str(job_id),
+            error_class=type(exc).__name__,
+        )
         with session_factory() as db:
             job = db.get(BackgroundJob, job_id)
             if job is not None:
@@ -910,6 +950,7 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
     job.heartbeat_at = None
     job.completed_at = None
     job.attempt_count = 0
+    structured_event(logger, logging.INFO, "background_job_manual_retry", job_id=str(job.id), job_type=job.job_type)
     return job
 
 

@@ -1,5 +1,18 @@
 # Markdown 文档台账
 
+2026-08-14 Release C synchronization: request correlation, redacted structured logging, aggregate diagnostics, storage visibility and explicit safe cleanup are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`, `docs/system/CLEANUP_CONTRACT.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/api-reference.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`. No migration or business-data cleanup is introduced.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/OBSERVABILITY_CONTRACT.md` | Current | Request ID, log schema/redaction, lifecycle events, aggregate metrics and diagnostics security. |
+| `docs/system/CLEANUP_CONTRACT.md` | Current | Grace, categories, dry-run default, explicit apply, final recheck, idempotency and protected data. |
+| `apps/api/app/core/observability.py` | Current runtime | Server-owned request correlation and sanitized completion logging. |
+| `apps/api/app/services/diagnostics.py` | Current runtime | Bounded database/storage aggregate collection without user content. |
+| `apps/api/scripts/artifact_cleanup.py` | Current operator CLI | Dry-run by default; explicit category/token manual apply. |
+| `apps/api/tests/test_observability.py` | Current test | Request/header/error correlation and log privacy/failure isolation. |
+| `apps/api/tests/test_diagnostics.py` | Current test | Disabled-by-default, aggregate privacy and query/storage budget. |
+| `apps/api/tests/test_cleanup_execution.py` | Current test | Protected predicates, race recheck, partial failure and idempotency. |
+
 2026-08-13 synchronization: manual Owner TOC refresh, canonical dialogue-index semantics, current/all section rebuild scope, background progress, UI focus/error behavior and regression evidence are current in `PROJECT_STATE.md`, `docs/api-reference.md`, `docs/system/USER_FLOWS.md`, `docs/testing.md` and `results.md`. No migration or new document category was added.
 
 | Path | Lifecycle | Responsibility |
@@ -258,7 +271,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 
 2026-08-14 synchronization: Release B artifact publication, outer-transaction safety, bounded Import stale recovery, Share Drawer focus restoration and dry-run cleanup classification are current in `PROJECT_STATE.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/testing.md` and `docs/deployment.md`.
 
-2026-08-14 final synchronization: PostgreSQL `.cr` attachment enumeration, final Actions/artifact/backup/deployment evidence, production Offline/Export/Import QA, dry-run counts and the remaining production Chrome focus debt are recorded without removing Release A history. Automatic cleanup remains disabled.
+2026-08-14 final synchronization: PostgreSQL `.cr` attachment enumeration, final Actions/artifact/backup/deployment evidence, production Offline/Export/Import QA and dry-run counts are recorded without removing Release A history. The operator subsequently closed the Share focus debt through manual production Chrome verification. Automatic cleanup remains disabled.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |

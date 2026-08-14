@@ -19,6 +19,8 @@ from app.api.routes.offline import router as offline_router
 from app.api.routes.attachments import router as attachments_router
 from app.api.routes.system_archives import router as system_archives_router
 from app.core.config import get_settings
+from app.api.routes.diagnostics import router as diagnostics_router
+from app.core.observability import RequestObservabilityMiddleware
 
 settings = get_settings()
 
@@ -35,6 +37,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestObservabilityMiddleware)
 
 app.include_router(health_router)
 app.include_router(imports_router)
@@ -53,3 +56,4 @@ app.include_router(annotations_router)
 app.include_router(offline_router)
 app.include_router(attachments_router)
 app.include_router(system_archives_router)
+app.include_router(diagnostics_router)

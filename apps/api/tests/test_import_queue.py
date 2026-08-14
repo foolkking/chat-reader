@@ -1,4 +1,5 @@
 import uuid
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
@@ -68,7 +69,8 @@ def test_claim_order_and_stale_recovery(tmp_path) -> None:
         assert first.error_message is not None
 
 
-def test_stale_import_recovery_is_bounded_and_manual_retry_starts_a_new_bounded_lifecycle(tmp_path) -> None:
+def test_stale_import_recovery_is_bounded_and_manual_retry_starts_a_new_bounded_lifecycle(tmp_path, caplog) -> None:
+    caplog.set_level(logging.INFO, logger="app.services.import_queue")
     engine = create_engine(f"sqlite:///{tmp_path / 'bounded.db'}")
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -116,6 +118,8 @@ def test_stale_import_recovery_is_bounded_and_manual_retry_starts_a_new_bounded_
         assert record is not None
         assert record.status == "failed"
         assert record.attempt_count == MAX_AUTOMATIC_ATTEMPTS
+    assert '"event":"import_auto_retry_exhausted"' in caplog.text
+    assert '"event":"import_manual_retry"' in caplog.text
 
 
 def _record(import_id: uuid.UUID) -> ImportRecord:

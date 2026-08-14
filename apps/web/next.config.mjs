@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const standaloneBuild = process.env.NEXT_STANDALONE === "1";
 const standaloneBuildCpus = Math.max(1, Number.parseInt(process.env.NEXT_BUILD_CPUS ?? "1", 10) || 1);
+const distDir = process.env.NEXT_DIST_DIR?.trim() || ".next";
 
 const apiInternalUrl = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 
@@ -35,6 +36,7 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir,
   poweredByHeader: false,
   ...(standaloneBuild
     ? {

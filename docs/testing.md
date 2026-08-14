@@ -1,5 +1,30 @@
 # Testing Addendum 2026-08-09
 
+## Release C observability and cleanup (2026-08-14)
+
+The Release C safety suite is part of the release workflow before the API full
+suite and therefore before image construction:
+
+```text
+cd apps/api
+pytest -q tests/test_observability.py tests/test_diagnostics.py \
+  tests/test_artifact_lifecycle.py tests/test_cleanup_execution.py \
+  tests/test_artifact_transaction_boundary.py tests/test_import_queue.py
+```
+
+Coverage includes UUID request IDs for success/400/404/409/500, route-template
+logging, query/header redaction, logging failure isolation, diagnostics default
+disablement and bounded queries/scans, current/active/recent/unknown/AssetObject
+protection, Offline superseded classification, dry-run, explicit apply,
+canonical/active race recheck, idempotence and partial unlink failure. Release B
+publication and bounded Import retry tests run in the same focused gate.
+
+Current Windows focused result is `28 passed / 1 skipped`; full API is
+`279 passed / 6 skipped`; Web lint/typecheck/production build PASS; Alembic is
+the single `20260806_0021` head; default PWA is `67 passed / 37 conditional
+skipped`. The focused skip is symlink path-escape coverage because this host
+cannot create the test symlink. Linux CI must execute it; no skip is a PASS.
+
 ## Release A safety baseline (2026-08-13)
 
 The release workflow runs the default commands plus a real PostgreSQL service, `alembic upgrade/current`, the official npm-registry audit policy, a live API/worker, focused production-build browser tests, and the default PWA baseline before any image build. `build-images` requires successful `quality`; diagnostic quality evidence is explicitly non-deployable.
@@ -225,4 +250,4 @@ The desktop Share utility drawer opened successfully, but Esc restoration landed
 - Local final result: focused `.cr`/transaction tests `10 passed / 1 PostgreSQL-gated skip`; full API `264 passed / 5 skipped`; Web lint/typecheck/production build PASS; Alembic remains `20260806_0021`. The local build uses `NEXT_DIST_DIR=.release-b-next` backed by the user-approved disposable build-cache directory. Skips remain separate from PASS.
 - `share-drawer-focus.spec.ts` creates and deletes its own QA Conversation and asserts initial focus plus `document.activeElement` after Esc, X and backdrop. It runs only in the full online matrix via `E2E_SHARE_DRAWER_FOCUS=1`, never in the lightweight PWA matrix. The previous Release A production failure is preserved as historical evidence and is not overwritten.
 - Final Actions run `31736593196` uses PostgreSQL and `POSTGRES_EXPORT_INTEGRATION=1`: API `265 passed / 4 skipped`, including the actual `.cr` Attachment query; focused browser `28 passed`, including Share focus; default PWA `67 passed / 37 skipped`. Earlier run `31735786444` failed one valid retained-shell status assertion and produced no deployable image, preserving quality-gate evidence.
-- Production QA separately passed Offline A/B publication/download, committed `.cr` immediate download/archive sanity, and normal Import preview/commit. Fault injection remains production-equivalent only. Actual production Chrome Share focus is `NOT_VERIFIED` because Chrome was not running.
+- Production QA separately passed Offline A/B publication/download, committed `.cr` immediate download/archive sanity, and normal Import preview/commit. Fault injection remains production-equivalent only. The operator later completed manual production Chrome Share focus verification for Esc/X/backdrop/remounted-trigger restoration; this evidence is user-provided rather than browser-bridge automation.

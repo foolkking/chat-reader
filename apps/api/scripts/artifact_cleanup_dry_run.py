@@ -13,9 +13,19 @@ def main() -> None:
         result = classify_artifact_files(
             db,
             roots={"offline": settings.offline_storage_dir, "export": settings.export_storage_dir},
+            grace_seconds=settings.artifact_cleanup_grace_hours * 3600,
         )
         db.rollback()
-    print(json.dumps({"dry_run": True, "categories": result}, sort_keys=True))
+    print(
+        json.dumps(
+            {
+                "dry_run": True,
+                "grace_hours": settings.artifact_cleanup_grace_hours,
+                "categories": result,
+            },
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":

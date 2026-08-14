@@ -1,5 +1,13 @@
 # Implementation Results
 
+## Release C Observability and Safe Cleanup (implementation, 2026-08-14)
+
+Release B closure is now `PASS` based on the operator's manual production Chrome verification of Share Drawer Esc/X/backdrop/remounted-trigger focus restoration. It is explicitly manual user evidence, not a browser-bridge automation claim.
+
+Release C implements server-owned request IDs, redacted route-template request logs, lifecycle events, aggregate diagnostics, bounded storage scans, explicit cleanup grace, opaque two-pass candidate tokens and per-object final rechecks. Diagnostics is disabled by default; automatic cleanup and AssetObject GC remain disabled. No schema or user artifact format changes were made.
+
+The existing production dry-run was repeated twice before code changes and remained `ORPHAN_FINAL 4 / 659,673 bytes`, `SAFE_TEMP 0`, `SUPERSEDED_ARTIFACT 0`, `UNSAFE_PROTECTED 29 / 236,546,674 bytes`. Nothing was deleted. Local results: focused `28 passed / 1 skipped`, full API `279 passed / 6 skipped`, Web lint/typecheck/production build PASS, Alembic `20260806_0021`, default PWA `67 passed / 37 conditional skipped`. Skips remain separate from PASS. CI artifact, deployment and final production diagnostics/dry-run are pending.
+
 ## Release B Artifact Integrity Closure (production, 2026-08-14)
 
 - Offline and asynchronous Export ZIP builders stage, validate, publish a unique final file, commit via the worker-owned transaction, and clean old files only after commit. Uncommitted files are cleanup debt, never canonical state. Import automatic stale recovery is bounded at three attempts.
@@ -8,7 +16,7 @@
 - Final run `31736593196`, source `32a980bb7cc6ab5a30dc2b3a47d6f6c19acfa8da`: API `265 passed / 4 skipped`, focused browser `28 passed`, default PWA `67 passed / 37 skipped`, and all Release A gates PASS. SHA-256 `aa1bd95a4567be87c43d5e86a5bd17602d738402b37bef7922ca93d87f8b4088`; API digest `sha256:14478427325f395be4d54ce6cccb2fdcff8de7fcf97503a547e11cd57c4696aa`; Web digest `sha256:0f544a7c39c735a84d59b81b4d08abb5cd7061f8f41c613f74ef72b4a59062e4`.
 - Production deployment/health and Offline A/B, `.cr` immediate download, archive sanity and Import smoke PASS. Verified backup: `/opt/chat-reader/backups/release-b-final-20260813T194413Z-32a980b`. QA Conversations were removed through the API; the committed QA ImportRecord/source artifact remains under normal product retention.
 - Dry-run only: `SAFE_TEMP 0`, `SUPERSEDED_ARTIFACT 0`, `ORPHAN_FINAL 4 / 659,673 bytes`, `UNSAFE_PROTECTED 29 / 236,546,674 bytes`. No artifact was deleted. Image cleanup retained current `32a980b`, rollback `1d366fb` and `latest`.
-- Share focus production-equivalent E2E PASS for initial focus, containment, Esc, X, backdrop and remounted-trigger fallback. Actual production Chrome is `NOT_VERIFIED` because Chrome was not running; `RELEASE_B = PARTIAL_PASS` pending that last UI evidence.
+- Share focus production-equivalent E2E PASS for initial focus, containment, Esc, X, backdrop and remounted-trigger fallback. The operator subsequently confirmed the same Esc/X/backdrop/remounted-trigger behavior in manual production Chrome; this is user-provided production evidence, not browser-bridge automation. `RELEASE_B = PASS`.
 
 ## Release B Artifact Integrity Closure (2026-08-14)
 

@@ -51,3 +51,5 @@
 
 不得在事实文档中保存真实会话正文、标题、ID、Share token、Cookie、凭据、数据库 URL 或 `.env` 值。
 Current release contract: [Release Safety Baseline](RELEASE_SAFETY_BASELINE.md).
+
+Current operational contracts: [Artifact Lifecycle](ARTIFACT_LIFECYCLE_CONTRACT.md), [Observability](OBSERVABILITY_CONTRACT.md), and [Safe Cleanup](CLEANUP_CONTRACT.md).

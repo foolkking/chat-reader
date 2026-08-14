@@ -77,6 +77,16 @@ jobs:
       - name: Web production build
         run: pnpm --filter web build
 
+      - name: Release C observability and cleanup safety suite
+        run: >-
+          cd apps/api && pytest -q
+          tests/test_observability.py
+          tests/test_diagnostics.py
+          tests/test_artifact_lifecycle.py
+          tests/test_cleanup_execution.py
+          tests/test_artifact_transaction_boundary.py
+          tests/test_import_queue.py
+
       - name: API full suite
         run: pnpm run test:api
 
@@ -106,7 +116,7 @@ jobs:
       - name: Start API and worker for browser integration
         run: |
           cd apps/api
-          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &
+          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/api.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/api.pid"
           nohup python -m app.workers.import_worker > "$RUNNER_TEMP/worker.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/worker.pid"

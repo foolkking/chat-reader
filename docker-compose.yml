@@ -20,12 +20,14 @@ services:
     image: python:3.11-slim
     container_name: chat-reader-api
     working_dir: /workspace/apps/api
-    command: sh -c "pip install -e . && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: sh -c "pip install -e . && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"
     environment:
       APP_NAME: ${APP_NAME:-chat-reader}
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      ENABLE_INTERNAL_DIAGNOSTICS: ${ENABLE_INTERNAL_DIAGNOSTICS:-false}
+      ARTIFACT_CLEANUP_GRACE_HOURS: ${ARTIFACT_CLEANUP_GRACE_HOURS:-24}
       OFFLINE_STORAGE_DIR: /workspace/apps/api/storage/offline
       ASSET_STORAGE_DIR: /workspace/apps/api/storage/assets
       ASSET_STORAGE_BACKEND: ${ASSET_STORAGE_BACKEND:-local}
@@ -50,6 +52,7 @@ services:
       APP_NAME: ${APP_NAME:-chat-reader}
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
+      ARTIFACT_CLEANUP_GRACE_HOURS: ${ARTIFACT_CLEANUP_GRACE_HOURS:-24}
       IMPORT_STORAGE_DIR: /workspace/apps/api/storage/imports
       OFFLINE_STORAGE_DIR: /workspace/apps/api/storage/offline
       ASSET_STORAGE_DIR: /workspace/apps/api/storage/assets

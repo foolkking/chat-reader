@@ -59,3 +59,5 @@
 Current release contract: [Release Safety Baseline](system/RELEASE_SAFETY_BASELINE.md), covering dependency risk, production secret fail-fast, security headers, CSP Report-Only, quality gating, image inspection and artifact provenance.
 
 Artifact publication and cleanup contract: [Artifact Lifecycle Contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md), covering Offline/Export staging, validation, transaction boundaries, orphan semantics, bounded Import recovery and dry-run cleanup.
+
+Operational evidence and cleanup safety: [Observability Contract](system/OBSERVABILITY_CONTRACT.md) and [Cleanup Contract](system/CLEANUP_CONTRACT.md), covering request IDs, redacted structured logs, diagnostics enablement, aggregate storage/job state, grace windows, explicit manual apply and final race rechecks.
