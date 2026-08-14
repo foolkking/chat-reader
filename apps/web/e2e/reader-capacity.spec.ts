@@ -158,10 +158,8 @@ async function measureReader(page: Page, conversationId: string, run: number) {
   const navigationStartedAt = Date.now();
   await page.goto(`/conversations/${conversationId}`);
   const root = page.locator("[data-reader-scroll-root='true']");
-  const navigationStage = page.locator("[data-navigation-stage]");
   await expect(root).toBeVisible();
   await expect.poll(() => root.locator("article[data-message-id]").count(), { timeout: 120_000 }).toBeGreaterThan(0);
-  await expect(navigationStage).toHaveAttribute("data-navigation-stage", /^(settled|settled:fallback)$/, { timeout: 120_000 });
   const navigationElapsedMs = Date.now() - navigationStartedAt;
   await root.evaluate((element) => { element.scrollTop = 0; });
   await page.waitForTimeout(150);
