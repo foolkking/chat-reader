@@ -1,11 +1,10 @@
 # PDF.js Maintained Stable-Line Migration Contract
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
 
-Current status: `RELEASE_G = PARTIAL_PASS`. The PDF.js 6.2.108 source candidate
-and current-source local browser/quality gates pass, but the CI artifact and
-production evidence are still pending. This document must not be used as
-production acceptance evidence until the Final Closure section is completed.
+Current status: `RELEASE_G = PASS`. PDF.js 6.2.108, final CI artifact,
+immutable production identities, complete backup, production Chrome
+acceptance and retained Release F rollback are closed below.
 
 ## Scope And Frozen Boundaries
 
@@ -35,7 +34,7 @@ The target was resolved independently from the official npm registry and the
 Mozilla PDF.js release feed on 2026-08-15. Both identify `6.2.108` as the
 current non-prerelease release.
 
-| Field | Candidate value |
+| Field | Final value |
 | --- | --- |
 | Version | `6.2.108` |
 | GitHub release | `https://github.com/mozilla/pdf.js/releases/tag/v6.2.108` |
@@ -68,7 +67,7 @@ destroyed its loading task and cancelled page/thumbnail render tasks during
 cleanup. Server owner and Share routes remained the authority for GET/HEAD
 and one authenticated byte range.
 
-### Candidate After
+### After
 
 ```text
 AttachmentViewerProvider
@@ -133,7 +132,7 @@ The Viewer continues to:
 
 Owner and Share browser paths prove authenticated `206` Range and preserve
 scope. Viewer replacement/close tests prove cancellation and cleanup remain
-bounded; production acceptance is still required before final closure.
+bounded; production Chrome repeated the owner and Share Range paths.
 
 ## Security Contract
 
@@ -149,16 +148,15 @@ cast. The Release A `isEvalSupported: false` implementation is classified as
 maintained version, disabled scripting integration and malicious-file browser
 regression.
 
-The candidate sets `useWasm: false`, so no remote or unversioned Wasm/QuickJS
+The final runtime sets `useWasm: false`, so no remote or unversioned Wasm/QuickJS
 asset is introduced. CMap and standard-font CDN URLs are not configured.
 Ordinary PDF rendering, malformed/truncated handling and the malicious fixture
 must pass before this security section can be marked closed.
 
 The former `pdfjs-dist` advisory and optional
 `canvas -> node-pre-gyp -> tar` exception records have been removed from the
-candidate dependency policy because the old chain is absent. The final
-dependency-policy gate must confirm there is no unused or unapproved
-critical/high exception before claiming closure.
+dependency policy because the old chain is absent. The final dependency-policy
+gate reports zero blocked and zero unapproved findings.
 
 ## Offline And PWA
 
@@ -201,7 +199,7 @@ the production bundle or PWA precache.
 
 The local build comparison is:
 
-| Artifact | PDF.js 3.11.174 baseline | PDF.js 6.2.108 candidate |
+| Artifact | PDF.js 3.11.174 baseline | PDF.js 6.2.108 final |
 | --- | ---: | ---: |
 | PDF dynamic chunk | 305,261 bytes | 429,398 bytes |
 | PDF worker asset | 1,039,505 bytes | 1,180,944 bytes |
@@ -236,13 +234,13 @@ Skipped scoped cases are not PASS. Production must use externally built
 immutable images, verify backup and running identities, and retain Release F
 as direct rollback. King must not build Next or run broad Docker cleanup.
 
-## Candidate Evidence
+## Final Evidence
 
 | Evidence | Current status |
 | --- | --- |
 | Official version/provenance resolution | PASS |
 | Package/import/type compatibility checkpoint | PASS |
-| Candidate Webpack build | PASS, Next 16.3.1 with Webpack |
+| Final Webpack build | PASS, Next 16.3.1 with Webpack |
 | Modern worker emitted with embedded 6.2.108 | PASS |
 | Real worker and canvas browser proof | PASS |
 | Owner/Share Range browser proof | PASS |
@@ -250,51 +248,94 @@ as direct rollback. King must not build Next or run broad Docker cleanup.
 | Malformed/malicious PDF proof | PASS |
 | Default/scoped PWA rerun | PASS: 68/53 conditional; scoped 10/10 with 0 skips |
 | Full local quality gate | PASS: lint/type/build; API 280/6; Alembic 20260806_0021; policy 0 blocked/unapproved |
-| CI artifact and checksum | PENDING |
-| Production backup/deployment/image identity | NOT_EXECUTED |
-| Production Chrome acceptance | NOT_EXECUTED |
+| CI artifact and checksum | PASS, run 31896564657, archive `0d3c460815a562f0e25aab5f0750bc46aa85b5a153ddcb52238018bf7cfeede4` |
+| Production backup/deployment/image identity | PASS, complete verified backup and exact manifest match |
+| Production Chrome acceptance | PASS, PDF/Range/offline/Viewer/Share/Editor/CSP smokes |
 
 ```text
 TARGET_PDFJS_VERSION = 6.2.108
 PDFJS_OFFICIAL_STABLE = PASS
 PDFJS_PACKAGE_PROVENANCE = PASS
 PDFJS_BUILD_VARIANT = MODERN
+PDFJS_ESM_COMPATIBILITY = PASS
 PDF_WORKER_MODE = REAL
 PDFJS_LIBRARY_WORKER_VERSION_MATCH = PASS
+PDF_SINGLE_PAGE = PASS
+PDF_MULTI_PAGE = PASS
+PDF_FIT_PAGE = PASS
+PDF_FIT_WIDTH = PASS
+PDF_ZOOM = PASS
+PDF_PAGE_NAVIGATION = PASS
 PDF_RANGE = PASS
 PDF_AUTH_RANGE = PASS
 PDF_SHARE = PASS
-PDF_OFFLINE = PASS_PRODUCTION_EQUIVALENT
+PDF_OFFLINE = PASS
+PDF_OFFLINE_MISS = PASS
+PDF_CORRUPTED_FILE = PASS
 PDF_MALICIOUS_SCRIPT = PASS
+PDFJS_CVE_2024_4367_PATCHED_BY_VERSION = PASS
+PDFJS_EVAL_DISABLED = NOT_APPLICABLE
+PDF_SCRIPTING = DISABLED
+PDF_CSP_REPORT_ONLY = PASS
+PDF_WORKER_CSP = PASS
+PDF_WASM_COMPATIBILITY = NOT_APPLICABLE
+PDF_CMAP_STANDARD_FONT_COMPATIBILITY = NOT_APPLICABLE
+PDF_VIEWER_FOCUS = PASS
+PDF_VIEWER_MAXIMIZE = PASS
+PDF_RENDER_CANCELLATION = PASS
+PDF_RESOURCE_CLEANUP = PASS
 PDF_LAZY_LOADING = PASS
-PDFJS_SUPPORTED_LINE = PARTIAL_PASS
+PDF_INITIAL_BUNDLE_REGRESSION = PASS
+PDFJS_SUPPORTED_LINE = PASS
 PDFJS_LEGACY_SECURITY_EXCEPTION = REMOVED
 PDFJS_LEGACY_BUILD_CHAIN_EXCEPTION = REMOVED
+DEPENDENCY_AUDIT = PASS
+PWA_POSITIVE = PASS
+PWA_NEGATIVE_MATRIX = PASS
+PWA_SCOPED_SKIPS = 0
 BUILD_BUNDLER = WEBPACK
 TURBOPACK_MIGRATION = NOT_EXECUTED
 CSP_ENFORCING = NOT_IMPLEMENTED
-RELEASE_G = PARTIAL_PASS
+DEXIE_SCHEMA_MIGRATION = NONE
+NEW_ALEMBIC_MIGRATION = NONE
+OFFLINE_PACKAGE_FORMAT_CHANGE = NONE
+RUNNING_IMAGE_IDENTITY = PASS
+ROLLBACK_RELEASE_F = RETAINED
+PRODUCTION_DEPLOYMENT = PASS
+RELEASE_G = PASS
 ```
 
 ## Final Closure
 
-Populate this section only after one source commit has passed CI and immutable
-production acceptance:
+One frozen source passed CI and immutable production acceptance:
 
 ```text
-RUNTIME_SOURCE_COMMIT = PENDING
-ACTIONS_RUN = PENDING
-ARCHIVE_SHA256 = PENDING
-API_IMAGE_DIGEST = PENDING
-WEB_IMAGE_DIGEST = PENDING
-BACKUP = PENDING
-EXPECTED_RUNNING_IMAGES = PENDING
-ACTUAL_RUNNING_IMAGES = PENDING
-PRODUCTION_CHROME = PENDING
-ROLLBACK_RELEASE_F = PENDING_VERIFICATION
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
-RELEASE_G = PARTIAL_PASS
+RUNTIME_SOURCE_COMMIT = 1b752b77063893feefef01756af9deda559f30a5
+ACTIONS_RUN = 31896564657 (SUCCESS)
+ARCHIVE_SHA256 = 0d3c460815a562f0e25aab5f0750bc46aa85b5a153ddcb52238018bf7cfeede4
+API_IMAGE_DIGEST = sha256:d95bb99660f3bafd7e64ef7866e49947797ec26a55328671fdd7afe3044ac331
+WEB_IMAGE_DIGEST = sha256:6684742dbe6960d6ee4f4632b61048765407266344685c3fd616bce2e6c848e6
+BACKUP = /opt/chat-reader/backups/release-g-20260815T170643Z-1b752b7 (verified)
+EXPECTED_RUNNING_IMAGES = manifest API/Web digests above
+ACTUAL_RUNNING_IMAGES = exact match for API/worker/migrate/Web
+PRODUCTION_CHROME = PASS
+ROLLBACK_RELEASE_F = RETAINED (c9ddae1 immutable images and backup)
+PRODUCTION_DEPLOYMENT = PASS
+RELEASE_G = PASS
 ```
+
+Production Chrome used synthetic/disposable data and formal product cleanup.
+It observed a same-origin real worker, exact library/worker version, nonblank
+single/multi canvases, owner/Share `206` Range, Share scope denial, Fit
+Page/Width, 110% zoom, page navigation, maximize/Escape/focus, cached-only PDF
+offline and reconnect. Production headers/CSP remained within Release A/F
+contracts. The malicious and corrupt PDF fixtures were kept in the isolated
+production-equivalent suite rather than opened on the production domain.
+
+An exploratory Markdown attachment upload run exposed a pre-existing
+upload-placement timing race unrelated to PDF.js. The affected runtime files
+are unchanged from Release F. It remains separate follow-up debt and does not
+alter this PDF engine contract.
 
 ## Deferred Tracks
 

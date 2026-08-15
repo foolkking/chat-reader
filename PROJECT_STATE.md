@@ -1,50 +1,56 @@
 # Project State
 
-## 2026-08-15 Release G PDF.js maintained-line candidate
+## 2026-08-16 Release G PDF.js maintained-line closure
 
-- `RELEASE_G = PARTIAL_PASS`. The current worktree migrates the browser PDF
-  engine from `pdfjs-dist 3.11.174` to the official stable `6.2.108` modern
-  ESM build. Official npm/GitHub release provenance agrees; the locked npm
-  integrity is
-  `sha512-YxFb+SQcodN2rnX9Tn3dHYlqfb7NjlzzfONPpJd+AKoKtUjEdevTfbC07d5TcczzOK6261auRkP/M8OBHs9vFQ==`.
-- A single browser runtime helper configures the same-package, same-origin
-  `pdf.worker.min.mjs`; the existing Viewer remains one provider/shell/dialog.
-  Owner/Share routes remain the authenticated Range authority, offline remains
-  cached-only, and the offline shell inventory now includes the local worker
-  asset. No PDF scripting manager or external worker CDN is introduced.
-- The target package requires Node `>=22.13.0 || >=24`, so Release G aligns CI
-  and Web build/runtime images on Node `22.13.1` without changing frozen Next
-  `16.3.1`, React `19.2.8` or Webpack. Turbopack, CSP enforcement, Dexie,
-  offline package and Alembic schemas remain unchanged.
-- The legacy `isEvalSupported` document option is absent from the target
-  public API; the candidate does not conceal it behind a type cast. PDF
-  scripting remains disabled and `useWasm: false` prevents an unhosted Wasm or
-  QuickJS asset path. Controlled malicious and truncated PDF browser checks
-  pass without script execution, a blank Viewer or an unbounded error state.
-- Current-source local gates pass: Web lint, typecheck and Next 16 Webpack
-  build; API `280 passed / 6 skipped`; Alembic current/head
-  `20260806_0021`; and dependency policy with two disclosed non-PDF
-  advisories, zero blocked findings and zero unapproved exceptions. The PDF
-  owner/Share/security browser gate is `10 passed / 0 failed`; it proves a
-  real same-origin worker, library/worker version `6.2.108`, nonblank canvas,
-  authenticated `206` Range, Share scope, lazy loading, Viewer focus,
-  malicious-file isolation and corrupt-file recovery.
-- Broader current-runtime evidence remains PASS: focused Reader/Rich
-  Markdown/Viewer/Share regression `38/38`, Source Editor/mutation `2/2`,
-  default PWA `68 passed / 53 conditional skipped`, and Release E scoped PWA
-  negative matrix `10/10` with zero scoped skips. The three additional default
-  skips are Release G opt-in PDF suites and were executed separately; they are
-  not counted as PWA passes.
-- The final local Webpack artifact emits a 429,398-byte lazy PDF chunk and a
-  1,180,944-byte local worker. The PDF chunk has no initial-manifest
-  intersection, browser tracing observes neither chunk nor worker before a
-  PDF is opened, and server traces contain no `@napi-rs/canvas`,
-  `node-pre-gyp` or `tar` chain. CI artifact, backup, immutable deployment,
-  running-image identity and production Chrome acceptance remain pending.
-- The candidate removes the obsolete PDF.js 3 advisory and old optional
-  canvas/node-pre-gyp/tar exception records. Final policy verification must
-  prove no unapproved critical/high finding before closure. Release F remains
-  the current production runtime and direct rollback baseline.
+- `RELEASE_G = PASS`. Runtime source
+  `1b752b77063893feefef01756af9deda559f30a5` migrates the browser PDF engine
+  from `pdfjs-dist 3.11.174` to official stable `6.2.108` using the modern ESM
+  build. npm and Mozilla release provenance agree and the lockfile retains the
+  official registry integrity.
+- One browser runtime helper configures the same-package, same-origin
+  `pdf.worker.min.mjs`. Production Chrome observed the real worker, embedded
+  version `6.2.108`, nonblank one- and two-page canvases, Fit Page, Fit Width,
+  110% custom zoom, page navigation, maximize/Escape and focus restoration.
+  Owner and Share both retained authenticated `206` Range; out-of-scope Share
+  access remained `404`.
+- Offline remains cached-only. An isolated production Chrome profile created
+  a real offline package, verified its IndexedDB identity, restarted through
+  the service worker, opened the cached PDF offline with the local worker, and
+  reconnected successfully. Missing/corrupt/worker-miss behavior remains
+  covered by the Release E scoped matrix.
+- PDF scripting remains disabled. The target removed the public
+  `isEvalSupported` option, so Release G uses maintained-version protection,
+  no scripting manager, `useWasm: false`, and a controlled malicious-file
+  browser test that executed no application JavaScript. The obsolete PDF.js 3
+  and canvas/node-pre-gyp/tar policy exceptions are removed.
+- Actions run `31896564657` passed locked install, lint, typecheck, Next
+  `16.3.1` Webpack build, API `282 passed / 4 skipped`, Alembic, dependency
+  policy, focused browser `38/38`, PDF.js `3/3`, default PWA `68 passed / 53
+  conditional skipped`, and scoped PWA negative `10/10` with zero scoped
+  skips. Skips remain explicitly separate from PASS.
+- The deployable archive SHA-256 is
+  `0d3c460815a562f0e25aab5f0750bc46aa85b5a153ddcb52238018bf7cfeede4`.
+  API/worker/migrate image identity is
+  `sha256:d95bb99660f3bafd7e64ef7866e49947797ec26a55328671fdd7afe3044ac331`;
+  Web is
+  `sha256:6684742dbe6960d6ee4f4632b61048765407266344685c3fd616bce2e6c848e6`.
+  All running identities match the manifest.
+- King verified backup
+  `/opt/chat-reader/backups/release-g-20260815T170643Z-1b752b7` with
+  `pg_restore --list`, four business-volume archive listings and SHA-256.
+  Deployment used immutable commit tags, migration preflight and
+  `--no-build`; API/Web/PostgreSQL are healthy, worker runs, Scanner is
+  disabled, `/api/health` is `200`, and Alembic remains the single
+  `20260806_0021` head. Release F immutable images remain direct rollback.
+- Production responses retain Release A headers, CSP Report-Only and a
+  server-owned request ID; `X-Powered-By` is absent. Production Chrome also
+  passed Rich Markdown/KaTeX/MathML, image/Markdown unified Viewer, Source
+  Editor type/backspace, and desktop plus 390x844 Share focus contracts.
+- An exploratory opt-in Markdown attachment upload exposed an existing
+  upload-placement timing race (`cr-upload://` not yet replaced before save).
+  The affected editor runtime files are byte-identical to Release F, so this
+  is recorded as separate pre-existing debt rather than a PDF.js regression;
+  Release G did not change or conceal it.
 - Durable contract: `docs/system/PDFJS_MIGRATION_CONTRACT.md`.
 
 ## 2026-08-15 Release F Next 16 final closure

@@ -1,39 +1,69 @@
 # Implementation Results
 
-## Release G PDF.js maintained-line candidate - 2026-08-15
+## Release G PDF.js maintained-line closure - 2026-08-16
 
 ```text
 TARGET_PDFJS_VERSION = 6.2.108
 PDFJS_OFFICIAL_STABLE = PASS
 PDFJS_PACKAGE_PROVENANCE = PASS
-PDFJS_SUPPORTED_LINE = PARTIAL_PASS
+PDFJS_SUPPORTED_LINE = PASS
 PDFJS_BUILD_VARIANT = MODERN
 PDFJS_ESM_COMPATIBILITY = PASS
-PDF_WORKER_MODE = REAL (production-build browser)
+PDF_WORKER_MODE = REAL
 PDFJS_LIBRARY_WORKER_VERSION_MATCH = PASS
+PDF_SINGLE_PAGE = PASS
+PDF_MULTI_PAGE = PASS
+PDF_FIT_PAGE = PASS
+PDF_FIT_WIDTH = PASS
+PDF_ZOOM = PASS
+PDF_PAGE_NAVIGATION = PASS
 PDF_RANGE = PASS
 PDF_AUTH_RANGE = PASS
 PDF_SHARE = PASS
-PDF_OFFLINE = PASS (production-equivalent browser)
+PDF_OFFLINE = PASS
 PDF_OFFLINE_MISS = PASS
+PDF_CORRUPTED_FILE = PASS
 PDF_MALICIOUS_SCRIPT = PASS
+PDFJS_CVE_2024_4367_PATCHED_BY_VERSION = PASS
 PDFJS_EVAL_DISABLED = NOT_APPLICABLE (option removed from target public API)
 PDF_SCRIPTING = DISABLED
+PDF_CSP_REPORT_ONLY = PASS
+PDF_WORKER_CSP = PASS
+PDF_WASM_COMPATIBILITY = NOT_APPLICABLE (useWasm=false)
+PDF_CMAP_STANDARD_FONT_COMPATIBILITY = NOT_APPLICABLE
+PDF_VIEWER_FOCUS = PASS
+PDF_VIEWER_MAXIMIZE = PASS
+PDF_RENDER_CANCELLATION = PASS
+PDF_RESOURCE_CLEANUP = PASS
 PDF_LAZY_LOADING = PASS
+PDF_INITIAL_BUNDLE_REGRESSION = PASS
 PDFJS_LEGACY_SECURITY_EXCEPTION = REMOVED
 PDFJS_LEGACY_BUILD_CHAIN_EXCEPTION = REMOVED
 DEPENDENCY_AUDIT = PASS (0 blocked / 0 unapproved)
 PWA_POSITIVE = PASS (68 passed / 53 conditional skipped)
 PWA_NEGATIVE_MATRIX = PASS (10 passed / 0 scoped skipped)
 PWA_SCOPED_SKIPS = 0
+READER_REGRESSION = PASS
+RICH_MARKDOWN_REGRESSION = PASS
+MOBILE_SHARE_REGRESSION = PASS
+SOURCE_EDITOR_REGRESSION = PASS
+VIEWER_NON_PDF_REGRESSION = PASS
+RELEASE_A_REGRESSION = PASS
+RELEASE_B_REGRESSION = PASS
+RELEASE_C_REGRESSION = PASS
+RELEASE_D_REGRESSION = PASS
+RELEASE_E_REGRESSION = PASS
+RELEASE_F_REGRESSION = PASS
 BUILD_BUNDLER = WEBPACK
 TURBOPACK_MIGRATION = NOT_EXECUTED
+CSP_ENFORCING = NOT_IMPLEMENTED
 DEXIE_SCHEMA_MIGRATION = NONE
 NEW_ALEMBIC_MIGRATION = NONE
 OFFLINE_PACKAGE_FORMAT_CHANGE = NONE
-CI_RELEASE_ARTIFACT = PENDING
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
-RELEASE_G = PARTIAL_PASS
+RUNNING_IMAGE_IDENTITY = PASS
+ROLLBACK_RELEASE_F = RETAINED
+PRODUCTION_DEPLOYMENT = PASS
+RELEASE_G = PASS
 ```
 
 Official npm and Mozilla GitHub release sources both resolve stable
@@ -44,7 +74,7 @@ Its Node engine requirement (`>=22.13.0 || >=24`) caused the narrow CI/Web
 image baseline update to Node `22.13.1`; Next `16.3.1`, React `19.2.8` and
 Webpack remain frozen.
 
-The candidate centralizes the browser-only PDF.js module and local modern
+The final runtime centralizes the browser-only PDF.js module and local modern
 worker, updates PDF.js 6 canvas render calls, preserves explicit authenticated
 Range loading for owner/Share URLs, and adds the worker to offline shell asset
 inventory. No worker CDN, PDF scripting manager, Dexie/Alembic migration or
@@ -58,12 +88,41 @@ remain lazy artifacts: the PDF chunk has no initial-manifest intersection and
 the production-build browser observes no PDF chunk or worker before opening a
 PDF. Current-source lint/typecheck/build pass; API is `280 passed / 6 skipped`;
 Alembic current/head is the single `20260806_0021`; dependency policy has zero
-blocked or unapproved finding. PDF owner/Share/security is `10/10`, broader
-focused browser regression is `38/38`, Source Editor/mutation is `2/2`, the
-default PWA matrix is `68 passed / 53 conditional skipped`, and the scoped
-negative matrix is `10/10` with zero scoped skips. CI, artifact, backup,
-deployment, running image identity and production Chrome evidence do not yet
-exist for Release G.
+blocked or unapproved finding.
+
+Final CI evidence is source `1b752b77063893feefef01756af9deda559f30a5`,
+Actions run `31896564657`, archive SHA-256
+`0d3c460815a562f0e25aab5f0750bc46aa85b5a153ddcb52238018bf7cfeede4`,
+API/worker/migrate image
+`sha256:d95bb99660f3bafd7e64ef7866e49947797ec26a55328671fdd7afe3044ac331`
+and Web image
+`sha256:6684742dbe6960d6ee4f4632b61048765407266344685c3fd616bce2e6c848e6`.
+The workflow passed API `282/4`, focused browser `38/38`, maintained-PDF
+`3/3`, default PWA `68/53 conditional`, and scoped negative `10/10` with zero
+scoped skips before building images.
+
+King independently verified the archive and complete backup
+`/opt/chat-reader/backups/release-g-20260815T170643Z-1b752b7`, then used
+immutable `API_IMAGE`/`WEB_IMAGE`, Alembic preflight and `--no-build` service
+recreation. Expected and actual running API/worker/migrate/Web identities
+match exactly. API/Web/PostgreSQL are healthy, worker is running, Scanner is
+disabled, `/api/health` returns `200`, and Alembic remains `20260806_0021`.
+
+Isolated production Chrome passed real version-matched worker and same-origin
+asset loading, nonblank single/multi canvas, authenticated owner/Share `206`
+Range, Share denial outside scope, Fit Page/Width, 110% zoom, page navigation,
+maximize/Escape/focus, cached PDF offline through a real service worker,
+offline-to-online recovery, Rich Markdown/KaTeX/MathML, image/Markdown unified
+Viewer, Source Editor type/backspace, and desktop/mobile Share focus. CSP
+Report-Only monitoring found no unexplained PDF worker/Wasm violation; Release
+F immutable images remain retained as direct rollback.
+
+An exploratory opt-in Markdown attachment upload flow exposed a pre-existing
+placement race where a transient `cr-upload://` reference can reach save
+before canonical replacement. The relevant runtime files are byte-identical
+to Release F, the required Source Editor regression passed, and Release G did
+not alter this path. It remains separately disclosed follow-up debt rather
+than being misattributed to the PDF engine migration.
 
 ## Release F Next 16 final closure - 2026-08-15
 

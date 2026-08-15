@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## Release G PDF.js migration candidate (2026-08-15)
+## Release G PDF.js migration closure (2026-08-16)
 
 Release G uses official `pdfjs-dist 6.2.108` with the modern ESM library and a
 same-origin `pdf.worker.min.mjs`. The target requires Node `>=22.13.0`, so run
@@ -58,12 +58,42 @@ Range, lazy loading, focus, malicious script isolation and corrupt-file
 recovery. Broader focused browser regression remains `38/38`, and Source
 Editor/mutation is `2/2`.
 
-The current-runtime default PWA matrix is `68 passed / 53 conditional
-skipped`; three additional conditional skips are the opt-in Release G PDF
-suites and were executed separately. The Release E scoped negative matrix is
-`10 passed / 0 scoped skipped`, including the local PDF worker inventory and
-missing-worker recovery. CI artifact and production evidence remain
-`PENDING`; local evidence does not authorize deployment by itself.
+The final CI default PWA matrix is `68 passed / 53 conditional skipped`;
+three additional conditional skips are the opt-in Release G PDF suites and
+were executed separately. The Release E scoped negative matrix is `10 passed
+/ 0 scoped skipped`, including local PDF worker inventory and missing-worker
+recovery. Skips remain skips and are not counted as PASS.
+
+Actions run `31896564657` tested frozen source
+`1b752b77063893feefef01756af9deda559f30a5`. It passed locked install,
+lint/typecheck/Next Webpack build, API `282 passed / 4 skipped`, Alembic,
+dependency policy, focused browser `38/38`, maintained PDF `3/3`, default PWA
+and scoped negative PWA before image construction. The Docker log explicitly
+records `next build --webpack` and `Next.js 16.3.1 (webpack)`.
+
+Production acceptance used installed Chrome `151.0.7922.138` through isolated
+Playwright contexts and the public HTTPS origin. It verified real worker,
+version match, single/multi canvas, owner/Share Range `206`, Share scope,
+Fit Page/Width, 110% zoom, page navigation, maximize/Escape/focus, and a real
+offline package/IndexedDB/service-worker PDF open followed by reconnect.
+Separate production smokes passed Rich Markdown/KaTeX/MathML, image/Markdown
+unified Viewer, Source Editor input/backspace, desktop Share and the mandatory
+390x844 single-dialog/Escape/focus contract. Synthetic QA Conversations were
+deleted through the product API; no direct SQL cleanup was used.
+
+The first zoom evidence attempt used an over-broad icon selector and timed
+out after all earlier PDF assertions passed. Its QA Conversation was then
+deleted through the product API. The corrected accessible-name selector
+passed in `21.4s`; the failed attempt is retained as test-harness evidence and
+is not classified as a product failure.
+
+An exploratory `E2E_RICH_MARKDOWN_ATTACHMENT` production run exposed an
+existing upload-placement timing race: the editor can still contain a
+transient `cr-upload://` reference when save begins. This path is outside the
+PDF.js change, the relevant runtime files are byte-identical to Release F, and
+the required Source Editor type/backspace/close regression passed. Keep the
+race as separate follow-up work; do not use the optional failed run as Release
+G PDF evidence or conceal it as a PASS.
 
 ## Release F Next 16 final closure (2026-08-15)
 

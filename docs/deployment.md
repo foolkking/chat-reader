@@ -1,20 +1,17 @@
 # 生产部署
 
-## Release G PDF.js deployment candidate (not deployed, 2026-08-15)
+## Release G PDF.js deployment closure (2026-08-16)
 
 Release G changes the browser PDF engine to official stable
-`pdfjs-dist 6.2.108`. Because this package requires Node `>=22.13.0`, the
-candidate aligns the CI and Web build/runtime images on Node `22.13.1` while
-keeping Next `16.3.1`, React `19.2.8`, Webpack and all data formats frozen.
-
-No Release G production artifact exists yet:
+`pdfjs-dist 6.2.108`. CI and Web build/runtime images use Node `22.13.1` while
+Next `16.3.1`, React `19.2.8`, Webpack and all data formats remain frozen.
 
 ```text
-RELEASE_G = PARTIAL_PASS
-CI_RELEASE_ARTIFACT = PENDING
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
-RUNNING_IMAGE_IDENTITY = NOT_VERIFIED
-ROLLBACK_RELEASE_F = PENDING_PREDEPLOY_VERIFICATION
+RELEASE_G = PASS
+CI_RELEASE_ARTIFACT = PASS
+PRODUCTION_DEPLOYMENT = PASS
+RUNNING_IMAGE_IDENTITY = PASS
+ROLLBACK_RELEASE_F = RETAINED
 ```
 
 The permanent immutable-image contract from Release F applies unchanged:
@@ -35,14 +32,45 @@ convenience alias. Any running-image mismatch stops acceptance even if health
 is `200`. King must not run a Next build, overwrite `.env.production`, start
 Scanner, delete a volume or use broad Docker pruning.
 
-Before a Release G deployment, retain the immutable Release F
-`c9ddae1e9cd5c94c406f357a152304105e6d20b0` API/worker/Web images and verified
-backup as direct rollback. Production acceptance must additionally prove the
-same-origin real PDF worker, rendered single/multi-page canvases,
-authenticated Range, cached-only offline PDF, Viewer focus/maximize behavior
-and zero unexplained PDF worker/Wasm CSP Report-Only violations. The
-malicious-PDF fault fixture remains production-equivalent only and must not be
-opened on the production domain.
+### Release G final evidence
+
+- Source `1b752b77063893feefef01756af9deda559f30a5`; Actions run
+  `31896564657` completed SUCCESS. Archive SHA-256 is
+  `0d3c460815a562f0e25aab5f0750bc46aa85b5a153ddcb52238018bf7cfeede4`.
+- API/worker/migrate image identity is
+  `sha256:d95bb99660f3bafd7e64ef7866e49947797ec26a55328671fdd7afe3044ac331`;
+  Web identity is
+  `sha256:6684742dbe6960d6ee4f4632b61048765407266344685c3fd616bce2e6c848e6`.
+  The image archive, manifest, architecture and entrypoints were independently
+  checked before transfer and King recomputed the same archive hash.
+- Complete backup
+  `/opt/chat-reader/backups/release-g-20260815T170643Z-1b752b7` contains the
+  PostgreSQL custom dump plus imports, exports, offline and assets archives.
+  `pg_restore --list`, all archive listings and every SHA-256 entry passed.
+- The release directory stores a copied production Compose file, a protected
+  `release-images.env` and `compose-release-g` wrapper. The wrapper clears
+  inherited image/Compose variables and binds exact commit tags through
+  `API_IMAGE` and `WEB_IMAGE`; `.env.production` was not overwritten.
+  Alembic current/head preflight was `20260806_0021`, the migrate execution
+  used the expected API image, and API/worker/Web were recreated with
+  `--no-build`.
+- Expected and actual running image IDs match for API, import worker, migrate
+  and Web. This identity gate passed before health or browser acceptance.
+  API/Web/PostgreSQL are healthy, worker runs, Scanner is disabled and public
+  `/api/health` returns `200` with a server-owned request ID.
+- Production responses retain `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy` and CSP Report-Only; `X-Powered-By` is absent.
+  Isolated production Chrome passed real same-origin PDF worker, exact
+  library/worker version, single/multi canvas, authenticated owner/Share
+  `206` Range, Share scope, Fit Page/Width, 110% zoom, page navigation,
+  maximize/Escape/focus, cached PDF offline and reconnect. No unexplained PDF
+  worker/Wasm CSP violation was observed. Malicious/corrupt fault fixtures
+  remained production-equivalent only.
+- Immutable Release F `c9ddae1e9cd5c94c406f357a152304105e6d20b0`
+  API/Web images and its verified backup remain available for direct rollback.
+  `latest` remains only a convenience alias. No broad image cleanup, business
+  volume deletion, database change, Scanner change or King-side Next build was
+  performed.
 
 ## Release F Next 16 deployment contract (closed, 2026-08-15)
 
