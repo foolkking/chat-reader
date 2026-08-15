@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## Release H CSP enforcement candidate (2026-08-16)
+## Release H CSP enforcement closure (2026-08-16)
 
 Release H adds a production-build browser hard gate:
 
@@ -29,13 +29,14 @@ corepack pnpm --filter web exec playwright test --config=playwright.config.ts \
   e2e/pwa-negative.spec.ts
 ```
 
-Current candidate evidence is CSP `4/4`, PWA negative `10/10`, default PWA
-`72 passed / 53 unrelated conditional skipped`, focused Reader/Rich/Security
-`36/36`, PDF owner/Share `3/3`, Markdown and image unified Viewer `1/1`,
-Source Editor/mutation `2/2`, final Share focus `2/2`, and a separate Share
-repeat `6/6`. Root lint/typecheck/Next 16.3.1 Webpack build pass; full API is
-`280 passed / 6 skipped`; Alembic current/head is `20260806_0021`; dependency
-policy has zero blocked/unapproved advisories. Rich Markdown requires a real Shiki
+Final Actions run `31906595581` on source
+`da160a9c9a34dfe670fc67262cf3c8c9eedba07a` passed CSP `4/4`, Release C
+`30/30`, full API `282 passed / 4 skipped`, PWA negative `10/10` with zero
+scoped skips, default PWA `72 passed / 53 unrelated conditional skipped`,
+focused Reader/Rich/Security `36/36`, PDF `3/3`, Markdown/image unified Viewer
+`1/1`, Source Editor/mutation `2/2`, and Share `2/2`. Locked install,
+lint/typecheck/Next `16.3.1` Webpack build, Alembic and dependency policy also
+passed before images were built. Rich Markdown requires a real Shiki
 highlighted token span plus zero enforced violation events, in addition to
 KaTeX, MathML and sanitizer assertions.
 
@@ -46,6 +47,27 @@ times. This is treated as a deterministic test-process lifecycle defect, not a
 rerun-based product PASS. CI therefore keeps CSP, long Reader/focused paths,
 Share, mutation, Markdown/image Viewer, PDF and scoped PWA as separate hard
 steps.
+
+Production acceptance used an isolated Chrome profile and browser same-origin
+`fetch` for disposable QA setup/cleanup. It did not use a logged-in user
+profile, direct SQL, or Node APIRequestContext as release evidence. The final
+scoped product run passed `3/3`: Reader scroll/Rich Markdown/Source Editor
+mutation and reload; Markdown/image/PDF unified Viewer with a real PDF.js
+worker and authenticated `206` Range; desktop and 390x844 Share single-dialog
+and focus restoration. A separate clean-profile PWA offline/reconnect run
+passed `1/1`. The deployed CSP block probes passed for external script/connect/
+image/blob-worker/object and frame embedding, and legitimate paths produced
+zero `securitypolicyviolation` events. A final product-API cleanup pass verified
+zero Release H disposable Conversation titles remained.
+
+The production smoke initially exposed a pre-existing Source Editor timing
+race where an attachment upload can display ready before its `cr-upload://`
+marker is replaced in the submitted document; the API safely rejects it with
+422. This is not a CSP regression and is already represented by overlapping
+uncommitted user editor work. Release H preserves those files and validates
+Viewer data by upload-session/finalize plus insertion of the committed
+Conversation attachment. Do not convert the exploratory 422 into a release
+PASS or silently stage the user's editor changes.
 
 ## Release G PDF.js migration closure (2026-08-16)
 

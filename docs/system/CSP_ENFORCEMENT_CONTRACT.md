@@ -6,17 +6,17 @@ Release H promotes the application document policy from observation to
 browser enforcement without changing Next, React, Webpack, Reader, Viewer,
 Share, PWA, Offline package v2, Dexie v1, PDF.js, or database schemas.
 
-Until the Release H image is accepted in production:
+The immutable Release H image is accepted in production:
 
 ```text
-RELEASE_H = PARTIAL_PASS
+RELEASE_H = PASS
 CSP_LOCAL_CANDIDATE = PASS
-CSP_PRODUCTION = PENDING
+CSP_PRODUCTION = PASS
 ```
 
-The production runtime therefore remains Release G with Report-Only CSP until
-the immutable Release H deployment completes. This distinction prevents local
-candidate evidence from being presented as production fact.
+Production source `da160a9c9a34dfe670fc67262cf3c8c9eedba07a` now emits the
+enforcing policy below. The public response has exactly one enforcing header,
+no Report-Only shadow and no gateway-added conflicting policy.
 
 ## Policy authority
 
@@ -190,3 +190,25 @@ worker behavior, KaTeX/Shiki/Viewer/Reader/Share operation, and a harmless
 controlled blocked-resource probe. Release G immutable images and verified
 backup remain the direct rollback source. No Alembic, Dexie, Offline package,
 Next, React, PDF.js, or bundler migration is part of Release H.
+
+## Final release evidence
+
+Actions run `31906595581` completed the quality-gated image pipeline. The
+release archive SHA-256 is
+`abb3f48ce6ab833fa9abb222a304b8c26ac42c458ab232e94789acbc3e0b32c5`.
+The manifest and actual running identities match:
+
+```text
+API/worker/migrate = sha256:a8604d1518a623eacc5171171d1105ff2eeb84f0371e93a3535f36a9d9264ba1
+Web                = sha256:0f37153f34d86fe514f0e58a14bf8f7a358e9f0975dbad64d3f529cc97915c66
+```
+
+Backup `/opt/chat-reader/backups/release-h-20260815T204036Z-da160a9` was
+validated with `pg_restore --list`, archive listings and SHA-256 before the
+immutable `--no-build` recreation. Alembic remained `20260806_0021`.
+
+Production Chrome observed the enforced block probes and zero violations on
+legitimate Library, Reader, Shiki, KaTeX, MathML, Markdown/image/PDF Viewer,
+Source Editor mutation, Share and PWA offline/reconnect paths. PDF used the
+same-origin real worker and authenticated `206` Range. Release G immutable
+images and verified backup remain direct rollback.

@@ -1,13 +1,14 @@
 # Implementation Results
 
-## Release H CSP enforcement candidate - 2026-08-16
+## Release H CSP enforcement closure - 2026-08-16
 
 ```text
 CSP_RESOURCE_INVENTORY = PASS
 CSP_POLICY_AUTHORITY = PASS
-CSP_ENFORCING_HEADER = PASS (production build)
-CSP_ENFORCING = PASS (production-equivalent candidate)
+CSP_ENFORCING_HEADER = PASS (production)
+CSP_ENFORCING = PASS (production)
 CSP_REPORT_ONLY_SHADOW = NOT_USED
+CSP_REPORT_ONLY = ABSENT
 CSP_SCRIPT_UNSAFE_EVAL = ABSENT (production)
 CSP_SCRIPT_UNSAFE_INLINE = RETAINED_WITH_EVIDENCE (script-src-elem)
 CSP_STYLE_UNSAFE_INLINE = RETAINED_WITH_EVIDENCE
@@ -48,9 +49,27 @@ NEW_ALEMBIC_MIGRATION = NONE
 DEXIE_SCHEMA_MIGRATION = NONE
 OFFLINE_PACKAGE_FORMAT_CHANGE = NONE
 CSP_SERVER_REPORTING = NOT_IMPLEMENTED
-CI_RELEASE_ARTIFACT = PENDING
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
-RELEASE_H = PARTIAL_PASS
+CI_RELEASE_ARTIFACT = PASS
+RUNNING_IMAGE_IDENTITY = PASS
+LATEST_TAG_IS_NOT_RELEASE_AUTHORITY = TRUE
+ROLLBACK_RELEASE_G = RETAINED
+PRODUCTION_CSP_BLOCK_PROBES = PASS
+PRODUCTION_CSP_LEGITIMATE_PATHS = PASS
+PRODUCTION_CSP_VIOLATIONS = 0
+PRODUCTION_READER_RICH_MARKDOWN = PASS
+PRODUCTION_VIEWER_PDF_RANGE = PASS
+PRODUCTION_SOURCE_EDITOR_MUTATION = PASS
+PRODUCTION_MOBILE_SHARE_390 = PASS
+PRODUCTION_PWA_OFFLINE_RECONNECT = PASS
+RELEASE_A_REGRESSION = PASS
+RELEASE_B_REGRESSION = PASS
+RELEASE_C_REGRESSION = PASS
+RELEASE_D_REGRESSION = PASS
+RELEASE_E_REGRESSION = PASS
+RELEASE_F_REGRESSION = PASS
+RELEASE_G_REGRESSION = PASS
+PRODUCTION_DEPLOYMENT = PASS
+RELEASE_H = PASS
 ```
 
 The application policy is now enforcing in the production build. Its
@@ -60,7 +79,7 @@ Production `'unsafe-eval'`, wildcard/scheme sources, data fonts, blob workers,
 external CDNs, duplicate Report-Only policy and a reporting endpoint are not
 present.
 
-Local Chromium proves real blocking with `4/4` scoped tests and zero skips.
+Production-build Chromium proves real blocking with `4/4` scoped tests and zero skips.
 The controlled loopback origin receives no forbidden script/connect/image/
 object requests; browser events have `disposition=enforce`; a blob worker and
 cross-origin parent frame are blocked. Legitimate local/data/blob images,
@@ -73,11 +92,39 @@ PWA negative is `10/10` with zero scoped skips, including the new synthetic
 Security is `36/36`; PDF owner/Share real worker and Range are `3/3`; the
 Markdown and image unified Viewer is `1/1`; Source Editor and mutation are
 `2/2`; final Share focus is `2/2`, with a separate three-run `6/6` repeat.
-Root lint/typecheck/Next 16.3.1 Webpack build pass, full API is `280 passed / 6
-skipped`, Alembic current/head is `20260806_0021`, and dependency policy has
-zero blocked or unapproved advisories.
-The source is not yet frozen, committed, built by Actions, deployed or accepted
-in production, so Release H remains `PARTIAL_PASS`.
+Final Actions run `31906595581` on
+`da160a9c9a34dfe670fc67262cf3c8c9eedba07a` passed locked install,
+lint/typecheck/Next `16.3.1` Webpack build, Release C `30/30`, full API
+`282 passed / 4 skipped`, Alembic, dependency policy, CSP `4/4`, focused
+browser/security `36/36`, Share `2/2`, Source Editor/mutation `2/2`,
+Markdown/image Viewer `1/1`, PDF `3/3`, default PWA `72 passed / 53 unrelated
+conditional skipped`, and scoped PWA negative `10/10` with zero scoped skips.
+The quality job gated the successful image/inspect/package job.
+
+The independently verified release archive SHA-256 is
+`abb3f48ce6ab833fa9abb222a304b8c26ac42c458ab232e94789acbc3e0b32c5`.
+The manifest API/worker/migrate identity is
+`sha256:a8604d1518a623eacc5171171d1105ff2eeb84f0371e93a3535f36a9d9264ba1`;
+Web is
+`sha256:0f37153f34d86fe514f0e58a14bf8f7a358e9f0975dbad64d3f529cc97915c66`.
+Running API, worker and Web match these identities after immutable commit-tag
+binding and `--no-build` recreation.
+
+Backup `/opt/chat-reader/backups/release-h-20260815T204036Z-da160a9` passed
+`pg_restore --list`, all four business-volume archive listings, and independent
+SHA-256 verification. Production has exactly one enforcing application policy,
+no Report-Only header, no `X-Powered-By`, and all Release A headers. Isolated
+Chrome passed real forbidden-resource blocking, Reader/Rich Markdown,
+Source Editor mutation/reload, Markdown/image Viewer, PDF real worker/nonblank
+canvas/authenticated `206` Range, desktop and 390x844 Share focus, and PWA
+offline/reconnect, with zero legitimate-path CSP violations. Final QA cleanup
+used the product API and left zero Release H disposable Conversations.
+
+An exploratory direct Source Editor upload reproduced the pre-existing
+upload-token replacement race already recorded by Release G. It is not caused
+by CSP and the user's overlapping uncommitted editor fix was preserved rather
+than folded into Release H. Release G immutable images and backup remain direct
+rollback. `RELEASE_H = PASS`.
 
 ## Release G PDF.js maintained-line closure - 2026-08-16
 

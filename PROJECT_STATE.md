@@ -1,12 +1,11 @@
 # Project State
 
-## 2026-08-16 Release H CSP enforcement candidate
+## 2026-08-16 Release H CSP enforcement closure
 
-- `RELEASE_H = PARTIAL_PASS`. The current source has one application CSP
-  authority in `apps/web/next.config.mjs` and emits a real
-  `Content-Security-Policy` header in production builds. Production remains on
-  Release G Report-Only until CI artifact and immutable deployment acceptance
-  complete.
+- `RELEASE_H = PASS`. Production source
+  `da160a9c9a34dfe670fc67262cf3c8c9eedba07a` has one application CSP authority
+  in `apps/web/next.config.mjs` and emits one enforcing
+  `Content-Security-Policy`; Report-Only and `X-Powered-By` are absent.
 - The policy is derived from the actual resource graph: same-origin Next/API,
   local KaTeX fonts, same-origin Service/PDF/Search/complex workers, Mermaid
   data images, Offline/Viewer blob images and media, and the Shiki Oniguruma
@@ -23,20 +22,42 @@
   manifest/Service Worker resources. Markdown sanitizer browser evidence
   removes `javascript:` links and script payloads; direct inline-script CSP is
   disclosed as `POLICY_LIMITED`.
-- Current local regressions: lint/typecheck/Next 16.3.1 Webpack build PASS;
-  API `280 passed / 6 skipped`; Alembic current/head `20260806_0021`;
-  dependency policy has zero blocked/unapproved advisories; scoped PWA negative
-  `10/10` with zero scoped skips; default PWA `72 passed / 53 unrelated
-  conditional skipped`; focused Reader/Rich/Security `36/36`; PDF/Share `3/3`;
-  Markdown and image Viewer `1/1`; mutation/Source Editor `2/2`; final Share
-  focus `2/2` and the isolated repeat `6/6`. A long 38-test Windows Chrome process
-  exited before creating the desktop Share context after its first 36 tests;
-  the CI workflow now runs Share and mutation as independent hard gates instead
-  of treating a rerun as product evidence.
+- Actions run `31906595581` completed SUCCESS on the final source. Quality
+  passed locked install, lint, typecheck, Next `16.3.1` Webpack build, Release C
+  `30/30`, API `282 passed / 4 skipped`, Alembic, dependency policy, CSP `4/4`,
+  focused browser/security `36/36`, Share `2/2`, Source Editor/mutation `2/2`,
+  Markdown/image Viewer `1/1`, PDF `3/3`, default PWA `72 passed / 53 unrelated
+  conditional skipped`, and scoped PWA negative `10/10` with zero scoped skips.
+  `build-images` ran only after quality and completed inspect/package/upload.
+- The verified archive SHA-256 is
+  `abb3f48ce6ab833fa9abb222a304b8c26ac42c458ab232e94789acbc3e0b32c5`.
+  API/worker/migrate image identity is
+  `sha256:a8604d1518a623eacc5171171d1105ff2eeb84f0371e93a3535f36a9d9264ba1`;
+  Web is
+  `sha256:0f37153f34d86fe514f0e58a14bf8f7a358e9f0975dbad64d3f529cc97915c66`.
+  King bound immutable commit tags and the actual running identities match.
+- Backup `/opt/chat-reader/backups/release-h-20260815T204036Z-da160a9`
+  contains the PostgreSQL custom dump plus imports, exports, offline and assets
+  archives. `pg_restore --list`, four archive listings and independent SHA-256
+  re-verification passed before deployment. Alembic remains the single
+  `20260806_0021` head; no database, Dexie or Offline package migration exists.
+- Isolated production Chrome passed the deployed block probes, Reader scroll
+  and no-blank-window smoke, Shiki/KaTeX/MathML, Source Editor cursor and
+  canonical mutation reload, Markdown/image unified Viewer, PDF `6.2.108`
+  real worker/nonblank canvas/authenticated `206` Range, desktop Share and the
+  390x844 single-dialog/Escape/focus contract. A clean profile passed PWA
+  offline startup and reconnect. Legitimate-path enforced CSP violations were
+  zero, public `/api/health` is `200`, and its server-owned request ID correlates
+  with `api_request_completed` without raw query logging.
 - The Service Worker synthetic offline-incomplete 503 has its own locked-down
   CSP. Owner and Share attachment Range responses retain the API
   `default-src 'none'; sandbox` contract. Alembic, Dexie, Offline package,
-  Next/React/PDF.js and Webpack remain unchanged.
+  Next/React/PDF.js and Webpack remain unchanged. The pre-existing Source Editor
+  upload-token replacement race observed during exploratory QA remains outside
+  Release H; the user's overlapping uncommitted editor fix was preserved and
+  was not staged into this release.
+- Release G immutable API/Web images and verified backup remain the direct
+  rollback source. `latest` is only a convenience alias, not release authority.
 - Durable contract: `docs/system/CSP_ENFORCEMENT_CONTRACT.md`.
 
 ## 2026-08-16 Release G PDF.js maintained-line closure

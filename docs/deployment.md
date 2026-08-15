@@ -1,10 +1,10 @@
 # 生产部署
 
-## Release H CSP enforcement candidate (2026-08-16)
+## Release H CSP enforcement closure (2026-08-16)
 
-Release H changes the Web response from Report-Only to an enforcing
-`Content-Security-Policy`. Before deployment, `RELEASE_H = PARTIAL_PASS` and
-production remains Release G.
+Release H changes the Web response from Report-Only to one enforcing
+`Content-Security-Policy`. `RELEASE_H = PASS`; production runs immutable source
+`da160a9c9a34dfe670fc67262cf3c8c9eedba07a`.
 
 The immutable sequence is unchanged:
 
@@ -37,6 +37,45 @@ offline/reconnect and 390x844 Share focus. Legitimate-path enforced violations
 must be zero. A harmless test-only external resource attempt must be blocked by
 the deployed policy without a server-side mutation. CSP reporting remains
 browser evidence only; no public reporting endpoint is introduced.
+
+### Release H final evidence
+
+- Actions run `31906595581` completed SUCCESS. The archive SHA-256 is
+  `abb3f48ce6ab833fa9abb222a304b8c26ac42c458ab232e94789acbc3e0b32c5`.
+  API/worker/migrate image identity is
+  `sha256:a8604d1518a623eacc5171171d1105ff2eeb84f0371e93a3535f36a9d9264ba1`;
+  Web identity is
+  `sha256:0f37153f34d86fe514f0e58a14bf8f7a358e9f0975dbad64d3f529cc97915c66`.
+  King independently verified the checksum, image architecture, commands and
+  manifest before recreation.
+- Backup `/opt/chat-reader/backups/release-h-20260815T204036Z-da160a9`
+  contains the PostgreSQL custom dump and imports, exports, offline and assets
+  archives. `pg_restore --list`, all archive listings and all SHA-256 values
+  passed. The initial aggregate verifier exited only after those validations
+  because a PowerShell CRLF reached its final file-list `sort`; an independent
+  re-verification closed that tooling-only result before deployment.
+- The release directory binds exact commit tags through `API_IMAGE` and
+  `WEB_IMAGE`; migration preflight/current/head remained `20260806_0021` and
+  the migrate execution used the manifest API image. API, worker and Web were
+  recreated with `--no-build`. Actual running Compose image identities match
+  the manifest before health/browser acceptance.
+- API/Web/PostgreSQL are healthy, worker runs, Scanner remains disabled and
+  `/api/health` returns `200` with a server-owned request ID that correlates to
+  the structured completion event. The public `/library` response has exactly
+  one enforcing policy, no Report-Only and no `X-Powered-By`; Release A headers
+  remain present.
+- Isolated production Chrome passed real forbidden-resource enforcement,
+  Reader/Rich Markdown/KaTeX/MathML, Source Editor mutation/reload,
+  Markdown/image Viewer, PDF `6.2.108` real worker/nonblank canvas/authenticated
+  `206` Range, desktop and 390x844 Share focus, and PWA offline/reconnect with
+  zero legitimate-path violations. QA Conversations were deleted through the
+  product API and a final list check found none remaining.
+- Release G immutable API/Web images
+  `sha256:d95bb99660f3bafd7e64ef7866e49947797ec26a55328671fdd7afe3044ac331`
+  and
+  `sha256:6684742dbe6960d6ee4f4632b61048765407266344685c3fd616bce2e6c848e6`
+  plus its verified backup remain direct rollback. `latest` remains only a
+  convenience alias. No broad image cleanup or business-volume cleanup ran.
 
 ## Release G PDF.js deployment closure (2026-08-16)
 

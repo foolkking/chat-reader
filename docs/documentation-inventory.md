@@ -1,11 +1,13 @@
 # Markdown 文档台账
 
-2026-08-16 Release H candidate synchronization: the evidence-derived enforced
+2026-08-16 Release H final synchronization: the evidence-derived enforced
 CSP, single authority, resource graph, inline/Wasm decisions, browser violation
 harness, PWA synthetic-response policy and immutable deployment gate are
 recorded in `docs/system/CSP_ENFORCEMENT_CONTRACT.md`, `PROJECT_STATE.md`,
-`results.md`, `docs/testing.md` and `docs/deployment.md`. Production remains on
-Release G Report-Only until CI/deployment closure; `RELEASE_H = PARTIAL_PASS`.
+`results.md`, `docs/testing.md` and `docs/deployment.md`. Source `da160a9`,
+Actions run `31906595581`, verified artifact/backup, immutable running image
+identity, public enforced headers, isolated production Chrome and retained
+Release G rollback are recorded. `RELEASE_H = PASS`.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
