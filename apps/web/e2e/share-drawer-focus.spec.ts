@@ -48,3 +48,42 @@ test("Share drawer restores logical focus for Escape, X and backdrop", async ({ 
     await page.request.delete(`/api/conversations/${conversationId}`);
   }
 });
+
+test("mobile Share replaces the tools sheet and restores the More trigger", async ({ page }) => {
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const created = await page.request.post("/api/conversations", {
+    data: {
+      title: `QA mobile Share focus ${suffix}`,
+      messages: [
+        { role: "user", content_markdown: "QA mobile Share focus user" },
+        { role: "assistant", content_markdown: "QA mobile Share focus assistant" },
+      ],
+    },
+  });
+  expect(created.status()).toBe(201);
+  const body = await created.json() as { conversation: { id: string } };
+  const conversationId = body.conversation.id;
+
+  try {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/conversations/${conversationId}`);
+    const more = page.locator('[data-reader-mobile-more-actions="true"]');
+    await expect(more).toBeVisible();
+    await more.click();
+
+    const tools = page.getByRole("dialog", { name: /阅读工具|Reader tools/ });
+    await expect(tools).toBeVisible();
+    await tools.getByRole("button", { name: /分享|Share/ }).click();
+
+    const share = page.getByRole("dialog", { name: /分享对话|Share conversation/ });
+    await expect(tools).toBeHidden();
+    await expect(share).toBeVisible();
+    await expect(share.locator("[data-dialog-initial-focus]")).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(share).toBeHidden();
+    await expect(more).toBeFocused();
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}`);
+  }
+});

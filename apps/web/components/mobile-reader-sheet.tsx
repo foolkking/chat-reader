@@ -1,7 +1,7 @@
 "use client";
 
 import { Drawer } from "vaul";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function MobileReaderSheet({
   open,
@@ -9,6 +9,7 @@ export function MobileReaderSheet({
   title,
   header,
   status,
+  restoreFocus,
   children,
 }: {
   open: boolean;
@@ -16,13 +17,21 @@ export function MobileReaderSheet({
   title: string;
   header?: React.ReactNode;
   status?: React.ReactNode;
+  restoreFocus?: () => HTMLElement | null;
   children: React.ReactNode;
 }) {
   const [snapPoint, setSnapPoint] = useState<number | string | null>(0.6);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open) setSnapPoint(0.6);
   }, [open]);
+
+  // Keep only the active mobile surface mounted. Vaul otherwise retains a
+  // closing sheet for its exit animation while the selected utility sheet is
+  // already opening. Two simultaneous modal focus scopes make Escape close
+  // the stale sheet first and can leave focus on document.body.
+  if (!open) return null;
 
   return (
     <Drawer.Root
@@ -38,7 +47,20 @@ export function MobileReaderSheet({
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/30 md:hidden" />
         <Drawer.Content
+          ref={contentRef}
           aria-label={title}
+          onOpenAutoFocus={(event) => {
+            const preferred = contentRef.current?.querySelector<HTMLElement>("[data-dialog-initial-focus]");
+            if (!preferred) return;
+            event.preventDefault();
+            preferred.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            const target = restoreFocus?.();
+            if (!target?.isConnected) return;
+            event.preventDefault();
+            target.focus({ preventScroll: true });
+          }}
           className="fixed inset-x-0 bottom-0 z-50 flex h-[92vh] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden"
         >
           <div className="flex shrink-0 justify-center pb-2 pt-3" aria-hidden="true">
