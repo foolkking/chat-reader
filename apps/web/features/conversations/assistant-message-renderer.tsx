@@ -414,7 +414,7 @@ type VirtualizedBlocksProps = {
  * covers Home/End, accessibility tooling and programmatic scroll jumps.
  */
 function useVisibleVirtualGapRecovery(
-  containerRef: React.RefObject<HTMLDivElement>,
+  containerRef: React.RefObject<HTMLDivElement | null>,
   virtualItems: VirtualFlowItem[],
   setScrollMargin: React.Dispatch<React.SetStateAction<number>>,
 ) {
@@ -520,7 +520,7 @@ function useVirtualMessageRegistration(
  * handled by TanStack Virtual's per-row ResizeObserver.
  */
 function useVirtualLayoutMeasurements(
-  containerRef: React.RefObject<HTMLDivElement>,
+  containerRef: React.RefObject<HTMLDivElement | null>,
   messageId: string,
   mode: "element" | "window",
   committedLayoutMetrics: ReaderBlockLayoutMetrics,

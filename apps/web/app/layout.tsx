@@ -35,7 +35,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const preferences = await loadInitialPreferences();
-  const initialLocale = resolveLocale(preferences.locale_mode, headers().get("accept-language") ?? "");
+  const requestHeaders = await headers();
+  const initialLocale = resolveLocale(preferences.locale_mode, requestHeaders.get("accept-language") ?? "");
   const initialTheme = preferences.theme_mode === "dark" ? "dark" : "light";
   return (
     <html lang={initialLocale} data-theme={initialTheme} suppressHydrationWarning>

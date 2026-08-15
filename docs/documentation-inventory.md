@@ -1,5 +1,20 @@
 # Markdown 文档台账
 
+2026-08-15 Release F candidate synchronization: Next `16.3.1`, React
+`19.2.8`, async request APIs, explicit Webpack build, dependency exception
+removal, current-worktree focused browser evidence and the immutable-image
+deployment contract are recorded in `PROJECT_STATE.md`, `results.md`,
+`docs/testing.md`, `docs/deployment.md` and
+`docs/system/NEXT_LTS_MIGRATION_CONTRACT.md`. Production closure is still
+pending; no artifact, backup or deployment is claimed by this entry.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/NEXT_LTS_MIGRATION_CONTRACT.md` | Current | Next 14 -> 15 -> 16 checkpoints, React 19, async request APIs, cache semantics, Webpack preservation, PWA impact, provenance and rollback. |
+| `apps/web/package.json` | Current runtime contract | Pins Next/React candidate versions and makes `next build --webpack` explicit. |
+| `apps/web/e2e/release-security-baseline.spec.ts` | Current test | Release A header/CSP, production fault-bridge absence and quality-before-artifact checks. |
+| `docker-compose.production.yml` | Current deployment contract | Allows explicit immutable API/Web image binding without changing production env contents. |
+
 2026-08-15 Release E synchronization: scoped Offline/PWA negative-path
 resilience is current in docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md,
 PROJECT_STATE.md, docs/testing.md and results.md. The contract preserves

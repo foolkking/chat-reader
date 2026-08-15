@@ -1,5 +1,6 @@
 import { ProjectConversationList } from "../../../features/projects/project-conversation-list";
 
-export default function ProjectPage({ params }: { params: { projectId: string } }) {
-  return <ProjectConversationList projectId={params.projectId} />;
+export default async function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = await params;
+  return <ProjectConversationList projectId={projectId} />;
 }

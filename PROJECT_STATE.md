@@ -1,5 +1,27 @@
 # Project State
 
+## 2026-08-15 Release F Next 16 final closure candidate
+
+- The current worktree contains the Next 16.3.1 / React 19.2.8 migration and
+  the minimal async `headers()`/route-params and React 19 ref-typing fixes.
+  `BUILD_BUNDLER = WEBPACK`; Turbopack, PDF.js migration and CSP enforcing
+  remain separate tracks.
+- Local gates are PASS: locked install, lint, typecheck, Webpack production
+  build, API `280 passed / 6 skipped`, Alembic current/head
+  `20260806_0021`, and dependency policy with no unapproved Next runtime
+  exception. Current-worktree focused browser evidence is `38 passed / 0
+  failed` across the CI focused specs, including the 390x844 Share focus
+  contract. The default PWA matrix is `68 passed / 50 unrelated conditional
+  skipped`; the Release E scoped negative matrix is `9 passed / 0 scoped
+  skipped`. Normal production chunks contain no PWA fault bridge.
+- This is still a candidate. `RELEASE_F = PARTIAL_PASS`,
+  `CI_RELEASE_ARTIFACT = PENDING`, and `PRODUCTION_DEPLOYMENT = NOT_EXECUTED`.
+  No production image, backup, deployment or final PASS is claimed here.
+- Release F changes must be selectively staged. Existing API/editor,
+  screenshots, storage and build-cache paths in the worktree are unrelated
+  and remain untouched. Build logs and caches for this closure are kept under
+  `C:\Users\86182\Desktop\wkkk`.
+
 ## 2026-08-15 Release E PWA negative matrix and offline resilience
 
 - Release E implements scoped Offline/PWA negative-path resilience without

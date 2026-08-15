@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
 
@@ -257,10 +258,11 @@ test("opens read-only offline files and exports the downloaded snapshot with bot
       return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
     }));
   });
-  expect(hashes).toEqual([
-    "BF467029CE810249701DCB21E0642ECEDF55F7B61ADA1C597BA386B891F9D08E",
-    "BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613",
-  ]);
+  const expectedHashes = await Promise.all([
+    "public/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
+    "public/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
+  ].map(async (filePath) => createHash("sha256").update(await readFile(filePath)).digest("hex").toUpperCase()));
+  expect(hashes).toEqual(expectedHashes);
 });
 
 test("keeps offline file browsing reflow-safe at exact narrow and tablet viewports", async ({ browser }) => {

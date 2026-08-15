@@ -1,5 +1,27 @@
 # Testing Addendum 2026-08-09
 
+## Release F Next 16 final closure candidate (2026-08-15)
+
+The current worktree uses locked Next `16.3.1`, React/ReactDOM `19.2.8`,
+Node 20.13.1 and the explicit `next build --webpack` path. Final local gates
+passed lint, typecheck, Webpack build, API `280 passed / 6 skipped`, Alembic
+`20260806_0021` current/head and dependency policy (`unapproved=0`).
+
+The focused browser command was rerun against the current source after the
+async `headers()`/route-param and React 19 ref fixes. It passed 38/38 tests,
+including Rich Markdown/KaTeX/MathML, Viewer, Reader wheel/thumb/TOC and
+restoration, security/CSP-equivalent checks, desktop Share and the mandatory
+390x844 More -> Share single-dialog/Escape/focus contract. The Reader
+restoration subset was run with the isolated API import worker because those
+fixtures require committed imports.
+
+The current-source default PWA baseline is `68 passed / 50 unrelated
+conditional skipped`; the dedicated Release E scoped negative matrix is
+`9 passed / 0 scoped skipped`. Normal production chunks contain no PWA test
+fault bridge or benchmark fixture. Current candidate state remains
+`RELEASE_F = PARTIAL_PASS` until artifact, backup, immutable running-image
+identity and production browser acceptance close.
+
 ## Release E PWA negative matrix (2026-08-15)
 
 Release E adds a dedicated production-build browser matrix for scoped

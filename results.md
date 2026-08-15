@@ -1,5 +1,50 @@
 # Implementation Results
 
+## Release F Next 16 final closure candidate - 2026-08-15
+
+```text
+NEXT_ACTIVE_LTS = PASS (local candidate)
+TARGET_NEXT_VERSION = 16.3.1
+REACT = 19.2.8
+REACT_DOM = 19.2.8
+BUILD_BUNDLER = WEBPACK
+TURBOPACK_MIGRATION = NOT_EXECUTED
+ASYNC_REQUEST_APIS = PASS
+CACHE_SEMANTICS = PASS
+NEXT_RUNTIME_SECURITY_EXCEPTION = NONE
+NEW_ALEMBIC_MIGRATION = NONE
+DEXIE_SCHEMA_MIGRATION = NONE
+PRODUCTION_PWA_FAULT_BRIDGE = ABSENT
+FINAL_BROWSER_REGRESSION = 38 passed / 0 failed
+PWA_POSITIVE = PASS (68 passed / 50 unrelated conditional skipped)
+PWA_NEGATIVE_MATRIX = PASS (9 passed)
+PWA_SCOPED_SKIPS = 0
+CI_RELEASE_ARTIFACT = PENDING
+PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+RELEASE_F = PARTIAL_PASS
+```
+
+The current worktree local gates passed locked install, lint, typecheck,
+`next build --webpack`, API `280 passed / 6 skipped`, Alembic
+`20260806_0021` single head and the official-registry dependency policy with
+zero unapproved exceptions. The focused browser gate was rerun after the
+async request/ref fixes: Rich Markdown/KaTeX/MathML, Viewer, Reader
+restoration, security headers/CSP-equivalent checks, stabilization and
+desktop/mobile Share all passed (38 tests, 0 failures). The first Reader run
+was environment-incomplete because the isolated worker was absent; the
+Reader suite was then rerun with that worker and passed 8/8.
+
+The current-worktree default PWA matrix passed 68 tests with 50 unrelated
+conditional skips. The dedicated Release E negative build passed 9/9 with
+zero scoped skips. Normal production chunks were scanned directly and contain
+neither the PWA test fault bridge nor benchmark fixtures; the negative-only
+build and its temporary dist directory were not retained as runtime output.
+
+This section is candidate evidence only. It intentionally does not claim a
+commit, Actions run, archive checksum, image digest, backup, running-image
+identity or production acceptance. Those facts must be appended after the
+quality-gated artifact and immutable deployment close.
+
 ## Release E PWA Negative Matrix & Offline Resilience - 2026-08-15
 
 ```text

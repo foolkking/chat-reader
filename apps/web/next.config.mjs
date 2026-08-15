@@ -38,6 +38,9 @@ const securityHeaders = [
 const nextConfig = {
   distDir,
   poweredByHeader: false,
+  env: {
+    NEXT_PUBLIC_PWA_NEGATIVE_TESTS: process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS === "1" ? "1" : "0",
+  },
   ...(standaloneBuild
     ? {
         output: "standalone",

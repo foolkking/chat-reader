@@ -1,5 +1,33 @@
 # 生产部署
 
+## Release F Next 16 deployment contract (candidate, 2026-08-15)
+
+Release F is a Next `16.3.1` / React `19.2.8` framework migration. The
+candidate is built externally with `next build --webpack`; King never runs a
+Next build. `LATEST_TAG_IS_NOT_RELEASE_AUTHORITY = TRUE`: `latest` is only a
+convenience alias. Production authority is an immutable commit tag or digest
+recorded in the release manifest.
+
+The required sequence is:
+
+```text
+quality gate
+  -> image build/inspect
+  -> package manifest and SHA-256
+  -> explicit API_IMAGE/WEB_IMAGE immutable binding
+  -> backup and Alembic preflight
+  -> recreate --no-build
+  -> docker inspect running API/worker/migrate/Web image identities
+  -> compare every identity with the manifest
+  -> health, security headers, CSP Report-Only and browser acceptance
+```
+
+Container health is not deployment acceptance until running image identity
+matches the manifest. A mismatch stops acceptance immediately. Release E
+immutable API/worker/Web images and its verified backup remain the direct
+rollback source throughout Release F acceptance. No Alembic or Dexie schema
+migration is part of this release.
+
 ## Release E PWA resilience closure (2026-08-15)
 
 - Runtime source `1591fd9bdab3d12d7928f6421845173cb1b1b81e`; Actions run
