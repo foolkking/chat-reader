@@ -134,6 +134,7 @@ jobs:
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           E2E_RICH_MARKDOWN: "1"
+          E2E_LONG_READER: "1"
           E2E_SHARE_DRAWER_FOCUS: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: >-
@@ -142,6 +143,7 @@ jobs:
           e2e/ai-rich-markdown-contract.spec.ts
           e2e/ai-rich-markdown.spec.ts
           e2e/attachment-viewer-presentation.spec.ts
+          e2e/reader-restoration.spec.ts
           e2e/release-stabilization-contract.spec.ts
           e2e/share-drawer-focus.spec.ts
 
@@ -150,6 +152,17 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: pnpm --filter web exec playwright test --config=playwright.config.ts
+
+      - name: Release E production-build PWA negative matrix
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_PWA_NEGATIVE: "1"
+          NEXT_PUBLIC_PWA_NEGATIVE_TESTS: "1"
+          NEXT_DIST_DIR: ".next-pwa-negative"
+          RELEASE_E_PROFILE_ROOT: ${{ runner.temp }}/release-e-profiles
+        run: |
+          pnpm --filter web build
+          pnpm --filter web exec playwright test --config=playwright.config.ts e2e/pwa-negative.spec.ts
 
       - name: Upload non-deployable quality evidence
         if: always()

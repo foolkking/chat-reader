@@ -9,7 +9,7 @@
 | KI-001 | 应用没有认证或多用户 ACL | 公网管理 API 可能被未授权访问 | 反向代理/VPN/访问网关必须限制；代码层若引入 auth 需整体设计 |
 | KI-002 | 单个阅读轮次可包含极大正文 | 完整正文数据仍占内存，动态 block 测量也有成本 | >160 blocks 或 >50000 chars 时虚拟化 DOM；直达 URL、批注、下滑刷新 fixture 持续回归 |
 | KI-003 | 有效生产 Share 访客页未在文档中保存可复用 token | 生产访客视觉/范围无法由文档直接重放 | 使用隔离测试 token 复验，绝不记录真实 token |
-| KI-004 | 浏览器 quota、持久化许可和 cache eviction 因设备而异 | 离线更新/冷启动可能失败 | 原子 staging/transaction、旧数据保留；补充真实设备矩阵 |
+| KI-004 | 浏览器 quota、持久化许可和 cache eviction 因设备而异 | 离线更新/冷启动可能失败 | Release E adds deterministic Chromium quota/cache/IndexedDB negative coverage, explicit unavailable states and old-package preservation. Real device/browser eviction variance remains an operational compatibility risk. |
 | KI-005 | 生产 TLS、证书、访问控制和完整代理配置在仓库外 | 仓库无法证明安全和续期状态 | 运维侧单独审计；仓库只维护 HTTP 示例 |
 | KI-006 | 仓库没有集中式监控/APM/告警 | worker 卡死或磁盘/错误趋势可能晚发现 | health、job heartbeat、容器日志；生产应外接监控 |
 | KI-007 | 当前工作树包含未提交功能与文档改动 | Git HEAD 不能代表完整部署源 | 发布使用显式 manifest/哈希并记录 dirty 状态；提交前审查 diff |

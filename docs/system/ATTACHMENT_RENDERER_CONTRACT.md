@@ -1,5 +1,18 @@
 # Attachment Renderer Contract
 
+## Offline cache-miss hardening addendum (2026-08-15)
+
+Offline attachment bytes are verified against cached metadata before they are
+used. A missing, truncated, or SHA-256-mismatched Cache Storage entry resolves
+to offline_unavailable and is not promoted to a Viewer object URL. If bytes
+disappear after the files panel has already listed an attachment, the shared
+Viewer shell shows an explicit retryable unavailable state rather than leaving
+the renderer blank or permanently loading.
+
+Release E does not add offline upload, rename, insert, delete, server
+enumeration, derivative generation or a second Viewer. The miss path stays
+inside the existing AttachmentViewerProvider -> AttachmentViewerShell flow.
+
 ## Offline attachment consumption addendum (2026-08-11)
 
 Offline attachment access is consumer-only. `ReaderDataSource.capabilities.attachments` is `read-only`; it does not grant owner file management or server enumeration. The current conversation files panel uses the same `AttachmentViewerProvider -> AttachmentViewerShell -> RenderPlan` path as the online Reader. Cached originals may open/download. Missing originals and missing dynamic viewer resources use the approved `offline-unavailable` FileRow state with explicit text and no permanent loading.

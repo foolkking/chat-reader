@@ -244,6 +244,7 @@ async function reconcileOfflineShell(serviceWorker: ServiceWorker, existing: Wor
   setStatus({ ...currentStatus, updatePhase: "preparing", completed: 0, total: 0, message: null });
   const runtimeAssets = await warmAttachmentViewerRuntime();
   const assets = collectLibraryShellAssets(runtimeAssets);
+  const criticalAssets = assets.filter((asset) => !isOptionalShellAsset(asset));
   const workerUrl = getOfflineSearchWorkerUrl();
   const revision = await createRevision(assets);
   if (existing.ok && existing.status?.ready && existing.status.revision === revision && !force) {
@@ -253,6 +254,7 @@ async function reconcileOfflineShell(serviceWorker: ServiceWorker, existing: Wor
     type: "PREPARE_LIBRARY_SHELL",
     revision: force ? `${revision}-${Date.now().toString(36)}` : revision,
     assets,
+    criticalAssets,
     workerUrl,
   }, (progress) => {
     setStatus({
@@ -267,6 +269,12 @@ async function reconcileOfflineShell(serviceWorker: ServiceWorker, existing: Wor
     throw new Error(result.error ?? "离线启动资源未能完整缓存。");
   }
   return applyWorkerStatus(result);
+}
+
+function isOptionalShellAsset(asset: string): boolean {
+  // Skill documents are useful offline but are not required to mount Library
+  // or Reader. A missing one must not make the entire shell unavailable.
+  return asset.startsWith("/skills/");
 }
 
 async function warmAttachmentViewerRuntime(): Promise<string[]> {

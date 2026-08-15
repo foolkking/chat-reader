@@ -79,6 +79,11 @@ test("CSP remains report-only while core offline shell registration stays availa
   });
 });
 
+test("normal production bundles do not expose the PWA negative fault bridge", async ({ page }) => {
+  await page.goto("/library");
+  expect(await page.evaluate(() => window.__chatReaderPwaNegativeTest)).toBeUndefined();
+});
+
 test("release workflow cannot build a deployable artifact before quality passes", () => {
   const workflow = fs.readFileSync(path.resolve(process.cwd(), "../../.github/workflows/build-release-images.yml"), "utf8");
   expect(workflow).toMatch(/\n {2}build-images:\n {4}needs: quality\n {4}if: \$\{\{ needs\.quality\.result == 'success' \}\}/);

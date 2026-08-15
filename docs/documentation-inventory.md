@@ -1,5 +1,19 @@
 # Markdown 文档台账
 
+2026-08-15 Release E synchronization: scoped Offline/PWA negative-path
+resilience is current in docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md,
+PROJECT_STATE.md, docs/testing.md and results.md. The contract preserves
+offline package/Dexie formats and documents critical versus optional shell
+resources, cache-miss behavior, quota/interruption/restart semantics, retry
+ownership and false-ready prevention.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md | Current | /library shell readiness, conversation package current-state preservation, offline Viewer misses, quota/interruption/restart handling and Release E negative browser matrix. |
+| apps/web/e2e/pwa-negative.spec.ts | Current test | Production-build browser negative matrix using real Cache Storage, Service Worker, IndexedDB, offline network and isolated persistent profile. |
+| apps/web/public/library-sw.js | Current runtime | Critical shell-resource verification and standalone offline-incomplete fallback. |
+| apps/web/lib/offline-db.ts | Current runtime | Offline package import, immutable attachment cache writes and verified cached-attachment reads. |
+
 2026-08-15 Release D final synchronization: deterministic Reader/import/export/.cr
 capacity characterization, real Attachment identity fixtures, constrained-run
 methodology, query-plan evidence and the no-unnecessary-optimization decision

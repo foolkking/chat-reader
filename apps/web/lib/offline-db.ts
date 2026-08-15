@@ -174,27 +174,32 @@ export async function importOfflinePackage(packageId: string, response: Response
   };
 
   const cache = await caches.open("chat-reader-offline-assets-v1");
-  const cachedUrls: string[] = [];
-  const previousAttachmentIds = conversationIds.length
-    ? (await offlineDb.attachments.where("conversation_id").anyOf(conversationIds).primaryKeys()).map(String)
+  const cachedUrls = new Set<string>();
+  const previousCacheEntries = new Map<string, Response | null>();
+  const previousAttachments = conversationIds.length
+    ? await offlineDb.attachments.where("conversation_id").anyOf(conversationIds).toArray()
     : [];
-  if (payload.version === 3) {
-    for (const conversation of payload.conversations) {
-      for (const attachment of conversation.attachments ?? []) {
-        if (!attachment.content_path) continue;
-        const binary = entries[attachment.content_path];
-        if (!binary) throw new Error(`Offline package is missing ${attachment.content_path}.`);
-        const digest = await crypto.subtle.digest("SHA-256", binary);
-        const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
-        if (sha256 !== attachment.sha256 || binary.byteLength !== attachment.byte_size) throw new Error("Offline attachment checksum failed.");
-        const url = offlineAttachmentCacheUrl(attachment.id);
-        await cache.put(url, new Response(binary, { headers: { "Content-Type": attachment.detected_mime_type, "Content-Length": String(binary.byteLength) } }));
-        cachedUrls.push(url);
-      }
-    }
-  }
 
   try {
+    if (payload.version === 3) {
+      for (const conversation of payload.conversations) {
+        for (const attachment of conversation.attachments ?? []) {
+          if (!attachment.content_path) continue;
+          const binary = entries[attachment.content_path];
+          if (!binary) throw new Error(`Offline package is missing ${attachment.content_path}.`);
+          const digest = await crypto.subtle.digest("SHA-256", binary);
+          const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
+          if (sha256 !== attachment.sha256 || binary.byteLength !== attachment.byte_size) throw new Error("Offline attachment checksum failed.");
+          const url = offlineAttachmentCacheUrl(attachment.id, attachment.sha256);
+          if (!previousCacheEntries.has(url)) {
+            const previous = await cache.match(url);
+            previousCacheEntries.set(url, previous ? previous.clone() : null);
+          }
+          await cache.put(url, new Response(binary, { headers: { "Content-Type": attachment.detected_mime_type, "Content-Length": String(binary.byteLength) } }));
+          cachedUrls.add(url);
+        }
+      }
+    }
     await offlineDb.transaction(
     "rw",
     [offlineDb.conversations, offlineDb.messages, offlineDb.blocks, offlineDb.headings, offlineDb.searchDocuments, offlineDb.annotations, offlineDb.notebooks, offlineDb.readingPositions, offlineDb.packages, offlineDb.outbox, offlineDb.attachments],
@@ -265,22 +270,29 @@ export async function importOfflinePackage(packageId: string, response: Response
     },
     );
   } catch (error) {
-    await Promise.all(cachedUrls.map((url) => cache.delete(url)));
+    // Restore the last known-good cache entry for every URL touched before the
+    // Dexie transaction committed. Attachment URLs are business-identity
+    // keyed, so deleting a failed update's URL could otherwise destroy the
+    // previous package's readable original.
+    await Promise.all(Array.from(previousCacheEntries, async ([url, previous]) => {
+      if (previous) await cache.put(url, previous.clone()).catch(() => undefined);
+      else await cache.delete(url).catch(() => false);
+    }));
     throw error;
   }
   const retainedCacheUrls = new Set(cachedUrls);
   await Promise.all(
-    previousAttachmentIds
-      .map(offlineAttachmentCacheUrl)
+    previousAttachments
+      .flatMap(offlineAttachmentCacheUrls)
       .filter((url) => !retainedCacheUrls.has(url))
-      .map((url) => cache.delete(url)),
+      .map((url) => cache.delete(url).catch(() => false)),
   );
   return packageMeta;
 }
 
 export async function removeOfflineConversations(conversationIds: string[]): Promise<void> {
-  const attachmentIds = conversationIds.length
-    ? (await offlineDb.attachments.where("conversation_id").anyOf(conversationIds).primaryKeys()).map(String)
+  const attachments = conversationIds.length
+    ? await offlineDb.attachments.where("conversation_id").anyOf(conversationIds).toArray()
     : [];
   await offlineDb.transaction(
     "rw",
@@ -305,35 +317,60 @@ export async function removeOfflineConversations(conversationIds: string[]): Pro
       }
     },
   );
-  if (attachmentIds.length) {
+  if (attachments.length) {
     const cache = await caches.open("chat-reader-offline-assets-v1");
-    await Promise.all(attachmentIds.map((id) => cache.delete(offlineAttachmentCacheUrl(id))));
+    await Promise.all(attachments.flatMap(offlineAttachmentCacheUrls).map((url) => cache.delete(url)));
   }
 }
 
 export async function getOfflineAttachment(attachmentId: string): Promise<AttachmentRead> {
   const record = await offlineDb.attachments.get(attachmentId);
   if (!record) throw new Error("Offline attachment metadata was not found.");
-  const cached = record.content_path ? await caches.open("chat-reader-offline-assets-v1").then((cache) => cache.match(offlineAttachmentCacheUrl(record.id))) : undefined;
+  const cached = await readVerifiedCachedAttachment(record);
   return offlineAttachmentRead(record, cached ? URL.createObjectURL(await cached.blob()) : null, Boolean(cached));
 }
 
 export async function getOfflineAttachmentBytes(attachmentId: string): Promise<Uint8Array | null> {
   const record = await offlineDb.attachments.get(attachmentId);
-  if (!record?.content_path) return null;
-  const response = await caches.open("chat-reader-offline-assets-v1").then((cache) => cache.match(offlineAttachmentCacheUrl(record.id)));
+  if (!record) return null;
+  const response = await readVerifiedCachedAttachment(record);
   return response ? new Uint8Array(await response.arrayBuffer()) : null;
 }
 
 export async function listOfflineConversationAttachments(conversationId: string): Promise<AttachmentRead[]> {
   const records = await offlineDb.attachments.where("conversation_id").equals(conversationId).toArray();
-  const cache = await caches.open("chat-reader-offline-assets-v1");
-  const cached = await Promise.all(records.map((record) => (
-    record.content_path ? cache.match(offlineAttachmentCacheUrl(record.id)).then(Boolean) : Promise.resolve(false)
-  )));
+  const cached = await Promise.all(records.map(async (record) => Boolean(await readVerifiedCachedAttachment(record))));
   return records
     .map((record, index) => offlineAttachmentRead(record, null, cached[index]))
     .sort((left, right) => left.display_name.localeCompare(right.display_name));
+}
+
+async function readVerifiedCachedAttachment(record: OfflineAttachmentRecord): Promise<Response | null> {
+  if (!record.content_path) return null;
+  try {
+    const cache = await caches.open("chat-reader-offline-assets-v1");
+    for (const url of offlineAttachmentCacheUrls(record)) {
+      const response = await cache.match(url);
+      if (!response) continue;
+      const bytes = new Uint8Array(await response.clone().arrayBuffer());
+      if (record.byte_size >= 0 && bytes.byteLength !== record.byte_size) {
+        await cache.delete(url);
+        continue;
+      }
+      if (record.sha256) {
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
+        if (sha256 !== record.sha256.toLowerCase()) {
+          await cache.delete(url);
+          continue;
+        }
+      }
+      return response;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function releaseOfflineAttachmentUrls(attachment?: AttachmentRead | null): void {
@@ -341,6 +378,20 @@ export function releaseOfflineAttachmentUrls(attachment?: AttachmentRead | null)
   urls.forEach((url) => {
     if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
   });
+}
+
+declare global {
+  interface Window {
+    __chatReaderPwaNegativeTest?: {
+      importOfflinePackage: typeof importOfflinePackage;
+    };
+  }
+}
+
+// Compile-time opt-in only: normal production bundles do not expose a fault
+// seam. Release E uses it to exercise the real Cache Storage/IndexedDB path.
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS === "1") {
+  window.__chatReaderPwaNegativeTest = { importOfflinePackage };
 }
 
 function offlineAttachmentRead(record: OfflineAttachmentRecord, contentUrl: string | null, cached: boolean): AttachmentRead {
@@ -385,8 +436,16 @@ function offlineAttachmentRead(record: OfflineAttachmentRecord, contentUrl: stri
   };
 }
 
-function offlineAttachmentCacheUrl(attachmentId: string): string {
-  return `https://offline.chat-reader.local/assets/${encodeURIComponent(attachmentId)}`;
+function offlineAttachmentCacheUrls(record: Pick<OfflineAttachmentRecord, "id" | "sha256">): string[] {
+  return [
+    offlineAttachmentCacheUrl(record.id, record.sha256),
+    offlineAttachmentCacheUrl(record.id),
+  ];
+}
+
+function offlineAttachmentCacheUrl(attachmentId: string, sha256?: string): string {
+  const base = `https://offline.chat-reader.local/assets/${encodeURIComponent(attachmentId)}`;
+  return sha256 ? `${base}/${encodeURIComponent(sha256.toLowerCase())}` : base;
 }
 
 export async function requestPersistentStorage(): Promise<{ persisted: boolean; quota: number | null; usage: number | null }> {

@@ -2,10 +2,12 @@ import { defineConfig } from "@playwright/test";
 
 const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
 const useBundledChromium = process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1";
+const runPwaNegativeMatrix = process.env.E2E_PWA_NEGATIVE === "1";
 const pnpmCommand = process.env.PNPM_HOME ? "pnpm" : "corepack pnpm";
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: runPwaNegativeMatrix ? [] : ["**/pwa-negative.spec.ts"],
   timeout: 90_000,
   expect: { timeout: 60_000 },
   fullyParallel: false,

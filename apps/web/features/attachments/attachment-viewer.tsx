@@ -134,6 +134,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
     gcTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
   });
   const attachment = attachmentQuery.data;
+  const offlineUnavailable = access.kind === "offline" && attachment?.resolution_status === "offline_unavailable";
   useEffect(() => () => {
     if (access.kind === "offline") releaseOfflineAttachmentUrls(attachment);
   }, [access.kind, attachment]);
@@ -234,7 +235,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
           {viewerKind === "image" && session.items.length > 1 ? <button type="button" className="hidden h-11 shrink-0 items-center gap-1 rounded-md px-3 text-sm text-secondary hover:bg-subtle sm:inline-flex" onClick={() => setMode("image-overview")} aria-label="查看全部图片" title="查看全部图片"><Grid2X2 className="h-4 w-4" />全部</button> : null}
         </header>
         <div className="min-h-0 overflow-hidden overscroll-contain" data-testid="attachment-viewer-content">
-          {attachmentQuery.isPending ? <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div> : attachmentQuery.isError || !attachment ? <ViewerError message="附件无法加载" onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : <ViewerBody attachment={attachment} kind={viewerKind} mode={effectiveMode} onModeChange={setMode} session={session} activeIndex={index} onSelect={(next) => { setActiveKey(session.items[next]?.itemKey ?? activeKey); setMode("image-focus"); }} onPrevious={() => setActiveIndex(-1)} onNext={() => setActiveIndex(1)} onMediaDimensions={setMediaDimensions} onPdfPageCount={setPdfPageCount} onComplexPresentationMetrics={setContentMetrics} toolbarHost={toolbarHost} />}
+          {attachmentQuery.isPending ? <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div> : attachmentQuery.isError || !attachment ? <ViewerError message="附件无法加载" onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : offlineUnavailable ? <ViewerError message="离线资源未缓存。重新联网或更新离线副本后重试。" onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : <ViewerBody attachment={attachment} kind={viewerKind} mode={effectiveMode} onModeChange={setMode} session={session} activeIndex={index} onSelect={(next) => { setActiveKey(session.items[next]?.itemKey ?? activeKey); setMode("image-focus"); }} onPrevious={() => setActiveIndex(-1)} onNext={() => setActiveIndex(1)} onMediaDimensions={setMediaDimensions} onPdfPageCount={setPdfPageCount} onComplexPresentationMetrics={setContentMetrics} toolbarHost={toolbarHost} />}
         </div>
         {viewerKind === "image" && session.items.length > 1 && effectiveMode !== "image-overview" ? <div className="flex min-h-16 gap-2 overflow-x-auto border-t border-ui bg-subtle p-2" role="list" aria-label="图片缩略图列表">{session.items.map((candidate, candidateIndex) => <ViewerThumbnail key={candidate.itemKey} item={candidate} access={access} active={candidate.itemKey === activeKey} label={`第 ${candidateIndex + 1} 张`} onClick={() => { setActiveKey(candidate.itemKey); setMode("image-focus"); }} />)}</div> : null}
       </section>

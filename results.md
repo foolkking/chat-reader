@@ -1,5 +1,52 @@
 # Implementation Results
 
+## Release E PWA Negative Matrix & Offline Resilience - 2026-08-15
+
+```text
+PWA_RUNTIME_CHUNK_MISS = PASS
+PWA_SHELL_CRITICAL_CACHE_MISS = PASS
+PWA_SHELL_UPDATE_ATOMICITY = PASS
+OFFLINE_ATTACHMENT_MISS = PASS
+OFFLINE_VIEWER_MISS = PASS
+PWA_QUOTA_EXHAUSTION = PASS
+PWA_QUOTA_RECOVERY = PASS
+OFFLINE_PACKAGE_INTERRUPTION = PASS
+OFFLINE_PACKAGE_RESTART_RECOVERY = PASS
+OFFLINE_PREVIOUS_PACKAGE_PRESERVATION = PASS
+OFFLINE_RETRY_IDEMPOTENCY = PASS
+OFFLINE_RECONNECT = PASS
+OFFLINE_NETWORK_FLAPPING = PASS
+OFFLINE_CORRUPTED_CACHE = PASS
+OFFLINE_FALSE_READY_PREVENTION = PASS
+PWA_NEGATIVE_MATRIX = PASS
+MOBILE_SHARE_SINGLE_DIALOG_REGRESSION = PASS
+RELEASE_A_REGRESSION = PASS
+RELEASE_B_REGRESSION = PASS
+RELEASE_C_REGRESSION = PASS
+RELEASE_D_REGRESSION = PASS
+DEXIE_SCHEMA_MIGRATION = NONE
+NEW_ALEMBIC_MIGRATION = NONE
+RUNTIME_CHANGES = IMPLEMENTED
+PRODUCTION_DEPLOYMENT = PENDING
+RELEASE_E = PENDING_PRODUCTION_CLOSURE
+```
+
+Release E closes the scoped browser-side PWA negative matrix using a
+test-instrumented production build with real Cache Storage, Service Worker,
+IndexedDB, offline network state, Chromium quota override and an isolated
+persistent browser profile. The scoped matrix currently passes 9/9 with no
+Release E conditional skips. The default PWA baseline remains
+The prior default PWA baseline was 67 passed / 50 skipped; the current full
+local run is 68 passed / 50 skipped because it includes the normal-bundle
+fault-bridge assertion added in Release E. Those skipped flows are unrelated
+conditional fixture/production-copy paths and remain separate from PASS.
+
+The runtime fix preserves the existing product contracts: Offline remains
+cached-only; offline package v2/v3 read/write compatibility is unchanged; Dexie
+schema is unchanged; missing cached attachments and Viewer resources become
+explicit unavailable states; failed updates preserve the last committed package.
+Normal production bundles do not expose the test-only PWA fault bridge.
+
 ## Release D Performance & Capacity Characterization - 2026-08-15
 
 ```text

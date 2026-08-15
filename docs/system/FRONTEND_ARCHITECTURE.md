@@ -1,5 +1,20 @@
 # 前端架构
 
+## PWA negative-path resilience (2026-08-15)
+
+Release E keeps the existing /library Service Worker architecture but makes
+offline negative states explicit. A cached Library navigation is served only
+when the active shell's critical resources are still present; missing critical
+JavaScript or stylesheet resources return a standalone offline-incomplete page
+with retry guidance. Optional Skill markdown files do not block Library or
+Reader startup.
+
+Offline package updates preserve the last committed conversation package.
+Attachment bytes are written to immutable attachment id plus sha256 cache keys,
+validated before use, and only supersede old cache entries after the Dexie
+transaction commits. Cache quota errors, truncated packages, Dexie aborts,
+browser/SW restarts and corrupted bytes cannot mark partial data ready.
+
 ## Offline shell and offline Reader attachments (2026-08-11)
 
 `offline-shell.ts` separates shell availability from background update phase. A complete active service-worker shell is usable immediately; dynamic viewer warming and deterministic shell reconciliation never gate Library interaction or conversation-package downloads. The inventory contains document scripts/styles/icons, the offline search worker, declared viewer runtime chunks and the two inert Skill files. It deliberately excludes API responses, images and historical `performance` resource entries. If reconciliation fails, the previous active shell remains ready and the UI exposes a retryable background-update state.

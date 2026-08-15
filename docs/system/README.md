@@ -53,3 +53,7 @@
 Current release contract: [Release Safety Baseline](RELEASE_SAFETY_BASELINE.md).
 
 Current operational contracts: [Artifact Lifecycle](ARTIFACT_LIFECYCLE_CONTRACT.md), [Observability](OBSERVABILITY_CONTRACT.md), and [Safe Cleanup](CLEANUP_CONTRACT.md).
+
+Capacity measurement contract: [Performance and Capacity](PERFORMANCE_CAPACITY_CONTRACT.md), with dated results in [the Release D evidence report](../evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md).
+
+PWA/offline resilience contract: [PWA and Offline Resilience](PWA_OFFLINE_RESILIENCE_CONTRACT.md), covering shell critical resources, offline package current-state preservation, quota/interruption/restart semantics, Viewer cache misses and the Release E negative matrix.

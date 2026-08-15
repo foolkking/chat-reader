@@ -1,5 +1,36 @@
 # Project State
 
+## 2026-08-15 Release E PWA negative matrix and offline resilience
+
+- Release E implements scoped Offline/PWA negative-path resilience without
+  changing offline package format, Dexie schema, Alembic schema, Reader,
+  Share, Viewer, Import, Export, cleanup, Next major, PDF.js or CSP policy.
+  Runtime changes are limited to /library shell readiness, offline package
+  client persistence safety, explicit offline attachment/viewer miss handling,
+  test-only PWA fault instrumentation, and release workflow coverage.
+- The /library service worker now checks critical active-shell resources
+  before serving cached navigation while offline. Missing critical runtime
+  assets return a standalone offline-incomplete page with a retry action instead
+  of a generic client exception, blank page, spinner, or reload loop. Optional
+  Skill markdown resources no longer make the whole shell unavailable.
+- Offline package attachment bytes are written under immutable attachment id
+  plus sha256 Cache Storage keys and verified by byte size and SHA-256 before
+  use. Dexie commit failure, quota/cache put failure, truncated package,
+  browser/SW restart, or corruption preserves the last committed package.
+  Legacy identity-only cache keys remain readable.
+- Offline file rows and the shared Attachment Viewer now surface
+  offline_unavailable explicitly when cached bytes are absent, truncated, or
+  corrupted. Error-state Viewer close/Esc/focus behavior uses the existing
+  shell; offline misses do not enumerate server files, create derivatives, or
+  widen attachment scope.
+- Current local Release E evidence: scoped PWA negative browser matrix
+  9 passed / 0 scoped skipped; the prior Release D default PWA baseline was
+  67 passed / 50 skipped and the current full run is 68 passed / 50 skipped
+  after adding the normal-bundle fault-bridge assertion. Full API is
+  280 passed / 6 skipped, Alembic heads/current is 20260806_0021 (head), and
+  the Release A security browser regression is 7 passed. Remaining default PWA
+  skips are unrelated conditional flows and are not PASS.
+
 ## 2026-08-15 Release D performance and capacity characterization
 
 - Release D final source is `da0a79fd116b7a26e30bf2d1f57b1ff658a758f7` and

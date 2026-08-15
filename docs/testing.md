@@ -1,5 +1,33 @@
 # Testing Addendum 2026-08-09
 
+## Release E PWA negative matrix (2026-08-15)
+
+Release E adds a dedicated production-build browser matrix for scoped
+Offline/PWA negative paths:
+
+```text
+E2E_PWA_NEGATIVE=1
+NEXT_PUBLIC_PWA_NEGATIVE_TESTS=1
+NEXT_DIST_DIR=.release-e-negative-next
+corepack pnpm --filter web exec playwright test e2e/pwa-negative.spec.ts --config=playwright.config.ts
+```
+
+The matrix uses real Cache Storage, Service Worker, IndexedDB, offline network
+state, Chromium quota override and an isolated persistent browser profile. It
+covers critical and optional shell misses, online recovery, shell cache quota,
+offline attachment and Viewer misses, corrupted cached bytes, quota/cache put
+failure after a partial write, Dexie transaction abort, truncated package,
+browser/SW restart, idempotent retry, package identity preservation,
+offline-to-online recovery and bounded network flapping. Current local result:
+9 passed / 0 scoped skipped.
+
+The prior default PWA baseline was 67 passed / 50 skipped. The current full
+local run is 68 passed / 50 skipped because it includes the normal production
+bundle fault-bridge assertion added in Release E. Those skips remain unrelated
+conditional fixture/production-copy flows and are not counted as Release E
+PASS. The normal production bundle is separately checked to ensure
+window.__chatReaderPwaNegativeTest is absent.
+
 ## Release D performance and capacity characterization (2026-08-15 final)
 
 The Release D workflow is an external Linux characterization run, not a

@@ -59,14 +59,15 @@ async function prepareLibraryShell(data, port) {
       throw new Error("Invalid offline shell revision.");
     }
     const assets = normalizeAssets(data.assets);
+    const criticalAssets = normalizeAssets(data.criticalAssets ?? assets);
     const workerUrl = normalizeAsset(data.workerUrl);
     if (!workerUrl || !assets.includes(workerUrl)) {
       throw new Error("The offline search worker is missing from the shell manifest.");
     }
-    if (!assets.some((asset) => asset.startsWith("/_next/static/") && asset.includes(".js"))) {
+    if (!criticalAssets.some((asset) => asset.startsWith("/_next/static/") && asset.includes(".js"))) {
       throw new Error("The offline shell has no JavaScript entry.");
     }
-    if (!assets.some((asset) => asset.startsWith("/_next/static/") && asset.includes(".css"))) {
+    if (!criticalAssets.some((asset) => asset.startsWith("/_next/static/") && asset.includes(".css"))) {
       throw new Error("The offline shell has no stylesheet entry.");
     }
 
@@ -106,6 +107,7 @@ async function prepareLibraryShell(data, port) {
       revision: requestedRevision,
       cacheName: targetCacheName,
       assets: required,
+      criticalAssets,
       workerUrl,
       resourceCount: required.length,
       preparedAt: new Date().toISOString(),
@@ -157,8 +159,11 @@ async function inspectActiveShell() {
   const cache = await caches.open(record.cacheName);
   const matches = await Promise.all(record.assets.map((asset) => cache.match(asset)));
   const missing = record.assets.filter((_, index) => !matches[index]);
+  const criticalAssets = Array.isArray(record.criticalAssets) ? record.criticalAssets : record.assets;
+  const criticalMatches = await Promise.all(criticalAssets.map((asset) => cache.match(asset)));
+  const criticalMissing = criticalAssets.filter((_, index) => !criticalMatches[index]);
   return {
-    ready: missing.length === 0,
+    ready: criticalMissing.length === 0,
     revision: record.revision,
     resourceCount: record.resourceCount,
     missing,
@@ -187,12 +192,34 @@ async function libraryNavigation(request) {
     if (attempt === 0) await delay(350);
   }
 
+  const shellStatus = await inspectActiveShell();
+  if (!shellStatus.ready) return offlineShellUnavailableResponse();
   const cached = await matchActive("/library") || await matchLegacyLibrary();
   if (cached) return cached;
   if (lastResponse) return lastResponse;
-  return new Response("Offline library is not ready. Connect once and open /library to prepare it.", {
+  return offlineShellUnavailableResponse();
+}
+
+function offlineShellUnavailableResponse() {
+  const body = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Offline resources incomplete</title>
+  <style>body{margin:0;font-family:system-ui,sans-serif;background:#f7f6f2;color:#252522}main{box-sizing:border-box;min-height:100vh;display:grid;place-content:center;gap:12px;padding:24px;text-align:center}h1,p{margin:0}a{display:inline-flex;justify-self:center;margin-top:8px;padding:10px 14px;border-radius:8px;background:#252522;color:#fff;text-decoration:none}:focus-visible{outline:3px solid #2563eb;outline-offset:3px}</style>
+</head>
+<body>
+  <main>
+    <h1>当前离线缓存不完整</h1>
+    <p>Offline resources are incomplete. Reconnect to update the offline library.</p>
+    <a href="/library">重新联网后重试 / Retry when online</a>
+  </main>
+</body>
+</html>`;
+  return new Response(body, {
     status: 503,
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Retry-After": "1" },
+    headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "1", "Cache-Control": "no-store" },
   });
 }
 
