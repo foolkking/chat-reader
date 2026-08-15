@@ -1,5 +1,29 @@
 # 生产部署
 
+## Release C superseding closure (2026-08-15)
+
+- Runtime commit `e58b750357d92bba314737582a94493829c038e2`; Actions run
+  `31856041473`; archive SHA-256
+  `023c2eb4bea5e216c323a457454a627a3d4a72e7c4b9a99361f1501e59ed8a71`.
+- Image digests: API/worker/migrate
+  `sha256:58868488dacf5722c3b12cc50cd191532067384e507dbb7d4a043672ff96570b`;
+  Web `sha256:f814e1a2ac2c1d6df5aa9fc9418d9a7c42f57f9bb7472cb41b467df5fde0cea6`.
+- Backup `/opt/chat-reader/backups/release-c-mobile-focus-20260815T013334Z-e58b750`
+  passed custom-dump, archive-listing and checksum verification. King used
+  explicit production compose/env, migration preflight and `--no-build`.
+- Post-deploy API/Web/PostgreSQL, worker, Scanner-disabled state and Alembic
+  `20260806_0021` passed. Production responses verified `nosniff`, strict
+  referrer policy, bounded Permissions Policy, CSP Report-Only and absent
+  `X-Powered-By`; public diagnostics remains intentionally `404`.
+- A real 390x844 Chrome check found overlapping mobile utility and Share sheets.
+  The final code unmounts inactive sheets and restores the logical More trigger;
+  focused desktop/mobile E2E and production read-only smoke pass with one Esc
+  closing Share and focus returning to More.
+- After health verification, only exact obsolete Chat Reader image tags and an
+  incomplete duplicate backup were removed. Current/latest images, verified
+  backup, release archive, volumes, PostgreSQL and `.env.production` remain.
+  No business-data cleanup or volume deletion was performed.
+
 ## Release C final deployment (2026-08-14)
 
 - Source `8d0ad66d65bb069176970ea814d9a6b08e04322c`; Actions `31789905868`; artifact SHA-256 `577594e63ed351de39cdfb56c02e385bff1ef0bbfe90285ddd9d0441aaabedd7`.

@@ -1,5 +1,64 @@
 # Project State
 
+## 2026-08-15 Release C superseding production closure
+
+- Runtime source is `e58b750357d92bba314737582a94493829c038e2`, pushed to
+  `origin/master` and deployed from GitHub Actions run `31856041473`.
+  Quality, image build/inspection, package checksum and artifact publication
+  passed. The archive SHA-256 is
+  `023c2eb4bea5e216c323a457454a627a3d4a72e7c4b9a99361f1501e59ed8a71`.
+- API/worker/migrate image is
+  `sha256:58868488dacf5722c3b12cc50cd191532067384e507dbb7d4a043672ff96570b`;
+  Web image is
+  `sha256:f814e1a2ac2c1d6df5aa9fc9418d9a7c42f57f9bb7472cb41b467df5fde0cea6`.
+  King verified the archive checksum, used explicit production compose/env,
+  ran migration preflight and recreated only API/import-worker/Web with
+  `--no-build`.
+- Verified backup is
+  `/opt/chat-reader/backups/release-c-mobile-focus-20260815T013334Z-e58b750`;
+  PostgreSQL custom-dump listing, imports/exports/offline/assets archive
+  listings and SHA-256 checks passed. Alembic remains the single
+  `20260806_0021` head; no migration or business-data mutation was added.
+- Production health after deployment and targeted image cleanup is PASS:
+  API/Web/PostgreSQL healthy, worker running, Scanner disabled, public health
+  `200`, and public diagnostics remains intentionally `404`. Actual headers
+  include `nosniff`, strict referrer policy, bounded Permissions Policy, CSP
+  Report-Only and no `X-Powered-By`.
+- A real 390x844 production Chrome regression found two simultaneously mounted
+  Vaul sheets when More -> Share was opened. The fix immediately unmounts the
+  inactive mobile sheet and routes Esc/X/backdrop close through the logical
+  More trigger. Production Chrome now closes Share with one Esc and restores
+  focus to the More button; desktop and mobile focused E2E both pass.
+- Exact obsolete Chat Reader image tags for the prior runtime and intermediate
+  diagnostics build were removed only after final health. Current `e58b750`
+  and `latest` tags remain. The incomplete duplicate backup was removed; the
+  verified backup, current release archive, all volumes, PostgreSQL,
+  `.env.production` and user data remain. This is targeted image/archive
+  cleanup, not business-data cleanup.
+- Final Release C status remains `PASS`. `JOB_METRICS` is `PARTIAL_PASS` because
+  an independently persisted idle-worker heartbeat is not derivable;
+  diagnostics HTTP stays `NOT_ENABLED`, cleanup manual apply is
+  `NOT_EXECUTED`, automatic cleanup is disabled, and AssetObject GC is not
+  implemented. The earlier Release C aggregate change from the Release B
+  baseline remains disclosed as an unresolved candidate-set change.
+
+## 2026-08-14 Release C bounded-diagnostics follow-up (verification-only)
+
+- Current source is `6c50e740449a9186f7f2121e6b9280be7a9801de`, which contains
+  the deployed Release C commit as an ancestor. No Release C production
+  redeploy was performed; this follow-up only closes a diagnostics query-budget
+  gap.
+- Cleanup classification now snapshots the bounded filesystem first and then
+  queries only matching artifact paths and parsed job IDs in chunks of 500.
+  Historical Export/Offline references and unrelated jobs are not loaded into
+  Python for an administrator diagnostics request.
+- Current verification: artifact/diagnostics subset `21 passed / 1 skipped`;
+  full API `280 passed / 6 skipped`; Web lint, typecheck and production build
+  PASS; Alembic heads/current `20260806_0021 (head)`. The Windows skip is the
+  known symlink path-escape case and is not counted as PASS. Build output was
+  redirected through the junction-backed cache under
+  `C:\Users\86182\Desktop\wkkk\next-build-release-c`.
+
 ## 2026-08-14 Release C Production Closure (final)
 
 - Release C runtime source is `8d0ad66d65bb069176970ea814d9a6b08e04322c`; GitHub Actions run `31789905868` passed the complete `quality -> build-images -> inspect -> package -> checksum -> artifact` chain. Quality included Web lint/typecheck/build, Release C observability/cleanup tests, API full suite, Alembic validation, official dependency audit, focused online browser checks and the default PWA baseline. The earlier run `31778569056` also passed but is superseded by this logging fix; its first predecessor failure remains evidence that the quality gate blocks images.

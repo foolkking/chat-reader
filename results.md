@@ -1,5 +1,70 @@
 # Implementation Results
 
+## Release C superseding production closure - 2026-08-15
+
+```text
+RELEASE_B_PRODUCTION_FOCUS_CLOSURE = PASS
+REQUEST_ID = PASS
+STRUCTURED_API_LOGGING = PASS
+SENSITIVE_LOG_REDACTION = PASS
+JOB_METRICS = PARTIAL_PASS
+ARTIFACT_METRICS = PASS
+STORAGE_AGGREGATES = PASS
+INTERNAL_DIAGNOSTICS_IMPLEMENTATION = PASS
+INTERNAL_DIAGNOSTICS_PRODUCTION = NOT_ENABLED
+CLEANUP_CLASSIFIER = PASS
+CLEANUP_DRY_RUN = PASS
+CLEANUP_RECHECK = PASS
+CLEANUP_MANUAL_APPLY = NOT_EXECUTED
+AUTOMATIC_CLEANUP = DISABLED
+ASSET_OBJECT_GC = NOT_IMPLEMENTED
+RELEASE_A_REGRESSION = PASS
+RELEASE_B_REGRESSION = PASS
+NEW_ALEMBIC_MIGRATION = NONE
+RELEASE_C = PASS
+```
+
+The final runtime is commit `e58b750357d92bba314737582a94493829c038e2` from
+Actions run `31856041473`. The externally built archive SHA-256 is
+`023c2eb4bea5e216c323a457454a627a3d4a72e7c4b9a99361f1501e59ed8a71`; API/
+worker/migrate is `sha256:58868488dacf5722c3b12cc50cd191532067384e507dbb7d4a043672ff96570b`
+and Web is
+`sha256:f814e1a2ac2c1d6df5aa9fc9418d9a7c42f57f9bb7472cb41b467df5fde0cea6`.
+The verified backup is
+`/opt/chat-reader/backups/release-c-mobile-focus-20260815T013334Z-e58b750`.
+
+The production 390x844 Chrome regression showed two mobile Vaul sheets could
+remain mounted during More -> Share, so the first Esc closed the wrong sheet.
+`e58b750` immediately unmounts inactive sheets and restores the logical More
+trigger on every mobile utility close path. Focused desktop/mobile E2E passed,
+and a final production read-only smoke observed one Share dialog, one Esc,
+zero dialogs and focus on the More button. No production business data was
+written.
+
+Production health, worker, Scanner-disabled state, Alembic head and actual
+security headers passed. Public diagnostics is still 404 by design. King has
+only current/latest Chat Reader image tags after exact old-tag cleanup; the
+verified backup and release archive were retained, and no volume or user data
+was deleted. The prior Release C `ORPHAN_FINAL=4` baseline versus the current
+stable `3 / 655,810 bytes` remains an explicitly unresolved candidate-set
+change; no cleanup apply was inferred or executed.
+
+## Release C bounded-diagnostics follow-up - verification-only (2026-08-14)
+
+The current source `6c50e740449a9186f7f2121e6b9280be7a9801de` contains the
+deployed Release C commit as an ancestor. A real query-budget gap was closed in
+`artifact_lifecycle.py`: diagnostics now snapshots the bounded filesystem and
+performs path/job-ID scoped reference lookups in chunks of 500 instead of
+loading all historical artifact/job rows. Artifact publication, cleanup
+eligibility, database schema and user contracts are unchanged; no production
+redeploy was needed for this verification-only change.
+
+Current results: artifact/diagnostics subset `21 passed / 1 skipped`; full API
+`280 passed / 6 skipped`; Web lint/typecheck/production build PASS; Alembic
+heads/current `20260806_0021 (head)`. The Windows symlink path-escape test is
+the single skip and is not counted as PASS. Build cache was kept under
+`C:\Users\86182\Desktop\wkkk\next-build-release-c`.
+
 ## Release C Production Closure - 2026-08-14
 
 ### Executive result

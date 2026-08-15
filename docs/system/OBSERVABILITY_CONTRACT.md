@@ -76,6 +76,10 @@ The health endpoint remains cheap and unchanged. Diagnostics never reads
 artifact contents or hashes files. Filesystem scans stop at 100,000 files and
 return `complete=false` when truncated. SQL aggregation uses counts/groups and
 a latest-500 timing sample; it does not load messages or attachment contents.
+Cleanup classification first takes the bounded filesystem snapshot, then looks
+up only matching `storage_uri` and artifact job IDs in chunks of 500. Historical
+artifact references and unrelated jobs are never loaded merely because an
+administrator requested diagnostics.
 
 ## Failure behavior
 
