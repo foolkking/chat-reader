@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+2026-08-15 Release G candidate synchronization: the official stable
+`pdfjs-dist 6.2.108` target, modern ESM/local-worker strategy, Range/offline
+and security boundaries, Node `22.13.1` engine requirement, verification gate
+and immutable deployment/rollback procedure are recorded in
+`docs/system/PDFJS_MIGRATION_CONTRACT.md`, `PROJECT_STATE.md`, `results.md`,
+`docs/testing.md` and `docs/deployment.md`. Current-source local browser and
+PWA gates pass; the candidate is not a production closure because the CI
+artifact, backup, running-image identity and production Chrome evidence remain
+pending, so `RELEASE_G = PARTIAL_PASS`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/PDFJS_MIGRATION_CONTRACT.md` | Current candidate contract | PDF.js target/provenance, ESM and real-worker boundary, authenticated Range, cached-only offline behavior, scripting/security, bundle, CI, deployment and rollback gates. |
+| `apps/web/features/attachments/pdfjs-runtime.ts` | Current candidate runtime | Single browser-only PDF.js load and same-package local worker configuration. |
+| `apps/web/e2e/pdfjs-migration.spec.ts` | Current candidate test | Synthetic real-worker/canvas, Range, Viewer lifecycle, malformed and malicious PDF browser assertions. |
+| `security/dependency-exceptions.json` | Current candidate policy | Removes obsolete PDF.js 3 and legacy canvas/node-pre-gyp/tar exceptions; the current official-registry policy gate reports 0 blocked and 0 unapproved findings. |
+
 2026-08-15 Release F final synchronization: Next `16.3.1`, React
 `19.2.8`, async request APIs, explicit Webpack build, dependency exception
 removal, current-worktree focused browser evidence and the immutable-image

@@ -1,5 +1,70 @@
 # Implementation Results
 
+## Release G PDF.js maintained-line candidate - 2026-08-15
+
+```text
+TARGET_PDFJS_VERSION = 6.2.108
+PDFJS_OFFICIAL_STABLE = PASS
+PDFJS_PACKAGE_PROVENANCE = PASS
+PDFJS_SUPPORTED_LINE = PARTIAL_PASS
+PDFJS_BUILD_VARIANT = MODERN
+PDFJS_ESM_COMPATIBILITY = PASS
+PDF_WORKER_MODE = REAL (production-build browser)
+PDFJS_LIBRARY_WORKER_VERSION_MATCH = PASS
+PDF_RANGE = PASS
+PDF_AUTH_RANGE = PASS
+PDF_SHARE = PASS
+PDF_OFFLINE = PASS (production-equivalent browser)
+PDF_OFFLINE_MISS = PASS
+PDF_MALICIOUS_SCRIPT = PASS
+PDFJS_EVAL_DISABLED = NOT_APPLICABLE (option removed from target public API)
+PDF_SCRIPTING = DISABLED
+PDF_LAZY_LOADING = PASS
+PDFJS_LEGACY_SECURITY_EXCEPTION = REMOVED
+PDFJS_LEGACY_BUILD_CHAIN_EXCEPTION = REMOVED
+DEPENDENCY_AUDIT = PASS (0 blocked / 0 unapproved)
+PWA_POSITIVE = PASS (68 passed / 53 conditional skipped)
+PWA_NEGATIVE_MATRIX = PASS (10 passed / 0 scoped skipped)
+PWA_SCOPED_SKIPS = 0
+BUILD_BUNDLER = WEBPACK
+TURBOPACK_MIGRATION = NOT_EXECUTED
+DEXIE_SCHEMA_MIGRATION = NONE
+NEW_ALEMBIC_MIGRATION = NONE
+OFFLINE_PACKAGE_FORMAT_CHANGE = NONE
+CI_RELEASE_ARTIFACT = PENDING
+PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+RELEASE_G = PARTIAL_PASS
+```
+
+Official npm and Mozilla GitHub release sources both resolve stable
+`pdfjs-dist 6.2.108`. The npm tarball is
+`https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.2.108.tgz`; integrity is
+`sha512-YxFb+SQcodN2rnX9Tn3dHYlqfb7NjlzzfONPpJd+AKoKtUjEdevTfbC07d5TcczzOK6261auRkP/M8OBHs9vFQ==`.
+Its Node engine requirement (`>=22.13.0 || >=24`) caused the narrow CI/Web
+image baseline update to Node `22.13.1`; Next `16.3.1`, React `19.2.8` and
+Webpack remain frozen.
+
+The candidate centralizes the browser-only PDF.js module and local modern
+worker, updates PDF.js 6 canvas render calls, preserves explicit authenticated
+Range loading for owner/Share URLs, and adds the worker to offline shell asset
+inventory. No worker CDN, PDF scripting manager, Dexie/Alembic migration or
+offline package change was introduced. The target API no longer accepts the
+legacy `isEvalSupported` option; the candidate uses the maintained package,
+keeps scripting disabled and sets `useWasm: false`.
+
+Before/after emitted artifacts are 305,261 -> 429,398 bytes for
+the PDF dynamic chunk and 1,039,505 -> 1,180,944 bytes for the worker. These
+remain lazy artifacts: the PDF chunk has no initial-manifest intersection and
+the production-build browser observes no PDF chunk or worker before opening a
+PDF. Current-source lint/typecheck/build pass; API is `280 passed / 6 skipped`;
+Alembic current/head is the single `20260806_0021`; dependency policy has zero
+blocked or unapproved finding. PDF owner/Share/security is `10/10`, broader
+focused browser regression is `38/38`, Source Editor/mutation is `2/2`, the
+default PWA matrix is `68 passed / 53 conditional skipped`, and the scoped
+negative matrix is `10/10` with zero scoped skips. CI, artifact, backup,
+deployment, running image identity and production Chrome evidence do not yet
+exist for Release G.
+
 ## Release F Next 16 final closure - 2026-08-15
 
 ```text

@@ -1,5 +1,49 @@
 # 生产部署
 
+## Release G PDF.js deployment candidate (not deployed, 2026-08-15)
+
+Release G changes the browser PDF engine to official stable
+`pdfjs-dist 6.2.108`. Because this package requires Node `>=22.13.0`, the
+candidate aligns the CI and Web build/runtime images on Node `22.13.1` while
+keeping Next `16.3.1`, React `19.2.8`, Webpack and all data formats frozen.
+
+No Release G production artifact exists yet:
+
+```text
+RELEASE_G = PARTIAL_PASS
+CI_RELEASE_ARTIFACT = PENDING
+PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+RUNNING_IMAGE_IDENTITY = NOT_VERIFIED
+ROLLBACK_RELEASE_F = PENDING_PREDEPLOY_VERIFICATION
+```
+
+The permanent immutable-image contract from Release F applies unchanged:
+
+```text
+verified CI artifact and SHA-256
+  -> immutable API_IMAGE/WEB_IMAGE binding
+  -> PostgreSQL + imports/exports/offline/assets backup and validation
+  -> Alembic current/head preflight
+  -> recreate --no-build
+  -> inspect running API/worker/migrate/Web identities
+  -> compare with manifest
+  -> health, headers/CSP and isolated-Chromium acceptance
+```
+
+`LATEST_TAG_IS_NOT_RELEASE_AUTHORITY = TRUE`; `latest` remains only a
+convenience alias. Any running-image mismatch stops acceptance even if health
+is `200`. King must not run a Next build, overwrite `.env.production`, start
+Scanner, delete a volume or use broad Docker pruning.
+
+Before a Release G deployment, retain the immutable Release F
+`c9ddae1e9cd5c94c406f357a152304105e6d20b0` API/worker/Web images and verified
+backup as direct rollback. Production acceptance must additionally prove the
+same-origin real PDF worker, rendered single/multi-page canvases,
+authenticated Range, cached-only offline PDF, Viewer focus/maximize behavior
+and zero unexplained PDF worker/Wasm CSP Report-Only violations. The
+malicious-PDF fault fixture remains production-equivalent only and must not be
+opened on the production domain.
+
 ## Release F Next 16 deployment contract (closed, 2026-08-15)
 
 Release F is a Next `16.3.1` / React `19.2.8` framework migration. The

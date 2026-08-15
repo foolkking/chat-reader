@@ -1,5 +1,70 @@
 # Testing Addendum 2026-08-09
 
+## Release G PDF.js migration candidate (2026-08-15)
+
+Release G uses official `pdfjs-dist 6.2.108` with the modern ESM library and a
+same-origin `pdf.worker.min.mjs`. The target requires Node `>=22.13.0`, so run
+Release G Web commands under Node `22.13.1`. The production build remains
+Webpack:
+
+```text
+corepack pnpm run lint
+corepack pnpm run typecheck
+corepack pnpm --filter web build
+```
+
+The dedicated browser suite is `apps/web/e2e/pdfjs-migration.spec.ts` and is
+explicitly enabled so its disposable API data is never created by the default
+PWA matrix:
+
+```text
+E2E_PDFJS_MIGRATION=1
+corepack pnpm --filter web exec playwright test e2e/pdfjs-migration.spec.ts --config=playwright.config.ts
+```
+
+It must prove a real Worker event and local worker response, library/worker
+version `6.2.108`, non-empty canvas pixels, single/multi-page fit/navigation,
+authenticated `206` Range, maximize/Escape/focus behavior, malformed PDF
+isolation and no JavaScript execution from a controlled malicious fixture.
+The fixture Conversation and attachments are synthetic and must be removed
+through the product API.
+
+Release G also requires:
+
+```text
+corepack pnpm run test:api
+cd apps/api; python -m alembic heads
+cd apps/api; python -m alembic current
+corepack pnpm --filter web test:pwa
+E2E_PWA_NEGATIVE=1
+NEXT_PUBLIC_PWA_NEGATIVE_TESTS=1
+NEXT_DIST_DIR=.release-e-negative-next
+corepack pnpm --filter web exec playwright test e2e/pwa-negative.spec.ts --config=playwright.config.ts
+```
+
+The default PWA matrix reports unrelated conditional skips separately. The
+Release E scoped negative matrix must execute with zero scoped skips and must
+cover the local PDF worker/original missing offline path. Focused regressions
+must retain unified non-PDF Viewer behavior, Reader scroll stability, Rich
+Markdown/KaTeX/MathML, Source Editor and the 390x844 Mobile Share
+single-dialog/Escape/focus contract.
+
+Current-source local evidence is PASS: Web lint/typecheck/Next 16 Webpack
+build; API `280 passed / 6 skipped`; Alembic current/head single
+`20260806_0021`; and dependency policy with zero blocked and zero unapproved
+findings. The combined owner/Share/security PDF gate is `10/10`, including
+real worker, exact version match, nonblank single/multi canvas, authenticated
+Range, lazy loading, focus, malicious script isolation and corrupt-file
+recovery. Broader focused browser regression remains `38/38`, and Source
+Editor/mutation is `2/2`.
+
+The current-runtime default PWA matrix is `68 passed / 53 conditional
+skipped`; three additional conditional skips are the opt-in Release G PDF
+suites and were executed separately. The Release E scoped negative matrix is
+`10 passed / 0 scoped skipped`, including the local PDF worker inventory and
+missing-worker recovery. CI artifact and production evidence remain
+`PENDING`; local evidence does not authorize deployment by itself.
+
 ## Release F Next 16 final closure (2026-08-15)
 
 The current worktree uses locked Next `16.3.1`, React/ReactDOM `19.2.8`,

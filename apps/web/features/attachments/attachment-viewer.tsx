@@ -9,6 +9,7 @@ import { getAttachment } from "../../lib/api";
 import { getOfflineAttachment, releaseOfflineAttachmentUrls } from "../../lib/offline-db";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
+import { loadPdfJs } from "./pdfjs-runtime";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import type { AttachmentAccess } from "./attachment-access";
 import {
@@ -394,6 +395,7 @@ type PdfFitMode = "page" | "width" | "custom";
 
 function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment: AttachmentRead; toolbarHost: HTMLDivElement | null; onPageCountChange: (count: number | null) => void }) {
   const [documentProxy, setDocumentProxy] = useState<import("pdfjs-dist").PDFDocumentProxy | null>(null);
+  const [pdfjsVersion, setPdfjsVersion] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [fitMode, setFitMode] = useState<PdfFitMode>("page");
@@ -407,10 +409,18 @@ function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment:
     let active = true;
     let task: import("pdfjs-dist").PDFDocumentLoadingTask | null = null;
     setDocumentProxy(null);
+    setPdfjsVersion(null);
     setError(false);
-    void import("pdfjs-dist").then((pdfjs) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.js", import.meta.url).toString();
-      task = pdfjs.getDocument({ url: retryableUrl(attachment.content_url, attempt)!, isEvalSupported: false });
+    const sourceUrl = retryableUrl(attachment.content_url, attempt)!;
+    void loadPdfJs().then((pdfjs) => {
+      if (active) setPdfjsVersion(pdfjs.version);
+      task = pdfjs.getDocument({
+        url: sourceUrl,
+        ...(sourceUrl.startsWith("/api/") || /^https?:/i.test(sourceUrl)
+          ? { disableStream: true, disableAutoFetch: true, rangeChunkSize: 64 * 1024 }
+          : {}),
+        useWasm: false,
+      });
       return task.promise;
     }).then((pdf) => {
       if (!active) return;
@@ -449,7 +459,7 @@ function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment:
       {documentProxy.numPages > 1 ? <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => setThumbnailRail((value) => !value)} aria-label={thumbnailRail ? "收起页面缩略图" : "展开页面缩略图"} title={thumbnailRail ? "收起页面缩略图" : "展开页面缩略图"}>{thumbnailRail ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}</button> : null}
       <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" onClick={() => selectPage(currentPage - 1)} disabled={currentPage <= 1} aria-label="上一页"><ChevronLeft className="h-4 w-4" /></button>
       <span className="min-w-14 text-center text-xs text-secondary" aria-label={`第 ${currentPage} 页，共 ${documentProxy.numPages} 页`}>{currentPage} / {documentProxy.numPages}</span>
-      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" onClick={() => selectPage(currentPage + 1)} disabled={currentPage >= documentProxy.numPages} aria-label="下一页"><ChevronRight className="h-4 w-4" /></button>
+      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" onClick={() => selectPage(currentPage + 1)} disabled={currentPage >= documentProxy.numPages} aria-label="下一页" data-testid="pdf-next-page"><ChevronRight className="h-4 w-4" /></button>
       <ModeButton active={fitMode === "page"} onClick={() => setFitMode("page")}>Fit page</ModeButton>
       <ModeButton active={fitMode === "width"} onClick={() => setFitMode("width")}>Fit width</ModeButton>
       <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => { setFitMode("custom"); setZoom((value) => Math.max(0.25, value - 0.1)); }} aria-label="缩小 PDF"><ZoomOut className="h-4 w-4" /></button>
@@ -474,7 +484,7 @@ function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment:
     if (nearestPage !== currentPage) setCurrentPage(nearestPage);
   };
   return (
-    <div className="flex h-full min-h-0 bg-subtle" data-testid="pdf-viewer">
+    <div className="flex h-full min-h-0 bg-subtle" data-testid="pdf-viewer" data-pdfjs-version={pdfjsVersion ?? undefined}>
       {toolbar}
       {thumbnailRail && documentProxy.numPages > 1 ? <aside className="w-28 shrink-0 overflow-y-auto border-r border-ui bg-page p-2" aria-label="PDF 页面缩略图">{Array.from({ length: documentProxy.numPages }, (_, index) => <PdfThumbnail key={index + 1} documentProxy={documentProxy} pageNumber={index + 1} active={currentPage === index + 1} onClick={() => { setCurrentPage(index + 1); setFitMode("page"); }} />)}</aside> : null}
       <div ref={viewportRef} className={`min-h-0 min-w-0 flex-1 overscroll-contain ${fitMode === "page" ? "overflow-hidden" : "overflow-auto"}`} onScroll={handleScroll} data-testid="pdf-viewer-pages" data-pdf-fit={fitMode}>
@@ -514,9 +524,7 @@ function PdfPage({ documentProxy, pageNumber, fitMode, zoom, containerWidth, con
       canvas.style.height = `${Math.floor(viewport.height)}px`;
       canvas.style.width = `${viewport.width}px`;
       canvas.style.height = `${viewport.height}px`;
-      const context = canvas.getContext("2d");
-      if (!context) return;
-      renderTask = page.render({ canvasContext: context, viewport, transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0] });
+      renderTask = page.render({ canvas, viewport, transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0] });
       return renderTask.promise;
     }).catch(() => undefined);
     return () => { cancelled = true; renderTask?.cancel(); };
@@ -536,9 +544,7 @@ function PdfThumbnail({ documentProxy, pageNumber, active, onClick }: { document
       const canvas = canvasRef.current;
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
-      const context = canvas.getContext("2d");
-      if (!context) return;
-      renderTask = page.render({ canvasContext: context, viewport });
+      renderTask = page.render({ canvas, viewport });
       return renderTask.promise;
     }).catch(() => undefined);
     return () => { cancelled = true; renderTask?.cancel(); };

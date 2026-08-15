@@ -39,10 +39,14 @@ test("production responses carry the Release A security baseline", async ({ page
 test("PDF and Mermaid keep their bounded runtime security settings", () => {
   const root = process.cwd();
   const viewer = fs.readFileSync(path.join(root, "features/attachments/attachment-viewer.tsx"), "utf8");
+  const pdfRuntime = fs.readFileSync(path.join(root, "features/attachments/pdfjs-runtime.ts"), "utf8");
   const markdown = fs.readFileSync(path.join(root, "features/conversations/markdown-renderer.tsx"), "utf8");
 
   expect(viewer.match(/pdfjs\.getDocument\(/g)).toHaveLength(1);
-  expect(viewer).toContain("isEvalSupported: false");
+  expect(viewer).toContain("useWasm: false");
+  expect(viewer).not.toContain("PDFScriptingManager");
+  expect(pdfRuntime).toContain('pdfjs-dist/build/pdf.worker.min.mjs');
+  expect(pdfRuntime).not.toMatch(/unpkg|jsdelivr|cdnjs/);
   expect(markdown).toContain('securityLevel: "strict"');
 });
 
@@ -87,10 +91,17 @@ test("normal production bundles do not expose the PWA negative fault bridge", as
   const staticDir = path.join(process.cwd(), distDir, "static");
   const bundledFiles = fs.readdirSync(staticDir, { recursive: true, encoding: "utf8" })
     .filter((entry) => entry.endsWith(".js"));
-  const leakingChunk = bundledFiles.find((entry) => (
-    fs.readFileSync(path.join(staticDir, entry), "utf8").includes("__chatReaderPwaNegativeTest")
-  ));
-  expect(leakingChunk).toBeUndefined();
+  const forbiddenTestMarkers = [
+    "__chatReaderPwaNegativeTest",
+    "__pdfJsMaliciousExecuted",
+    "Synthetic PDF.js migration fixture",
+  ];
+  for (const marker of forbiddenTestMarkers) {
+    const leakingChunk = bundledFiles.find((entry) => (
+      fs.readFileSync(path.join(staticDir, entry), "utf8").includes(marker)
+    ));
+    expect(leakingChunk, `${marker} must not enter the production bundle`).toBeUndefined();
+  }
 });
 
 test("release workflow cannot build a deployable artifact before quality passes", () => {

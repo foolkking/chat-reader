@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.13.1"
+          node-version: "22.13.1"
           cache: pnpm
 
       - uses: actions/setup-python@v5
@@ -146,6 +146,16 @@ jobs:
           e2e/reader-restoration.spec.ts
           e2e/release-stabilization-contract.spec.ts
           e2e/share-drawer-focus.spec.ts
+
+      - name: PDF.js maintained-line browser checks
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_PDFJS_MIGRATION: "1"
+          E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/pdfjs-migration.spec.ts
+          e2e/pdfjs-share.spec.ts
 
       - name: Default PWA baseline
         env:

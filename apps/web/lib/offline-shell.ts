@@ -282,19 +282,23 @@ async function warmAttachmentViewerRuntime(): Promise<string[]> {
   // shell asset inventory includes them instead of discovering a missing
   // renderer only after connectivity has been lost.
   const before = new Set(performance.getEntriesByType("resource").map((entry) => entry.name));
+  const pdfRuntime = await import("../features/attachments/pdfjs-runtime");
   const results = await Promise.allSettled([
-    import("pdfjs-dist"),
+    pdfRuntime.loadPdfJs(),
     import("react-zoom-pan-pinch"),
   ]);
   const failed = results.filter((result) => result.status === "rejected");
   if (failed.length) {
     throw new Error("部分附件预览组件未能缓存，请联网后重试。");
   }
-  return performance.getEntriesByType("resource")
+  const loadedAssets = performance.getEntriesByType("resource")
     .map((entry) => entry.name)
     .filter((value) => !before.has(value))
     .map(normalizeShellAsset)
     .filter((value): value is string => Boolean(value));
+  const workerAsset = normalizeShellAsset(pdfRuntime.getPdfJsWorkerUrl());
+  if (workerAsset) loadedAssets.push(workerAsset);
+  return Array.from(new Set(loadedAssets));
 }
 
 function collectLibraryShellAssets(runtimeAssets: string[] = []): string[] {

@@ -26,7 +26,12 @@ The F1 checkpoint is retained as migration evidence only. Production must not de
 | @types/react | 19.2.18 | official npm registry |
 | @types/react-dom | 19.2.4 | official npm registry |
 
-next 16.3.1 requires Node >=20.9.0. Local and CI verification used Node 20.13.1; the Web Dockerfile remains on the Node 20 Alpine line, so build and runtime majors stay aligned.
+Next 16.3.1 requires Node >=20.9.0. Release F local, CI and production
+verification used Node 20.13.1. The current Release G PDF.js candidate raises
+CI and the Web build/runtime images together to Node 22.13.1 because
+`pdfjs-dist 6.2.108` requires `>=22.13.0 || >=24`; Next and React versions do
+not change. Release F's closed evidence remains historical, while the Release
+G runtime requires its own final CI and production proof.
 
 ## Provenance
 
@@ -117,7 +122,8 @@ Skip counts must be reported separately and scoped PWA negative skips must be ze
 
 ## Remaining Separate Tracks
 
-- PDF.js supported-line migration.
+- PDF.js maintained-line migration is active as the Release G candidate; it
+  remains incomplete until its browser, CI and production gates close.
 - CSP enforcing.
 - Optional Turbopack migration.
 - Automatic cleanup / first production cleanup apply.

@@ -19,9 +19,10 @@
 - [Release D characterization evidence](evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md)
 - [Release E PWA/offline resilience contract](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md)
 - [Release F Next LTS migration contract](system/NEXT_LTS_MIGRATION_CONTRACT.md)
+- [Release G PDF.js maintained-line migration contract](system/PDFJS_MIGRATION_CONTRACT.md)
 - [Conversation/import/viewer test addendum](testing.md)
 
-当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-11。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-15。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 
 ## 开始这里
 

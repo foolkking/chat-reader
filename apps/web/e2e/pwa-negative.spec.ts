@@ -92,6 +92,47 @@ test.describe("Release E PWA negative matrix", () => {
     expect(retried.status?.ready).toBe(true);
   });
 
+  test("PDF worker is version-matched shell inventory and a missing offline worker is explicit", async ({ page, context }) => {
+    await page.goto("/library");
+    const active = await waitForActiveRecord(page);
+    const workerAsset = active.assets.find((asset) => /pdf\.worker\.min\..*\.mjs$/.test(asset));
+    expect(workerAsset, "PDF.js worker must be part of the active shell inventory").toBeTruthy();
+    expect(active.criticalAssets ?? active.assets).toContain(workerAsset);
+    const workerEvidence = await page.evaluate(async ({ cacheName, workerAsset }) => {
+      const response = await (await caches.open(cacheName)).match(workerAsset!);
+      return response ? { status: response.status, url: response.url, body: await response.text() } : null;
+    }, { cacheName: active.cacheName, workerAsset });
+    expect(workerEvidence?.status).toBe(200);
+    expect(new URL(workerEvidence!.url).origin).toBe("http://127.0.0.1:3107");
+    expect(workerEvidence!.body).toContain('"6.2.108"');
+
+    await context.setOffline(true);
+    expect(await page.evaluate(async ({ cacheName, workerAsset }) => {
+      const cache = await caches.open(cacheName);
+      await cache.delete(workerAsset!);
+      return !(await cache.match(workerAsset!));
+    }, { cacheName: active.cacheName, workerAsset })).toBe(true);
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Network.enable");
+    await cdp.send("Network.clearBrowserCache");
+    await page.close();
+    const offlinePage = await context.newPage();
+    const response = await offlinePage.goto("/library", { waitUntil: "domcontentloaded" });
+    expect(response?.status()).toBe(503);
+    await expect(offlinePage.locator("main")).toContainText(/not ready|尚未就绪|incomplete|不完整/i);
+
+    await context.setOffline(false);
+    await offlinePage.reload({ waitUntil: "domcontentloaded" });
+    await expect(offlinePage.locator("main")).toContainText(/Offline ready|可离线启动/);
+    const repaired = await waitForActiveRecord(offlinePage);
+    const repairedWorkerAsset = repaired.assets.find((asset) => /pdf\.worker\.min\..*\.mjs$/.test(asset));
+    expect(repairedWorkerAsset).toBeTruthy();
+    expect(await offlinePage.evaluate(async ({ cacheName, workerAsset }) => Boolean(await (await caches.open(cacheName)).match(workerAsset!)), {
+      cacheName: repaired.cacheName,
+      workerAsset: repairedWorkerAsset,
+    })).toBe(true);
+  });
+
   test("PWA-NEG-006..007..020 missing and corrupted attachment resources become unavailable", async ({ page }) => {
     await seedMinimalOfflineFixture(page);
     await page.evaluate(async () => {

@@ -1,4 +1,4 @@
-FROM node:20-alpine AS dependencies
+FROM node:22.13.1-alpine AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -12,8 +12,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 # Browser PDF rendering does not require pdfjs-dist's optional native canvas.
-# Disabling lifecycle scripts prevents its legacy node-pre-gyp/tar chain from
-# executing during the release build while the supported PDF.js migration is pending.
+# Release installs keep lifecycle scripts disabled as a supply-chain boundary.
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM dependencies AS builder
@@ -32,7 +31,7 @@ ENV NODE_OPTIONS="--max-old-space-size=${WEB_BUILD_HEAP_MB}"
 ENV NEXT_BUILD_CPUS=1
 RUN pnpm --filter web build
 
-FROM node:20-alpine AS runtime
+FROM node:22.13.1-alpine AS runtime
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
