@@ -1,12 +1,16 @@
 # Markdown 文档台账
 
-2026-08-15 Release F candidate synchronization: Next `16.3.1`, React
+2026-08-15 Release F final synchronization: Next `16.3.1`, React
 `19.2.8`, async request APIs, explicit Webpack build, dependency exception
 removal, current-worktree focused browser evidence and the immutable-image
 deployment contract are recorded in `PROJECT_STATE.md`, `results.md`,
 `docs/testing.md`, `docs/deployment.md` and
-`docs/system/NEXT_LTS_MIGRATION_CONTRACT.md`. Production closure is still
-pending; no artifact, backup or deployment is claimed by this entry.
+`docs/system/NEXT_LTS_MIGRATION_CONTRACT.md`. Final Actions run
+`31887198941`, artifact SHA-256
+`739435634b6a4ebe52597d9db6887c3599c10a6fb5441f1032b01981923e5b84`, verified
+backup `/opt/chat-reader/backups/release-f-final-20260815T134803Z-c9ddae1`,
+immutable running-image identity and production Chromium acceptance are now
+recorded. `RELEASE_F = PASS`; Release E rollback images remain retained.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |

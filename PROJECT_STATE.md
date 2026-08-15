@@ -1,6 +1,6 @@
 # Project State
 
-## 2026-08-15 Release F Next 16 final closure candidate
+## 2026-08-15 Release F Next 16 final closure
 
 - The current worktree contains the Next 16.3.1 / React 19.2.8 migration and
   the minimal async `headers()`/route-params and React 19 ref-typing fixes.
@@ -14,9 +14,32 @@
   contract. The default PWA matrix is `68 passed / 50 unrelated conditional
   skipped`; the Release E scoped negative matrix is `9 passed / 0 scoped
   skipped`. Normal production chunks contain no PWA fault bridge.
-- This is still a candidate. `RELEASE_F = PARTIAL_PASS`,
-  `CI_RELEASE_ARTIFACT = PENDING`, and `PRODUCTION_DEPLOYMENT = NOT_EXECUTED`.
-  No production image, backup, deployment or final PASS is claimed here.
+- Final source is `c9ddae1e9cd5c94c406f357a152304105e6d20b0`, pushed to
+  `origin/master`. Actions run `31887198941` passed the complete quality,
+  image, inspect, package and checksum chain. The artifact archive SHA-256 is
+  `739435634b6a4ebe52597d9db6887c3599c10a6fb5441f1032b01981923e5b84`.
+  API/worker/migrate image identity is
+  `sha256:4856d1a275c178418d2495dc0cd2b67cf9d94fe660c5100d7d4a84c5b2af0f9a`;
+  Web is `sha256:d7ac14aa3c3f2955e109c6cd933cf3ac350992e0fe99b93071507674a4790670`.
+- King independently recomputed the archive hash, retained Release E rollback
+  images, and validated the complete backup at
+  `/opt/chat-reader/backups/release-f-final-20260815T134803Z-c9ddae1`.
+  PostgreSQL `pg_restore --list`, all four business archive listings and all
+  five SHA-256 entries passed. The explicit Release F compose binding used
+  immutable commit tags and `--no-build`; no `.env.production`, volume or
+  database schema was changed.
+- Running API, worker, migrate image and Web identities match the manifest
+  exactly. API/Web/PostgreSQL are healthy, worker is running, Scanner is
+  disabled, public `/api/health` is `200`, and Alembic current/head remains
+  `20260806_0021`.
+- Production headers include `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, CSP Report-Only and no `X-Powered-By`; `/api/health`
+  returned a server-owned `x-request-id`. Isolated production Chromium passed
+  shell/offline/reconnect, Reader KaTeX/MathML, 390x844 Share focus,
+  mutation/source-editor, generic attachment Viewer and a disposable PDF
+  upload through the real PDF canvas. QA records were removed through the
+  product API. `RELEASE_F = PASS`, `PRODUCTION_DEPLOYMENT = PASS`,
+  `RUNNING_IMAGE_IDENTITY = PASS`, and `ROLLBACK_RELEASE_E = RETAINED`.
 - Release F changes must be selectively staged. Existing API/editor,
   screenshots, storage and build-cache paths in the worktree are unrelated
   and remain untouched. Build logs and caches for this closure are kept under

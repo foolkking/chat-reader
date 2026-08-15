@@ -1,6 +1,6 @@
 # Implementation Results
 
-## Release F Next 16 final closure candidate - 2026-08-15
+## Release F Next 16 final closure - 2026-08-15
 
 ```text
 NEXT_ACTIVE_LTS = PASS (local candidate)
@@ -19,9 +19,11 @@ FINAL_BROWSER_REGRESSION = 38 passed / 0 failed
 PWA_POSITIVE = PASS (68 passed / 50 unrelated conditional skipped)
 PWA_NEGATIVE_MATRIX = PASS (9 passed)
 PWA_SCOPED_SKIPS = 0
-CI_RELEASE_ARTIFACT = PENDING
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
-RELEASE_F = PARTIAL_PASS
+CI_RELEASE_ARTIFACT = PASS
+PRODUCTION_DEPLOYMENT = PASS
+RUNNING_IMAGE_IDENTITY = PASS
+ROLLBACK_RELEASE_E = RETAINED
+RELEASE_F = PASS
 ```
 
 The current worktree local gates passed locked install, lint, typecheck,
@@ -40,10 +42,27 @@ zero scoped skips. Normal production chunks were scanned directly and contain
 neither the PWA test fault bridge nor benchmark fixtures; the negative-only
 build and its temporary dist directory were not retained as runtime output.
 
-This section is candidate evidence only. It intentionally does not claim a
-commit, Actions run, archive checksum, image digest, backup, running-image
-identity or production acceptance. Those facts must be appended after the
-quality-gated artifact and immutable deployment close.
+The final source commit is `c9ddae1e9cd5c94c406f357a152304105e6d20b0` and the
+release workflow is Actions run `31887198941` (SUCCESS). The externally built
+archive is `739435634b6a4ebe52597d9db6887c3599c10a6fb5441f1032b01981923e5b84`.
+API/worker/migrate use
+`sha256:4856d1a275c178418d2495dc0cd2b67cf9d94fe660c5100d7d4a84c5b2af0f9a` and
+Web uses `sha256:d7ac14aa3c3f2955e109c6cd933cf3ac350992e0fe99b93071507674a4790670`.
+King recomputed the archive hash and matched the manifest before loading the
+images. The verified Release F backup is
+`/opt/chat-reader/backups/release-f-final-20260815T134803Z-c9ddae1`; its
+PostgreSQL custom dump, four business archives, listings and checksums passed.
+
+Production used the explicit Release F compose file with immutable
+`API_IMAGE`/`WEB_IMAGE` tags and `--no-build`; the running container IDs match
+the manifest exactly. API/Web/PostgreSQL are healthy, worker is running,
+Scanner is disabled and Alembic remains `20260806_0021`. Actual production
+headers preserve the Release A contract and `X-Powered-By` is absent. The
+isolated production Chromium smoke passed shell/SW offline and reconnect,
+Reader KaTeX/MathML, 390x844 Share single-dialog/Escape/focus, mutation and
+Source Editor, attachment Viewer, and a disposable PDF Viewer canvas. All QA
+Conversation cleanup used the product API. Release E immutable images remain
+available for direct rollback.
 
 ## Release E PWA Negative Matrix & Offline Resilience - 2026-08-15
 

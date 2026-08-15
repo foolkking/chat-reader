@@ -1,6 +1,6 @@
 # 生产部署
 
-## Release F Next 16 deployment contract (candidate, 2026-08-15)
+## Release F Next 16 deployment contract (closed, 2026-08-15)
 
 Release F is a Next `16.3.1` / React `19.2.8` framework migration. The
 candidate is built externally with `next build --webpack`; King never runs a
@@ -25,8 +25,34 @@ quality gate
 Container health is not deployment acceptance until running image identity
 matches the manifest. A mismatch stops acceptance immediately. Release E
 immutable API/worker/Web images and its verified backup remain the direct
-rollback source throughout Release F acceptance. No Alembic or Dexie schema
-migration is part of this release.
+rollback source. No Alembic or Dexie schema migration is part of this release.
+
+### Release F final evidence
+
+- Source `c9ddae1e9cd5c94c406f357a152304105e6d20b0`; Actions run
+  `31887198941` completed SUCCESS. Archive SHA-256 is
+  `739435634b6a4ebe52597d9db6887c3599c10a6fb5441f1032b01981923e5b84`.
+- API/worker/migrate digest is
+  `sha256:4856d1a275c178418d2495dc0cd2b67cf9d94fe660c5100d7d4a84c5b2af0f9a`;
+  Web digest is
+  `sha256:d7ac14aa3c3f2955e109c6cd933cf3ac350992e0fe99b93071507674a4790670`.
+  King recomputed the archive hash and the four running service image IDs
+  match these manifest identities exactly.
+- Backup `/opt/chat-reader/backups/release-f-final-20260815T134803Z-c9ddae1`
+  contains PostgreSQL custom dump plus imports/exports/offline/assets
+  archives. `pg_restore --list`, tar listings and all five SHA-256 checks
+  passed. Release E rollback images remain retained.
+- The Release F compose file was used from the immutable release directory
+  with the existing `.env.production`; only `API_IMAGE` and `WEB_IMAGE` were
+  supplied as immutable commit tags. Migration preflight was unchanged at
+  `20260806_0021`, and API/worker/Web were recreated with `--no-build`.
+  No volume, database, environment file or Scanner service was changed.
+- Post-deploy API/Web/PostgreSQL are healthy, worker is running, Scanner is
+  disabled, and `/api/health` is `200`. Actual production responses contain
+  the Release A security headers and a server-owned `x-request-id`; `X-Powered-By`
+  is absent. Isolated Chromium passed PWA shell/offline/reconnect, Reader
+  KaTeX/MathML, mobile Share focus, mutation/Source Editor, attachment Viewer
+  and disposable PDF canvas acceptance.
 
 ## Release E PWA resilience closure (2026-08-15)
 

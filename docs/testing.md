@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## Release F Next 16 final closure candidate (2026-08-15)
+## Release F Next 16 final closure (2026-08-15)
 
 The current worktree uses locked Next `16.3.1`, React/ReactDOM `19.2.8`,
 Node 20.13.1 and the explicit `next build --webpack` path. Final local gates
@@ -18,9 +18,16 @@ fixtures require committed imports.
 The current-source default PWA baseline is `68 passed / 50 unrelated
 conditional skipped`; the dedicated Release E scoped negative matrix is
 `9 passed / 0 scoped skipped`. Normal production chunks contain no PWA test
-fault bridge or benchmark fixture. Current candidate state remains
-`RELEASE_F = PARTIAL_PASS` until artifact, backup, immutable running-image
-identity and production browser acceptance close.
+fault bridge or benchmark fixture. Final Actions run `31887198941` passed
+quality, image inspection, packaging and checksum generation; the artifact
+SHA-256 is `739435634b6a4ebe52597d9db6887c3599c10a6fb5441f1032b01981923e5b84`.
+King recomputed the same hash, verified backup
+`/opt/chat-reader/backups/release-f-final-20260815T134803Z-c9ddae1`, and
+confirmed running image identities match the manifest. Isolated production
+Chromium passed PWA shell/offline/reconnect, Reader KaTeX/MathML, 390x844
+Share single-dialog/Escape/focus, mutation/Source Editor, attachment Viewer
+and disposable PDF canvas acceptance. `RELEASE_F = PASS`; unrelated default
+PWA skips remain skips.
 
 ## Release E PWA negative matrix (2026-08-15)
 
