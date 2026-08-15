@@ -53,6 +53,9 @@ rollback source. No Alembic or Dexie schema migration is part of this release.
   is absent. Isolated Chromium passed PWA shell/offline/reconnect, Reader
   KaTeX/MathML, mobile Share focus, mutation/Source Editor, attachment Viewer
   and disposable PDF canvas acceptance.
+- A production Chromium CSP Report-Only listener observed zero violations on
+  `/library` and the Reader route; CSP remains report-only and no policy was
+  broadened.
 
 ## Release E PWA resilience closure (2026-08-15)
 

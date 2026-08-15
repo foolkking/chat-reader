@@ -62,7 +62,9 @@ isolated production Chromium smoke passed shell/SW offline and reconnect,
 Reader KaTeX/MathML, 390x844 Share single-dialog/Escape/focus, mutation and
 Source Editor, attachment Viewer, and a disposable PDF Viewer canvas. All QA
 Conversation cleanup used the product API. Release E immutable images remain
-available for direct rollback.
+available for direct rollback. A production CSP Report-Only listener observed
+zero violations on `/library` and Reader; enforcing remains intentionally
+unimplemented.
 
 ## Release E PWA Negative Matrix & Offline Resilience - 2026-08-15
 

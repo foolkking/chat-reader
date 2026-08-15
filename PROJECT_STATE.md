@@ -38,7 +38,8 @@
   shell/offline/reconnect, Reader KaTeX/MathML, 390x844 Share focus,
   mutation/source-editor, generic attachment Viewer and a disposable PDF
   upload through the real PDF canvas. QA records were removed through the
-  product API. `RELEASE_F = PASS`, `PRODUCTION_DEPLOYMENT = PASS`,
+  product API. A production CSP Report-Only listener observed zero violations
+  on `/library` and Reader. `RELEASE_F = PASS`, `PRODUCTION_DEPLOYMENT = PASS`,
   `RUNNING_IMAGE_IDENTITY = PASS`, and `ROLLBACK_RELEASE_E = RETAINED`.
 - Release F changes must be selectively staged. Existing API/editor,
   screenshots, storage and build-cache paths in the worktree are unrelated
