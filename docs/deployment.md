@@ -1,5 +1,40 @@
 # 生产部署
 
+## Release E PWA resilience closure (2026-08-15)
+
+- Runtime source `1591fd9bdab3d12d7928f6421845173cb1b1b81e`; Actions run
+  `31874712687`; archive SHA-256
+  `ff07fdab24d729b173f3f1abc9facfe730f5ec88ea6a326445c64d3f1b633f1d`.
+  API/worker/migrate image is
+  `sha256:f360fefd4a4881e695bfb5a1a6a81f2f096adfbd2149981ca0191caaac6808f8`;
+  Web image is
+  `sha256:f1d33ca458b3a2e6af249796972399c281feffce831eac00c4babadf9e2ed35f`.
+- King independently verified the archive and retained verified backup
+  `/opt/chat-reader/backups/release-e-20260815T084805Z-1591fd9`. The backup
+  contains a readable PostgreSQL custom dump and imports, exports, offline and
+  assets archives; all five checksums and archive listings passed.
+- The first recreation remained on the prior images because the CI archive
+  carries immutable commit tags and Compose resolves `latest`. Container image
+  ID verification caught this before acceptance. The verified commit tags were
+  then explicitly retagged to `latest`, migration preflight was repeated and
+  API/worker/Web were recreated again with `--no-build`. Final container IDs
+  match the manifest. No business state changed during the first recreation.
+- Post-deploy API/Web/PostgreSQL are healthy, worker runs, Scanner remains
+  disabled and Alembic is `20260806_0021 (head)`. Production headers retain
+  `nosniff`, strict referrer policy, bounded Permissions Policy, CSP
+  Report-Only and no `X-Powered-By`.
+- Isolated production Chromium verified an active coherent shell, 75/75
+  critical cached resources, offline Library restart, reconnect and 390px
+  reflow. Read-only Reader QA verified KaTeX plus MathML without overflow;
+  mobile Share retained one dialog and restored focus after one Escape. No
+  production fault injection, data mutation, Next build, volume deletion,
+  `.env.production` overwrite, Scanner start or automatic cleanup occurred.
+
+For future archive deployments, load the commit-tagged images and explicitly
+retag all four service images to `latest` before running production Compose.
+Always verify the resulting container image IDs against the release manifest;
+source HEAD alone is not runtime-image evidence.
+
 ## Release C superseding closure (2026-08-15)
 
 - Runtime commit `e58b750357d92bba314737582a94493829c038e2`; Actions run

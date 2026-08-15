@@ -27,8 +27,8 @@ RELEASE_D_REGRESSION = PASS
 DEXIE_SCHEMA_MIGRATION = NONE
 NEW_ALEMBIC_MIGRATION = NONE
 RUNTIME_CHANGES = IMPLEMENTED
-PRODUCTION_DEPLOYMENT = PENDING
-RELEASE_E = PENDING_PRODUCTION_CLOSURE
+PRODUCTION_DEPLOYMENT = PASS
+RELEASE_E = PASS
 ```
 
 Release E closes the scoped browser-side PWA negative matrix using a
@@ -40,6 +40,28 @@ The prior default PWA baseline was 67 passed / 50 skipped; the current full
 local run is 68 passed / 50 skipped because it includes the normal-bundle
 fault-bridge assertion added in Release E. Those skipped flows are unrelated
 conditional fixture/production-copy paths and remain separate from PASS.
+
+The final runtime source is
+`1591fd9bdab3d12d7928f6421845173cb1b1b81e`; Actions run `31874712687`
+passed the complete release gate. The externally built archive SHA-256 is
+`ff07fdab24d729b173f3f1abc9facfe730f5ec88ea6a326445c64d3f1b633f1d`.
+API/worker/migrate image digest is
+`sha256:f360fefd4a4881e695bfb5a1a6a81f2f096adfbd2149981ca0191caaac6808f8`;
+Web image digest is
+`sha256:f1d33ca458b3a2e6af249796972399c281feffce831eac00c4babadf9e2ed35f`.
+King recomputed the archive checksum and validated backup
+`/opt/chat-reader/backups/release-e-20260815T084805Z-1591fd9` before migration
+preflight and `--no-build` recreation.
+
+Production health is PASS: API/Web/PostgreSQL are healthy, worker is running,
+Scanner is disabled, and Alembic current/head remains `20260806_0021`.
+Production Chromium used an isolated profile under the approved external cache
+root. The shell had 75 critical resources with zero misses; offline Library
+reload and reconnect returned HTTP 200 at 390px with no overflow or CSP
+violation. Read-only Reader QA produced 22 blocks, 10 KaTeX nodes and 10 MathML
+nodes without page overflow or page errors. Mobile Share kept one dialog and
+restored focus to More after one Escape. No production fault injection or
+business-data mutation was performed.
 
 The runtime fix preserves the existing product contracts: Offline remains
 cached-only; offline package v2/v3 read/write compatibility is unchanged; Dexie

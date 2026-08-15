@@ -30,6 +30,30 @@
   280 passed / 6 skipped, Alembic heads/current is 20260806_0021 (head), and
   the Release A security browser regression is 7 passed. Remaining default PWA
   skips are unrelated conditional flows and are not PASS.
+- Final runtime source is `1591fd9bdab3d12d7928f6421845173cb1b1b81e` from
+  Actions run `31874712687`. The complete quality -> image inspection ->
+  checksum -> artifact chain passed. Archive SHA-256 is
+  `ff07fdab24d729b173f3f1abc9facfe730f5ec88ea6a326445c64d3f1b633f1d`;
+  API/worker/migrate image is
+  `sha256:f360fefd4a4881e695bfb5a1a6a81f2f096adfbd2149981ca0191caaac6808f8`
+  and Web is
+  `sha256:f1d33ca458b3a2e6af249796972399c281feffce831eac00c4babadf9e2ed35f`.
+- King verified the archive checksum and backup
+  `/opt/chat-reader/backups/release-e-20260815T084805Z-1591fd9`. The PostgreSQL
+  custom dump, imports/exports/offline/assets archives, archive listings and
+  SHA-256 checks passed before explicit production-compose migration preflight
+  and `--no-build` recreation. No schema or Dexie migration was added.
+- Production API/Web/PostgreSQL are healthy, the worker runs, Scanner remains
+  disabled and Alembic is `20260806_0021 (head)`. Actual public headers retain
+  `nosniff`, the strict referrer policy, bounded Permissions Policy and CSP
+  Report-Only; `X-Powered-By` remains absent.
+- An isolated production Chromium profile verified an active Service Worker,
+  75/75 critical shell resources, an offline `/library` reload with HTTP 200,
+  390px reflow, online recovery and zero CSP violations. Read-only Reader QA
+  rendered 22 blocks with 10 KaTeX and 10 MathML nodes, no page overflow or
+  page error. Mobile More -> Share kept exactly one dialog and one Escape
+  restored focus to More. `RELEASE_E = PASS`, `PRODUCTION_DEPLOYMENT = PASS`,
+  `DEXIE_SCHEMA_MIGRATION = NONE`, and `NEW_ALEMBIC_MIGRATION = NONE`.
 
 ## 2026-08-15 Release D performance and capacity characterization
 

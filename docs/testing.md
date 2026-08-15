@@ -28,6 +28,21 @@ conditional fixture/production-copy flows and are not counted as Release E
 PASS. The normal production bundle is separately checked to ensure
 window.__chatReaderPwaNegativeTest is absent.
 
+Final CI run `31874712687` executed the scoped negative matrix in the quality
+job before image construction and passed all 9 browser tests with zero scoped
+skips. The same run passed Web lint/typecheck/build, the API full suite,
+Alembic, Release A/B/C/D regressions, the default PWA matrix, image inspection
+and archive checksum generation.
+
+Post-deploy production Chromium used an isolated disposable profile rather than
+the operator's normal browser data. It verified the active Service Worker,
+75/75 critical cached shell resources, offline `/library` HTTP 200, 390px
+reflow, reconnect, zero CSP violations, Reader KaTeX/MathML and the single
+mobile Share dialog/focus contract. Quota, interruption and cache-corruption
+faults remained confined to the production-build CI/local matrix; production
+did not receive fault injection. The unrelated 50 default-matrix conditional
+skips remain reported as skips.
+
 ## Release D performance and capacity characterization (2026-08-15 final)
 
 The Release D workflow is an external Linux characterization run, not a

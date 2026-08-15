@@ -7,6 +7,13 @@ offline package/Dexie formats and documents critical versus optional shell
 resources, cache-miss behavior, quota/interruption/restart semantics, retry
 ownership and false-ready prevention.
 
+2026-08-15 Release E production closure: runtime `1591fd9`, Actions run
+`31874712687`, archive/image provenance, verified five-part backup, explicit
+production-compose deployment, production health, isolated PWA/Reader/Share
+browser evidence and the final PASS matrix are recorded in `PROJECT_STATE.md`,
+`results.md`, `docs/testing.md` and `docs/deployment.md`. No migration or
+business-data cleanup was performed; unrelated PWA skips remain skips.
+
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
 | docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md | Current | /library shell readiness, conversation package current-state preservation, offline Viewer misses, quota/interruption/restart handling and Release E negative browser matrix. |
