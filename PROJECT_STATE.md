@@ -1,5 +1,44 @@
 # Project State
 
+## 2026-08-16 Release H CSP enforcement candidate
+
+- `RELEASE_H = PARTIAL_PASS`. The current source has one application CSP
+  authority in `apps/web/next.config.mjs` and emits a real
+  `Content-Security-Policy` header in production builds. Production remains on
+  Release G Report-Only until CI artifact and immutable deployment acceptance
+  complete.
+- The policy is derived from the actual resource graph: same-origin Next/API,
+  local KaTeX fonts, same-origin Service/PDF/Search/complex workers, Mermaid
+  data images, Offline/Viewer blob images and media, and the Shiki Oniguruma
+  Wasm engine. External runtime origins are zero. Wildcards, external scheme
+  sources, blob workers, data fonts and production `'unsafe-eval'` are absent.
+- Next's two nonce-less inline bootstrap/RSC scripts require
+  `script-src-elem 'unsafe-inline'`; 36 current runtime style sites require
+  `style-src 'unsafe-inline'`. Inline event attributes are blocked with
+  `script-src-attr 'none'`. Strict nonce/hashes are deferred with architecture
+  evidence rather than forcing dynamic/PWA changes.
+- A production-build Chromium harness passes `4/4` with zero skips: enforced
+  header shape, actual external script/connect/image/object/frame and blob
+  worker blocking, inline-handler blocking, and allowed local/data/blob/style/
+  manifest/Service Worker resources. Markdown sanitizer browser evidence
+  removes `javascript:` links and script payloads; direct inline-script CSP is
+  disclosed as `POLICY_LIMITED`.
+- Current local regressions: lint/typecheck/Next 16.3.1 Webpack build PASS;
+  API `280 passed / 6 skipped`; Alembic current/head `20260806_0021`;
+  dependency policy has zero blocked/unapproved advisories; scoped PWA negative
+  `10/10` with zero scoped skips; default PWA `72 passed / 53 unrelated
+  conditional skipped`; focused Reader/Rich/Security `36/36`; PDF/Share `3/3`;
+  Markdown and image Viewer `1/1`; mutation/Source Editor `2/2`; final Share
+  focus `2/2` and the isolated repeat `6/6`. A long 38-test Windows Chrome process
+  exited before creating the desktop Share context after its first 36 tests;
+  the CI workflow now runs Share and mutation as independent hard gates instead
+  of treating a rerun as product evidence.
+- The Service Worker synthetic offline-incomplete 503 has its own locked-down
+  CSP. Owner and Share attachment Range responses retain the API
+  `default-src 'none'; sandbox` contract. Alembic, Dexie, Offline package,
+  Next/React/PDF.js and Webpack remain unchanged.
+- Durable contract: `docs/system/CSP_ENFORCEMENT_CONTRACT.md`.
+
 ## 2026-08-16 Release G PDF.js maintained-line closure
 
 - `RELEASE_G = PASS`. Runtime source

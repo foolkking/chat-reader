@@ -1,5 +1,52 @@
 # Testing Addendum 2026-08-09
 
+## Release H CSP enforcement candidate (2026-08-16)
+
+Release H adds a production-build browser hard gate:
+
+```text
+corepack pnpm --filter web exec playwright test --config=playwright.config.ts \
+  e2e/csp-enforcement.spec.ts
+```
+
+The four tests must all execute. They verify the exact enforcing response,
+production absence of `'unsafe-eval'` and broad sources, controlled external
+script/connect/image/object blocking, blob-worker blocking, real
+`frame-ancestors` enforcement from a second origin, inline event-handler
+blocking, and allowed same-origin/data/blob/style/manifest/Service Worker
+resources. The harness records only directive/disposition and bounded URI
+classifications; it does not persist raw URLs or content.
+
+The Release E scoped PWA command remains a separate zero-skip gate. It now also
+asserts the synthetic offline-incomplete 503 CSP:
+
+```text
+E2E_PWA_NEGATIVE=1
+NEXT_PUBLIC_PWA_NEGATIVE_TESTS=1
+NEXT_DIST_DIR=.next-pwa-negative
+corepack pnpm --filter web build
+corepack pnpm --filter web exec playwright test --config=playwright.config.ts \
+  e2e/pwa-negative.spec.ts
+```
+
+Current candidate evidence is CSP `4/4`, PWA negative `10/10`, default PWA
+`72 passed / 53 unrelated conditional skipped`, focused Reader/Rich/Security
+`36/36`, PDF owner/Share `3/3`, Markdown and image unified Viewer `1/1`,
+Source Editor/mutation `2/2`, final Share focus `2/2`, and a separate Share
+repeat `6/6`. Root lint/typecheck/Next 16.3.1 Webpack build pass; full API is
+`280 passed / 6 skipped`; Alembic current/head is `20260806_0021`; dependency
+policy has zero blocked/unapproved advisories. Rich Markdown requires a real Shiki
+highlighted token span plus zero enforced violation events, in addition to
+KaTeX, MathML and sanitizer assertions.
+
+A Windows Chromium process repeatedly exited when the desktop Share test tried
+to create a new context after the long Reader group; all preceding tests and
+the next worker's mobile Share passed, and the isolated Share suite passed six
+times. This is treated as a deterministic test-process lifecycle defect, not a
+rerun-based product PASS. CI therefore keeps CSP, long Reader/focused paths,
+Share, mutation, Markdown/image Viewer, PDF and scoped PWA as separate hard
+steps.
+
 ## Release G PDF.js migration closure (2026-08-16)
 
 Release G uses official `pdfjs-dist 6.2.108` with the modern ESM library and a

@@ -17,20 +17,35 @@ Text[^1]
 
 [^1]: Attachment footnote.
 ` + "\n\n`\\(code-is-not-math\\)`";
+const ATTACHMENT_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
 
-test("Markdown attachment inline and Viewer use the shared AI Rich Markdown core", async ({ page }) => {
+test("Markdown and image attachments use the unified Viewer without weakening Rich Markdown", async ({ page }) => {
   const { conversationId, messageId } = await createConversation(page.request);
   try {
     await page.goto(`/conversations/${conversationId}`);
     const message = page.locator(`#message-${messageId}`);
     await message.getByRole("button", { name: /Edit Markdown source|Markdown/ }).click();
-    await page.getByTestId("source-editor-attachment-input").setInputFiles({
+    const attachmentInput = page.getByTestId("source-editor-attachment-input");
+    await attachmentInput.setInputFiles({
       name: "rich-markdown-fixture.md",
       mimeType: "text/markdown",
       buffer: Buffer.from(ATTACHMENT_MARKDOWN),
     });
-    await expect(page.getByTestId("source-editor-attachment-drafts")).toBeVisible();
-    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/Uploading:|正在上传/)).toHaveCount(0);
+    const attachmentDrafts = page.getByTestId("source-editor-attachment-drafts");
+    await expect(attachmentDrafts).toBeVisible();
+    await expect(attachmentDrafts.getByText(/Uploading:|正在上传/)).toHaveCount(0);
+    await expect(attachmentDrafts).not.toContainText(/Upload failed|上传失败/);
+    await attachmentInput.setInputFiles({
+      name: "viewer-image-fixture.png",
+      mimeType: "image/png",
+      buffer: ATTACHMENT_PNG,
+    });
+    await expect(attachmentDrafts.getByText(/Uploading:|正在上传/)).toHaveCount(0);
+    await expect(attachmentDrafts).not.toContainText(/Upload failed|上传失败/);
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
     const saveResponse = page.waitForResponse((response) => response.request().method() === "PATCH"
       && response.url().endsWith(`/api/messages/${messageId}`));
     await page.getByTestId("source-editor-create-version").click();
@@ -40,9 +55,11 @@ test("Markdown attachment inline and Viewer use the shared AI Rich Markdown core
 
     const attachments = await page.request.get(`/api/conversations/${conversationId}/attachments`);
     expect(attachments.ok()).toBeTruthy();
-    const item = ((await attachments.json()) as { items: Array<{ id: string; display_name: string }> }).items
-      .find((attachment) => attachment.display_name === "rich-markdown-fixture.md");
+    const items = ((await attachments.json()) as { items: Array<{ id: string; display_name: string }> }).items;
+    const item = items.find((attachment) => attachment.display_name === "rich-markdown-fixture.md");
+    const imageItem = items.find((attachment) => attachment.display_name === "viewer-image-fixture.png");
     expect(item).toBeTruthy();
+    expect(imageItem).toBeTruthy();
 
     const markdownPreview = message.locator(`[data-testid="attachment-block"][data-attachment-id="${item!.id}"]`);
     await expect(markdownPreview).toBeVisible();
@@ -58,6 +75,15 @@ test("Markdown attachment inline and Viewer use the shared AI Rich Markdown core
     await expect(viewer.locator("code").filter({ hasText: "\\(code-is-not-math\\)" })).toHaveCount(1);
     await page.keyboard.press("Escape");
     await expect(viewer).toHaveCount(0);
+
+    const imagePreview = message.locator(`[data-testid="attachment-block"][data-attachment-id="${imageItem!.id}"]`);
+    await expect(imagePreview.locator("img")).toBeVisible();
+    await imagePreview.locator("img").click();
+    const imageDialog = page.getByTestId("attachment-viewer-shell");
+    await expect(imageDialog).toHaveAttribute("aria-label", "viewer-image-fixture.png");
+    await expect(imageDialog.getByRole("img", { name: "viewer-image-fixture.png" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(imageDialog).toHaveCount(0);
   } finally {
     const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
     expect(cleanup.ok()).toBeTruthy();

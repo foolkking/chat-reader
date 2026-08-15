@@ -201,6 +201,7 @@ async function libraryNavigation(request) {
 }
 
 function offlineShellUnavailableResponse() {
+  const policy = "default-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
   const body = `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -219,7 +220,12 @@ function offlineShellUnavailableResponse() {
 </html>`;
   return new Response(body, {
     status: 503,
-    headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "1", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": policy,
+      "Retry-After": "1",
+      "Cache-Control": "no-store",
+    },
   });
 }
 

@@ -25,12 +25,20 @@ test("production responses carry the Release A security baseline", async ({ page
   const permissions = headers["permissions-policy"] ?? "";
   for (const directive of expectedPermissions) expect(permissions).toContain(directive);
 
-  const csp = headers["content-security-policy-report-only"] ?? "";
+  const csp = headers["content-security-policy"] ?? "";
   expect(csp).toContain("default-src 'self'");
+  expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
+  expect(csp).toContain("script-src-elem 'self' 'unsafe-inline'");
+  expect(csp).toContain("script-src-attr 'none'");
+  expect(csp).not.toContain("'unsafe-eval'");
+  expect(csp).toContain("worker-src 'self'");
+  expect(csp).not.toContain("worker-src 'self' blob:");
+  expect(csp).toContain("manifest-src 'self'");
+  expect(csp).toContain("frame-src 'none'");
   expect(csp).toContain("object-src 'none'");
-  expect(csp).toContain("base-uri 'self'");
+  expect(csp).toContain("base-uri 'none'");
   expect(csp).toContain("frame-ancestors 'none'");
-  expect(headers["content-security-policy"]).toBeUndefined();
+  expect(headers["content-security-policy-report-only"]).toBeUndefined();
 
   const staticResponse = await request.get("/skills/chat-reader-conversation-context-acquisition-skill.v1.md");
   expect(staticResponse.headers()["x-content-type-options"]).toBe("nosniff");
@@ -67,7 +75,7 @@ test("long-running import commit is served by the dedicated proxy at runtime", a
   expect(response.headers()["cache-control"]).toContain("no-store");
 });
 
-test("CSP remains report-only while core offline shell registration stays available", async ({ page }) => {
+test("enforced CSP keeps core offline shell registration available", async ({ page }) => {
   const cspViolations: string[] = [];
   page.on("console", (message) => {
     if (/content security policy|csp/i.test(message.text())) cspViolations.push(message.text());
@@ -78,9 +86,10 @@ test("CSP remains report-only while core offline shell registration stays availa
   expect(await page.evaluate(() => "serviceWorker" in navigator)).toBe(true);
 
   test.info().annotations.push({
-    type: "csp-report-only-observation",
+    type: "csp-enforcement-observation",
     description: cspViolations.length === 0 ? "No browser-console violations on /library." : cspViolations.join(" | ").slice(0, 1000),
   });
+  expect(cspViolations).toEqual([]);
 });
 
 test("normal production bundles do not expose the PWA negative fault bridge", async ({ page }) => {

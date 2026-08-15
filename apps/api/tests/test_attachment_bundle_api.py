@@ -347,6 +347,7 @@ def test_bundle_preview_commit_and_range_content(client, tmp_path: Path, monkeyp
     assert partial.status_code == 206
     assert partial.content == b"attachment"
     assert partial.headers["content-range"].startswith("bytes 0-9/")
+    assert partial.headers["content-security-policy"] == "default-src 'none'; sandbox"
 
     derivative_job = client.post(
         f"/api/attachments/{attachment_id}/derivatives/text_extract",
@@ -381,6 +382,7 @@ def test_bundle_preview_commit_and_range_content(client, tmp_path: Path, monkeyp
     )
     assert shared_content.status_code == 206
     assert shared_content.content == b"body\n"
+    assert shared_content.headers["content-security-policy"] == "default-src 'none'; sandbox"
 
     queued = client.post(
         f"/api/conversations/{conversation_id}/exports",

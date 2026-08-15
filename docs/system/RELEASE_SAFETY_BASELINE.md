@@ -1,5 +1,10 @@
 # Release Safety Baseline
 
+Release A introduced CSP in Report-Only mode. Release H supersedes the current
+application response mode with an evidence-derived enforcing policy; see
+`CSP_ENFORCEMENT_CONTRACT.md`. The Release A history below remains the baseline
+record and is not retroactively rewritten as enforcement evidence.
+
 Last audited: 2026-08-13
 
 This contract defines the Release A security and provenance gate. It does not change product data, Reader behavior, attachment lifecycle, Share, export formats, or offline package formats.

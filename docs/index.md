@@ -20,9 +20,10 @@
 - [Release E PWA/offline resilience contract](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md)
 - [Release F Next LTS migration contract](system/NEXT_LTS_MIGRATION_CONTRACT.md)
 - [Release G PDF.js maintained-line migration contract](system/PDFJS_MIGRATION_CONTRACT.md)
+- [Release H CSP enforcement contract](system/CSP_ENFORCEMENT_CONTRACT.md)
 - [Conversation/import/viewer test addendum](testing.md)
 
-当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-15。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-16。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 
 ## 开始这里
 
@@ -61,7 +62,7 @@
 ## Markdown 数据资产
 
 `apps/api/storage/imports/**/*.md` 与 `examples/**/*.md` 是用户导入内容或解析 fixture，不属于文档系统。不要自动改写、移动或纳入文档链接校验；详细边界见 [文档台账](documentation-inventory.md)。
-Current release contract: [Release Safety Baseline](system/RELEASE_SAFETY_BASELINE.md), covering dependency risk, production secret fail-fast, security headers, CSP Report-Only, quality gating, image inspection and artifact provenance.
+Current release contracts: [Release Safety Baseline](system/RELEASE_SAFETY_BASELINE.md) covers dependency risk, production secret fail-fast, security headers, quality gating, image inspection and artifact provenance; [CSP Enforcement Contract](system/CSP_ENFORCEMENT_CONTRACT.md) defines the current application policy, resource allowlist and browser enforcement gate.
 
 Artifact publication and cleanup contract: [Artifact Lifecycle Contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md), covering Offline/Export staging, validation, transaction boundaries, orphan semantics, bounded Import recovery and dry-run cleanup.
 

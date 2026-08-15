@@ -1,5 +1,84 @@
 # Implementation Results
 
+## Release H CSP enforcement candidate - 2026-08-16
+
+```text
+CSP_RESOURCE_INVENTORY = PASS
+CSP_POLICY_AUTHORITY = PASS
+CSP_ENFORCING_HEADER = PASS (production build)
+CSP_ENFORCING = PASS (production-equivalent candidate)
+CSP_REPORT_ONLY_SHADOW = NOT_USED
+CSP_SCRIPT_UNSAFE_EVAL = ABSENT (production)
+CSP_SCRIPT_UNSAFE_INLINE = RETAINED_WITH_EVIDENCE (script-src-elem)
+CSP_STYLE_UNSAFE_INLINE = RETAINED_WITH_EVIDENCE
+STRICT_SCRIPT_CSP_STRATEGY = CURRENT_ARCHITECTURE_CONSTRAINED
+STRICT_NONCE_CSP = DEFERRED_WITH_ARCHITECTURE_EVIDENCE
+NEXT_EXPERIMENTAL_SRI = NOT_EXECUTED
+TRUSTED_TYPES = NOT_EXECUTED
+CSP_DEFAULT_SRC = PASS
+CSP_CONNECT_SRC = PASS
+CSP_IMG_SRC = PASS
+CSP_FONT_SRC = PASS
+CSP_MEDIA_SRC = PASS
+CSP_WORKER_SRC = PASS
+CSP_MANIFEST_SRC = PASS
+CSP_OBJECT_SRC = PASS
+CSP_BASE_URI = PASS
+CSP_FRAME_ANCESTORS = PASS
+CSP_FORM_ACTION = PASS
+SERVICE_WORKER_CSP = PASS
+PDF_WORKER_CSP = PASS
+PDF_REAL_WORKER = PASS
+PDF_WASM_CSP = NOT_APPLICABLE (useWasm=false)
+KATEX_FONT_CSP = PASS
+OFFLINE_CSP = PASS
+SHARE_CSP = PASS
+CSP_EXTERNAL_SCRIPT_BLOCK = PASS
+CSP_EXTERNAL_CONNECT_BLOCK = PASS
+CSP_EXTERNAL_WORKER_BLOCK = PASS
+CSP_FRAME_EMBED_BLOCK = PASS
+CSP_INLINE_INJECTION_BLOCK = POLICY_LIMITED
+CSP_SCOPED_SKIPS = 0
+PWA_POSITIVE = PASS (72 passed / 53 unrelated conditional skipped)
+PWA_NEGATIVE_MATRIX = PASS (10 passed / 0 scoped skipped)
+PWA_SCOPED_SKIPS = 0
+BUILD_BUNDLER = WEBPACK
+TURBOPACK_MIGRATION = NOT_EXECUTED
+NEW_ALEMBIC_MIGRATION = NONE
+DEXIE_SCHEMA_MIGRATION = NONE
+OFFLINE_PACKAGE_FORMAT_CHANGE = NONE
+CSP_SERVER_REPORTING = NOT_IMPLEMENTED
+CI_RELEASE_ARTIFACT = PENDING
+PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+RELEASE_H = PARTIAL_PASS
+```
+
+The application policy is now enforcing in the production build. Its
+allowlist is tied to observed same-origin resources plus the narrow Shiki
+`'wasm-unsafe-eval'`, Mermaid data-image, and Offline/Viewer blob requirements.
+Production `'unsafe-eval'`, wildcard/scheme sources, data fonts, blob workers,
+external CDNs, duplicate Report-Only policy and a reporting endpoint are not
+present.
+
+Local Chromium proves real blocking with `4/4` scoped tests and zero skips.
+The controlled loopback origin receives no forbidden script/connect/image/
+object requests; browser events have `disposition=enforce`; a blob worker and
+cross-origin parent frame are blocked. Legitimate local/data/blob images,
+inline layout styles, manifest and Service Worker remain available. Rich
+Markdown additionally proves real Shiki tokens, KaTeX/MathML, sanitized
+`javascript:`/script payloads and zero legitimate-path CSP violations.
+
+PWA negative is `10/10` with zero scoped skips, including the new synthetic
+503 CSP assertion. Default PWA is `72/53 conditional`. Focused Reader/Rich/
+Security is `36/36`; PDF owner/Share real worker and Range are `3/3`; the
+Markdown and image unified Viewer is `1/1`; Source Editor and mutation are
+`2/2`; final Share focus is `2/2`, with a separate three-run `6/6` repeat.
+Root lint/typecheck/Next 16.3.1 Webpack build pass, full API is `280 passed / 6
+skipped`, Alembic current/head is `20260806_0021`, and dependency policy has
+zero blocked or unapproved advisories.
+The source is not yet frozen, committed, built by Actions, deployed or accepted
+in production, so Release H remains `PARTIAL_PASS`.
+
 ## Release G PDF.js maintained-line closure - 2026-08-16
 
 ```text

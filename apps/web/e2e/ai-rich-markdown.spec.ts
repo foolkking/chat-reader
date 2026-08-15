@@ -87,6 +87,13 @@ f(x)=x^2.
 普通说明 (Appendix A)、日期 (2026-08-12) 与价格 $20 不应成为公式。`;
 
 test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", async ({ page }) => {
+  await page.addInitScript(() => {
+    const runtime = window as typeof window & { __cspDirectiveViolations?: string[] };
+    runtime.__cspDirectiveViolations = [];
+    document.addEventListener("securitypolicyviolation", (event) => {
+      runtime.__cspDirectiveViolations!.push(`${event.effectiveDirective}:${event.disposition}`);
+    });
+  });
   const conversationId = await importFixture(page, RICH_MARKDOWN);
   try {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -107,7 +114,10 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
     await expect(assistant.locator("[data-footnote-ref]")).toHaveCount(1);
     await expect(assistant.locator("[data-footnote-backref]")).toHaveCount(1);
     await expect(assistant.locator("code").filter({ hasText: "\\(x^2\\)" })).toHaveCount(1);
-    await expect(assistant.locator("pre").filter({ hasText: "\\[" })).toHaveCount(1);
+    const fencedCode = assistant.locator("pre").filter({ hasText: "\\[" });
+    await expect(fencedCode).toHaveCount(1);
+    await fencedCode.scrollIntoViewIfNeeded();
+    await expect(fencedCode.locator("code > span").first()).toBeVisible();
     await expect(assistant.locator('a[href^="javascript:"]')).toHaveCount(0);
     await expect(assistant.locator('a[href="https://example.org/autolink"]')).toHaveCount(1);
     expect(await page.evaluate(() => (window as typeof window & { __richMarkdownXss?: boolean }).__richMarkdownXss)).not.toBe(true);
@@ -133,6 +143,9 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
     await page.keyboard.press("Backspace");
     await expect.poll(async () => Number(await editor.getAttribute("data-cursor-offset"))).toBe(cursorBefore);
     await expect(preview.locator(".katex-display")).toHaveCount(2);
+    expect(await page.evaluate(() => (
+      (window as typeof window & { __cspDirectiveViolations?: string[] }).__cspDirectiveViolations ?? []
+    ))).toEqual([]);
     await page.getByRole("button", { name: /Reading mode|\u9605\u8bfb\u6a21\u5f0f/ }).click();
 
     await page.setViewportSize({ width: 360, height: 800 });
@@ -148,6 +161,9 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
       fullPage: false,
       animations: "disabled",
     });
+    expect(await page.evaluate(() => (
+      (window as typeof window & { __cspDirectiveViolations?: string[] }).__cspDirectiveViolations ?? []
+    ))).toEqual([]);
   } finally {
     await page.request.delete(`/api/conversations/${conversationId}`);
   }

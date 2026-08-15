@@ -1,5 +1,43 @@
 # 生产部署
 
+## Release H CSP enforcement candidate (2026-08-16)
+
+Release H changes the Web response from Report-Only to an enforcing
+`Content-Security-Policy`. Before deployment, `RELEASE_H = PARTIAL_PASS` and
+production remains Release G.
+
+The immutable sequence is unchanged:
+
+```text
+verified Actions artifact and SHA-256
+  -> verified PostgreSQL + imports/exports/offline/assets backup
+  -> immutable API_IMAGE/WEB_IMAGE binding
+  -> Alembic current/head preflight
+  -> recreate --no-build
+  -> compare actual API/worker/migrate/Web image identities with manifest
+  -> health
+  -> raw public header and isolated-Chromium CSP acceptance
+```
+
+`LATEST_TAG_IS_NOT_RELEASE_AUTHORITY = TRUE`. Keep Release G immutable API/Web
+images and its verified backup as direct rollback. Do not run Next on King,
+overwrite production env, delete a volume, change Scanner, or use broad Docker
+pruning.
+
+Public header acceptance must inspect raw header arrays, not only a merged map.
+The application document response must have one effective enforcing policy;
+Report-Only is absent unless a future strictly narrower shadow is separately
+approved. The external gateway must not append a conflicting policy. API raw
+attachment responses keep their independent `default-src 'none'; sandbox`.
+
+After running-image identity passes, isolated Chrome must cover Library,
+Reader, Rich Markdown/Shiki/KaTeX, PDF real worker and Range, image/Markdown
+Viewer, Share, Source Editor, mutation cache, clean-profile PWA install,
+offline/reconnect and 390x844 Share focus. Legitimate-path enforced violations
+must be zero. A harmless test-only external resource attempt must be blocked by
+the deployed policy without a server-side mutation. CSP reporting remains
+browser evidence only; no public reporting endpoint is introduced.
+
 ## Release G PDF.js deployment closure (2026-08-16)
 
 Release G changes the browser PDF engine to official stable

@@ -32,6 +32,9 @@ test.describe("Release E PWA negative matrix", () => {
     const offlinePage = await context.newPage();
     const response = await offlinePage.goto("/library", { waitUntil: "domcontentloaded" });
     expect(response?.status()).toBe(503);
+    expect(response?.headers()["content-security-policy"]).toBe(
+      "default-src 'none'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    );
     await expect(offlinePage.locator("main")).toContainText(/Offline|离线/);
     await expect(offlinePage.locator("main")).toContainText(/not ready|尚未就绪|incomplete|不完整/);
     await expect(offlinePage.getByRole("link", { name: /Retry when online|重新联网后重试/ })).toBeVisible();

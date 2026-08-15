@@ -1,5 +1,19 @@
 # Markdown 文档台账
 
+2026-08-16 Release H candidate synchronization: the evidence-derived enforced
+CSP, single authority, resource graph, inline/Wasm decisions, browser violation
+harness, PWA synthetic-response policy and immutable deployment gate are
+recorded in `docs/system/CSP_ENFORCEMENT_CONTRACT.md`, `PROJECT_STATE.md`,
+`results.md`, `docs/testing.md` and `docs/deployment.md`. Production remains on
+Release G Report-Only until CI/deployment closure; `RELEASE_H = PARTIAL_PASS`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/CSP_ENFORCEMENT_CONTRACT.md` | Current contract | Application policy authority, actual resource allowlist, strictness limits, isolated response policies, test privacy, release and rollback. |
+| `apps/web/next.config.mjs` | Current runtime | One production application CSP generator and development-only eval boundary. |
+| `apps/web/e2e/csp-enforcement.spec.ts` | Current test | Production-build enforcing header, blocked forbidden resources, allowed legitimate resources and frame-ancestor proof. |
+| `apps/web/public/library-sw.js` | Current runtime | Offline shell lifecycle and independently locked-down synthetic incomplete response. |
+
 2026-08-16 Release G final synchronization: the official stable
 `pdfjs-dist 6.2.108` target, modern ESM/local-worker strategy, Range/offline
 and security boundaries, Node `22.13.1` engine requirement, verification gate

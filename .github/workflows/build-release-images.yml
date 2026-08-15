@@ -130,12 +130,18 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
 
+      - name: Release H enforced CSP browser matrix
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/csp-enforcement.spec.ts
+
       - name: Focused online browser and security checks
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           E2E_RICH_MARKDOWN: "1"
           E2E_LONG_READER: "1"
-          E2E_SHARE_DRAWER_FOCUS: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
@@ -145,7 +151,30 @@ jobs:
           e2e/attachment-viewer-presentation.spec.ts
           e2e/reader-restoration.spec.ts
           e2e/release-stabilization-contract.spec.ts
+
+      - name: Release H Share focus checks
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_SHARE_DRAWER_FOCUS: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/share-drawer-focus.spec.ts
+
+      - name: Release H Source Editor and mutation cache checks
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_MUTATION_FLOW: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/release-mutation-lifecycle.spec.ts
+
+      - name: Release H Markdown and image Viewer checks
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_RICH_MARKDOWN_ATTACHMENT: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/ai-rich-markdown-attachment.spec.ts
 
       - name: PDF.js maintained-line browser checks
         env:
