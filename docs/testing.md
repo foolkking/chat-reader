@@ -1,5 +1,36 @@
 # Testing Addendum 2026-08-09
 
+## Release D performance and capacity characterization (2026-08-15 final)
+
+The Release D workflow is an external Linux characterization run, not a
+production stress test:
+
+```text
+quality
+  -> Reader capacity (398/1k/10k x plain/math/mixed/real attachment metadata)
+  -> import/export RSS and elapsed measurements
+  -> isolated .cr v4 export/restore (current/2x/10x)
+  -> PostgreSQL EXPLAIN (ANALYZE, BUFFERS)
+  -> Release A/B/C, Rich Markdown, Reader, and default PWA regression
+```
+
+The deterministic fixture uses seed `20260814`. Attachment metadata fixtures
+use real business Attachment rows with distinct identities, one shared
+AssetObject, and current occurrences; they are reconciled through the API after
+import. API/worker RSS is sampled from Linux `/proc`, browser working set is
+measured by DOM/Playwright telemetry, and no source text is recorded. The
+quality job must pass before any characterization job starts. Conditional
+skips remain separate from pass counts.
+
+The final Actions run `31865404393` completed successfully after an unchanged
+regression rerun. Reader capacity and backend measurements passed the functional
+and bounded-working-set gates; 10k Markdown export and few-huge import are
+explicit WARNING capacity boundaries. Release D does not weaken the historical
+Reader budgets, add a migration, run large workloads on King, change the `.cr`
+format, or perform a product architecture rewrite. See [the capacity contract](system/PERFORMANCE_CAPACITY_CONTRACT.md)
+and [the dated evidence report](evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md)
+for classification and final numbers.
+
 ## Release C observability and cleanup (2026-08-14)
 
 The Release C safety suite is part of the release workflow before the API full
@@ -14,10 +45,11 @@ pytest -q tests/test_observability.py tests/test_diagnostics.py \
 
 Coverage includes UUID request IDs for success/400/404/409/500, route-template
 logging, query/header redaction, logging failure isolation, diagnostics default
-disablement and bounded queries/scans, current/active/recent/unknown/AssetObject
-protection, Offline superseded classification, dry-run, explicit apply,
-canonical/active race recheck, idempotence and partial unlink failure. Release B
-publication and bounded Import retry tests run in the same focused gate.
+disablement and bounded queries/scans, path-scoped/chunked cleanup lookups,
+current/active/recent/unknown/AssetObject protection, Offline superseded
+classification, dry-run, explicit apply, canonical/active race recheck,
+idempotence and partial unlink failure. Release B publication and bounded Import
+retry tests run in the same focused gate.
 
 Current Windows focused result is `28 passed / 1 skipped`; full API is
 `279 passed / 6 skipped`; Web lint/typecheck/production build PASS; Alembic is

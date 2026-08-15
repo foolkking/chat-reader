@@ -1,5 +1,29 @@
 # Project State
 
+## 2026-08-15 Release D performance and capacity characterization
+
+- Release D final source is `da0a79fd116b7a26e30bf2d1f57b1ff658a758f7` and
+  Actions run `31865404393` completed the quality-gated external Linux
+  characterization. Web lint/typecheck/build, API/Alembic, Reader capacity,
+  import/export RSS, `.cr v4` export/restore, PostgreSQL plans and Release A/B/C
+  regressions passed. The default PWA matrix was `67 passed / 50 skipped`;
+  conditional skips remain separate from PASS.
+- `RELEASE_D = PASS`, `PERFORMANCE_OPTIMIZATION_REQUIRED = NO`,
+  `PERFORMANCE_OPTIMIZATION_CHANGES = NONE`, `RUNTIME_CHANGES = NONE`,
+  `NEW_ALEMBIC_MIGRATION = NONE`, and `PRODUCTION_DEPLOYMENT = NOT_REQUIRED`.
+  No core Reader, Markdown/KaTeX, import, export, `.cr v4`, database or runtime
+  algorithm was changed. Large workloads ran only in the isolated Linux stack.
+- Reader working sets stayed bounded across 398/1k/10k tiers (maximum observed
+  26 mounted messages and 77 blocks); 10k is characterized-only. Short-message
+  import stayed bounded without OOM; 10k Markdown export and few-huge import
+  are documented capacity warnings. `.cr v4` current-like/2x/10x restore
+  preserved canonical row and Attachment/AssetObject identity.
+- The final evidence is in
+  `docs/evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md` and the
+  contract in `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md`. Benchmark logs and
+  artifacts were kept under `C:\Users\86182\Desktop\wkkk`; no synthetic fixture
+  entered the product bundle, PWA cache, King, or user data.
+
 ## 2026-08-15 Release C superseding production closure
 
 - Runtime source is `e58b750357d92bba314737582a94493829c038e2`, pushed to

@@ -1,5 +1,20 @@
 # Markdown 文档台账
 
+2026-08-15 Release D final synchronization: deterministic Reader/import/export/.cr
+capacity characterization, real Attachment identity fixtures, constrained-run
+methodology, query-plan evidence and the no-unnecessary-optimization decision
+are current in `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md`,
+`docs/evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md`,
+`docs/testing.md`, `PROJECT_STATE.md` and `results.md`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md` | Current | Fixture tiers, budgets, measurement privacy, capacity classes and evidence-driven optimization/index gates. |
+| `docs/evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md` | Dated evidence | Release D environment, raw aggregate results, regression status and remaining capacity debt. |
+| `.github/workflows/performance-characterization.yml` | Current workflow | Quality-gated external Linux Reader/API/.cr characterization and A/B/C regression. |
+| `apps/web/e2e/reader-capacity.spec.ts` | Current test | Three cold runs, warm revisit, bounded virtual working set, scroll and browser budget assertions. |
+| `scripts/performance/run_backend_benchmark.py` | Current harness | Deterministic import/export, real attachment identity, RSS/temp-disk and `.cr` archive measurements. |
+
 2026-08-14 Release C synchronization: request correlation, production-emitted redacted structured logging, aggregate diagnostics, storage visibility and explicit safe cleanup are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`, `docs/system/CLEANUP_CONTRACT.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/api-reference.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`. Final source `8d0ad66` is deployed; no migration or business-data cleanup is introduced.
 
 | Path | Lifecycle | Responsibility |

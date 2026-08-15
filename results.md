@@ -1,5 +1,49 @@
 # Implementation Results
 
+## Release D Performance & Capacity Characterization - 2026-08-15
+
+```text
+PERFORMANCE_ENVIRONMENT = PASS
+READER_398 = PASS
+READER_1000 = PASS
+READER_10000 = WARNING
+READER_MATH_CACHE = PASS
+READER_VIRTUALIZATION_BOUND = PASS
+READER_SCROLL_STABILITY = PASS
+MOBILE_SHARE_SINGLE_DIALOG_REGRESSION = PASS
+IMPORT_398 = PASS
+IMPORT_1000 = PASS
+IMPORT_10000 = WARNING
+IMPORT_FEW_HUGE = WARNING
+IMPORT_MEMORY_BUDGET = PASS
+EXPORT_CAPACITY = WARNING
+CR_V4_EXPORT_CAPACITY = PASS
+CR_V4_RESTORE_CAPACITY = PASS
+POSTGRES_QUERY_BASELINE = PASS
+DATABASE_INDEX_REQUIRED = NO
+WEB_BUNDLE_BASELINE = PASS
+PERFORMANCE_OPTIMIZATION_REQUIRED = NO
+PERFORMANCE_OPTIMIZATION_CHANGES = NONE
+RELEASE_A_REGRESSION = PASS
+RELEASE_B_REGRESSION = PASS
+RELEASE_C_REGRESSION = PASS
+NEW_ALEMBIC_MIGRATION = NONE
+RUNTIME_CHANGES = NONE
+PRODUCTION_DEPLOYMENT = NOT_REQUIRED
+RELEASE_D = PASS
+```
+
+The final source was `da0a79fd116b7a26e30bf2d1f57b1ff658a758f7` and Actions run
+`31865404393`. The final run used a deterministic seed/version in an isolated
+Linux/PostgreSQL/Chromium stack. Reader virtualization stayed bounded at 398,
+1k and 10k; no OOM, data-integrity failure, blank window or page overflow was
+observed. The 10k and few-huge warnings are capacity boundaries, not normal UX
+guarantees. No core algorithm or runtime image changed, so no deployment was
+performed. Exact math cache hit/miss is not derivable from the current
+test-only probe; the bounded working-set and frame/long-task budgets passed.
+The 10k Markdown export warning and few-huge import warning are detailed in the
+dated evidence report.
+
 ## Release C superseding production closure - 2026-08-15
 
 ```text
