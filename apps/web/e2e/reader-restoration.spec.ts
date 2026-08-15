@@ -147,6 +147,16 @@ test("scrollbar pointer drag defers edge-window growth until pointer release", a
     edgeRequests += 1;
     await route.continue();
   });
+  await scrollRoot.evaluate((root) => {
+    root.setAttribute("data-test-next-loading-count", "0");
+    const observer = new MutationObserver(() => {
+      if (root.getAttribute("data-reader-edge-stage") !== "next:loading") return;
+      const current = Number.parseInt(root.getAttribute("data-test-next-loading-count") ?? "0", 10);
+      root.setAttribute("data-test-next-loading-count", String(current + 1));
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["data-reader-edge-stage"] });
+    (root as HTMLElement & { __readerEdgeTestObserver?: MutationObserver }).__readerEdgeTestObserver = observer;
+  });
 
   await scrollRoot.evaluate((root) => {
     root.scrollTop = Math.max(0, root.scrollHeight - root.clientHeight - 320);
@@ -161,10 +171,16 @@ test("scrollbar pointer drag defers edge-window growth until pointer release", a
   });
   await page.waitForTimeout(250);
   expect(edgeRequests).toBe(0);
+  await expect(scrollRoot).toHaveAttribute("data-test-next-loading-count", "0");
 
   await page.mouse.up();
   await expect(scrollRoot).not.toHaveAttribute("data-reader-pointer-dragging", "true");
-  await expect.poll(() => edgeRequests, { timeout: 5_000 }).toBe(1);
+  await expect.poll(() => edgeRequests, { timeout: 5_000 }).toBeGreaterThan(0);
+  await expect(scrollRoot).toHaveAttribute("data-reader-edge-stage", "next:settled");
+  await expect(scrollRoot).toHaveAttribute("data-test-next-loading-count", "1");
+  await scrollRoot.evaluate((root) => {
+    (root as HTMLElement & { __readerEdgeTestObserver?: MutationObserver }).__readerEdgeTestObserver?.disconnect();
+  });
   await page.unroute("**/api/conversations/*/reader-turn*");
 });
 
