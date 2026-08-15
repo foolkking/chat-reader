@@ -190,6 +190,20 @@ MathML, GFM, security, Viewer, Share, mutation and PWA baseline regressions
 passed. Conditional PWA negative scenarios remain outside this characterization
 and are not promoted to PASS.
 
+The production build bundle summary was also captured before the capacity jobs:
+
+| Route | Route size | First Load JS |
+| --- | ---: | ---: |
+| `/conversations/[conversationId]` | 222 B | 730 kB |
+| `/library` | 11.6 kB | 741 kB |
+| `/offline` | 951 B | 344 kB |
+| `/share/[token]` | 8.1 kB | 414 kB |
+| Shared by all | - | 93.2 kB |
+
+This is a characterization snapshot, not a new bundle budget. PDF.js/Mermaid
+and the Reader route remain subject to their existing lazy-loading and
+regression contracts; no bundling change was made.
+
 ### Answers to the ten capacity questions
 
 1. 398 and 1k Reader workloads are bounded and pass; 10k remains usable in the
