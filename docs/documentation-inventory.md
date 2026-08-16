@@ -5,8 +5,9 @@ idle/busy/stale/unavailable derivation, loopback-only internal diagnostics,
 public Nginx concealment, no-store/privacy rules and Alembic `20260816_0022`
 are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`,
 `docs/api-reference.md`, `docs/development.md`, `docs/testing.md`,
-`docs/deployment.md` and `results.md`. Production enablement remains pending
-exact-SHA release and acceptance.
+`docs/deployment.md` and `results.md`. Production closure is PASS: exact-SHA
+run `31948357231`, immutable artifact `9264075894`, protected public denial,
+operator loopback access and idle/busy worker evidence are recorded there.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |

@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## Release L observability verification (2026-08-16)
+## Release L observability verification and production closure (2026-08-16)
 
 The deterministic focused gate is:
 
@@ -24,6 +24,21 @@ suite against that isolated final-head database is `303 passed / 6 skipped`.
 An initial full run used the unrelated local default database at 0021 and had
 one migration-current environment failure; no shared/default database was
 migrated, and the explicit isolated rerun is the release evidence.
+
+Production closure used Actions run `31948357231` and immutable artifact
+`9264075894` from source `baca93bdf6f2965c4f5614e296c12d337efc1a0a`.
+The API/worker image ID was
+`sha256:818c37bc703344ff6ce291c79a805832ad6ab4f24433323c6193622b24857395`
+and the Web image ID was
+`sha256:83ee77cc5b7b69b90fda804555f6eb3803063491f34aa19f4db50df968ae39a8`.
+Production diagnostics returned `alive_idle` with a recent heartbeat through
+the SSH plus API-container loopback boundary; a disposable product QA rebuild
+observed `alive_busy` and then `alive_idle`. Public diagnostics returned a
+concealed 404 with `Cache-Control: no-store` and `nosniff`. Response inspection
+found no message, attachment, token, credential, payload or full-path fields.
+The QA conversation was deleted through the product API. Production health,
+Alembic head/current, image identity and post-deploy API/worker error counts
+all passed.
 
 ## Release K residual production verification (2026-08-16)
 

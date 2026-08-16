@@ -2,7 +2,7 @@
 
 ## Release L protected diagnostics and worker liveness
 
-Release L changes the API/worker image, adds Alembic `20260816_0022` and adds a
+Release L is deployed and changes the API/worker image, adds Alembic `20260816_0022` and adds a
 versioned Nginx diagnostics-concealment fragment. The Web runtime is unchanged,
 but all services must still be bound to the exact CI manifest images.
 
@@ -27,6 +27,20 @@ add a public operator token, build on King or use `latest` as release authority.
 The authorized read-only command runs inside the API container; the public path
 must remain denied independently. Stale/recovery is tested deterministically in
 the isolated suite and must not be induced by killing the production worker.
+
+Production closure evidence (2026-08-16): source
+`baca93bdf6f2965c4f5614e296c12d337efc1a0a`, Actions run `31948357231`, artifact
+`9264075894`, API/worker ID
+`sha256:818c37bc703344ff6ce291c79a805832ad6ab4f24433323c6193622b24857395`,
+Web ID
+`sha256:83ee77cc5b7b69b90fda804555f6eb3803063491f34aa19f4db50df968ae39a8`.
+The pre-deploy backup at
+`/opt/chat-reader/backups/release-l-predeploy-20260816T131149Z-baca93b`
+passed restore/archive listings and SHA256 verification. Production
+`20260816_0022` is head/current, public health is 200, public diagnostics is
+denied, and operator diagnostics is available only through SSH public-key plus
+API-container loopback. Idle and busy worker states were observed with a
+disposable QA job and the QA conversation was removed through the product API.
 
 ## Release J cleanup first-apply closure (2026-08-16)
 

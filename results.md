@@ -1,9 +1,9 @@
 # Implementation Results
 
-## Release L observability candidate - 2026-08-16
+## Release L final closure - 2026-08-16
 
 ```text
-RELEASE_L = IN_PROGRESS
+RELEASE_L = PASS
 WORKER_HEARTBEAT_IMPLEMENTATION = LOCAL_PASS
 HEARTBEAT_INTERVAL = 30 seconds
 STALE_THRESHOLD = 120 seconds
@@ -24,8 +24,23 @@ WEB_PRODUCTION_BUILD = PASS / Next 16.3.1 / Webpack
 DEPENDENCY_POLICY = PASS
 SECURITY_HIGH_CRITICAL = 0 / 0
 FINAL_SOURCE_FROZEN = TRUE
-PRODUCTION_DEPLOYMENT = PENDING
-PRODUCTION_ACCEPTANCE = PENDING
+PRODUCTION_DEPLOYMENT = PASS
+PRODUCTION_ACCEPTANCE = PASS
+RUNTIME_SOURCE_COMMIT = baca93bdf6f2965c4f5614e296c12d337efc1a0a
+PUSHED_SHA = baca93bdf6f2965c4f5614e296c12d337efc1a0a
+CI_RUN = 31948357231 / PASS / exact SHA
+IMMUTABLE_ARTIFACT = 9264075894 / archive SHA 2bb24e92d50ea38fd7fa22ccae68bae90e3bafa7f9649402fcc68811a26e4d89
+API_IMAGE_ID = sha256:818c37bc703344ff6ce291c79a805832ad6ab4f24433323c6193622b24857395
+WEB_IMAGE_ID = sha256:83ee77cc5b7b69b90fda804555f6eb3803063491f34aa19f4db50df968ae39a8
+PUBLIC_HEALTH = 200
+PUBLIC_DIAGNOSTICS = DENIED / 404 / no-store
+AUTHORIZED_OPERATOR_DIAGNOSTICS = PASS / SSH + API-container loopback
+PRODUCTION_WORKER_ALIVE_IDLE = PASS
+PRODUCTION_WORKER_ALIVE_BUSY = PASS
+PRODUCTION_WORKER_BUSY_TO_IDLE = PASS
+DIAGNOSTICS_PRIVACY_FORBIDDEN_KEYS = 0
+ALEMBIC_PRODUCTION = 20260816_0022 / head=current
+QA_CLEANUP = PASS / product API
 READY_FOR_RELEASE_M = NO
 ```
 
@@ -33,8 +48,8 @@ Worker liveness is committed before a separate best-effort task heartbeat, so
 task-row update failure cannot erase process liveness. Instance fencing stops a
 replaced worker from claiming more work. Diagnostics exposes only aggregate
 state and applies `no-store`, request correlation and content minimization.
-Public and authorized production access remain pending until exact-SHA CI,
-gateway installation and immutable deployment complete.
+Public denial and authorized operator access are now verified on the exact
+immutable deployment; no API/worker error log lines were observed post-deploy.
 
 ## Release K residual production verification closure - 2026-08-16
 

@@ -3180,37 +3180,49 @@ NEXT_RELEASE = RELEASE_L_NOT_STARTED
 # Release L Execution Ledger
 
 ```text
-RELEASE_L_STATUS = IN_PROGRESS
-CURRENT_CHECKPOINT = LOCAL_GATES_COMPLETE_RELEASE_AUTHORITY_PENDING
+RELEASE_L_STATUS = PASS
+CURRENT_CHECKPOINT = PRODUCTION_ACCEPTANCE_COMPLETE
 READY_FOR_RELEASE_M = NO
 FINAL_SOURCE_FROZEN = TRUE
 PRODUCTION_RUNTIME_SOURCE_BEFORE = 7bcd686b59d62fb9907ba09d644637b7af2b3d86
 REPOSITORY_HEAD_BEFORE_L = 60fbdb91836dc6f327d6864a66ff39596f281f93
+RUNTIME_SOURCE_COMMIT = baca93bdf6f2965c4f5614e296c12d337efc1a0a
+PUSHED_SHA = baca93bdf6f2965c4f5614e296c12d337efc1a0a
+CI_RUN = 31948357231
+ARTIFACT_ID = 9264075894
+PRODUCTION_RUNTIME_SOURCE = baca93bdf6f2965c4f5614e296c12d337efc1a0a
 ```
 
 ## Scope
 
 - [x] Preserve the externally modified main worktree through an isolated Release L worktree.
 - [x] Reconcile Release K repository and production authority.
-- [ ] L-001: establish worker-owned idle/busy heartbeat and deterministic stale/recovery evidence.
-- [ ] L-002: protect production diagnostics with real operator authorization and public denial.
+- [x] L-001: establish worker-owned idle/busy heartbeat and deterministic stale/recovery evidence.
+- [x] L-002: protect production diagnostics with real operator authorization and public denial.
 - [x] Implement and deterministically test worker-owned idle/busy heartbeat, stale/recovery and long-job continuity.
 - [x] Implement loopback-only diagnostics with versioned public Nginx concealment.
 - [x] Verify diagnostics minimization, no-store policy, request correlation and log redaction locally.
 - [x] Run focused API, migration and full API gates on the final backend source.
 - [x] Run Web lint/typecheck/Next 16.3.1 Webpack build and dependency/security policy.
-- [ ] Commit, push, run exact-SHA CI, package immutable images and deploy production.
-- [ ] Verify production idle/busy diagnostics, public denial, operator access and running identity.
-- [ ] Synchronize current-state documentation and close Release L.
+- [x] Commit, push, run exact-SHA CI, package immutable images and deploy production.
+- [x] Verify production idle/busy diagnostics, public denial, operator access and running identity.
+- [x] Synchronize current-state documentation and close Release L.
 
 ## Open Debt
 
 ```text
-L-001_WORKER_IDLE_HEARTBEAT = IN_PROGRESS
-L-002_PROTECTED_INTERNAL_DIAGNOSTICS = IN_PROGRESS
+L-001_WORKER_IDLE_HEARTBEAT = PASS
+L-002_PROTECTED_INTERNAL_DIAGNOSTICS = ENABLED_PROTECTED
+PRODUCTION_WORKER_ALIVE_IDLE = PASS
+PRODUCTION_WORKER_ALIVE_BUSY = PASS
+PRODUCTION_WORKER_BUSY_TO_IDLE = PASS
+PUBLIC_DIAGNOSTICS_ACCESS = DENIED
+AUTHORIZED_OPERATOR_DIAGNOSTICS = PASS
+DIAGNOSTICS_SENSITIVE_DATA_EXPOSURE = 0
 KNOWN_PRODUCT_DEFECT = 0
 UNRESOLVED_BLOCKER = NONE
-NEXT_RELEASE = RELEASE_M_NOT_STARTED
+NEXT_RELEASE = RELEASE_M
+RELEASE_M = NOT_STARTED
 ```
 
 ## Tasks

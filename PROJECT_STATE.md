@@ -1,11 +1,12 @@
 # Project State
 
-## 2026-08-16 Release L implementation candidate
+## 2026-08-16 Release L final closure
 
-- `RELEASE_L = IN_PROGRESS`; Release K remains `PASS`. Runtime work is isolated
-  from the externally modified main worktree. Production still runs Release I
-  source `7bcd686b59d62fb9907ba09d644637b7af2b3d86` until exact-SHA Release L
-  images and the protected gateway fragment pass CI and deployment.
+- `RELEASE_L = PASS`; Release K remains `PASS` and Release M is not started.
+  Runtime work was committed and pushed from an isolated worktree, preserving
+  the externally modified main worktree. Production now runs exact source
+  `baca93bdf6f2965c4f5614e296c12d337efc1a0a` from Actions run `31948357231`
+  and immutable artifact `9264075894`.
 - The single worker now emits a worker-owned heartbeat independent of job
   traffic: immediate startup registration, 30-second idle/busy pulses and a
   120-second stale threshold. A background publisher continues during long
@@ -27,8 +28,19 @@
   verification pass. Focused observability/liveness is `27 passed`; full API is
   `303 passed / 6 skipped` against the isolated final-head database. Web lint,
   typecheck, Next `16.3.1` Webpack build and dependency policy pass with zero
-  high/critical findings. Production backup, deployment and acceptance are
-  pending.
+  high/critical findings. Production backup
+  `/opt/chat-reader/backups/release-l-predeploy-20260816T131149Z-baca93b`
+  passed PostgreSQL restore-listing, five archive listings and six SHA256
+  checks. API/worker use image
+  `sha256:818c37bc703344ff6ce291c79a805832ad6ab4f24433323c6193622b24857395`;
+  Web uses image
+  `sha256:83ee77cc5b7b69b90fda804555f6eb3803063491f34aa19f4db50df968ae39a8`.
+  Production Alembic is `20260816_0022` at head/current. Public health is 200;
+  public diagnostics is denied; SSH public-key plus API-container loopback
+  diagnostics returned `alive_idle`, while a disposable product QA rebuild
+  observed `alive_busy` and returned to idle before product-API cleanup. No
+  sensitive diagnostics fields or post-deploy API/worker error log lines were
+  observed.
 
 ## 2026-08-16 Release K residual production verification closure
 
