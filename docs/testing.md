@@ -1,5 +1,30 @@
 # Testing Addendum 2026-08-09
 
+## Release L observability verification (2026-08-16)
+
+The deterministic focused gate is:
+
+```text
+cd apps/api
+python -m pytest -q tests/test_worker_liveness.py \
+  tests/test_diagnostics.py tests/test_observability.py tests/test_health.py
+```
+
+Current result: `27 passed`. The matrix controls timestamps and thread/event
+barriers rather than waiting for wall-clock stale intervals. It covers recent
+idle, busy, stale, unavailable, restart recovery, old-instance fencing, both
+task families, blocked long-job pulses, task-heartbeat failure isolation,
+privacy, public denial, loopback authorization, no-store headers, request IDs
+and Scanner-disabled semantics.
+
+The final migration was applied to an isolated PostgreSQL 16 environment,
+downgraded to `20260806_0021`, upgraded again, and verified at single
+head/current `20260816_0022`. Migration integrity is `3 passed`. The full API
+suite against that isolated final-head database is `303 passed / 6 skipped`.
+An initial full run used the unrelated local default database at 0021 and had
+one migration-current environment failure; no shared/default database was
+migrated, and the explicit isolated rerun is the release evidence.
+
 ## Release K residual production verification (2026-08-16)
 
 Release K retained the reconciled 40-item inventory and executed only its seven

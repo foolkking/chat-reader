@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     import_commit_inline: bool = Field(default=False, alias="IMPORT_COMMIT_INLINE")
     import_worker_poll_seconds: float = Field(default=1.0, alias="IMPORT_WORKER_POLL_SECONDS")
     import_stale_after_seconds: int = Field(default=300, alias="IMPORT_STALE_AFTER_SECONDS")
+    worker_heartbeat_interval_seconds: float = Field(default=30.0, alias="WORKER_HEARTBEAT_INTERVAL_SECONDS", ge=1)
+    worker_heartbeat_stale_after_seconds: int = Field(default=120, alias="WORKER_HEARTBEAT_STALE_AFTER_SECONDS", ge=3)
     import_draft_ttl_hours: int = Field(default=24, alias="IMPORT_DRAFT_TTL_HOURS")
     enable_internal_diagnostics: bool = Field(default=False, alias="ENABLE_INTERNAL_DIAGNOSTICS")
     artifact_cleanup_grace_hours: int = Field(default=24, alias="ARTIFACT_CLEANUP_GRACE_HOURS", ge=1)
@@ -94,6 +96,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def reject_unsafe_production_attachment_cursor_secret(self) -> "Settings":
+        if self.worker_heartbeat_stale_after_seconds < self.worker_heartbeat_interval_seconds * 3:
+            raise ValueError(
+                "WORKER_HEARTBEAT_STALE_AFTER_SECONDS must allow at least three heartbeat intervals."
+            )
         if self.app_env.strip().casefold() not in {"production", "prod"}:
             return self
 

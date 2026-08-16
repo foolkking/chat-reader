@@ -1,5 +1,33 @@
 # 生产部署
 
+## Release L protected diagnostics and worker liveness
+
+Release L changes the API/worker image, adds Alembic `20260816_0022` and adds a
+versioned Nginx diagnostics-concealment fragment. The Web runtime is unchanged,
+but all services must still be bound to the exact CI manifest images.
+
+Deployment order is security-sensitive:
+
+```text
+verify exact source/CI/artifact identity
+  -> back up PostgreSQL + imports/exports/offline/assets + Nginx config
+  -> install versioned diagnostics gateway fragment
+  -> nginx -t and reload
+  -> prove public diagnostics returns non-cacheable 404
+  -> run migration with the exact immutable API image
+  -> set ENABLE_INTERNAL_DIAGNOSTICS=true without exposing other env values
+  -> recreate API/worker/Web with --no-build
+  -> verify running image IDs and Alembic current=head
+  -> query diagnostics through SSH + API-container loopback
+  -> verify public denial, idle/busy state, privacy, health and logs
+```
+
+Do not expose the API port publicly, proxy the diagnostics path through Next.js,
+add a public operator token, build on King or use `latest` as release authority.
+The authorized read-only command runs inside the API container; the public path
+must remain denied independently. Stale/recovery is tested deterministically in
+the isolated suite and must not be induced by killing the production worker.
+
 ## Release J cleanup first-apply closure (2026-08-16)
 
 Release J is an operations/evidence closure. It does not change runtime source,

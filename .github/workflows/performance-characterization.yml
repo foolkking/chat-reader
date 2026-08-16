@@ -73,8 +73,8 @@ jobs:
       - name: Alembic single head
         run: |
           cd apps/api
-          test "$(python -m alembic heads)" = "20260806_0021 (head)"
-          python -m alembic current | grep -F "20260806_0021 (head)"
+          test "$(python -m alembic heads)" = "20260816_0022 (head)"
+          python -m alembic current | grep -F "20260816_0022 (head)"
 
   benchmark:
     needs: quality

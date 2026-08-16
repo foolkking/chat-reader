@@ -1,5 +1,41 @@
 # Implementation Results
 
+## Release L observability candidate - 2026-08-16
+
+```text
+RELEASE_L = IN_PROGRESS
+WORKER_HEARTBEAT_IMPLEMENTATION = LOCAL_PASS
+HEARTBEAT_INTERVAL = 30 seconds
+STALE_THRESHOLD = 120 seconds
+WORKER_ALIVE_IDLE = DETERMINISTIC_TEST_PASS
+WORKER_ALIVE_BUSY = DETERMINISTIC_TEST_PASS
+WORKER_STALE_DETECTION = DETERMINISTIC_TEST_PASS
+WORKER_RECOVERY = DETERMINISTIC_TEST_PASS
+LONG_JOB_FALSE_STALE = 0 / EVENT_BARRIER_TEST
+INTERNAL_DIAGNOSTICS_IMPLEMENTATION = LOCAL_PASS
+PUBLIC_GATEWAY_POLICY = VERSIONED_CONCEALED_404
+AUTHORIZED_OPERATOR_PATH = SSH + API_CONTAINER_LOOPBACK
+ALEMBIC_HEAD_CURRENT_ISOLATED = 20260816_0022
+FOCUSED_TESTS = 27 passed
+API_FULL_SUITE = 303 passed / 6 skipped
+WEB_LINT = PASS
+WEB_TYPECHECK = PASS
+WEB_PRODUCTION_BUILD = PASS / Next 16.3.1 / Webpack
+DEPENDENCY_POLICY = PASS
+SECURITY_HIGH_CRITICAL = 0 / 0
+FINAL_SOURCE_FROZEN = TRUE
+PRODUCTION_DEPLOYMENT = PENDING
+PRODUCTION_ACCEPTANCE = PENDING
+READY_FOR_RELEASE_M = NO
+```
+
+Worker liveness is committed before a separate best-effort task heartbeat, so
+task-row update failure cannot erase process liveness. Instance fencing stops a
+replaced worker from claiming more work. Diagnostics exposes only aggregate
+state and applies `no-store`, request correlation and content minimization.
+Public and authorized production access remain pending until exact-SHA CI,
+gateway installation and immutable deployment complete.
+
 ## Release K residual production verification closure - 2026-08-16
 
 ```text

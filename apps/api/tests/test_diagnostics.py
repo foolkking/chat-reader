@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -12,8 +13,13 @@ from app.core.database import get_db
 from app.main import app
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
+from app.models.worker_runtime_state import WorkerRuntimeState
 from app.services.diagnostics import storage_usage
 from test_import_preview_api import client  # noqa: F401
+
+
+def _operator_client() -> TestClient:
+    return TestClient(app, client=("127.0.0.1", 50000))
 
 
 def test_internal_diagnostics_disabled_by_default(client: TestClient, monkeypatch) -> None:
@@ -21,6 +27,19 @@ def test_internal_diagnostics_disabled_by_default(client: TestClient, monkeypatc
     get_settings.cache_clear()
     response = client.get("/api/internal/diagnostics")
     assert response.status_code == 404
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+
+def test_internal_diagnostics_enabled_still_denies_non_loopback_client(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("ENABLE_INTERNAL_DIAGNOSTICS", "true")
+    get_settings.cache_clear()
+    response = client.get("/api/internal/diagnostics")
+    assert response.status_code == 404
+    assert response.headers["Cache-Control"] == "no-store"
 
 
 def test_internal_diagnostics_returns_bounded_aggregates_without_sensitive_content(
@@ -79,25 +98,67 @@ def test_internal_diagnostics_returns_bounded_aggregates_without_sensitive_conte
 
     event.listen(engine, "before_cursor_execute", record_statement)
     try:
-        response = client.get("/api/internal/diagnostics")
+        response = _operator_client().get("/api/internal/diagnostics")
     finally:
         event.remove(engine, "before_cursor_execute", record_statement)
         db.close()
         generator.close()
     assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Pragma"] == "no-cache"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Robots-Tag"] == "noindex, noarchive"
+    assert response.headers["X-Request-ID"]
     payload = response.json()
     assert payload["jobs"]["status_counts"]["queued"] == 1
     assert payload["imports"]["retry_exhausted"] == 1
     assert payload["storage"]["assets"]["file_count"] == 1
     assert payload["artifacts"]["cleanup_scan_complete"] is True
+    assert payload["system"]["scanner"] == "disabled"
     serialized = json.dumps(payload)
     assert "sensitive-filename" not in serialized
     assert "private conversation content" not in serialized
     assert "private-name.json" not in serialized
     assert "storage_uri" not in serialized
     assert "token" not in serialized.casefold()
+    assert "instance_id" not in serialized
+    assert "job_id" not in serialized
     assert len(statements) <= 24
     assert not any("messages" in statement.casefold() for statement in statements)
+
+
+def test_diagnostics_reports_recent_idle_worker_without_recent_job_activity(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("ENABLE_INTERNAL_DIAGNOSTICS", "true")
+    get_settings.cache_clear()
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        now = datetime.now(timezone.utc)
+        db.add(
+            WorkerRuntimeState(
+                worker_key="primary",
+                instance_id=uuid.uuid4(),
+                state="idle",
+                task_kind=None,
+                started_at=now - timedelta(hours=2),
+                heartbeat_at=now,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+        generator.close()
+
+    response = _operator_client().get("/api/internal/diagnostics")
+    assert response.status_code == 200
+    system = response.json()["system"]
+    assert system["worker_state"] == "alive_idle"
+    assert system["worker_processing_task_count"] == 0
+    assert system["worker_active_task_kind"] is None
 
 
 def test_health_remains_separate_from_diagnostics(client: TestClient) -> None:
@@ -111,3 +172,17 @@ def test_storage_usage_stops_at_the_configured_entry_budget(tmp_path: Path) -> N
         (tmp_path / f"file-{index}.bin").write_bytes(b"x")
     result = storage_usage(tmp_path, max_entries=3)
     assert result == {"file_count": 3, "bytes": 3, "complete": False}
+
+
+def test_public_gateway_configuration_conceals_internal_diagnostics() -> None:
+    root = Path(__file__).parents[3]
+    fragment = (root / "deploy" / "nginx-internal-diagnostics.location.conf").read_text(encoding="utf-8")
+    nginx = (root / "deploy" / "nginx-chat-reader.conf").read_text(encoding="utf-8")
+    compose = (root / "docker-compose.production.yml").read_text(encoding="utf-8")
+    assert "location ^~ /api/internal/diagnostics" in fragment
+    assert "return 404;" in fragment
+    assert "no-store" in fragment
+    assert "proxy_pass" not in fragment
+    assert "include /etc/nginx/snippets/chat-reader-internal-diagnostics.conf;" in nginx
+    assert 'expose:\n      - "8000"' in compose.replace("\r\n", "\n")
+    assert 'ports:\n      - "8000' not in compose.replace("\r\n", "\n")

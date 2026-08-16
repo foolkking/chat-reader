@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -13,6 +13,7 @@ from app.models.background_job import BackgroundJob
 from app.models.export_artifact import ExportArtifact
 from app.models.import_record import ImportRecord
 from app.models.offline_package_artifact import OfflinePackageArtifact
+from app.models.worker_runtime_state import WorkerRuntimeState
 from app.services.artifact_lifecycle import scan_cleanup_candidates
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 
@@ -32,8 +33,7 @@ def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None
         db.query(func.count(BackgroundJob.id))
         .filter(
             BackgroundJob.status.in_(("processing", "cancelling")),
-            BackgroundJob.heartbeat_at.is_not(None),
-            BackgroundJob.heartbeat_at < job_stale_cutoff,
+            or_(BackgroundJob.heartbeat_at.is_(None), BackgroundJob.heartbeat_at < job_stale_cutoff),
         )
         .scalar()
         or 0
@@ -42,8 +42,7 @@ def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None
         db.query(func.count(ImportRecord.id))
         .filter(
             ImportRecord.status == "processing",
-            ImportRecord.heartbeat_at.is_not(None),
-            ImportRecord.heartbeat_at < job_stale_cutoff,
+            or_(ImportRecord.heartbeat_at.is_(None), ImportRecord.heartbeat_at < job_stale_cutoff),
         )
         .scalar()
         or 0
@@ -64,6 +63,16 @@ def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None
     oldest_import = db.query(func.min(ImportRecord.queued_at)).filter(ImportRecord.status == "queued").scalar()
     last_job_heartbeat = db.query(func.max(BackgroundJob.heartbeat_at)).scalar()
     last_import_heartbeat = db.query(func.max(ImportRecord.heartbeat_at)).scalar()
+    worker_row = db.get(WorkerRuntimeState, "primary")
+    active_job_count = int(job_statuses.get("processing", 0) + job_statuses.get("cancelling", 0))
+    active_import_count = int(import_statuses.get("processing", 0))
+    worker = worker_status(
+        worker_row,
+        now=now,
+        stale_after_seconds=settings.worker_heartbeat_stale_after_seconds,
+        active_job_count=active_job_count,
+        active_import_count=active_import_count,
+    )
 
     timing_rows = (
         db.query(BackgroundJob.queued_at, BackgroundJob.started_at, BackgroundJob.completed_at)
@@ -124,13 +133,53 @@ def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None
         },
         "storage": storage,
         "system": {
-            "worker_state": "processing" if job_statuses.get("processing", 0) or import_statuses.get("processing", 0) else "idle_or_unknown",
+            "worker_state": worker["status"],
+            "worker_heartbeat_at": worker["heartbeat_at"],
+            "worker_heartbeat_age_seconds": worker["heartbeat_age_seconds"],
+            "worker_processing_task_count": worker["processing_task_count"],
+            "worker_active_task_kind": worker["active_task_kind"],
             "last_task_heartbeat_age_seconds": _age_seconds(
                 now,
                 max(filter(None, (last_job_heartbeat, last_import_heartbeat)), default=None),
             ),
             "scanner": settings.attachment_scanner,
         },
+    }
+
+
+def worker_status(
+    row: WorkerRuntimeState | None,
+    *,
+    now: datetime,
+    stale_after_seconds: int,
+    active_job_count: int,
+    active_import_count: int,
+) -> dict[str, Any]:
+    processing_task_count = active_job_count + active_import_count
+    if row is None:
+        return {
+            "status": "unavailable",
+            "heartbeat_at": None,
+            "heartbeat_age_seconds": None,
+            "processing_task_count": processing_task_count,
+            "active_task_kind": None,
+        }
+    heartbeat_age = _age_seconds(now, row.heartbeat_at)
+    if heartbeat_age is None or heartbeat_age >= stale_after_seconds:
+        status = "stale"
+        active_task_kind = None
+    elif row.state == "busy":
+        status = "alive_busy"
+        active_task_kind = row.task_kind
+    else:
+        status = "alive_idle"
+        active_task_kind = None
+    return {
+        "status": status,
+        "heartbeat_at": _utc(row.heartbeat_at).isoformat(),
+        "heartbeat_age_seconds": heartbeat_age,
+        "processing_task_count": processing_task_count,
+        "active_task_kind": active_task_kind,
     }
 
 

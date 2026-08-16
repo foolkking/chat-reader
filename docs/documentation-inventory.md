@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+2026-08-16 Release L synchronization: independent single-worker heartbeat,
+idle/busy/stale/unavailable derivation, loopback-only internal diagnostics,
+public Nginx concealment, no-store/privacy rules and Alembic `20260816_0022`
+are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`,
+`docs/api-reference.md`, `docs/development.md`, `docs/testing.md`,
+`docs/deployment.md` and `results.md`. Production enablement remains pending
+exact-SHA release and acceptance.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `apps/api/app/services/worker_liveness.py` | Current runtime | Worker-owned periodic liveness and separately committed active-task refresh. |
+| `apps/api/app/models/worker_runtime_state.py` | Current runtime | Payload-free singleton worker process state. |
+| `apps/api/alembic/versions/20260816_0022_worker_runtime_state.py` | Current migration | Backward-safe operational heartbeat table. |
+| `deploy/nginx-internal-diagnostics.location.conf` | Current deployment config | Public diagnostics concealment and non-cacheability. |
+| `apps/api/tests/test_worker_liveness.py` | Current test | Idle/busy/stale/recovery, fencing, failure isolation and long-task coverage. |
+| `apps/api/tests/test_diagnostics.py` | Current test | Protected access, aggregates, privacy, headers and query/storage bounds. |
+
 2026-08-16 Release J final synchronization: the first bounded production
 cleanup apply, exact candidate authority, 24-hour grace, per-object recheck,
 idempotency, canonical zero-deletion evidence and protected post-publication QA

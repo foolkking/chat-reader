@@ -30,8 +30,8 @@ def test_alembic_current_matches_repository_head() -> None:
         capture_output=True,
         check=True,
     )
-    assert "20260806_0021" in current.stdout
-    assert heads.stdout.strip() == "20260806_0021 (head)"
+    assert "20260816_0022" in current.stdout
+    assert heads.stdout.strip() == "20260816_0022 (head)"
 
 
 def test_latest_migration_has_upgrade_and_downgrade() -> None:

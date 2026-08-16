@@ -28,7 +28,7 @@ python -m alembic heads
 Set-Location ../..
 ```
 
-`alembic heads` 应只有一个结果。当前源码 head 是 `20260806_0021`。
+`alembic heads` 应只有一个结果。当前源码 head 是 `20260816_0022`。
 
 ## 环境变量
 
@@ -48,6 +48,9 @@ Set-Location ../..
 | `IMPORT_COMMIT_INLINE` | 测试/调试时内联 commit | 默认关闭 |
 | `IMPORT_WORKER_POLL_SECONDS` | worker 轮询间隔 | 1 秒 |
 | `IMPORT_STALE_AFTER_SECONDS` | stale job 判定 | 300 秒 |
+| `WORKER_HEARTBEAT_INTERVAL_SECONDS` | worker-owned liveness publish interval | 30 seconds |
+| `WORKER_HEARTBEAT_STALE_AFTER_SECONDS` | worker stale threshold; at least 3x interval | 120 seconds |
+| `ENABLE_INTERNAL_DIAGNOSTICS` | loopback-only aggregate diagnostics feature flag | false |
 
 不要把真实凭据或生产 URL 提交到仓库；示例只维护变量名和无敏感默认值。
 

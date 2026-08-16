@@ -82,6 +82,7 @@ jobs:
           cd apps/api && pytest -q
           tests/test_observability.py
           tests/test_diagnostics.py
+          tests/test_worker_liveness.py
           tests/test_artifact_lifecycle.py
           tests/test_cleanup_execution.py
           tests/test_artifact_transaction_boundary.py
@@ -93,8 +94,8 @@ jobs:
       - name: Alembic single-head and current validation
         run: |
           cd apps/api
-          test "$(python -m alembic heads)" = "20260806_0021 (head)"
-          python -m alembic current | grep -F "20260806_0021 (head)"
+          test "$(python -m alembic heads)" = "20260816_0022 (head)"
+          python -m alembic current | grep -F "20260816_0022 (head)"
 
       - name: Dependency audit from official npm registry
         run: |
@@ -279,7 +280,8 @@ jobs:
             --arg sha256 "$(cut -d' ' -f1 chat-reader-images.tar.gz.sha256)" \
             --arg api_image_id "$(docker image inspect -f '{{.Id}}' chat-reader-api:${GITHUB_SHA})" \
             --arg web_image_id "$(docker image inspect -f '{{.Id}}' chat-reader-web:${GITHUB_SHA})" \
-            '{schema_version: 1, commit: $commit, workflow_run_id: $run_id, workflow_run_attempt: $run_attempt, built_at: $built_at, archive: $archive, sha256: $sha256, images: {api: $api_image_id, web: $web_image_id}}' \
+            --arg diagnostics_gateway_sha256 "$(sha256sum deploy/nginx-internal-diagnostics.location.conf | cut -d' ' -f1)" \
+            '{schema_version: 1, commit: $commit, workflow_run_id: $run_id, workflow_run_attempt: $run_attempt, built_at: $built_at, archive: $archive, sha256: $sha256, images: {api: $api_image_id, web: $web_image_id}, diagnostics_gateway: {path: "deploy/nginx-internal-diagnostics.location.conf", sha256: $diagnostics_gateway_sha256}}' \
             > release-manifest.json
 
       - name: Upload deployable release artifact
@@ -291,5 +293,6 @@ jobs:
             chat-reader-images.tar.gz.sha256
             release-manifest.json
             image-inspection.json
+            deploy/nginx-internal-diagnostics.location.conf
           if-no-files-found: error
           retention-days: 3

@@ -2,93 +2,107 @@
 
 ## Scope
 
-Release C adds low-volume operational evidence without an external telemetry
-stack or a database migration. It covers API request correlation, lifecycle
-events, aggregate diagnostics and storage visibility. It does not collect user
-analytics or Reader performance telemetry.
+The current contract combines the Release C request/logging and bounded
+aggregate diagnostics baseline with the Release L worker-liveness and protected
+operator-access closure. It does not collect user analytics, Reader telemetry,
+or business content.
 
-## Request correlation
+## Request correlation and logs
 
-FastAPI generates a UUID for every request. Client-provided `X-Request-ID` is
-not trusted or reused. The internal ID is available through request context,
-is returned in `X-Request-ID`, and is included in the single structured request
-completion event. Unhandled errors also return the same ID in an optional
-`request_id` response field.
+FastAPI creates a server-owned UUID for every request. It is returned as
+`X-Request-ID` and included in one structured completion event. Client request
+IDs are not trusted. Raw Uvicorn access logging is disabled so query strings do
+not bypass redaction.
 
-Request logging records only:
-
-```text
-timestamp, event, request_id, method, route_template, status, duration_ms
-```
-
-An unhandled error may add the exception class, but never its raw message. The
-Uvicorn raw access log is disabled in deployed and Compose API startup so query
-strings cannot bypass this policy. Logging is best-effort: serialization or
-handler failure cannot fail a business request or worker transition.
+Request logs contain only bounded operational fields: timestamp, event,
+request ID, method, route template, status, duration and, for an unhandled
+error, the exception class. They never contain raw exception messages,
+credentials or business content. Logging is best-effort and cannot fail a
+business request or worker transition.
 
 ## Privacy boundary
 
-Structured logs and diagnostics must not contain message or conversation text,
-Markdown source, attachment contents, user filenames, raw paths, request query
-strings, Cookies, Authorization headers, Share tokens, cursor tokens, database
-URLs, passwords or production secrets. Opaque internal request/job/artifact IDs
-are permitted in lifecycle logs when needed for correlation. They are not used
-as aggregate metric labels.
+Logs and diagnostics must not contain message or conversation text, Markdown
+source, attachment contents or filenames, full storage paths, raw job payloads,
+query strings, Cookies, Authorization headers, Share/cursor tokens, database
+URLs, passwords or environment secrets. Aggregate counts, byte totals, bounded
+timings and configured operational modes are allowed. Opaque IDs may appear in
+transition logs when needed for correlation, but never as unbounded metric
+labels or in diagnostics output.
 
-## Lifecycle events
+## Worker liveness
 
-Background jobs and imports emit one event for meaningful transitions:
-started, committed, failed, cancelled, stale-recovered, retry-exhausted and
-manual retry. Artifact publication emits staging, validated, published and DB
-committed events. Cleanup emits aggregate apply results and cleanup failures.
-Events contain category/type, state, attempt, bounded size/duration and opaque
-internal IDs only.
+The single production worker owns the `worker_runtime_states` row keyed by
+`primary`. A process instance registers immediately, publishes an independent
+heartbeat every 30 seconds and records `idle` or `busy` plus only the task
+family (`import` or `job`). The row contains no task ID or payload. A heartbeat
+is stale after 120 seconds, allowing four missed intervals and normal scheduling
+jitter.
 
-Historical counters are intentionally derived from logs. Release C does not
-add a metrics table. Current job/import state, retry exhaustion, queue age,
-recent bounded timings, artifact records and task heartbeat age are derived
-from existing database fields. There is no separate idle-worker heartbeat, so
-an idle system is reported as `idle_or_unknown`, not falsely as healthy worker
-activity.
+The heartbeat runs on a worker-owned background thread and continues while the
+main worker thread executes a long synchronous task. Worker liveness commits
+before a separate best-effort active-task heartbeat update, so a task-row
+failure cannot roll back proof that the process is alive. A replaced instance
+cannot overwrite the current instance row and stops claiming new tasks after
+detecting replacement.
 
-## Diagnostics
-
-`GET /api/internal/diagnostics` is disabled by default through
-`ENABLE_INTERNAL_DIAGNOSTICS=false`. When disabled it returns 404. Enabling the
-route is not sufficient production authorization: the external gateway/VPN
-must also prove that the public path is inaccessible. If that boundary is not
-confirmed, production keeps the endpoint disabled and administrators use:
+Diagnostics derives these server-time states:
 
 ```text
-cd apps/api
-python -m scripts.internal_diagnostics
+recent heartbeat + idle = alive_idle
+recent heartbeat + busy = alive_busy
+heartbeat age >= stale threshold = stale
+no worker row = unavailable
 ```
 
-Diagnostics returns aggregates only:
+Job/import completion timestamps never prove process liveness. Processing task
+counts and the most recent task heartbeat remain separate aggregates. This
+distinction permits an orphaned processing row to coexist with an accurately
+reported idle/stale worker state.
 
-- job/import status, stale and retry-exhausted counts;
-- oldest queue age and bounded recent timing samples;
-- Export/Offline record counts and cleanup classification totals;
-- imports/exports/offline/assets file counts and bytes;
-- task-heartbeat age and configured scanner state.
+## Protected diagnostics
 
-The health endpoint remains cheap and unchanged. Diagnostics never reads
-artifact contents or hashes files. Filesystem scans stop at 100,000 files and
-return `complete=false` when truncated. SQL aggregation uses counts/groups and
-a latest-500 timing sample; it does not load messages or attachment contents.
-Cleanup classification first takes the bounded filesystem snapshot, then looks
-up only matching `storage_uri` and artifact job IDs in chunks of 500. Historical
-artifact references and unrelated jobs are never loaded merely because an
-administrator requested diagnostics.
+`GET /api/internal/diagnostics` is omitted from the public OpenAPI schema and
+requires both controls:
+
+1. `ENABLE_INTERNAL_DIAGNOSTICS=true` in the API/worker environment.
+2. A loopback API client (`127.0.0.1` or `::1`).
+
+The production Nginx exact-prefix location always returns a concealed 404 for
+the diagnostics path and never proxies it to Next.js. The authorized operator
+path is the existing SSH public-key boundary followed by a request made inside
+the API container to its loopback listener. There is no public HTTP credential,
+hidden-link authorization or frontend entry.
+
+Both denied and successful responses are non-cacheable. Successful responses
+also carry `Pragma: no-cache`, `X-Content-Type-Options: nosniff`,
+`X-Robots-Tag: noindex, noarchive` and the normal server-owned request ID.
+
+Diagnostics returns only:
+
+- worker state, heartbeat timestamp/age, task family and processing count;
+- job/import status, stale, retry-exhausted, queue-age and bounded timing data;
+- Export/Offline record and cleanup classification aggregates;
+- imports/exports/offline/assets file counts and byte totals;
+- configured Scanner mode (`disabled` remains `disabled`, never `safe`).
+
+The public `/api/health` endpoint stays coarse and separate. Diagnostics is
+read-only, triggers no cleanup or remediation, hashes no files and caps its
+filesystem scan at 100,000 entries and recent timing sample at 500 rows.
 
 ## Failure behavior
 
-An unavailable metric degrades to an unavailable/incomplete aggregate. It must
-not make ordinary API requests fail. Cleanup execution is a separate CLI and
-is never triggered by a diagnostics GET.
+A heartbeat or metric write failure is rate-limited in logs and must not expose
+payload data. An unavailable metric degrades to unavailable/incomplete rather
+than failing ordinary API traffic. Release L detects stale workers but does not
+restart, kill, scale or otherwise remediate them automatically.
 
-## Current exclusions
+## Persistence and configuration
 
-Client cache hit telemetry, percentiles/alerts, external APM, Prometheus,
-Sentry, OpenTelemetry collectors and a metrics database are not implemented.
-No Alembic migration is introduced by this contract.
+Alembic revision `20260816_0022` adds only the bounded singleton operational
+state table. It does not change canonical conversation, attachment, Offline,
+Dexie or package formats. `WORKER_HEARTBEAT_STALE_AFTER_SECONDS` must be at
+least three times `WORKER_HEARTBEAT_INTERVAL_SECONDS`.
+
+External APM, Prometheus/Grafana, alerting, automatic remediation and a general
+metrics database remain out of scope.

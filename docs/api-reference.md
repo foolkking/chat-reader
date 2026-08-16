@@ -273,11 +273,14 @@ Message edit, task toggle, current-version selection and version deletion respon
 
 `DELETE /api/projects/{project_id}` permanently deletes a non-default archived Project container and returns `204`. Its conversations are atomically retained under the internal default/Unclassified project. Active or default projects return `422`; missing projects return `404`. The operation does not delete conversations, messages or attachments and requires no schema migration.
 
-## Internal diagnostics (Release C)
+## Internal diagnostics (Release C/L)
 
 `GET /api/internal/diagnostics` is an aggregate-only internal route. It returns
-404 unless `ENABLE_INTERNAL_DIAGNOSTICS=true`. Production must keep it disabled
-until the reverse proxy/VPN is proven to deny the public path. It returns job,
-Import, artifact cleanup and storage aggregates without filenames, raw paths,
-message content, tokens or credentials. `/api/health` remains the separate,
-cheap health-check route. See `docs/system/OBSERVABILITY_CONTRACT.md`.
+404 unless `ENABLE_INTERNAL_DIAGNOSTICS=true` and the direct API client is
+loopback. Production Nginx deliberately returns 404 for the public path;
+authorized operators use the SSH + API-container loopback boundary. The route
+returns worker liveness, job/Import, artifact cleanup and storage aggregates
+without instance/task IDs, filenames, raw paths, message content, tokens or
+credentials. Responses are `no-store` and carry a server-owned request ID.
+`/api/health` remains the separate, cheap public health-check route. See
+`docs/system/OBSERVABILITY_CONTRACT.md`.

@@ -1,5 +1,35 @@
 # Project State
 
+## 2026-08-16 Release L implementation candidate
+
+- `RELEASE_L = IN_PROGRESS`; Release K remains `PASS`. Runtime work is isolated
+  from the externally modified main worktree. Production still runs Release I
+  source `7bcd686b59d62fb9907ba09d644637b7af2b3d86` until exact-SHA Release L
+  images and the protected gateway fragment pass CI and deployment.
+- The single worker now emits a worker-owned heartbeat independent of job
+  traffic: immediate startup registration, 30-second idle/busy pulses and a
+  120-second stale threshold. A background publisher continues during long
+  synchronous work. Worker liveness commits separately from the active task
+  heartbeat, and replaced instances cannot overwrite the current instance or
+  continue claiming new tasks after ownership loss.
+- Diagnostics now reports `alive_idle`, `alive_busy`, `stale` or `unavailable`
+  from server-time worker heartbeat state. It separately reports aggregate
+  processing-task count, task family and last task heartbeat age; old job
+  completion never proves worker liveness.
+- Protected diagnostics uses two enforced boundaries: public Nginx returns a
+  concealed non-cacheable 404 for `/api/internal/diagnostics`, while the API
+  route requires both enablement and a loopback client. Authorized access is
+  the existing SSH public-key plus API-container loopback path. No public HTTP
+  credential, frontend link or mutation endpoint is added.
+- Alembic revision `20260816_0022` adds the bounded
+  `worker_runtime_states` operational table; canonical data, Dexie and Offline
+  formats are unchanged. Isolated PostgreSQL downgrade/upgrade and head/current
+  verification pass. Focused observability/liveness is `27 passed`; full API is
+  `303 passed / 6 skipped` against the isolated final-head database. Web lint,
+  typecheck, Next `16.3.1` Webpack build and dependency policy pass with zero
+  high/critical findings. Production backup, deployment and acceptance are
+  pending.
+
 ## 2026-08-16 Release K residual production verification closure
 
 - `RELEASE_K = PASS`; `CURRENT_VERIFICATION_DEBT_COUNT = 0`; known product

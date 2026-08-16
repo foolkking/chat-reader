@@ -27,6 +27,7 @@ from app.models.share import Share
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.models.user_preference import UserPreference
+from app.models.worker_runtime_state import WorkerRuntimeState
 
 __all__ = [
     "BackgroundJob",
@@ -58,4 +59,5 @@ __all__ = [
     "SourceArtifact",
     "SourceMessageRef",
     "UserPreference",
+    "WorkerRuntimeState",
 ]

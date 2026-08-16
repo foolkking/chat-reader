@@ -4,7 +4,7 @@
 
 ## PostgreSQL
 
-当前 SQLAlchemy metadata 有 29 张业务表；加 `alembic_version` 共 30 张。源码和本地数据库 Alembic 单一 head 为 `20260806_0021`；生产部署后必须执行 `alembic current` 核对该 head。
+当前 SQLAlchemy metadata 有 30 张应用表；加 `alembic_version` 共 31 张。源码和本地数据库 Alembic 单一 head 为 `20260816_0022`；生产部署后必须执行 `alembic current` 核对该 head。
 
 | 领域 | 表 |
 | --- | --- |
@@ -14,6 +14,7 @@
 | 搜索 | `search_documents` |
 | 批注 | `conversation_annotations`, `conversation_notebooks`, `annotation_sync_receipts` |
 | 分享/文件 | `shares`, `export_artifacts`, `offline_package_artifacts`, `asset_objects`, `attachments`, `message_version_attachments`, `asset_derivatives`, `asset_object_leases`, `attachment_upload_sessions`, `attachment_upload_items` |
+| Operational liveness | `worker_runtime_states` (single-worker heartbeat/state only; no payload or task ID) |
 
 ## Canonical 关系
 
