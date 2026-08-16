@@ -4,12 +4,13 @@
 
 ```text
 RELEASE_K = BLOCKED
-BLOCKER_CLASS = VERIFICATION_TOOLING_CAPABILITY
+BLOCKER_CLASS = PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE
 PRODUCT_DEFECT = NOT_ESTABLISHED
 RELEASE_A_J = PASS
 CURRENT_PRODUCTION_AUTHORITY = VERIFIED
 PRODUCTION_RUNTIME_SOURCE = 7bcd686b59d62fb9907ba09d644637b7af2b3d86
 RECONCILIATION_BASE_HEAD = fcb55ffd09c246f1714992e108802259ee185cd7
+BROWSER_RECOVERY_BASE_HEAD = a47066f04491f0e4f1f65e48ce5f4c45c5996c0f
 CI_AUTHORITY = 31936666151 / success / 81fb441f51984330042625aac4dabddfd78b0ebc
 ARTIFACT_ID = 9260977100 / present / unexpired
 RUNNING_IMAGE_IDENTITY = PASS
@@ -23,6 +24,10 @@ UNKNOWN_UNRESOLVED = 0
 REAL_BROWSER_ZOOM_125 = NOT_VERIFIED
 REAL_BROWSER_ZOOM_150 = NOT_VERIFIED
 REAL_BROWSER_ZOOM_200 = NOT_VERIFIED
+MERMAID_PRODUCTION = NOT_VERIFIED
+DOCX_ODT_PRODUCTION = NOT_VERIFIED
+XLSX_ODS_PRODUCTION = NOT_VERIFIED
+PPTX_ODP_PRODUCTION = NOT_VERIFIED
 ACCESSIBILITY_ZOOM_SIGNOFF = BLOCKED
 RUNTIME_SOURCE_CHANGED = NO
 TEST_TOOLING_CHANGED = NO
@@ -41,11 +46,13 @@ chooser are closed by Releases F-J.
 Seven current production evidence records remain: native Chrome page zoom at
 125%, 150% and 200%; Mermaid rendering; and the document, spreadsheet and
 presentation browser-Worker Viewers. The Chrome browser skill is present, but
-its required JavaScript control tool is not exposed and no browser MCP resource
-is available. Its explicit-browser rule prohibits substituting standalone
-Playwright, device emulation, CSS zoom or another desktop surface. Consequently
-the product was not exercised at native zoom, no screenshots were claimed, and
-Release K cannot be promoted to PASS.
+fresh current-session discovery found no exposed Chrome/browser/Computer Use or
+JavaScript control tool and no browser MCP resource/template. Its
+explicit-browser rule prohibits substituting standalone Playwright, device
+emulation, CSS zoom or another desktop surface. Production health and exact
+running image/OCI revision authority were reverified, but the product could not
+be exercised through the required Chrome surface. No fixture, zoom or product
+failure is claimed, and Release K cannot be promoted to PASS.
 
 ## Release J cleanup first-apply closure - 2026-08-16
 

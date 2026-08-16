@@ -20,13 +20,16 @@ The deduplicated status inventory contains 40 records:
 | Conditional/external future | 6 | No current defect or unconditional product gate |
 | Unknown | 0 | Every discovered logical candidate has an owner and classification |
 
-Native Chrome verification is blocked by the current control environment. The
-mandatory `chrome:control-chrome` JavaScript control tool is not exposed, and
-no browser MCP resource is available. Under the browser skill's explicit Chrome
-rule, standalone Playwright, Computer Use, CSS zoom, viewport/device scale and
-CDP page-scale emulation cannot substitute for native page zoom. Therefore the
-125/150/200 matrix and its 200% accessibility/reflow paths were not executed;
-this is a tooling-capability blocker, not a product failure.
+Native Chrome verification is blocked by the current control environment. A
+fresh continuation-session inventory found no Chrome/browser/Computer Use or
+mandatory `chrome:control-chrome` JavaScript control tool, and MCP browser
+resources/templates are empty. Under the browser skill's explicit Chrome rule,
+standalone Playwright, CSS zoom, viewport/device scale and CDP page-scale
+emulation cannot substitute for native page zoom. Therefore the Mermaid and
+Office Viewer production fixtures, the 125/150/200 matrix, and the 200%
+accessibility/reflow paths were not executed. The exact blocker is
+`PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE`, not a product failure;
+public health and exact running image/OCI revision authority were reverified.
 
 No product or test-tooling source changed. Web/API/PWA historical gates were
 not mechanically rerun for unchanged runtime source. `TEST_RESULTS.md` does not

@@ -3171,7 +3171,7 @@ RELEASE_J = PASS
 RELEASE_K_STATUS = BLOCKED
 CURRENT_CHECKPOINT = NATIVE_CHROME_CONTROL_BLOCKED
 CURRENT_VERIFICATION_DEBT_COUNT = 7
-UNRESOLVED_BLOCKER = VERIFICATION_TOOLING_CAPABILITY
+UNRESOLVED_BLOCKER = PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE
 NEXT_RELEASE = RELEASE_L_NOT_STARTED
 ```
 
@@ -3260,10 +3260,10 @@ UNKNOWN_UNRESOLVED = 0
 ## Blocking State
 
 ```text
-BLOCKER_CLASS = VERIFICATION_TOOLING_CAPABILITY
-EXACT_FAILED_OPERATION = establish chrome:control-chrome native browser session
-ROOT_CAUSE = required JavaScript browser-control tool is not exposed; MCP browser resources/templates are empty
-RECOVERY_ATTEMPTS = tool inventory query; MCP resource query; MCP template query
+BLOCKER_CLASS = PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE
+EXACT_FAILED_OPERATION = acquire an allowed production Chrome control surface
+ROOT_CAUSE = the required JavaScript Chrome-control tool is not exposed; current MCP browser resources/templates are empty
+RECOVERY_ATTEMPTS = fresh tool inventory query; current-session MCP resource query; current-session MCP template query; production health and running-image authority recheck
 WHY_CONTINUATION_IS_NOT_VALID = explicit Chrome skill forbids substituting standalone Playwright, Computer Use, CSS/device/CDP scale, or another browser surface
 PRODUCT_FAILURE = NOT_ESTABLISHED
 RUNTIME_SOURCE_CHANGED = NO

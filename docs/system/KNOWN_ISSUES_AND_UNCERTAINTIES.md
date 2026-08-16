@@ -8,7 +8,7 @@
 
 | ID | Current item | Classification | Current evidence / owner |
 | --- | --- | --- | --- |
-| K-001 | Real Chrome page zoom 125%, 150% and 200% | `CURRENT_VERIFICATION_DEBT` (3 records) | Native Chrome control is unavailable in the current tool surface; product failure is not established. |
+| K-001 | Real Chrome page zoom 125%, 150% and 200% | `CURRENT_VERIFICATION_DEBT` (3 records) | Fresh continuation-session discovery found no allowed Chrome control tool or MCP browser resource/template; product failure is not established. |
 | K-002 | Production Mermaid renderer | `CURRENT_VERIFICATION_DEBT` | Strict-mode CI passes, but no later production Mermaid fixture supersedes the Release A gap. |
 | K-003 | DOCX/ODT, XLSX/ODS and PPTX/ODP browser-Worker Viewers | `CURRENT_VERIFICATION_DEBT` (3 records) | Current capability exists; ZIP has production evidence, but these three Viewer groups do not. |
 | K-004 | Idle worker heartbeat and protected internal diagnostics | `DEFERRED_BY_DESIGN` | Owned by Release L; not a Release K product defect. |

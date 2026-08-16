@@ -21,12 +21,16 @@
   production Mermaid rendering, and production DOCX/ODT, XLSX/ODS and PPTX/ODP
   browser-Worker Viewer acceptance. ZIP Viewer has later production Chrome
   evidence and is closed rather than grouped with the unverified Office paths.
-- The required `chrome:control-chrome` control surface is unavailable in this
-  session: its mandatory JavaScript browser-control tool is not exposed and no
-  browser MCP resource is present. The Chrome skill forbids substituting
+- The required `chrome:control-chrome` control surface remains unavailable
+  after a fresh continuation-session capability check: no Chrome, browser,
+  Computer Use or JavaScript browser-control tool is exposed, and MCP browser
+  resources/templates are empty. The Chrome skill forbids substituting
   standalone Playwright or another desktop surface for an explicitly required
   Chrome session. Therefore native zoom could not be set and independently
-  verified; no Zoom or product failure is claimed.
+  verified; the exact blocker is
+  `PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE`, and no Zoom, Viewer or
+  product failure is claimed. Production health and running image/OCI revision
+  authority were reverified before retaining this blocked status.
 - `CURRENT_VERIFICATION_DEBT_COUNT = 7`. No product or test-tooling source was
   changed, no runtime artifact was built, and no production redeploy was
   required. Release L remains not started.
