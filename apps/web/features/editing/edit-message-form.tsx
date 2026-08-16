@@ -152,7 +152,9 @@ export function EditMessageForm({
         }
         // EditorView is the save authority. The draft becomes ready only
         // after its canonicalization transaction is visible in that document.
-        setText(view.state.doc.toString());
+        const canonicalDocument = view.state.doc.toString();
+        if (replacement === "replaced") setEditorDocument(canonicalDocument);
+        setText(canonicalDocument);
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
       onError: (token, message) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current),
@@ -165,7 +167,9 @@ export function EditMessageForm({
     const view = editorViewRef.current;
     if (view && drafts.length) {
       insertPendingMarkers(view, drafts, position);
-      setText(view.state.doc.toString());
+      const pendingDocument = view.state.doc.toString();
+      setEditorDocument(pendingDocument);
+      setText(pendingDocument);
     }
   };
   const performExistingAttachmentInsert = (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number) => {
@@ -194,7 +198,11 @@ export function EditMessageForm({
       setError(zh ? "\u9644\u4ef6\u5f15\u7528\u91cd\u590d\uff0c\u8bf7\u5728\u6e90\u7801\u4e2d\u4fdd\u7559\u4e00\u5904\u540e\u91cd\u8bd5\u3002" : "The attachment reference is duplicated. Keep one source reference and retry.");
       return;
     }
-    if (editorViewRef.current) setText(editorViewRef.current.state.doc.toString());
+    if (editorViewRef.current) {
+      const nextDocument = editorViewRef.current.state.doc.toString();
+      if (removal === "removed") setEditorDocument(nextDocument);
+      setText(nextDocument);
+    }
     setAttachmentDrafts((current) => ({
       ...current,
       [draft.token]: { ...current[draft.token], status: "removed" },

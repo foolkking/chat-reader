@@ -87,6 +87,23 @@ async function installFinalizeBarrier(page: Page, conversationId: string) {
   return { seen: seen.promise, release: release.resolve };
 }
 
+async function installLazyEditorChunkBarrier(page: Page) {
+  const seen = createDeferred();
+  const release = createDeferred();
+  let holding = false;
+
+  await page.route("**/_next/static/chunks/*.js", async (route) => {
+    if (!holding) {
+      holding = true;
+      seen.resolve();
+      await release.promise;
+    }
+    await route.continue();
+  });
+
+  return { seen: seen.promise, release: release.resolve };
+}
+
 async function failFirstFinalize(page: Page, conversationId: string) {
   let failed = false;
   await page.route(`**/api/conversations/${conversationId}/attachments`, async (route) => {
@@ -215,6 +232,66 @@ test.describe("Release I source editor upload-token atomicity", () => {
       await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
       const source = await saveAndReadPatch(page, payloads);
       expect(source).toContain("Typed during fast upload.");
+      expect(source).toContain("cr-asset://");
+      expect(source).not.toContain("cr-upload://");
+
+      const versionsResponse = await page.request.get(`/api/messages/${fixture.messageId}/versions`);
+      expect(versionsResponse.ok()).toBeTruthy();
+      const versions = (await versionsResponse.json()) as {
+        items: Array<{ display_text: string; is_current: boolean }>;
+      };
+      const persistedSource = versions.items.find((item) => item.is_current)?.display_text ?? "";
+      expect(persistedSource).toContain("cr-asset://");
+      expect(persistedSource).not.toContain("cr-upload://");
+
+      const attachmentsResponse = await page.request.get(
+        `/api/conversations/${fixture.conversationId}/attachments`,
+      );
+      expect(attachmentsResponse.ok()).toBeTruthy();
+      const attachments = (await attachmentsResponse.json()) as {
+        items: Array<{ occurrence_count: number; current_occurrence_count: number }>;
+      };
+      expect(attachments.items).toHaveLength(1);
+      expect(attachments.items[0]).toMatchObject({ occurrence_count: 1, current_occurrence_count: 1 });
+    } finally {
+      await deleteConversation(page, fixture?.conversationId);
+    }
+  });
+
+  test("I-RACE-002A queued chooser survives the lazy CodeMirror controlled-value handoff", async ({
+    page,
+  }) => {
+    let fixture: CreatedFixture | undefined;
+    try {
+      fixture = await createConversation(page.request);
+      await page.goto(`/conversations/${fixture.conversationId}`);
+      const message = page.locator(`#message-${fixture.messageId}`);
+      await expect(message).toBeVisible();
+      const chunkBarrier = await installLazyEditorChunkBarrier(page);
+      await message.getByRole("button", { name: /Edit Markdown source|编辑 Markdown 源码/ }).click();
+      await chunkBarrier.seen;
+      await expect(page.getByTestId("source-editor-attachment-input")).toBeAttached();
+      await expect(page.getByTestId("source-editor-codemirror").locator(".cm-content")).toHaveCount(0);
+
+      const finalizeBarrier = await installFinalizeBarrier(page, fixture.conversationId);
+      const payloads = captureMessagePatches(page);
+      await page.getByTestId("source-editor-attachment-input").setInputFiles({
+        name: "queued-before-codemirror.md",
+        mimeType: "text/markdown",
+        buffer: Buffer.from("# Queued attachment\n"),
+      });
+
+      chunkBarrier.release();
+      await expect(page.getByTestId("source-editor-codemirror").locator(".cm-content")).toBeVisible();
+      await finalizeBarrier.seen;
+      const pendingSource = await readEditorDocument(page);
+      expect(pendingSource).toContain("cr-upload://");
+      expect(pendingSource).not.toContain("cr-asset://");
+      await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
+
+      finalizeBarrier.release();
+      await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+      const source = await saveAndReadPatch(page, payloads);
       expect(source).toContain("cr-asset://");
       expect(source).not.toContain("cr-upload://");
 
