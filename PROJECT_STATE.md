@@ -2,8 +2,8 @@
 
 ## 2026-08-16 Release K residual verification reconciliation
 
-- `RELEASE_K = BLOCKED`; `PRODUCT_DEFECT = NOT_ESTABLISHED`. Current repository
-  head is `fcb55ffd09c246f1714992e108802259ee185cd7`, while production correctly
+- `RELEASE_K = BLOCKED`; `PRODUCT_DEFECT = NOT_ESTABLISHED`. Reconciliation
+  started from repository head `fcb55ffd09c246f1714992e108802259ee185cd7`, while production correctly
   continues to run immutable runtime source
   `7bcd686b59d62fb9907ba09d644637b7af2b3d86`. API and worker use image
   `sha256:e7800d1a86f9973db3642add2f3236e721846f9d4426f74da54e7da0b0f0b8ea`;

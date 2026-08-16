@@ -3,7 +3,7 @@
 ## Release K residual production verification (2026-08-16)
 
 Release K first reconciled current authority rather than rerunning every older
-release. Repository head is `fcb55ffd...`; production remains the verified
+release. Reconciliation started from head `fcb55ffd...`; production remains the verified
 Release I runtime `7bcd686...`. Read-only production inspection matched actual
 API/worker/Web image IDs and their OCI revision labels, public health returned
 200, and Alembic head/current both returned `20260806_0021`. GitHub run
