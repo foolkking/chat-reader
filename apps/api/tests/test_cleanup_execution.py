@@ -75,6 +75,47 @@ def test_classifier_protects_recent_active_canonical_unknown_and_assets(tmp_path
     assert not scan.candidates
 
 
+def test_recent_server_generated_staging_file_is_protected(tmp_path: Path) -> None:
+    factory = _factory(tmp_path)
+    root = tmp_path / "exports"
+    recent = staging_path(root / str(uuid.uuid4()) / "recent.zip")
+    _zip(recent)
+    with factory() as db:
+        scan = scan_cleanup_candidates(db, roots={"export": root})
+    assert scan.summary["UNSAFE_PROTECTED"] == {
+        "candidate_count": 1,
+        "candidate_bytes": recent.stat().st_size,
+    }
+    assert not scan.candidates
+
+
+def test_canonical_retained_conversation_export_is_protected(tmp_path: Path) -> None:
+    factory = _factory(tmp_path)
+    root = tmp_path / "exports"
+    job = BackgroundJob(id=uuid.uuid4(), job_type="conversation_export", status="committed")
+    retained = root / str(job.id) / "retained.zip"
+    _zip(retained)
+    _old(retained)
+    artifact = ExportArtifact(
+        id=uuid.uuid4(),
+        job_id=job.id,
+        conversation_id=None,
+        scope_type="conversation",
+        format="markdown_bundle",
+        filename=retained.name,
+        storage_uri=str(retained),
+        sha256="hash",
+        byte_size=retained.stat().st_size,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+    )
+    with factory() as db:
+        db.add_all([job, artifact])
+        db.commit()
+        scan = scan_cleanup_candidates(db, roots={"export": root})
+    assert scan.summary["UNSAFE_PROTECTED"]["candidate_count"] == 1
+    assert not scan.candidates
+
+
 def test_current_offline_artifact_is_protected_and_superseded_artifact_is_classified(tmp_path: Path) -> None:
     factory = _factory(tmp_path)
     root = tmp_path / "offline"
@@ -151,6 +192,25 @@ def test_dry_run_and_manual_apply_are_two_pass_explicit_and_idempotent(tmp_path:
     assert repeated.skipped_changed_count == 1
 
 
+def test_apply_rejects_confirmed_token_from_another_category(tmp_path: Path) -> None:
+    factory = _factory(tmp_path)
+    root = tmp_path / "exports"
+    orphan = root / str(uuid.uuid4()) / "orphan.zip"
+    _zip(orphan)
+    _old(orphan)
+    with factory() as db:
+        candidate = scan_cleanup_candidates(db, roots={"export": root}).candidates[0]
+        result = execute_cleanup_candidates(
+            db,
+            roots={"export": root},
+            category="SAFE_TEMP",
+            confirmed_tokens=[candidate.token],
+        )
+    assert result.deleted_count == 0
+    assert result.skipped_changed_count == 1
+    assert orphan.exists()
+
+
 def test_diagnostics_scan_budget_is_reported_as_incomplete(tmp_path: Path) -> None:
     factory = _factory(tmp_path)
     root = tmp_path / "exports"
@@ -220,6 +280,30 @@ def test_apply_handles_disappearance_and_partial_permission_failure(tmp_path: Pa
         _zip(path)
         _old(path)
     with factory() as db:
+        current_job = BackgroundJob(id=uuid.uuid4(), job_type="offline_package", status="committed")
+        current = root / f"offline-all-{current_job.id}.crpkg"
+        _zip(current)
+        _old(current)
+        current_artifact = OfflinePackageArtifact(
+            id=uuid.uuid4(),
+            job_id=current_job.id,
+            subject_key="local:default",
+            scope_type="all",
+            scope_id=None,
+            catalog_revision="current",
+            filename=current.name,
+            storage_uri=str(current),
+            sha256="hash",
+            byte_size=current.stat().st_size,
+            conversation_count=1,
+        )
+        db.add_all([current_job, current_artifact])
+        db.commit()
+        canonical_before = (
+            db.query(BackgroundJob).count(),
+            db.query(OfflinePackageArtifact).count(),
+            db.get(OfflinePackageArtifact, current_artifact.id).storage_uri,
+        )
         scan = scan_cleanup_candidates(db, roots={"offline": root})
         tokens = {item.path: item.token for item in scan.candidates}
         original_unlink = Path.unlink
@@ -236,9 +320,17 @@ def test_apply_handles_disappearance_and_partial_permission_failure(tmp_path: Pa
             category="ORPHAN_FINAL",
             confirmed_tokens=[tokens[first], tokens[second]],
         )
+        db.expire_all()
+        canonical_after = (
+            db.query(BackgroundJob).count(),
+            db.query(OfflinePackageArtifact).count(),
+            db.get(OfflinePackageArtifact, current_artifact.id).storage_uri,
+        )
     assert result.deleted_count == 1
     assert result.failed_count == 1
     assert result.as_dict()["failure_categories"] == {"unlink_failed": 1}
+    assert canonical_after == canonical_before
+    assert current.exists()
     assert not first.exists() and second.exists()
 
 
