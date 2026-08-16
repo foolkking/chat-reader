@@ -3162,3 +3162,113 @@ AUTOMATIC_CLEANUP = DISABLED
 ASSET_OBJECT_GC = NOT_IMPLEMENTED / NOT_ENABLED
 RELEASE_J = PASS
 ```
+
+---
+
+# Release K Execution Ledger
+
+```text
+RELEASE_K_STATUS = BLOCKED
+CURRENT_CHECKPOINT = NATIVE_CHROME_CONTROL_BLOCKED
+CURRENT_VERIFICATION_DEBT_COUNT = 7
+UNRESOLVED_BLOCKER = VERIFICATION_TOOLING_CAPABILITY
+NEXT_RELEASE = RELEASE_L_NOT_STARTED
+```
+
+## Tasks
+
+- [x] Release A-J repository authority re-established.
+- [x] Residual verification debt inventory built and classified.
+- [x] Historical stale debt reconciled against later release evidence.
+- [-] Native Chrome page-zoom authority blocked by unavailable required control surface.
+- [ ] Production Chrome 125% page zoom verified.
+- [ ] Production Chrome 150% page zoom verified.
+- [ ] Production Chrome 200% page zoom verified.
+- [ ] Remaining current verification debt reconciled.
+- [x] Current-state documentation synchronized.
+
+## Authority Baseline
+
+```text
+REPOSITORY_BRANCH = master
+REPOSITORY_HEAD = fcb55ffd09c246f1714992e108802259ee185cd7
+PRODUCTION_RUNTIME_SOURCE = 7bcd686b59d62fb9907ba09d644637b7af2b3d86
+RELEASE_I = PASS
+RELEASE_J = PASS
+RUNTIME_SOURCE_CHANGED = NO
+PRODUCTION_REDEPLOY_REQUIRED = NO
+```
+
+## Residual Verification Matrix
+
+Evidence precedence used here is production runtime, later release evidence,
+current state/results, and only then older release checkpoints.
+
+| Item | Historical status | Latest evidence | Classification | Current status | Owner | Action required |
+| --- | --- | --- | --- | --- | --- | --- |
+| Chrome page zoom 125% | `NOT_PRODUCTION_VERIFIED` | No later native-zoom evidence | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Native Chrome verify |
+| Chrome page zoom 150% | `NOT_PRODUCTION_VERIFIED` | No later native-zoom evidence | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Native Chrome verify |
+| Chrome page zoom 200% | `NOT_PRODUCTION_VERIFIED` | No later native-zoom evidence | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Native Chrome accessibility/reflow verify |
+| Mermaid production renderer | `NOT_PRODUCTION_VERIFIED` | Strict-mode CI only | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Disposable production fixture |
+| DOCX/ODT browser Viewer | `NOT_PRODUCTION_VERIFIED` | Current Worker capability; no production fixture | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Safe production fixture |
+| XLSX/ODS browser Viewer | `NOT_PRODUCTION_VERIFIED` | Current Worker capability; no production fixture | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Safe production fixture |
+| PPTX/ODP browser Viewer | `NOT_PRODUCTION_VERIFIED` | Current Worker capability; no production fixture | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Safe production fixture |
+| PWA negative matrix | historical partial | Release H `10/10`, zero scoped skips | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release H | None |
+| Source upload-token race | reproduced debt | Release I deterministic closure | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release I | None |
+| Manual cleanup first apply | `NOT_EXECUTED` | Release J bounded apply | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release J | None |
+| Cleanup identity/two-pass/recheck | partial/manual | Release J stable tokens and final recheck | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release J | None |
+| Next supported LTS | migration required | Release F Next 16.3.1 | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release F | None |
+| PDF.js supported line | migration required | Release G 6.2.108 | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release G | None |
+| CSP enforcing | not implemented | Release H production enforcement | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release H | None |
+| Production file chooser | bridge unavailable | Release I three real chooser runs | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release I | None |
+| Share focus restoration | P2 / not verified | Release B/H production evidence | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release H | None |
+| Exact 360/390/768 reflow | partial | Later exact reflow and 390 Share evidence | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Later releases | None |
+| Active unreferenced files | `NOT_PRODUCTION_VERIFIED` | Final closure and Release I/J integrity | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Later releases | None |
+| Delete/undo/revision mutation | `NOT_PRODUCTION_VERIFIED` | Final closure and Release I mutation evidence | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release I | None |
+| `.cr v4` round trip | partial | Final closure and Release D characterization | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release D | None |
+| ZIP Viewer | `NOT_PRODUCTION_VERIFIED` | Later production Chrome ZIP Viewer | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Viewer closure | None |
+| Rich Markdown browser suite | fixture-gated | Release H production Rich Markdown/KaTeX | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release H | None |
+| Performance/save characterization | production not verified | Release D forbids King stress and passes isolated tiers | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS by current contract | Release D | None |
+| Export download/clipboard behavior | bridge readback missing | Release J real download; negative clipboard path tested | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS by contract | Later releases | None |
+| Message attachment refresh/render | `NOT_PRODUCTION_VERIFIED` | Release I canonical save/reload/Viewer | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release I | None |
+| Release A-J historical blocked/partial summaries | mixed | Current production and later release closures | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | A-J | Preserve history only |
+| Worker idle heartbeat | `PARTIAL_PASS` | Limitation unchanged | `DEFERRED_BY_DESIGN` | DEFERRED | Release L | Do not implement in K |
+| Protected internal diagnostics | `NOT_ENABLED` | Gateway authority not closed | `DEFERRED_BY_DESIGN` | DEFERRED | Release L | Do not enable in K |
+| Automatic cleanup | disabled | Release J manual apply only | `DEFERRED_BY_DESIGN` | DEFERRED | Release N | Keep disabled |
+| Strict nonce CSP | deferred | Release H architecture evidence | `DEFERRED_BY_DESIGN` | DEFERRED | Release O | Do not implement in K |
+| CSP server reporting | not implemented | Release H deliberate omission | `DEFERRED_BY_DESIGN` | DEFERRED | Release O | Do not implement in K |
+| Precise Markdown/KaTeX telemetry | not derivable | Release D future measurement note | `DEFERRED_BY_DESIGN` | DEFERRED | Future | Do not implement in K |
+| Next experimental SRI | not executed | Architecture track only | `DEFERRED_BY_DESIGN` | DEFERRED | Release O | Do not implement in K |
+| Trusted Types | not executed | Architecture track only | `DEFERRED_BY_DESIGN` | DEFERRED | Release O | Do not implement in K |
+| AssetObject physical GC | not implemented | No current defect | `CONDITIONAL_FUTURE_TRACK` | CONDITIONAL | Future | No K action |
+| Turbopack migration | not executed | Webpack is frozen production bundler | `CONDITIONAL_FUTURE_TRACK` | CONDITIONAL | Future | No K action |
+| Real-device quota/eviction variance | device-dependent | Release E/H deterministic matrix passes | `CONDITIONAL_FUTURE_TRACK` | OPERATIONAL RISK | Future | Device compatibility only |
+| TIFF converted preview/animation extras | partial optional matrix | Fallback path is production PASS | `CONDITIONAL_FUTURE_TRACK` | CONDITIONAL | Future | No K action |
+| All-conversations derived task branch | data-safety limited | Current scoped flow and worker integration pass | `CONDITIONAL_FUTURE_TRACK` | CONDITIONAL | Future | No production broad mutation |
+| External TLS/access gateway audit | repository cannot prove full config | Public health works; authority is external | `CONDITIONAL_FUTURE_TRACK` | EXTERNAL | Operations | Separate audit |
+
+```text
+CANDIDATES_DISCOVERED = 40
+CURRENT_VERIFICATION_DEBT = 7
+SUPERSEDED_OR_ALREADY_CLOSED = 19
+DEFERRED_BY_DESIGN = 8
+CONDITIONAL_FUTURE_TRACK = 6
+KNOWN_PRODUCT_DEFECT = 0
+UNKNOWN_UNRESOLVED = 0
+```
+
+## Blocking State
+
+```text
+BLOCKER_CLASS = VERIFICATION_TOOLING_CAPABILITY
+EXACT_FAILED_OPERATION = establish chrome:control-chrome native browser session
+ROOT_CAUSE = required JavaScript browser-control tool is not exposed; MCP browser resources/templates are empty
+RECOVERY_ATTEMPTS = tool inventory query; MCP resource query; MCP template query
+WHY_CONTINUATION_IS_NOT_VALID = explicit Chrome skill forbids substituting standalone Playwright, Computer Use, CSS/device/CDP scale, or another browser surface
+PRODUCT_FAILURE = NOT_ESTABLISHED
+RUNTIME_SOURCE_CHANGED = NO
+TEST_TOOLING_CHANGED = NO
+PRODUCTION_REDEPLOY_REQUIRED = NO
+RELEASE_K = BLOCKED
+NEXT_RELEASE = RELEASE_L_NOT_STARTED
+```

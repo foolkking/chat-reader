@@ -401,3 +401,11 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `security/dependency-exceptions.json` | Current policy data | Exact, expiring critical/high advisory dispositions. |
 | `scripts/check-dependency-audit.mjs` | Current release check | Fails unapproved, expired, mismatched, duplicate or unused exceptions. |
 | `scripts/inspect-release-images.sh` | Current release check | OCI revision/architecture/entrypoint and forbidden-path inspection. |
+
+2026-08-16 Release K synchronization: `PROJECT_STATE.md`, `results.md`,
+`TASKS.md`, `docs/testing.md`, `docs/index.md`, and
+`docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` distinguish current production
+verification debt from superseded historical rows, deferred design work, and
+conditional future tracks. No new document category was created. The dated
+`docs/execution/TEST_RESULTS.md` remains historical and the absent root
+`TEST_RESULTS.md` was not recreated as a duplicate authority.

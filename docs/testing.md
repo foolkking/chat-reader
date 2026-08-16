@@ -1,5 +1,38 @@
 # Testing Addendum 2026-08-09
 
+## Release K residual production verification (2026-08-16)
+
+Release K first reconciled current authority rather than rerunning every older
+release. Repository head is `fcb55ffd...`; production remains the verified
+Release I runtime `7bcd686...`. Read-only production inspection matched actual
+API/worker/Web image IDs and their OCI revision labels, public health returned
+200, and Alembic head/current both returned `20260806_0021`. GitHub run
+`31936666151` remains successful for exact test/evidence SHA `81fb441...`, and
+artifact `9260977100` is present and unexpired.
+
+The deduplicated status inventory contains 40 records:
+
+| Classification | Count | Current interpretation |
+| --- | ---: | --- |
+| Current verification debt | 7 | Native Chrome zoom 125/150/200, Mermaid, DOCX/ODT, XLSX/ODS and PPTX/ODP production Viewer evidence |
+| Superseded/already closed | 19 | Later Release A-J evidence is authoritative; historical failure/partial rows remain historical |
+| Deferred by design | 8 | Release L/N/O or explicit architecture deferral |
+| Conditional/external future | 6 | No current defect or unconditional product gate |
+| Unknown | 0 | Every discovered logical candidate has an owner and classification |
+
+Native Chrome verification is blocked by the current control environment. The
+mandatory `chrome:control-chrome` JavaScript control tool is not exposed, and
+no browser MCP resource is available. Under the browser skill's explicit Chrome
+rule, standalone Playwright, Computer Use, CSS zoom, viewport/device scale and
+CDP page-scale emulation cannot substitute for native page zoom. Therefore the
+125/150/200 matrix and its 200% accessibility/reflow paths were not executed;
+this is a tooling-capability blocker, not a product failure.
+
+No product or test-tooling source changed. Web/API/PWA historical gates were
+not mechanically rerun for unchanged runtime source. `TEST_RESULTS.md` does not
+exist at the repository root; `docs/execution/TEST_RESULTS.md` remains a dated
+historical record and was not rewritten as current authority.
+
 ## Release J cleanup first-apply closure (2026-08-16)
 
 No cleanup runtime code changed. Four explicit fixture gaps were added to

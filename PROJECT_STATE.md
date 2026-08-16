@@ -1,5 +1,36 @@
 # Project State
 
+## 2026-08-16 Release K residual verification reconciliation
+
+- `RELEASE_K = BLOCKED`; `PRODUCT_DEFECT = NOT_ESTABLISHED`. Current repository
+  head is `fcb55ffd09c246f1714992e108802259ee185cd7`, while production correctly
+  continues to run immutable runtime source
+  `7bcd686b59d62fb9907ba09d644637b7af2b3d86`. API and worker use image
+  `sha256:e7800d1a86f9973db3642add2f3236e721846f9d4426f74da54e7da0b0f0b8ea`;
+  Web uses `sha256:dae7507d89a66ffc086cc3971e2de57907af2781279c19f3f480b35031d66654`.
+  Running container identities, `amd64` OCI revision labels, public health and
+  Alembic head/current `20260806_0021` were reverified directly.
+- Release A-J remain `PASS`. Exact-SHA Release J Actions run `31936666151`
+  remains successful for test/evidence source `81fb441...`; artifact
+  `9260977100` is present and unexpired. Release J did not change the runtime.
+- Forty deduplicated historical status candidates were reconciled: 19 are
+  superseded or closed by later releases, eight are deferred by design, six
+  are conditional/external future tracks, and seven remain current production
+  verification debt. Unknown/unclassified candidates are zero.
+- The seven current records are real Chrome page zoom at 125%, 150% and 200%,
+  production Mermaid rendering, and production DOCX/ODT, XLSX/ODS and PPTX/ODP
+  browser-Worker Viewer acceptance. ZIP Viewer has later production Chrome
+  evidence and is closed rather than grouped with the unverified Office paths.
+- The required `chrome:control-chrome` control surface is unavailable in this
+  session: its mandatory JavaScript browser-control tool is not exposed and no
+  browser MCP resource is present. The Chrome skill forbids substituting
+  standalone Playwright or another desktop surface for an explicitly required
+  Chrome session. Therefore native zoom could not be set and independently
+  verified; no Zoom or product failure is claimed.
+- `CURRENT_VERIFICATION_DEBT_COUNT = 7`. No product or test-tooling source was
+  changed, no runtime artifact was built, and no production redeploy was
+  required. Release L remains not started.
+
 ## 2026-08-16 Release J cleanup first-apply closure
 
 - `RELEASE_J = PASS`. Release J used the existing cleanup engine without a

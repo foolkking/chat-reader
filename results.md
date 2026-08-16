@@ -1,5 +1,52 @@
 # Implementation Results
 
+## Release K residual verification reconciliation - 2026-08-16
+
+```text
+RELEASE_K = BLOCKED
+BLOCKER_CLASS = VERIFICATION_TOOLING_CAPABILITY
+PRODUCT_DEFECT = NOT_ESTABLISHED
+RELEASE_A_J = PASS
+CURRENT_PRODUCTION_AUTHORITY = VERIFIED
+PRODUCTION_RUNTIME_SOURCE = 7bcd686b59d62fb9907ba09d644637b7af2b3d86
+CURRENT_REPOSITORY_HEAD = fcb55ffd09c246f1714992e108802259ee185cd7
+CI_AUTHORITY = 31936666151 / success / 81fb441f51984330042625aac4dabddfd78b0ebc
+ARTIFACT_ID = 9260977100 / present / unexpired
+RUNNING_IMAGE_IDENTITY = PASS
+ALEMBIC_HEAD_CURRENT = 20260806_0021
+CANDIDATES_DISCOVERED = 40
+SUPERSEDED_OR_ALREADY_CLOSED = 19
+DEFERRED_BY_DESIGN = 8
+CONDITIONAL_FUTURE_TRACK = 6
+CURRENT_VERIFICATION_DEBT = 7
+UNKNOWN_UNRESOLVED = 0
+REAL_BROWSER_ZOOM_125 = NOT_VERIFIED
+REAL_BROWSER_ZOOM_150 = NOT_VERIFIED
+REAL_BROWSER_ZOOM_200 = NOT_VERIFIED
+ACCESSIBILITY_ZOOM_SIGNOFF = BLOCKED
+RUNTIME_SOURCE_CHANGED = NO
+TEST_TOOLING_CHANGED = NO
+PRODUCTION_REDEPLOY_REQUIRED = NO
+NEXT_RELEASE = RELEASE_L_NOT_STARTED
+```
+
+The current production containers and OCI labels independently match Release I
+runtime source and immutable image IDs; public health is 200 and Alembic remains
+at the single current head. The status scan was reconciled by evidence
+precedence rather than by treating every historical `PARTIAL_PASS` as current.
+PWA negative paths, Source Editor upload atomicity, manual cleanup apply,
+Next/PDF.js maintained lines, CSP enforcement, Share focus and production file
+chooser are closed by Releases F-J.
+
+Seven current production evidence records remain: native Chrome page zoom at
+125%, 150% and 200%; Mermaid rendering; and the document, spreadsheet and
+presentation browser-Worker Viewers. The Chrome browser skill is present, but
+its required JavaScript control tool is not exposed and no browser MCP resource
+is available. Its explicit-browser rule prohibits substituting standalone
+Playwright, device emulation, CSS zoom or another desktop surface. Consequently
+the product was not exercised at native zoom, no screenshots were claimed, and
+Release K cannot be promoted to PASS.
+
 ## Release J cleanup first-apply closure - 2026-08-16
 
 ```text

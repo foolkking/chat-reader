@@ -1,8 +1,26 @@
 # 已知风险与不确定性
 
-最后核验：2026-08-10
+最后核验：2026-08-16
 
 已解决问题和实施过程保留在 [execution/](../execution/README.md)，本页只维护当前仍成立的风险。
+
+## Release K current verification reconciliation
+
+| ID | Current item | Classification | Current evidence / owner |
+| --- | --- | --- | --- |
+| K-001 | Real Chrome page zoom 125%, 150% and 200% | `CURRENT_VERIFICATION_DEBT` (3 records) | Native Chrome control is unavailable in the current tool surface; product failure is not established. |
+| K-002 | Production Mermaid renderer | `CURRENT_VERIFICATION_DEBT` | Strict-mode CI passes, but no later production Mermaid fixture supersedes the Release A gap. |
+| K-003 | DOCX/ODT, XLSX/ODS and PPTX/ODP browser-Worker Viewers | `CURRENT_VERIFICATION_DEBT` (3 records) | Current capability exists; ZIP has production evidence, but these three Viewer groups do not. |
+| K-004 | Idle worker heartbeat and protected internal diagnostics | `DEFERRED_BY_DESIGN` | Owned by Release L; not a Release K product defect. |
+| K-005 | Automatic cleanup | `DEFERRED_BY_DESIGN` | Disabled; owned by Release N. Release J manual first apply remains PASS. |
+| K-006 | Strict nonce CSP and CSP reporting | `DEFERRED_BY_DESIGN` | Owned by Release O; Release H enforcing CSP remains PASS. |
+| K-007 | AssetObject GC, Turbopack and real-device storage variance | `CONDITIONAL_FUTURE_TRACK` | No current defect or unconditional Release K gate. |
+
+Historical RA/RB rows below retain their original checkpoint meaning. Later
+Release evidence closes active-unreferenced visibility, delete/undo, Share
+focus, exact narrow reflow, production chooser, PWA negative paths and `.cr v4`
+round trip. They are not current debt. The current count is
+`CURRENT_VERIFICATION_DEBT_COUNT = 7`; unknown/unclassified records are zero.
 
 | ID | 风险/不确定性 | 影响 | 当前控制/验证方式 |
 | --- | --- | --- | --- |
