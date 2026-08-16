@@ -1,14 +1,15 @@
 # Markdown 文档台账
 
-2026-08-16 Release I candidate synchronization: the Source Editor transient
+2026-08-16 Release I final synchronization: the Source Editor transient
 URI grammar, authoritative CodeMirror document, network-versus-editor-ready
 state machine, three-layer save defense, retry/history/selection behavior and
 immutable production acceptance are recorded in
 `docs/system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md`, `PROJECT_STATE.md`,
-`results.md`, `docs/testing.md` and `docs/deployment.md`. Current local evidence
-is API `15/15`, browser `17/17` and isolated Alembic head/current
-`20260806_0021`; CI, artifact and production remain pending, so
-`RELEASE_I = PARTIAL_PASS`.
+`results.md`, `docs/testing.md` and `docs/deployment.md`. Final evidence is API
+`15/15`, browser `18/18`, isolated and production Alembic head/current
+`20260806_0021`, exact-SHA Actions run `31934088629`, verified immutable image
+identity and three production real chooser/save/reload flows. The post-deploy
+aggregate transient-reference count is zero; `RELEASE_I = PASS`.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |

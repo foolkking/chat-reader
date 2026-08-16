@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## Release I upload-token atomicity candidate (2026-08-16)
+## Release I upload-token atomicity closure (2026-08-16)
 
 The focused API gate is:
 
@@ -10,7 +10,7 @@ python -m pytest tests/test_attachment_scanner.py \
   tests/test_attachment_upload_api.py -q
 ```
 
-Current candidate result: `15 passed`. It proves structured rejection and
+Final result: `15 passed`. It proves structured rejection and
 transaction rollback for active transient references at PATCH, conversation
 create and message insert; acceptance of canonical references and occurrence
 creation; allowance of bare/inline/fenced/indented code literals; idempotent
@@ -28,13 +28,17 @@ corepack pnpm --filter web exec playwright test \
   e2e/attachment-upload-flow.spec.ts
 ```
 
-Current result: `17 passed / 0 failed / 0 scoped skipped`. Playwright route
+Final result: `18 passed / 0 failed / 0 scoped skipped`. Playwright route
 barriers hold and release real upload/finalize/save requests; elapsed sleeps
 are not the correctness authority. The matrix asserts zero PATCHes before
 canonicalization, canonical-only payload/version reads, exact occurrence
 counts, chooser/drop/paste convergence, fast/slow and B-before-A completion,
 partial failure and single-flight retry, typing/cursor/selection/scroll,
 delete-before-completion, undo/redo, and canonical drafts after 409/500.
+`I-RACE-002A` additionally holds the lazy CodeMirror chunk, selects a file
+before `.cm-content` exists, then releases editor creation and upload finalize;
+this covers the exact real-production ordering that the first candidate
+exposed.
 
 The remaining final-source regression set passed: full API `285 passed / 5
 skipped`, CSP `4/4`, focused Reader/Rich/security `36/36`, Share `2/2`,
@@ -49,10 +53,17 @@ HTTP 500 caused by the test worker committing `conversation_derived_rebuild`
 at the same instant, then requires a successful product API delete and a 404
 readback. This retry is test cleanup, not upload correctness synchronization.
 
-Final Release I acceptance still requires the exact-SHA workflow artifact,
-verified backup, immutable production deployment and real production chooser,
-save and reload evidence. A source-aware read-only production audit already
-reported zero active transient references without exposing content or IDs.
+Actions run `31934088629` passed this gate and all release gates on exact SHA
+`7bcd686b59d62fb9907ba09d644637b7af2b3d86`. The same immutable images passed
+production identity checks. Standalone production Chrome then passed three
+independent real chooser/upload/save/reload cycles: each captured PATCH and
+canonical version contained `cr-asset://` and no `cr-upload://`, reload rendered
+the attachment and Markdown Viewer opened it. The isolated PWA shell also
+started offline and reconnected. Legitimate-path CSP violations were zero.
+All disposable Conversations were deleted through the product API and returned
+404. The post-deploy source-aware aggregate audit reported zero active
+transient references in all and current MessageVersions without exposing
+content, tokens or IDs.
 
 ## Release H CSP enforcement closure (2026-08-16)
 

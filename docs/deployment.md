@@ -1,11 +1,11 @@
 # 生产部署
 
-## Release I upload-token atomicity deployment contract (candidate, 2026-08-16)
+## Release I upload-token atomicity closure (2026-08-16)
 
 Release I changes only Source Editor upload/save coordination and API
-defense-in-depth. It adds no migration or storage-format change. Production is
-still Release H until the exact Release I source passes Actions and its
-immutable images are accepted.
+defense-in-depth. It adds no migration or storage-format change. Production
+runs runtime source `7bcd686b59d62fb9907ba09d644637b7af2b3d86` from successful
+Actions run `31934088629`.
 
 The permanent deployment sequence is:
 
@@ -41,6 +41,28 @@ present and `cr-upload://` absent, Viewer must open the attachment, enforced CSP
 must report zero legitimate-path violations, and QA cleanup must use the product
 API with 404 readback. The deterministic race authority remains the pre-
 production Playwright matrix; no production test hook is allowed.
+
+The independently verified release archive SHA-256 is
+`dd082f902e4c84cb2a1466735da80dd2659119f087518703b98838b2f66c04f8`.
+The manifest and actual running identities are:
+
+| Service | Expected and actual image identity | Match |
+| --- | --- | --- |
+| API / worker / migrate | `sha256:e7800d1a86f9973db3642add2f3236e721846f9d4426f74da54e7da0b0f0b8ea` | yes |
+| Web | `sha256:dae7507d89a66ffc086cc3971e2de57907af2781279c19f3f480b35031d66654` | yes |
+
+Backup `/opt/chat-reader/backups/release-i-final-20260816T074726Z-7bcd686`
+passed PostgreSQL restore listing, imports/exports/offline/assets archive
+listings and SHA-256 verification. Deployment used explicit immutable commit
+tags, migration from the exact API image and `--no-build`. Production health,
+headers and Alembic `20260806_0021` passed before Chrome acceptance.
+
+Three independent real chooser/upload/save/reload flows produced canonical-only
+source, opened the saved Markdown attachment in Viewer and emitted zero
+legitimate-path CSP violations. An isolated PWA profile passed offline startup
+and reconnect. QA cleanup used the product API with 404 readback. The final
+aggregate scan reported zero active transient references. Release H immutable
+images and backup remain direct rollback; `latest` remains convenience only.
 
 ## Release H CSP enforcement closure (2026-08-16)
 

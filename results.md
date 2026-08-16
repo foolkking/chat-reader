@@ -1,10 +1,11 @@
 # Implementation Results
 
-## Release I upload-token atomicity candidate - 2026-08-16
+## Release I upload-token atomicity closure - 2026-08-16
 
 ```text
-RELEASE_I = PARTIAL_PASS
-SOURCE_EDITOR_UPLOAD_TOKEN_ATOMICITY = PASS (local candidate)
+RELEASE_I = PASS
+READY_FOR_RELEASE_J = YES
+SOURCE_EDITOR_UPLOAD_TOKEN_ATOMICITY = PASS
 EDITOR_GUARD = IMPLEMENTED
 SAVE_TIME_CANONICAL_VALIDATION = PASS
 API_TRANSIENT_REFERENCE_REJECTION = PASS
@@ -24,7 +25,7 @@ REVISION_AND_NETWORK_FAILURE_DRAFT_RETENTION = PASS
 ATTACHMENT_OCCURRENCE_INTEGRITY = PASS
 BACKEND_FOCUSED_TESTS = PASS (15 passed)
 API_FULL_SUITE = PASS (285 passed / 5 skipped)
-BROWSER_ATOMICITY_E2E = PASS (17 passed)
+BROWSER_ATOMICITY_E2E = PASS (18 passed / 0 scoped skipped)
 UPLOAD_ATOMICITY_SCOPED_SKIPS = 0
 FOCUSED_BROWSER_REGRESSION = PASS (36 passed)
 CSP_BROWSER = PASS (4 passed)
@@ -45,25 +46,48 @@ OFFLINE_PACKAGE_FORMAT_CHANGE = NONE
 BUILD_BUNDLER = WEBPACK
 TURBOPACK_MIGRATION = NOT_EXECUTED
 PRODUCTION_FAULT_BRIDGE = ABSENT
-CI_RELEASE_ARTIFACT = NOT_EXECUTED
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
-PERSISTED_TRANSIENT_REFERENCE_COUNT = 0 (read-only production audit)
+RUNTIME_SOURCE_COMMIT = 7bcd686b59d62fb9907ba09d644637b7af2b3d86
+ACTIONS_RUN = 31934088629 (success, exact source SHA)
+ARCHIVE_SHA256 = dd082f902e4c84cb2a1466735da80dd2659119f087518703b98838b2f66c04f8
+API_WORKER_MIGRATE_IMAGE = sha256:e7800d1a86f9973db3642add2f3236e721846f9d4426f74da54e7da0b0f0b8ea
+WEB_IMAGE = sha256:dae7507d89a66ffc086cc3971e2de57907af2781279c19f3f480b35031d66654
+RUNNING_IMAGE_IDENTITY = PASS
+PRODUCTION_DEPLOYMENT = PASS
+PRODUCTION_REAL_FILE_CHOOSER = PASS (3 independent runs)
+PRODUCTION_UPLOAD_SAVE_RELOAD = PASS
+PRODUCTION_CANONICAL_SOURCE = PASS
+PERSISTED_TRANSIENT_REFERENCE_COUNT = 0 (post-deploy aggregate audit)
 DATA_REPAIR_REQUIRED = NO
-READY_FOR_RELEASE_J = NO
+ROLLBACK_RELEASE_H = RETAINED
+FINAL_DOCUMENTATION_ONLY = TRUE
+RUNTIME_IMAGE_UNCHANGED = TRUE
 ```
 
-The reproduced ordering allowed upload business finalization to mark a draft
-ready while the React text mirror read by Save could still contain the old
-transient token. Release I makes the live CodeMirror document the save
-authority, marks a draft ready only after a synchronous exact-token transaction
-and post-dispatch verification, and retains an independent API persistence
-guard. Deterministic Playwright request barriers prove no PATCH occurs while a
-real active transient reference remains; successful payload and version reads
-contain `cr-asset://` and no `cr-upload://`.
+The original defect allowed upload finalization to mark a draft ready while
+the React text mirror read by Save could still contain a transient token. A
+first immutable production candidate then exposed a narrower pre-CodeMirror
+ordering: a real chooser event queued before lazy CodeMirror creation, marker
+insertion updated only `text`, and the post-create controlled-value effect
+restored the baseline `editorDocument`. The final runtime synchronizes both
+mirrors from the exact live document after marker insert, canonical replacement
+and explicit removal. `I-RACE-002A` deterministically holds the lazy editor
+chunk and upload finalize response to prove this ordering.
 
-This is final-source candidate evidence only. Exact-SHA CI, immutable image/
-archive identity, complete production backup, Release H rollback retention,
-deployment and real chooser/save/reload acceptance remain pending.
+The live CodeMirror document is the save authority, every save path rescans it,
+and FastAPI independently rejects active transient Markdown destinations with
+structured 422 rollback. Actions run `31934088629` passed the full quality and
+image chain on exact SHA `7bcd686...`. The independently verified release
+archive, complete backup and immutable image identities are recorded above.
+
+King migration used the exact API image and recreation used `--no-build`.
+Running API/worker/Web image identities match the manifest; API/Web/PostgreSQL
+are healthy, the worker runs, Scanner remains disabled and Alembic remains
+`20260806_0021`. Production Chrome passed three real chooser/save/reload flows,
+canonical API readback, attachment Viewer, zero legitimate-path CSP violations
+and isolated PWA offline/reconnect. Product-API cleanup returned 404 for every
+QA Conversation. The final aggregate source-aware audit found zero active
+transient references in all and current MessageVersions. Release H images and
+backup remain direct rollback.
 
 ## Release H CSP enforcement closure - 2026-08-16
 

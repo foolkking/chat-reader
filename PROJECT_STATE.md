@@ -1,12 +1,11 @@
 # Project State
 
-## 2026-08-16 Release I upload-token atomicity candidate
+## 2026-08-16 Release I upload-token atomicity closure
 
-- `RELEASE_I = PARTIAL_PASS`. The current worktree closes the reproduced
-  Source Editor race without changing the attachment model: `cr-upload://` is
-  editor-local only, CodeMirror is the authoritative save document, and a
-  successful canonical source may contain only finalized `cr-asset://`
-  references.
+- `RELEASE_I = PASS` and `READY_FOR_RELEASE_J = YES`. Production runtime source
+  is `7bcd686b59d62fb9907ba09d644637b7af2b3d86`; `cr-upload://` is editor-local
+  only, CodeMirror is the authoritative save document, and successful
+  canonical source may contain only finalized `cr-asset://` references.
 - The editor distinguishes upload completion from canonical replacement,
   blocks all shared save paths while either state is unresolved, rereads the
   live CodeMirror document at submit time, and applies exact token-identity
@@ -14,22 +13,25 @@
   structured 422 `transient_upload_reference` and rolls back create, insert or
   edit mutations containing an active transient Markdown destination. Code
   literals remain valid user content.
-- Current candidate evidence is API atomicity/scanner `15/15`, deterministic
-  production-build Chromium upload matrix `17/17` with zero scoped skips, and
+- Final local evidence is API atomicity/scanner `15/15`, deterministic
+  production-build Chromium upload matrix `18/18` with zero scoped skips, and
   isolated PostgreSQL Alembic head/current `20260806_0021`. The browser matrix
-  covers chooser, drag/drop, clipboard, fast/slow and out-of-order completion,
-  partial failure/retry, typing, cursor/selection/scroll, delete-before-
-  completion, undo/redo and canonical draft retention after 409/500.
+  covers chooser before and after lazy CodeMirror creation, drag/drop,
+  clipboard, fast/slow and out-of-order completion, partial failure/retry,
+  typing, cursor/selection/scroll, delete-before-completion, undo/redo and
+  canonical draft retention after 409/500.
 - Final-source regression evidence is full API `285 passed / 5 skipped`, CSP
   `4/4`, focused Reader/Rich/security `36/36`, Share `2/2`, mutation `2/2`,
   Markdown/image Viewer `1/1`, PDF `3/3`, default PWA `72 passed / 65`
   unrelated conditional skips, and scoped PWA negative `10/10` with zero
   scoped skips. Lint, typecheck, the Next `16.3.1` Webpack production build,
   dependency policy and the zero high/critical security gate also pass.
-- A read-only production scan used the same source-aware transient-reference
-  classifier and returned zero active transient references across all and
-  current MessageVersions. No source, token or business identifier was
-  emitted; `DATA_REPAIR_REQUIRED = NO`.
+- The first immutable candidate exposed one additional real ordering defect:
+  a chooser event could queue before lazy CodeMirror creation, then the
+  controlled-value effect could overwrite the inserted transient marker with
+  the baseline document. The final fix synchronizes both editor mirrors from
+  the exact live document after insert, canonical replacement and removal;
+  deterministic `I-RACE-002A` covers this ordering.
 - An observed Windows-only concurrent `python-magic` initialization failure is
   serialized at the optional detector boundary; the signature/mimetype
   fallback and Scanner-disabled production policy are unchanged. Upload
@@ -38,11 +40,27 @@
   Offline package format change. The normal production bundle exposes no test
   fault bridge. Next `16.3.1`, React `19.2.8`, PDF.js `6.2.108`, Webpack and the
   enforced CSP remain frozen.
-- Exact-SHA Actions artifact, verified backup, immutable deployment/running-
-  image identity and real production chooser/save/reload acceptance are still
-  pending. Production
-  remains Release H `da160a9`; its immutable images and backup remain direct
-  rollback. `READY_FOR_RELEASE_J = NO` until this evidence chain closes.
+- Actions run `31934088629` passed on exact SHA `7bcd686...`. Independently
+  verified archive SHA-256 is
+  `dd082f902e4c84cb2a1466735da80dd2659119f087518703b98838b2f66c04f8`.
+  API/worker/migrate image identity is
+  `sha256:e7800d1a86f9973db3642add2f3236e721846f9d4426f74da54e7da0b0f0b8ea`;
+  Web is
+  `sha256:dae7507d89a66ffc086cc3971e2de57907af2781279c19f3f480b35031d66654`.
+  King bound the immutable commit tags, migrated with the exact API image and
+  actual API/worker/Web identities match the manifest.
+- Verified backup
+  `/opt/chat-reader/backups/release-i-final-20260816T074726Z-7bcd686` contains
+  PostgreSQL plus imports, exports, offline and assets; restore/listing and
+  SHA-256 checks passed. Release H immutable images and backup remain direct
+  rollback.
+- Production Chrome passed three independent real chooser/upload/save/reload
+  flows with canonical API readback and Viewer open, plus isolated PWA offline
+  startup/reconnect. Legitimate-path CSP violations were zero and all QA
+  Conversations were deleted through the product API with 404 confirmation.
+  A post-deploy source-aware aggregate scan returned zero active transient
+  references across all and current MessageVersions without emitting content,
+  tokens or IDs; `DATA_REPAIR_REQUIRED = NO`.
 - Durable contract:
   `docs/system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md`.
 

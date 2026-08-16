@@ -124,3 +124,28 @@ verified archive and image identities, complete backup, explicit `API_IMAGE`
 and `WEB_IMAGE`, `--no-build`, running-image identity before browser QA, and
 retention of the Release H immutable rollback images and backup. `latest` is a
 convenience alias only.
+
+## Production Closure
+
+The first immutable candidate exposed an additional editor-creation ordering:
+a real file chooser could queue work before lazy CodeMirror creation, marker
+insertion updated the React text mirror, and the post-create controlled-value
+effect restored the older `editorDocument`. The final implementation
+synchronizes both mirrors from the exact live CodeMirror document after marker
+insert, canonical replacement and explicit removal. Missing markers still mean
+the user removed the reference and are never reinserted. Deterministic
+`I-RACE-002A` holds the lazy editor chunk and finalize response to preserve this
+contract.
+
+Final runtime source is `7bcd686b59d62fb9907ba09d644637b7af2b3d86`.
+Actions run `31934088629` passed the full quality and image chain for that exact
+SHA. King verified the archive checksum and complete backup, bound immutable
+API/Web images, ran migration from the exact API image and confirmed running
+API/worker/Web identities against the manifest before acceptance.
+
+Production Chrome passed three independent real chooser/upload/save/reload
+flows with canonical API readback, Viewer open, zero legitimate-path CSP
+violations and product-API cleanup. A source-aware post-deploy aggregate audit
+reported zero active transient references in all and current MessageVersions.
+No source, token or business identifier was emitted. `RELEASE_I = PASS` and
+Release H remains the direct rollback.
