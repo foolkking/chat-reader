@@ -1,39 +1,49 @@
 # Project State
 
-## 2026-08-16 Release K residual verification reconciliation
+## 2026-08-16 Release K residual production verification closure
 
-- `RELEASE_K = BLOCKED`; `PRODUCT_DEFECT = NOT_ESTABLISHED`. Reconciliation
-  started from repository head `fcb55ffd09c246f1714992e108802259ee185cd7`, while production correctly
-  continues to run immutable runtime source
+- `RELEASE_K = PASS`; `CURRENT_VERIFICATION_DEBT_COUNT = 0`; known product
+  defects and unknown/unclassified candidates are zero. Release A-J remain
+  `PASS`, and Release L is explicitly not started.
+- Production continues to run immutable runtime source
   `7bcd686b59d62fb9907ba09d644637b7af2b3d86`. API and worker use image
   `sha256:e7800d1a86f9973db3642add2f3236e721846f9d4426f74da54e7da0b0f0b8ea`;
   Web uses `sha256:dae7507d89a66ffc086cc3971e2de57907af2781279c19f3f480b35031d66654`.
-  Running container identities, `amd64` OCI revision labels, public health and
-  Alembic head/current `20260806_0021` were reverified directly.
-- Release A-J remain `PASS`. Exact-SHA Release J Actions run `31936666151`
-  remains successful for test/evidence source `81fb441...`; artifact
-  `9260977100` is present and unexpired. Release J did not change the runtime.
-- Forty deduplicated historical status candidates were reconciled: 19 are
-  superseded or closed by later releases, eight are deferred by design, six
-  are conditional/external future tracks, and seven remain current production
-  verification debt. Unknown/unclassified candidates are zero.
-- The seven current records are real Chrome page zoom at 125%, 150% and 200%,
-  production Mermaid rendering, and production DOCX/ODT, XLSX/ODS and PPTX/ODP
-  browser-Worker Viewer acceptance. ZIP Viewer has later production Chrome
-  evidence and is closed rather than grouped with the unverified Office paths.
-- The required `chrome:control-chrome` control surface remains unavailable
-  after a fresh continuation-session capability check: no Chrome, browser,
-  Computer Use or JavaScript browser-control tool is exposed, and MCP browser
-  resources/templates are empty. The Chrome skill forbids substituting
-  standalone Playwright or another desktop surface for an explicitly required
-  Chrome session. Therefore native zoom could not be set and independently
-  verified; the exact blocker is
-  `PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE`, and no Zoom, Viewer or
-  product failure is claimed. Production health and running image/OCI revision
-  authority were reverified before retaining this blocked status.
-- `CURRENT_VERIFICATION_DEBT_COUNT = 7`. No product or test-tooling source was
-  changed, no runtime artifact was built, and no production redeploy was
-  required. Release L remains not started.
+  Release K changed no runtime or test-tooling source and required no production
+  redeploy. Release J Actions run `31936666151`, artifact `9260977100`, running
+  image identity, public application availability and Alembic head/current
+  `20260806_0021` remain the release authority.
+- The Chrome extension control surface was recovered. The operator changed the
+  dedicated production Chrome profile with native browser Page Zoom, while the
+  controlled page independently verified exact DPR/CSS viewport ratios against
+  the original 100% baseline: `1.05 / 1830px` at 100%, `1.3125 / 1464px` at
+  125%, `1.575 / 1220px` at 150%, and `2.10 / 915px` at 200%. The profile was
+  restored to the exact 100% baseline afterward. No CSS zoom, transform,
+  device-scale, viewport-only or CDP page-scale substitution was used.
+- Native 125%, 150% and 200% production checks pass. At 200%, Library, long
+  Reader content, Source Editor, Files Panel, image/Markdown/PDF Viewers, Share,
+  core dialogs and keyboard focus remain usable. Save, upload, Close, Download
+  and primary navigation controls are reachable; dialog focus supports
+  Tab/Shift+Tab and Esc restoration. Every checkpoint reported zero page-level
+  horizontal overflow; intrinsic document/table/code content retains local
+  scrolling where needed. PDF rendered a nonblank canvas with real controls.
+- Production Mermaid rendered a complete data-URI SVG image with nonzero
+  dimensions and remained within the 200% Reader shell. Online Viewer fixtures
+  for DOCX, ODT, XLSX, ODS, PPTX and ODP all selected the expected Viewer path,
+  rendered supported content, retained Download, exposed exactly one accessible
+  Close, closed with Esc and restored focus. The fixture matrix recorded zero
+  CSP violations and no fatal Viewer error.
+- The disposable Mermaid QA Conversation was permanently deleted through the
+  product UI and was absent after a fresh navigation. Recoverable Chrome issues
+  (an extension popup, a OneTab tab handoff, and a transient click timeout) were
+  resolved by reconnecting or creating a fresh controlled tab; they caused no
+  product or data failure.
+- Final reconciliation retains 40 discovered candidates: 26 are now closed
+  (19 by Releases A-J and seven by Release K), eight remain deferred by design,
+  and six remain conditional/external future tracks. Worker heartbeat and
+  protected diagnostics remain Release L work; automatic cleanup remains
+  disabled for Release N; strict nonce/reporting remain Release O work;
+  AssetObject GC and Turbopack remain conditional future tracks.
 
 ## 2026-08-16 Release J cleanup first-apply closure
 

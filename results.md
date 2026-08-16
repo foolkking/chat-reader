@@ -1,11 +1,11 @@
 # Implementation Results
 
-## Release K residual verification reconciliation - 2026-08-16
+## Release K residual production verification closure - 2026-08-16
 
 ```text
-RELEASE_K = BLOCKED
-BLOCKER_CLASS = PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE
-PRODUCT_DEFECT = NOT_ESTABLISHED
+RELEASE_K = PASS
+UNRESOLVED_BLOCKER = NONE
+KNOWN_PRODUCT_DEFECT = 0
 RELEASE_A_J = PASS
 CURRENT_PRODUCTION_AUTHORITY = VERIFIED
 PRODUCTION_RUNTIME_SOURCE = 7bcd686b59d62fb9907ba09d644637b7af2b3d86
@@ -16,43 +16,60 @@ ARTIFACT_ID = 9260977100 / present / unexpired
 RUNNING_IMAGE_IDENTITY = PASS
 ALEMBIC_HEAD_CURRENT = 20260806_0021
 CANDIDATES_DISCOVERED = 40
-SUPERSEDED_OR_ALREADY_CLOSED = 19
+SUPERSEDED_OR_ALREADY_CLOSED = 26 (19 historical + 7 closed by Release K)
 DEFERRED_BY_DESIGN = 8
 CONDITIONAL_FUTURE_TRACK = 6
-CURRENT_VERIFICATION_DEBT = 7
+CURRENT_VERIFICATION_DEBT = 0
 UNKNOWN_UNRESOLVED = 0
-REAL_BROWSER_ZOOM_125 = NOT_VERIFIED
-REAL_BROWSER_ZOOM_150 = NOT_VERIFIED
-REAL_BROWSER_ZOOM_200 = NOT_VERIFIED
-MERMAID_PRODUCTION = NOT_VERIFIED
-DOCX_ODT_PRODUCTION = NOT_VERIFIED
-XLSX_ODS_PRODUCTION = NOT_VERIFIED
-PPTX_ODP_PRODUCTION = NOT_VERIFIED
-ACCESSIBILITY_ZOOM_SIGNOFF = BLOCKED
+PRODUCTION_BROWSER_CONTROL = PASS
+NATIVE_PAGE_ZOOM_METHOD = Chrome native Page Zoom / operator action + independent controlled-page metrics
+ZOOM_AUTHORITY_VERIFIED = PASS
+REAL_BROWSER_ZOOM_100 = PASS / baseline and restored
+REAL_BROWSER_ZOOM_125 = PASS
+REAL_BROWSER_ZOOM_150 = PASS
+REAL_BROWSER_ZOOM_200 = PASS
+MERMAID_PRODUCTION = PASS
+DOCX_PRODUCTION = PASS
+ODT_PRODUCTION = PASS
+XLSX_PRODUCTION = PASS
+ODS_PRODUCTION = PASS
+PPTX_PRODUCTION = PASS
+ODP_PRODUCTION = PASS
+ACCESSIBILITY_ZOOM_SIGNOFF = PASS
+PAGE_LEVEL_HORIZONTAL_OVERFLOW = 0 at 100/125/150/200 checkpoints
+PRODUCTION_QA_CLEANUP = PASS / product UI / absent after fresh navigation
 RUNTIME_SOURCE_CHANGED = NO
 TEST_TOOLING_CHANGED = NO
 PRODUCTION_REDEPLOY_REQUIRED = NO
 NEXT_RELEASE = RELEASE_L_NOT_STARTED
 ```
 
-The current production containers and OCI labels independently match Release I
-runtime source and immutable image IDs; public health is 200 and Alembic remains
-at the single current head. The status scan was reconciled by evidence
-precedence rather than by treating every historical `PARTIAL_PASS` as current.
-PWA negative paths, Source Editor upload atomicity, manual cleanup apply,
-Next/PDF.js maintained lines, CSP enforcement, Share focus and production file
-chooser are closed by Releases F-J.
+The recovered Chrome extension controlled the current production deployment.
+The native zoom action was performed in Chrome itself and independently
+verified from exact changes relative to the original 100% page: DPR/viewport
+were `1.05/1830`, `1.3125/1464`, `1.575/1220` and `2.10/915` at
+100/125/150/200 respectively. Chrome returned to `1.05/1830` at the end. CSS,
+transform, device-scale, viewport-only and CDP page-scale methods were not used.
 
-Seven current production evidence records remain: native Chrome page zoom at
-125%, 150% and 200%; Mermaid rendering; and the document, spreadsheet and
-presentation browser-Worker Viewers. The Chrome browser skill is present, but
-fresh current-session discovery found no exposed Chrome/browser/Computer Use or
-JavaScript control tool and no browser MCP resource/template. Its
-explicit-browser rule prohibits substituting standalone Playwright, device
-emulation, CSS zoom or another desktop surface. Production health and exact
-running image/OCI revision authority were reverified, but the product could not
-be exercised through the required Chrome surface. No fixture, zoom or product
-failure is claimed, and Release K cannot be promoted to PASS.
+The 200% core matrix passed Library, long Reader content, Source Editor, Files
+Panel, image Viewer, Markdown Viewer, PDF Viewer, Share, preferences dialog,
+Tab/Shift+Tab/Esc focus behavior and page reflow. Every checkpoint had zero
+page-level horizontal overflow. The PDF canvas was visibly nonblank and all
+Viewer/Share Close, Download, Save and upload actions remained reachable.
+
+Mermaid rendered a complete nonzero data-URI SVG in production. DOCX, ODT,
+XLSX, ODS, PPTX and ODP all rendered through the online Viewer contract with
+one accessible Close, Download, Esc close and trigger focus restoration. The
+fixture matrix recorded zero CSP violations and no fatal Viewer error. One
+pre-existing React hydration warning was observed during the initial Offline
+Library startup; it was not new to Release K and did not recur as a K fixture or
+zoom failure.
+
+The disposable Mermaid QA Conversation was permanently deleted through the
+product UI and disappeared after a fresh navigation. Extension-popup and tab
+handoff interruptions were recovered without runtime changes or data loss.
+Release K closes all seven current verification records, leaving only the
+explicit Release L/N/O and conditional future tracks.
 
 ## Release J cleanup first-apply closure - 2026-08-16
 

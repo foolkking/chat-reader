@@ -3168,10 +3168,10 @@ RELEASE_J = PASS
 # Release K Execution Ledger
 
 ```text
-RELEASE_K_STATUS = BLOCKED
-CURRENT_CHECKPOINT = NATIVE_CHROME_CONTROL_BLOCKED
-CURRENT_VERIFICATION_DEBT_COUNT = 7
-UNRESOLVED_BLOCKER = PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE
+RELEASE_K_STATUS = PASS
+CURRENT_CHECKPOINT = COMPLETE
+CURRENT_VERIFICATION_DEBT_COUNT = 0
+UNRESOLVED_BLOCKER = NONE
 NEXT_RELEASE = RELEASE_L_NOT_STARTED
 ```
 
@@ -3180,11 +3180,13 @@ NEXT_RELEASE = RELEASE_L_NOT_STARTED
 - [x] Release A-J repository authority re-established.
 - [x] Residual verification debt inventory built and classified.
 - [x] Historical stale debt reconciled against later release evidence.
-- [-] Native Chrome page-zoom authority blocked by unavailable required control surface.
-- [ ] Production Chrome 125% page zoom verified.
-- [ ] Production Chrome 150% page zoom verified.
-- [ ] Production Chrome 200% page zoom verified.
-- [ ] Remaining current verification debt reconciled.
+- [x] Native Chrome page-zoom authority established and independently verified.
+- [x] Production Chrome 125% page zoom verified.
+- [x] Production Chrome 150% page zoom verified.
+- [x] Production Chrome 200% page zoom and accessibility/reflow matrix verified.
+- [x] Production Mermaid and DOCX/ODT/XLSX/ODS/PPTX/ODP Viewer fixtures verified.
+- [x] Disposable production QA data removed through the product UI.
+- [x] Remaining current verification debt reconciled to zero.
 - [x] Current-state documentation synchronized.
 
 ## Authority Baseline
@@ -3206,13 +3208,13 @@ current state/results, and only then older release checkpoints.
 
 | Item | Historical status | Latest evidence | Classification | Current status | Owner | Action required |
 | --- | --- | --- | --- | --- | --- | --- |
-| Chrome page zoom 125% | `NOT_PRODUCTION_VERIFIED` | No later native-zoom evidence | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Native Chrome verify |
-| Chrome page zoom 150% | `NOT_PRODUCTION_VERIFIED` | No later native-zoom evidence | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Native Chrome verify |
-| Chrome page zoom 200% | `NOT_PRODUCTION_VERIFIED` | No later native-zoom evidence | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Native Chrome accessibility/reflow verify |
-| Mermaid production renderer | `NOT_PRODUCTION_VERIFIED` | Strict-mode CI only | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Disposable production fixture |
-| DOCX/ODT browser Viewer | `NOT_PRODUCTION_VERIFIED` | Current Worker capability; no production fixture | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Safe production fixture |
-| XLSX/ODS browser Viewer | `NOT_PRODUCTION_VERIFIED` | Current Worker capability; no production fixture | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Safe production fixture |
-| PPTX/ODP browser Viewer | `NOT_PRODUCTION_VERIFIED` | Current Worker capability; no production fixture | `CURRENT_VERIFICATION_DEBT` | BLOCKED | Release K | Safe production fixture |
+| Chrome page zoom 125% | `NOT_PRODUCTION_VERIFIED` | Native Chrome 125%; DPR/viewport ratio 1.25; core matrix and zero page overflow | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release K | None |
+| Chrome page zoom 150% | `NOT_PRODUCTION_VERIFIED` | Native Chrome 150%; DPR/viewport ratio 1.50; core matrix and zero page overflow | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release K | None |
+| Chrome page zoom 200% | `NOT_PRODUCTION_VERIFIED` | Native Chrome 200%; DPR/viewport ratio 2.00; complete accessibility/reflow matrix | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release K | None |
+| Mermaid production renderer | `NOT_PRODUCTION_VERIFIED` | Disposable production fixture rendered complete nonzero data-URI SVG; zero CSP violation | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release K | None |
+| DOCX/ODT browser Viewer | `NOT_PRODUCTION_VERIFIED` | Both online production fixtures rendered; Close/Download/Esc/focus passed | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release K | None |
+| XLSX/ODS browser Viewer | `NOT_PRODUCTION_VERIFIED` | Both online production fixtures rendered; Close/Download/Esc/focus passed | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release K | None |
+| PPTX/ODP browser Viewer | `NOT_PRODUCTION_VERIFIED` | Both online production fixtures rendered; Close/Download/Esc/focus passed | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release K | None |
 | PWA negative matrix | historical partial | Release H `10/10`, zero scoped skips | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release H | None |
 | Source upload-token race | reproduced debt | Release I deterministic closure | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release I | None |
 | Manual cleanup first apply | `NOT_EXECUTED` | Release J bounded apply | `SUPERSEDED_OR_ALREADY_CLOSED` | PASS | Release J | None |
@@ -3249,26 +3251,49 @@ current state/results, and only then older release checkpoints.
 
 ```text
 CANDIDATES_DISCOVERED = 40
-CURRENT_VERIFICATION_DEBT = 7
-SUPERSEDED_OR_ALREADY_CLOSED = 19
+CURRENT_VERIFICATION_DEBT = 0
+SUPERSEDED_OR_ALREADY_CLOSED = 26
 DEFERRED_BY_DESIGN = 8
 CONDITIONAL_FUTURE_TRACK = 6
 KNOWN_PRODUCT_DEFECT = 0
 UNKNOWN_UNRESOLVED = 0
 ```
 
-## Blocking State
+## Production Browser Evidence
 
 ```text
-BLOCKER_CLASS = PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE
-EXACT_FAILED_OPERATION = acquire an allowed production Chrome control surface
-ROOT_CAUSE = the required JavaScript Chrome-control tool is not exposed; current MCP browser resources/templates are empty
-RECOVERY_ATTEMPTS = fresh tool inventory query; current-session MCP resource query; current-session MCP template query; production health and running-image authority recheck
-WHY_CONTINUATION_IS_NOT_VALID = explicit Chrome skill forbids substituting standalone Playwright, Computer Use, CSS/device/CDP scale, or another browser surface
-PRODUCT_FAILURE = NOT_ESTABLISHED
+PRODUCTION_BROWSER_CONTROL = PASS
+NATIVE_PAGE_ZOOM_METHOD = Chrome native Page Zoom / operator action plus independent controlled-page metrics
+ZOOM_AUTHORITY_VERIFIED = PASS
+REAL_BROWSER_ZOOM_100 = PASS / baseline and restored
+REAL_BROWSER_ZOOM_125 = PASS
+REAL_BROWSER_ZOOM_150 = PASS
+REAL_BROWSER_ZOOM_200 = PASS
+ACCESSIBILITY_ZOOM_SIGNOFF = PASS
+MERMAID_PRODUCTION = PASS
+DOCX_PRODUCTION = PASS
+ODT_PRODUCTION = PASS
+XLSX_PRODUCTION = PASS
+ODS_PRODUCTION = PASS
+PPTX_PRODUCTION = PASS
+ODP_PRODUCTION = PASS
+LIBRARY_200 = PASS
+READER_200 = PASS
+SOURCE_EDITOR_200 = PASS
+FILES_PANEL_200 = PASS
+ATTACHMENT_VIEWER_200 = PASS
+MARKDOWN_VIEWER_200 = PASS
+PDF_VIEWER_200 = PASS
+SHARE_200 = PASS
+DIALOGS_200 = PASS
+KEYBOARD_FOCUS_SMOKE_200 = PASS
+PAGE_REFLOW_200 = PASS
+PAGE_LEVEL_HORIZONTAL_OVERFLOW = 0
+PRODUCTION_QA_CLEANUP = PASS / product UI / absent after fresh navigation
+UNRESOLVED_BLOCKER = NONE
 RUNTIME_SOURCE_CHANGED = NO
 TEST_TOOLING_CHANGED = NO
 PRODUCTION_REDEPLOY_REQUIRED = NO
-RELEASE_K = BLOCKED
+RELEASE_K = PASS
 NEXT_RELEASE = RELEASE_L_NOT_STARTED
 ```

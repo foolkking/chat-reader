@@ -2,39 +2,66 @@
 
 ## Release K residual production verification (2026-08-16)
 
-Release K first reconciled current authority rather than rerunning every older
-release. Reconciliation started from head `fcb55ffd...`; production remains the verified
-Release I runtime `7bcd686...`. Read-only production inspection matched actual
-API/worker/Web image IDs and their OCI revision labels, public health returned
-200, and Alembic head/current both returned `20260806_0021`. GitHub run
-`31936666151` remains successful for exact test/evidence SHA `81fb441...`, and
-artifact `9260977100` is present and unexpired.
+Release K retained the reconciled 40-item inventory and executed only its seven
+current production verification records. Production remains immutable Release I
+runtime `7bcd686...`; Release J Actions run `31936666151`, artifact `9260977100`,
+running image identity and Alembic `20260806_0021` remain authoritative. No
+runtime or test-tooling source changed, so there was no production redeploy and
+the historical Web/API/PWA matrices were not mechanically rerun.
 
-The deduplicated status inventory contains 40 records:
+The final inventory is:
 
 | Classification | Count | Current interpretation |
 | --- | ---: | --- |
-| Current verification debt | 7 | Native Chrome zoom 125/150/200, Mermaid, DOCX/ODT, XLSX/ODS and PPTX/ODP production Viewer evidence |
-| Superseded/already closed | 19 | Later Release A-J evidence is authoritative; historical failure/partial rows remain historical |
+| Current verification debt | 0 | All seven Release K records now have production evidence |
+| Superseded/already closed | 26 | 19 closed by Releases A-J plus seven closed by Release K |
 | Deferred by design | 8 | Release L/N/O or explicit architecture deferral |
 | Conditional/external future | 6 | No current defect or unconditional product gate |
 | Unknown | 0 | Every discovered logical candidate has an owner and classification |
 
-Native Chrome verification is blocked by the current control environment. A
-fresh continuation-session inventory found no Chrome/browser/Computer Use or
-mandatory `chrome:control-chrome` JavaScript control tool, and MCP browser
-resources/templates are empty. Under the browser skill's explicit Chrome rule,
-standalone Playwright, CSS zoom, viewport/device scale and CDP page-scale
-emulation cannot substitute for native page zoom. Therefore the Mermaid and
-Office Viewer production fixtures, the 125/150/200 matrix, and the 200%
-accessibility/reflow paths were not executed. The exact blocker is
-`PRODUCTION_BROWSER_CONTROL_CAPABILITY_UNAVAILABLE`, not a product failure;
-public health and exact running image/OCI revision authority were reverified.
+### Native Chrome page zoom
 
-No product or test-tooling source changed. Web/API/PWA historical gates were
-not mechanically rerun for unchanged runtime source. `TEST_RESULTS.md` does not
-exist at the repository root; `docs/execution/TEST_RESULTS.md` remains a dated
-historical record and was not rewritten as current authority.
+The dedicated Chrome profile was changed with Chrome's native Page Zoom. The
+controlled production page independently verified exact state changes relative
+to the original 100% baseline:
+
+| Chrome state | DPR | CSS viewport width | Ratio to baseline | Result |
+| --- | ---: | ---: | ---: | --- |
+| 100% baseline | 1.05 | 1830 px | 1.00 | PASS |
+| 125% | 1.3125 | 1464 px | 1.25 | PASS |
+| 150% | 1.575 | 1220 px | 1.50 | PASS |
+| 200% | 2.10 | 915 px | 2.00 | PASS |
+| 100% restored | 1.05 | 1830 px | 1.00 | PASS |
+
+CSS zoom, transforms, device scale, viewport-only resizing and CDP page-scale
+emulation were not used. Library, Reader, Source Editor, Files Panel, Viewer,
+Share and core dialogs passed at 125% and 150%. The 200% matrix additionally
+verified long Reader content, image/Markdown/PDF Viewers, preferences dialog,
+Tab/Shift+Tab/Esc focus behavior, trigger focus restoration and reachable Save,
+upload, Close and Download actions. Every checkpoint reported zero page-level
+horizontal overflow; only intrinsic document/table/code surfaces retain local
+scrolling. The PDF Viewer rendered a visibly nonblank canvas with its real
+toolbar while the browser remained at 200%.
+
+### Production Viewer fixtures
+
+The Mermaid fixture rendered a complete data-URI SVG image with nonzero natural
+and displayed dimensions, including the expected Upload, Canonical and Reader
+nodes. DOCX, ODT, XLSX, ODS, PPTX and ODP all selected the expected online
+Viewer path, rendered supported content, exposed Download and exactly one
+accessible Close, closed with Esc and restored focus to the trigger. The
+fixture matrix recorded zero CSP violations and no fatal Viewer error.
+
+One React hydration warning already known from the earlier Offline Library path
+was observed during initial setup; it did not recur as a Release K fixture or
+zoom failure. An offline cached-blob DOCX fetch observation was excluded from
+the online Viewer contract rather than used as production Viewer evidence.
+
+The disposable Mermaid QA Conversation was permanently deleted through the
+product UI and was absent after a fresh navigation. Chrome extension-popup and
+OneTab handoff interruptions were recovered with a fresh controlled tab; no
+product data or runtime changed. `TEST_RESULTS.md` does not exist at repository
+root, while `docs/execution/TEST_RESULTS.md` remains dated historical evidence.
 
 ## Release J cleanup first-apply closure (2026-08-16)
 
