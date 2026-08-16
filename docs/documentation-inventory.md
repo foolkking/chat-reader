@@ -9,6 +9,13 @@ are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`,
 run `31948357231`, immutable artifact `9264075894`, protected public denial,
 operator loopback access and idle/busy worker evidence are recorded there.
 
+2026-08-16 Release M synchronization: the five-part verified backup,
+production-target rejection preflight, aggregate/physical recovery integrity
+audit, two fresh isolated restore targets, measured recovery characterization and
+the executable restore procedure are recorded in
+`docs/system/DISASTER_RECOVERY_RUNBOOK.md`, `deploy/recovery_preflight.py`,
+`deploy/recovery_integrity.py`, `PROJECT_STATE.md`, `results.md` and `TASKS.md`.
+
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |
 | `apps/api/app/services/worker_liveness.py` | Current runtime | Worker-owned periodic liveness and separately committed active-task refresh. |

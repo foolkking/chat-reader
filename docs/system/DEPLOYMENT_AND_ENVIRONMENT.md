@@ -51,7 +51,10 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 - 复杂附件预览默认关闭。未配置独立 preview origin 时 Office/ZIP 只下载；HTML 可作为转义文本读取，SVG 只通过浏览器图片上下文展示，不作为可执行文档注入。
 - healthcheck：PostgreSQL、API、Web；worker 通过进程、日志和 job heartbeat 观察。
 - Docker json-file 日志已配置轮转；仓库没有集中式日志/APM。
-- `deploy/backup.sh` 生成 PostgreSQL custom-format dump；恢复演练和异地保留需由运维补充。
+- `deploy/backup.sh` 生成 PostgreSQL custom-format dump；Release M 的五部分
+  备份校验、隔离恢复前置检查和完整性审计见
+  `docs/system/DISASTER_RECOVERY_RUNBOOK.md`、
+  `deploy/recovery_preflight.py` 与 `deploy/recovery_integrity.py`。
 
 ## 运行约束
 

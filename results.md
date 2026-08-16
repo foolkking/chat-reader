@@ -1,5 +1,38 @@
 # Implementation Results
 
+## Release M disaster-recovery closure - 2026-08-17
+
+```text
+RELEASE_M = PASS
+BACKUP_RESTORE = PASS
+DISASTER_RECOVERY = PASS
+RESTORE_RUNBOOK = PASS
+BACKUP_ID = release-m-20260816T161711Z-baca93b
+BACKUP_COMPONENTS = postgres, imports, exports, offline, assets
+BACKUP_INTEGRITY = PASS
+BACKUP_COMPLETENESS = PASS
+RECOVERY_TARGETS = chat-reader-release-m-recovery-a, chat-reader-release-m-recovery-b
+RECOVERY_TARGET_ISOLATION = PASS / production DB and volumes reused: 0
+POSTGRESQL_RESTORE = PASS
+BUSINESS_VOLUME_RESTORE = PASS
+RECOVERY_ALEMBIC = 20260816_0022 / head=current
+WORKER_OLD_HEARTBEAT_TREATED_CURRENT = NO
+WORKER_RECOVERY = stale -> alive_idle -> alive_busy -> alive_idle
+CANONICAL_DANGLING_REFERENCE_COUNT = 0
+CANONICAL_MISSING_REQUIRED_FILE_COUNT = 0
+PHYSICAL_OBJECT_CHECKS = 228 / missing 0 / size mismatch 0 / hash mismatch 0
+RESTORE_REPEATABILITY = PASS / second fresh target matched critical aggregates
+MEASURED_BACKUP_WINDOW = 68 seconds
+MEASURED_RECOVERY_A = 24 minutes 21 seconds end-to-end
+PRODUCTION_NON_IMPACT = PASS / public health 200 / runtime unchanged
+PRODUCTION_RESOURCES_REMOVED = 0
+BACKUP_PRESERVED = YES
+PRODUCTION_DR_CUTOVER = NOT_EXECUTED_BY_DESIGN
+KNOWN_PRODUCT_DEFECT = 0
+UNRESOLVED_BLOCKER = NONE
+NEXT_RELEASE = RELEASE_N / NOT_STARTED
+```
+
 ## Release L final closure - 2026-08-16
 
 ```text

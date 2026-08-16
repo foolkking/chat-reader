@@ -3193,6 +3193,8 @@ ARTIFACT_ID = 9264075894
 PRODUCTION_RUNTIME_SOURCE = baca93bdf6f2965c4f5614e296c12d337efc1a0a
 ```
 
+---
+
 ## Scope
 
 - [x] Preserve the externally modified main worktree through an isolated Release L worktree.
@@ -3346,4 +3348,91 @@ TEST_TOOLING_CHANGED = NO
 PRODUCTION_REDEPLOY_REQUIRED = NO
 RELEASE_K = PASS
 NEXT_RELEASE = RELEASE_L_NOT_STARTED
+```
+
+---
+
+# Release M Execution Ledger
+
+```text
+RELEASE_M_STATUS = PASS
+CURRENT_CHECKPOINT = RECOVERY_ACCEPTANCE_COMPLETE
+READY_FOR_RELEASE_N = NO
+PRODUCTION_RUNTIME_SOURCE = baca93bdf6f2965c4f5614e296c12d337efc1a0a
+PRODUCTION_SCHEMA = 20260816_0022
+CURRENT_BACKUP = release-m-20260816T161711Z-baca93b
+BACKUP_INTEGRITY = PASS
+BACKUP_COMPLETENESS = PASS
+RECOVERY_TARGET_ISOLATION = PASS
+POSTGRESQL_RESTORE = PASS
+BUSINESS_VOLUME_RESTORE = PASS
+RECOVERY_RUNTIME_IDENTITY = PASS
+RECOVERY_ALEMBIC = PASS
+WORKER_RESTORED_HEARTBEAT_SEMANTICS = PASS
+CONVERSATION_INTEGRITY = PASS
+MESSAGE_VERSION_INTEGRITY = PASS
+ATTACHMENT_INTEGRITY = PASS
+ATTACHMENT_OCCURRENCE_INTEGRITY = PASS
+ASSET_OBJECT_INTEGRITY = PASS
+DEDUPE_INTEGRITY = PASS
+IMPORT_INTEGRITY = PASS
+EXPORT_INTEGRITY = PASS
+OFFLINE_INTEGRITY = PASS
+SHARE_INTEGRITY = PASS
+SOURCE_EDITOR_CANONICAL_SOURCE = PASS
+CANONICAL_DANGLING_REFERENCE_COUNT = 0
+CANONICAL_MISSING_REQUIRED_FILE_COUNT = 0
+RESTORE_REPEATABILITY = PASS
+RESTORE_RUNBOOK = PASS
+PRODUCTION_DR_CUTOVER = NOT_EXECUTED_BY_DESIGN
+PRODUCTION_NON_IMPACT = PASS
+RECOVERY_ENVIRONMENT_CLEANUP = PASS
+KNOWN_PRODUCT_DEFECT = 0
+UNRESOLVED_BLOCKER = NONE
+NEXT_RELEASE = RELEASE_N
+RELEASE_N = NOT_STARTED
+```
+
+## Scope
+
+- [x] Preserve the externally modified main worktree through an isolated Release M worktree.
+- [x] Re-establish production runtime, schema, service-health and storage authority.
+- [x] Create and verify a current five-part production backup.
+- [x] Prove database, filesystem, ports, network, project and volume isolation.
+- [x] Restore PostgreSQL and all four business volumes into a fresh recovery target.
+- [x] Verify old heartbeat state is stale before worker startup and new worker state is alive.
+- [x] Verify recovery API/Web/worker and the protected diagnostics path.
+- [x] Complete aggregate, physical-file, hash, dedupe and referential-integrity checks.
+- [x] Restore the same backup into a second fresh target and prove repeatability.
+- [x] Publish the executable recovery preflight, integrity audit and runbook.
+- [x] Reconfirm production identity/health and remove only identified recovery resources.
+- [x] Preserve the verified backup and close Release M.
+
+## Evidence
+
+```text
+BACKUP_ID = release-m-20260816T161711Z-baca93b
+BACKUP_STARTED_AT = 2026-08-16T16:17:11Z
+BACKUP_COMPLETED_AT = 2026-08-16T16:18:19Z
+BACKUP_SIZE_BYTES = 525053902
+BACKUP_COMPONENTS = postgres,imports,exports,offline,assets
+BACKUP_SHA256 = PASS
+BACKUP_SOURCE_RUNTIME_SHA = baca93bdf6f2965c4f5614e296c12d337efc1a0a
+BACKUP_SOURCE_SCHEMA = 20260816_0022
+SOURCE_SNAPSHOT_TIME = 2026-08-16 16:17:13Z
+RECOVERY_A = chat-reader-release-m-recovery-a / 127.0.0.1:39001 / PASS
+RECOVERY_B = chat-reader-release-m-recovery-b / 127.0.0.1:39002 / PASS
+RECOVERY_API_IMAGE = sha256:818c37bc703344ff6ce291c79a805832ad6ab4f24433323c6193622b24857395
+RECOVERY_WEB_IMAGE = sha256:83ee77cc5b7b69b90fda804555f6eb3803063491f34aa19f4db50df968ae39a8
+RECOVERY_AGGREGATE_ROWS = 33 conversations / 5264 messages / 5686 versions / 88 attachments / 79 assets
+RECOVERY_PHYSICAL_CHECKS = 228 checked / 0 missing / 0 size mismatch / 0 hash mismatch
+RECOVERY_STORAGE_MATCH = PASS
+RECOVERY_DEDUPE_GROUPS = 8
+RECOVERY_ACTIVE_UNREFERENCED_ATTACHMENTS = 2 (preserved)
+RECOVERY_TRANSIENT_UPLOAD_REFERENCES = 0
+RECOVERY_A_BROWSER_SMOKE = Library / Reader / Source Editor PASS
+RECOVERY_DIAGNOSTICS = operator 200 / public 404 / no-store / privacy PASS
+PRODUCTION_RUNTIME_AFTER = unchanged / health 200
+PRODUCTION_RESOURCES_REMOVED = 0
+BACKUP_PRESERVED = YES
 ```

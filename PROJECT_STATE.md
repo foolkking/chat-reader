@@ -1,8 +1,37 @@
 # Project State
 
+## 2026-08-17 Release M disaster-recovery closure
+
+- `RELEASE_M = PASS`; `RELEASE_N = NOT_STARTED`. This was a restore drill in
+  two fresh, isolated recovery environments and did not cut production traffic.
+- Current production authority remained runtime source
+  `baca93bdf6f2965c4f5614e296c12d337efc1a0a`, schema `20260816_0022`, with
+  public health 200 and unchanged API/Web/worker/PostgreSQL image identities.
+- Backup `release-m-20260816T161711Z-baca93b` contains the PostgreSQL custom
+  dump plus imports, exports, offline and assets archives. PostgreSQL listing,
+  archive listings and SHA-256 verification passed; the backup is retained.
+- Recovery targets `chat-reader-release-m-recovery-a` and `-b` used distinct
+  projects, networks, databases, ports and named volumes. Preflight rejected
+  production identity reuse and passed isolation before either restore.
+- Both restores reached schema `20260816_0022`, healthy API/Web/worker state,
+  matching aggregate and storage counts, 228 physical-object checks with zero
+  missing/size/hash mismatches, zero canonical dangling references and zero
+  missing required files. Dedupe groups and active-unreferenced attachments
+  were preserved; transient upload references remained zero.
+- Restored historical heartbeat state was stale before worker startup; a new
+  worker heartbeat reached `alive_idle`, and a normal recovery QA job produced
+  `alive_busy` then returned to idle. The recovery browser smoke covered
+  Library, Reader and Source Editor without recording user content.
+- Recovery resources were removed by exact project/volume identity only;
+  production resources removed by the drill: `0`. The executable procedure is
+  `docs/system/DISASTER_RECOVERY_RUNBOOK.md` with `deploy/recovery_preflight.py`
+  and `deploy/recovery_integrity.py`.
+
 ## 2026-08-16 Release L final closure
 
-- `RELEASE_L = PASS`; Release K remains `PASS` and Release M is not started.
+- At the Release L checkpoint, `RELEASE_L = PASS` and Release K remained
+  `PASS`; Release M was not started at that time. The current Release M state
+  is recorded above.
   Runtime work was committed and pushed from an isolated worktree, preserving
   the externally modified main worktree. Production now runs exact source
   `baca93bdf6f2965c4f5614e296c12d337efc1a0a` from Actions run `31948357231`

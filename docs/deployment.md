@@ -1,5 +1,20 @@
 # 生产部署
 
+## Release M disaster-recovery drill (2026-08-17)
+
+The current restore contract is documented in
+`docs/system/DISASTER_RECOVERY_RUNBOOK.md`. It requires a current verified
+PostgreSQL custom dump plus `imports`, `exports`, `offline` and `assets`
+archives, SHA-256/archive-list validation, and a fresh recovery Compose
+project. Run `deploy/recovery_preflight.py` against an explicit JSON plan and
+require isolation before any restore mutation; run
+`deploy/recovery_integrity.py` inside the exact versioned API image after
+restoring. Release M restored the retained backup into two independent targets,
+verified Alembic `20260816_0022`, canonical/physical integrity and worker
+heartbeat recovery, then removed only the exact recovery resources. Production
+runtime, volumes and health were unchanged. A disaster cutover was not
+executed by design.
+
 ## Release L protected diagnostics and worker liveness
 
 Release L is deployed and changes the API/worker image, adds Alembic `20260816_0022` and adds a

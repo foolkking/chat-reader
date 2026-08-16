@@ -1,5 +1,24 @@
 # Testing Addendum 2026-08-09
 
+## Release M disaster-recovery verification (2026-08-17)
+
+Release M used the current five-part production backup and restored it into
+two fresh isolated Compose projects. `deploy/recovery_preflight.py` passed the
+database, filesystem, port, network and volume-isolation checks before each
+restore; its tests pass `9/9`. `deploy/recovery_integrity.py` found matching
+aggregate/storage snapshots, zero canonical dangling references, zero missing
+required files and 228 physical objects with zero missing, size or hash
+mismatches on both targets. The second fresh target matched critical
+aggregates, proving repeatability. The recovery runbook is
+`docs/system/DISASTER_RECOVERY_RUNBOOK.md`.
+
+The drill also verified that restored historical worker heartbeat state is
+stale until a new worker emits a heartbeat, then observed recovery `alive_idle`
+and a normal QA job transition `alive_busy -> alive_idle`. Production health,
+runtime image identity and business volumes remained unchanged; no production
+resource was removed. Browser smoke was limited to aggregate Library, Reader
+and Source Editor availability and did not persist user content.
+
 ## Release L observability verification and production closure (2026-08-16)
 
 The deterministic focused gate is:
