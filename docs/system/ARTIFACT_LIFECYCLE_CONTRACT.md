@@ -98,6 +98,21 @@ The detailed grace, two-pass evidence, idempotency, partial failure and
 operator-approval rules are frozen in [Cleanup Contract](CLEANUP_CONTRACT.md).
 Automatic cleanup remains disabled by default.
 
+## Release J first production apply
+
+Release J exercised the existing transaction and cleanup contracts against the
+Release I production runtime. Four stable, unreferenced final Export files were
+deleted only after backup, two-pass identity comparison and the engine's fresh
+per-object DB/filesystem recheck. No canonical row or referenced file changed,
+and replaying the old tokens was a no-op.
+
+The post-apply publication smoke created a new final `.cr` file and committed
+its job/artifact row. A targeted scan proved the file existed with the declared
+size and was protected. After the disposable Conversation was deleted through
+the product API, the now-unreferenced recent final remained protected by grace.
+This production evidence closes the publish-versus-cleanup window without
+changing publication order, retention policy, storage format or schema.
+
 ## Logging
 
 Structured lifecycle events contain category, opaque artifact/job id, size,

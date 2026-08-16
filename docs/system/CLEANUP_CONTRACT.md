@@ -93,3 +93,26 @@ C deployment or a request to run Release C is not deletion approval.
 
 Automatic scheduled cleanup is disabled by default and not enabled by Release
 C. Direct SQL deletion is never part of this procedure.
+
+## Release J first-apply evidence
+
+Release J used this contract without a runtime change. A verified five-part
+backup preceded two stable production dry-runs and a final pre-apply scan. The
+same four opaque `ORPHAN_FINAL` identities totaled `659,673` bytes; no
+`SAFE_TEMP` or `SUPERSEDED_ARTIFACT` object was eligible.
+
+The bounded apply requested and deleted exactly those four files. Failed,
+changed/skipped and already-absent counts were zero. Both post-apply dry-runs
+reported zero eligible objects, while replay of the old tokens deleted zero
+and skipped all four as stale. Canonical DB counts and all referenced Export/
+Offline files remained intact.
+
+A new disposable committed Export was subsequently proven to be present,
+size-matched and absent from candidates. After product-API QA cleanup its final
+file became unreferenced but remained `UNSAFE_PROTECTED` because it was inside
+the 24-hour grace window. It was not manually deleted. This is the intended
+publication/cleanup race behavior.
+
+Release J does not authorize future applies. Every later apply needs a new
+stable identity set and explicit approval. Automatic cleanup remains disabled
+and AssetObject GC remains unimplemented.

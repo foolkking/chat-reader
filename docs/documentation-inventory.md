@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+2026-08-16 Release J final synchronization: the first bounded production
+cleanup apply, exact candidate authority, 24-hour grace, per-object recheck,
+idempotency, canonical zero-deletion evidence and protected post-publication QA
+artifact are recorded in `docs/system/CLEANUP_CONTRACT.md`,
+`docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `PROJECT_STATE.md`, `results.md`,
+`docs/testing.md`, `docs/deployment.md` and `TASKS.md`. Runtime source and
+production images remain Release I; automatic cleanup and AssetObject GC remain
+disabled/out of scope. `RELEASE_J = PASS`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/CLEANUP_CONTRACT.md` | Current contract | Managed roots, categories, grace, opaque identity, explicit apply, final recheck, first-apply evidence and future-approval boundary. |
+| `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md` | Current contract | Publish/commit ordering, orphan semantics, download integrity and production publish-versus-cleanup evidence. |
+| `apps/api/scripts/artifact_cleanup.py` | Current operator CLI | Dry-run by default and exact category/token apply; no apply-all or automatic schedule. |
+| `apps/api/tests/test_cleanup_execution.py` | Current test | Cleanup matrix, wrong-category protection, race recheck, partial failure, path escape and idempotency. |
+| `TASKS.md` | Current release ledger | Release J approved candidate set, apply/post-apply aggregates, recovery notes and final status. |
+
 2026-08-16 Release I final synchronization: the Source Editor transient
 URI grammar, authoritative CodeMirror document, network-versus-editor-ready
 state machine, three-layer save defense, retry/history/selection behavior and

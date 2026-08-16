@@ -1,5 +1,50 @@
 # Testing Addendum 2026-08-09
 
+## Release J cleanup first-apply closure (2026-08-16)
+
+No cleanup runtime code changed. Four explicit fixture gaps were added to
+`tests/test_cleanup_execution.py`: recent generated staging protection,
+retained conversation Export protection, wrong-category token rejection and
+canonical DB-state preservation on partial unlink failure.
+
+The focused local gate is:
+
+```text
+cd apps/api
+python -m pytest -q \
+  tests/test_cleanup_execution.py \
+  tests/test_artifact_lifecycle.py \
+  tests/test_artifact_transaction_boundary.py
+```
+
+Result: `32 passed / 1 skipped`. The skip is the Windows host's inability to
+create the path-escape symlink fixture; exact-SHA Linux Actions executed the
+cleanup safety step without a scoped skip. Actions run `31936666151` on
+`81fb441f51984330042625aac4dabddfd78b0ebc` also passed lint, typecheck, Next
+`16.3.1` Webpack build, full API, Alembic, dependency policy, browser matrices,
+default PWA, scoped PWA negative and image inspection/package/upload.
+
+Production evidence is not count-only. Dry-runs A/B plus the pre-apply scan
+returned the same four opaque `ORPHAN_FINAL` tokens and `659,673` bytes. Apply
+deleted exactly four with zero failures/skips; two post-apply scans had zero
+eligible objects. Replaying the old token authority deleted zero and reported
+four changed/stale skips. Before/after canonical counts and Export/Offline file
+size checks were identical.
+
+Isolated production Chrome passed Library, Reader, Source Editor real upload
+and canonical save, Markdown Viewer, Files Panel, Share focus, Offline catalog,
+committed Export download and zero CSP violations. A targeted production
+classifier proved the new committed Export existed, matched its declared size
+and was not a cleanup candidate. QA cleanup used the product API with 404
+readback. The recent final file left by that disposable lifecycle is protected
+by the 24-hour grace window and was not deleted.
+
+The first two attempts to create the QA through Node `APIRequestContext`
+encountered HTTPS `ECONNRESET` before the route reached API logs. Browser
+same-origin `fetch`, which matches the application boundary, completed the
+flow. This is recorded as recovered test transport behavior, not a cleanup or
+product failure.
+
 ## Release I upload-token atomicity closure (2026-08-16)
 
 The focused API gate is:

@@ -1,5 +1,52 @@
 # 生产部署
 
+## Release J cleanup first-apply closure (2026-08-16)
+
+Release J is an operations/evidence closure. It does not change runtime source,
+database schema or deployment configuration, and production was not recreated.
+The running authority remains Release I source
+`7bcd686b59d62fb9907ba09d644637b7af2b3d86` with API/worker image
+`sha256:e7800d1a86f9973db3642add2f3236e721846f9d4426f74da54e7da0b0f0b8ea`
+and Web image
+`sha256:dae7507d89a66ffc086cc3971e2de57907af2781279c19f3f480b35031d66654`.
+Actual running identities and OCI revision labels were reverified before apply.
+
+The permanent first-apply sequence is:
+
+```text
+verify immutable running identity and health
+  -> verify PostgreSQL + imports/exports/offline/assets backup
+  -> assert both managed roots are mounted
+  -> dry-run A and dry-run B with exact opaque identities
+  -> verify ORPHAN_FINAL predicates per identity
+  -> final dry-run immediately before apply
+  -> apply only approved category and tokens
+  -> per-object fresh classification before unlink
+  -> post-apply dry-run and old-token idempotency replay
+  -> canonical DB/file integrity and production publication smoke
+```
+
+Backup `/opt/chat-reader/backups/release-j-precleanup-20260816T081840Z-7bcd686`
+passed five SHA-256 checks, PostgreSQL restore listing and four archive listings.
+The approved set was four `ORPHAN_FINAL` Export files totaling `659,673` bytes.
+Apply deleted exactly that set with zero failed, changed or absent results.
+Post-apply eligible categories were all zero; replaying the old tokens deleted
+zero and skipped all four as stale.
+
+Canonical counts and Export/Offline file integrity were unchanged. API/Web/
+PostgreSQL remained healthy, the worker remained running, Alembic stayed
+`20260806_0021 (head/current)` and public health returned 200. Production
+Chrome published/downloaded a disposable committed Export and proved it was
+protected from cleanup; QA deletion used the product API with 404 readback.
+The recent final file remains `UNSAFE_PROTECTED` by the 24-hour grace window.
+
+Automatic cleanup remains disabled. Do not schedule the CLI, lower the grace
+window, apply another category, delete the recent QA file manually, run
+AssetObject GC, prune volumes or treat `latest` as release authority. Release J
+test/evidence commit `81fb441f51984330042625aac4dabddfd78b0ebc` passed Actions
+run `31936666151`; its images were not deployed because runtime source did not
+change.
+
 ## Release I upload-token atomicity closure (2026-08-16)
 
 Release I changes only Source Editor upload/save coordination and API

@@ -2,7 +2,7 @@
 
 当前渲染合同：[AI Rich Markdown Renderer](AI_RICH_MARKDOWN_CONTRACT.md)。
 
-最后审计：2026-08-09
+最后审计：2026-08-16
 
 本目录记录可由当前代码、配置、migration、测试或带日期的生产证据追溯的系统事实，不保存产品计划。当前代码与 migration 优先于本目录；无法复验的生产结论必须注明证据日期。
 

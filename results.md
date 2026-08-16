@@ -1,5 +1,59 @@
 # Implementation Results
 
+## Release J cleanup first-apply closure - 2026-08-16
+
+```text
+RELEASE_J = PASS
+RUNTIME_SOURCE_CHANGED = NO
+PRODUCTION_REDEPLOY_REQUIRED = NO
+PRODUCTION_RUNTIME_SOURCE = 7bcd686b59d62fb9907ba09d644637b7af2b3d86
+TEST_EVIDENCE_COMMIT = 81fb441f51984330042625aac4dabddfd78b0ebc
+ACTIONS_RUN = 31936666151 (success, exact test/evidence SHA)
+CLEANUP_FOCUSED_LOCAL = PASS (32 passed / 1 Windows symlink capability skip)
+LINUX_CLEANUP_MATRIX = PASS (0 scoped skips)
+PRE_CLEANUP_BACKUP = /opt/chat-reader/backups/release-j-precleanup-20260816T081840Z-7bcd686
+BACKUP_VERIFIED = PASS
+GRACE_WINDOW = 24 hours
+DRY_RUN_A_B_STABLE = PASS
+APPROVED_CATEGORY = ORPHAN_FINAL
+APPROVED_CANDIDATES = 4 / 659673 bytes
+FIRST_APPLY = PASS
+DELETED = 4 / 659673 bytes
+FAILED = 0
+RECHECK_SKIPPED = 0
+ALREADY_ABSENT = 0
+POST_APPLY_ELIGIBLE = 0
+IDEMPOTENCY = PASS (old tokens: deleted 0 / skipped 4 / failed 0)
+BUSINESS_ATTACHMENT_DELETED = 0
+ASSET_OBJECT_DELETED = 0
+CANONICAL_REFERENCED_ARTIFACT_DELETED = 0
+ACTIVE_JOB_ARTIFACT_DELETED = 0
+SUCCESSFUL_RETAINED_EXPORT_DELETED = 0
+CURRENT_OFFLINE_ARTIFACT_DELETED = 0
+SHARE_REQUIRED_OBJECT_DELETED = 0
+PRODUCTION_PUBLICATION_SMOKE = PASS
+PRODUCTION_QA_CLEANUP = PASS (product API / 404 readback)
+PRODUCTION_HEALTH = PASS
+ALEMBIC_HEAD_CURRENT = 20260806_0021
+AUTOMATIC_CLEANUP = DISABLED
+ASSET_OBJECT_GC = NOT_IMPLEMENTED / NOT_ENABLED
+```
+
+The first production apply used only the four opaque identities stable across
+two dry-runs plus a final pre-apply scan. The engine performed its normal fresh
+DB/filesystem classification before every unlink. The exact apply result was
+four requested, four deleted, `659,673` bytes, zero failures and zero skipped.
+Both post-apply scans had no eligible objects; replaying the old tokens was a
+bounded no-op.
+
+Canonical table counts and file integrity were identical before and after the
+apply. Production Chrome then published and downloaded a disposable `.cr`
+Export, and a targeted classifier proved its committed DB/job/file state was
+protected and absent from candidates. Product API cleanup returned 404 for the
+QA Conversation. The resulting recent final file remains protected by the
+24-hour grace window; Release J did not run a second cleanup or enable a
+schedule. Runtime/image identity is unchanged from Release I.
+
 ## Release I upload-token atomicity closure - 2026-08-16
 
 ```text

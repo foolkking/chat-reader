@@ -1,5 +1,44 @@
 # Project State
 
+## 2026-08-16 Release J cleanup first-apply closure
+
+- `RELEASE_J = PASS`. Release J used the existing cleanup engine without a
+  runtime change or production redeploy. Production continues to run immutable
+  Release I source `7bcd686b59d62fb9907ba09d644637b7af2b3d86`; actual
+  API/worker/Web image identities still match that release and Alembic remains
+  `20260806_0021 (head/current)`.
+- Cleanup authority is limited to the configured Export and Offline roots, a
+  24-hour technical grace window, canonical DB/job/path checks, opaque tokens
+  and a fresh per-object reclassification. Automatic cleanup stays disabled;
+  AssetObject/Attachment/business-file GC remains out of scope.
+- Focused cleanup/lifecycle tests passed `32` with one local Windows symlink
+  capability skip. Exact-SHA Actions run `31936666151` on test/evidence commit
+  `81fb441f51984330042625aac4dabddfd78b0ebc` passed the Linux cleanup matrix,
+  full API/Web/Alembic/dependency/browser/PWA gates and artifact packaging.
+- Verified backup
+  `/opt/chat-reader/backups/release-j-precleanup-20260816T081840Z-7bcd686`
+  contains PostgreSQL plus imports, exports, offline and assets; all five
+  checksums, the PostgreSQL restore listing and four archive listings passed.
+- Two production dry-runs and a final pre-apply scan returned the same four
+  `ORPHAN_FINAL` identities totaling `659,673` bytes. The bounded first apply
+  requested and deleted exactly those four objects with zero failed, changed
+  or already-absent results. Post-apply eligible categories were all zero.
+  Replaying the same old authority deleted zero and skipped all four stale
+  tokens, proving idempotency.
+- Canonical state before/after apply is unchanged: 79 AssetObjects, 88
+  Attachments, 81 MessageVersion occurrences, 18 Export artifacts, 19 Offline
+  artifacts and 67 Import records. Every canonical Export/Offline file exists
+  with its declared size. Business Attachment, AssetObject, active-job,
+  retained Export, current Offline and Share-required deletions are all zero.
+- Isolated production Chrome passed Library, Reader, Source Editor upload/save,
+  Markdown Viewer, Files Panel, Share focus, Offline catalog and committed
+  Export download with zero CSP violations. The new publication was proven
+  protected from cleanup before the disposable QA Conversation was deleted by
+  the product API with 404 readback. Its recent 5,902-byte final file remains
+  `UNSAFE_PROTECTED` under the grace contract and is not a cleanup candidate.
+- Durable contracts: `docs/system/CLEANUP_CONTRACT.md` and
+  `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`.
+
 ## 2026-08-16 Release I upload-token atomicity closure
 
 - `RELEASE_I = PASS` and `READY_FOR_RELEASE_J = YES`. Production runtime source

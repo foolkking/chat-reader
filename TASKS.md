@@ -3058,11 +3058,11 @@ Never broaden this into automatic GC or business-file deletion.**
 # Release J Execution Ledger
 
 ```text
-RELEASE_J_STATUS = IN_PROGRESS
+RELEASE_J_STATUS = PASS
 PREREQUISITES = PASS
-CURRENT_CHECKPOINT = PRE_APPLY_CI_GATE
+CURRENT_CHECKPOINT = COMPLETE
 BLOCKERS = NONE
-FINAL_RESULT = PENDING
+FINAL_RESULT = PASS
 ```
 
 ## Tasks
@@ -3076,10 +3076,10 @@ FINAL_RESULT = PENDING
 - [x] Complete pre-cleanup backup created and verified.
 - [x] Production dry-run A completed with opaque candidate identities.
 - [x] Production dry-run B completed and exact stable set verified.
-- [ ] Bounded `ORPHAN_FINAL` first apply completed or no eligible objects proven.
-- [ ] Post-apply dry-run, idempotency and canonical integrity verified.
-- [ ] Production business smoke and QA cleanup completed.
-- [ ] Release J evidence documents committed and pushed.
+- [x] Bounded `ORPHAN_FINAL` first apply completed or no eligible objects proven.
+- [x] Post-apply dry-run, idempotency and canonical integrity verified.
+- [x] Production business smoke and QA cleanup completed.
+- [x] Release J evidence documents committed and pushed.
 
 ## Completed
 
@@ -3101,7 +3101,13 @@ TEST_CI_RESULT = FAILED (Release I attachment E2E advanced after PATCH response 
 TEST_FAILURE_CLASS = TEST_SYNCHRONIZATION_DEFECT
 TEST_SYNC_FIX_SCOPE = attachment-upload-flow.spec.ts only; runtime source unchanged
 TEST_SYNC_FIX_LOCAL = PASS / 18 passed / 0 skipped
-TEST_SYNC_FOLLOWUP_COMMIT = PENDING
+TEST_SYNC_FOLLOWUP_COMMIT = 81fb441f51984330042625aac4dabddfd78b0ebc
+FINAL_TEST_CI_RUN = 31936666151
+FINAL_TEST_CI_RESULT = PASS
+FINAL_TEST_CI_SOURCE_MATCH = PASS
+FINAL_TEST_ARTIFACT_ID = 9260977100
+RUNTIME_SOURCE_CHANGED = NO
+PRODUCTION_REDEPLOY_REQUIRED = NO
 ```
 
 ## Recovery Notes
@@ -3127,7 +3133,32 @@ APPROVED_CATEGORY = ORPHAN_FINAL
 APPROVED_CANDIDATE_TOKENS = 5b25dfb77228fc7342e05a7e, 92c67fdbd46ee0621c64d424, 310dd2c594a8bbbbfa032737, 22636908b3de8c98298b1e3b
 APPROVED_CANDIDATE_COUNT = 4
 APPROVED_CANDIDATE_BYTES = 659673
-ORPHAN_FINAL_MANUAL_APPLY = PENDING
-POST_APPLY_DRY_RUN = PENDING
-CANONICAL_STATE_INTEGRITY = PENDING
+ORPHAN_FINAL_MANUAL_APPLY = PASS
+APPLY_REQUESTED_COUNT = 4
+APPLY_DELETED_COUNT = 4
+APPLY_DELETED_BYTES = 659673
+APPLY_ALREADY_ABSENT_COUNT = 0
+APPLY_RECHECK_SKIPPED_COUNT = 0
+APPLY_FAILED_COUNT = 0
+POST_APPLY_DRY_RUN = PASS (eligible categories all 0)
+IDEMPOTENCY_REPLAY = PASS (requested 4 / deleted 0 / skipped stale 4 / failed 0)
+CANONICAL_STATE_INTEGRITY = PASS
+BUSINESS_ATTACHMENT_DELETED = 0
+ASSET_OBJECT_DELETED = 0
+CANONICAL_REFERENCED_ARTIFACT_DELETED = 0
+ACTIVE_JOB_ARTIFACT_DELETED = 0
+SUCCESSFUL_RETAINED_EXPORT_DELETED = 0
+CURRENT_OFFLINE_ARTIFACT_DELETED = 0
+SHARE_REQUIRED_OBJECT_DELETED = 0
+POST_APPLY_ORPHAN_FINAL = 0 / 0 bytes
+POST_APPLY_UNSAFE_PROTECTED = 37 / 240320650 bytes
+PRODUCTION_PUBLICATION_SMOKE = PASS
+PUBLICATION_ARTIFACT_PROTECTED = PASS
+PRODUCTION_QA_CLEANUP = PASS / product API / 404 readback
+FINAL_DRY_RUN = PASS (eligible categories all 0; recent QA export remains protected by grace)
+PRODUCTION_HEALTH_AFTER = PASS
+ALEMBIC_AFTER = 20260806_0021 (head/current)
+AUTOMATIC_CLEANUP = DISABLED
+ASSET_OBJECT_GC = NOT_IMPLEMENTED / NOT_ENABLED
+RELEASE_J = PASS
 ```
