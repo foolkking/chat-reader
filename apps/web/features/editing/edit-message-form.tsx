@@ -12,6 +12,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import {
+  findTransientUploadReferences,
   insertPendingMarkers,
   removePendingMarker,
   replacePendingMarker,
@@ -75,7 +76,6 @@ export function EditMessageForm({
   cursorOffsetChangeRef.current = onCursorOffsetChange;
   const insertFilesRef = useRef<(files: File[], position: number, originalCodePosition?: number) => void>(() => undefined);
   const insertExistingAttachmentRef = useRef<(attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void>(() => undefined);
-  const completedUploadItemsRef = useRef(new Map<string, string>());
   const queuedFilesRef = useRef<File[]>([]);
   const themeCompartmentRef = useRef(new Compartment());
   const initialThemeRef = useRef(resolvedTheme);
@@ -103,7 +103,9 @@ export function EditMessageForm({
   const trimmedText = text.trim();
   const isUnchanged = trimmedText === baselineText.trim();
   const hasAttachmentWork = Object.values(attachmentDrafts).some((draft) => draft.status !== "removed");
-  const hasUnresolvedAttachment = Object.values(attachmentDrafts).some((draft) => draft.status === "uploading" || draft.status === "error");
+  const transientUploadReferences = findTransientUploadReferences(text);
+  const hasUnresolvedAttachment = transientUploadReferences.length > 0
+    || Object.values(attachmentDrafts).some((draft) => draft.status !== "ready" && draft.status !== "removed");
   const canDetachRemovedAttachment = (attachmentId: string) => {
     const attachment = conversationAttachments.find((item) => item.id === attachmentId);
     const draftStillUses = countAttachmentReferences(trimmedText, attachmentId) > 0;
@@ -122,14 +124,35 @@ export function EditMessageForm({
       onComplete: (token, item) => {
         const view = editorViewRef.current;
         const canonicalId = item.attachmentId ?? item.id;
-        if (!view || !replacePendingMarker(view, token, canonicalId)) {
-          completedUploadItemsRef.current.set(token, canonicalId);
-        } else {
-          // CodeMirror dispatch and React state may be batched separately.
-          // Seed the canonical document before enabling save so a resolved
-          // upload cannot submit its stale cr-upload:// marker.
-          setText(view.state.doc.toString());
+        setAttachmentDrafts((current) => current[token] ? {
+          ...current,
+          [token]: { ...current[token], status: "canonicalizing", itemId: canonicalId, progress: 100 },
+        } : current);
+        if (!view) {
+          setAttachmentDrafts((current) => current[token] ? {
+            ...current,
+            [token]: { ...current[token], status: "error", error: "The editor is not ready to resolve this attachment." },
+          } : current);
+          return;
         }
+        const replacement = replacePendingMarker(view, token, canonicalId);
+        if (replacement === "duplicate") {
+          setAttachmentDrafts((current) => current[token] ? {
+            ...current,
+            [token]: { ...current[token], status: "error", error: "The attachment placeholder is duplicated." },
+          } : current);
+          return;
+        }
+        if (findTransientUploadReferences(view.state.doc.toString()).some((reference) => reference.token === token)) {
+          setAttachmentDrafts((current) => current[token] ? {
+            ...current,
+            [token]: { ...current[token], status: "error", error: "The attachment reference could not be resolved." },
+          } : current);
+          return;
+        }
+        // EditorView is the save authority. The draft becomes ready only
+        // after its canonicalization transaction is visible in that document.
+        setText(view.state.doc.toString());
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
       onError: (token, message) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current),
@@ -142,10 +165,6 @@ export function EditMessageForm({
     const view = editorViewRef.current;
     if (view && drafts.length) {
       insertPendingMarkers(view, drafts, position);
-      for (const draft of drafts) {
-        const itemId = completedUploadItemsRef.current.get(draft.token);
-        if (itemId && replacePendingMarker(view, draft.token, itemId)) completedUploadItemsRef.current.delete(draft.token);
-      }
       setText(view.state.doc.toString());
     }
   };
@@ -164,6 +183,23 @@ export function EditMessageForm({
     const anchor = position + insert.length;
     view.dispatch({ changes: { from: position, insert }, selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
     onExistingAttachment?.(attachment, position);
+  };
+  const removeAttachmentDraft = (draft: AttachmentDraftState) => {
+    const removal = removePendingMarker(editorViewRef.current, draft.token, draft.itemId);
+    if (removal === "duplicate") {
+      setAttachmentDrafts((current) => current[draft.token] ? {
+        ...current,
+        [draft.token]: { ...current[draft.token], status: "error", error: "The attachment reference is duplicated." },
+      } : current);
+      setError(zh ? "\u9644\u4ef6\u5f15\u7528\u91cd\u590d\uff0c\u8bf7\u5728\u6e90\u7801\u4e2d\u4fdd\u7559\u4e00\u5904\u540e\u91cd\u8bd5\u3002" : "The attachment reference is duplicated. Keep one source reference and retry.");
+      return;
+    }
+    if (editorViewRef.current) setText(editorViewRef.current.state.doc.toString());
+    setAttachmentDrafts((current) => ({
+      ...current,
+      [draft.token]: { ...current[draft.token], status: "removed" },
+    }));
+    onAttachmentRemove?.(draft.token);
   };
   insertFilesRef.current = (files, position, originalCodePosition) => {
     if (originalCodePosition !== undefined) {
@@ -281,13 +317,22 @@ export function EditMessageForm({
     setError(null);
     setRevisionConflict(false);
     setReloadStatus("idle");
-    const unresolved = Object.values(attachmentDrafts).find((draft) => draft.status === "uploading" || draft.status === "error");
+    const authoritativeSource = editorViewRef.current?.state.doc.toString() ?? text;
+    const nextTrimmedText = authoritativeSource.trim();
+    const unresolvedReferences = findTransientUploadReferences(authoritativeSource);
+    const unresolved = Object.values(attachmentDrafts).find((draft) => draft.status !== "ready" && draft.status !== "removed");
     if (unresolved) {
       setError(zh ? `附件“${unresolved.displayName}”尚未完成，请先重试或移除。` : `Attachment “${unresolved.displayName}” is not ready. Retry or remove it before saving.`);
       return;
     }
-    if (!trimmedText || isUnchanged) return;
-    const removedIds = removedAttachmentIds(baselineText, trimmedText);
+    if (unresolvedReferences.length) {
+      setError(zh
+        ? `\u7b2c ${unresolvedReferences[0].lineNumber} \u884c\u7684\u9644\u4ef6\u4ecd\u5728\u5b8c\u6210\u4e2d\u3002\u8bf7\u7b49\u5f85\u5b8c\u6210\u6216\u79fb\u9664\u8be5\u5f15\u7528\u3002`
+        : `The attachment on line ${unresolvedReferences[0].lineNumber} is still resolving. Wait for it to finish or remove the reference.`);
+      return;
+    }
+    if (!nextTrimmedText || nextTrimmedText === baselineText.trim()) return;
+    const removedIds = removedAttachmentIds(baselineText, nextTrimmedText);
     if (removedIds.length && !confirmedRemoval) {
       setRemovedActions(Object.fromEntries(removedIds.map((attachmentId) => [attachmentId, "keep_in_conversation"])));
       setRemovedConfirmMode(mode);
@@ -296,18 +341,17 @@ export function EditMessageForm({
     setIsSaving(true);
     try {
       await onSave(
-        trimmedText,
+        nextTrimmedText,
         reason.trim() || undefined,
         mode,
         removedIds.map((attachmentId) => ({ attachment_id: attachmentId, action: removedActions[attachmentId] ?? "keep_in_conversation" })),
       );
-      setBaselineText(trimmedText);
-      setEditorDocument(trimmedText);
-      setText(trimmedText);
+      setBaselineText(nextTrimmedText);
+      setEditorDocument(nextTrimmedText);
+      setText(nextTrimmedText);
       setReason("");
       setShowClosePrompt(false);
       setAttachmentDrafts({});
-      completedUploadItemsRef.current.clear();
       setRemovedConfirmMode(null);
       setRemovedActions({});
       onDirtyChange?.(false);
@@ -416,12 +460,12 @@ export function EditMessageForm({
           </div>
         </div> : null}
         {Object.values(attachmentDrafts).some((draft) => draft.status !== "removed") ? <div className="space-y-1 rounded-lg border border-ui bg-subtle p-2 text-xs" data-testid="source-editor-attachment-drafts">
-          <p className="text-secondary">{zh ? `待保存附件 ${Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").length} 个` : `${Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").length} attachment(s) pending save`}</p>
+          <p className="text-secondary" role="status" aria-live="polite">{zh ? `待保存附件 ${Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").length} 个` : `${Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").length} attachment(s) pending save`}</p>
           {Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").map((draft) => <div key={draft.token} className="flex min-h-7 items-center gap-2" data-testid={`source-editor-upload-${draft.token}`}>
             <span className="min-w-0 flex-1 truncate text-secondary">{draft.status === "uploading" ? (zh ? `\u6b63\u5728\u4e0a\u4f20\uff1a${draft.displayName}` : `Uploading: ${draft.displayName}`) : draft.status === "error" ? (zh ? `\u4e0a\u4f20\u5931\u8d25\uff1a${draft.displayName}` : `Upload failed: ${draft.displayName}`) : draft.displayName}</span>
             {draft.status === "uploading" ? <span className="shrink-0 text-secondary">{draft.progress}%</span> : null}
             {draft.status === "error" ? <button type="button" className="shrink-0 text-[var(--accent)] hover:underline" onClick={() => { setAttachmentDrafts((current) => ({ ...current, [draft.token]: { ...current[draft.token], status: "uploading", error: undefined, progress: 0 } })); onAttachmentRetry?.(draft.token); }}>{zh ? "\u91cd\u8bd5" : "Retry"}</button> : null}
-            <button type="button" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface" aria-label={zh ? `\u79fb\u9664 ${draft.displayName}` : `Remove ${draft.displayName}`} onClick={() => { removePendingMarker(editorViewRef.current, draft.token); completedUploadItemsRef.current.delete(draft.token); setAttachmentDrafts((current) => ({ ...current, [draft.token]: { ...current[draft.token], status: "removed" } })); onAttachmentRemove?.(draft.token); }}><X className="h-3.5 w-3.5" /></button>
+            <button type="button" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface" aria-label={zh ? `\u79fb\u9664 ${draft.displayName}` : `Remove ${draft.displayName}`} onClick={() => removeAttachmentDraft(draft)}><X className="h-3.5 w-3.5" /></button>
           </div>)}
         </div> : null}
         <button type="button" onClick={() => setShowReason((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle"><ChevronDown className={`h-4 w-4 transition ${showReason ? "rotate-180" : ""}`} />{zh ? "\u7f16\u8f91\u8bf4\u660e\uff08\u53ef\u9009\uff09" : "Edit note (optional)"}</button>
@@ -464,7 +508,7 @@ export function EditMessageForm({
               <button type="button" onClick={() => setShowClosePrompt(false)} className="min-h-10 rounded-lg border border-ui bg-surface px-4 text-sm font-medium text-primary hover:bg-subtle">{zh ? "\u7ee7\u7eed\u7f16\u8f91" : "Continue editing"}</button>
               {hasAttachmentWork ? <button type="button" onClick={() => void closeWithAttachments(true)} className="min-h-10 rounded-lg px-4 text-sm font-medium text-secondary hover:bg-subtle">{zh ? "\u4fdd\u7559\u6587\u4ef6\u5e76\u5173\u95ed" : "Keep files and close"}</button> : null}
               <button type="button" onClick={() => hasAttachmentWork ? void closeWithAttachments(false) : void onCancel(true)} className="min-h-10 rounded-lg px-4 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">{zh ? "\u653e\u5f03" : "Discard"}</button>
-              <button type="button" disabled={isSaving} onClick={() => void submit("create_version")} className="min-h-10 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50">{zh ? "\u4fdd\u5b58\u4e3a\u65b0\u7248\u672c" : "Save as new version"}</button>
+              <button type="button" disabled={isSaving || hasUnresolvedAttachment} onClick={() => void submit("create_version")} className="min-h-10 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50">{zh ? "\u4fdd\u5b58\u4e3a\u65b0\u7248\u672c" : "Save as new version"}</button>
             </div>
           </div>
         </div>

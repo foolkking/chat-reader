@@ -1,5 +1,70 @@
 # Implementation Results
 
+## Release I upload-token atomicity candidate - 2026-08-16
+
+```text
+RELEASE_I = PARTIAL_PASS
+SOURCE_EDITOR_UPLOAD_TOKEN_ATOMICITY = PASS (local candidate)
+EDITOR_GUARD = IMPLEMENTED
+SAVE_TIME_CANONICAL_VALIDATION = PASS
+API_TRANSIENT_REFERENCE_REJECTION = PASS
+API_CANONICAL_REFERENCE_ACCEPTANCE = PASS
+AUTHORITATIVE_EDITOR_DOCUMENT = CodeMirror EditorView.state.doc
+UPLOAD_NETWORK_COMPLETE_SEPARATED_FROM_EDITOR_READY = PASS
+FILE_CHOOSER_UPLOAD_ATOMICITY = PASS
+DRAG_DROP_UPLOAD_ATOMICITY = PASS
+CLIPBOARD_UPLOAD_ATOMICITY = PASS
+MULTI_UPLOAD_OUT_OF_ORDER = PASS
+PARTIAL_UPLOAD_FAILURE = PASS
+UPLOAD_RETRY_IDEMPOTENCY = PASS
+DELETE_PLACEHOLDER_BEFORE_COMPLETION = PASS
+CANONICALIZATION_UNDO_SAFETY = PASS
+CURSOR_SELECTION_SCROLL_STABILITY = PASS
+REVISION_AND_NETWORK_FAILURE_DRAFT_RETENTION = PASS
+ATTACHMENT_OCCURRENCE_INTEGRITY = PASS
+BACKEND_FOCUSED_TESTS = PASS (15 passed)
+API_FULL_SUITE = PASS (285 passed / 5 skipped)
+BROWSER_ATOMICITY_E2E = PASS (17 passed)
+UPLOAD_ATOMICITY_SCOPED_SKIPS = 0
+FOCUSED_BROWSER_REGRESSION = PASS (36 passed)
+CSP_BROWSER = PASS (4 passed)
+SHARE_BROWSER = PASS (2 passed)
+MUTATION_BROWSER = PASS (2 passed)
+VIEWER_BROWSER = PASS (1 passed)
+PDF_BROWSER = PASS (3 passed)
+PWA_DEFAULT = PASS (72 passed / 65 unrelated conditional skipped)
+PWA_NEGATIVE_MATRIX = PASS (10 passed / 0 scoped skipped)
+ALEMBIC_HEAD = 20260806_0021
+ALEMBIC_CURRENT = 20260806_0021
+DEPENDENCY_POLICY = PASS
+SECURITY_HIGH_CRITICAL = PASS (0 high / 0 critical)
+NEW_RUNTIME_DEPENDENCIES = NONE
+NEW_ALEMBIC_MIGRATION = NONE
+DEXIE_SCHEMA_MIGRATION = NONE
+OFFLINE_PACKAGE_FORMAT_CHANGE = NONE
+BUILD_BUNDLER = WEBPACK
+TURBOPACK_MIGRATION = NOT_EXECUTED
+PRODUCTION_FAULT_BRIDGE = ABSENT
+CI_RELEASE_ARTIFACT = NOT_EXECUTED
+PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+PERSISTED_TRANSIENT_REFERENCE_COUNT = 0 (read-only production audit)
+DATA_REPAIR_REQUIRED = NO
+READY_FOR_RELEASE_J = NO
+```
+
+The reproduced ordering allowed upload business finalization to mark a draft
+ready while the React text mirror read by Save could still contain the old
+transient token. Release I makes the live CodeMirror document the save
+authority, marks a draft ready only after a synchronous exact-token transaction
+and post-dispatch verification, and retains an independent API persistence
+guard. Deterministic Playwright request barriers prove no PATCH occurs while a
+real active transient reference remains; successful payload and version reads
+contain `cr-asset://` and no `cr-upload://`.
+
+This is final-source candidate evidence only. Exact-SHA CI, immutable image/
+archive identity, complete production backup, Release H rollback retention,
+deployment and real chooser/save/reload acceptance remain pending.
+
 ## Release H CSP enforcement closure - 2026-08-16
 
 ```text

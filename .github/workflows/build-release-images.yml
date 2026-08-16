@@ -168,6 +168,15 @@ jobs:
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/release-mutation-lifecycle.spec.ts
 
+      - name: Release I upload-token atomicity matrix
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_ATTACHMENT_UPLOAD: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/source-editor-upload-atomicity.spec.ts
+          e2e/attachment-upload-flow.spec.ts
+
       - name: Release H Markdown and image Viewer checks
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"

@@ -19,9 +19,32 @@ async function createConversation(request: APIRequestContext): Promise<{ convers
     },
   });
   expect(preview.ok()).toBeTruthy();
-  const commit = await request.post(`/api/imports/${(await preview.json()).import_id}/commit`);
+  const importId = (await preview.json()).import_id as string;
+  const commit = await request.post(`/api/imports/${importId}/commit`);
   expect(commit.ok()).toBeTruthy();
-  const conversationId = (await commit.json()).conversation_ids[0] as string;
+  const commitBody = (await commit.json()) as { conversation_ids: string[] };
+  let conversationId = commitBody.conversation_ids[0];
+  const deadline = Date.now() + 180_000;
+  while (!conversationId && Date.now() < deadline) {
+    const statusResponse = await request.get(`/api/imports/${importId}/status`);
+    expect(statusResponse.ok()).toBeTruthy();
+    const importStatus = (await statusResponse.json()) as {
+      status: string;
+      conversation_ids: string[];
+      error_message?: string;
+    };
+    if (importStatus.status === "committed") {
+      conversationId = importStatus.conversation_ids[0];
+      break;
+    }
+    if (importStatus.status === "failed") {
+      throw new Error(importStatus.error_message ?? "Attachment upload fixture import failed");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (!conversationId) {
+    throw new Error("Attachment upload fixture import timed out");
+  }
   const window = await request.get(`/api/conversations/${conversationId}/message-window?limit=10&include_blocks=true`);
   expect(window.ok()).toBeTruthy();
   return { conversationId, messageId: (await window.json()).items[0].id as string };
@@ -44,6 +67,38 @@ async function replaceSourceText(page: Page, text: string): Promise<void> {
   await expect(editor).not.toContainText("cr-asset://");
 }
 
+function waitForMessagePatch(page: Page, messageId: string) {
+  return page.waitForResponse((response) =>
+    response.request().method() === "PATCH"
+    && new URL(response.url()).pathname === `/api/messages/${messageId}`,
+  );
+}
+
+async function saveNewVersion(page: Page, messageId: string): Promise<void> {
+  const saveButton = page.getByTestId("source-editor-create-version");
+  await expect(saveButton).toBeEnabled();
+  const saved = waitForMessagePatch(page, messageId);
+  await saveButton.click();
+  expect((await saved).ok()).toBeTruthy();
+}
+
+async function deleteConversation(request: APIRequestContext, conversationId: string): Promise<void> {
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await request.delete(`/api/conversations/${conversationId}`);
+    lastStatus = response.status();
+    if (response.ok()) {
+      expect((await request.get(`/api/conversations/${conversationId}`)).status()).toBe(404);
+      return;
+    }
+    if (lastStatus !== 500) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`Conversation cleanup failed with HTTP ${lastStatus}`);
+}
+
 test("uploads, inserts, versions, and reuses conversation attachments", async ({ page }) => {
   const { conversationId, messageId } = await createConversation(page.request);
   const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
@@ -57,7 +112,7 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
       buffer: tinyPng,
     });
     await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 1 个|1 attachment\(s\) pending save/)).toBeVisible();
-    await page.getByTestId("source-editor-create-version").click();
+    await saveNewVersion(page, messageId);
     await expect(page.getByTestId("source-editor-create-version")).toContainText(/v3/);
     await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
 
@@ -83,7 +138,7 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
     await page.getByRole("button", { name: /Choose conversation file|选择当前对话文件/ }).click();
     await expect(page.getByTestId("source-editor-attachment-picker")).toBeVisible();
     await page.getByRole("button", { name: /Insert later-file\.txt at cursor|在光标处插入 later-file\.txt/ }).click();
-    await page.getByTestId("source-editor-create-version").click();
+    await saveNewVersion(page, messageId);
     await expect(page.getByTestId("source-editor-create-version")).toContainText(/v4/);
     await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
     await expect(message.getByTestId("attachment-block")).toHaveCount(2);
@@ -99,8 +154,7 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
     await message.getByRole("button", { name: /Next version|下一版/ }).click();
     await expect(message.getByTestId("attachment-block")).toHaveCount(2);
   } finally {
-    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
-    expect(cleanup.ok()).toBeTruthy();
+    await deleteConversation(page.request, conversationId);
   }
 });
 
@@ -130,16 +184,14 @@ test("drops and pastes files at the source cursor with independent upload drafts
       content.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: transfer }));
     });
     await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 2 个|2 attachment\(s\) pending save/)).toBeVisible();
-    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
-    await page.getByTestId("source-editor-create-version").click();
+    await saveNewVersion(page, messageId);
     await expect(page.getByTestId("source-editor-create-version")).toContainText(/v3/);
     const attachments = await page.request.get(`/api/conversations/${conversationId}/attachments`);
     expect((await attachments.json()).items).toHaveLength(2);
     await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
     await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(2);
   } finally {
-    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
-    expect(cleanup.ok()).toBeTruthy();
+    await deleteConversation(page.request, conversationId);
   }
 });
 
@@ -167,13 +219,11 @@ test("asks before placing a dropped attachment inside a fenced code block", asyn
     await page.getByRole("button", { name: /Insert after code block|插入到代码块之后/ }).click();
     await expect(page.getByTestId("source-editor-code-drop-choice")).toHaveCount(0);
     await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/code-evidence\.txt/).first()).toBeVisible();
-    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
-    await page.getByTestId("source-editor-create-version").click();
+    await saveNewVersion(page, messageId);
     await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
     await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(1);
   } finally {
-    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
-    expect(cleanup.ok()).toBeTruthy();
+    await deleteConversation(page.request, conversationId);
   }
 });
 
@@ -199,8 +249,7 @@ test("keeps completed unsaved uploads as unplaced conversation files on close", 
     }).toEqual({ count: 1, used: false });
     await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(0);
   } finally {
-    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
-    expect(cleanup.ok()).toBeTruthy();
+    await deleteConversation(page.request, conversationId);
   }
 });
 
@@ -244,18 +293,21 @@ test("drags an existing conversation file into source and confirms removed refer
       content.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: x, clientY: y }));
     }, { attachmentId: attachment.id, x: editorBox!.x + 48, y: editorBox!.y + 22 });
     await expect(page.getByTestId("source-editor-codemirror")).toContainText("existing-file.txt");
-    await page.getByTestId("source-editor-create-version").click();
+    await saveNewVersion(page, messageId);
     await expect(page.locator(`#message-${messageId}`).getByTestId("attachment-block")).toHaveCount(1);
     const afterInsert = await page.request.get(`/api/conversations/${conversationId}/attachments`);
     expect((await afterInsert.json()).items).toHaveLength(1);
     await page.getByTestId("conversation-files-workspace").getByRole("button", { name: /Close|关闭/ }).click();
 
     await replaceSourceText(page, "Attachment reference removed but file retained.");
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
     await page.getByTestId("source-editor-create-version").click();
     const removalDialog = page.getByRole("dialog", { name: /Attachment references were removed|已从正文移除附件引用/ });
     await expect(removalDialog).toBeVisible();
     await expect(removalDialog.getByLabel(/Keep in conversation|保留在当前对话文件/)).toBeChecked();
+    const removalSaved = waitForMessagePatch(page, messageId);
     await removalDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
+    expect((await removalSaved).ok()).toBeTruthy();
     await expect.poll(async () => {
       const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
       return ((await response.json()).items as Array<{ is_used: boolean }>).map((item) => item.is_used);
@@ -263,22 +315,21 @@ test("drags an existing conversation file into source and confirms removed refer
 
     await page.getByRole("button", { name: /Choose conversation file|选择当前对话文件/ }).click();
     await page.getByRole("button", { name: /Insert existing-file\.txt at cursor|在光标处插入 existing-file\.txt/ }).click();
-    const createButton = page.getByTestId("source-editor-create-version");
-    const createLabel = await createButton.textContent();
-    await createButton.click();
-    await expect.poll(() => createButton.textContent()).not.toBe(createLabel);
+    await saveNewVersion(page, messageId);
     await replaceSourceText(page, "Attachment detached from active conversation files.");
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
     await page.getByTestId("source-editor-create-version").click();
     const detachDialog = page.getByRole("dialog", { name: /Attachment references were removed|已从正文移除附件引用/ });
     await detachDialog.getByLabel(/Detach from conversation|同时从当前对话文件移除/).check();
+    const detachSaved = waitForMessagePatch(page, messageId);
     await detachDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
+    expect((await detachSaved).ok()).toBeTruthy();
     await expect.poll(async () => {
       const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
       return ((await response.json()).items as unknown[]).length;
     }).toBe(0);
     expect((await page.request.get(`/api/attachments/${attachment.id}/content`)).ok()).toBeTruthy();
   } finally {
-    const cleanup = await page.request.delete(`/api/conversations/${conversationId}`);
-    expect(cleanup.ok()).toBeTruthy();
+    await deleteConversation(page.request, conversationId);
   }
 });

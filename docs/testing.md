@@ -1,5 +1,59 @@
 # Testing Addendum 2026-08-09
 
+## Release I upload-token atomicity candidate (2026-08-16)
+
+The focused API gate is:
+
+```text
+cd apps/api
+python -m pytest tests/test_attachment_scanner.py \
+  tests/test_attachment_upload_api.py -q
+```
+
+Current candidate result: `15 passed`. It proves structured rejection and
+transaction rollback for active transient references at PATCH, conversation
+create and message insert; acceptance of canonical references and occurrence
+creation; allowance of bare/inline/fenced/indented code literals; idempotent
+finalize; and concurrent optional MIME detection.
+
+The browser gate uses the existing production build and no runtime fault
+bridge:
+
+```text
+PLAYWRIGHT_USE_BUNDLED_CHROMIUM=1
+E2E_ATTACHMENT_UPLOAD=1
+corepack pnpm --filter web exec playwright test \
+  --config=playwright.config.ts \
+  e2e/source-editor-upload-atomicity.spec.ts \
+  e2e/attachment-upload-flow.spec.ts
+```
+
+Current result: `17 passed / 0 failed / 0 scoped skipped`. Playwright route
+barriers hold and release real upload/finalize/save requests; elapsed sleeps
+are not the correctness authority. The matrix asserts zero PATCHes before
+canonicalization, canonical-only payload/version reads, exact occurrence
+counts, chooser/drop/paste convergence, fast/slow and B-before-A completion,
+partial failure and single-flight retry, typing/cursor/selection/scroll,
+delete-before-completion, undo/redo, and canonical drafts after 409/500.
+
+The remaining final-source regression set passed: full API `285 passed / 5
+skipped`, CSP `4/4`, focused Reader/Rich/security `36/36`, Share `2/2`,
+mutation `2/2`, Markdown/image Viewer `1/1`, PDF `3/3`, default PWA `72 passed
+/ 65 unrelated conditional skipped`, and scoped PWA negative `10/10` with
+zero scoped skips. Lint, typecheck, Next `16.3.1` Webpack production build,
+dependency policy and the zero high/critical gate also passed.
+
+The historical attachment tests now wait for actual PATCH completion rather
+than a transient `Saving...` button label. Cleanup retries only a transient
+HTTP 500 caused by the test worker committing `conversation_derived_rebuild`
+at the same instant, then requires a successful product API delete and a 404
+readback. This retry is test cleanup, not upload correctness synchronization.
+
+Final Release I acceptance still requires the exact-SHA workflow artifact,
+verified backup, immutable production deployment and real production chooser,
+save and reload evidence. A source-aware read-only production audit already
+reported zero active transient references without exposing content or IDs.
+
 ## Release H CSP enforcement closure (2026-08-16)
 
 Release H adds a production-build browser hard gate:

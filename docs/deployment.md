@@ -1,5 +1,47 @@
 # 生产部署
 
+## Release I upload-token atomicity deployment contract (candidate, 2026-08-16)
+
+Release I changes only Source Editor upload/save coordination and API
+defense-in-depth. It adds no migration or storage-format change. Production is
+still Release H until the exact Release I source passes Actions and its
+immutable images are accepted.
+
+The permanent deployment sequence is:
+
+```text
+exact source commit and successful Actions run
+  -> independently verified artifact SHA-256 and image manifest
+  -> verified PostgreSQL + imports/exports/offline/assets backup
+  -> preserve Release H immutable images and backup
+  -> explicit immutable API_IMAGE/WEB_IMAGE binding
+  -> Alembic current/head preflight
+  -> recreate --no-build
+  -> compare actual API/worker/migrate/Web identities with the manifest
+  -> health and security headers
+  -> production aggregate transient-reference audit
+  -> isolated Chrome real chooser/upload/save/reload acceptance
+```
+
+`LATEST_TAG_IS_NOT_RELEASE_AUTHORITY = TRUE`. A running image mismatch stops
+acceptance even if health is 200. Never build Next on King, replace production
+environment files, delete volumes, run broad Docker pruning or repair canonical
+message content directly.
+
+Before and after deployment, the production audit must run the same
+source-aware active-reference classifier and output only an aggregate count.
+It must not print source, token, filename, conversation title or IDs. A nonzero
+count requires separate operator approval for data repair; Release I must not
+rewrite user content automatically.
+
+After identity passes, create a disposable QA Conversation through the product,
+use the real Source Editor file chooser, observe Save blocked while unresolved,
+then save after canonicalization. API/reload evidence must show `cr-asset://`
+present and `cr-upload://` absent, Viewer must open the attachment, enforced CSP
+must report zero legitimate-path violations, and QA cleanup must use the product
+API with 404 readback. The deterministic race authority remains the pre-
+production Playwright matrix; no production test hook is allowed.
+
 ## Release H CSP enforcement closure (2026-08-16)
 
 Release H changes the Web response from Report-Only to one enforcing

@@ -6,10 +6,14 @@ import struct
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 
 import httpx
 
 from app.core.config import get_settings
+
+
+_MAGIC_DETECTION_LOCK = Lock()
 
 
 class AssetScanError(RuntimeError):
@@ -161,12 +165,20 @@ def scan_with_clamav(path: Path) -> str:
 
 
 def detect_mime_type(path: Path, filename: str | None = None) -> tuple[str, str | None]:
-    try:
-        import magic  # type: ignore[import-not-found]
+    # python-magic initializes and reuses process-global state. Serialize the
+    # optional import and first use so concurrent uploads cannot observe a
+    # partially initialized module when libmagic is unavailable.
+    with _MAGIC_DETECTION_LOCK:
+        try:
+            import magic  # type: ignore[import-not-found]
 
-        detected = str(magic.from_file(str(path), mime=True) or "application/octet-stream")
-    except (ImportError, OSError):
-        detected = _signature_mime(path) or mimetypes.guess_type(filename or path.name)[0] or "application/octet-stream"
+            detected = str(magic.from_file(str(path), mime=True) or "application/octet-stream")
+        except (ImportError, OSError):
+            detected = (
+                _signature_mime(path)
+                or mimetypes.guess_type(filename or path.name)[0]
+                or "application/octet-stream"
+            )
     extension = mimetypes.guess_extension(detected, strict=False)
     return detected.lower(), extension.lower() if extension else None
 

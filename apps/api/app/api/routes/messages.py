@@ -47,7 +47,6 @@ from app.services.background_jobs import queue_conversation_derived_rebuild
 from app.services.canonical.block_builder import extract_markdown_tasks
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
-UPLOAD_REFERENCE_RE = re.compile(r"cr-upload://(?P<id>[^\s)]+)")
 ASSET_REFERENCE_RE = re.compile(r"cr-asset://(?P<id>[0-9a-fA-F-]{36})")
 logger = logging.getLogger(__name__)
 
@@ -67,7 +66,7 @@ def merge_messages_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return MessageMergeResponse(
         conversation_id=result.survivor_message.conversation_id,
         survivor_message_id=result.survivor_message.id,
@@ -138,7 +137,7 @@ def delete_message_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     conversation = db.get(Conversation, conversation_id)
     if conversation is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
@@ -168,7 +167,7 @@ def restore_deleted_message_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     conversation = db.get(Conversation, conversation_id)
     if conversation is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
@@ -195,7 +194,7 @@ def split_message_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return MessageSplitResponse(
         conversation_id=result.original_message.conversation_id,
         original_message_id=result.original_message.id,
@@ -224,10 +223,6 @@ def update_message(
         except ValueError as exc:
             raise MessageEditError(str(exc), 422) from exc
         timings["request_parse_ms"] = round((time.perf_counter() - request_started) * 1000, 3)
-        _upload_references(source_text)
-        if "cr-upload://" in source_text:
-            line_number = next(index for index, line in enumerate(source_text.splitlines(), 1) if "cr-upload://" in line)
-            raise MessageEditError(f"Line {line_number} contains an unresolved attachment upload.", 422)
         if payload.attachment_occurrences:
             occurrence_keys = [item.occurrence_key for item in payload.attachment_occurrences]
             if len(set(occurrence_keys)) != len(occurrence_keys):
@@ -253,7 +248,7 @@ def update_message(
         timings["commit_ms"] = round((time.perf_counter() - commit_started) * 1000, 3)
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except Exception:
         db.rollback()
         raise
@@ -362,7 +357,7 @@ def toggle_message_task(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except Exception:
         db.rollback()
         raise
@@ -400,7 +395,7 @@ def get_message_versions(
         message = db.get(Message, message_id)
         versions = list_message_versions(db, message_id)
     except MessageEditError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return MessageVersionHistoryResponse(
         message_id=message_id,
         current_version_id=message.current_version_id if message else None,
@@ -436,7 +431,7 @@ def select_message_version_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     message = db.get(Message, result.message.id)
     assert message is not None
     return _edit_response(message, result.previous_version_id, result.current_version.id, result.current_version.version_number, result.warnings, db)
@@ -453,7 +448,7 @@ def delete_message_version_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     message = db.get(Message, result.message.id)
     assert message is not None
     conversation = db.get(Conversation, message.conversation_id)
@@ -486,7 +481,7 @@ def restore_message_version_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     message = db.get(Message, result.message.id)
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
@@ -643,21 +638,6 @@ def _apply_removed_attachment_actions(db: Session, message: Message, actions) ->
         raise MessageEditError("An attachment cannot be detached while a current message version still uses it.", 409)
     for attachment in attachments:
         attachment.status = "detached"
-
-
-def _upload_references(text: str) -> list[tuple[int, uuid.UUID]]:
-    references: list[tuple[int, uuid.UUID]] = []
-    for line_number, line in enumerate(text.splitlines(), 1):
-        for match in UPLOAD_REFERENCE_RE.finditer(line):
-            try:
-                item_id = uuid.UUID(match.group("id"))
-            except ValueError as exc:
-                raise MessageEditError(
-                    f"Line {line_number} contains an invalid attachment upload reference.",
-                    422,
-                ) from exc
-            references.append((line_number, item_id))
-    return references
 
 
 def _version_read(version: MessageVersion) -> MessageVersionRead:

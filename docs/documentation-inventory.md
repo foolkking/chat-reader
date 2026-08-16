@@ -1,5 +1,21 @@
 # Markdown 文档台账
 
+2026-08-16 Release I candidate synchronization: the Source Editor transient
+URI grammar, authoritative CodeMirror document, network-versus-editor-ready
+state machine, three-layer save defense, retry/history/selection behavior and
+immutable production acceptance are recorded in
+`docs/system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md`, `PROJECT_STATE.md`,
+`results.md`, `docs/testing.md` and `docs/deployment.md`. Current local evidence
+is API `15/15`, browser `17/17` and isolated Alembic head/current
+`20260806_0021`; CI, artifact and production remain pending, so
+`RELEASE_I = PARTIAL_PASS`.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `docs/system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md` | Current contract | Transient/canonical URI classes, editor authority, upload state machine, save/API defenses, concurrency, retry, history, data audit, release and rollback. |
+| `apps/web/e2e/source-editor-upload-atomicity.spec.ts` | Current test | Deterministic Release I race matrix, canonical payload/readback, editor stability and save-failure retention. |
+| `apps/api/app/services/editing/transient_upload_references.py` | Current runtime | Source-aware active transient Markdown reference classifier used at persistence boundaries. |
+
 2026-08-16 Release H final synchronization: the evidence-derived enforced
 CSP, single authority, resource graph, inline/Wasm decisions, browser violation
 harness, PWA synthetic-response policy and immutable deployment gate are

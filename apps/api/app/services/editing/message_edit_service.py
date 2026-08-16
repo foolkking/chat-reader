@@ -36,6 +36,7 @@ from app.services.annotations import relocate_annotations_for_new_version
 from app.services.editing.conversation_merge_service import copy_conversation_history
 from app.services.assets.scanner import scan_status_allows_use
 from app.services.database.bulk_insert import insert_rows
+from app.services.editing.transient_upload_references import find_transient_upload_references
 
 MAX_EDIT_TEXT_LENGTH = 200_000
 MESSAGE_ORDER_SCALE = Decimal("1000000")
@@ -44,9 +45,27 @@ MergeProgressCallback = Callable[[str, int, int, int], None]
 
 
 class MessageEditError(ValueError):
-    def __init__(self, message: str, status_code: int = HTTPStatus.BAD_REQUEST) -> None:
+    def __init__(
+        self,
+        message: str,
+        status_code: int = HTTPStatus.BAD_REQUEST,
+        *,
+        code: str | None = None,
+        line_number: int | None = None,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.code = code
+        self.line_number = line_number
+
+    @property
+    def detail(self) -> str | dict[str, str | int]:
+        if self.code is None:
+            return str(self)
+        detail: dict[str, str | int] = {"code": self.code, "message": str(self)}
+        if self.line_number is not None:
+            detail["line_number"] = self.line_number
+        return detail
 
 
 @dataclass(frozen=True)
@@ -850,7 +869,21 @@ def _validate_text(text: str) -> str:
         raise MessageEditError("Message content cannot be empty.")
     if len(clean_text) > MAX_EDIT_TEXT_LENGTH:
         raise MessageEditError("Message content is too large.")
+    _ensure_no_transient_upload_references(clean_text)
     return clean_text
+
+
+def _ensure_no_transient_upload_references(text: str) -> None:
+    references = find_transient_upload_references(text)
+    if not references:
+        return
+    line_number = references[0].line_number
+    raise MessageEditError(
+        f"Line {line_number} contains an unresolved attachment upload.",
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+        code="transient_upload_reference",
+        line_number=line_number,
+    )
 
 
 def _version_blocks(db: Session, version_id: uuid.UUID) -> list[RenderBlock]:
@@ -869,6 +902,7 @@ def _sync_message_from_version(
     *,
     block_count: int | None = None,
 ) -> None:
+    _ensure_no_transient_upload_references(version.display_text)
     blocks = _version_blocks(db, version.id) if block_count is None else []
     message.content_hash = version.content_hash
     message.block_count = block_count if block_count is not None else len(blocks)
@@ -890,6 +924,7 @@ def _replace_version_content(
     attachment_occurrences=None,
 ) -> None:
     import time
+    _ensure_no_transient_upload_references(text)
     parse_started = time.perf_counter()
     block_drafts = build_basic_render_blocks(text)
     if timings is not None:
@@ -953,6 +988,7 @@ def _create_version(
     attachment_occurrences=None,
 ) -> MessageVersion:
     import time
+    _ensure_no_transient_upload_references(text)
     parse_started = time.perf_counter()
     next_version_number = _next_version_number(db, message.id)
     plain = plain_text if plain_text is not None else text

@@ -27,6 +27,7 @@ type UploadJob = {
   cancel?: () => void;
   callbacks: AttachmentDraftCallbacks;
   cancelled?: boolean;
+  inFlight?: boolean;
 };
 
 export function SourceEditorWorkspace({
@@ -79,19 +80,25 @@ export function SourceEditorWorkspace({
   const effectiveAttachmentInsertion = localAttachmentInsertion ?? pendingAttachmentInsertion;
 
   async function startUploadJob(job: UploadJob): Promise<void> {
+    if (job.inFlight || job.cancelled) return;
+    job.inFlight = true;
     try {
-      const session = await createAttachmentUploadSession(message.conversation_id, {
-        targetMessageId: message.id,
-        baseMessageVersionId: message.current_version?.id,
-      });
-      job.sessionId = session.id;
+      if (!job.sessionId) {
+        const session = await createAttachmentUploadSession(message.conversation_id, {
+          targetMessageId: message.id,
+          baseMessageVersionId: message.current_version?.id,
+        });
+        job.sessionId = session.id;
+      }
       if (job.cancelled) return;
-      const request = uploadAttachmentItem(session.id, job.file, (progress) => job.callbacks.onProgress(job.token, progress));
-      job.cancel = request.cancel;
-      const item = await request.promise;
+      if (!job.itemId) {
+        const request = uploadAttachmentItem(job.sessionId, job.file, (progress) => job.callbacks.onProgress(job.token, progress));
+        job.cancel = request.cancel;
+        const item = await request.promise;
+        job.itemId = item.id;
+      }
       if (job.cancelled) return;
-      job.itemId = item.id;
-      const finalized = await finalizeConversationAttachments(message.conversation_id, [item.id]);
+      const finalized = await finalizeConversationAttachments(message.conversation_id, [job.itemId]);
       const attachment = finalized[0];
       if (!attachment) throw new Error("Uploaded attachment could not be finalized.");
       job.attachmentId = attachment.id;
@@ -103,10 +110,13 @@ export function SourceEditorWorkspace({
         ["conversation-attachments", message.conversation_id],
         (current) => current?.some((item) => item.id === attachment.id) ? current : [...(current ?? []), attachment],
       );
-      job.callbacks.onComplete(job.token, { id: item.id, attachmentId: attachment.id });
+      job.callbacks.onComplete(job.token, { id: job.itemId, attachmentId: attachment.id });
     } catch (error) {
       if (job.cancelled || (error instanceof DOMException && error.name === "AbortError")) return;
       job.callbacks.onError(job.token, error instanceof Error ? error.message : "Attachment upload failed.");
+    } finally {
+      job.inFlight = false;
+      job.cancel = undefined;
     }
   }
 
@@ -119,14 +129,21 @@ export function SourceEditorWorkspace({
     drafts.forEach((draft, index) => {
       const job: UploadJob = { token: draft.token, file: files[index], callbacks };
       uploadJobsRef.current.set(job.token, job);
-      void startUploadJob(job);
+    });
+    // Insert transient markers into the authoritative document before even an
+    // immediate upload can complete and attempt canonicalization.
+    queueMicrotask(() => {
+      for (const draft of drafts) {
+        const job = uploadJobsRef.current.get(draft.token);
+        if (job && !job.cancelled) void startUploadJob(job);
+      }
     });
     return drafts;
   }
 
   function retryAttachment(token: string): void {
     const job = uploadJobsRef.current.get(token);
-    if (!job) return;
+    if (!job || job.inFlight) return;
     job.cancelled = false;
     void startUploadJob(job);
   }

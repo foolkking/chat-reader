@@ -95,7 +95,8 @@ def create_conversation_endpoint(
         db.refresh(result.conversation)
     except (MessageEditError, ProjectServiceError) as exc:
         db.rollback()
-        raise HTTPException(status_code=getattr(exc, "status_code", 422), detail=str(exc)) from exc
+        detail = exc.detail if isinstance(exc, MessageEditError) else str(exc)
+        raise HTTPException(status_code=getattr(exc, "status_code", 422), detail=detail) from exc
     return ConversationCreateResponse(
         conversation=_conversation_detail(result.conversation),
         messages=[_message_item(message, True, db, ordinal=index + 1) for index, message in enumerate(result.messages)],
@@ -126,7 +127,8 @@ def insert_message_endpoint(
         db.refresh(result.conversation)
     except (MessageEditError, ProjectServiceError) as exc:
         db.rollback()
-        raise HTTPException(status_code=getattr(exc, "status_code", 422), detail=str(exc)) from exc
+        detail = exc.detail if isinstance(exc, MessageEditError) else str(exc)
+        raise HTTPException(status_code=getattr(exc, "status_code", 422), detail=detail) from exc
     return MessageInsertResponse(
         conversation=_conversation_detail(result.conversation),
         messages=[_message_item(message, True, db) for message in result.messages],

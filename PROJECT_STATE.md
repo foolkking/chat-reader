@@ -1,5 +1,51 @@
 # Project State
 
+## 2026-08-16 Release I upload-token atomicity candidate
+
+- `RELEASE_I = PARTIAL_PASS`. The current worktree closes the reproduced
+  Source Editor race without changing the attachment model: `cr-upload://` is
+  editor-local only, CodeMirror is the authoritative save document, and a
+  successful canonical source may contain only finalized `cr-asset://`
+  references.
+- The editor distinguishes upload completion from canonical replacement,
+  blocks all shared save paths while either state is unresolved, rereads the
+  live CodeMirror document at submit time, and applies exact token-identity
+  replacements outside editor history. The API independently returns a
+  structured 422 `transient_upload_reference` and rolls back create, insert or
+  edit mutations containing an active transient Markdown destination. Code
+  literals remain valid user content.
+- Current candidate evidence is API atomicity/scanner `15/15`, deterministic
+  production-build Chromium upload matrix `17/17` with zero scoped skips, and
+  isolated PostgreSQL Alembic head/current `20260806_0021`. The browser matrix
+  covers chooser, drag/drop, clipboard, fast/slow and out-of-order completion,
+  partial failure/retry, typing, cursor/selection/scroll, delete-before-
+  completion, undo/redo and canonical draft retention after 409/500.
+- Final-source regression evidence is full API `285 passed / 5 skipped`, CSP
+  `4/4`, focused Reader/Rich/security `36/36`, Share `2/2`, mutation `2/2`,
+  Markdown/image Viewer `1/1`, PDF `3/3`, default PWA `72 passed / 65`
+  unrelated conditional skips, and scoped PWA negative `10/10` with zero
+  scoped skips. Lint, typecheck, the Next `16.3.1` Webpack production build,
+  dependency policy and the zero high/critical security gate also pass.
+- A read-only production scan used the same source-aware transient-reference
+  classifier and returned zero active transient references across all and
+  current MessageVersions. No source, token or business identifier was
+  emitted; `DATA_REPAIR_REQUIRED = NO`.
+- An observed Windows-only concurrent `python-magic` initialization failure is
+  serialized at the optional detector boundary; the signature/mimetype
+  fallback and Scanner-disabled production policy are unchanged. Upload
+  finalize is idempotent for a committed item and retry remains single-flight.
+- Release I adds no runtime dependency, Alembic migration, Dexie migration or
+  Offline package format change. The normal production bundle exposes no test
+  fault bridge. Next `16.3.1`, React `19.2.8`, PDF.js `6.2.108`, Webpack and the
+  enforced CSP remain frozen.
+- Exact-SHA Actions artifact, verified backup, immutable deployment/running-
+  image identity and real production chooser/save/reload acceptance are still
+  pending. Production
+  remains Release H `da160a9`; its immutable images and backup remain direct
+  rollback. `READY_FOR_RELEASE_J = NO` until this evidence chain closes.
+- Durable contract:
+  `docs/system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md`.
+
 ## 2026-08-16 Release H CSP enforcement closure
 
 - `RELEASE_H = PASS`. Production source

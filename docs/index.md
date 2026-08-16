@@ -21,6 +21,7 @@
 - [Release F Next LTS migration contract](system/NEXT_LTS_MIGRATION_CONTRACT.md)
 - [Release G PDF.js maintained-line migration contract](system/PDFJS_MIGRATION_CONTRACT.md)
 - [Release H CSP enforcement contract](system/CSP_ENFORCEMENT_CONTRACT.md)
+- [Release I Source Editor upload atomicity contract](system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md)
 - [Conversation/import/viewer test addendum](testing.md)
 
 当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-16。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。

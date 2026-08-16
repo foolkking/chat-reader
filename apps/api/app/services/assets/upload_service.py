@@ -156,6 +156,24 @@ def finalize_upload_items(
     sessions = {item.session_id: item.session for item in items}
     if any(session.conversation_id != conversation_id for session in sessions.values()):
         raise AttachmentUploadError("Upload items belong to another conversation.", 422)
+    if all(item.validation_status == "committed" for item in items):
+        attachments = (
+            db.query(Attachment)
+            .filter(
+                Attachment.conversation_id == conversation_id,
+                Attachment.source_type == source_type,
+                Attachment.source_attachment_id.in_([str(item.id) for item in items]),
+            )
+            .all()
+        )
+        by_source_id = {attachment.source_attachment_id: attachment for attachment in attachments}
+        ordered = [by_source_id.get(str(item_id)) for item_id in item_ids]
+        if all(attachment is not None for attachment in ordered):
+            return FinalizeResult(
+                attachments=[attachment for attachment in ordered if attachment is not None],
+                promoted_storage_keys=[],
+            )
+        raise AttachmentUploadError("Committed upload attachment was not found.", 409)
     if any(session.status != "open" for session in sessions.values()):
         raise AttachmentUploadError("Upload session is not open.", 409)
     if any(item.validation_status != "ready" or not scan_status_allows_use(item.scan_status) for item in items):

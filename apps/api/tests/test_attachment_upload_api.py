@@ -7,6 +7,8 @@ from app.core.database import get_db
 from app.main import app
 from app.models.attachment import Attachment, AssetObject, AttachmentUploadItem, MessageVersionAttachment
 from app.models.background_job import BackgroundJob
+from app.models.conversation import Conversation
+from app.models.message import Message
 from app.models.message_version import MessageVersion
 from test_import_preview_api import client  # noqa: F401
 
@@ -61,6 +63,61 @@ def _upload(client, session_id: str, name: str = "evidence.md", body: bytes = b"
     return response.json()
 
 
+def _canonical_entity_counts() -> dict[str, int]:
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        return {
+            "conversations": db.query(Conversation).count(),
+            "messages": db.query(Message).count(),
+            "versions": db.query(MessageVersion).count(),
+            "occurrences": db.query(MessageVersionAttachment).count(),
+        }
+    finally:
+        db.close()
+        generator.close()
+
+
+def _message_persistence_snapshot(conversation_id: str, message_id: str) -> dict[str, str | int]:
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        conversation = db.get(Conversation, uuid.UUID(conversation_id))
+        message = db.get(Message, uuid.UUID(message_id))
+        assert conversation is not None
+        assert message is not None
+        assert message.current_version_id is not None
+        version = db.get(MessageVersion, message.current_version_id)
+        assert version is not None
+        return {
+            "conversation_revision": conversation.offline_revision,
+            "conversation_message_count": conversation.message_count,
+            "message_row_count": db.query(Message).filter(Message.conversation_id == conversation.id).count(),
+            "current_version_id": str(message.current_version_id),
+            "current_source": version.display_text,
+            "version_count": db.query(MessageVersion).filter(MessageVersion.message_id == message.id).count(),
+            "occurrence_count": (
+                db.query(MessageVersionAttachment)
+                .filter(MessageVersionAttachment.message_version_id == message.current_version_id)
+                .count()
+            ),
+        }
+    finally:
+        db.close()
+        generator.close()
+
+
+def _assert_transient_reference_error(response, *, line_number: int) -> None:
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"] == {
+        "code": "transient_upload_reference",
+        "message": f"Line {line_number} contains an unresolved attachment upload.",
+        "line_number": line_number,
+    }
+
+
 def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_file(client, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
     monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
@@ -88,6 +145,12 @@ def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_fi
     )
     assert promoted.status_code == 201, promoted.text
     attachment_id = promoted.json()["items"][0]["id"]
+    replayed_finalize = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [item["id"]]},
+    )
+    assert replayed_finalize.status_code == 201, replayed_finalize.text
+    assert replayed_finalize.json()["items"][0]["id"] == attachment_id
     updated_text = message["current_version"]["display_text"] + f"\n\n[Attachment](cr-asset://{attachment_id})"
     saved = client.patch(
         f"/api/messages/{message['id']}",
@@ -100,7 +163,7 @@ def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_fi
     assert saved.json()["version_number"] == 2
     saved_text = saved.json()["message"]["current_version"]["display_text"]
     assert "cr-upload://" not in saved_text
-    assert "cr-asset://" in saved_text
+    assert f"cr-asset://{attachment_id}" in saved_text
     assert saved.json()["message_version"]["id"] == saved.json()["current_version_id"]
     assert saved.json()["render_blocks"]
     assert len(saved.json()["attachment_occurrences"]) == 1
@@ -201,6 +264,7 @@ def test_message_save_rejects_unresolved_upload_references_with_line_number(
     conversation_id, message = _conversation_with_message(client)
     session = _create_session(client, conversation_id, message)
     item = _upload(client, session["id"], "pending.txt", b"pending\n")
+    before = _message_persistence_snapshot(conversation_id, message["id"])
 
     missing_item = client.patch(
         f"/api/messages/{message['id']}",
@@ -210,25 +274,106 @@ def test_message_save_rejects_unresolved_upload_references_with_line_number(
             "upload_item_ids": [],
         },
     )
-    assert missing_item.status_code == 422
-    assert "Line 3" in missing_item.json()["detail"]
+    _assert_transient_reference_error(missing_item, line_number=3)
 
+    draft_token = f"draft-{uuid.uuid4()}"
     draft_marker = client.patch(
         f"/api/messages/{message['id']}",
         json={
-            "display_text": "First line.\n\n[Uploading](cr-upload://draft-local-token)",
+            "display_text": f"First line.\n\n[Uploading](cr-upload://{draft_token})",
             "base_version_id": message["current_version"]["id"],
             "upload_item_ids": [],
         },
     )
-    assert draft_marker.status_code == 422
-    assert "Line 3" in draft_marker.json()["detail"]
-    assert "invalid attachment upload reference" in draft_marker.json()["detail"]
+    _assert_transient_reference_error(draft_marker, line_number=3)
+    assert _message_persistence_snapshot(conversation_id, message["id"]) == before
 
     session_state = client.get(f"/api/attachment-upload-sessions/{session['id']}").json()
     assert session_state["status"] == "open"
     assert session_state["items"][0]["validation_status"] == "ready"
     assert client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"] == []
+
+
+def test_manual_conversation_create_rejects_active_transient_reference_without_writes(client) -> None:
+    before = _canonical_entity_counts()
+    token = f"draft-{uuid.uuid4()}"
+
+    response = client.post(
+        "/api/conversations",
+        json={
+            "title": "Rejected transient reference",
+            "messages": [
+                {"role": "user", "content_markdown": f"Question\n\n[Uploading](cr-upload://{token})"},
+                {"role": "assistant", "content_markdown": "Answer"},
+            ],
+        },
+    )
+
+    _assert_transient_reference_error(response, line_number=3)
+    assert _canonical_entity_counts() == before
+
+
+def test_manual_message_insert_rejects_active_transient_reference_without_writes(client) -> None:
+    created = client.post(
+        "/api/conversations",
+        json={
+            "title": "Insert guard conversation",
+            "messages": [
+                {"role": "user", "content_markdown": "Question"},
+                {"role": "assistant", "content_markdown": "Answer"},
+            ],
+        },
+    )
+    assert created.status_code == 201, created.text
+    payload = created.json()
+    conversation_id = payload["conversation"]["id"]
+    anchor = payload["messages"][1]
+    before = _message_persistence_snapshot(conversation_id, anchor["id"])
+    before_counts = _canonical_entity_counts()
+    token = f"draft-{uuid.uuid4()}"
+
+    response = client.post(
+        f"/api/conversations/{conversation_id}/messages/insert",
+        json={
+            "anchor_message_id": anchor["id"],
+            "position": "after",
+            "mode": "single",
+            "messages": [{"content_markdown": f"Follow-up\n\n[Uploading](cr-upload://{token})"}],
+            "expected_offline_revision": payload["conversation"]["offline_revision"],
+        },
+    )
+
+    _assert_transient_reference_error(response, line_number=3)
+    assert _canonical_entity_counts() == before_counts
+    assert _message_persistence_snapshot(conversation_id, anchor["id"]) == before
+
+
+def test_message_save_allows_inline_code_fenced_code_and_bare_transient_uri_literals(client) -> None:
+    conversation_id, message = _conversation_with_message(client)
+    inline_token = f"draft-{uuid.uuid4()}"
+    fenced_token = f"draft-{uuid.uuid4()}"
+    indented_token = f"draft-{uuid.uuid4()}"
+    bare_token = f"draft-{uuid.uuid4()}"
+    source = (
+        f"Inline literal: `[Uploading](cr-upload://{inline_token})`.\n\n"
+        "```markdown\n"
+        f"[Uploading](cr-upload://{fenced_token})\n"
+        "```\n\n"
+        f"    [Uploading](cr-upload://{indented_token})\n\n"
+        f"Bare literal: cr-upload://{bare_token}"
+    )
+
+    response = client.patch(
+        f"/api/messages/{message['id']}",
+        json={
+            "content_markdown": source,
+            "base_version_id": message["current_version"]["id"],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["message"]["current_version"]["display_text"] == source
+    assert response.json()["attachment_occurrences"] == []
 
 
 def test_message_save_rejects_legacy_implicit_upload_finalize(client, tmp_path: Path, monkeypatch) -> None:

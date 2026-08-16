@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier, BrokenBarrierError, Lock
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,6 +16,7 @@ from app.services.assets.scanner import (
     DisabledScanner,
     RemoteScanner,
     configured_scanner_name,
+    detect_mime_type,
 )
 
 
@@ -130,3 +135,50 @@ def test_invalid_scanner_provider_is_rejected(monkeypatch: pytest.MonkeyPatch) -
 
     with pytest.raises(AssetScanError, match="Unsupported attachment scanner provider"):
         configured_scanner_name()
+
+
+def test_detect_mime_type_serializes_python_magic_first_use(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    sources = [tmp_path / "first.txt", tmp_path / "second.txt"]
+    for source in sources:
+        source.write_text("concurrent upload", encoding="utf-8")
+
+    start = Barrier(3)
+    overlap = Barrier(2, timeout=0.1)
+    counter_lock = Lock()
+    active = 0
+    max_active = 0
+
+    def from_file(path: str, *, mime: bool) -> str:
+        nonlocal active, max_active
+        del path, mime
+        with counter_lock:
+            active += 1
+            max_active = max(max_active, active)
+        try:
+            try:
+                overlap.wait()
+            except BrokenBarrierError:
+                pass
+            if max_active > 1:
+                raise NameError("MAGIC_NONE is not defined")
+            return "text/plain"
+        finally:
+            with counter_lock:
+                active -= 1
+
+    monkeypatch.setitem(sys.modules, "magic", SimpleNamespace(from_file=from_file))
+
+    def detect(source: Path) -> tuple[str, str | None]:
+        start.wait()
+        return detect_mime_type(source, source.name)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(detect, source) for source in sources]
+        start.wait()
+        results = [future.result(timeout=2) for future in futures]
+
+    assert results == [("text/plain", ".txt"), ("text/plain", ".txt")]
+    assert max_active == 1
