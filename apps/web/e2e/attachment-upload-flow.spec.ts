@@ -74,12 +74,17 @@ function waitForMessagePatch(page: Page, messageId: string) {
   );
 }
 
+async function expectSaveSettled(page: Page, saved: ReturnType<typeof waitForMessagePatch>): Promise<void> {
+  expect((await saved).ok()).toBeTruthy();
+  await expect(page.getByTestId("source-editor-create-version")).not.toContainText(/Saving|保存中/);
+}
+
 async function saveNewVersion(page: Page, messageId: string): Promise<void> {
   const saveButton = page.getByTestId("source-editor-create-version");
   await expect(saveButton).toBeEnabled();
   const saved = waitForMessagePatch(page, messageId);
   await saveButton.click();
-  expect((await saved).ok()).toBeTruthy();
+  await expectSaveSettled(page, saved);
 }
 
 async function deleteConversation(request: APIRequestContext, conversationId: string): Promise<void> {
@@ -307,7 +312,7 @@ test("drags an existing conversation file into source and confirms removed refer
     await expect(removalDialog.getByLabel(/Keep in conversation|保留在当前对话文件/)).toBeChecked();
     const removalSaved = waitForMessagePatch(page, messageId);
     await removalDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
-    expect((await removalSaved).ok()).toBeTruthy();
+    await expectSaveSettled(page, removalSaved);
     await expect.poll(async () => {
       const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
       return ((await response.json()).items as Array<{ is_used: boolean }>).map((item) => item.is_used);
@@ -323,7 +328,7 @@ test("drags an existing conversation file into source and confirms removed refer
     await detachDialog.getByLabel(/Detach from conversation|同时从当前对话文件移除/).check();
     const detachSaved = waitForMessagePatch(page, messageId);
     await detachDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
-    expect((await detachSaved).ok()).toBeTruthy();
+    await expectSaveSettled(page, detachSaved);
     await expect.poll(async () => {
       const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
       return ((await response.json()).items as unknown[]).length;

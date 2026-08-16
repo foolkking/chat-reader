@@ -3060,7 +3060,7 @@ Never broaden this into automatic GC or business-file deletion.**
 ```text
 RELEASE_J_STATUS = IN_PROGRESS
 PREREQUISITES = PASS
-CURRENT_CHECKPOINT = CLEANUP_TEST_MATRIX_CLOSURE
+CURRENT_CHECKPOINT = PRE_APPLY_CI_GATE
 BLOCKERS = NONE
 FINAL_RESULT = PENDING
 ```
@@ -3070,12 +3070,12 @@ FINAL_RESULT = PENDING
 - [x] Release I prerequisite verified from committed final evidence.
 - [x] Release I runtime source and production image identity recorded.
 - [x] Existing cleanup engine safety implementation verified; no runtime rewrite required.
-- [ ] Four explicit cleanup matrix fixture gaps closed and verified.
-- [ ] Existing retention/grace authority verified.
-- [ ] Production runtime identity and health reverified before cleanup.
-- [ ] Complete pre-cleanup backup created and verified.
-- [ ] Production dry-run A completed with opaque candidate identities.
-- [ ] Production dry-run B completed and exact stable set verified.
+- [x] Four explicit cleanup matrix fixture gaps closed and verified.
+- [x] Existing retention/grace authority verified.
+- [x] Production runtime identity and health reverified before cleanup.
+- [x] Complete pre-cleanup backup created and verified.
+- [x] Production dry-run A completed with opaque candidate identities.
+- [x] Production dry-run B completed and exact stable set verified.
 - [ ] Bounded `ORPHAN_FINAL` first apply completed or no eligible objects proven.
 - [ ] Post-apply dry-run, idempotency and canonical integrity verified.
 - [ ] Production business smoke and QA cleanup completed.
@@ -3093,22 +3093,40 @@ PRODUCT_SOURCE_CHANGED = NO
 CLEANUP_ENGINE_PRESENT = YES
 RUNTIME_SOURCE_CHANGE_REQUIRED = NO
 CLEANUP_LOCAL_BASELINE = 29 passed / 1 Windows symlink skip
+CLEANUP_FINAL_LOCAL = 32 passed / 1 Windows symlink skip
+TEST_SOURCE_COMMIT = 7983c2bf6e1e0da9137b019b4e66293914576082
+TEST_CI_RUN = 31936103034
+LINUX_CLEANUP_SAFETY_STEP = PASS
+TEST_CI_RESULT = FAILED (Release I attachment E2E advanced after PATCH response but before client mutation state settled)
+TEST_FAILURE_CLASS = TEST_SYNCHRONIZATION_DEFECT
+TEST_SYNC_FIX_SCOPE = attachment-upload-flow.spec.ts only; runtime source unchanged
+TEST_SYNC_FIX_LOCAL = PASS / 18 passed / 0 skipped
+TEST_SYNC_FOLLOWUP_COMMIT = PENDING
 ```
 
 ## Recovery Notes
 
 ```text
-RECOVERABLE_ERRORS_ENCOUNTERED = 3 orchestration/quoting errors
-RECOVERABLE_ERRORS_RESOLVED = 3 (no production mutation occurred)
+RECOVERABLE_ERRORS_ENCOUNTERED = invalid-cell dispatches, SSH quoting, host pg_restore absence, and CRLF shell transport
+RECOVERABLE_ERRORS_RESOLVED = YES (no cleanup apply or unintended production mutation occurred)
 ```
 
 ## Production Evidence
 
 ```text
-PRE_CLEANUP_BACKUP = PENDING
-PRODUCTION_DRY_RUN_A = PENDING
-PRODUCTION_DRY_RUN_B = PENDING
-CANDIDATE_SET_STABLE = PENDING
+PRE_CLEANUP_BACKUP = /opt/chat-reader/backups/release-j-precleanup-20260816T081840Z-7bcd686
+BACKUP_VERIFIED = PASS (five checksums, pg_restore listing, four tar listings)
+PRODUCTION_DRY_RUN_A = PASS
+PRODUCTION_DRY_RUN_B = PASS
+CANDIDATE_SET_STABLE = PASS
+SAFE_TEMP_A_B = 0 / 0 bytes
+ORPHAN_FINAL_A_B = 4 / 659673 bytes
+SUPERSEDED_ARTIFACT_A_B = 0 / 0 bytes
+UNSAFE_PROTECTED_A_B = 37 / 240320650 bytes
+APPROVED_CATEGORY = ORPHAN_FINAL
+APPROVED_CANDIDATE_TOKENS = 5b25dfb77228fc7342e05a7e, 92c67fdbd46ee0621c64d424, 310dd2c594a8bbbbfa032737, 22636908b3de8c98298b1e3b
+APPROVED_CANDIDATE_COUNT = 4
+APPROVED_CANDIDATE_BYTES = 659673
 ORPHAN_FINAL_MANUAL_APPLY = PENDING
 POST_APPLY_DRY_RUN = PENDING
 CANONICAL_STATE_INTEGRITY = PENDING
