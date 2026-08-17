@@ -2,7 +2,9 @@
 
 ## Release N single-owner authentication deployment (complete)
 
-Release N changes the API/worker runtime and adds Alembic `20260817_0023`.
+The current runtime adds Alembic `20260817_0024` for independent optional
+Share passwords and scoped unlock sessions. The explicit `/share/{token}`
+surface is public-by-link by default; owner application routes remain gated.
 For a future authenticated-runtime cutover, create a verified production backup using the current
 five-component procedure, prove the exact CI artifact, and configure the
 versioned Compose environment with `AUTH_ENABLED=true`, a separately generated

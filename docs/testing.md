@@ -12,7 +12,7 @@ pytest -q apps/api/tests/test_sharing_api.py apps/api/tests/test_search_api.py a
 ```
 
 The current local result is `27 passed / 1 skipped`; the full API suite is
-`322 passed / 7 skipped`. The Web typecheck and lint also pass. Production
+`324 passed / 7 skipped`. The Web typecheck and lint also pass. Production
 deployment and browser acceptance are intentionally recorded only after the
 scoped commit reaches exact-SHA CI and the current production runtime.
 
@@ -30,7 +30,7 @@ python -m pytest -q tests/test_auth.py tests/test_migration_integrity.py
 ```
 
 An auth-enabled isolated PostgreSQL environment upgrades to Alembic
-`20260817_0023` and runs the production-build Playwright gate:
+`20260817_0024` and runs the production-build Playwright gate:
 
 ```text
 apps/web/e2e/auth-gate.spec.ts

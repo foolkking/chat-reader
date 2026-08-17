@@ -19,7 +19,8 @@ provisioning and production acceptance are complete.
 | --- | --- | --- |
 | `apps/api/app/services/auth.py` | Current runtime | Single-owner Argon2id verification, opaque-token digest, session expiry/touch and bounded login throttle. |
 | `apps/api/app/core/auth_middleware.py` | Current runtime | Default-deny business API boundary, origin checks and no-store behavior. |
-| `apps/api/alembic/versions/20260817_0023_single_owner_auth.py` | Current migration | Owner principal, per-device session and throttle persistence. |
+| `apps/api/alembic/versions/20260817_0023_single_owner_auth.py` | Historical migration | Owner principal, per-device session and throttle persistence. |
+| `apps/api/alembic/versions/20260817_0024_public_share_password.py` | Current migration | Independent optional Share-password and scoped unlock-session persistence. |
 | `apps/web/components/auth-boundary.tsx` | Current runtime | Online session verification and conservative offline cache lock. |
 | `apps/web/e2e/auth-gate.spec.ts` | Current test | New device, Share, logout/PWA and global password-change session invalidation. |
 
