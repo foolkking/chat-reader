@@ -48,7 +48,8 @@ test.describe("Release E PWA negative matrix", () => {
     await expect(offlinePage.locator("main")).toContainText(/Offline ready|可离线启动/);
 
     // A non-critical Skill asset may be absent without making Library unusable.
-    const repaired = await readActiveRecord(offlinePage);
+    const repaired = await waitForCachedShellAssets(offlinePage, [criticalChunk, optionalSkill]);
+    await expect.poll(() => offlinePage.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
     await context.setOffline(true);
     await offlinePage.evaluate(async ({ cacheName, optionalSkill }) => {
       const cache = await caches.open(cacheName);
@@ -291,6 +292,24 @@ async function waitForActiveRecord(page: Page): Promise<ActiveRecord> {
     return Boolean(record);
   }, { timeout: 60_000 }).toBe(true);
   if (!record) throw new Error("Active shell record missing after reconciliation.");
+  return record;
+}
+
+async function waitForCachedShellAssets(page: Page, assets: string[]): Promise<ActiveRecord> {
+  let record: ActiveRecord | null = null;
+  await expect.poll(async () => {
+    record = await page.evaluate(async ({ metaCache, assetPaths }) => {
+      const metadata = await caches.open(metaCache);
+      const response = await metadata.match("/__chat_reader_library_active__");
+      if (!response) return null;
+      const active = await response.json() as ActiveRecord;
+      const shell = await caches.open(active.cacheName);
+      const cached = await Promise.all(assetPaths.map((assetPath) => shell.match(assetPath)));
+      return cached.every(Boolean) ? active : null;
+    }, { metaCache: SHELL_META_CACHE, assetPaths: assets });
+    return Boolean(record);
+  }, { timeout: 60_000 }).toBe(true);
+  if (!record) throw new Error(`Active shell assets ${assets.join(", ")} missing after reconciliation.`);
   return record;
 }
 
