@@ -32,21 +32,37 @@ The exact-source CI, password provisioning, deployment and production
 acceptance subsequently completed. This section remains the compact Release N
 evidence ledger.
 
-## Final product audit - in progress
+## Final product audit - complete
 
 ```text
-FINAL_PRODUCT_AUDIT = IN_PROGRESS
+FINAL_PRODUCT_AUDIT = PASS
+PRODUCT_READY_FOR_LONG_TERM_PERSONAL_USE = YES
 P0_DISCOVERED = 0
+P0_FIXED = 0
 P1_SELECTED = 2
-P1-READER_ATTACHMENT_METADATA_REUSE = LOCAL_PASS
+P1_IMPLEMENTED = 2
+P1-READER_ATTACHMENT_METADATA_REUSE = PASS / CI + production deployed
 P1-CURRENT_STATE_DOCUMENTATION = UPDATED
+P1_DEFERRED = 0
 P2_NOT_IMPLEMENTED = SPECULATIVE_READER_REARCHITECTURE
+KNOWN_PRODUCT_DEFECT = 0
+KNOWN_SECURITY_DEFECT = 0
+KNOWN_DATA_INTEGRITY_DEFECT = 0
+PRODUCTION_GOLDEN_PATH = PASS / Reader, Share, Offline/PWA boundary, Logout, Login
+QA_DATA_CLEANUP = PASS / product UI
+RUNTIME_SOURCE_CHANGED = YES / cb70e0a
+PRODUCTION_REDEPLOY_REQUIRED = YES / completed
+PROACTIVE_OPTIMIZATION = STOP
+NEXT_RELEASE = NONE_PLANNED
 ```
 
 The selected Reader change is covered by focused API tests and the full API
-suite. It embeds owner or Share-scoped attachment URLs from the already-loaded
-occurrence relation, while preserving the existing query fallback for legacy
-and offline data. Production/CI acceptance remains pending.
+suite, exact-source CI run `32021895498`, and production deployment. It embeds
+owner or Share-scoped attachment URLs from the already-loaded occurrence
+relation, while preserving the existing query fallback for legacy and offline
+data. No upload was needed for the disposable QA conversation; Share was
+created and revoked, logout redirected to login, protected content remained
+gated, and the QA conversation was deleted through the product UI.
 
 ## Release M disaster-recovery closure - 2026-08-17
 

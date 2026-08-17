@@ -31,18 +31,27 @@
   Current CI, deployment and backup reporting no longer treats a separately
   repeated human SHA/checksum confirmation as a release gate.
 
-## 2026-08-17 Final product audit in progress
+## 2026-08-17 Final product audit complete
 
-- The first user-centric audit found no P0 product, security or data-integrity
-  defect. The selected P1 changes are limited to Reader attachment metadata
-  reuse and synchronization of current deployment/authentication documents.
+- `FINAL_PRODUCT_AUDIT = PASS`; the user-centric audit found no P0 product,
+  security or data-integrity defect. The only selected P1 runtime change was
+  Reader attachment metadata reuse; current deployment and authentication
+  documents were synchronized as an evidence-only change.
 - Attachment-rich Reader turns now embed the already authorized attachment
   metadata loaded with their occurrences, avoiding one metadata request per
   inline block. Owner and Share responses use their respective content URL
   prefixes; offline and legacy payloads retain their existing query fallback.
+- CI run `32021895498` passed for exact source `cb70e0a`; production now runs
+  that artifact and remains healthy with Alembic `20260817_0023` at head.
+- Production read-only audit and the disposable QA golden path passed for
+  Reader, Share creation/revocation, logout/login and protected-route/PWA
+  cache behavior. The QA conversation was deleted through the product UI.
+- No P0 items remain. P1 selected: 2, implemented: 2. P2 speculative Reader
+  virtualization and broad architecture/performance rewrites remain
+  intentionally unimplemented. No new migration or dependency was added.
 - Large-scale Reader virtualization, architectural rewrites and speculative
-  performance work are intentionally not selected. Final source, CI and
-  production golden-path acceptance are pending this audit's deployment.
+  performance work are intentionally not selected. Proactive optimization is
+  now stopped; future work is usage-, measurement- or security-triggered.
 
 ## 2026-08-17 Release M disaster-recovery closure
 
