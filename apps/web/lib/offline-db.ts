@@ -121,6 +121,17 @@ class OfflineLibraryDatabase extends Dexie {
 
 export const offlineDb = new OfflineLibraryDatabase();
 
+export async function clearProtectedOfflineData(): Promise<void> {
+  offlineDb.close();
+  await Dexie.delete("chat-reader-offline-library");
+  if (typeof caches !== "undefined") {
+    const names = await caches.keys();
+    await Promise.all(names
+      .filter((name) => name === "chat-reader-offline-assets-v1")
+      .map((name) => caches.delete(name)));
+  }
+}
+
 type PackageConversation = Record<string, unknown> & {
   id: string;
   messages: MessageListItem[];

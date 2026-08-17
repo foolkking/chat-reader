@@ -1,5 +1,28 @@
 # 生产部署
 
+## Release N single-owner authentication deployment (in progress)
+
+Release N changes the API/worker runtime and adds Alembic `20260817_0023`.
+Before any cutover, create a verified production backup using the current
+five-component procedure, prove the exact CI artifact, and configure the
+versioned Compose environment with `AUTH_ENABLED=true`, a separately generated
+long `AUTH_SESSION_SECRET`, Secure cookies and the fixed 48-hour timeout. Do
+not print or commit that secret.
+
+Provision the owner credential only through the running exact API image and
+the password-safe operator CLI:
+
+```text
+python -m scripts.owner_auth provision
+```
+
+The command reads a password from the terminal without echoing it. Keep SSH
+operator access as the password-recovery path. Run migrations before serving
+the authenticated application, then prove public health, unauthenticated
+business denial, a clean-browser login, logout, Share/download gating, PWA
+cache lock, worker liveness and protected diagnostics. Do not enable the
+password gate with no provisioned owner credential.
+
 ## Release M disaster-recovery drill (2026-08-17)
 
 The current restore contract is documented in

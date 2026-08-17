@@ -3436,3 +3436,41 @@ PRODUCTION_RUNTIME_AFTER = unchanged / health 200
 PRODUCTION_RESOURCES_REMOVED = 0
 BACKUP_PRESERVED = YES
 ```
+
+---
+
+# Release N Execution Ledger
+
+```text
+RELEASE_N_STATUS = IN_PROGRESS
+AUTH_MODE = SINGLE_PASSWORD
+RUNTIME_SOURCE_CHANGED = YES
+ALEMBIC_HEAD = 20260817_0023
+FINAL_SOURCE_FROZEN = TRUE
+OWNER_PASSWORD_PROVISIONED = NOT_EXECUTED
+PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+KNOWN_PRODUCT_DEFECT = 0
+KNOWN_SECURITY_DEFECT = 0
+UNRESOLVED_BLOCKER = NONE
+```
+
+## Scope
+
+- [x] Preserve the externally modified main worktree through an isolated Release N worktree.
+- [x] Establish a single-owner principal/session boundary with hashed opaque session tokens.
+- [x] Add deterministic single-device, multi-device, expiry, logout, password-change and rate-limit tests.
+- [x] Protect business APIs by default and preserve public health plus login endpoints only.
+- [x] Gate Share and direct artifact paths at the API boundary.
+- [x] Lock protected offline application data after logout, session failure or cookie removal.
+- [x] Complete final local gates and verify the isolated migration head/current state.
+- [x] Freeze the tested local source before commit.
+- [ ] Complete exact-SHA CI, immutable artifact, password provisioning and production acceptance.
+
+Current local evidence: `8` focused authentication tests, `319` API tests (`7`
+skipped), `3` authentication browser tests, the default PWA matrix (`72`
+passed, `69` scoped skips), and the Release E PWA negative matrix (`10` passed)
+pass against the isolated PostgreSQL target. Web lint,
+typecheck, production build, dependency policy, security high/critical policy,
+Alembic `head == current == 20260817_0023`, and `git diff --check` also pass.
+Production password provisioning, CI/artifact authority, deployment and
+acceptance remain intentionally unexecuted.

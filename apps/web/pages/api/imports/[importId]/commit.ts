@@ -36,6 +36,8 @@ export default async function handler(request: NextApiRequest, response: NextApi
     const upstream = await requestImportCommit(
       upstreamUrl,
       request.headers.accept ?? "application/json",
+      request.headers.cookie,
+      request.headers.origin,
     );
     const contentTypeHeader = upstream.headers["content-type"];
     const contentType = Array.isArray(contentTypeHeader) ? contentTypeHeader[0] : contentTypeHeader;
@@ -53,14 +55,18 @@ type UpstreamResponse = {
   statusCode: number;
 };
 
-function requestImportCommit(urlValue: string, accept: string): Promise<UpstreamResponse> {
+function requestImportCommit(urlValue: string, accept: string, cookie?: string, origin?: string): Promise<UpstreamResponse> {
   return new Promise((resolve, reject) => {
     const url = new URL(urlValue);
     const upstreamRequest = (url.protocol === "https:" ? httpsRequest : httpRequest)(
       url,
       {
         method: "POST",
-        headers: { accept },
+        headers: {
+          accept,
+          ...(cookie ? { cookie } : {}),
+          ...(origin ? { origin } : {}),
+        },
       },
       (upstreamResponse) => {
         const chunks: Uint8Array[] = [];

@@ -39,6 +39,10 @@ def test_production_accepts_non_default_attachment_cursor_secret(secret: str) ->
         _env_file=None,
         APP_ENV="production",
         ATTACHMENT_CURSOR_SECRET=secret,
+        AUTH_ENABLED=True,
+        AUTH_SESSION_SECRET="test-only-auth-session-secret-012345678901234567890",
+        AUTH_COOKIE_SECURE=True,
+        AUTH_INACTIVITY_TIMEOUT_SECONDS=172800,
     )
     assert settings.attachment_cursor_secret == secret
 

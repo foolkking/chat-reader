@@ -94,8 +94,8 @@ jobs:
       - name: Alembic single-head and current validation
         run: |
           cd apps/api
-          test "$(python -m alembic heads)" = "20260816_0022 (head)"
-          python -m alembic current | grep -F "20260816_0022 (head)"
+          test "$(python -m alembic heads)" = "20260817_0023 (head)"
+          python -m alembic current | grep -F "20260817_0023"
 
       - name: Dependency audit from official npm registry
         run: |
@@ -201,6 +201,44 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: pnpm --filter web exec playwright test --config=playwright.config.ts
+
+      - name: Single-owner authentication browser gate
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          AUTH_ENABLED: "true"
+          AUTH_SESSION_SECRET: ci-only-auth-session-secret-012345678901234567890
+          AUTH_COOKIE_SECURE: "false"
+          AUTH_ACTIVITY_TOUCH_INTERVAL_SECONDS: "600"
+          AUTH_INACTIVITY_TIMEOUT_SECONDS: "172800"
+        run: |
+          export E2E_AUTH_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(24) + "-owner")')"
+          cd apps/api
+          python - <<'PY'
+          import os
+          from app.core.config import get_settings
+          from app.core.database import SessionLocal
+          from app.services.auth import provision_owner
+          with SessionLocal() as db:
+              provision_owner(db, os.environ["E2E_AUTH_PASSWORD"], get_settings())
+          PY
+          kill "$(cat "$RUNNER_TEMP/api.pid")" || true
+          nohup env AUTH_ENABLED=true AUTH_SESSION_SECRET="$AUTH_SESSION_SECRET" AUTH_COOKIE_SECURE=false \
+            uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/auth-api.log" 2>&1 &
+          auth_api_pid=$!
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then break; fi
+            sleep 1
+          done
+          cd ../..
+          E2E_AUTH=1 E2E_AUTH_PASSWORD="$E2E_AUTH_PASSWORD" \
+            pnpm --filter web exec playwright test --config=playwright.config.ts e2e/auth-gate.spec.ts
+          kill "$auth_api_pid" || true
+          cd apps/api
+          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/api.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then break; fi
+            sleep 1
+          done
 
       - name: Release E production-build PWA negative matrix
         env:

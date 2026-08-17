@@ -1,5 +1,20 @@
 # Markdown 文档台账
 
+2026-08-17 Release N synchronization is in progress. The current auth
+contract, configuration, single-owner/session schema and tests are recorded in
+`docs/system/AUTHENTICATION_CONTRACT.md`, `PROJECT_STATE.md`, `TASKS.md`,
+`docs/testing.md`, `docs/development.md`, `docs/api-reference.md` and
+`docs/deployment.md`. No Release N production result is claimed before exact
+CI, a verified pre-deploy backup, owner-password provisioning and acceptance.
+
+| Path | Lifecycle | Responsibility |
+| --- | --- | --- |
+| `apps/api/app/services/auth.py` | Current runtime | Single-owner Argon2id verification, opaque-token digest, session expiry/touch and bounded login throttle. |
+| `apps/api/app/core/auth_middleware.py` | Current runtime | Default-deny business API boundary, origin checks and no-store behavior. |
+| `apps/api/alembic/versions/20260817_0023_single_owner_auth.py` | Current migration | Owner principal, per-device session and throttle persistence. |
+| `apps/web/components/auth-boundary.tsx` | Current runtime | Online session verification and conservative offline cache lock. |
+| `apps/web/e2e/auth-gate.spec.ts` | Current test | New device, Share, logout/PWA and global password-change session invalidation. |
+
 2026-08-16 Release L synchronization: independent single-worker heartbeat,
 idle/busy/stale/unavailable derivation, loopback-only internal diagnostics,
 public Nginx concealment, no-store/privacy rules and Alembic `20260816_0022`

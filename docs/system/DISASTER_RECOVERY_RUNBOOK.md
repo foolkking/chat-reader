@@ -11,7 +11,10 @@ recoverability; it does not cut production traffic over.
    values from the deployed system and backup manifest, not from a stale report.
 2. Keep the production Compose file and `.env.production` separate from the
    recovery environment. Recovery credentials are ephemeral and must never be
-   copied from production.
+   copied from production. When the restored database includes Release N auth
+   state, use a fresh recovery `AUTH_SESSION_SECRET` so restored browser
+   sessions are invalid, then provision the owner password through the
+   recovery-only password-safe CLI.
 3. Select a new Compose project name, loopback-only Web port, recovery network,
    database name and named volumes. Do not reuse any production identity.
 4. Run `deploy/recovery_preflight.py` against an identity-only JSON plan. It

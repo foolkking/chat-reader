@@ -6,6 +6,7 @@ import { ShortcutManager } from "../components/shortcut-manager";
 import { InteractionDialogProvider } from "../components/interaction-dialog-provider";
 import { ServiceWorkerRegistration } from "../components/service-worker-registration";
 import { OfflineSyncManager } from "../components/offline-sync-manager";
+import { AuthBoundary } from "../components/auth-boundary";
 import { AttachmentViewerProvider } from "../features/attachments/attachment-viewer";
 import { resolveLocale } from "../lib/i18n";
 import type { UserPreferenceRead } from "../lib/types";
@@ -38,13 +39,16 @@ export default async function RootLayout({
   const requestHeaders = await headers();
   const initialLocale = resolveLocale(preferences.locale_mode, requestHeaders.get("accept-language") ?? "");
   const initialTheme = preferences.theme_mode === "dark" ? "dark" : "light";
+  const authEnabled = process.env.APP_ENV !== "test" || process.env.AUTH_ENABLED === "true";
   return (
     <html lang={initialLocale} data-theme={initialTheme} suppressHydrationWarning>
       <body>
         <QueryProvider>
-          <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
-            <InteractionDialogProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager />{children}</AttachmentViewerProvider></ImportDialogProvider></InteractionDialogProvider>
-          </PreferencesProvider>
+          <AuthBoundary authEnabled={authEnabled}>
+            <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
+              <InteractionDialogProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager />{children}</AttachmentViewerProvider></ImportDialogProvider></InteractionDialogProvider>
+            </PreferencesProvider>
+          </AuthBoundary>
         </QueryProvider>
         <ServiceWorkerRegistration />
       </body>

@@ -284,3 +284,22 @@ without instance/task IDs, filenames, raw paths, message content, tokens or
 credentials. Responses are `no-store` and carry a server-owned request ID.
 `/api/health` remains the separate, cheap public health-check route. See
 `docs/system/OBSERVABILITY_CONTRACT.md`.
+
+## Single-owner authentication (Release N)
+
+When `AUTH_ENABLED=true`, every business API route is authenticated by default.
+The explicit public allowlist is coarse health plus the minimal session flow:
+
+| Method | Path | Contract |
+| --- | --- | --- |
+| GET | `/api/auth/session` | Returns authenticated state and a server-derived inactivity expiry; no-store. |
+| POST | `/api/auth/login` | Accepts one password and issues a fresh HttpOnly opaque session cookie; generic failure and bounded backoff. |
+| POST | `/api/auth/logout` | Revokes the current server session and clears cookies. |
+| POST | `/api/auth/password` | Authenticated owner-only current/new/confirm password change; invalidates all sessions. |
+
+The opaque session token is never stored as plaintext. It expires on exactly
+48 hours of per-device inactivity and only authenticated requests can advance a
+rate-limited server-side activity timestamp. Unauthenticated business routes
+return `401`; all authenticated and auth responses are `Cache-Control:
+no-store`. Unsafe mutations require the configured same origin. Share and
+artifact paths remain protected; there is no public Share-token bypass.

@@ -1,5 +1,31 @@
 # Project State
 
+## 2026-08-17 Release N single-owner authentication in progress
+
+- Release N is implementing one owner-password gate with a future-compatible
+  principal/session boundary, not multi-user accounts. The production runtime
+  remains Release L source until an exact Release N artifact is deployed.
+- Sessions use an Argon2id owner credential, a server-side HMAC digest of a
+  cryptographically random opaque cookie token, per-session 48-hour sliding
+  inactivity and a bounded 10-minute activity touch interval. No plaintext
+  password or raw token is persisted.
+- Business API routes are protected by default when authentication is enabled;
+  public health and the minimal login/session/logout endpoints are explicit
+  exceptions. Share and artifact routes are not bypasses. Unsafe mutations
+  require same-origin requests, and authenticated responses are no-store.
+- The PWA may cache its shell but removes protected IndexedDB/Cache Storage
+  state on logout or rejected session. A non-credential browser marker makes
+  ordinary cookie clearing lock offline content; it cannot authorize server
+  requests. Production remains fail-closed until a non-secret session signing
+  value and an operator-provisioned owner password are supplied.
+- Alembic revision `20260817_0023` adds the single owner, session and bounded
+  login-throttle records. Final isolated evidence is `8` focused auth tests,
+  `319` API tests (`7` skipped), `3` auth browser tests, the default PWA
+  matrix (`72` passed, `69` scoped skips), and the Release E PWA negative
+  matrix (`10` passed), with lint, typecheck, production build,
+  dependency/security policy and migration head/current all passing.
+  Release N has not yet completed exact-SHA CI, deployment or acceptance.
+
 ## 2026-08-17 Release M disaster-recovery closure
 
 - `RELEASE_M = PASS`; `RELEASE_N = NOT_STARTED`. This was a restore drill in

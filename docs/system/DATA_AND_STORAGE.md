@@ -15,6 +15,7 @@
 | 批注 | `conversation_annotations`, `conversation_notebooks`, `annotation_sync_receipts` |
 | 分享/文件 | `shares`, `export_artifacts`, `offline_package_artifacts`, `asset_objects`, `attachments`, `message_version_attachments`, `asset_derivatives`, `asset_object_leases`, `attachment_upload_sessions`, `attachment_upload_items` |
 | Operational liveness | `worker_runtime_states` (single-worker heartbeat/state only; no payload or task ID) |
+| Authentication | `auth_principals`, `auth_sessions`, `auth_login_throttles` (single-owner credential hash, opaque-session digest and bounded throttle only; no plaintext password or token) |
 
 ## Canonical 关系
 

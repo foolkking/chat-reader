@@ -1,5 +1,35 @@
 # Testing Addendum 2026-08-09
 
+## Release N authentication verification in progress (2026-08-17)
+
+The focused gate exercises one owner principal, independent device sessions,
+the exact 48-hour expiry boundary, rate-limited activity touch, bounded login
+backoff, logout, password-change global revocation, default API protection,
+Share protection and same-origin mutation checks:
+
+```powershell
+cd apps/api
+python -m pytest -q tests/test_auth.py tests/test_migration_integrity.py
+```
+
+An auth-enabled isolated PostgreSQL environment upgrades to Alembic
+`20260817_0023` and runs the production-build Playwright gate:
+
+```text
+apps/web/e2e/auth-gate.spec.ts
+```
+
+It covers a fresh device login, generic failure, HttpOnly server credential,
+logout cache purge, Share-token non-bypass, two independent device sessions and
+password-change invalidation. It uses a generated test credential only; no
+production credential is written to test output. The final isolated source
+passes `8` focused auth tests, `319` API tests (`7` skipped), `3` browser auth
+tests, the default PWA matrix (`72` passed, `69` scoped skips), and the Release
+E PWA negative matrix (`10` passed). Web lint,
+typecheck, the Next 16.3.1 Webpack production build, dependency/security policy,
+migration head/current and `git diff --check` also pass. Exact-SHA CI,
+production provisioning, deployment and acceptance remain pending.
+
 ## Release M disaster-recovery verification (2026-08-17)
 
 Release M used the current five-part production backup and restored it into

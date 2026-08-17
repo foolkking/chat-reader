@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import ClassVar
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -73,6 +73,15 @@ class Settings(BaseSettings):
     worker_heartbeat_stale_after_seconds: int = Field(default=120, alias="WORKER_HEARTBEAT_STALE_AFTER_SECONDS", ge=3)
     import_draft_ttl_hours: int = Field(default=24, alias="IMPORT_DRAFT_TTL_HOURS")
     enable_internal_diagnostics: bool = Field(default=False, alias="ENABLE_INTERNAL_DIAGNOSTICS")
+    auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
+    auth_session_secret: SecretStr | None = Field(default=None, alias="AUTH_SESSION_SECRET")
+    auth_cookie_secure: bool = Field(default=False, alias="AUTH_COOKIE_SECURE")
+    auth_activity_touch_interval_seconds: int = Field(
+        default=600, alias="AUTH_ACTIVITY_TOUCH_INTERVAL_SECONDS", ge=300, le=900
+    )
+    auth_inactivity_timeout_seconds: int = Field(
+        default=48 * 60 * 60, alias="AUTH_INACTIVITY_TIMEOUT_SECONDS", ge=60
+    )
     artifact_cleanup_grace_hours: int = Field(default=24, alias="ARTIFACT_CLEANUP_GRACE_HOURS", ge=1)
     canjson_max_line_bytes: int = Field(default=32 * 1024 * 1024, alias="CANJSON_MAX_LINE_BYTES")
     canjson_max_messages: int = Field(default=100_000, alias="CANJSON_MAX_MESSAGES")
@@ -95,7 +104,7 @@ class Settings(BaseSettings):
         return value
 
     @model_validator(mode="after")
-    def reject_unsafe_production_attachment_cursor_secret(self) -> "Settings":
+    def reject_unsafe_production_security_configuration(self) -> "Settings":
         if self.worker_heartbeat_stale_after_seconds < self.worker_heartbeat_interval_seconds * 3:
             raise ValueError(
                 "WORKER_HEARTBEAT_STALE_AFTER_SECONDS must allow at least three heartbeat intervals."
@@ -113,7 +122,21 @@ class Settings(BaseSettings):
                 "Refusing to start in production with a missing, default, or placeholder attachment cursor secret. "
                 "Configure ATTACHMENT_CURSOR_SECRET with a production-specific value."
             )
+        if not self.auth_enabled:
+            raise ValueError("Refusing to start in production with AUTH_ENABLED disabled.")
+        auth_secret = self.auth_session_secret.get_secret_value().strip() if self.auth_session_secret else ""
+        if len(auth_secret) < 32 or auth_secret.casefold() in self._PRODUCTION_SECRET_PLACEHOLDERS:
+            raise ValueError(
+                "Refusing to start in production with a missing, short, or placeholder AUTH_SESSION_SECRET."
+            )
+        if not self.auth_cookie_secure:
+            raise ValueError("Refusing to start in production without a Secure authentication cookie.")
+        if self.auth_inactivity_timeout_seconds != 48 * 60 * 60:
+            raise ValueError("Production AUTH_INACTIVITY_TIMEOUT_SECONDS must be exactly 48 hours.")
         return self
+
+    def auth_secret_value(self) -> str:
+        return self.auth_session_secret.get_secret_value() if self.auth_session_secret else ""
 
 
 @lru_cache

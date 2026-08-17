@@ -17,6 +17,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "PURGE_PROTECTED_CONTENT") {
+    event.waitUntil(caches.delete("chat-reader-offline-assets-v1"));
+    return;
+  }
   const port = event.ports[0];
   if (!port) return;
   if (event.data?.type === "GET_LIBRARY_SHELL_STATUS") {
@@ -25,6 +29,7 @@ self.addEventListener("message", (event) => {
   }
   if (event.data?.type === "PREPARE_LIBRARY_SHELL") {
     event.waitUntil(prepareLibraryShell(event.data, port));
+    return;
   }
 });
 

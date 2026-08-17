@@ -20,6 +20,8 @@ from app.api.routes.attachments import router as attachments_router
 from app.api.routes.system_archives import router as system_archives_router
 from app.core.config import get_settings
 from app.api.routes.diagnostics import router as diagnostics_router
+from app.api.routes.auth import router as auth_router
+from app.core.auth_middleware import AuthenticationMiddleware
 from app.core.observability import RequestObservabilityMiddleware
 
 settings = get_settings()
@@ -37,6 +39,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(AuthenticationMiddleware)
 app.add_middleware(RequestObservabilityMiddleware)
 
 app.include_router(health_router)
@@ -57,3 +60,4 @@ app.include_router(offline_router)
 app.include_router(attachments_router)
 app.include_router(system_archives_router)
 app.include_router(diagnostics_router)
+app.include_router(auth_router)

@@ -1,5 +1,32 @@
 # Implementation Results
 
+## Release N single-owner authentication - in progress
+
+```text
+RELEASE_N = IN_PROGRESS
+AUTH_MODE = SINGLE_PASSWORD
+AUTH_SCHEMA = 20260817_0023 / isolated upgrade verified
+FOCUSED_AUTH_TESTS = PASS / 8 passed
+API_FULL_SUITE = PASS / 319 passed / 7 skipped
+AUTH_BROWSER_E2E = PASS / 3 passed / isolated production build / generated test credential
+PWA_REGRESSION = PASS / 72 passed / 69 scoped skips
+PWA_NEGATIVE_MATRIX = PASS / 10 passed
+WEB_LINT = PASS
+TYPECHECK = PASS
+PRODUCTION_BUILD = PASS / Next 16.3.1 Webpack
+DEPENDENCY_POLICY = PASS
+SECURITY_HIGH_CRITICAL = PASS / 0 high / 0 critical
+GIT_DIFF_CHECK = PASS
+RUNTIME_SOURCE_CHANGED = YES
+FINAL_SOURCE_FROZEN = TRUE
+PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+OWNER_PASSWORD_PROVISIONED = NOT_EXECUTED
+```
+
+This is final-source local and isolated evidence only. It does not establish a
+production password gate, CI/artifact authority, deployment or acceptance
+result.
+
 ## Release M disaster-recovery closure - 2026-08-17
 
 ```text

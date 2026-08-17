@@ -1,4 +1,5 @@
 from app.models.background_job import BackgroundJob
+from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthSession
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
 from app.models.attachment import (
     AssetDerivative,
@@ -31,6 +32,9 @@ from app.models.worker_runtime_state import WorkerRuntimeState
 
 __all__ = [
     "BackgroundJob",
+    "AuthLoginThrottle",
+    "AuthPrincipal",
+    "AuthSession",
     "AnnotationSyncReceipt",
     "AssetDerivative",
     "AssetObject",

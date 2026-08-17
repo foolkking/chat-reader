@@ -120,6 +120,7 @@ export function uploadAttachmentItem(
     request.addEventListener("load", () => {
       let payload: unknown;
       try { payload = request.responseText ? JSON.parse(request.responseText) : null; } catch { payload = null; }
+      if (request.status === 401) window.dispatchEvent(new Event("chat-reader:auth-unauthorized"));
       if (request.status >= 200 && request.status < 300) resolve(payload as AttachmentUploadItemRead);
       else reject(new Error(readApiError(payload, request.status)));
     });
@@ -1124,6 +1125,9 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("chat-reader:auth-unauthorized"));
+    }
     throw new Error(await getErrorMessage(response, path));
   }
   if (response.status === 204) {
