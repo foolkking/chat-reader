@@ -42,6 +42,32 @@ def test_search_returns_results_and_plain_text_snippet(client: TestClient) -> No
     assert all(match["match_start"] < match["match_end"] for match in payload["items"][0]["matches"])
 
 
+def test_manual_conversation_is_immediately_searchable_with_distinct_occurrences(client: TestClient) -> None:
+    created = client.post(
+        "/api/conversations",
+        json={
+            "title": "Immediate Search",
+            "messages": [
+                {"role": "user", "content_markdown": "needle once; needle twice."},
+                {"role": "assistant", "content_markdown": "needle answer."},
+            ],
+        },
+    )
+    assert created.status_code == 201
+    conversation_id = created.json()["conversation"]["id"]
+
+    response = client.get(
+        "/api/search",
+        params={"q": "needle", "conversation_id": conversation_id, "document_type": "message"},
+    )
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert {item["role"] for item in items} == {"user", "assistant"}
+    user_item = next(item for item in items if item["role"] == "user")
+    assert len(user_item["matches"]) == 2
+    assert len({(match["block_index"], match["match_start"], match["match_end"]) for match in user_item["matches"]}) == 2
+
+
 def test_search_filters_validation_and_pagination(client: TestClient) -> None:
     conversation_id = _commit_search_sample(client, "Filter Sample")
     project_id = client.post("/api/projects", json={"name": "Search Project"}).json()["id"]

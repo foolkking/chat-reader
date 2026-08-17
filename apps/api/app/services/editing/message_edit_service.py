@@ -1371,6 +1371,9 @@ def create_manual_conversation(
         )
         messages.append(message)
     _refresh_conversation_stats(db, conversation.id)
+    # Manual conversations must be searchable as soon as their creation
+    # transaction commits, just like imported and subsequently edited content.
+    rebuild_search_and_toc_for_conversation(db, conversation.id)
     return ConversationCreateResult(conversation=conversation, messages=messages)
 
 
