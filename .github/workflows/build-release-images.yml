@@ -276,9 +276,13 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      - name: Record image build metadata
+        run: echo "IMAGE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - name: Build API and worker image
         run: |
           docker build \
+            --label org.opencontainers.image.created="${IMAGE_BUILD_TIME}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
             --label org.opencontainers.image.source="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
             --tag chat-reader-api:${GITHUB_SHA} apps/api
@@ -292,6 +296,7 @@ jobs:
             --build-arg API_INTERNAL_URL=http://api:8000 \
             --build-arg COMPLEX_ATTACHMENT_PREVIEW_ENABLED=false \
             --build-arg WEB_BUILD_HEAP_MB=2048 \
+            --label org.opencontainers.image.created="${IMAGE_BUILD_TIME}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
             --label org.opencontainers.image.source="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
             --tag chat-reader-web:${GITHUB_SHA} \
@@ -308,18 +313,15 @@ jobs:
             chat-reader-migrate:${GITHUB_SHA} \
             chat-reader-web:${GITHUB_SHA} \
             | gzip -1 > chat-reader-images.tar.gz
-          sha256sum chat-reader-images.tar.gz > chat-reader-images.tar.gz.sha256
           jq -n \
             --arg commit "$GITHUB_SHA" \
             --arg run_id "$GITHUB_RUN_ID" \
             --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
-            --arg built_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg built_at "$IMAGE_BUILD_TIME" \
             --arg archive "chat-reader-images.tar.gz" \
-            --arg sha256 "$(cut -d' ' -f1 chat-reader-images.tar.gz.sha256)" \
             --arg api_image_id "$(docker image inspect -f '{{.Id}}' chat-reader-api:${GITHUB_SHA})" \
             --arg web_image_id "$(docker image inspect -f '{{.Id}}' chat-reader-web:${GITHUB_SHA})" \
-            --arg diagnostics_gateway_sha256 "$(sha256sum deploy/nginx-internal-diagnostics.location.conf | cut -d' ' -f1)" \
-            '{schema_version: 1, commit: $commit, workflow_run_id: $run_id, workflow_run_attempt: $run_attempt, built_at: $built_at, archive: $archive, sha256: $sha256, images: {api: $api_image_id, web: $web_image_id}, diagnostics_gateway: {path: "deploy/nginx-internal-diagnostics.location.conf", sha256: $diagnostics_gateway_sha256}}' \
+            '{schema_version: 2, commit: $commit, workflow_run_id: $run_id, workflow_run_attempt: $run_attempt, built_at: $built_at, archive: $archive, images: {api: $api_image_id, web: $web_image_id}, diagnostics_gateway: {path: "deploy/nginx-internal-diagnostics.location.conf"}}' \
             > release-manifest.json
 
       - name: Upload deployable release artifact
@@ -328,7 +330,6 @@ jobs:
           name: chat-reader-images
           path: |
             chat-reader-images.tar.gz
-            chat-reader-images.tar.gz.sha256
             release-manifest.json
             image-inspection.json
             deploy/nginx-internal-diagnostics.location.conf

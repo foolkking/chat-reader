@@ -11,11 +11,13 @@ has_previous_image=""
 
 for image in $images; do
   image_revision=$(docker image inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")
+  image_created=$(docker image inspect -f '{{ index .Config.Labels "org.opencontainers.image.created" }}' "$image")
   architecture=$(docker image inspect -f '{{ .Architecture }}' "$image")
   image_id=$(docker image inspect -f '{{ .Id }}' "$image")
   command=$(docker image inspect -f '{{ json .Config.Cmd }}' "$image")
 
   test "$image_revision" = "$revision"
+  test -n "$image_created"
   test "$architecture" = "amd64"
   case "$image" in
     chat-reader-web:*) printf '%s' "$command" | grep -F 'apps/web/server.js' >/dev/null ;;
@@ -34,8 +36,8 @@ for image in $images; do
   if [ -n "$has_previous_image" ]; then
     printf ',\n' >> image-inspection.json
   fi
-  printf '    {"name":"%s","id":"%s","architecture":"%s","command":%s}' \
-    "$image" "$image_id" "$architecture" "$command" >> image-inspection.json
+  printf '    {"name":"%s","id":"%s","built_at":"%s","architecture":"%s","command":%s}' \
+    "$image" "$image_id" "$image_created" "$architecture" "$command" >> image-inspection.json
   has_previous_image="1"
 done
 
