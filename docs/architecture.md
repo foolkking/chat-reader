@@ -20,9 +20,11 @@ flowchart LR
 ## Current authentication boundary
 
 The browser and FastAPI now enforce a default-deny single-owner session
-boundary for business routes. Only coarse health and the minimal login/session
-allowlist are public; Share and artifact URLs are authenticated business
-surfaces. The API owns authorization, opaque HttpOnly cookie verification,
+boundary for private business routes. Coarse health, the minimal
+login/session allowlist and the explicit token-scoped `/share/{token}` public
+capability surface are exceptions. Share data is still authorized by its
+opaque token and optional independent Share password; Share and artifact
+resources never become general owner APIs. The API owns authorization, opaque HttpOnly cookie verification,
 48-hour sliding inactivity, same-origin mutation checks and no-store response
 policy. The historical statements below that describe an unauthenticated
 deployment are retained for context and are superseded by

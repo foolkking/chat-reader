@@ -24,6 +24,7 @@ class ShareCreate(BaseModel):
     expires_at: datetime | None = None
     theme: ResolvedTheme | None = None
     locale: ResolvedLocale | None = None
+    share_password: str | None = Field(default=None, min_length=12, max_length=1024)
 
 
 class ShareRead(BaseModel):
@@ -49,6 +50,7 @@ class ShareRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     share_url: str | None = None
+    password_required: bool = False
 
 
 class ShareCreateResponse(ShareRead):
@@ -62,6 +64,7 @@ class ShareUpdate(BaseModel):
     expires_at: datetime | None = None
     theme: ResolvedTheme | None = None
     locale: ResolvedLocale | None = None
+    share_password: str | None = Field(default=None, min_length=12, max_length=1024)
 
 
 class ShareRevokeResponse(ShareRead):
@@ -75,6 +78,14 @@ class SharedConversationBootstrap(BaseModel):
     turn_count: int
     capabilities: dict[str, bool] = Field(default_factory=dict)
     description_markdown: str | None = None
+
+
+class ShareUnlockInput(BaseModel):
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class ShareUnlockResponse(BaseModel):
+    unlocked: bool = True
 
 
 class SharedMessageWindowResponse(MessageWindowResponse):

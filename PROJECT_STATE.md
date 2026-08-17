@@ -1,5 +1,25 @@
 # Project State
 
+## 2026-08-17 Public Share and reference-style conversation search
+
+- The post-audit product enhancement is implemented locally: the explicit
+  `/share/{token}` page and `/api/shared/{token}/*` capability surface are
+  public-by-link by default, while the owner password remains required for
+  private application routes. Share passwords are optional, independently
+  Argon2id-hashed credentials; they never create or reuse an owner session.
+- Password-protected Shares use a Share-scoped HttpOnly unlock cookie and
+  server-side unlock session with revocation on password change/removal. Share
+  resources continue to be resolved through the exact Share scope. The public
+  Share page does not register the owner PWA service worker and responses are
+  non-cacheable.
+- Current-conversation search now requests canonical message results by
+  default, returns message-version and per-occurrence block/offset/quote
+  anchors with contextual plain-text snippets, and keeps a persistent exact
+  match previous/next navigation context after a jump.
+- Alembic revision `20260817_0024` adds only Share password and unlock-session
+  state. Focused Share/search/auth/migration tests pass locally; production
+  deployment and browser acceptance remain pending for this working change.
+
 ## 2026-08-17 Deployed baseline and final product audit
 
 - Release N deployed one owner-password gate with a future-compatible

@@ -28,9 +28,12 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             if not _same_origin(request, settings.public_web_base_url):
                 return _json_error(403, "Cross-origin request denied.")
 
-        if path in PUBLIC_PATHS or path == "/api/internal/diagnostics" or request.method == "OPTIONS":
+        # Share capabilities are a deliberate public-by-link surface. The
+        # share service still enforces token scope and optional password
+        # unlock before returning any content.
+        if path in PUBLIC_PATHS or path.startswith("/api/shared/") or path == "/api/internal/diagnostics" or request.method == "OPTIONS":
             response = await call_next(request)
-            if path.startswith("/api/auth/"):
+            if path.startswith("/api/auth/") or path.startswith("/api/shared/"):
                 response.headers["Cache-Control"] = "no-store"
                 response.headers["Pragma"] = "no-cache"
             return response

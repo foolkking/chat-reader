@@ -1,8 +1,9 @@
 import hashlib
+import hmac
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 from sqlalchemy import func, select
@@ -15,12 +16,13 @@ from app.models.heading import Heading
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
-from app.models.share import Share
+from app.models.share import Share, ShareUnlockSession
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.schemas.conversation import ConversationListItem
 from app.schemas.message import DialogueIndexItem, DialogueIndexResponse, MessageListItem, MessageVersionRead, ReaderTurnResponse, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
 from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareUpdate, SharedConversationBootstrap
+from app.services.auth import hash_password, verify_password
 from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
@@ -31,6 +33,11 @@ class ShareError(ValueError):
     def __init__(self, message: str, status_code: int = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(message)
         self.status_code = status_code
+
+
+SHARE_UNLOCK_COOKIE_NAME = "chat_reader_share_unlock"
+SHARE_UNLOCK_BACKOFF_AFTER = 3
+SHARE_UNLOCK_BACKOFF_MAX_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -67,6 +74,7 @@ def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) 
         theme=theme,
         locale=locale,
         expires_at=payload.expires_at,
+        password_hash=hash_password(payload.share_password) if payload.share_password else None,
         created_at=now,
         updated_at=now,
         created_by="local",
@@ -105,8 +113,8 @@ def list_shares(
     return query.order_by(Share.created_at.desc()).all()
 
 
-def get_shared_conversation_by_token(db: Session, token: str) -> SharedConversationBootstrap:
-    share = _get_accessible_share(db, token)
+def get_shared_conversation_by_token(db: Session, token: str, unlock_token: str | None = None) -> SharedConversationBootstrap:
+    share = _get_accessible_share(db, token, unlock_token)
     conversation = _get_conversation(db, share.conversation_id)
     share.access_count += 1
     share.last_accessed_at = _utc_now()
@@ -137,8 +145,9 @@ def get_shared_message_window(
     limit: int,
     anchor_message_id: uuid.UUID | None,
     anchor_before: int,
+    unlock_token: str | None = None,
 ) -> MessageWindowResponse:
-    share = _get_accessible_share(db, token)
+    share = _get_accessible_share(db, token, unlock_token)
     query = _share_message_query(db, share)
     total = query.count()
     if anchor_message_id is not None:
@@ -158,8 +167,8 @@ def get_shared_message_window(
     )
 
 
-def get_shared_reader_turn(db: Session, token: str, *, anchor_message_id: uuid.UUID | None) -> ReaderTurnResponse:
-    share = _get_accessible_share(db, token)
+def get_shared_reader_turn(db: Session, token: str, *, anchor_message_id: uuid.UUID | None, unlock_token: str | None = None) -> ReaderTurnResponse:
+    share = _get_accessible_share(db, token, unlock_token)
     messages = _share_message_query(db, share).order_by(Message.order_key.asc()).all()
     try:
         return build_reader_turn(
@@ -182,8 +191,9 @@ def get_shared_dialogue_index(
     offset: int,
     limit: int,
     anchor_message_id: uuid.UUID | None,
+    unlock_token: str | None = None,
 ) -> DialogueIndexResponse:
-    share = _get_accessible_share(db, token)
+    share = _get_accessible_share(db, token, unlock_token)
     conversation = _get_conversation(db, share.conversation_id)
     base_query = _share_message_query(db, share)
     total = base_query.count()
@@ -255,8 +265,9 @@ def get_shared_toc(
     offset: int,
     limit: int,
     max_level: int | None,
+    unlock_token: str | None = None,
 ) -> TocResponse:
-    share = _get_accessible_share(db, token)
+    share = _get_accessible_share(db, token, unlock_token)
     if not share.include_toc:
         return TocResponse(conversation_id=share.conversation_id, items=[], limit=limit, offset=0, total=0)
     query = db.query(Heading).filter(Heading.conversation_id == share.conversation_id)
@@ -286,8 +297,9 @@ def get_shared_message_blocks(
     message_id: uuid.UUID,
     start: int,
     limit: int,
+    unlock_token: str | None = None,
 ) -> list[RenderBlockRead]:
-    share = _get_accessible_share(db, token)
+    share = _get_accessible_share(db, token, unlock_token)
     message = _ensure_shared_message(db, share, message_id)
     if message.current_version_id is None:
         return []
@@ -304,8 +316,8 @@ def get_shared_message_blocks(
     return [_block_read(block) for block in blocks]
 
 
-def get_shared_annotations(db: Session, token: str):
-    share = _get_accessible_share(db, token)
+def get_shared_annotations(db: Session, token: str, unlock_token: str | None = None):
+    share = _get_accessible_share(db, token, unlock_token)
     if not share.include_annotations:
         return []
     query = db.query(ConversationAnnotation).filter(
@@ -318,8 +330,8 @@ def get_shared_annotations(db: Session, token: str):
     return query.order_by(ConversationAnnotation.created_at.asc()).all()
 
 
-def get_shared_notebook(db: Session, token: str):
-    share = _get_accessible_share(db, token)
+def get_shared_notebook(db: Session, token: str, unlock_token: str | None = None):
+    share = _get_accessible_share(db, token, unlock_token)
     if not share.include_notebook:
         return None
     return db.query(ConversationNotebook).filter(
@@ -371,6 +383,15 @@ def update_share(db: Session, share_id: uuid.UUID, payload: ShareUpdate) -> Shar
         if payload.locale not in {"zh-CN", "en-US"}:
             raise ShareError("Unsupported share locale.")
         share.locale = payload.locale
+    if "share_password" in provided_fields:
+        share.password_hash = hash_password(payload.share_password) if payload.share_password else None
+        share.password_version += 1
+        share.unlock_failed_attempts = 0
+        share.unlock_blocked_until = None
+        db.query(ShareUnlockSession).filter(
+            ShareUnlockSession.share_id == share.id,
+            ShareUnlockSession.revoked_at.is_(None),
+        ).update({ShareUnlockSession.revoked_at: _utc_now()}, synchronize_session=False)
     share.updated_at = _utc_now()
     _write_event(
         db,
@@ -410,6 +431,7 @@ def share_read(share: Share) -> ShareRead:
         created_at=share.created_at,
         updated_at=share.updated_at,
         share_url=metadata.get("share_url") if isinstance(metadata.get("share_url"), str) else None,
+        password_required=share.password_hash is not None,
     )
 
 
@@ -423,16 +445,67 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def _get_accessible_share(db: Session, token: str) -> Share:
+def _get_accessible_share(db: Session, token: str, unlock_token: str | None = None) -> Share:
     share = db.query(Share).filter(Share.token_hash == hash_token(token)).one_or_none()
     if share is None:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
     _assert_share_accessible(share)
+    if share.password_hash is not None:
+        if not unlock_token:
+            raise ShareError("Share password required.", HTTPStatus.UNAUTHORIZED)
+        digest = share_unlock_digest(share.id, unlock_token)
+        session = db.query(ShareUnlockSession).filter(
+            ShareUnlockSession.share_id == share.id,
+            ShareUnlockSession.token_digest == digest,
+            ShareUnlockSession.password_version == share.password_version,
+            ShareUnlockSession.revoked_at.is_(None),
+        ).one_or_none()
+        if session is None:
+            raise ShareError("Share password required.", HTTPStatus.UNAUTHORIZED)
+        session.last_activity_at = _utc_now()
     return share
 
 
-def resolve_accessible_share(db: Session, token: str) -> Share:
-    return _get_accessible_share(db, token)
+def resolve_accessible_share(db: Session, token: str, unlock_token: str | None = None) -> Share:
+    return _get_accessible_share(db, token, unlock_token)
+
+
+def unlock_share(db: Session, token: str, password: str) -> tuple[Share, str]:
+    share = db.query(Share).filter(Share.token_hash == hash_token(token)).one_or_none()
+    if share is None:
+        raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    _assert_share_accessible(share)
+    if share.password_hash is None:
+        return share, ""
+    now = _utc_now()
+    if share.unlock_blocked_until is not None and _as_utc(share.unlock_blocked_until) > now:
+        raise ShareError("Too many attempts. Try again shortly.", HTTPStatus.TOO_MANY_REQUESTS)
+    if not verify_password(share.password_hash, password):
+        share.unlock_failed_attempts += 1
+        if share.unlock_failed_attempts >= SHARE_UNLOCK_BACKOFF_AFTER:
+            delay = min(SHARE_UNLOCK_BACKOFF_MAX_SECONDS, 2 ** (share.unlock_failed_attempts - SHARE_UNLOCK_BACKOFF_AFTER))
+            share.unlock_blocked_until = now + timedelta(seconds=delay)
+        db.flush()
+        raise ShareError("Incorrect share password.", HTTPStatus.UNAUTHORIZED)
+    share.unlock_failed_attempts = 0
+    share.unlock_blocked_until = None
+    raw_token = secrets.token_urlsafe(48)
+    db.add(ShareUnlockSession(
+        share_id=share.id,
+        token_digest=share_unlock_digest(share.id, raw_token),
+        password_version=share.password_version,
+        created_at=now,
+        last_activity_at=now,
+    ))
+    db.flush()
+    return share, raw_token
+
+
+def share_unlock_digest(share_id: uuid.UUID, token: str) -> str:
+    secret = get_settings().auth_secret_value().encode("utf-8")
+    if len(secret) < 32:
+        raise ShareError("Share authorization is unavailable.", HTTPStatus.SERVICE_UNAVAILABLE)
+    return hmac.new(secret, f"share:{share_id}:{token}".encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def _selected_message_ids(share: Share) -> set[uuid.UUID]:

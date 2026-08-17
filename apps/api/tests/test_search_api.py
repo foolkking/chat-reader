@@ -37,6 +37,9 @@ def test_search_returns_results_and_plain_text_snippet(client: TestClient) -> No
     assert payload["items"][0]["conversation_id"] == conversation_id
     assert "alpha" in payload["items"][0]["snippet"].lower()
     assert "<" not in payload["items"][0]["snippet"]
+    assert payload["items"][0]["message_version_id"]
+    assert payload["items"][0]["matches"]
+    assert all(match["match_start"] < match["match_end"] for match in payload["items"][0]["matches"])
 
 
 def test_search_filters_validation_and_pagination(client: TestClient) -> None:
@@ -56,6 +59,32 @@ def test_search_filters_validation_and_pagination(client: TestClient) -> None:
 
     empty = client.get("/api/search?q=")
     assert empty.status_code == 400
+
+
+def test_message_search_returns_distinct_occurrences_with_stable_block_offsets(client: TestClient) -> None:
+    conversation_id = _commit_search_sample(client, "Repeated Search")
+    response = client.get(
+        "/api/search",
+        params={"q": "alpha", "conversation_id": conversation_id, "document_type": "message", "role": "assistant"},
+    )
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["message_id"] is not None
+    assert item["message_version_id"] is not None
+    assert len(item["matches"]) >= 2
+    positions = {(match["block_index"], match["match_start"], match["match_end"]) for match in item["matches"]}
+    assert len(positions) == len(item["matches"])
+    assert all(match["quote"].casefold() == "alpha" for match in item["matches"])
+
+
+def test_conversation_scoped_search_does_not_turn_title_matches_into_body_hits(client: TestClient) -> None:
+    conversation_id = _commit_search_sample(client, "TitleOnlyNeedle")
+    response = client.get(
+        "/api/search",
+        params={"q": "TitleOnlyNeedle", "conversation_id": conversation_id, "document_type": "message"},
+    )
+    assert response.status_code == 200
+    assert response.json()["items"] == []
 
 
 def test_search_matches_chinese_code_url_and_quoted_substrings(client: TestClient) -> None:

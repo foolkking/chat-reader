@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   deleteMessage,
   getTask,
@@ -24,6 +24,7 @@ import { usePreferences, useTranslations } from "../../components/preferences-pr
 import { MessageItem } from "./message-item";
 import { MessageInsertDialog } from "./message-insert-dialog";
 import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor } from "./reader-navigation";
+import { resolveTextAnchorRange } from "./text-anchor";
 import {
   emptyLoadedWindow,
   INITIAL_WINDOW_TURNS,
@@ -37,7 +38,7 @@ import { ReaderHeaderActionRail, type ReaderHeaderAction } from "../../component
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
 import { ReaderPanelShell } from "../../components/reader-panel-shell";
 import { useMobileHeaderAutoHide } from "./use-mobile-header-auto-hide";
-import { ConversationSearchPanel } from "../search/conversation-search-panel";
+import { ConversationSearchPanel, type ConversationSearchPanelState, type SearchNavigationContext, type SearchNavigationTarget } from "../search/conversation-search-panel";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { AnnotationWorkspace } from "../annotations/annotation-workspace";
 import { ConversationSplitWorkspace } from "../editing/conversation-split-workspace";
@@ -85,6 +86,9 @@ export function ConversationReader({
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [searchPanelState, setSearchPanelState] = useState<ConversationSearchPanelState>({ query: "", documentType: "message", role: "all", activeIndex: 0 });
+  const [searchNavigation, setSearchNavigation] = useState<SearchNavigationContext | null>(null);
+    const [searchHighlight, setSearchHighlight] = useState<{ targetId: string; quote: string; start?: number; end?: number; prefix?: string; suffix?: string } | null>(null);
   const [showFiles, setShowFiles] = useState(false);
   const [tocRefreshOpen, setTocRefreshOpen] = useState(false);
   const [tocRefreshTask, setTocRefreshTask] = useState<{ task: BackgroundTaskRead; input: TocRefreshInput } | null>(null);
@@ -882,12 +886,14 @@ export function ConversationReader({
             return { ok: false, targetId: result.targetId, reason: "cancelled" };
           }
           setNavigationStage(root, result.fallback ? "settled:fallback" : "settled");
-          window.setTimeout(() => {
-            if (navigationTokenRef.current === token) {
-              setTargetHighlightId(null);
-              setNavigationStatus("idle");
-            }
-          }, 2000);
+          if (target.source !== "search") {
+            window.setTimeout(() => {
+              if (navigationTokenRef.current === token) {
+                setTargetHighlightId(null);
+                setNavigationStatus("idle");
+              }
+            }, 2000);
+          }
         } else {
           setNavigationStatus("failed");
         }
@@ -905,6 +911,49 @@ export function ConversationReader({
     },
     [applyLoadedWindow, conversationId, conversationQuery.data, dataSource, queryClient],
   );
+
+  const handleSearchNavigate = useCallback(async (
+    target: SearchNavigationTarget,
+    context: SearchNavigationContext,
+  ): Promise<NavigationResult> => {
+    const result = await navigateToTarget({
+      messageId: target.messageId,
+      blockIndex: target.blockIndex,
+      characterOffset: target.characterOffset,
+      endCharacterOffset: target.endCharacterOffset,
+      quote: target.quote,
+      prefix: target.prefix,
+      suffix: target.suffix,
+      source: "search",
+    });
+    if (result.ok) {
+      setSearchNavigation(context);
+      setSearchHighlight({ targetId: result.targetId, quote: target.quote ?? "", start: target.characterOffset, end: target.endCharacterOffset, prefix: target.prefix, suffix: target.suffix });
+    }
+    return result;
+  }, [navigateToTarget]);
+
+  const navigateSearchResult = useCallback(async (index: number) => {
+    const context = searchNavigation;
+    const target = context?.targets[index];
+    if (!context || !target) return;
+    const result = await navigateToTarget({
+      messageId: target.messageId,
+      blockIndex: target.blockIndex,
+      characterOffset: target.characterOffset,
+      endCharacterOffset: target.endCharacterOffset,
+      quote: target.quote,
+      prefix: target.prefix,
+      suffix: target.suffix,
+      source: "search",
+    });
+    if (result.ok) {
+      setSearchNavigation({ ...context, index });
+        setSearchHighlight({ targetId: result.targetId, quote: target.quote ?? "", start: target.characterOffset, end: target.endCharacterOffset, prefix: target.prefix, suffix: target.suffix });
+    }
+  }, [navigateToTarget, searchNavigation]);
+
+  useEffect(() => applySearchHighlight(searchHighlight), [searchHighlight]);
 
   useEffect(() => {
     const handleReadingShortcut = (event: KeyboardEvent) => {
@@ -1883,6 +1932,14 @@ export function ConversationReader({
           {!focusMode && navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">{t("locating")}</div> : null}
           {!focusMode && navigationStatus === "stale" ? <div className="border-t border-ui bg-amber-50 px-[3vw] py-2 text-sm text-amber-800" role="status">{t("locateChanged")}</div> : null}
           {!focusMode && navigationStatus === "failed" ? <div className="border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert">{t("locateFailed")}</div> : null}
+          {!focusMode && searchNavigation ? <div className="flex min-w-0 items-center gap-2 border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-primary" role="status">
+            <span className="min-w-0 flex-1 truncate font-medium">{searchNavigation.query}</span>
+            <span className="shrink-0 text-xs text-secondary">{searchNavigation.index + 1} / {searchNavigation.targets.length}</span>
+            <button type="button" onClick={() => void navigateSearchResult(Math.max(0, searchNavigation.index - 1))} disabled={searchNavigation.index === 0} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "上一个匹配" : "Previous match"}><ChevronUp className="h-4 w-4" /></button>
+            <button type="button" onClick={() => void navigateSearchResult(Math.min(searchNavigation.targets.length - 1, searchNavigation.index + 1))} disabled={searchNavigation.index >= searchNavigation.targets.length - 1} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "下一个匹配" : "Next match"}><ChevronDown className="h-4 w-4" /></button>
+            <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); void openUtilityPanel("search"); }} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-surface">{resolvedLocale === "zh-CN" ? "返回搜索" : "Return to search"}</button>
+            <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); setTargetHighlightId(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
+          </div> : null}
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => { window.location.href = buildReaderUrl("/library", currentReaderLocation()); }} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
 
@@ -2032,7 +2089,7 @@ export function ConversationReader({
         {navigationContent}
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "search" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("search")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("search")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setUtilityPanel(null)} showHeader={false} />
+        <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setUtilityPanel(null)} showHeader={false} />
       </MobileReaderSheet>
       {utilityPanel === "navigation" && !sourceEditorTarget ? (
         <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
@@ -2058,7 +2115,7 @@ export function ConversationReader({
       {!focusMode && (showShare || showExport || showSearch) ? (
         <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels} restoreFocus={restoreDesktopUtilityFocus}>
             <div className="flex h-full min-w-0 w-full overflow-hidden">
-              {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} onNavigate={({ messageId, blockIndex, characterOffset }) => navigateToTarget({ messageId, blockIndex, characterOffset, source: "search" })} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+              {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
                 {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} /> : null}
               </ReaderPanelShell>}
@@ -2487,6 +2544,33 @@ function buildReaderUrl(basePath: string, location: { conversationId: string; me
   if (location.characterOffset !== undefined) params.set("characterOffset", String(location.characterOffset));
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
+}
+
+function applySearchHighlight(target: { targetId: string; quote: string; start?: number; end?: number; prefix?: string; suffix?: string } | null): () => void {
+  const highlights = (CSS as unknown as { highlights?: { set: (name: string, value: unknown) => void; delete: (name: string) => void } }).highlights;
+  const HighlightConstructor = (window as unknown as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight;
+  if (!target || !highlights || !HighlightConstructor || !target.quote) {
+    highlights?.delete("chat-reader-search-match");
+    return () => undefined;
+  }
+  let frame = 0;
+  const apply = () => {
+    const element = document.getElementById(target.targetId);
+    const range = element ? resolveTextAnchorRange(element, {
+      quote: target.quote,
+      prefix: target.prefix,
+      suffix: target.suffix,
+      startOffset: target.start,
+      endOffset: target.end,
+    }) : null;
+    if (range) highlights.set("chat-reader-search-match", new HighlightConstructor(range));
+  };
+  apply();
+  frame = window.requestAnimationFrame(apply);
+  return () => {
+    if (frame) window.cancelAnimationFrame(frame);
+    highlights.delete("chat-reader-search-match");
+  };
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {

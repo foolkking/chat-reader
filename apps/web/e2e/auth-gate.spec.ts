@@ -48,10 +48,66 @@ test.describe("single-owner authentication boundary", () => {
     await context.close();
   });
 
-  test("share URLs do not become a login-query credential bypass", async ({ page, baseURL }) => {
+  test("public share URLs stay outside the owner login boundary without leaking into login state", async ({ page, baseURL }) => {
     await page.goto(`${baseURL}/share/qa-token-without-access`);
-    await expect(page).toHaveURL(/\/login$/);
-    expect(new URL(page.url()).search).toBe("");
+    await expect(page).toHaveURL(/\/share\/qa-token-without-access$/);
+    await expect(page.getByText(/Share unavailable|分享不可用/)).toBeVisible();
+    expect((await page.context().cookies()).find((item) => item.name === "chat_reader_session")).toBeUndefined();
+  });
+
+  test("public and independently protected Shares keep their capability boundaries", async ({ browser, page, baseURL }) => {
+    await page.goto(`${baseURL}/login`);
+    await page.locator("#owner-password").fill(password!);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(`${baseURL}/`);
+
+    const mutationHeaders = { Origin: baseURL! };
+    const conversationResponse = await page.request.post("/api/conversations", {
+      headers: mutationHeaders,
+      data: {
+        title: "Public Share QA fixture",
+        messages: [
+          { role: "user", content_markdown: "Share QA question" },
+          { role: "assistant", content_markdown: "Share QA answer" },
+        ],
+      },
+    });
+    expect(conversationResponse.status()).toBe(201);
+    const conversation = await conversationResponse.json() as { conversation: { id: string } };
+    const publicResponse = await page.request.post(`/api/conversations/${conversation.conversation.id}/shares`, { headers: mutationHeaders, data: {} });
+    expect(publicResponse.ok()).toBe(true);
+    const publicShare = await publicResponse.json() as { id: string; token: string };
+
+    const guest = await browser.newContext();
+    const guestPage = await guest.newPage();
+    await guestPage.goto(`${baseURL}/share/${publicShare.token}`);
+    await expect(guestPage).toHaveURL(new RegExp(`/share/${publicShare.token}$`));
+    await expect(guestPage.getByRole("heading", { name: "Public Share QA fixture" })).toBeVisible();
+    expect((await guest.cookies()).find((item) => item.name === "chat_reader_session")).toBeUndefined();
+
+    const sharePassword = "independent-share-qa";
+    const protectedResponse = await page.request.post(`/api/conversations/${conversation.conversation.id}/shares`, {
+      headers: mutationHeaders,
+      data: { share_password: sharePassword },
+    });
+    expect(protectedResponse.ok()).toBe(true);
+    const protectedShare = await protectedResponse.json() as { id: string; token: string };
+    const protectedPage = await guest.newPage();
+    await protectedPage.goto(`${baseURL}/share/${protectedShare.token}`);
+    await expect(protectedPage.getByRole("heading", { name: "This share is password protected" })).toBeVisible();
+    await protectedPage.locator("#share-password").fill(password!);
+    await protectedPage.getByRole("button", { name: "View shared content" }).click();
+    await expect(protectedPage.getByText("Incorrect share password.")).toBeVisible();
+    await protectedPage.locator("#share-password").fill(sharePassword);
+    await protectedPage.getByRole("button", { name: "View shared content" }).click();
+    await expect(protectedPage.getByRole("heading", { name: "Public Share QA fixture" })).toBeVisible();
+    await protectedPage.goto(`${baseURL}/library`);
+    await expect(protectedPage).toHaveURL(/\/login(?:\?|$)/);
+
+    await page.request.post(`/api/shares/${publicShare.id}/revoke`, { headers: mutationHeaders });
+    await page.request.post(`/api/shares/${protectedShare.id}/revoke`, { headers: mutationHeaders });
+    await page.request.delete(`/api/conversations/${conversation.conversation.id}`, { headers: mutationHeaders });
+    await guest.close();
   });
 
   test("password change invalidates every device session", async ({ browser, baseURL }) => {

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Text, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -40,6 +40,10 @@ class Share(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     created_by: Mapped[str] = mapped_column(Text, nullable=False, default="local")
     metadata_: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    password_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    unlock_failed_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    unlock_blocked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     conversation = relationship("Conversation")
 
@@ -51,3 +55,25 @@ Index("idx_shares_expires_at", Share.expires_at)
 Index("idx_shares_revoked_at", Share.revoked_at)
 Index("idx_shares_created_at", Share.created_at)
 Index("idx_shares_last_accessed_at", Share.last_accessed_at)
+
+
+class ShareUnlockSession(Base):
+    __tablename__ = "share_unlock_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    share_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("shares.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token_digest: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    password_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    share = relationship("Share")
+
+
+Index("idx_share_unlock_sessions_share", ShareUnlockSession.share_id, ShareUnlockSession.revoked_at)
+Index("idx_share_unlock_sessions_activity", ShareUnlockSession.last_activity_at)

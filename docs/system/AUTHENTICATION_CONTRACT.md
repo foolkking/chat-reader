@@ -33,11 +33,14 @@ multi-user features.
 
 FastAPI applies a default-deny authentication middleware to every route except
 the explicit infrastructure/auth allowlist: public health, login, session
-status, logout and the separately protected loopback diagnostics route. A
-missing, malformed, expired, revoked or unverifiable cookie returns `401`; an
-authentication database error returns a fail-closed `503`. Share APIs,
-attachment content, export downloads, offline package downloads and import/job
-business APIs are not exceptions.
+status, logout, the separately protected loopback diagnostics route and the
+token-scoped `/api/shared/{token}/*` capability surface. A missing, malformed,
+expired, revoked or unverifiable owner cookie returns `401`; an authentication
+database error returns a fail-closed `503`. Share APIs remain capability
+authorized: a default Share is public-by-link, while an optional Share
+password is verified separately and issues only a Share-scoped unlock cookie.
+Owner application APIs, private attachment content, export downloads, offline
+package downloads and import/job business APIs remain owner-session protected.
 
 Unsafe browser requests require an exact same-origin `Origin` matching
 `PUBLIC_WEB_BASE_URL`. This complements the session cookie's `SameSite=Lax`
@@ -46,10 +49,12 @@ responses are non-cacheable. `/api/health` stays a coarse public infrastructure
 endpoint; detailed diagnostics remains outside the browser password boundary and
 is protected by the Release L SSH plus API-loopback operator boundary.
 
-Next's proxy redirects a browser with no session cookie to `/login`; the API
-remains the authorization authority. A Share capability URL is redirected
-without copying its token into `return_to`. A successful login returns only a
-safe same-origin internal destination.
+Next's proxy redirects a browser with no owner session cookie to `/login` for
+private pages, while the exact `/share/{token}` page is an explicit public
+exception. The API remains the authorization authority for all Share data and
+resources. A Share capability token is never copied into a login
+`return_to`; a successful owner login returns only a safe same-origin internal
+destination.
 
 ## PWA and offline boundary
 

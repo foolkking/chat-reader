@@ -22,6 +22,7 @@ import type {
   ReadingPositionInput,
   ReadingPositionResponse,
   RenderBlockRead,
+  SearchMatch,
   SearchResponse,
   TocItem,
   TocResponse,
@@ -230,26 +231,45 @@ export const offlineReaderDataSource: ReaderDataSource = {
       .filter((item) => !options.documentType || item.document_type === options.documentType)
       .filter((item) => !options.role || item.role === options.role)
       .slice(0, limit);
-    return {
-      query: options.query,
-      items: documents.map((item, index) => ({
+    const items = await Promise.all(documents.map(async (item, index) => {
+      const message = item.message_id ? await offlineDb.messages.get(item.message_id) : null;
+      const requestedBlockIndex = metadataNumber(item.metadata, "block_index");
+      const blocks = message
+        ? (await offlineDb.blocks.where("message_id").equals(message.id).sortBy("block_index"))
+          .filter((block) => requestedBlockIndex === null || block.block_index === requestedBlockIndex)
+        : [];
+      const candidates = blocks.length
+        ? blocks.map((block) => ({ blockIndex: block.block_index, text: block.plain_text ?? "" }))
+        : [{ blockIndex: requestedBlockIndex, text: item.plain_text }];
+      const matches = candidates.flatMap((candidate) => findOfflineSearchMatches(candidate.text, options.query, candidate.blockIndex)).slice(0, 100);
+      const firstMatch = matches[0];
+      const snippet = firstMatch
+        ? `${firstMatch.context_before ? "..." : ""}${firstMatch.context_before}${firstMatch.quote}${firstMatch.context_after}${firstMatch.context_after ? "..." : ""}`
+        : item.plain_text.slice(0, 320);
+      return {
         document_id: item.id,
         document_type: item.document_type,
         conversation_id: item.conversation_id,
         conversation_title: item.title ?? "Conversation",
         message_id: item.message_id,
+        message_version_id: message?.current_version?.id ?? null,
         role: item.role,
         order_key: item.order_key,
-        block_index: metadataNumber(item.metadata, "block_index"),
-        character_offset: metadataNumber(item.metadata, "character_offset"),
-        snippet: item.plain_text.slice(0, 320),
+        block_index: requestedBlockIndex,
+        character_offset: firstMatch?.match_start ?? metadataNumber(item.metadata, "character_offset"),
+        snippet,
         rank: documents.length - index,
         source_profile: "offline",
-        occurrence_count: 1,
+        occurrence_count: matches.length || 1,
+        matches,
         annotation_id: typeof item.metadata.annotation_id === "string" ? item.metadata.annotation_id : null,
         annotation_type: typeof item.metadata.annotation_type === "string" ? item.metadata.annotation_type : null,
         annotation_color: typeof item.metadata.annotation_color === "string" ? item.metadata.annotation_color : null,
-      })),
+      };
+    }));
+    return {
+      query: options.query,
+      items,
       limit,
       offset: 0,
       total: documents.length,
@@ -277,6 +297,43 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return null;
   },
 };
+
+function findOfflineSearchMatches(text: string, query: string, blockIndex: number | null): SearchMatch[] {
+  const normalizedText = text.replace(/\s+/g, " ").trim();
+  const normalizedQuery = query.replace(/\s+/g, " ").trim();
+  if (!normalizedText || !normalizedQuery) return [];
+  const lowerText = normalizedText.toLocaleLowerCase();
+  const lowerQuery = normalizedQuery.toLocaleLowerCase();
+  const matches: SearchMatch[] = [];
+  let cursor = 0;
+  while (cursor <= lowerText.length - lowerQuery.length) {
+    const index = lowerText.indexOf(lowerQuery, cursor);
+    if (index < 0) break;
+    matches.push(offlineSearchMatch(normalizedText, index, index + normalizedQuery.length, blockIndex));
+    cursor = index + Math.max(1, normalizedQuery.length);
+  }
+  if (!matches.length) {
+    const token = lowerQuery.split(/\s+/).find(Boolean);
+    if (token) {
+      const index = lowerText.indexOf(token);
+      if (index >= 0) matches.push(offlineSearchMatch(normalizedText, index, index + token.length, blockIndex));
+    }
+  }
+  return matches;
+}
+
+function offlineSearchMatch(text: string, start: number, end: number, blockIndex: number | null): SearchMatch {
+  const beforeStart = Math.max(0, start - 80);
+  const afterEnd = Math.min(text.length, end + 80);
+  return {
+    block_index: blockIndex,
+    match_start: start,
+    match_end: end,
+    quote: text.slice(start, end),
+    context_before: text.slice(beforeStart, start),
+    context_after: text.slice(end, afterEnd),
+  };
+}
 
 const LEADING_TIMESTAMP_RE = /^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?\s*$/;
 const THINKING_DURATION_RE = /^(?:\u5df2?\s*\u601d\u8003(?:\u4e86)?|thinking|reasoning)\s*[:\uff1a]?\s*(?:\d+\s*(?:h|hr|hour|\u5c0f\u65f6)\s*)?(?:\d+\s*(?:m|min|\u5206\u949f|\u5206)\s*)?\d+\s*(?:s|sec|\u79d2)$/i;

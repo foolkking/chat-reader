@@ -1,13 +1,14 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.schemas.message import DialogueIndexResponse, ReaderTurnResponse, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
 from app.schemas.annotation import AnnotationRead, NotebookRead
-from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUpdate, SharedConversationBootstrap
+from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUnlockInput, ShareUnlockResponse, ShareUpdate, SharedConversationBootstrap
 from app.schemas.toc import TocResponse
 from app.services.sharing.share_service import (
     ShareError,
@@ -24,6 +25,8 @@ from app.services.sharing.share_service import (
     revoke_share,
     share_create_response,
     share_read,
+    SHARE_UNLOCK_COOKIE_NAME,
+    unlock_share,
     update_share,
 )
 from app.services.annotations import annotation_read, notebook_read
@@ -90,12 +93,42 @@ def update_conversation_share(
 @router.get("/api/shared/{token}", response_model=SharedConversationBootstrap)
 def get_shared_conversation(
     token: str,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> SharedConversationBootstrap:
     try:
-        response = get_shared_conversation_by_token(db, token)
+        response = get_shared_conversation_by_token(db, token, request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))
         db.commit()
         return response
+    except ShareError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.post("/api/shared/{token}/unlock", response_model=ShareUnlockResponse)
+def unlock_shared_conversation(
+    token: str,
+    payload: ShareUnlockInput,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> ShareUnlockResponse:
+    try:
+        _, unlock_token = unlock_share(db, token, payload.password)
+        db.commit()
+        if unlock_token:
+            settings = get_settings()
+            response.set_cookie(
+                SHARE_UNLOCK_COOKIE_NAME,
+                unlock_token,
+                max_age=30 * 24 * 60 * 60,
+                httponly=True,
+                secure=settings.auth_cookie_secure,
+                samesite="lax",
+                path=f"/api/shared/{token}",
+            )
+        response.headers["Cache-Control"] = "no-store"
+        return ShareUnlockResponse()
     except ShareError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -104,6 +137,7 @@ def get_shared_conversation(
 @router.get("/api/shared/{token}/message-window", response_model=MessageWindowResponse)
 def get_shared_messages(
     token: str,
+    request: Request,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=30, ge=1, le=100),
     anchor_message_id: uuid.UUID | None = None,
@@ -123,6 +157,7 @@ def get_shared_messages(
             limit=limit,
             anchor_message_id=anchor_message_id,
             anchor_before=min(anchor_before if anchor_before is not None else 12, limit - 1),
+            unlock_token=request.cookies.get(SHARE_UNLOCK_COOKIE_NAME),
         )
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -131,11 +166,12 @@ def get_shared_messages(
 @router.get("/api/shared/{token}/reader-turn", response_model=ReaderTurnResponse)
 def get_shared_reader_turn_route(
     token: str,
+    request: Request,
     anchor_message_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
 ) -> ReaderTurnResponse:
     try:
-        return get_shared_reader_turn(db, token, anchor_message_id=anchor_message_id)
+        return get_shared_reader_turn(db, token, anchor_message_id=anchor_message_id, unlock_token=request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
@@ -143,6 +179,7 @@ def get_shared_reader_turn_route(
 @router.get("/api/shared/{token}/dialogue-index", response_model=DialogueIndexResponse)
 def get_shared_index(
     token: str,
+    request: Request,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=80, ge=1, le=5000),
     anchor_message_id: uuid.UUID | None = None,
@@ -155,6 +192,7 @@ def get_shared_index(
             offset=offset,
             limit=limit,
             anchor_message_id=anchor_message_id,
+            unlock_token=request.cookies.get(SHARE_UNLOCK_COOKIE_NAME),
         )
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -163,6 +201,7 @@ def get_shared_index(
 @router.get("/api/shared/{token}/toc", response_model=TocResponse)
 def get_shared_contents(
     token: str,
+    request: Request,
     message_id: uuid.UUID | None = None,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=200, ge=1, le=500),
@@ -177,6 +216,7 @@ def get_shared_contents(
             offset=offset,
             limit=limit,
             max_level=max_level,
+            unlock_token=request.cookies.get(SHARE_UNLOCK_COOKIE_NAME),
         )
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -185,6 +225,7 @@ def get_shared_contents(
 @router.get("/api/shared/{token}/messages/{message_id}/blocks", response_model=list[RenderBlockRead])
 def get_shared_blocks(
     token: str,
+    request: Request,
     message_id: uuid.UUID,
     start: int = Query(default=0, ge=0),
     limit: int = Query(default=200, ge=1, le=500),
@@ -197,23 +238,24 @@ def get_shared_blocks(
             message_id=message_id,
             start=start,
             limit=limit,
+            unlock_token=request.cookies.get(SHARE_UNLOCK_COOKIE_NAME),
         )
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 @router.get("/api/shared/{token}/annotations", response_model=list[AnnotationRead])
-def get_shared_annotations_route(token: str, db: Session = Depends(get_db)) -> list[AnnotationRead]:
+def get_shared_annotations_route(token: str, request: Request, db: Session = Depends(get_db)) -> list[AnnotationRead]:
     try:
-        return [annotation_read(item) for item in get_shared_annotations(db, token)]
+        return [annotation_read(item) for item in get_shared_annotations(db, token, request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))]
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 @router.get("/api/shared/{token}/notebook", response_model=NotebookRead | None)
-def get_shared_notebook_route(token: str, db: Session = Depends(get_db)) -> NotebookRead | None:
+def get_shared_notebook_route(token: str, request: Request, db: Session = Depends(get_db)) -> NotebookRead | None:
     try:
-        notebook = get_shared_notebook(db, token)
+        notebook = get_shared_notebook(db, token, request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))
         return notebook_read(notebook) if notebook else None
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

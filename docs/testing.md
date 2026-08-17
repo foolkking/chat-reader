@@ -1,11 +1,28 @@
 # Testing Addendum 2026-08-09
 
+## Public Share and exact conversation search (working change, 2026-08-17)
+
+The focused API coverage now exercises passwordless public Share access,
+independent Share-password hashing/unlock rotation, owner-session separation,
+revocation and per-occurrence search anchors:
+
+```powershell
+$env:PYTHONPATH='apps/api'
+pytest -q apps/api/tests/test_sharing_api.py apps/api/tests/test_search_api.py apps/api/tests/test_auth.py apps/api/tests/test_migration_integrity.py
+```
+
+The current local result is `27 passed / 1 skipped`; the full API suite is
+`322 passed / 7 skipped`. The Web typecheck and lint also pass. Production
+deployment and browser acceptance are intentionally recorded only after the
+scoped commit reaches exact-SHA CI and the current production runtime.
+
 ## Release N authentication verification and production acceptance (2026-08-17)
 
 The focused gate exercises one owner principal, independent device sessions,
 the exact 48-hour expiry boundary, rate-limited activity touch, bounded login
 backoff, logout, password-change global revocation, default API protection,
-Share protection and same-origin mutation checks:
+Private-route protection, public Share capability scoping and same-origin
+mutation checks:
 
 ```powershell
 cd apps/api

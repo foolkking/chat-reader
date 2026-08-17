@@ -16,16 +16,17 @@ type AuthState = "checking" | "granted" | "offline-locked";
 export function AuthBoundary({ children, authEnabled = true }: { children: React.ReactNode; authEnabled?: boolean }) {
   const pathname = usePathname();
   const currentPath = pathname ?? "/";
+  const publicShare = /^\/share\/[^/]+\/?$/i.test(currentPath);
   // Auth-disabled test/dev mode must preserve the legacy offline shell from the
   // first render. Production and auth-enabled tests still begin fail-closed.
-  const [state, setState] = useState<AuthState>(!authEnabled || currentPath === "/login" ? "granted" : "checking");
+  const [state, setState] = useState<AuthState>(!authEnabled || currentPath === "/login" || publicShare ? "granted" : "checking");
 
   useEffect(() => {
     if (!authEnabled) {
       setState("granted");
       return;
     }
-    if (currentPath === "/login") {
+    if (currentPath === "/login" || publicShare) {
       setState("granted");
       return;
     }
@@ -74,9 +75,9 @@ export function AuthBoundary({ children, authEnabled = true }: { children: React
       window.removeEventListener("online", recheck);
       window.removeEventListener("focus", recheck);
     };
-  }, [authEnabled, currentPath]);
+  }, [authEnabled, currentPath, publicShare]);
 
-  if (currentPath === "/login") return children;
+  if (currentPath === "/login" || publicShare) return children;
   if (state === "checking") {
     return <main className="grid min-h-screen place-items-center bg-page p-6 text-sm text-secondary" aria-live="polite">Checking trusted device…</main>;
   }

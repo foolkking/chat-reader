@@ -174,6 +174,14 @@ Owner 可通过 `POST /api/conversations/{id}/toc/refresh` 手动排队目录更
 
 ## Shares
 
+The current Share contract is public-by-link by default. Creation accepts an
+optional `share_password` that is independently hashed and never creates an
+owner session. Password-protected Shares unlock through
+`POST /api/shared/{token}/unlock`, which issues only a Share-scoped HttpOnly
+credential; changing or removing the password revokes prior unlock sessions.
+All shared data and attachment routes continue to re-check token, scope,
+expiry and revocation, and cannot call private owner APIs.
+
 管理端接口：
 
 | Method | Path | 说明 |
@@ -299,7 +307,8 @@ The explicit public allowlist is coarse health plus the minimal session flow:
 
 The opaque session token is never stored as plaintext. It expires on exactly
 48 hours of per-device inactivity and only authenticated requests can advance a
-rate-limited server-side activity timestamp. Unauthenticated business routes
-return `401`; all authenticated and auth responses are `Cache-Control:
-no-store`. Unsafe mutations require the configured same origin. Share and
-artifact paths remain protected; there is no public Share-token bypass.
+rate-limited server-side activity timestamp. Unauthenticated private business
+routes return `401`; all authenticated, auth and shared-capability responses
+are `Cache-Control: no-store`. Unsafe mutations require the configured same
+origin. A Share token authorizes only its exact scoped public Share resources;
+it is never a global owner or artifact bypass.

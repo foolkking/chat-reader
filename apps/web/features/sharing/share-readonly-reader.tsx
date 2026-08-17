@@ -3,10 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ApiRequestError,
   getSharedConversation,
   getSharedDialogueIndex,
   getSharedReaderTurn,
   getSharedToc,
+  unlockSharedConversation,
 } from "../../lib/api";
 import type { LoadedMessageWindow, MessageListItem, NavigationResult, PersistedSharePosition, ScrollAnchorSnapshot, ScrollDirection } from "../../lib/types";
 import { MessageItem } from "../conversations/message-item";
@@ -45,6 +47,9 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const [savedPosition, setSavedPosition] = useState<PersistedSharePosition | null>(null);
   const [storageReady, setStorageReady] = useState(false);
   const [positionReady, setPositionReady] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState("");
+  const [unlockBusy, setUnlockBusy] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
   const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
     pending: false,
     error: null,
@@ -443,7 +448,29 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   if (shareQuery.isLoading || !storageReady) {
     return <ShareState title="正在加载分享" detail="正在获取只读会话信息。" />;
   }
-  if (shareQuery.isError) return <ShareState title="分享不可用" detail={shareQuery.error.message} />;
+  if (shareQuery.isError) {
+    if (shareQuery.error instanceof ApiRequestError && shareQuery.error.status === 401) {
+      return <SharePasswordGate
+        password={unlockPassword}
+        onPasswordChange={setUnlockPassword}
+        busy={unlockBusy}
+        error={unlockError}
+        onSubmit={async () => {
+          setUnlockBusy(true);
+          setUnlockError(null);
+          try {
+            await unlockSharedConversation(token, unlockPassword);
+            await shareQuery.refetch();
+          } catch (error) {
+            setUnlockError(error instanceof Error ? error.message : "Unable to unlock this share.");
+          } finally {
+            setUnlockBusy(false);
+          }
+        }}
+      />;
+    }
+    return <ShareState title="分享不可用" detail={shareQuery.error.message} />;
+  }
   if (!payload) return <ShareState title="分享不可用" detail="服务未返回分享信息。" />;
 
   return (
@@ -718,6 +745,32 @@ function ShareState({ title, detail }: { title: string; detail: string }) {
       <h1 className="text-lg font-semibold">{title}</h1>
       <p className="mt-2 text-sm leading-6 text-[#6b7280]">{detail}</p>
     </div>
+  );
+}
+
+function SharePasswordGate({
+  password,
+  onPasswordChange,
+  busy,
+  error,
+  onSubmit,
+}: {
+  password: string;
+  onPasswordChange: (value: string) => void;
+  busy: boolean;
+  error: string | null;
+  onSubmit: () => Promise<void>;
+}) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-page px-4 text-primary">
+      <form className="w-full max-w-sm rounded-xl border border-ui bg-surface p-6 shadow-sm" onSubmit={(event) => { event.preventDefault(); void onSubmit(); }}>
+        <h1 className="text-lg font-semibold">This share is password protected</h1>
+        <label className="mt-5 block text-sm text-secondary" htmlFor="share-password">Password</label>
+        <input id="share-password" data-dialog-initial-focus autoFocus type="password" autoComplete="current-password" value={password} onChange={(event) => onPasswordChange(event.target.value)} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]" />
+        {error ? <p role="alert" className="mt-3 text-sm text-red-700">{error}</p> : null}
+        <button type="submit" disabled={busy || !password} className="mt-5 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-wait disabled:opacity-50">{busy ? "Checking..." : "View shared content"}</button>
+      </form>
+    </main>
   );
 }
 

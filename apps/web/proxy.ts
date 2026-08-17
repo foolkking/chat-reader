@@ -21,6 +21,7 @@ export function proxy(request: NextRequest) {
 
 function isPublicPath(pathname: string): boolean {
   return pathname === "/login"
+    || /^\/share\/[^/]+\/?$/i.test(pathname)
     || pathname === "/health"
     || pathname.startsWith("/api/")
     || pathname.startsWith("/_next/")

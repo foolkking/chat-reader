@@ -1,8 +1,17 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.message import MessageListItem
+
+
+class SearchMatch(BaseModel):
+    block_index: int | None = None
+    match_start: int
+    match_end: int
+    quote: str
+    context_before: str = ""
+    context_after: str = ""
 
 
 class SearchResultItem(BaseModel):
@@ -11,6 +20,7 @@ class SearchResultItem(BaseModel):
     conversation_id: UUID
     conversation_title: str
     message_id: UUID | None
+    message_version_id: UUID | None = None
     role: str | None
     order_key: str | None
     block_index: int | None = None
@@ -19,6 +29,7 @@ class SearchResultItem(BaseModel):
     rank: float
     source_profile: str | None
     occurrence_count: int = 1
+    matches: list[SearchMatch] = Field(default_factory=list)
     annotation_id: UUID | None = None
     annotation_type: str | None = None
     annotation_color: str | None = None

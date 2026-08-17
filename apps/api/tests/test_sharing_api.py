@@ -49,6 +49,44 @@ def test_create_share_returns_token_once_and_db_stores_hash(
     assert share.metadata_["share_url"].endswith(f"/share/{token}")
 
 
+def test_optional_share_password_is_independent_and_revocable(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("AUTH_SESSION_SECRET", "test-share-secret-012345678901234567890")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    sample = commit_edit_sample(client)
+    conversation_id = sample["conversation_id"]
+    password = "share-only-passphrase"
+    create = client.post(f"/api/conversations/{conversation_id}/shares", json={"share_password": password})
+    assert create.status_code == 200
+    payload = create.json()
+    assert payload["password_required"] is True
+    token = payload["token"]
+
+    locked = client.get(f"/api/shared/{token}")
+    assert locked.status_code == 401
+    assert client.post(f"/api/shared/{token}/unlock", json={"password": "wrong-share-password"}).status_code == 401
+    unlocked = client.post(f"/api/shared/{token}/unlock", json={"password": password})
+    assert unlocked.status_code == 200
+    assert "chat_reader_share_unlock=" in unlocked.headers["set-cookie"]
+    assert client.get(f"/api/shared/{token}").status_code == 200
+
+    changed = client.patch(f"/api/shares/{payload['id']}", json={"share_password": "another-share-passphrase"})
+    assert changed.status_code == 200
+    assert client.get(f"/api/shared/{token}").status_code == 401
+    assert client.post(f"/api/shared/{token}/unlock", json={"password": "correct horse battery staple"}).status_code == 401
+    assert client.post(f"/api/shared/{token}/unlock", json={"password": "another-share-passphrase"}).status_code == 200
+
+    removed = client.patch(f"/api/shares/{payload['id']}", json={"share_password": None})
+    assert removed.status_code == 200
+    assert removed.json()["password_required"] is False
+    assert client.get(f"/api/shared/{token}").status_code == 200
+
+    get_settings.cache_clear()
+
+
 def test_update_share_expiry_and_management_url(client: TestClient) -> None:
     sample = commit_edit_sample(client)
     conversation_id = sample["conversation_id"]

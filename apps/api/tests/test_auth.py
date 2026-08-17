@@ -56,9 +56,44 @@ def auth_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[Te
 def test_business_routes_are_protected_but_health_and_login_are_public(auth_client: TestClient) -> None:
     assert auth_client.get("/api/health").status_code == 200
     assert auth_client.get("/api/preferences").status_code == 401
-    assert auth_client.get("/api/shared/not-a-token").status_code == 401
+    assert auth_client.get("/api/shared/not-a-token").status_code == 404
     assert auth_client.get("/api/attachments/not-an-id/content").status_code == 401
     assert auth_client.get("/api/offline/packages/not-an-id/download").status_code == 401
+
+
+def test_owner_session_does_not_unlock_an_independently_protected_share(auth_client: TestClient) -> None:
+    assert auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"}).status_code == 200
+    created_conversation = auth_client.post(
+        "/api/conversations",
+        json={
+            "title": "Share auth boundary fixture",
+            "messages": [
+                {"role": "user", "content_markdown": "safe question"},
+                {"role": "assistant", "content_markdown": "safe answer"},
+            ],
+        },
+    )
+    assert created_conversation.status_code == 201
+    conversation_id = created_conversation.json()["conversation"]["id"]
+    created = auth_client.post(
+        f"/api/conversations/{conversation_id}/shares",
+        json={"share_password": "independent share passphrase"},
+    )
+    assert created.status_code == 200
+    token = created.json()["token"]
+
+    # The owner cookie still grants the private application, but it is not a
+    # Share unlock credential and cannot cross the capability boundary.
+    assert auth_client.get("/api/preferences").status_code == 200
+    assert auth_client.get(f"/api/shared/{token}").status_code == 401
+    assert auth_client.post(
+        f"/api/shared/{token}/unlock",
+        json={"password": "correct horse battery staple"},
+    ).status_code == 401
+    assert auth_client.post(
+        f"/api/shared/{token}/unlock",
+        json={"password": "independent share passphrase"},
+    ).status_code == 200
 
 
 def test_login_sets_cookie_without_persisting_raw_token(auth_client: TestClient) -> None:

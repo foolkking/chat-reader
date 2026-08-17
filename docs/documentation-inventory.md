@@ -1,5 +1,13 @@
 # Markdown 文档台账
 
+2026-08-17 public Share/search enhancement synchronization: the current
+public-by-link Share contract, independent optional Share password and
+reference-style exact occurrence navigation are recorded in
+`PROJECT_STATE.md`, `docs/system/AUTHENTICATION_CONTRACT.md`,
+`docs/api-reference.md`, `docs/product.md`, `docs/architecture.md` and
+`docs/testing.md`. Production acceptance remains pending for the working
+change.
+
 2026-08-17 Release N synchronization is complete. The current auth
 contract, configuration, single-owner/session schema and tests are recorded in
 `docs/system/AUTHENTICATION_CONTRACT.md`, `PROJECT_STATE.md`, `TASKS.md`,

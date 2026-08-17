@@ -459,7 +459,7 @@ def get_shared_attachment_content(
     db: Session = Depends(get_db),
 ) -> Response:
     try:
-        share = resolve_accessible_share(db, token)
+        share = resolve_accessible_share(db, token, request.cookies.get("chat_reader_share_unlock"))
         content = attachment_content(get_share_attachment(db, share, attachment_id))
         return _content_response(content.path, content.asset_object.detected_mime_type, content.attachment.display_name, request.method, disposition, range_header, cache_control="private, no-store")
     except (AttachmentAccessError, ShareError) as exc:
@@ -470,10 +470,11 @@ def get_shared_attachment_content(
 def get_shared_attachment_metadata(
     token: str,
     attachment_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentRead:
     try:
-        share = resolve_accessible_share(db, token)
+        share = resolve_accessible_share(db, token, request.cookies.get("chat_reader_share_unlock"))
         attachment = get_share_attachment(db, share, attachment_id)
         return attachment_read(attachment, content_prefix=f"/api/shared/{token}/attachments")
     except (AttachmentAccessError, ShareError) as exc:

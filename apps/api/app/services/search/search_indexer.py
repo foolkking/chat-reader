@@ -65,7 +65,10 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         indexed_count += 1
 
     for row in _message_version_rows(db, conversation.id):
-        canonical_body = row.display_text.strip() or row.plain_text.strip()
+        # Search snippets use the rendered plain-text representation. Keep
+        # Markdown source as the canonical authority, but do not leak its
+        # presentation syntax into the result UI.
+        canonical_body = row.plain_text.strip() or row.display_text.strip()
         search_text = f"{row.role} {canonical_body}".strip()
         if not search_text:
             continue

@@ -243,6 +243,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 ::highlight(annotation-strikethrough-green) { text-decoration: line-through 2px var(--annotation-green-border); }
 ::highlight(annotation-strikethrough-blue) { text-decoration: line-through 2px var(--annotation-blue-border); }
 ::highlight(annotation-strikethrough-pink) { text-decoration: line-through 2px var(--annotation-pink-border); }
+::highlight(chat-reader-search-match) { background: var(--accent-soft); color: var(--text); text-decoration: underline 2px var(--accent); text-decoration-skip-ink: none; }
 .annotation-swatch-yellow { background: var(--annotation-yellow-swatch); }
 .annotation-swatch-green { background: var(--annotation-green-swatch); }
 .annotation-swatch-blue { background: var(--annotation-blue-swatch); }

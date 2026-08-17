@@ -74,6 +74,18 @@ import type {
 // /api/* to FastAPI over the server-side API_INTERNAL_URL.
 export const API_BASE_URL = "";
 
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly path: string;
+
+  constructor(message: string, status: number, path: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.path = path;
+  }
+}
+
 export async function getHealth(): Promise<HealthResponse> {
   return fetchJson<HealthResponse>("/api/health");
 }
@@ -963,6 +975,10 @@ export async function getSharedConversation(token: string): Promise<SharedConver
   return { ...response, share: normalizeShareUrl(response.share) };
 }
 
+export async function unlockSharedConversation(token: string, password: string): Promise<void> {
+  await fetchJson(`/api/shared/${encodeURIComponent(token)}/unlock`, jsonRequest("POST", { password }));
+}
+
 export async function getSharedMessageWindow(
   token: string,
   options: { offset?: number; limit?: number; anchorMessageId?: string; anchorBefore?: number } = {},
@@ -1125,10 +1141,15 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      !path.startsWith("/api/shared/") &&
+      !path.startsWith("/api/auth/")
+    ) {
       window.dispatchEvent(new Event("chat-reader:auth-unauthorized"));
     }
-    throw new Error(await getErrorMessage(response, path));
+    throw new ApiRequestError(await getErrorMessage(response, path), response.status, path);
   }
   if (response.status === 204) {
     return undefined as T;

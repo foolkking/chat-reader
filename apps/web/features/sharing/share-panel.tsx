@@ -29,6 +29,9 @@ export function SharePanel({
   const [includeAnnotations, setIncludeAnnotations] = useState(false);
   const [includeNotebook, setIncludeNotebook] = useState(false);
   const [allowExport, setAllowExport] = useState(false);
+  const [passwordProtected, setPasswordProtected] = useState(false);
+  const [sharePassword, setSharePassword] = useState("");
+  const [sharePasswordConfirm, setSharePasswordConfirm] = useState("");
   const [shareTheme, setShareTheme] = useState<"light" | "dark">(preferences.resolvedTheme);
   const [shareLocale, setShareLocale] = useState<"zh-CN" | "en-US">(preferences.resolvedLocale);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
@@ -41,6 +44,14 @@ export function SharePanel({
 
   async function submit() {
     setError(null);
+    if (passwordProtected && sharePassword.length < 12) {
+      setError(zh ? "分享密码至少需要 12 个字符。" : "Share passwords must be at least 12 characters.");
+      return;
+    }
+    if (passwordProtected && sharePassword !== sharePasswordConfirm) {
+      setError(zh ? "两次输入的分享密码不一致。" : "Share password confirmation does not match.");
+      return;
+    }
     setIsCreating(true);
     try {
       const response = await createShare(conversationId, {
@@ -57,6 +68,7 @@ export function SharePanel({
         expires_at: expiryValue(expiryMode, expiresAt),
         theme: shareTheme,
         locale: shareLocale,
+        share_password: passwordProtected ? sharePassword : null,
       });
       setCreatedUrl(response.share_url);
       await sharesQuery.refetch();
@@ -121,6 +133,15 @@ export function SharePanel({
         {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={includeToc} onChange={(event) => setIncludeToc(event.target.checked)} />{zh ? "包含章节目录" : "Include section contents"}</label> : null}
         {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={includeMetadata} onChange={(event) => setIncludeMetadata(event.target.checked)} />{zh ? "包含元数据" : "Include metadata"}</label> : null}
         {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={allowExport} onChange={(event) => setAllowExport(event.target.checked)} />{zh ? "允许导出" : "Allow export"}</label> : null}
+        <fieldset className="grid gap-2 border-y border-ui py-3">
+          <legend className="px-1 text-xs font-semibold text-secondary">{zh ? "访问权限" : "Access"}</legend>
+          <label className="flex items-center gap-2 text-sm text-primary"><input type="radio" name={`share-access-${conversationId}-${compact ? "compact" : "full"}`} checked={!passwordProtected} onChange={() => setPasswordProtected(false)} />{zh ? "任何拥有链接的人" : "Anyone with the link"}</label>
+          <label className="flex items-center gap-2 text-sm text-primary"><input type="radio" name={`share-access-${conversationId}-${compact ? "compact" : "full"}`} checked={passwordProtected} onChange={() => setPasswordProtected(true)} />{zh ? "需要密码" : "Password required"}</label>
+          {passwordProtected ? <div className="grid gap-2 pl-6">
+            <label className="text-xs text-secondary">{zh ? "分享密码" : "Share password"}<input type="password" autoComplete="new-password" value={sharePassword} onChange={(event) => setSharePassword(event.target.value)} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-primary" /></label>
+            <label className="text-xs text-secondary">{zh ? "确认密码" : "Confirm password"}<input type="password" autoComplete="new-password" value={sharePasswordConfirm} onChange={(event) => setSharePasswordConfirm(event.target.value)} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-primary" /></label>
+          </div> : null}
+        </fieldset>
         {!compact ? <fieldset className="grid gap-2 border-y border-ui py-3">
           <legend className="px-1 text-xs font-semibold text-secondary">{zh ? "私人内容（默认不分享）" : "Private content (not shared by default)"}</legend>
           <PrivacyToggle label={zh ? "包含对话说明" : "Include description"} checked={includeDescription} onChange={setIncludeDescription} />
@@ -206,6 +227,8 @@ function ShareManagementRow({
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(share.theme);
   const [locale, setLocale] = useState(share.locale);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
 
   async function saveExpiry() {
     setBusy("save");
@@ -219,6 +242,29 @@ function ShareManagementRow({
       await onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : (zh ? "无法更新分享。" : "Unable to update share."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function savePassword(value: string | null) {
+    if (value !== null && value.length < 12) {
+      setError(zh ? "分享密码至少需要 12 个字符。" : "Share passwords must be at least 12 characters.");
+      return;
+    }
+    if (value !== null && value !== newPasswordConfirm) {
+      setError(zh ? "两次输入的分享密码不一致。" : "Share password confirmation does not match.");
+      return;
+    }
+    setBusy("password");
+    setError(null);
+    try {
+      await updateShare(share.id, { share_password: value });
+      setNewPassword("");
+      setNewPasswordConfirm("");
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (zh ? "无法更新分享密码。" : "Unable to update share password."));
     } finally {
       setBusy(null);
     }
@@ -294,7 +340,7 @@ function ShareManagementRow({
               </button>
             </>
           ) : null}
-          {!share.share_url && !share.revoked_at ? (
+          {!share.share_url && !share.revoked_at && !share.password_required ? (
             <button
               type="button"
               onClick={() => void regenerateShareLink()}
@@ -324,6 +370,15 @@ function ShareManagementRow({
             {share.revoked_at ? t("revoked") : t("revoke")}
           </button>
         </div>
+      </div>
+      <div className="mt-3 grid gap-2 rounded-lg bg-subtle p-2">
+        <p className="text-xs font-medium text-secondary">{share.password_required ? (zh ? "需要分享密码" : "Password required") : (zh ? "任何拥有链接的人" : "Anyone with the link")}</p>
+        {!share.revoked_at && share.password_required ? <button type="button" onClick={() => void savePassword(null)} disabled={busy !== null} className="min-h-8 rounded-lg border border-ui px-2.5 text-xs font-medium text-primary disabled:opacity-60">{busy === "password" ? t("saving") : (zh ? "移除密码" : "Remove password")}</button> : null}
+        {!share.revoked_at ? <>
+          <input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder={share.password_required ? (zh ? "新分享密码" : "New share password") : (zh ? "设置分享密码" : "Set share password")} className="rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm text-primary" />
+          <input type="password" autoComplete="new-password" value={newPasswordConfirm} onChange={(event) => setNewPasswordConfirm(event.target.value)} placeholder={zh ? "确认分享密码" : "Confirm share password"} className="rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm text-primary" />
+          <button type="button" onClick={() => void savePassword(newPassword)} disabled={busy !== null || !newPassword} className="min-h-8 rounded-lg bg-[var(--text)] px-2.5 text-xs font-medium text-[var(--surface)] disabled:opacity-60">{busy === "password" ? t("saving") : (zh ? "保存密码" : "Save password")}</button>
+        </> : null}
       </div>
       <div className="mt-3 grid gap-2">
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2"><label className="min-w-0 text-xs font-medium text-secondary">{t("shareTheme")}<select value={theme} onChange={(event) => setTheme(event.target.value as "light" | "dark")} className="mt-1 block w-full min-w-0 rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label><label className="min-w-0 text-xs font-medium text-secondary">{t("shareLanguage")}<select value={locale} onChange={(event) => setLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 block w-full min-w-0 rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label></div>

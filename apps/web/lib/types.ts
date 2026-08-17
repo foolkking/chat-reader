@@ -548,6 +548,7 @@ export type SearchResultItem = {
   conversation_id: string;
   conversation_title: string;
   message_id: string | null;
+  message_version_id?: string | null;
   role: string | null;
   order_key: string | null;
   block_index: number | null;
@@ -556,9 +557,19 @@ export type SearchResultItem = {
   rank: number;
   source_profile: string | null;
   occurrence_count: number;
+  matches?: SearchMatch[];
   annotation_id?: string | null;
   annotation_type?: string | null;
   annotation_color?: string | null;
+};
+
+export type SearchMatch = {
+  block_index: number | null;
+  match_start: number;
+  match_end: number;
+  quote: string;
+  context_before: string;
+  context_after: string;
 };
 
 export type SearchResponse = {
@@ -801,6 +812,7 @@ export type ShareRead = {
   created_at: string;
   updated_at: string;
   share_url?: string | null;
+  password_required: boolean;
 };
 
 export type ShareCreateInput = {
@@ -817,6 +829,7 @@ export type ShareCreateInput = {
   expires_at?: string | null;
   theme?: ResolvedTheme | null;
   locale?: ResolvedLocale | null;
+  share_password?: string | null;
 };
 
 export type ShareCreateResponse = ShareRead & {
@@ -830,6 +843,7 @@ export type ShareUpdateInput = {
   expires_at?: string | null;
   theme?: ResolvedTheme | null;
   locale?: ResolvedLocale | null;
+  share_password?: string | null;
 };
 
 export type SharedConversationBootstrap = {

@@ -62,14 +62,14 @@ Chat Reader 是单资料拥有者使用的标准化 AI 对话资料库，不是�
 ## 搜索、批注与精选笔记
 
 - 全局搜索覆盖 conversation、message、heading、code 和 annotation；中文、URL、标识符和符号查询结合全文与 trigram 子串。
-- Reader 内搜索提供结果计数、角色/内容筛选、命中高亮和统一远距离定位。
+- Reader 内搜索默认使用 canonical message 结果，返回 message/version、block、字符范围和 quote 的结构化命中；结果提供围绕命中的纯文本上下文、高亮、精确跳转以及跳转后的前后命中导航。
 - 批注支持 highlight、underline、strikethrough、comment 和 bookmark，以及黄/绿/蓝/粉四种颜色。
 - 批注工作区可浮动、固定到左侧或展开为全屏阅读层；“全部批注”和“精选笔记”支持连续阅读与逐条回顾。
 - 精选笔记由 Markdown 说明和 annotation reference 组成；移除引用不会删除原批注。
 
 ## 分享、导出与离线
 
-- Share token 只在创建时返回原文；数据库仅保存 hash/prefix。scope、过期、撤销、private include flags 和 `allow_export` 由每个公开接口重新校验。
+- Share 默认是“任何拥有链接的人”可读的 public-by-link capability；创建时可选择独立的 Share 密码。Share 密码与 owner 密码分开哈希，解锁只签发 Share 范围的 HttpOnly credential，不创建 owner session。token、scope、过期、撤销、private include flags 和 `allow_export` 由每个公开接口重新校验。
 - 对话导出只显示 CanJSON、Markdown 和“包含附件”：无附件分别输出 `.canjsonl`/`.md`，含附件分别输出 AI 承接 `.context.zip`/可移植 Markdown ZIP。系统 `.cr v4` 位于设置的数据与备份，保存完整版本与关系并只允许恢复到空实例；旧对话级 `.cr` 只保留导入兼容。
 - 需要携带二进制附件时可导出 `Markdown + 附件` 或 `CanJSON + 附件` Bundle；物理对象按 SHA-256 内容寻址。简介、批注、笔记和来源引用作为折叠的二级内容选项，不增加新的顶级格式。
 - 当前单用户部署主动关闭附件恶意软件扫描和内容安全审查；附件以 `scanner_disabled`/`unscanned` 状态正常使用，中文 UI 显示“未扫描”，不显示 clean/safe 或“已通过扫描”。这不代表文件经过安全检测。正文附件只采用 rich、compact、file-card、fallback 四种层级；连续图片/文件会分组。Viewer 的遮罩属于全页面，但实际内容窗口按类型受限：图片/视频为深色舞台，音频为紧凑面板，Markdown/文本/表格/PDF 为文档工作区。SVG 始终通过 `<img>` 显示。

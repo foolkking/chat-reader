@@ -10,7 +10,9 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
+from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
+from app.schemas.search import SearchMatch
 
 
 class SearchServiceError(ValueError):
@@ -24,6 +26,7 @@ class SearchResult:
     conversation_id: uuid.UUID
     conversation_title: str
     message_id: uuid.UUID | None
+    message_version_id: uuid.UUID | None
     role: str | None
     order_key: str | None
     block_index: int | None
@@ -32,6 +35,7 @@ class SearchResult:
     rank: float
     source_profile: str | None
     occurrence_count: int = 1
+    matches: list[SearchMatch] | None = None
     annotation_id: uuid.UUID | None = None
     annotation_type: str | None = None
     annotation_color: str | None = None
@@ -112,7 +116,10 @@ def search(
             + case((heading_match, 3.0), else_=0.0)
             + case((text_match, 2.0), else_=0.0)
         )
-        filters = [title_match, text_match]
+        # A conversation-scoped search is a content search. The conversation
+        # title must not make every message look like a hit with no navigable
+        # occurrence in the message body.
+        filters = [text_match] if conversation_id is not None else [title_match, text_match]
         if use_text_query:
             filters.append(SearchDocument.search_tsv.op("@@")(tsquery))
         base_query = (
@@ -150,10 +157,11 @@ def search(
             + case((text_match & (SearchDocument.document_type == "heading"), 3.0), else_=0.0)
             + case((text_match, 2.0), else_=0.0)
         )
+        scoped_match = text_match if conversation_id is not None else or_(text_match, title_match)
         base_query = (
             db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-            .filter(Conversation.deleted_at.is_(None), _status_filter(status_scope), or_(text_match, title_match))
+            .filter(Conversation.deleted_at.is_(None), _status_filter(status_scope), scoped_match)
         )
         if conversation_id is not None:
             base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
@@ -236,14 +244,16 @@ def search(
             conversation_id=document.conversation_id,
             conversation_title=conversation_title,
             message_id=document.message_id,
+            message_version_id=document.message_version_id,
             role=document.role,
             order_key=document.order_key,
             block_index=_document_block_index(document),
             character_offset=_document_character_offset(document),
-            snippet=_snippet(document.search_text, normalized_query),
+            snippet=_result_snippet(document, normalized_query, db),
             rank=rank,
             source_profile=document.source_profile,
             occurrence_count=occurrence_count,
+            matches=_document_matches(document, normalized_query, db),
             annotation_id=_annotation_fields(document)[0],
             annotation_type=_annotation_fields(document)[1],
             annotation_color=_annotation_fields(document)[2],
@@ -308,6 +318,74 @@ def _snippet(text: str, query: str) -> str:
     prefix = "..." if start > 0 else ""
     suffix = "..." if end < len(normalized_text) else ""
     return f"{prefix}{normalized_text[start:end]}{suffix}"
+
+
+def _result_snippet(document: SearchDocument, query: str, db: Session) -> str:
+    matches = _document_matches(document, query, db)
+    if matches:
+        match = matches[0]
+        text = document.plain_text or document.search_text
+        if match.block_index is not None:
+            block = db.query(RenderBlock).filter(
+                RenderBlock.message_version_id == document.message_version_id,
+                RenderBlock.block_index == match.block_index,
+            ).one_or_none()
+            text = (block.plain_text if block is not None else text) or text
+        return _snippet(text, match.quote)
+    return _snippet(document.plain_text or document.search_text, query)
+
+
+def _document_matches(document: SearchDocument, query: str, db: Session) -> list[SearchMatch]:
+    if document.message_version_id is None:
+        return []
+    blocks = db.query(RenderBlock).filter(
+        RenderBlock.message_version_id == document.message_version_id,
+    ).order_by(RenderBlock.block_index.asc()).all()
+    candidates = [(block.block_index, block.plain_text or "") for block in blocks]
+    if not candidates:
+        candidates = [(None, document.plain_text or document.search_text)]
+    matches: list[SearchMatch] = []
+    for block_index, text in candidates:
+        matches.extend(_find_text_matches(text, query, block_index))
+        if len(matches) >= 100:
+            break
+    return matches[:100]
+
+
+def _find_text_matches(text: str, query: str, block_index: int | None) -> list[SearchMatch]:
+    normalized_text = " ".join(text.split())
+    normalized_query = " ".join(query.split())
+    if not normalized_text or not normalized_query:
+        return []
+    lower_text = normalized_text.casefold()
+    lower_query = normalized_query.casefold()
+    offsets: list[tuple[int, int]] = []
+    cursor = 0
+    while True:
+        index = lower_text.find(lower_query, cursor)
+        if index < 0:
+            break
+        offsets.append((index, index + len(normalized_query)))
+        cursor = index + max(1, len(normalized_query))
+    if not offsets:
+        for token in _query_tokens(lower_query):
+            index = lower_text.find(token)
+            if index >= 0:
+                offsets.append((index, index + len(token)))
+                break
+    result: list[SearchMatch] = []
+    for start, end in offsets:
+        before_start = max(0, start - 80)
+        after_end = min(len(normalized_text), end + 80)
+        result.append(SearchMatch(
+            block_index=block_index,
+            match_start=start,
+            match_end=end,
+            quote=normalized_text[start:end],
+            context_before=normalized_text[before_start:start],
+            context_after=normalized_text[end:after_end],
+        ))
+    return result
 
 
 def _query_tokens(query: str) -> list[str]:
