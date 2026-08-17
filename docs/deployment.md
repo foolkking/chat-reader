@@ -1,15 +1,18 @@
 # 生产部署
 
-## Release N single-owner authentication deployment (complete)
+## Current authenticated runtime and public Share deployment (complete)
 
 The current runtime adds Alembic `20260817_0024` for independent optional
 Share passwords and scoped unlock sessions. The explicit `/share/{token}`
 surface is public-by-link by default; owner application routes remain gated.
-For a future authenticated-runtime cutover, create a verified production backup using the current
-five-component procedure, prove the exact CI artifact, and configure the
-versioned Compose environment with `AUTH_ENABLED=true`, a separately generated
-long `AUTH_SESSION_SECRET`, Secure cookies and the fixed 48-hour timeout. Do
-not print or commit that secret.
+Password-protected Shares issue only a Share-scoped unlock credential and do
+not create an owner session. Production acceptance covers direct public Share
+viewing, password gating, revocation and private-route isolation.
+For future authenticated-runtime changes, create a verified production backup
+using the current five-component procedure, deploy the versioned Compose
+configuration with `AUTH_ENABLED=true`, a separately generated long
+`AUTH_SESSION_SECRET`, Secure cookies and the fixed 48-hour timeout. Do not
+print or commit that secret.
 
 Provision the owner credential only through the running exact API image and
 the password-safe operator CLI:

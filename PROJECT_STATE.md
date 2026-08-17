@@ -1,8 +1,8 @@
 # Project State
 
-## 2026-08-17 Public Share and reference-style conversation search
+## 2026-08-18 Public Share and reference-style conversation search
 
-- The post-audit product enhancement is implemented locally: the explicit
+- The post-audit product enhancement is deployed: the explicit
   `/share/{token}` page and `/api/shared/{token}/*` capability surface are
   public-by-link by default, while the owner password remains required for
   private application routes. Share passwords are optional, independently
@@ -17,8 +17,14 @@
   anchors with contextual plain-text snippets, and keeps a persistent exact
   match previous/next navigation context after a jump.
 - Alembic revision `20260817_0024` adds only Share password and unlock-session
-  state. Focused Share/search/auth/migration tests pass locally; production
-  deployment and browser acceptance remain pending for this working change.
+  state. The deployed production runtime has passed focused Share/search/auth
+  tests, the full API suite, Web lint/typecheck/production build and CI.
+  Production acceptance covered direct passwordless viewing, wrong/correct
+  Share-password behavior, revocation, and exact search occurrence navigation
+  with previous/next and return-to-results state. A small manual-conversation
+  indexing fix ensures newly created conversations are searchable immediately.
+  All disposable QA conversations and Shares used for this acceptance were
+  removed through the product UI.
 
 ## 2026-08-17 Deployed baseline and final product audit
 

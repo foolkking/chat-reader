@@ -1,12 +1,14 @@
 # 页面与路由地图
 
-## Current route access rule (2026-08-17)
+## Current route access rule (2026-08-18)
 
-Every application page and business API route, including `/share/[token]` and
-direct artifact downloads, requires an authenticated owner session. The public
-allowlist is limited to coarse health and the minimal login/session flow.
-Historical route labels below describe the earlier pre-Release-N surface and
-do not bypass the current authentication middleware.
+Every application page and business API route requires an authenticated owner
+session except coarse health, the minimal login/session flow, and the exact
+public Share capability surface. `/share/[token]` and `/api/shared/{token}/*`
+authorize only that Share and its explicitly scoped resources. Shares are
+passwordless by default; an optional independent Share password unlocks only
+that Share through a scoped credential. Direct artifact downloads and all
+private application routes remain owner-session protected.
 
 最后核验：2026-08-05
 

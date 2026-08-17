@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## Public Share and exact conversation search (working change, 2026-08-17)
+## Public Share and exact conversation search (deployed and accepted, 2026-08-18)
 
 The focused API coverage now exercises passwordless public Share access,
 independent Share-password hashing/unlock rotation, owner-session separation,
@@ -11,10 +11,16 @@ $env:PYTHONPATH='apps/api'
 pytest -q apps/api/tests/test_sharing_api.py apps/api/tests/test_search_api.py apps/api/tests/test_auth.py apps/api/tests/test_migration_integrity.py
 ```
 
-The current local result is `27 passed / 1 skipped`; the full API suite is
-`324 passed / 7 skipped`. The Web typecheck and lint also pass. Production
-deployment and browser acceptance are intentionally recorded only after the
-scoped commit reaches exact-SHA CI and the current production runtime.
+The focused search regression is `9 passed`; the full API suite is `325 passed
+/ 7 skipped`. Web lint, typecheck and the Webpack production build pass, and
+the normal CI run completed successfully for the deployed runtime.
+
+Production acceptance used only disposable QA content. It verified a direct
+passwordless Share, a password-protected Share's generic wrong-password denial
+and successful Share-scoped unlock, revocation, and owner-route isolation.
+It also verified exact current-conversation occurrence navigation, persistent
+previous/next controls and return-to-results state. The QA conversations and
+Shares were removed through the product UI after acceptance.
 
 ## Release N authentication verification and production acceptance (2026-08-17)
 
