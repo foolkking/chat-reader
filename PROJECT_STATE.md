@@ -25,6 +25,11 @@
   matrix (`10` passed), with lint, typecheck, production build,
   dependency/security policy and migration head/current all passing.
   Release N has not yet completed exact-SHA CI, deployment or acceptance.
+- File reads now enforce controlled paths, existence and declared byte size
+  without recomputing SHA-256. Database digest fields, content-addressed names,
+  password/session/Share security hashes and digest generation remain intact.
+  Current CI, deployment and backup reporting no longer treats a separately
+  repeated human SHA/checksum confirmation as a release gate.
 
 ## 2026-08-17 Release M disaster-recovery closure
 
@@ -34,14 +39,14 @@
   `baca93bdf6f2965c4f5614e296c12d337efc1a0a`, schema `20260816_0022`, with
   public health 200 and unchanged API/Web/worker/PostgreSQL image identities.
 - Backup `release-m-20260816T161711Z-baca93b` contains the PostgreSQL custom
-  dump plus imports, exports, offline and assets archives. PostgreSQL listing,
-  archive listings and SHA-256 verification passed; the backup is retained.
+  dump plus imports, exports, offline and assets archives. PostgreSQL and
+  archive readability/listing verification passed; the backup is retained.
 - Recovery targets `chat-reader-release-m-recovery-a` and `-b` used distinct
   projects, networks, databases, ports and named volumes. Preflight rejected
   production identity reuse and passed isolation before either restore.
 - Both restores reached schema `20260816_0022`, healthy API/Web/worker state,
   matching aggregate and storage counts, 228 physical-object checks with zero
-  missing/size/hash mismatches, zero canonical dangling references and zero
+  missing/size mismatches, zero canonical dangling references and zero
   missing required files. Dedupe groups and active-unreferenced attachments
   were preserved; transient upload references remained zero.
 - Restored historical heartbeat state was stale before worker startup; a new

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 
@@ -33,23 +32,13 @@ TABLES = (
 )
 
 
-def _digest(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _check_file(path: Path, *, byte_size: int, sha256: str, result: dict[str, int]) -> None:
+def _check_file(path: Path, *, byte_size: int, result: dict[str, int]) -> None:
     if not path.is_file():
         result["missing"] += 1
         return
     if path.stat().st_size != byte_size:
         result["size_mismatch"] += 1
         return
-    if _digest(path) != sha256:
-        result["hash_mismatch"] += 1
 
 
 def _storage_usage(root: Path) -> dict[str, int]:
@@ -69,7 +58,7 @@ def audit(snapshot: dict) -> dict:
         "rows": {},
         "storage": {},
         "relations": {},
-        "files": {"checked": 0, "missing": 0, "size_mismatch": 0, "hash_mismatch": 0},
+        "files": {"checked": 0, "missing": 0, "size_mismatch": 0},
     }
     with SessionLocal() as db:
         for table in TABLES:
@@ -162,31 +151,30 @@ def audit(snapshot: dict) -> dict:
             ),
         }
 
-        for storage_key, byte_size, sha256 in db.execute(
-            text("select storage_key,byte_size,sha256 from asset_objects where status='available'")
+        for storage_key, byte_size in db.execute(
+            text("select storage_key,byte_size from asset_objects where status='available'")
         ):
             report["files"]["checked"] += 1
-            _check_file(roots["assets"] / storage_key, byte_size=byte_size, sha256=sha256, result=report["files"])
-        for import_id, safe_filename, byte_size, sha256 in db.execute(
-            text("select import_id,safe_filename,byte_size,sha256 from source_artifacts")
+            _check_file(roots["assets"] / storage_key, byte_size=byte_size, result=report["files"])
+        for import_id, safe_filename, byte_size in db.execute(
+            text("select import_id,safe_filename,byte_size from source_artifacts")
         ):
             report["files"]["checked"] += 1
             _check_file(
                 roots["imports"] / str(import_id) / safe_filename,
                 byte_size=byte_size,
-                sha256=sha256,
                 result=report["files"],
             )
         for table, root_key in (("export_artifacts", "exports"), ("offline_package_artifacts", "offline")):
-            for storage_uri, byte_size, sha256 in db.execute(
-                text(f"select storage_uri,byte_size,sha256 from {table}")
+            for storage_uri, byte_size in db.execute(
+                text(f"select storage_uri,byte_size from {table}")
             ):
                 path = Path(storage_uri).resolve()
                 report["files"]["checked"] += 1
                 if not path.is_relative_to(roots[root_key]):
                     report["files"]["missing"] += 1
                     continue
-                _check_file(path, byte_size=byte_size, sha256=sha256, result=report["files"])
+                _check_file(path, byte_size=byte_size, result=report["files"])
 
         report["transient_upload_reference_count"] = sum(
             bool(find_transient_upload_references(source))
@@ -205,7 +193,7 @@ def audit(snapshot: dict) -> dict:
         value for key, value in report["relations"].items() if key.startswith("dangling_")
     )
     report["canonical_missing_required_file_count"] = (
-        report["files"]["missing"] + report["files"]["size_mismatch"] + report["files"]["hash_mismatch"]
+        report["files"]["missing"] + report["files"]["size_mismatch"]
     )
     return report
 

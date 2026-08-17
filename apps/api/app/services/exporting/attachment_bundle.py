@@ -60,8 +60,8 @@ def create_attachment_bundle(
         except (ValueError, FileNotFoundError):
             missing_attachments += 1
             continue
-        if _sha256_file(source) != asset.sha256 or source.stat().st_size != asset.byte_size:
-            raise ExportError("Attachment object failed integrity validation.")
+        if source.stat().st_size != asset.byte_size:
+            raise ExportError("Attachment object failed size validation.")
         object_path = (
             portable_paths[attachment.id]
             if bundle_format == MARKDOWN_BUNDLE_FORMAT
@@ -273,14 +273,6 @@ def _write_stream(archive: zipfile.ZipFile, name: str, chunks: Iterable[bytes]) 
 def _write_json(archive: zipfile.ZipFile, name: str, value: dict[str, Any]) -> dict[str, Any]:
     encoded = (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     return _write_stream(archive, name, (encoded,))
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _safe_filename(value: str) -> str:

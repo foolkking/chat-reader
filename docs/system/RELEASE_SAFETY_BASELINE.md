@@ -19,10 +19,10 @@ locked install without lifecycle scripts
 -> API full suite / Alembic current and single head
 -> official-registry dependency audit and exact exceptions
 -> focused online browser checks / default PWA baseline
--> image build / inspection / SHA-256 / deployable artifact
+-> image build / inspection / deployable artifact
 ```
 
-Quality evidence may be uploaded after a failed gate for diagnosis. It is explicitly non-deployable. A deployable artifact must include the source commit, workflow run, image identifiers, build time, archive name, SHA-256, and image inspection report.
+Quality evidence may be uploaded after a failed gate for diagnosis. It is explicitly non-deployable. A deployable artifact must include the source commit, workflow run, image identifiers, build time, archive name, and image inspection report. Automated package digests may remain in build metadata, but human CI/deployment reports do not require a separate SHA/checksum confirmation.
 
 CI installs pinned pnpm `9.15.4` through `pnpm/action-setup`. The Web image pins a Node-20-compatible Corepack before activating the same package-manager version. Do not bypass package-manager signature validation with `COREPACK_INTEGRITY_KEYS=0`.
 
@@ -60,7 +60,7 @@ The report-only CSP starts with same-origin defaults, allows the local data/blob
 
 Release images must be `linux/amd64`, carry the exact OCI revision label, expose expected API/Web entrypoints, and omit `.env`, `.git`, build caches, and user import storage. Worker and migration tags share the API filesystem image; production Compose supplies their explicit command overrides.
 
-King never runs a Next production build. Deployment uses an externally built archive, verifies SHA-256, validates PostgreSQL and business-volume backups, runs migration preflight, and recreates services with `--no-build`. It never runs `down -v`, deletes business volumes, replaces `.env.production`, or enables Scanner.
+King never runs a Next production build. Deployment uses an externally built archive, validates its versioned build metadata, validates PostgreSQL and business-volume backup readability/listings, runs migration preflight, and recreates services with `--no-build`. It never runs `down -v`, deletes business volumes, replaces `.env.production`, or enables Scanner. Manual SHA/checksum confirmation is not a release-report gate.
 
 The application has no account system. TLS and owner access control remain the responsibility of the external gateway/VPN. The repository owns application headers; the gateway must preserve or deliberately supersede them, forward the expected proxy headers, and monitor `/api/health`.
 

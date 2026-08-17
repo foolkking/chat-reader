@@ -106,7 +106,7 @@ def download_offline_package(package_id: uuid.UUID, db: Session = Depends(get_db
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Offline package is not ready.")
     root = Path(get_settings().offline_storage_dir).resolve()
     path = Path(package.storage_uri).resolve()
-    if not path.is_relative_to(root) or not validate_final_artifact(path, expected_sha256=package.sha256, expected_size=package.byte_size):
+    if not path.is_relative_to(root) or not validate_final_artifact(path, expected_size=package.byte_size):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offline package file is missing.")
     package.download_count += 1
     db.commit()

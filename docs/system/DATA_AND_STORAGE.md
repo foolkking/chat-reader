@@ -47,7 +47,7 @@ Conversation
 | `OFFLINE_STORAGE_DIR` | `.crpkg` offline artifacts | `offline-storage` |
 | `ASSET_STORAGE_DIR` | quarantine/original/derivative attachment objects | `asset-storage` |
 
-数据库只保存 metadata 和受控相对路径；服务必须验证 resolved path 位于对应 root。ImportDraft 记录 SHA-256、统计和到期时间，Commit 校验后读取同一文件。导入目录可能含用户私密正文，不进入文档整理、截图或普通源码归档。
+数据库只保存 metadata 和受控相对路径；服务必须验证 resolved path 位于对应 root。ImportDraft 记录 SHA-256、统计和到期时间，Commit 校验路径、统计和到期后读取同一文件。导入目录可能含用户私密正文，不进入文档整理、截图或普通源码归档。
 
 ## Dexie
 

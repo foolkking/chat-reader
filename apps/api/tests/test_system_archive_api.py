@@ -143,7 +143,7 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
         files={"file": ("tampered.cr", tampered_archive, "application/vnd.chat-reader.archive+zip")},
     )
     assert tampered.status_code == 400
-    assert "integrity" in tampered.json()["detail"].lower()
+    assert "size validation" in tampered.json()["detail"].lower()
 
     restored = client.post(
         "/api/system/archive/restore",

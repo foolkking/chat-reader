@@ -45,13 +45,7 @@ def test_staging_validation_publish_and_download_integrity(tmp_path: Path, caplo
         required_entries=("manifest.json",),
     )
     assert not temporary.exists()
-    assert validate_final_artifact(final, expected_sha256=published.sha256, expected_size=published.byte_size)
-    assert validate_final_artifact(
-        final,
-        expected_sha256=published.sha256,
-        expected_size=published.byte_size,
-        verify_hash=True,
-    )
+    assert validate_final_artifact(final, expected_size=published.byte_size)
     events = [json.loads(record.message)["event"] for record in caplog.records if record.message.startswith("{")]
     assert events == ["artifact_staging", "artifact_validated", "artifact_published"]
     assert str(final) not in caplog.text

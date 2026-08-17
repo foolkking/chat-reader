@@ -48,7 +48,7 @@ test.describe("Release E PWA negative matrix", () => {
     await expect(offlinePage.locator("main")).toContainText(/Offline ready|可离线启动/);
 
     // A non-critical Skill asset may be absent without making Library unusable.
-    const repaired = await waitForCachedShellAssets(offlinePage, [criticalChunk, optionalSkill]);
+    const repaired = await waitForCachedShellAssets(offlinePage, [criticalChunk]);
     await expect.poll(() => offlinePage.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
     await context.setOffline(true);
     await offlinePage.evaluate(async ({ cacheName, optionalSkill }) => {

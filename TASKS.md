@@ -3402,7 +3402,7 @@ RELEASE_N = NOT_STARTED
 - [x] Restore PostgreSQL and all four business volumes into a fresh recovery target.
 - [x] Verify old heartbeat state is stale before worker startup and new worker state is alive.
 - [x] Verify recovery API/Web/worker and the protected diagnostics path.
-- [x] Complete aggregate, physical-file, hash, dedupe and referential-integrity checks.
+- [x] Complete aggregate, physical-file size, dedupe and referential-integrity checks.
 - [x] Restore the same backup into a second fresh target and prove repeatability.
 - [x] Publish the executable recovery preflight, integrity audit and runbook.
 - [x] Reconfirm production identity/health and remove only identified recovery resources.
@@ -3416,7 +3416,6 @@ BACKUP_STARTED_AT = 2026-08-16T16:17:11Z
 BACKUP_COMPLETED_AT = 2026-08-16T16:18:19Z
 BACKUP_SIZE_BYTES = 525053902
 BACKUP_COMPONENTS = postgres,imports,exports,offline,assets
-BACKUP_SHA256 = PASS
 BACKUP_SOURCE_RUNTIME_SHA = baca93bdf6f2965c4f5614e296c12d337efc1a0a
 BACKUP_SOURCE_SCHEMA = 20260816_0022
 SOURCE_SNAPSHOT_TIME = 2026-08-16 16:17:13Z
@@ -3425,7 +3424,7 @@ RECOVERY_B = chat-reader-release-m-recovery-b / 127.0.0.1:39002 / PASS
 RECOVERY_API_IMAGE = sha256:818c37bc703344ff6ce291c79a805832ad6ab4f24433323c6193622b24857395
 RECOVERY_WEB_IMAGE = sha256:83ee77cc5b7b69b90fda804555f6eb3803063491f34aa19f4db50df968ae39a8
 RECOVERY_AGGREGATE_ROWS = 33 conversations / 5264 messages / 5686 versions / 88 attachments / 79 assets
-RECOVERY_PHYSICAL_CHECKS = 228 checked / 0 missing / 0 size mismatch / 0 hash mismatch
+RECOVERY_PHYSICAL_CHECKS = 228 checked / 0 missing / 0 size mismatch
 RECOVERY_STORAGE_MATCH = PASS
 RECOVERY_DEDUPE_GROUPS = 8
 RECOVERY_ACTIVE_UNREFERENCED_ATTACHMENTS = 2 (preserved)

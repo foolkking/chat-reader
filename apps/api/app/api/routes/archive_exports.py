@@ -147,7 +147,7 @@ def download_archive(artifact_id: uuid.UUID, db: Session = Depends(get_db)) -> F
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Export has expired.")
     export_root = Path(get_settings().export_storage_dir).resolve()
     path = Path(artifact.storage_uri).resolve()
-    if not path.is_relative_to(export_root) or not validate_final_artifact(path, expected_sha256=artifact.sha256, expected_size=artifact.byte_size):
+    if not path.is_relative_to(export_root) or not validate_final_artifact(path, expected_size=artifact.byte_size):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export file is missing.")
     artifact.download_count += 1
     db.commit()

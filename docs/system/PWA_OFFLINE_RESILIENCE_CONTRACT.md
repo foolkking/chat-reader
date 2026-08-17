@@ -94,7 +94,7 @@ best-effort deleted.
 
 ```text
 new versioned attachment cache entries
-  -> validate size and SHA-256
+  -> validate declared byte size
   -> Dexie transaction commits package/current records
   -> old attachment cache entries become cleanup candidates
 ```
@@ -107,8 +107,9 @@ failed committed update.
 ## Attachment and Viewer Misses
 
 Every offline attachment read checks Cache Storage bytes against the current
-metadata size and SHA-256. A missing, truncated, or mismatched entry is removed
-from the usable set and resolves to `offline_unavailable`.
+metadata size. A missing or truncated entry is removed from the usable set and
+resolves to `offline_unavailable`. SHA-256 metadata remains part of the
+content-addressed cache identity, but reads do not re-hash file bytes.
 
 | Condition | Result |
 | --- | --- |

@@ -94,20 +94,10 @@ class _ScannedArtifactFile:
 def validate_final_artifact(
     path: Path,
     *,
-    expected_sha256: str,
     expected_size: int,
-    verify_hash: bool = False,
 ) -> bool:
     path = path.resolve()
-    if not path.is_file() or path.stat().st_size != expected_size:
-        return False
-    if not verify_hash:
-        return True
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest() == expected_sha256
+    return path.is_file() and path.stat().st_size == expected_size
 
 
 def classify_artifact_files(

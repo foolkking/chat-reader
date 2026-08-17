@@ -78,12 +78,10 @@ def iter_import_draft(record: ImportRecord):
     expected_messages = int((record.draft_summary or {}).get("message_count") or 0)
     actual_conversations = 0
     actual_messages = 0
-    digest = hashlib.sha256()
     max_line_bytes = max(1, get_settings().max_import_file_size_mb * 1024 * 1024 * 2)
 
     with path.open("rb") as handle:
         for line_number, raw_line in enumerate(handle, start=1):
-            digest.update(raw_line)
             if len(raw_line) > max_line_bytes:
                 raise ImportDraftError(f"Import draft line {line_number} exceeds the configured size limit.")
             if not raw_line.strip():
@@ -104,8 +102,6 @@ def iter_import_draft(record: ImportRecord):
             actual_messages += len(messages)
             yield conversation
 
-    if digest.hexdigest() != record.draft_sha256:
-        raise ImportDraftError("Import draft checksum does not match preview.")
     if expected_conversations and actual_conversations != expected_conversations:
         raise ImportDraftError("Import draft conversation count does not match preview.")
     if expected_messages and actual_messages != expected_messages:

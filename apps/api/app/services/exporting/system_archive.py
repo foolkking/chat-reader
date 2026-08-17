@@ -120,9 +120,8 @@ def create_system_archive(
         except (ValueError, FileNotFoundError):
             missing_assets += 1
             continue
-        digest, size = _hash_file(path)
-        if digest != asset.sha256 or size != asset.byte_size:
-            raise SystemArchiveError("An attachment object failed integrity validation.")
+        if path.stat().st_size != asset.byte_size:
+            raise SystemArchiveError("An attachment object failed size validation.")
         asset_entries.setdefault(f"assets/objects/{asset.sha256[:2]}/{asset.sha256}", (asset, path))
 
     files: list[dict[str, Any]] = []
@@ -271,9 +270,9 @@ def restore_system_archive(db: Session, archive_path: Path) -> dict[str, int]:
                     raise SystemArchiveError("System archive contains an invalid attachment object path.")
                 with archive.open(archive_entry) as source:
                     staged = store.stage(source, max_bytes=get_settings().bundle_max_object_bytes, quarantine=False)
-                if staged.sha256 != payload.get("sha256") or staged.byte_size != int(payload.get("byte_size", -1)):
+                if staged.byte_size != int(payload.get("byte_size", -1)):
                     staged.path.unlink(missing_ok=True)
-                    raise SystemArchiveError("System archive attachment hash mismatch.")
+                    raise SystemArchiveError("System archive attachment size mismatch.")
                 storage_key = store.object_key()
                 store.promote(staged.path, storage_key)
                 promoted.append(storage_key)
@@ -402,7 +401,6 @@ def _validate_canonical_entries(archive: zipfile.ZipFile, manifest: dict[str, An
         if path in declared_paths or path not in expected_paths:
             raise SystemArchiveError("System archive manifest contains an unexpected canonical entry.")
         declared_paths.add(path)
-        digest = hashlib.sha256()
         size = 0
         try:
             source = archive.open(path)
@@ -410,19 +408,8 @@ def _validate_canonical_entries(archive: zipfile.ZipFile, manifest: dict[str, An
             raise SystemArchiveError(f"System archive is missing {path}.") from exc
         with source:
             for chunk in iter(lambda: source.read(1024 * 1024), b""):
-                digest.update(chunk)
                 size += len(chunk)
-        if digest.hexdigest() != entry.get("sha256") or size != int(entry.get("byte_size", -1)):
-            raise SystemArchiveError("System archive canonical entry failed integrity validation.")
+        if size != int(entry.get("byte_size", -1)):
+            raise SystemArchiveError("System archive canonical entry failed size validation.")
     if declared_paths != expected_paths:
         raise SystemArchiveError("System archive manifest does not cover all canonical entries.")
-
-
-def _hash_file(path: Path) -> tuple[str, int]:
-    digest = hashlib.sha256()
-    size = 0
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-            size += len(chunk)
-    return digest.hexdigest(), size

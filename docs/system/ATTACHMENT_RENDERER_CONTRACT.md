@@ -2,12 +2,13 @@
 
 ## Offline cache-miss hardening addendum (2026-08-15)
 
-Offline attachment bytes are verified against cached metadata before they are
-used. A missing, truncated, or SHA-256-mismatched Cache Storage entry resolves
-to offline_unavailable and is not promoted to a Viewer object URL. If bytes
-disappear after the files panel has already listed an attachment, the shared
-Viewer shell shows an explicit retryable unavailable state rather than leaving
-the renderer blank or permanently loading.
+Offline attachment bytes are checked against cached byte-size metadata before
+they are used. A missing or truncated Cache Storage entry resolves to
+offline_unavailable and is not promoted to a Viewer object URL. SHA-256 remains
+stored as content identity metadata, but the runtime read path does not re-hash
+file bytes. If bytes disappear after the files panel has already listed an
+attachment, the shared Viewer shell shows an explicit retryable unavailable
+state rather than leaving the renderer blank or permanently loading.
 
 Release E does not add offline upload, rename, insert, delete, server
 enumeration, derivative generation or a second Viewer. The miss path stays

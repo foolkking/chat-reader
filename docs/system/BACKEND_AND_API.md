@@ -127,7 +127,7 @@ Owner and Share attachment content routes authorize before stat/read and impleme
 
 The conversation export UI maps CanJSON/Markdown plus `include attachments` to four outputs: `.canjsonl`, `.context.zip`, `.md`, and portable Markdown ZIP. Secondary options for description, annotations, notebook and CanJSON source refs are represented by one `ExportOptions` contract for streaming and background bundle exports. Conversation projections include active Attachments only; `detached` identities remain available to historical MessageVersions and system `.cr v4` but are excluded from current conversation package counts and files. Metadata-only formats preserve active attachment references; package manifests separate conversation completeness from asset completeness and record the included secondary content. System `.cr v4` is a full single-user archive exported from Settings, includes Attachment/AssetObject/Occurrence relationships, and restores only into an empty instance. Old conversation `.cr` remains import-compatible but is not newly exposed in conversation export UI.
 
-The current deployment policy does not inspect attachment contents for secrets or exclude files by filename/content. Export still verifies object status, byte size and SHA-256. Scanner state remains explicit (`scanner_disabled` on King), so an included object is not asserted clean or safe.
+The current deployment policy does not inspect attachment contents for secrets or exclude files by filename/content. Export still verifies object status, controlled path and byte size, but does not re-hash file bytes while reading. Scanner state remains explicit (`scanner_disabled` on King), so an included object is not asserted clean or safe.
 
 ## 后台任务
 

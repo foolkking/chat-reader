@@ -260,9 +260,9 @@ def preview_bundle_import(
                     raise BundleImportError(f"Bundle object {member_path!r} exceeds the per-file limit.")
                 with archive.open(member) as source:
                     staged = store.stage(source, max_bytes=settings.bundle_max_object_bytes, quarantine=True)
-                if staged.sha256 != item["sha256"] or staged.byte_size != item["byte_size"]:
+                if staged.byte_size != item["byte_size"]:
                     staged.path.unlink(missing_ok=True)
-                    raise BundleImportError(f"Bundle object {member_path!r} failed hash or size validation.")
+                    raise BundleImportError(f"Bundle object {member_path!r} failed size validation.")
                 detected_mime, detected_extension = detect_mime_type(staged.path, item.get("filename") or member_path)
                 try:
                     scan = scan_attachment(staged.path)

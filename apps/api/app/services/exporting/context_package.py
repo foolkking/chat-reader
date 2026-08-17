@@ -177,9 +177,9 @@ def create_context_package(
                 resolution_status = "missing"
                 missing_objects.add(str(asset.id))
             else:
-                digest, byte_size = _hash_file(source_path)
-                if digest != asset.sha256 or byte_size != asset.byte_size:
-                    raise ContextPackageError("Attachment integrity check failed.")
+                byte_size = source_path.stat().st_size
+                if byte_size != asset.byte_size:
+                    raise ContextPackageError("Attachment size validation failed.")
                 object_path = f"assets/objects/{asset.sha256[:2]}/{asset.sha256}"
                 object_payload = {
                     "path": object_path,

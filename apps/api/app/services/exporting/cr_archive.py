@@ -485,9 +485,9 @@ def _import_attachments(
             raise CrArchiveError(f"Archive asset object {path} is missing.")
         with archive.open(path) as source:
             staged = store.stage(source, max_bytes=get_settings().bundle_max_object_bytes, quarantine=True)
-        if staged.sha256 != str(row.get("sha256") or "") or staged.byte_size != int(row.get("byte_size") or -1):
+        if staged.byte_size != int(row.get("byte_size") or -1):
             staged.path.unlink(missing_ok=True)
-            raise CrArchiveError("Archive asset object checksum failed.")
+            raise CrArchiveError("Archive asset object size validation failed.")
         try:
             scan = scan_attachment(staged.path)
         except AssetScanError as exc:
@@ -1035,27 +1035,24 @@ def _validate_manifest(archive: zipfile.ZipFile, manifest: dict[str, Any]) -> No
     if not required.issubset(set(archive.namelist())):
         raise CrArchiveError("Archive is missing required entries.")
     entries = manifest.get("entries") if isinstance(manifest.get("entries"), dict) else {}
-    for name in ("conversation.json", *JSONL_ENTRIES):
-        expected = entries.get(name, {}).get("sha256") if isinstance(entries.get(name), dict) else None
-        if not expected:
-            raise CrArchiveError(f"Archive checksum is missing for {name}.")
-        actual = hashlib.sha256(archive.read(name)).hexdigest()
-        if actual != expected:
-            raise CrArchiveError(f"Archive checksum failed for {name}.")
-    for name in ("annotations.jsonl", "notebook.json"):
+    for name in ("conversation.json", *JSONL_ENTRIES, "annotations.jsonl", "notebook.json"):
         if name not in archive.namelist():
             continue
-        expected = entries.get(name, {}).get("sha256") if isinstance(entries.get(name), dict) else None
-        if not expected or hashlib.sha256(archive.read(name)).hexdigest() != expected:
-            raise CrArchiveError(f"Archive checksum failed for {name}.")
+        entry = entries.get(name)
+        if not isinstance(entry, dict):
+            raise CrArchiveError(f"Archive manifest entry is invalid for {name}.")
+        expected_bytes = entry.get("bytes")
+        if not isinstance(expected_bytes, int) or archive.getinfo(name).file_size != expected_bytes:
+            raise CrArchiveError(f"Archive size validation failed for {name}.")
     if manifest.get("version") == ARCHIVE_VERSION:
         for name, entry in entries.items():
             if name in {"manifest.json", "conversation.json", *JSONL_ENTRIES, "annotations.jsonl", "notebook.json"}:
                 continue
-            if name not in archive.namelist() or not isinstance(entry, dict) or not entry.get("sha256"):
-                raise CrArchiveError(f"Archive checksum is missing for {name}.")
-            if hashlib.sha256(archive.read(name)).hexdigest() != entry["sha256"]:
-                raise CrArchiveError(f"Archive checksum failed for {name}.")
+            if name not in archive.namelist() or not isinstance(entry, dict):
+                raise CrArchiveError(f"Archive manifest entry is missing for {name}.")
+            expected_bytes = entry.get("bytes")
+            if not isinstance(expected_bytes, int) or archive.getinfo(name).file_size != expected_bytes:
+                raise CrArchiveError(f"Archive size validation failed for {name}.")
 
 
 def _manifest_fingerprint(manifest: dict[str, Any]) -> str:

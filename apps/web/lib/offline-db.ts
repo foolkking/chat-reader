@@ -198,9 +198,7 @@ export async function importOfflinePackage(packageId: string, response: Response
           if (!attachment.content_path) continue;
           const binary = entries[attachment.content_path];
           if (!binary) throw new Error(`Offline package is missing ${attachment.content_path}.`);
-          const digest = await crypto.subtle.digest("SHA-256", binary);
-          const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
-          if (sha256 !== attachment.sha256 || binary.byteLength !== attachment.byte_size) throw new Error("Offline attachment checksum failed.");
+          if (binary.byteLength !== attachment.byte_size) throw new Error("Offline attachment size validation failed.");
           const url = offlineAttachmentCacheUrl(attachment.id, attachment.sha256);
           if (!previousCacheEntries.has(url)) {
             const previous = await cache.match(url);
@@ -367,14 +365,6 @@ async function readVerifiedCachedAttachment(record: OfflineAttachmentRecord): Pr
       if (record.byte_size >= 0 && bytes.byteLength !== record.byte_size) {
         await cache.delete(url);
         continue;
-      }
-      if (record.sha256) {
-        const digest = await crypto.subtle.digest("SHA-256", bytes);
-        const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
-        if (sha256 !== record.sha256.toLowerCase()) {
-          await cache.delete(url);
-          continue;
-        }
       }
       return response;
     }

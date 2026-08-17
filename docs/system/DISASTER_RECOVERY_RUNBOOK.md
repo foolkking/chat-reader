@@ -63,7 +63,7 @@ backup `source-snapshot.json`. The audit emits aggregates only and checks:
 - row-count and storage count/byte equality;
 - current MessageVersion and AttachmentOccurrence relationships;
 - AssetObject, source-import, export, offline and Share foreign-key integrity;
-- AssetObject and retained artifact size plus SHA-256;
+- AssetObject and retained artifact existence plus declared byte size;
 - duplicate Attachment-to-AssetObject groups and active-unreferenced rows;
 - zero canonical `cr-upload://` references.
 

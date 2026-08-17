@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 三种导入入口 | 已确认 | 兼容 JSON+可选 Markdown、附件 `.crbundle`、旧 `.cr` 兼容归档；CanJSON v1/v2 自动识别 |
 | 输入范围收敛 | 已确认 | 官方 OpenAI 图/ZIP、CSV、TXT、Markdown 单文件与第三方 splitter 返回 unsupported profile |
-| preview -> ImportDraft -> commit | 已确认 | preview 写受控 JSONL/checksum；commit 校验并读取同一 Draft，幂等排队 |
+| preview -> ImportDraft -> commit | 已确认 | preview 写受控 JSONL/digest metadata；commit 校验路径、统计和到期并读取同一 Draft，幂等排队 |
 | CanJSON v2 | 已确认 | JSONL 流式导入/导出；正文一次；支持 gzip、selected、可选 versions/annotations/notebooks/source refs |
 | durable worker | 已确认 | PostgreSQL queue、heartbeat、stale recovery、retry；单并发 |
 | `.cr` round-trip | 已确认 | 后台 ZIP64 JSONL 导出、校验 preview、确定性 ID 重映射导入 |
