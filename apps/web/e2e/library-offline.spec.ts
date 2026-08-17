@@ -9,6 +9,13 @@ function offlineReadyStatus(page: Page) {
   return page.locator("p:visible, span:visible", { hasText: OFFLINE_READY_TEXT }).first();
 }
 
+function offlineIdleStatus(page: Page) {
+  return page
+    .locator("p:visible, span:visible", { hasText: OFFLINE_READY_TEXT })
+    .filter({ hasNotText: /正在后台更新|Updating resources/ })
+    .first();
+}
+
 test("only the library advertises the installable PWA", async ({ browser }) => {
   const context = await browser.newContext();
   const rootPage = await context.newPage();
@@ -71,6 +78,20 @@ test("keeps the active revision after a failed update and cold-starts offline", 
     const record = await readActiveRecord(page);
     return record.assets.includes("/skills/chat-reader-conversation-context-acquisition-skill.v1.md")
       && record.assets.includes("/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md");
+  }).toBe(true);
+  await expect(offlineIdleStatus(page)).toBeVisible();
+  let stableRevision = (await readActiveRecord(page)).revision;
+  let stableReads = 0;
+  await expect.poll(async () => {
+    if ((await offlineIdleStatus(page).count()) === 0) {
+      stableReads = 0;
+      return false;
+    }
+    const revision = (await readActiveRecord(page)).revision;
+    const unchanged = revision === stableRevision;
+    stableRevision = revision;
+    stableReads = unchanged ? stableReads + 1 : 0;
+    return stableReads >= 3;
   }).toBe(true);
   const activeBefore = await readActiveRecord(page);
   expect(activeBefore.revision).toBeTruthy();
