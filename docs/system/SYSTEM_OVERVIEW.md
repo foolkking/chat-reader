@@ -1,5 +1,14 @@
 # 系统概览
 
+## Current deployed access boundary (2026-08-17)
+
+Release N is deployed. A single owner password and server-side, per-device
+sessions protect every business API and page, including Share and artifact
+downloads. Public health remains coarse; protected diagnostics remains on its
+separate SSH plus loopback operator boundary. The historical unauthenticated
+description below is retained as a pre-Release-N snapshot and is superseded by
+[`AUTHENTICATION_CONTRACT.md`](AUTHENTICATION_CONTRACT.md).
+
 最后核验：2026-07-30
 
 ## 定位与边界

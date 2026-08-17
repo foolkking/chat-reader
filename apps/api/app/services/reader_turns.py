@@ -5,13 +5,14 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
+from app.models.attachment import Attachment, MessageVersionAttachment
 from app.models.message import Message
 from app.models.message_version import MessageVersion
-from app.models.attachment import MessageVersionAttachment
 from app.models.render_block import RenderBlock
 from app.schemas.message import MessageListItem, MessageVersionRead, ReaderTurnResponse, RenderBlockRead
+from app.services.assets.attachment_service import attachment_read
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ def build_reader_turn(
     conversation_id: uuid.UUID,
     messages: list[Message],
     anchor_message_id: uuid.UUID | None = None,
+    attachment_content_prefix: str = "/api/attachments",
 ) -> ReaderTurnResponse:
     ordered = sorted(messages, key=lambda message: message.order_key)
     if not ordered:
@@ -66,6 +68,9 @@ def build_reader_turn(
     blocks_by_version: dict[uuid.UUID, list[RenderBlockRead]] = {}
     attachment_links = (
         db.query(MessageVersionAttachment)
+        .options(
+            joinedload(MessageVersionAttachment.attachment).joinedload(Attachment.asset_object),
+        )
         .filter(MessageVersionAttachment.message_version_id.in_(version_ids))
         .order_by(
             MessageVersionAttachment.message_version_id.asc(),
@@ -83,7 +88,11 @@ def build_reader_turn(
     }
     for block in blocks:
         blocks_by_version.setdefault(block.message_version_id, []).append(
-            _block_read(block, occurrence_by_block.get((block.message_version_id, block.block_index)))
+            _block_read(
+                block,
+                occurrence_by_block.get((block.message_version_id, block.block_index)),
+                attachment_content_prefix=attachment_content_prefix,
+            )
         )
     items = []
     for index, message in enumerate(selected_messages):
@@ -163,7 +172,12 @@ def _message_item(message: Message, version: MessageVersion | None, blocks: list
     )
 
 
-def _block_read(block: RenderBlock, occurrence: MessageVersionAttachment | None = None) -> RenderBlockRead:
+def _block_read(
+    block: RenderBlock,
+    occurrence: MessageVersionAttachment | None = None,
+    *,
+    attachment_content_prefix: str = "/api/attachments",
+) -> RenderBlockRead:
     data = dict(block.data or {})
     if occurrence is not None:
         data.update({
@@ -175,6 +189,14 @@ def _block_read(block: RenderBlock, occurrence: MessageVersionAttachment | None 
             "caption": occurrence.caption,
             "relationType": occurrence.relation_type,
         })
+        # The Reader has already loaded this relation for the complete-turn
+        # response. Supplying the same safe attachment representation prevents
+        # every inline block from immediately issuing a duplicate detail request.
+        if occurrence.attachment is not None and occurrence.attachment.deleted_at is None:
+            data["attachment"] = attachment_read(
+                occurrence.attachment,
+                content_prefix=attachment_content_prefix,
+            ).model_dump(mode="json")
     return RenderBlockRead(
         id=block.id,
         block_index=block.block_index,

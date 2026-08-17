@@ -17,6 +17,17 @@ flowchart LR
   Q --> X
 ```
 
+## Current authentication boundary
+
+The browser and FastAPI now enforce a default-deny single-owner session
+boundary for business routes. Only coarse health and the minimal login/session
+allowlist are public; Share and artifact URLs are authenticated business
+surfaces. The API owns authorization, opaque HttpOnly cookie verification,
+48-hour sliding inactivity, same-origin mutation checks and no-store response
+policy. The historical statements below that describe an unauthenticated
+deployment are retained for context and are superseded by
+[`AUTHENTICATION_CONTRACT.md`](system/AUTHENTICATION_CONTRACT.md).
+
 浏览器始终请求 Web 当前 origin 下的 `/api/*`。Next.js rewrite 在服务端把请求转发给 FastAPI，因此 localhost、局域网和生产域名使用同一客户端代码，也不会把 `localhost:8000` 暴露给远端浏览器。
 
 ## 代码边界

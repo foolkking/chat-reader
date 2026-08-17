@@ -3441,13 +3441,14 @@ BACKUP_PRESERVED = YES
 # Release N Execution Ledger
 
 ```text
-RELEASE_N_STATUS = IN_PROGRESS
+RELEASE_N_STATUS = PASS
 AUTH_MODE = SINGLE_PASSWORD
 RUNTIME_SOURCE_CHANGED = YES
 ALEMBIC_HEAD = 20260817_0023
 FINAL_SOURCE_FROZEN = TRUE
-OWNER_PASSWORD_PROVISIONED = NOT_EXECUTED
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
+OWNER_PASSWORD_PROVISIONED = PASS
+PRODUCTION_DEPLOYMENT = PASS
+PRODUCTION_ACCEPTANCE = PASS
 KNOWN_PRODUCT_DEFECT = 0
 KNOWN_SECURITY_DEFECT = 0
 UNRESOLVED_BLOCKER = NONE
@@ -3463,7 +3464,7 @@ UNRESOLVED_BLOCKER = NONE
 - [x] Lock protected offline application data after logout, session failure or cookie removal.
 - [x] Complete final local gates and verify the isolated migration head/current state.
 - [x] Freeze the tested local source before commit.
-- [ ] Complete exact-SHA CI, immutable artifact, password provisioning and production acceptance.
+- [x] Complete exact-SHA CI, immutable artifact, password provisioning and production acceptance.
 
 Current local evidence: `8` focused authentication tests, `319` API tests (`7`
 skipped), `3` authentication browser tests, the default PWA matrix (`72`
@@ -3472,4 +3473,5 @@ pass against the isolated PostgreSQL target. Web lint,
 typecheck, production build, dependency policy, security high/critical policy,
 Alembic `head == current == 20260817_0023`, and `git diff --check` also pass.
 Production password provisioning, CI/artifact authority, deployment and
-acceptance remain intentionally unexecuted.
+acceptance are complete. This ledger is historical Release N evidence; the
+current product state is maintained in `PROJECT_STATE.md` and `results.md`.

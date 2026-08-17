@@ -1,5 +1,13 @@
 # 页面与路由地图
 
+## Current route access rule (2026-08-17)
+
+Every application page and business API route, including `/share/[token]` and
+direct artifact downloads, requires an authenticated owner session. The public
+allowlist is limited to coarse health and the minimal login/session flow.
+Historical route labels below describe the earlier pre-Release-N surface and
+do not bypass the current authentication middleware.
+
 最后核验：2026-08-05
 
 ## 页面路由

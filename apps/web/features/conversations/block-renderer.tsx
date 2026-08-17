@@ -1,7 +1,7 @@
 import { memo } from "react";
 import type { RenderBlockRead } from "../../lib/types";
 import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
-import { AttachmentBlock } from "../attachments/attachment-block";
+import { AttachmentBlock, embeddedAttachment } from "../attachments/attachment-block";
 
 const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 
@@ -28,6 +28,7 @@ export const BlockRenderer = memo(function BlockRenderer({
     return (
       <AttachmentBlock
         attachmentId={attachmentId}
+        attachment={embeddedAttachment(block.data.attachment, attachmentId)}
         displayMode={readString(block.data.displayMode) ?? (block.block_type === "image" ? "inline" : "card")}
         alt={readString(block.data.alt) ?? undefined}
         caption={readString(block.data.caption) ?? undefined}

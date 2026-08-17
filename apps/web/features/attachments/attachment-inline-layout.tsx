@@ -19,7 +19,7 @@ import {
 
 export type AttachmentInlineGroupItem = Omit<AttachmentBlockProps,
   "attachment" | "inlinePresentation" | "grouped" | "galleryItems" | "galleryItemStyle" | "onImageRatio" | "onRuntimeChange"
-> & { itemKey: string };
+> & { itemKey: string; attachment?: AttachmentRead };
 
 type ResolvedItem = {
   input: AttachmentInlineGroupItem;
@@ -42,6 +42,7 @@ export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupI
       queryKey: ["attachment", access.kind, shareToken ?? "owner", item.attachmentId],
       queryFn: () => access.kind === "offline" ? getOfflineAttachment(item.attachmentId) : getAttachment(item.attachmentId, shareToken),
       staleTime: 5 * 60 * 1000,
+      enabled: !item.attachment,
     })),
   });
   const [runtimeByItem, setRuntimeByItem] = useState<Record<string, AttachmentRuntimeRenderState>>({});
@@ -57,7 +58,7 @@ export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupI
     return callback;
   }, []);
   const resolved = items.map((input, index): ResolvedItem => {
-    const attachment = queries[index]?.data;
+    const attachment = input.attachment ?? queries[index]?.data;
     const runtime = runtimeByItem[input.itemKey] ?? { status: "idle" as const };
     return {
       input,

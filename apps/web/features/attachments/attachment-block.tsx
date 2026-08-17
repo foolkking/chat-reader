@@ -46,6 +46,12 @@ export type AttachmentBlockProps = {
   runtimeState?: AttachmentRuntimeRenderState;
 };
 
+export function embeddedAttachment(value: unknown, attachmentId: string): AttachmentRead | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const candidate = value as Record<string, unknown>;
+  return candidate.id === attachmentId ? candidate as AttachmentRead : undefined;
+}
+
 export function AttachmentBlock(props: AttachmentBlockProps) {
   const { attachmentId, alt, caption } = props;
   const access = useAttachmentAccess();

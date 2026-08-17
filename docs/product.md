@@ -6,6 +6,16 @@
 - Top-level actions are `Edit -> Search -> Annotations -> Focus -> More`; open workspace actions toggle closed. Share/export/merge/split remain in `More`. Share and Offline Reader remain read-only.
 - Merge is non-destructive and canonical: it copies complete message version history, blocks, source refs, annotations and conflict copies, while excluding notebooks. Long merges are cancellable and use bounded batches with a three-attempt stale retry limit.
 
+## Current access boundary
+
+Release N protects all business content, including Share and direct artifact
+downloads, with one owner password and server-side per-device sessions. A
+trusted browser remains signed in for 48 hours of sliding inactivity; logout
+and owner-password changes revoke sessions. The reserved principal/session
+boundary is not a multi-user feature. Historical notes below that describe an
+unauthenticated deployment are superseded by
+[`AUTHENTICATION_CONTRACT.md`](system/AUTHENTICATION_CONTRACT.md).
+
 最后核验：2026-08-05
 
 ## 定位

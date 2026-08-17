@@ -1,9 +1,9 @@
 # 生产部署
 
-## Release N single-owner authentication deployment (in progress)
+## Release N single-owner authentication deployment (complete)
 
 Release N changes the API/worker runtime and adds Alembic `20260817_0023`.
-Before any cutover, create a verified production backup using the current
+For a future authenticated-runtime cutover, create a verified production backup using the current
 five-component procedure, prove the exact CI artifact, and configure the
 versioned Compose environment with `AUTH_ENABLED=true`, a separately generated
 long `AUTH_SESSION_SECRET`, Secure cookies and the fixed 48-hour timeout. Do

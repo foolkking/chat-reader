@@ -1,5 +1,13 @@
 # Chat Reader
 
+## Current access boundary
+
+Chat Reader is deployed as a single-owner application. Business content,
+including Share and direct artifact downloads, requires the owner password on
+a new browser. Authentication uses server-side per-device sessions with a
+48-hour sliding inactivity timeout; no multi-user product feature is exposed.
+See [`docs/system/AUTHENTICATION_CONTRACT.md`](docs/system/AUTHENTICATION_CONTRACT.md).
+
 Chat Reader 是面向已经线性化、标准化的 AI 对话内容的长期阅读与管理系统。普通导入使用兼容 JSON（可附 Markdown 做一致性校验），完整恢复使用 `.cr`；系统提供长对话阅读、搜索、批注、Project 管理、分享、导出和离线资料库，但不解析 OpenAI 官方对话图或 ZIP。
 
 ## 核心能力

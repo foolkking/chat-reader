@@ -2,11 +2,11 @@
 
 当前渲染合同：[AI Rich Markdown Renderer](system/AI_RICH_MARKDOWN_CONTRACT.md)，定义 Reader、源码预览和 Markdown 附件共享的 Math/GFM/Footnote、安全、无障碍、溢出与离线资源行为。
 
-Release N single-owner authentication is in progress. Current facts are in
+Release N single-owner authentication is deployed and accepted. Current facts are in
 [Project State](../PROJECT_STATE.md), [testing](testing.md),
 [Authentication Contract](system/AUTHENTICATION_CONTRACT.md), and
 [known issues](system/KNOWN_ISSUES_AND_UNCERTAINTIES.md). Historical release
-rows retain their checkpoint meaning; later Release K/M evidence supersedes
+rows retain their checkpoint meaning; later Release K/M/N evidence supersedes
 their earlier incomplete verification records.
 
 ## 2026-08-11 current implementation notes

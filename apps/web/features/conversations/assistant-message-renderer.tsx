@@ -9,6 +9,7 @@ import { useTranslations } from "../../components/preferences-provider";
 import { READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLease } from "./block-virtualization";
 import { registerRenderedBlock } from "./rendered-block-registry";
 import type { AttachmentViewerItem } from "../attachments/attachment-viewer";
+import { embeddedAttachment } from "../attachments/attachment-block";
 import { AttachmentInlineGroup, type AttachmentInlineGroupItem } from "../attachments/attachment-inline-layout";
 import {
   DEFAULT_READER_BLOCK_LAYOUT_METRICS,
@@ -797,6 +798,7 @@ function attachmentInlineItem(messageId: string, block: RenderBlockRead): Attach
   return {
     itemKey: viewerItem.itemKey,
     attachmentId: viewerItem.attachmentId,
+    attachment: embeddedAttachment(block.data.attachment, viewerItem.attachmentId),
     displayMode: viewerItem.displayMode,
     alt: viewerItem.alt,
     caption: viewerItem.caption,

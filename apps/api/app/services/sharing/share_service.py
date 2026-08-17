@@ -162,7 +162,13 @@ def get_shared_reader_turn(db: Session, token: str, *, anchor_message_id: uuid.U
     share = _get_accessible_share(db, token)
     messages = _share_message_query(db, share).order_by(Message.order_key.asc()).all()
     try:
-        return build_reader_turn(db, share.conversation_id, messages, anchor_message_id)
+        return build_reader_turn(
+            db,
+            share.conversation_id,
+            messages,
+            anchor_message_id,
+            attachment_content_prefix=f"/api/shared/{token}/attachments",
+        )
     except ReaderTurnHydrationError as exc:
         raise ShareError(str(exc), HTTPStatus.CONFLICT) from exc
     except ValueError as exc:

@@ -1,10 +1,10 @@
 # Project State
 
-## 2026-08-17 Release N single-owner authentication in progress
+## 2026-08-17 Deployed baseline and final product audit
 
-- Release N is implementing one owner-password gate with a future-compatible
-  principal/session boundary, not multi-user accounts. The production runtime
-  remains Release L source until an exact Release N artifact is deployed.
+- Release N deployed one owner-password gate with a future-compatible
+  principal/session boundary, not multi-user accounts. The current production
+  runtime is the authenticated Release N baseline.
 - Sessions use an Argon2id owner credential, a server-side HMAC digest of a
   cryptographically random opaque cookie token, per-session 48-hour sliding
   inactivity and a bounded 10-minute activity touch interval. No plaintext
@@ -16,20 +16,33 @@
 - The PWA may cache its shell but removes protected IndexedDB/Cache Storage
   state on logout or rejected session. A non-credential browser marker makes
   ordinary cookie clearing lock offline content; it cannot authorize server
-  requests. Production remains fail-closed until a non-secret session signing
-  value and an operator-provisioned owner password are supplied.
+  requests. Production is fail-closed and the owner credential is provisioned
+  only through the operator path.
 - Alembic revision `20260817_0023` adds the single owner, session and bounded
   login-throttle records. Final isolated evidence is `8` focused auth tests,
   `319` API tests (`7` skipped), `3` auth browser tests, the default PWA
   matrix (`72` passed, `69` scoped skips), and the Release E PWA negative
   matrix (`10` passed), with lint, typecheck, production build,
   dependency/security policy and migration head/current all passing.
-  Release N has not yet completed exact-SHA CI, deployment or acceptance.
+  Release N completed exact-SHA CI, deployment and production acceptance.
 - File reads now enforce controlled paths, existence and declared byte size
   without recomputing SHA-256. Database digest fields, content-addressed names,
   password/session/Share security hashes and digest generation remain intact.
   Current CI, deployment and backup reporting no longer treats a separately
   repeated human SHA/checksum confirmation as a release gate.
+
+## 2026-08-17 Final product audit in progress
+
+- The first user-centric audit found no P0 product, security or data-integrity
+  defect. The selected P1 changes are limited to Reader attachment metadata
+  reuse and synchronization of current deployment/authentication documents.
+- Attachment-rich Reader turns now embed the already authorized attachment
+  metadata loaded with their occurrences, avoiding one metadata request per
+  inline block. Owner and Share responses use their respective content URL
+  prefixes; offline and legacy payloads retain their existing query fallback.
+- Large-scale Reader virtualization, architectural rewrites and speculative
+  performance work are intentionally not selected. Final source, CI and
+  production golden-path acceptance are pending this audit's deployment.
 
 ## 2026-08-17 Release M disaster-recovery closure
 

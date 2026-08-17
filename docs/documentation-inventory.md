@@ -1,11 +1,11 @@
 # Markdown 文档台账
 
-2026-08-17 Release N synchronization is in progress. The current auth
+2026-08-17 Release N synchronization is complete. The current auth
 contract, configuration, single-owner/session schema and tests are recorded in
 `docs/system/AUTHENTICATION_CONTRACT.md`, `PROJECT_STATE.md`, `TASKS.md`,
 `docs/testing.md`, `docs/development.md`, `docs/api-reference.md` and
-`docs/deployment.md`. No Release N production result is claimed before exact
-CI, a verified pre-deploy backup, owner-password provisioning and acceptance.
+`docs/deployment.md`. Exact CI, a verified pre-deploy backup, owner-password
+provisioning and production acceptance are complete.
 
 | Path | Lifecycle | Responsibility |
 | --- | --- | --- |

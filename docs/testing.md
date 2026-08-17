@@ -1,6 +1,6 @@
 # Testing Addendum 2026-08-09
 
-## Release N authentication verification in progress (2026-08-17)
+## Release N authentication verification and production acceptance (2026-08-17)
 
 The focused gate exercises one owner principal, independent device sessions,
 the exact 48-hour expiry boundary, rate-limited activity touch, bounded login
@@ -28,7 +28,7 @@ tests, the default PWA matrix (`72` passed, `69` scoped skips), and the Release
 E PWA negative matrix (`10` passed). Web lint,
 typecheck, the Next 16.3.1 Webpack production build, dependency/security policy,
 migration head/current and `git diff --check` also pass. Exact-SHA CI,
-production provisioning, deployment and acceptance remain pending.
+operator password provisioning, deployment and production acceptance passed.
 
 ## Release M disaster-recovery verification (2026-08-17)
 

@@ -1,9 +1,9 @@
 # Implementation Results
 
-## Release N single-owner authentication - in progress
+## Release N single-owner authentication - deployed and accepted
 
 ```text
-RELEASE_N = IN_PROGRESS
+RELEASE_N = PASS
 AUTH_MODE = SINGLE_PASSWORD
 AUTH_SCHEMA = 20260817_0023 / isolated upgrade verified
 FOCUSED_AUTH_TESTS = PASS / 8 passed
@@ -22,13 +22,31 @@ SECURITY_AND_IDENTITY_HASHES = RETAINED
 MANUAL_REPORT_CHECKSUM_CONFIRMATION = REMOVED
 RUNTIME_SOURCE_CHANGED = YES
 FINAL_SOURCE_FROZEN = TRUE
-PRODUCTION_DEPLOYMENT = NOT_EXECUTED
-OWNER_PASSWORD_PROVISIONED = NOT_EXECUTED
+CI_RELEASE = PASS
+OWNER_PASSWORD_PROVISIONED = PASS
+PRODUCTION_DEPLOYMENT = PASS
+PRODUCTION_ACCEPTANCE = PASS
 ```
 
-This is final-source local and isolated evidence only. It does not establish a
-production password gate, CI/artifact authority, deployment or acceptance
-result.
+The exact-source CI, password provisioning, deployment and production
+acceptance subsequently completed. This section remains the compact Release N
+evidence ledger.
+
+## Final product audit - in progress
+
+```text
+FINAL_PRODUCT_AUDIT = IN_PROGRESS
+P0_DISCOVERED = 0
+P1_SELECTED = 2
+P1-READER_ATTACHMENT_METADATA_REUSE = LOCAL_PASS
+P1-CURRENT_STATE_DOCUMENTATION = UPDATED
+P2_NOT_IMPLEMENTED = SPECULATIVE_READER_REARCHITECTURE
+```
+
+The selected Reader change is covered by focused API tests and the full API
+suite. It embeds owner or Share-scoped attachment URLs from the already-loaded
+occurrence relation, while preserving the existing query fallback for legacy
+and offline data. Production/CI acceptance remains pending.
 
 ## Release M disaster-recovery closure - 2026-08-17
 

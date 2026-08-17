@@ -4,8 +4,10 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.core.database import get_db
+from app.core.config import get_settings
 from app.main import app
 from app.models.message import Message
+from test_attachment_upload_api import _conversation_with_message, _create_session, _upload
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -85,6 +87,63 @@ def test_reader_turn_returns_a_complete_turn_and_all_blocks(client: TestClient) 
     assert payload["next_anchor_message_id"] is None
     assert all(item["content_truncated"] is False for item in payload["items"])
     assert all(len(item["render_blocks"]) == item["block_count"] for item in payload["items"])
+
+
+def test_reader_turn_embeds_current_attachment_metadata_without_storage_paths(client: TestClient, tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+    try:
+        conversation_id, message = _conversation_with_message(client)
+        session = _create_session(client, conversation_id, message)
+        upload = _upload(client, session["id"], "reader-attachment.md", b"# Reader attachment\n")
+        finalized = client.post(
+            f"/api/conversations/{conversation_id}/attachments",
+            json={"upload_item_ids": [upload["id"]]},
+        )
+        assert finalized.status_code == 201, finalized.text
+        attachment_id = finalized.json()["items"][0]["id"]
+        saved = client.patch(
+            f"/api/messages/{message['id']}",
+            json={
+                "content_markdown": f"{message['current_version']['display_text']}\n\n[Reader attachment](cr-asset://{attachment_id})",
+                "base_version_id": message["current_version"]["id"],
+            },
+        )
+        assert saved.status_code == 200, saved.text
+
+        response = client.get(f"/api/conversations/{conversation_id}/reader-turn")
+        assert response.status_code == 200, response.text
+        attachment_block = next(
+            block
+            for block in response.json()["items"][0]["render_blocks"]
+            if block["data"].get("attachmentId") == attachment_id
+        )
+        embedded = attachment_block["data"]["attachment"]
+        assert embedded["id"] == attachment_id
+        assert embedded["display_name"] == "reader-attachment.md"
+        assert embedded["content_url"].endswith("?disposition=inline")
+        assert embedded["download_url"].endswith("?disposition=attachment")
+        assert "storage_key" not in json.dumps(embedded)
+        assert "temporary_storage_key" not in json.dumps(embedded)
+
+        created_share = client.post(f"/api/conversations/{conversation_id}/shares", json={})
+        assert created_share.status_code == 200, created_share.text
+        token = created_share.json()["token"]
+        shared_response = client.get(f"/api/shared/{token}/reader-turn")
+        assert shared_response.status_code == 200, shared_response.text
+        shared_block = next(
+            block
+            for block in shared_response.json()["items"][0]["render_blocks"]
+            if block["data"].get("attachmentId") == attachment_id
+        )
+        shared_attachment = shared_block["data"]["attachment"]
+        assert shared_attachment["content_url"].startswith(f"/api/shared/{token}/attachments/{attachment_id}/content")
+        assert shared_attachment["download_url"].startswith(f"/api/shared/{token}/attachments/{attachment_id}/content")
+    finally:
+        get_settings.cache_clear()
 
 
 def test_reader_turn_rejects_an_incomplete_block_set(client: TestClient) -> None:

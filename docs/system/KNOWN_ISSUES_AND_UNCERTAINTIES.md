@@ -1,5 +1,14 @@
 # 已知风险与不确定性
 
+## Current status (2026-08-17)
+
+Release K production verification, Release L worker liveness and protected
+diagnostics, Release M disaster recovery, and Release N single-owner
+authentication are closed. The historical Release K reconciliation below is a
+checkpoint record, not current debt. Current deferred decisions are automatic
+artifact cleanup, strict nonce CSP/reporting and multi-user product work; they
+are not active defects.
+
 最后核验：2026-08-16
 
 已解决问题和实施过程保留在 [execution/](../execution/README.md)，本页只维护当前仍成立的风险。

@@ -1,5 +1,13 @@
 # 用户角色、身份与权限
 
+## Current identity model (2026-08-17)
+
+The deployed application has one non-editable logical principal, `owner`.
+Authentication is a password-protected, server-side per-device session; it is
+not a multi-user account, role or tenancy system. Share tokens constrain the
+post-auth read scope but never bypass owner authentication. Historical notes
+below that state the application has no login are pre-Release-N snapshots.
+
 最后核验：2026-07-29
 
 ## 身份模型
