@@ -1,5 +1,31 @@
 # 生产部署
 
+## 2026-08-22 Adaptive Import deployment
+
+Adaptive JSON / Markdown import was deployed from `master` after GitHub
+Actions run `32534425663` passed quality and image-build jobs. The image set
+was built at `2026-08-21T22:57:53Z` for commit
+`8b5b0e454ea244936eafa1b6f921d5c66ee5a873`; API, import worker and Web are
+healthy, public health returns 200, and Alembic is
+`20260822_0025 (head/current)`. The server's current and immediately previous
+Chat Reader image generations are retained; older unreferenced Chat Reader
+images were removed without touching PostgreSQL, business volumes or
+unrelated images.
+
+The pre-deploy recovery point is retained at
+`/opt/chat-reader/backups/adaptive-import-predeploy-20260821T231241Z-8b5b0e4`.
+Its PostgreSQL dump is readable by `pg_restore --list` and the imports,
+exports, offline and assets archives are readable by tar listing. This report
+does not require a separate manual archive checksum confirmation. Database
+content-addressing, artifact fields and security token/hash primitives remain
+unchanged.
+
+The Adaptive Import API is still behind the owner authentication boundary;
+anonymous session creation returns 401. Local/CI browser coverage proves the
+known-profile, unknown-to-Mapping, learned-profile and batch-family flows.
+Production logged-in browser acceptance remains `NOT VERIFIED` until an
+approved browser-control session is available.
+
 ## 2026-08-21 Large import and semantic Reader copy deployment
 
 The scoped import-pairing and semantic Markdown-copy changes were deployed on
@@ -58,7 +84,7 @@ password gate with no provisioned owner credential.
 The current restore contract is documented in
 `docs/system/DISASTER_RECOVERY_RUNBOOK.md`. It requires a current verified
 PostgreSQL custom dump plus `imports`, `exports`, `offline` and `assets`
-archives, SHA-256/archive-list validation, and a fresh recovery Compose
+archives/archive-list validation, and a fresh recovery Compose
 project. Run `deploy/recovery_preflight.py` against an explicit JSON plan and
 require isolation before any restore mutation; run
 `deploy/recovery_integrity.py` inside the exact versioned API image after

@@ -1,5 +1,28 @@
 # Implementation Results
 
+## Adaptive JSON / Markdown import - deployed
+
+```text
+ADAPTIVE_IMPORT = PASS / production deployed
+CI_RUN = 32534425663 / PASS
+SOURCE_COMMIT = 8b5b0e454ea244936eafa1b6f921d5c66ee5a873
+IMAGE_BUILD_TIME = 2026-08-21T22:57:53Z
+PRODUCTION_SCHEMA = 20260822_0025 / head=current
+PUBLIC_HEALTH = PASS / 200
+API = PASS
+IMPORT_WORKER = PASS
+WEB = PASS
+PREDEPLOY_BACKUP = /opt/chat-reader/backups/adaptive-import-predeploy-20260821T231241Z-8b5b0e4
+OLD_IMAGE_CLEANUP = PASS / current + immediate rollback retained
+MANUAL_CHECKSUM_CONFIRMATION = NOT USED
+SECURITY_AND_CONTENT_HASH_GENERATION = RETAINED
+PRODUCTION_LOGGED_IN_BROWSER_ACCEPTANCE = NOT VERIFIED / no approved browser-control session
+```
+
+The local and CI browser flows cover known-profile import, unknown-family
+Mapping, learned-profile reuse and batch-family reuse. The production API
+continues to deny anonymous Adaptive Import session creation with 401.
+
 ## Release N single-owner authentication - deployed and accepted
 
 ```text

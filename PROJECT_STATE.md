@@ -32,6 +32,19 @@
   Family, Profile and immutable revision persistence without changing the
   Conversation canonical schema. The retired Gateway's SQLite profile tables
   were empty, so no historical user mapping data required migration.
+- Production deployment completed from GitHub Actions run `32534425663` on
+  `master` at build time `2026-08-21T22:57:53Z`. API, import worker and Web
+  run on the immutable image set for commit `8b5b0e454ea244936eafa1b6f921d5c66ee5a873`;
+  the production schema is `20260822_0025 (head/current)` and public health
+  returns 200. The pre-deploy recovery point is retained at
+  `/opt/chat-reader/backups/adaptive-import-predeploy-20260821T231241Z-8b5b0e4`.
+  The server keeps only this image generation and the immediately previous
+  `95a665d` rollback generation; older Chat Reader images were removed.
+- The production Adaptive Import API remains owner-authenticated: an
+  unauthenticated session request returns 401. Production logged-in browser
+  acceptance of an unknown-family Mapping flow is not claimed without an
+  approved browser-control session; local and CI browser flows are the current
+  evidence for that path.
 
 ## 2026-08-22 Current-project drop target and project workspace
 
