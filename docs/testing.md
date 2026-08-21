@@ -1,5 +1,17 @@
 # Testing Addendum 2026-08-09
 
+## 2026-08-21 Deployment acceptance boundary
+
+The exact CI run for the large-import and semantic-copy scope passed quality,
+API, lint, typecheck, production build, browser/PWA and image-build jobs. The
+Desktop pair was previewed locally with 66 messages and `exact_match` in about
+1.2 seconds. Production health, schema current/head and running service health
+passed after deployment; anonymous import-preview requests remain denied.
+
+Production authenticated import-preview and real clipboard checks are not
+claimed without an approved logged-in browser-control session. No credential,
+cookie or token was copied into test output.
+
 ## Large paired imports and semantic Reader copy (2026-08-21)
 
 The import regression covers unique ordered role/timestamp pairing with

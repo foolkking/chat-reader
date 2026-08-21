@@ -1,5 +1,26 @@
 # 生产部署
 
+## 2026-08-21 Large import and semantic Reader copy deployment
+
+The scoped import-pairing and semantic Markdown-copy changes were deployed on
+`master` after the exact CI quality and image-build jobs passed. Production API,
+worker and Web are healthy, and Alembic remains `20260817_0024 (head/current)`.
+The pre-deploy backup is retained at
+`/opt/chat-reader/backups/import-copy-20260821T140915Z-95a665d`; its PostgreSQL
+dump and four business-volume archives were readable before the replacement.
+
+The production Nginx TLS server includes the versioned exact
+`/api/imports/preview` location with a 110 MiB request limit; the global 60 MiB
+limit is unchanged for other routes. The current and immediately previous Chat
+Reader image generations remain available for rollback; older unreferenced
+Chat Reader images were removed without touching unrelated images or volumes.
+
+The supplied Desktop JSON/Markdown pair was verified locally as a 66-message
+`exact_match` preview in about 1.2 seconds. Production authenticated preview
+and clipboard acceptance are not claimed here because the available execution
+session has no approved browser-control surface or owner credential; anonymous
+requests remain correctly denied by the production auth/CSRF boundary.
+
 ## Current authenticated runtime and public Share deployment (complete)
 
 The current runtime adds Alembic `20260817_0024` for independent optional

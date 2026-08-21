@@ -1,5 +1,27 @@
 # Project State
 
+## 2026-08-21 Large import and semantic Markdown copy deployment
+
+- The scoped import-pairing and Reader Markdown-copy changes are deployed from
+  the current `master` commit. The exact CI run passed both quality and image
+  build jobs; the production API, worker and Web are healthy on the new image
+  generation, with the previous generation retained for rollback.
+- Production Alembic remains `20260817_0024 (head/current)`. The pre-deploy
+  backup at `/opt/chat-reader/backups/import-copy-20260821T140915Z-95a665d`
+  contains the PostgreSQL dump plus imports, exports, offline and assets
+  archives; the dump and archive listings were readable before replacement.
+- Nginx now includes the versioned exact `/api/imports/preview` location with
+  a 110 MiB request limit; the global 60 MiB limit remains unchanged for all
+  other routes. Unauthenticated preview requests continue to fail closed.
+- The real Desktop JSON/Markdown pair previews locally as 66 messages with
+  `exact_match` in about 1.2 seconds. Production authenticated preview and
+  clipboard acceptance remain pending until an allowed logged-in browser
+  control session is available; no owner credential or session token was
+  extracted or recorded.
+- Local and production Chat Reader images retain only the current generation
+  and the immediately previous rollback generation. Unrelated Docker images,
+  containers, volumes and user worktree changes were preserved.
+
 ## 2026-08-21 Large paired imports and semantic Reader copy
 
 - JSON/Markdown pairing now takes a linear path when every non-empty JSON
