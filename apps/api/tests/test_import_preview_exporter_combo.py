@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.services.import_pipeline import exporter_markdown_parser
+from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -94,6 +95,81 @@ def test_preview_exporter_combo_exposes_markdown_display_preview(client: TestCli
     assert preview["alignment_summary"] == {"exact": 2}
     assert preview["messages"][1]["display_text_preview"] == "Content 1"
     assert preview["first_user_message_markdown"] == "Content 0"
+
+
+def test_unique_ordered_pair_ignores_untimed_body_headings_without_similarity_search(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    markdown = _markdown_file().replace(
+        b"Content 0",
+        b"Content 0\n\n## Prompt\n\nThis untimed heading is part of the message body.",
+    )
+
+    def reject_similarity_search(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("the unique structural path must not call SequenceMatcher")
+
+    monkeypatch.setattr(exporter_markdown_parser, "SequenceMatcher", reject_similarity_search)
+    response = client.post(
+        "/api/imports/preview",
+        files=[
+            ("files", ("export.json", _json_file(), "application/json")),
+            ("files", ("export.md", markdown, "text/markdown")),
+        ],
+    )
+
+    assert response.status_code == 200, response.text
+    preview = response.json()["conversation_preview"]
+    assert preview["alignment_status"] == "exact_match"
+    assert preview["message_count"] == 2
+    assert "untimed heading" in preview["first_user_message_markdown"]
+
+
+def test_extra_timed_heading_does_not_use_unique_structural_fast_path(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    markdown = _markdown_file().replace(
+        b"Content 0",
+        b"Content 0\n\n## Prompt\n2026-07-01 10:59:00\n\nTimed candidate.",
+    )
+    calls = 0
+    original = exporter_markdown_parser.SequenceMatcher
+
+    def count_similarity_search(*args: object, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(exporter_markdown_parser, "SequenceMatcher", count_similarity_search)
+    parsed = exporter_markdown_parser.parse_exporter_markdown(markdown, parse_exporter_json(_json_file()).messages)
+    response = client.post(
+        "/api/imports/preview",
+        files=[
+            ("files", ("export.json", _json_file(), "application/json")),
+            ("files", ("export.md", markdown, "text/markdown")),
+        ],
+    )
+
+    assert parsed.section_count == 3
+    assert calls > 0
+    assert response.status_code == 200
+    assert response.json()["can_commit"] is False
+    assert response.json()["conversation_preview"]["alignment_status"] == "conflict_detected"
+
+
+def test_preview_rejects_third_file_before_reading_upload_bodies(client: TestClient) -> None:
+    response = client.post(
+        "/api/imports/preview",
+        files=[
+            ("files", ("export.json", _json_file(), "application/json")),
+            ("files", ("export.md", _markdown_file(), "text/markdown")),
+            ("files", ("extra.md", b"# extra", "text/markdown")),
+        ],
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "unsupported_file_set"
 
 
 def test_preview_pairing_budget_returns_structured_422(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

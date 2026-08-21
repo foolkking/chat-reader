@@ -599,7 +599,7 @@ docker compose --env-file .env.production -f docker-compose.production.yml ps -a
 curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-将反向代理 upstream 指向 `127.0.0.1:<WEB_PORT>`，由代理处理 TLS、HTTP 到 HTTPS、请求体上限和访问控制。仓库中的 `deploy/nginx-chat-reader.conf` 只是 HTTP 示例，不是生产证书配置。
+将反向代理 upstream 指向 `127.0.0.1:<WEB_PORT>`，由代理处理 TLS、HTTP 到 HTTPS、请求体上限和访问控制。仓库中的 `deploy/nginx-chat-reader.conf` 只是 HTTP 示例，不是生产证书配置。生产配置必须把 `110m` 请求体上限限定在精确的 `/api/imports/preview` location；其他 route 保持全局 `60m` 上限。
 
 ## 发布前检查
 

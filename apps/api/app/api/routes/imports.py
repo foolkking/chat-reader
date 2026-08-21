@@ -145,6 +145,14 @@ async def preview_import(
 ) -> ImportPreviewResponse:
     if not files:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one file is required.")
+    if len(files) > 2:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "unsupported_file_set",
+                "message": "Import preview accepts at most one JSON file and one Markdown file.",
+            },
+        )
 
     settings = get_settings()
     max_bytes = settings.max_import_file_size_mb * 1024 * 1024

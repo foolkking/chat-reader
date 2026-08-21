@@ -239,10 +239,16 @@ def _paired_message_sections(
     # SequenceMatcher for every section only makes large, correctly paired
     # exports slower without improving the result.
     direct_path = [indexes[0] for indexes in candidate_indexes] if all(len(indexes) == 1 for indexes in candidate_indexes) else []
+    selected_candidate_indexes = set(direct_path)
+    unused_candidates = [
+        candidate
+        for index, candidate in enumerate(candidates)
+        if index not in selected_candidate_indexes
+    ] if direct_path else []
     if (
         direct_path
-        and len(candidates) == len(expected)
         and all(left < right for left, right in zip(direct_path, direct_path[1:]))
+        and all(candidate.time is None for candidate in unused_candidates)
     ):
         section_result = _sections_from_candidate_path(text, expected, candidates, direct_path, require_text_check=False)
         if section_result is not None:

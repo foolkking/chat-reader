@@ -1,6 +1,6 @@
 # 后端与 API
 
-## JSON + Markdown pairing v5 (2026-08-12)
+## JSON + Markdown pairing v5 (current)
 
 `POST /api/imports/preview` reads the multipart batch before final source classification. A compatible exporter JSON supplies the expected non-empty message identities to Markdown detection, so Prompt-only and Response-only exporter Markdown can be paired without making arbitrary Markdown importable by itself.
 
@@ -8,11 +8,23 @@ The pairing contract is:
 
 1. JSON owns metadata, role, timestamp, source index and order.
 2. Empty messages on either side are ignored at any position and counted separately.
-3. Non-empty messages are matched by a bounded monotonic message-level alignment; exact and normalized text are strongest, and unique role/timestamp plus recognizable rich Markdown supports historical lossy-JSON exports.
-4. Missing head/middle/tail messages, competing optimal paths and unrelated plain bodies produce explicit alignment issues and block commit. Source artifacts stay intact.
-5. Valid paired Markdown owns canonical display Markdown; canonical JSON remains the identity/provenance authority.
+3. When every non-empty JSON message has one unique, ordered role/timestamp
+   identity in Markdown, pairing is linear. Additional untimed
+   `Prompt`/`Response` headings remain part of message content and do not enter
+   similarity matching.
+4. Timed extras, duplicate identities and other ambiguous inputs use the
+   existing bounded monotonic message-level alignment; exact and normalized
+   text are strongest, and unique role/timestamp plus recognizable rich
+   Markdown supports historical lossy-JSON exports.
+5. Missing head/middle/tail messages, competing optimal paths and unrelated plain bodies produce explicit alignment issues and block commit. Source artifacts stay intact.
+6. Valid paired Markdown owns canonical display Markdown; canonical JSON remains the identity/provenance authority.
 
 Parser identities are `chat-reader-import-v5` and `markdown-parser-v5`. Alignment diagnostics include `source`, zero-based `source_index`, `role`, optional `timestamp` and `reason`. Bounded pairing errors remain structured HTTP 422 responses (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, `pairing_ambiguous`, `alignment_failed`).
+
+Preview accepts no more than two multipart files: one JSON and one Markdown.
+`MAX_IMPORT_FILE_SIZE_MB` remains 50 MiB per file and is checked before the
+pair is parsed. This permits a roughly 100 MiB two-file request without
+weakening either per-file bound.
 
 ## Conversation merge execution (current)
 

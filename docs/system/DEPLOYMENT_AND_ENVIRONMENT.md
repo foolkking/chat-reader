@@ -1,5 +1,13 @@
 # 部署与运行环境
 
+## Import Preview request boundary
+
+The application limit remains 50 MiB per uploaded import file and Preview
+accepts at most one JSON plus one Markdown file. The versioned Nginx config
+sets `client_max_body_size 110m` only for the exact
+`/api/imports/preview` location, allowing multipart overhead for a maximum-size
+pair. The server-wide 60 MiB boundary remains in force for every other route.
+
 ## Worker memory boundary
 
 Production Compose sets `import-worker.mem_limit` to `${IMPORT_WORKER_MEMORY_LIMIT:-640m}`. Override it only through the production environment; do not replace `.env.production` and do not remove named volumes. Conversation merge must remain below this limit through bounded canonical copy batches.

@@ -54,6 +54,7 @@ import { OfflineConversationFilesPanel } from "../attachments/offline-conversati
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { resolveActiveReadingTarget } from "./reader-active-position";
 import { TocRefreshDialog } from "../toc/toc-refresh-dialog";
+import { ReaderMarkdownCopyBoundary } from "./reader-markdown-copy";
 
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
@@ -1970,7 +1971,7 @@ export function ConversationReader({
               ) : null}
 
               {messages.length > 0 ? (
-                <div className="space-y-6">
+                <ReaderMarkdownCopyBoundary className="space-y-6">
                   <div ref={loadPreviousSentinelRef} className={`flex items-center justify-center ${edgeLoading === "previous" || edgeError === "previous" ? "min-h-10" : "h-px"}`}>
                     {edgeLoading === "previous" ? <span className="inline-flex items-center gap-2 text-sm text-secondary"><Spinner dark />{t("loadingEarlier")}</span> : null}
                     {edgeError === "previous" ? <button type="button" onClick={() => void loadPreviousWindow()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryEarlier")}</button> : null}
@@ -2019,7 +2020,7 @@ export function ConversationReader({
                     {edgeError === "next" ? <button type="button" onClick={() => void loadNextWindow()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryLater")}</button> : null}
                   </div>
                   {!hasMore ? <div aria-hidden="true" className="h-[calc(100vh-7rem)] min-h-72" /> : null}
-                </div>
+                </ReaderMarkdownCopyBoundary>
               ) : null}
             </div>}
             toc={<div className="h-full">

@@ -102,6 +102,34 @@ def test_preview_empty_file_returns_400(client: TestClient) -> None:
     assert response.status_code == 400
 
 
+def test_preview_accepts_a_file_at_the_configured_limit(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAX_IMPORT_FILE_SIZE_MB", "1")
+    get_settings.cache_clear()
+    prefix = b'{"metadata":{"powered_by":"ChatGPT Exporter","padding":"'
+    suffix = b'"},"messages":[]}'
+    content = prefix + (b"x" * (1024 * 1024 - len(prefix) - len(suffix))) + suffix
+
+    response = client.post(
+        "/api/imports/preview",
+        files={"files": ("export.json", content, "application/json")},
+    )
+
+    assert len(content) == 1024 * 1024
+    assert response.status_code == 200, response.text
+
+
+def test_preview_rejects_a_file_over_the_configured_limit(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAX_IMPORT_FILE_SIZE_MB", "1")
+    get_settings.cache_clear()
+
+    response = client.post(
+        "/api/imports/preview",
+        files={"files": ("export.json", b"x" * (1024 * 1024 + 1), "application/json")},
+    )
+
+    assert response.status_code == 413
+
+
 @pytest.mark.parametrize(
     ("filename", "content", "mime_type"),
     [

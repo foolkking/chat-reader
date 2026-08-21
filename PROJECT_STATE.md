@@ -1,5 +1,25 @@
 # Project State
 
+## 2026-08-21 Large paired imports and semantic Reader copy
+
+- JSON/Markdown pairing now takes a linear path when every non-empty JSON
+  message has one unique, ordered role/timestamp match. Untimed
+  `Prompt`/`Response` headings that appear inside message bodies no longer
+  force the bounded similarity search; timed extras, duplicate identities and
+  ambiguous inputs retain the existing explicit rejection path.
+- Import Preview accepts at most one JSON plus one Markdown file, with the
+  existing 50 MiB limit applied to each file before parsing. The production
+  proxy grants 110 MiB only to the exact `/api/imports/preview` route; other
+  routes retain their smaller request limit.
+- Owner, public Share and Offline Readers share one semantic Markdown copy
+  boundary. A selection may span rendered blocks and messages; complete blocks
+  use canonical rendered Markdown while partial selections preserve inline
+  Markdown semantics such as emphasis, links, code, lists and quotations.
+  Long-message virtualization pins only the active selection range and resumes
+  its normal bounded window after the selection is cleared.
+- No migration, dependency, visible control or persisted Reader/offline
+  contract changed.
+
 ## 2026-08-18 Public Share and reference-style conversation search
 
 - The post-audit product enhancement is deployed: the explicit

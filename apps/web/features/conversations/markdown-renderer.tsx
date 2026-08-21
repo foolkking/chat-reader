@@ -715,7 +715,7 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
 
   return (
     <section ref={containerRef} className="reader-code-block max-w-full overflow-hidden rounded-lg border border-ui bg-[var(--code-bg)]">
-      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-ui bg-subtle px-3 text-xs text-secondary">
+      <div data-markdown-copy-ignore="true" className="flex min-h-10 items-center justify-between gap-3 border-b border-ui bg-subtle px-3 text-xs text-secondary">
         <span className="min-w-0 truncate font-mono">{language || "text"}</span>
         <div className="flex items-center gap-1">
           <CodeAction title={wrapped ? "Disable line wrapping" : "Wrap long lines"} onClick={() => setWrapped((value) => !value)}><WrapText className="h-3.5 w-3.5" /></CodeAction>

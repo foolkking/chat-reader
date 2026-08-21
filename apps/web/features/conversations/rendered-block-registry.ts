@@ -2,11 +2,13 @@ type RenderedBlockEntry = {
   messageId: string;
   blockIndex: number;
   element: HTMLElement;
+  markdown: string;
 };
 
 type RegistryListener = () => void;
 
 const renderedBlocks = new Map<string, Set<HTMLElement>>();
+const renderedBlockMarkdown = new WeakMap<HTMLElement, string>();
 const listeners = new Set<RegistryListener>();
 
 function blockKey(messageId: string, blockIndex: number): string {
@@ -17,19 +19,25 @@ function notifyListeners() {
   for (const listener of listeners) listener();
 }
 
-export function registerRenderedBlock(messageId: string, blockIndex: number, element: HTMLElement): () => void {
+export function registerRenderedBlock(messageId: string, blockIndex: number, element: HTMLElement, markdown = ""): () => void {
   const key = blockKey(messageId, blockIndex);
   const entries = renderedBlocks.get(key) ?? new Set<HTMLElement>();
   entries.add(element);
+  renderedBlockMarkdown.set(element, markdown);
   renderedBlocks.set(key, entries);
   notifyListeners();
 
   return () => {
     const current = renderedBlocks.get(key);
     if (!current?.delete(element)) return;
+    renderedBlockMarkdown.delete(element);
     if (current.size === 0) renderedBlocks.delete(key);
     notifyListeners();
   };
+}
+
+export function getRenderedBlockMarkdown(element: HTMLElement): string | null {
+  return renderedBlockMarkdown.get(element) ?? null;
 }
 
 export function subscribeRenderedBlocks(listener: RegistryListener): () => void {
@@ -51,7 +59,7 @@ export function getRenderedBlocks(): RenderedBlockEntry[] {
     const blockIndex = Number.parseInt(key.slice(separator + 1), 10);
     if (!messageId || !Number.isFinite(blockIndex)) continue;
     for (const element of elements) {
-      if (element.isConnected) result.push({ messageId, blockIndex, element });
+      if (element.isConnected) result.push({ messageId, blockIndex, element, markdown: renderedBlockMarkdown.get(element) ?? "" });
     }
   }
   return result;

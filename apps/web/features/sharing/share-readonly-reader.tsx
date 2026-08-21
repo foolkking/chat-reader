@@ -30,6 +30,7 @@ import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
 import { X } from "lucide-react";
 import { acquireReaderBlockLease, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "../conversations/block-virtualization";
 import { resolveActiveReadingTarget } from "../conversations/reader-active-position";
+import { ReaderMarkdownCopyBoundary } from "../conversations/reader-markdown-copy";
 
 const ACTIVE_READING_OFFSET = 96;
 
@@ -496,7 +497,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             onNavigate={async (item) => {
               await navigateToTarget(item.messageId);
             }}
-          />} content={<div className="reader-content-inner min-w-0 space-y-5">
+          />} content={<ReaderMarkdownCopyBoundary className="reader-content-inner min-w-0 space-y-5">
           {payload.share.description ? <p className="text-sm leading-6 text-[#374151]">{payload.share.description}</p> : null}
           <div ref={topSentinelRef} className={`flex items-center justify-center ${edgeLoading === "previous" || edgeError === "previous" ? "min-h-10" : "h-px"}`}>
             {edgeLoading === "previous" ? <span className="text-sm text-secondary">{t("loadingEarlier")}</span> : null}
@@ -520,7 +521,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             {edgeError === "next" ? <button type="button" onClick={() => void loadNextPage()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryLater")}</button> : null}
           </div>
           {!loadedWindow.hasMore ? <div aria-hidden="true" className="h-[calc(100vh-6rem)] min-h-72" /> : null}
-        </div>} toc={<div className="h-full">
+        </ReaderMarkdownCopyBoundary>} toc={<div className="h-full">
           <ConversationToc
             conversationId={payload.conversation.id}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}

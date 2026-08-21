@@ -54,7 +54,9 @@ export function AssistantMessageRenderer({
 
   if (blocks.length === 0) {
     return currentText.trim() ? (
-      <MarkdownRenderer text={currentText} isAssistant={isAssistant} taskItems={applyTaskOverrides(allTasks, taskCheckedOverrides)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={message.current_version?.id ?? message.id} />
+      <CopyableMarkdownBlock messageId={message.id} blockIndex={0} markdown={currentText}>
+        <MarkdownRenderer text={currentText} isAssistant={isAssistant} taskItems={applyTaskOverrides(allTasks, taskCheckedOverrides)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={message.current_version?.id ?? message.id} />
+      </CopyableMarkdownBlock>
     ) : (
       <p className="text-sm text-secondary">{t("noDisplayableContent")}</p>
     );
@@ -74,7 +76,7 @@ export function AssistantMessageRenderer({
   return (
     <div className="reader-block-flow break-words">
       {leadingThinking ? (
-        <div className="reader-block-slot"><ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} /></div>
+        <div className="reader-block-slot"><CopyableMarkdownBlock messageId={message.id} blockIndex={visibleBlocks[0]?.block_index ?? 0} markdown={leadingThinking.text}><ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} /></CopyableMarkdownBlock></div>
       ) : null}
       {shouldVirtualize ? (
         <div className="reader-block-slot" style={leadingThinking ? slotGapStyle(blockGapVariable(null, semanticBlocks[0])) : undefined}>
@@ -230,6 +232,7 @@ function AttachmentBlockGroup({
   hasLeadingContent: boolean;
 }) {
   const items = useMemo(() => blocks.map((block) => attachmentInlineItem(messageId, block)), [blocks, messageId]);
+  const markdown = useMemo(() => blocks.map(markdownForBlock).filter(Boolean).join("\n\n"), [blocks]);
   return (
     <div
       className="reader-block-slot"
@@ -237,7 +240,9 @@ function AttachmentBlockGroup({
       data-attachment-group="semantic"
       style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, blocks[0] ?? null)) : undefined}
     >
-      <AttachmentInlineGroup items={items} />
+      <CopyableMarkdownBlock messageId={messageId} blockIndex={blocks[0]?.block_index ?? 0} markdown={markdown}>
+        <AttachmentInlineGroup items={items} />
+      </CopyableMarkdownBlock>
     </div>
   );
 }
@@ -247,12 +252,13 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   const [scrollMargin, setScrollMargin] = useState(0);
   const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
+  const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
   const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
     const indexes = defaultRangeExtractor(range);
-    const pinned = Array.from(pinnedVirtualIndexes).filter((index) => !indexes.includes(index));
+    const pinned = Array.from(new Set([...pinnedVirtualIndexes, ...selectionPinnedIndexes])).filter((index) => !indexes.includes(index));
     return pinned.length === 0 ? indexes : [...indexes, ...pinned].sort((left, right) => left - right);
-  }, [pinnedVirtualIndexes]);
+  }, [pinnedVirtualIndexes, selectionPinnedIndexes]);
   const virtualizer = useVirtualizer({
     count: blocks.length,
     getScrollElement: () => containerRef.current?.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? null,
@@ -289,6 +295,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
     virtualizer.measureElement,
   );
   useVirtualMessageRegistration(messageId, indexByBlock, setPinnedVirtualIndexes);
+  useSelectionBlockPinning(containerRef, blocks, indexByBlock, setSelectionPinnedIndexes);
   const virtualItems = virtualizer.getVirtualItems();
   const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
   useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
@@ -322,12 +329,13 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
   const [scrollMargin, setScrollMargin] = useState(0);
   const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
+  const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
   const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
     const indexes = defaultRangeExtractor(range);
-    const pinned = Array.from(pinnedVirtualIndexes).filter((index) => !indexes.includes(index));
+    const pinned = Array.from(new Set([...pinnedVirtualIndexes, ...selectionPinnedIndexes])).filter((index) => !indexes.includes(index));
     return pinned.length === 0 ? indexes : [...indexes, ...pinned].sort((left, right) => left - right);
-  }, [pinnedVirtualIndexes]);
+  }, [pinnedVirtualIndexes, selectionPinnedIndexes]);
   const virtualizer = useWindowVirtualizer({
     count: blocks.length,
     estimateSize: (index) => estimateReaderBlockSize(
@@ -362,6 +370,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     virtualizer.measureElement,
   );
   useVirtualMessageRegistration(messageId, indexByBlock, setPinnedVirtualIndexes);
+  useSelectionBlockPinning(containerRef, blocks, indexByBlock, setSelectionPinnedIndexes);
   const virtualItems = virtualizer.getVirtualItems();
   const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
   useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
@@ -505,6 +514,63 @@ function useVirtualMessageRegistration(
   }, [indexByBlock, messageId, setPinnedVirtualIndexes]);
 
   useEffect(() => registerVirtualMessage(messageId, acquireBlockLease), [acquireBlockLease, messageId]);
+}
+
+function useSelectionBlockPinning(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  blocks: RenderBlockRead[],
+  indexByBlock: Map<number, number>,
+  setPinnedIndexes: React.Dispatch<React.SetStateAction<Set<number>>>,
+) {
+  useEffect(() => {
+    function updateSelectionPins() {
+      const container = containerRef.current;
+      const article = container?.closest<HTMLElement>('article[data-message-id]');
+      const selection = window.getSelection();
+      if (!container || !article || !selection || selection.rangeCount !== 1 || selection.isCollapsed) {
+        setPinnedIndexes((current) => current.size === 0 ? current : new Set());
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      try {
+        if (!range.intersectsNode(article)) {
+          setPinnedIndexes((current) => current.size === 0 ? current : new Set());
+          return;
+        }
+      } catch {
+        return;
+      }
+
+      const startArticle = elementForSelectionNode(range.startContainer)?.closest<HTMLElement>('article[data-message-id]');
+      const endArticle = elementForSelectionNode(range.endContainer)?.closest<HTMLElement>('article[data-message-id]');
+      const lastIndex = Math.max(0, blocks.length - 1);
+      let first = 0;
+      let last = lastIndex;
+      if (startArticle === article) first = selectionBlockIndex(range.startContainer, indexByBlock) ?? 0;
+      if (endArticle === article) last = selectionBlockIndex(range.endContainer, indexByBlock) ?? lastIndex;
+      const next = new Set<number>();
+      for (let index = Math.max(0, Math.min(first, last)); index <= Math.min(lastIndex, Math.max(first, last)); index += 1) next.add(index);
+      setPinnedIndexes((current) => sameIndexes(current, next) ? current : next);
+    }
+
+    document.addEventListener("selectionchange", updateSelectionPins);
+    return () => document.removeEventListener("selectionchange", updateSelectionPins);
+  }, [blocks.length, containerRef, indexByBlock, setPinnedIndexes]);
+}
+
+function elementForSelectionNode(node: Node): HTMLElement | null {
+  return node instanceof HTMLElement ? node : node.parentElement;
+}
+
+function selectionBlockIndex(node: Node, indexByBlock: Map<number, number>): number | null {
+  const value = elementForSelectionNode(node)?.closest<HTMLElement>("[data-block-index]")?.dataset.blockIndex;
+  if (value === undefined) return null;
+  const blockIndex = Number.parseInt(value, 10);
+  return Number.isFinite(blockIndex) ? indexByBlock.get(blockIndex) ?? null : null;
+}
+
+function sameIndexes(left: Set<number>, right: Set<number>): boolean {
+  return left.size === right.size && Array.from(left).every((index) => right.has(index));
 }
 
 /**
@@ -746,9 +812,9 @@ const BlockElement = memo(function BlockElement({ messageId, block, isAssistant,
   const registerRef = useCallback((element: HTMLDivElement | null) => {
     unregisterRef.current?.();
     unregisterRef.current = element
-      ? registerRenderedBlock(messageId, block.block_index, element)
+      ? registerRenderedBlock(messageId, block.block_index, element, markdownForBlock(block))
       : null;
-  }, [block.block_index, messageId]);
+  }, [block, messageId]);
 
   return (
     <div
@@ -757,6 +823,8 @@ const BlockElement = memo(function BlockElement({ messageId, block, isAssistant,
       data-block-id={block.id}
       data-block-index={block.block_index}
       data-block-type={block.block_type}
+      data-copy-language={typeof block.data.language === "string" ? block.data.language : undefined}
+      data-reader-copy-block="true"
       className={`reader-markdown-block max-w-full scroll-mt-3 rounded-xl transition ${
         highlightTargetId === domId
           ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]"
@@ -848,6 +916,31 @@ function readStoredTaskItems(value: unknown): MarkdownTaskItem[] {
       ordinal: Number(task.ordinal ?? 0),
     }];
   });
+}
+
+function CopyableMarkdownBlock({ messageId, blockIndex, markdown, children }: { messageId: string; blockIndex: number; markdown: string; children: React.ReactNode }) {
+  const unregisterRef = useRef<(() => void) | null>(null);
+  const registerRef = useCallback((element: HTMLDivElement | null) => {
+    unregisterRef.current?.();
+    unregisterRef.current = element ? registerRenderedBlock(messageId, blockIndex, element, markdown) : null;
+  }, [blockIndex, markdown, messageId]);
+  return <div ref={registerRef} data-block-index={blockIndex} data-reader-copy-block="true">{children}</div>;
+}
+
+function markdownForBlock(block: RenderBlockRead): string {
+  const text = stripLeadingTimestamp(readBlockText(block));
+  if (block.block_type === "heading") {
+    const rawLevel = typeof block.data.level === "number" ? block.data.level : Number(block.data.level);
+    const level = rawLevel >= 1 && rawLevel <= 4 ? rawLevel : 3;
+    const title = stripLeadingTimestamp(typeof block.data.title === "string" ? block.data.title : text);
+    return `${"#".repeat(level)} ${title}`;
+  }
+  if (block.block_type === "code") {
+    const code = typeof block.data.code === "string" ? block.data.code : text;
+    const language = typeof block.data.language === "string" ? block.data.language : "";
+    return `\`\`\`${language}\n${code}\n\`\`\``;
+  }
+  return text;
 }
 
 function applyTaskOverrides(items: MarkdownTaskItem[], overrides?: ReadonlyMap<string, boolean>): MarkdownTaskItem[] {

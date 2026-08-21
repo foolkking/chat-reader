@@ -186,3 +186,13 @@ def test_public_gateway_configuration_conceals_internal_diagnostics() -> None:
     assert "include /etc/nginx/snippets/chat-reader-internal-diagnostics.conf;" in nginx
     assert 'expose:\n      - "8000"' in compose.replace("\r\n", "\n")
     assert 'ports:\n      - "8000' not in compose.replace("\r\n", "\n")
+
+
+def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
+    root = Path(__file__).parents[3]
+    nginx = (root / "deploy" / "nginx-chat-reader.conf").read_text(encoding="utf-8")
+    preview_location = nginx.split("location = /api/imports/preview", 1)[1].split("location /", 1)[0]
+
+    assert "client_max_body_size 110m;" in preview_location
+    assert nginx.count("client_max_body_size 110m;") == 1
+    assert "client_max_body_size 60m;" in nginx

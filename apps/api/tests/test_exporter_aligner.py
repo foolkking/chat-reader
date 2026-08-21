@@ -3,6 +3,7 @@ import time
 
 import pytest
 
+from app.services.import_pipeline import exporter_markdown_parser
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.canonical_draft import preview_markdown
 from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
@@ -71,6 +72,31 @@ def test_json_markdown_exact_alignment_uses_markdown_as_display_authority() -> N
     assert result.conversation.messages[1].display_source == "markdown"
     assert result.conversation.messages[1].display_text == "Yes, I can."
     assert result.conversation.alignment_status == "exact_match"
+
+
+def test_large_unique_pairing_is_linear_even_with_untimed_body_headings(monkeypatch: pytest.MonkeyPatch) -> None:
+    body = "large-pair-body " * 65_536
+    messages = []
+    markdown_parts = ["# Large pairing fixture\n"]
+    for index in range(12):
+        role = "Prompt" if index % 2 == 0 else "Response"
+        timestamp = f"2026-07-01 10:{index:02d}:00"
+        message_body = f"message-{index}\n\n## {role}\n\nUntimed body heading.\n\n{body}"
+        messages.append({"role": role, "say": message_body, "time": timestamp})
+        markdown_parts.append(f"## {role}\n{timestamp}\n\n{message_body}\n")
+
+    def reject_similarity_search(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("large unique structural pairing must not call SequenceMatcher")
+
+    monkeypatch.setattr(exporter_markdown_parser, "SequenceMatcher", reject_similarity_search)
+    expected = parse_exporter_json(_json(title="Large pairing fixture", messages=messages)).messages
+    started = time.perf_counter()
+    parsed = parse_exporter_markdown("\n".join(markdown_parts), expected)
+    elapsed = time.perf_counter() - started
+
+    assert parsed.section_count == 12
+    assert elapsed < 5
+    assert sum(len(part) for part in markdown_parts) > 10 * 1024 * 1024
 
 
 def test_json_markdown_count_mismatch_blocks_commit() -> None:

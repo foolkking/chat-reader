@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+2026-08-21 large paired-import and Reader-copy synchronization: the current
+linear unique-identity pairing rule, 50 MiB per-file/two-file Preview boundary,
+route-specific proxy allowance and shared Owner/Share/Offline semantic Markdown
+copy contract are recorded in `PROJECT_STATE.md`,
+`docs/system/BACKEND_AND_API.md`,
+`docs/system/FRONTEND_ARCHITECTURE.md`,
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`, `docs/deployment.md` and
+`docs/testing.md`. No migration, dependency or new documentation category was
+introduced.
+
 2026-08-17 public Share/search enhancement synchronization: the current
 public-by-link Share contract, independent optional Share password and
 reference-style exact occurrence navigation are recorded in

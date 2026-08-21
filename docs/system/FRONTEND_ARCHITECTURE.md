@@ -1,5 +1,21 @@
 # 前端架构
 
+## Reader semantic Markdown copy (current)
+
+Owner Reader, public Share and Offline Reader use one copy boundary. Complete
+render blocks contribute the same Markdown source used by their renderer;
+partial DOM selections are serialized semantically so emphasis, strikethrough,
+links, inline/fenced code, headings, lists, quotations and tables remain useful
+Markdown. Message metadata, role labels, toolbars and controls are excluded,
+and cross-message bodies are separated by one blank line.
+
+For long virtualized messages, the virtualizer temporarily pins the inclusive
+block interval between the selection anchor and focus. It releases those rows
+when the selection collapses or leaves the message, so semantic copy does not
+disable the existing long-message virtualization contract. If a selection
+cannot be represented reliably, the boundary leaves the browser's native copy
+behavior untouched rather than returning truncated content.
+
 ## PWA negative-path resilience (2026-08-15)
 
 Release E keeps the existing /library Service Worker architecture but makes

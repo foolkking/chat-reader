@@ -367,6 +367,69 @@ test("restores the offline reader frame and target-loads a distant annotation", 
   expect(persistedSidebarWidth).toBeGreaterThan(sidebarBefore + 40);
 });
 
+test("copies a long virtualized offline message as complete Markdown and releases selection pins", async ({ page }) => {
+  await page.goto("/library");
+  await seedOfflineFixture(page);
+  await page.goto("/library?conversationId=offline-fixture&annotations=open");
+  await page.getByRole("button", { name: /^(鍏ㄩ儴鎵规敞|All)$/ }).click();
+  await page.locator("#annotation-offline-far button").first().click();
+  const firstBlock = page.locator("#block-offline-message-40-1");
+  await expect(firstBlock).toBeVisible();
+  await expect.poll(() => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("settled");
+
+  await firstBlock.evaluate((element) => {
+    const text = element.querySelector("p")?.firstChild;
+    if (!(text instanceof Text)) throw new Error("Virtual copy start text is missing.");
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 1);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  });
+  await page.waitForTimeout(300);
+  const lastBlock = page.locator("#block-offline-message-40-219");
+  await expect.poll(async () => {
+    await page.locator('[data-reader-scroll-root="true"]').evaluate((root) => { root.scrollTop = root.scrollHeight; });
+    return lastBlock.count();
+  }, { timeout: 60_000 }).toBeGreaterThan(0);
+  await lastBlock.evaluate((element) => {
+    const first = document.querySelector("#block-offline-message-40-1 p")?.firstChild;
+    const last = element.querySelector("p")?.firstChild;
+    if (!(first instanceof Text) || !(last instanceof Text)) throw new Error("Virtual copy endpoints are missing.");
+    const range = document.createRange();
+    range.setStart(first, 0);
+    range.setEnd(last, last.length);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  });
+
+  const copied = await page.evaluate(() => {
+    const first = document.querySelector("#block-offline-message-40-1");
+    const last = document.querySelector("#block-offline-message-40-219");
+    const start = first?.querySelector("p")?.firstChild;
+    const end = last?.querySelector("p")?.firstChild;
+    if (!first || !last || !(start instanceof Text) || !(end instanceof Text)) throw new Error("Virtual copy endpoints are missing.");
+    const range = document.createRange();
+    range.setStart(start, 0);
+    range.setEnd(end, end.length);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    const transfer = new DataTransfer();
+    first.dispatchEvent(new ClipboardEvent("copy", { bubbles: true, cancelable: true, clipboardData: transfer }));
+    const result = transfer.getData("text/markdown");
+    selection?.removeAllRanges();
+    return result;
+  });
+
+  expect(copied).toContain("prefix target-annotation-40 suffix");
+  expect(copied).toContain("virtual paragraph 219");
+  expect(copied).not.toContain("Assistant -");
+  await expect.poll(() => page.locator("#message-offline-message-40 [data-index]").count()).toBeLessThan(220);
+});
+
 type ActiveRecord = {
   revision: string;
   cacheName: string;

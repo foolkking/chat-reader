@@ -1,5 +1,29 @@
 # Testing Addendum 2026-08-09
 
+## Large paired imports and semantic Reader copy (2026-08-21)
+
+The import regression covers unique ordered role/timestamp pairing with
+untimed body headings, verifies that the linear path does not instantiate
+`SequenceMatcher`, and keeps timed extras, duplicates, ambiguity and bounded
+failure handling on the conservative path. API boundary tests cover no more
+than two files, the exact configured per-file limit and the route-specific
+110 MiB Nginx allowance. The user-supplied desktop pair is Preview-only and is
+never added to repository fixtures or committed as a conversation.
+
+`reader-markdown-copy.spec.ts` covers complete blocks, cross-block and
+cross-message selections, partial bold text, links, inline code, fenced code
+and lists for Owner and public Share. The long Offline Reader fixture verifies
+that selection pinning crosses the virtualized block threshold, that metadata
+and controls do not enter either clipboard representation, and that rows are
+released after selection cleanup.
+
+Current local evidence is `55 passed / 3 fixture-gated skipped` for the focused
+import suite, `332 passed / 7 skipped` for the full API suite, and `75 passed /
+71 conditional skipped` for the default production-build browser/PWA matrix.
+The three new Owner/Share/Offline copy cases all executed and passed. Web lint,
+typecheck, production build, dependency policy and `git diff --check` pass;
+the official dependency audit contains zero high or critical findings.
+
 ## Public Share and exact conversation search (deployed and accepted, 2026-08-18)
 
 The focused API coverage now exercises passwordless public Share access,
