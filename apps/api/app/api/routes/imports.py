@@ -1,6 +1,4 @@
-import hashlib
 import logging
-import os
 import time
 import uuid
 import shutil
@@ -17,7 +15,6 @@ from app.models.import_record import ImportRecord
 from app.models.conversation import Conversation
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import (
-    BundlePreviewAccepted,
     ConversationPreview,
     ImportPreviewFile,
     ImportPreviewResponse,
@@ -44,12 +41,9 @@ from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseE
 from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdownPairingError, parse_exporter_markdown
 from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v1, parse_canjson_v2
 from app.services.import_pipeline.draft_store import attach_import_draft
-from app.services.import_pipeline.draft_store import ImportDraftError, read_import_draft
 from app.services.import_pipeline.source_detector import detect_source_profile
 from app.services.storage.local_storage import save_import_file
-from app.services.storage.local_storage import sanitize_filename
 from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
-from app.services.background_jobs import queue_bundle_preview
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
@@ -71,71 +65,6 @@ PREVIEW_CONVERSATION_LIMIT = 20
 
 
 UploadedPreviewFile = tuple[str, bytes, SourceDetectionResult]
-
-
-@router.post(
-    "/bundles/preview",
-    response_model=BundlePreviewAccepted,
-    status_code=status.HTTP_202_ACCEPTED,
-)
-async def preview_attachment_bundle(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-) -> BundlePreviewAccepted:
-    filename = file.filename or "conversation.crbundle"
-    if not filename.casefold().endswith(".crbundle"):
-        raise HTTPException(status_code=422, detail="Attachment bundles must use the .crbundle extension.")
-    import_id = uuid.uuid4()
-    destination: Path | None = None
-    try:
-        destination, digest, byte_size = await _save_streamed_bundle(import_id, filename, file)
-        record = ImportRecord(
-            id=import_id,
-            source_profile="chat_reader_bundle_v1",
-            source_fingerprint=digest,
-            status="validating",
-            phase="queued",
-            progress=0,
-            alignment_status="not_applicable",
-            warnings=[],
-            file_count=1,
-            total_bytes=byte_size,
-            json_filename=filename,
-            queued_at=datetime.now(timezone.utc),
-        )
-        db.add(record)
-        db.flush()
-        artifact = SourceArtifact(
-            id=uuid.uuid4(),
-            import_id=import_id,
-            source_type="chat_reader_bundle",
-            source_profile="chat_reader_bundle_v1",
-            filename=filename,
-            safe_filename=destination.name,
-            sha256=digest,
-            byte_size=byte_size,
-            mime_guess="application/vnd.chat-reader.bundle+zip",
-            file_extension=".crbundle",
-            raw_storage_uri=f"storage/imports/{import_id}/{destination.name}",
-            parsed_summary={},
-        )
-        db.add(artifact)
-        job = queue_bundle_preview(db, import_id=import_id, filename=filename)
-        db.commit()
-    except HTTPException:
-        db.rollback()
-        _cleanup_import_directory(import_id)
-        raise
-    except Exception as exc:
-        db.rollback()
-        _cleanup_import_directory(import_id)
-        raise HTTPException(status_code=500, detail="Bundle preview could not be queued.") from exc
-    return BundlePreviewAccepted(
-        import_id=import_id,
-        task_id=job.id,
-        status_url=f"/api/tasks/{job.id}",
-        preview_url=f"/api/imports/{import_id}/preview",
-    )
 
 
 @router.post("/preview", response_model=ImportPreviewResponse)
@@ -389,46 +318,6 @@ def list_source_artifacts(import_id: uuid.UUID, db: Session = Depends(get_db)) -
     ]
 
 
-@router.get("/{import_id:uuid}/preview", response_model=ImportPreviewResponse)
-def get_saved_import_preview(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportPreviewResponse:
-    record = _get_import_or_404(import_id, db)
-    if record.source_profile != "chat_reader_bundle_v1":
-        raise HTTPException(status_code=409, detail="This import does not expose a durable bundle preview.")
-    if record.status != "previewed":
-        raise HTTPException(status_code=409, detail=f"Bundle preview is not ready ({record.status}).")
-    artifacts = db.query(SourceArtifact).filter(SourceArtifact.import_id == import_id).all()
-    try:
-        drafts = read_import_draft(record)
-    except ImportDraftError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    conversation_preview = _preview_from_draft(drafts[0]) if drafts else None
-    files = [
-        ImportPreviewFile(
-            artifact_id=artifact.id,
-            filename=artifact.filename,
-            source_profile=SourceProfile.chat_reader_bundle_v1,
-            confidence=1,
-            sha256=artifact.sha256,
-            byte_size=artifact.byte_size,
-            mime_guess=artifact.mime_guess,
-            file_extension=artifact.file_extension or ".crbundle",
-            warnings=[],
-        )
-        for artifact in artifacts
-    ]
-    return ImportPreviewResponse(
-        import_id=record.id,
-        status=record.status,
-        files=files,
-        warnings=record.warnings or [],
-        conversation_preview=conversation_preview,
-        can_commit=conversation_preview is not None and record.alignment_status == "exact",
-        commit_endpoint=f"/api/imports/{record.id}/commit",
-        archive_summary=artifacts[0].parsed_summary if artifacts else None,
-        compatibility="compatible",
-    )
-
-
 @router.get("/{import_id}/warnings", response_model=ImportWarningsResponse)
 def get_import_warnings(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportWarningsResponse:
     import_record = _get_import_or_404(import_id, db)
@@ -603,40 +492,6 @@ def _cleanup_import_directory(import_id: uuid.UUID) -> None:
         return
     if directory.is_dir():
         shutil.rmtree(directory)
-
-
-async def _save_streamed_bundle(
-    import_id: uuid.UUID,
-    filename: str,
-    upload: UploadFile,
-) -> tuple[Path, str, int]:
-    settings = get_settings()
-    root = Path(settings.import_storage_dir).resolve()
-    directory = (root / str(import_id)).resolve()
-    if not directory.is_relative_to(root):
-        raise HTTPException(status_code=400, detail="Invalid import storage path.")
-    directory.mkdir(parents=True, exist_ok=True)
-    destination = directory / sanitize_filename(filename)
-    digest = hashlib.sha256()
-    byte_size = 0
-    limit = settings.bundle_max_compressed_bytes
-    try:
-        with destination.open("xb") as target:
-            while chunk := await upload.read(1024 * 1024):
-                byte_size += len(chunk)
-                if byte_size > limit:
-                    raise HTTPException(status_code=413, detail="Bundle exceeds the compressed size limit.")
-                digest.update(chunk)
-                target.write(chunk)
-            target.flush()
-            os.fsync(target.fileno())
-    except Exception:
-        destination.unlink(missing_ok=True)
-        raise
-    if byte_size == 0:
-        destination.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail="Uploaded bundle is empty.")
-    return destination, digest.hexdigest(), byte_size
 
 
 def _combined_source_profile(source_profiles: list[str]) -> str:

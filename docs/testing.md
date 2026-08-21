@@ -1,5 +1,22 @@
 # Testing Addendum 2026-08-09
 
+## Adaptive Import (2026-08-22)
+
+Focused API coverage is in `apps/api/tests/test_adaptive_import_api.py`. It
+covers UNKNOWN Mapping through direct commit, second-use exact matching,
+Built-in native JSON, Family-level batch reuse, full-family rejection,
+DRIFTED revision creation with old-revision compatibility, disabled/deleted
+profiles, Markdown role/noise behavior, ORDER/ID/ROLE_TIMESTAMP relations,
+unknown-role blocking, ambiguous mixed-file grouping and explicit session
+cancellation. `.cr` archive regression remains in
+`test_system_archive_api.py`; the removed `.crbundle` route is asserted `404`.
+
+Required gates for this change are the full API suite, migration single-head,
+Web lint/typecheck/build, focused Adaptive Import browser flow, PWA regression,
+dependency/security policy and `git diff --check`. Results are recorded only
+after the commands execute; this section defines scope rather than claiming
+unrun production acceptance.
+
 ## 2026-08-21 Deployment acceptance boundary
 
 The exact CI run for the large-import and semantic-copy scope passed quality,
@@ -29,12 +46,16 @@ that selection pinning crosses the virtualized block threshold, that metadata
 and controls do not enter either clipboard representation, and that rows are
 released after selection cleanup.
 
-Current local evidence is `55 passed / 3 fixture-gated skipped` for the focused
-import suite, `332 passed / 7 skipped` for the full API suite, and `75 passed /
-71 conditional skipped` for the default production-build browser/PWA matrix.
-The three new Owner/Share/Offline copy cases all executed and passed. Web lint,
-typecheck, production build, dependency policy and `git diff --check` pass;
-the official dependency audit contains zero high or critical findings.
+Current local evidence is `17 passed` for the focused Adaptive Import API suite,
+`342 passed / 6 skipped` for the full API suite, `2 passed / 1 conditional
+skipped` for the real Adaptive Import browser flow, and `75 passed / 70
+conditional skipped` for the default production-build browser/PWA matrix. The
+known-profile, unknown-to-Mapping, learned-profile reuse and batch-family
+flows all executed; the `.cr` archive regression passed and the removed
+`.crbundle` endpoint is covered by a `404` assertion. Web lint, typecheck,
+production build, dependency policy and `git diff --check` pass. The official
+dependency audit contains zero high or critical findings (one low and one
+moderate advisory remain in the dependency tree).
 
 ## Public Share and exact conversation search (deployed and accepted, 2026-08-18)
 

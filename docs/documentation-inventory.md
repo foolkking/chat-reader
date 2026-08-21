@@ -1,5 +1,16 @@
 # Markdown 文档台账
 
+2026-08-22 Adaptive Import synchronization: the two-entry import surface,
+session/group/family model, Built-in and Learned Profile revisions, canonical
+draft boundary, full-family validation, direct commit and retired `.crbundle`
+product contract are recorded in `PROJECT_STATE.md`,
+`docs/system/ADAPTIVE_IMPORT_CONTRACT.md`, `docs/product.md`,
+`docs/architecture.md`, `docs/api-reference.md`,
+`docs/system/BACKEND_AND_API.md`, `docs/system/FEATURE_INVENTORY.md` and
+`docs/testing.md`. Migration `20260822_0025` adds only adaptive-import
+operational/profile state; existing Conversation and `.cr` schema remains
+unchanged.
+
 2026-08-22 current-project movement synchronization: the right-hand Project
 workspace drop target, stable optimistic `project_relation`, URL-preserving
 success behavior and multi-cache failure rollback are recorded in
@@ -259,12 +270,9 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `apps/api/app/api/routes/attachments.py` | Current | Upload sessions, conversation files, metadata, Range content, derivatives and Share attachment access. |
 | `apps/api/app/services/assets/asset_store.py` | Current | Local and optional S3-compatible storage providers with controlled keys. |
 | `apps/api/app/services/assets/scanner.py` | Current | Disabled, ClamAV and remote scanner providers; deployment-policy status. |
-| `apps/api/app/services/import_pipeline/bundle_import.py` | Current | Native bundle and `chat-reader-import-bundle v1` validation/normalization. |
 | `apps/api/app/services/exporting/system_archive.py` | Current | System `.cr v4` export and empty-instance restore. |
 | `.github/workflows/build-release-images.yml` | Current | Manual external Linux image build for low-memory production deployment. |
-| `apps/api/tests/test_attachment_bundle_api.py` | Current | Real fixture, Share/Offline/export/split/merge attachment regression. |
 | `apps/web/features/attachments/conversation-files-panel.tsx` | Current | Current conversation file drawer, upload and occurrence actions. |
-| `apps/web/e2e/attachment-fixture.spec.ts` | Current | Real bundle product-flow acceptance without mutating source fixture. |
 | `apps/web/e2e/attachment-upload-flow.spec.ts` | Current | Ordinary upload, insertion, version switching and file reuse acceptance. |
 | `apps/web/e2e/project-sidebar-dnd.spec.ts` | Current | Explicit project/conversation drop-target and placement regression. |
 | `apps/api/tests/background_job_test_utils.py` | Test support | Deterministic post-commit derived-job processing for API tests. |

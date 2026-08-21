@@ -4,7 +4,6 @@ import { MarkdownRenderer } from "../conversations/markdown-renderer";
 export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse }) {
   const conversation = preview.conversation_preview ?? preview.conversation_previews?.[0] ?? null;
   const archive = preview.archive_summary;
-  const bundle = conversation?.source_profile === "chat_reader_bundle_v1" || readArchiveString(archive, "format") === "chat-reader-attachment-bundle";
 
   return (
     <div className="border-y border-ui py-4">
@@ -23,20 +22,10 @@ export function ImportPreviewCard({ preview }: { preview: ImportPreviewResponse 
       <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
         <PreviewStat label="文件" value={String(preview.files.length)} />
         <PreviewStat label="消息" value={String(conversation?.message_count ?? readArchiveNumber(archive, "message_count") ?? 0)} testId="import-message-count" />
-        <PreviewStat label="格式" value={bundle ? "附件对话包 v1" : archive ? `.cr v${readArchiveNumber(archive, "format_version") ?? 2}` : sourceProfileLabel(conversation?.source_profile)} />
+        <PreviewStat label="格式" value={archive ? `.cr v${readArchiveNumber(archive, "format_version") ?? 2}` : sourceProfileLabel(conversation?.source_profile)} />
       </dl>
 
-      {bundle ? (
-        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4" data-testid="bundle-preview-stats">
-          <PreviewStat label="附件" value={String(readArchiveNumber(archive, "attachment_count") ?? 0)} testId="bundle-attachment-count" />
-          <PreviewStat label="可用附件" value={String(readArchiveNumber(archive, "resolved_attachment_count") ?? 0)} testId="bundle-resolved-count" />
-          <PreviewStat label="缺失附件" value={String(readArchiveNumber(archive, "missing_attachment_count") ?? 0)} testId="bundle-missing-count" />
-          <PreviewStat label="物理对象" value={String(readArchiveNumber(archive, "object_count") ?? 0)} testId="bundle-object-count" />
-          <PreviewStat label="正文位置" value={String(readArchiveNumber(archive, "occurrence_count") ?? 0)} testId="bundle-occurrence-count" />
-          <PreviewStat label="尚未放入正文" value={String(readArchiveNumber(archive, "unplaced_attachment_count") ?? 0)} testId="bundle-unplaced-count" />
-          <PreviewStat label="扫描状态" value="按部署策略标记" />
-        </dl>
-      ) : archive ? (
+      {archive ? (
         <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
           <PreviewStat label="版本" value={String(readArchiveNumber(archive, "version_count") ?? 0)} />
           <PreviewStat label="Blocks" value={String(readArchiveNumber(archive, "block_count") ?? 0)} />
@@ -130,7 +119,6 @@ function sourceProfileLabel(profile?: string): string {
     case "chat_reader_canjson_v1": return "CanJSON v1 (Legacy)";
     case "chat_reader_canjson_v2": return "CanJSON v2";
     case "chat_reader_cr_v2": return ".cr v2";
-    case "chat_reader_bundle_v1": return "附件对话包 v1";
     default: return profile || "已识别格式";
   }
 }

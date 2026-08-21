@@ -370,14 +370,6 @@ export type ImportPreviewResponse = {
   compatibility?: string | null;
 };
 
-export type BundlePreviewAccepted = {
-  import_id: string;
-  task_id: string;
-  status: "queued" | string;
-  status_url: string;
-  preview_url: string;
-};
-
 export type ImportDuplicatePolicy = "clone" | "reject" | "replace" | "merge_if_same_hash";
 
 export type CommitImportResponse = {
@@ -401,6 +393,106 @@ export type CommitImportResponse = {
 
 export type ImportStatusResponse = CommitImportResponse;
 export type ActiveImportTask = ImportStatusResponse;
+
+export type AdaptiveImportDiagnostic = {
+  code: string;
+  layer: string;
+  message: string;
+  pointer?: string | null;
+  blocking?: boolean;
+  action?: string | null;
+  group_id?: string | null;
+  values?: string[];
+};
+
+export type AdaptiveImportGroup = {
+  id: string;
+  mode: "JSON" | "MARKDOWN" | "JSON_MARKDOWN" | "UNKNOWN";
+  display_name: string;
+  artifact_ids: string[];
+  grouping_status: string;
+  family_id: string | null;
+  profile_resolution: Record<string, unknown>;
+  diagnostics: AdaptiveImportDiagnostic[];
+  files: Array<{ artifact_id: string; filename: string; extension: string; byte_size: number }>;
+};
+
+export type AdaptiveImportFamily = {
+  id: string;
+  source_mode: "JSON" | "MARKDOWN" | "JSON_MARKDOWN";
+  display_name: string;
+  resolution_status: "EXACT_MATCH" | "COMPATIBLE" | "DRIFTED" | "AMBIGUOUS" | "UNKNOWN" | "INVALID";
+  group_count: number;
+  group_ids: string[];
+  matched_profile_key: string | null;
+  matched_profile_id: string | null;
+  matched_revision_id: string | null;
+  mapping_draft: Record<string, unknown>;
+  validation_result: Record<string, unknown>;
+  match_evidence: Record<string, unknown>;
+  diagnostics: AdaptiveImportDiagnostic[];
+};
+
+export type AdaptiveImportSession = {
+  import_id: string;
+  state: "COLLECTING" | "ANALYZING" | "NEEDS_GROUPING" | "RESOLVING" | "READY" | "IMPORTING" | "COMPLETED" | "BLOCKED" | "FAILED" | "CANCELED";
+  status: string;
+  file_count: number;
+  total_bytes: number;
+  group_count: number;
+  family_count: number;
+  conversation_count: number;
+  message_count: number;
+  can_import: boolean;
+  groups: AdaptiveImportGroup[];
+  families: AdaptiveImportFamily[];
+  warnings: string[];
+  analysis_summary: Record<string, unknown>;
+};
+
+export type AdaptiveMappingPreview = {
+  sample_group_id: string | null;
+  validation: {
+    valid: boolean;
+    conversation_count: number;
+    message_count: number;
+    issues: AdaptiveImportDiagnostic[];
+    groups: Array<Record<string, unknown>>;
+    verified_on_full_family: boolean;
+  };
+  preview: null | {
+    title: string;
+    message_count: number;
+    messages: Array<{ role: string; content: string; timestamp: string | null }>;
+  };
+};
+
+export type ImportFormatProfile = {
+  id: string | null;
+  key: string | null;
+  name: string;
+  kind: "BUILTIN" | "LEARNED";
+  source_mode: "JSON" | "MARKDOWN" | "JSON_MARKDOWN";
+  status: "ACTIVE" | "DISABLED";
+  current_revision: number | null;
+  current_revision_id: string | null;
+  revision_count: number | null;
+  last_used_at: string | null;
+  updated_at: string | null;
+  description?: string;
+};
+
+export type ImportFormatRevision = {
+  id: string;
+  revision: number;
+  status: "DRAFT" | "VERIFIED" | "SUPERSEDED";
+  mapping_spec: Record<string, unknown>;
+  validation_spec: Record<string, unknown>;
+  verification_summary: Record<string, unknown>;
+  created_at: string;
+  verified_at: string | null;
+  current: boolean;
+};
 
 export type BackgroundTaskRead = {
   job_id: string;

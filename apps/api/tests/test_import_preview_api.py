@@ -151,3 +151,12 @@ def test_preview_removed_or_unsupported_profiles_return_422(
 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "unsupported_source_profile"
+
+
+def test_removed_crbundle_product_route_is_not_exposed(client: TestClient) -> None:
+    response = client.post(
+        "/api/imports/bundles/preview",
+        files={"file": ("removed.crbundle", b"not-a-product-input", "application/octet-stream")},
+    )
+
+    assert response.status_code == 404

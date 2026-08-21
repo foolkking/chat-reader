@@ -26,6 +26,7 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     max_import_file_size_mb: int = Field(default=50, alias="MAX_IMPORT_FILE_SIZE_MB")
+    max_adaptive_import_total_mb: int = Field(default=512, alias="MAX_ADAPTIVE_IMPORT_TOTAL_MB")
     import_storage_dir: str = Field(
         default="storage/imports",
         alias="IMPORT_STORAGE_DIR",

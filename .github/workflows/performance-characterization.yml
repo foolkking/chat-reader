@@ -73,8 +73,8 @@ jobs:
       - name: Alembic single head
         run: |
           cd apps/api
-          test "$(python -m alembic heads)" = "20260816_0022 (head)"
-          python -m alembic current | grep -F "20260816_0022 (head)"
+          test "$(python -m alembic heads)" = "20260822_0025 (head)"
+          python -m alembic current | grep -F "20260822_0025"
 
   benchmark:
     needs: quality
@@ -309,12 +309,6 @@ jobs:
         run: |
           mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
           (cd apps/api && python -m alembic upgrade head)
-          mkdir -p "$RUNNER_TEMP/reader-attachment-fixtures"
-          for messages in 398 1000 10000; do
-            python scripts/performance/run_backend_benchmark.py \
-              --profile attachment_metadata --messages "$messages" \
-              --fixture-output "$RUNNER_TEMP/reader-attachment-fixtures/attachment-${messages}.crbundle"
-          done
           pnpm --filter web build
       - name: Start API and worker
         run: |
@@ -332,7 +326,6 @@ jobs:
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           E2E_READER_CAPACITY: "1"
-          E2E_READER_ATTACHMENT_FIXTURE_DIR: ${{ runner.temp }}/reader-attachment-fixtures
         run: pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts
       - name: Upload Reader evidence
         if: always()

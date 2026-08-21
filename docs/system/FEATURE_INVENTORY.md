@@ -6,8 +6,9 @@
 
 | 能力 | 状态 | 当前语义 |
 | --- | --- | --- |
-| 三种导入入口 | 已确认 | 兼容 JSON+可选 Markdown、附件 `.crbundle`、旧 `.cr` 兼容归档；CanJSON v1/v2 自动识别 |
-| 输入范围收敛 | 已确认 | 官方 OpenAI 图/ZIP、CSV、TXT、Markdown 单文件与第三方 splitter 返回 unsupported profile |
+| 两种导入入口 | 已确认 | Adaptive JSON/Markdown 与独立 `.cr` 归档；`.crbundle` 产品入口已删除 |
+| Adaptive Import | 已确认 | 单 JSON、单 Markdown、配对和批量；Session/Group/Family、Built-in/Learned Profile、Revision、drift、Mapping 与直接导入 |
+| Profile 安全匹配 | 已确认 | hard requirements、无正文 signature、semantic guards、unknown role 阻断、全 Family validation |
 | preview -> ImportDraft -> commit | 已确认 | preview 写受控 JSONL/digest metadata；commit 校验路径、统计和到期并读取同一 Draft，幂等排队 |
 | CanJSON v2 | 已确认 | JSONL 流式导入/导出；正文一次；支持 gzip、selected、可选 versions/annotations/notebooks/source refs |
 | durable worker | 已确认 | PostgreSQL queue、heartbeat、stale recovery、retry；单并发 |

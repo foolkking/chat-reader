@@ -55,7 +55,7 @@ PWA service worker 只在 secure context 注册。普通 LAN HTTP 作为响应�
 
 ## Import 失败
 
-- 检查上传大小是否同时低于 Nginx `client_max_body_size` 和 `MAX_IMPORT_FILE_SIZE_MB`。
+- 检查单文件是否低于 `MAX_IMPORT_FILE_SIZE_MB`，Adaptive batch 是否低于 `MAX_ADAPTIVE_IMPORT_TOTAL_MB`，以及精确 Nginx route 的 `client_max_body_size`。
 - 确认 `IMPORT_STORAGE_DIR` 或 Docker `import-storage` 可写且磁盘有空间。
 - 先查看 preview warnings，再 commit。
 - JSON/Markdown 数量不一致时，检查是否选择了不匹配的会话文件。

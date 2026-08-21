@@ -8,13 +8,10 @@ and never writes benchmark output into the Web bundle or a production database.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import io
 import json
 import os
 import threading
 import time
-import zipfile
 from pathlib import Path
 from typing import Any, Callable
 
@@ -26,8 +23,6 @@ FIXTURE_VERSION = "release-d-reader-capacity-v1"
 
 
 def fixture(messages: int, profile: str) -> tuple[bytes, dict[str, Any]]:
-    if profile == "attachment_metadata":
-        return attachment_bundle_fixture(messages)
     rows: list[dict[str, str]] = []
     math_blocks = 0
     code_blocks = 0
@@ -85,104 +80,6 @@ def fixture(messages: int, profile: str) -> tuple[bytes, dict[str, Any]]:
         "table_count": table_blocks,
         "attachment_count": 0,
     }
-
-
-def attachment_bundle_fixture(messages: int) -> tuple[bytes, dict[str, Any]]:
-    asset = b"release-d-shared-asset\n"
-    digest = hashlib.sha256(asset).hexdigest()
-    asset_path = f"assets/objects/{digest[:2]}/{digest}"
-    attachment_interval = 100
-    attachment_count = (messages + attachment_interval - 1) // attachment_interval
-    attachment_by_message = {
-        index: index // attachment_interval
-        for index in range(0, messages, attachment_interval)
-    }
-    conversation_records: list[dict[str, Any]] = [{
-        "record_type": "conversation",
-        "id": f"release-d-attachment-{messages}",
-        "title": f"Release D attachment metadata {messages}",
-    }]
-    attachment_records: list[dict[str, Any]] = []
-    occurrence_count = 0
-    for index in range(messages):
-        message_id = f"message-{index}"
-        attachment_index = attachment_by_message.get(index)
-        markdown = f"Synthetic attachment metadata message {index}."
-        if attachment_index is not None:
-            attachment_id = f"attachment-{attachment_index}"
-            markdown += f"\n\n[synthetic-{attachment_index}.txt](cr-asset://{attachment_id})"
-            conversation_records.append({
-                "record_type": "attachment_occurrence",
-                "occurrence_id": f"occurrence-{attachment_index}",
-                "attachment_id": attachment_id,
-                "message_id": message_id,
-                "placement": "after_message",
-                "display_mode": "card",
-                "display_order": 0,
-            })
-            occurrence_count += 1
-        conversation_records.append({
-            "record_type": "message",
-            "id": message_id,
-            "role": "Prompt" if index % 2 == 0 else "Response",
-            "content_markdown": markdown,
-        })
-    for index in range(attachment_count):
-        attachment_records.append({
-            "record_type": "attachment",
-            "id": f"attachment-{index}",
-            "source_attachment_id": f"release-d-attachment-{index}",
-            "resolution_status": "resolved",
-            "sha256": digest,
-            "byte_size": len(asset),
-            "bundle_path": asset_path,
-            "original_filename": f"synthetic-{index}.txt",
-            "display_name": f"synthetic-{index}.txt",
-            "declared_mime_type": "text/plain",
-            "display_mode": "card",
-        })
-    output = io.BytesIO()
-    with zipfile.ZipFile(output, "w", zipfile.ZIP_STORED) as archive:
-        _write_deterministic_zip_member(archive, "manifest.json", json.dumps({
-            "format": "chat-reader-import-bundle",
-            "version": 1,
-            "canjson_file": "conversation.canonical.jsonl",
-            "attachment_index": "attachments.jsonl",
-            "asset_root": "assets/objects",
-        }, separators=(",", ":")).encode("utf-8"))
-        _write_deterministic_zip_member(
-            archive,
-            "conversation.canonical.jsonl",
-            ("\n".join(json.dumps(row, separators=(",", ":")) for row in conversation_records) + "\n").encode("utf-8"),
-        )
-        _write_deterministic_zip_member(
-            archive,
-            "attachments.jsonl",
-            ("\n".join(json.dumps(row, separators=(",", ":")) for row in attachment_records) + "\n").encode("utf-8"),
-        )
-        _write_deterministic_zip_member(archive, asset_path, asset)
-    body = output.getvalue()
-    return body, {
-        "fixture_version": FIXTURE_VERSION,
-        "seed": SEED,
-        "message_count": messages,
-        "profile": "attachment_metadata",
-        "source_bytes": len(body),
-        "math_block_count": 0,
-        "code_block_count": 0,
-        "table_count": 0,
-        "attachment_count": attachment_count,
-        "asset_object_count": 1,
-        "occurrence_count": occurrence_count,
-        "asset_bytes": len(asset),
-    }
-
-
-def _write_deterministic_zip_member(archive: zipfile.ZipFile, name: str, content: bytes) -> None:
-    entry = zipfile.ZipInfo(name, date_time=(2026, 8, 14, 0, 0, 0))
-    entry.compress_type = zipfile.ZIP_STORED
-    entry.external_attr = 0o644 << 16
-    archive.writestr(entry, content)
 
 
 def rss_bytes(pid: str | None) -> int | None:
@@ -282,21 +179,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     result: dict[str, Any] = {"fixture": spec, "operations": []}
 
     def preview() -> dict[str, Any]:
-        if args.profile == "attachment_metadata":
-            response = client.post(
-                "/api/imports/bundles/preview",
-                files={"file": (f"release-d-{args.profile}-{args.messages}.crbundle", body, "application/vnd.chat-reader.bundle+zip")},
-            )
-        else:
-            response = client.post(
-                "/api/imports/preview",
-                files={"files": (f"release-d-{args.profile}-{args.messages}.json", body, "application/json")},
-            )
+        response = client.post(
+            "/api/imports/preview",
+            files={"files": (f"release-d-{args.profile}-{args.messages}.json", body, "application/json")},
+        )
         response.raise_for_status()
-        payload = response.json()
-        if args.profile == "attachment_metadata":
-            wait_for(client, payload["status_url"], {"committed", "failed"}, {"failed"})
-        return payload
+        return response.json()
 
     preview_payload, preview_metric = timed("import_preview", preview, Sampler(pids, roots))
     result["operations"].append({**preview_metric, "input_bytes": len(body)})
@@ -311,29 +199,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     result["operations"].append(commit_metric)
     conversation_id = status["conversation_ids"][0]
     result["conversation_id"] = conversation_id
-    if args.profile == "attachment_metadata":
-        attachments_response = client.get(f"/api/conversations/{conversation_id}/attachments")
-        attachments_response.raise_for_status()
-        attachments = attachments_response.json()["items"]
-        asset_object_ids = {
-            item["asset_object"]["id"]
-            for item in attachments
-            if item.get("asset_object")
-        }
-        summary = {
-            "attachment_count": len(attachments),
-            "asset_object_count": len(asset_object_ids),
-            "current_occurrence_count": sum(int(item["current_occurrence_count"]) for item in attachments),
-        }
-        expected = {
-            "attachment_count": spec["attachment_count"],
-            "asset_object_count": spec["asset_object_count"],
-            "current_occurrence_count": spec["occurrence_count"],
-        }
-        if summary != expected:
-            raise RuntimeError(f"attachment fixture reconciliation failed: {summary!r} != {expected!r}")
-        result["attachment_reconciliation"] = summary
-
     for export_name, path in (("markdown", f"/api/conversations/{conversation_id}/exports/markdown"), ("canjson", f"/api/conversations/{conversation_id}/exports/canjson?compression=gzip")):
         def download(url: str = path) -> int:
             response = client.get(url)
@@ -373,7 +238,7 @@ def main() -> None:
     parser.add_argument("--messages", type=int, required=True)
     parser.add_argument(
         "--profile",
-        choices=["plain", "math", "mixed", "attachment_metadata", "large_message"],
+        choices=["plain", "math", "mixed", "large_message"],
         default="plain",
     )
     parser.add_argument("--api-pid", default=os.getenv("BENCHMARK_API_PID"))

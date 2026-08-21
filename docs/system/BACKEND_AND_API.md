@@ -66,7 +66,7 @@ The ten-fixture isolated regression baseline contains 398 effective messages and
 
 | 资源组 | 责任 |
 | --- | --- |
-| imports/tasks | JSON/Markdown、`.crbundle`、旧 `.cr`、ImportDraft、preview、commit、warnings、durable job、retry/stale recovery |
+| imports/tasks | Adaptive JSON/Markdown session/group/family/profile、独立 `.cr`、ImportDraft、commit、warnings、durable job、retry/stale recovery |
 | conversations/messages | canonical 管理、完整轮次、索引、拆分/合并、版本 |
 | projects/reading/preferences | 单 Project 归属、排序、位置、最近、阅读偏好 |
 | search/toc | PostgreSQL full-text + trigram、SearchDocument、Heading |
@@ -77,16 +77,20 @@ The ten-fixture isolated regression baseline contains 398 effective messages and
 
 ## 关键数据流
 
-### 导入
+### Adaptive Import
 
 ```text
-JSON(+optional Markdown) or .cr -> detector/parser/aligner
--> imports + source artifact + checksummed ImportDraft JSONL
+JSON/Markdown SourceFile[] -> Analyzer -> InputGroup[] -> StructureFamily[]
+-> Built-in/Learned ImportProfileRevision or Mapping
+-> CanonicalConversationDraft[] -> full-family validation
+-> imports + source artifact + ImportDraft
 -> explicit commit -> background_jobs -> worker reads the same Draft
 -> conversation/messages/versions/blocks/headings/search -> publish
+
+.cr -> independent archive preview/restore
 ```
 
-JSON 是形式 1 的 metadata、role、time、源索引与配对冲突权威；有效配对的 Markdown 是 canonical 显示正文权威。Source detector 不在主链路接受官方 OpenAI 图/ZIP、CSV、TXT 或 Markdown 单文件；CanJSON v1/v2 由形式 1 自动识别。
+Session、Group、Family、Profile/Revision 与 Mapping/validation 合同见 [Adaptive Import Contract](ADAPTIVE_IMPORT_CONTRACT.md)。CanJSON v1/v2、Chat Reader Native 与 Prompt/Response Markdown 通过 Built-in Profile 使用同一上层 resolution contract。Learned Profile 仅保存无正文 signature、selector、role 字典、relation、noise 与受控 transform。
 
 形式 1 会分别删除 JSON/Markdown 尾部的空白消息，再按非空消息顺序校验 role 与 timestamp。配对解析枚举全部 `Prompt`/`Response` 标题候选，以 JSON 的角色、规范化时间和顺序建立完整单调路径，再按正文相似度和长度偏差选择唯一最佳路径；未选候选作为 Markdown 正文保留。只有完整路径唯一时启用辅助分段，同分、缺失或顺序冲突仍产生 conflict 并阻止 commit。消息状态为 exact、normalized 或 by_order 时，canonical `display_markdown` 取 Markdown；JSON-only 仍取 JSON。Markdown-only 与无可靠时间序列继续使用保守兼容解析，未闭合围栏恢复保持不变。parser/Markdown parser 当前为 v4，`ChatGPT Exporter (https://www.chatgptexporter.com)` 是受支持的 `powered_by` 值。
 
@@ -125,7 +129,11 @@ create -> random token returned once -> DB stores hash/prefix
 
 ### Attachments and Context Package
 
-`.crbundle` is the standard attachment-bearing import input. The Adapter accepts both the native attachment bundle schema and `chat-reader-import-bundle v1`, using CanJSONL as canonical truth and JSON/Markdown only for consistency reporting. It is validated in quarantine before commit; canonical RenderBlocks store only stable `attachmentId` values.
+`.crbundle` is no longer a product import format. Ordinary attachment upload,
+conversation-scoped Attachment/AssetObject identity, Reader/Share/Offline
+rendering and `.cr` archive restoration remain unchanged. Adaptive Import does
+not make private artifact endpoints public and does not persist source content
+inside an Import Profile.
 
 Ordinary uploads use expiring `attachment_upload_sessions/items`. The conversation attachment endpoint explicitly finalizes an uploaded item, promotes/reuses AssetObject bytes, and creates a conversation-owned Attachment identity. Message save never promotes uploads: it only references Attachments that already belong to the conversation. Split/merge clone Attachment identities for the target conversation, reuse AssetObject bytes, and rewrite occurrence/block/source Markdown IDs.
 

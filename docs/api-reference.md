@@ -1,6 +1,13 @@
 # API 参考
 
-## Import compatibility v5 (2026-08-12)
+## Adaptive Import (2026-08-22)
+
+JSON / Markdown sources use a session-oriented API. Analysis creates
+InputGroups and StructureFamilies, resolves Built-in or Learned Profile
+revisions, and produces canonical drafts for the existing durable commit path.
+Unknown and drifted Families use one unified Mapping endpoint; validation is
+performed on every group in the Family. `.cr` remains an independent archive
+preview/restore path. See [Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md).
 
 Importer v5 treats exporter JSON and its optional Markdown as one upload batch. JSON provides canonical message identity/role/time/order and allows a matching Prompt-only or Response-only Markdown export to be recognized; a standalone single-role Markdown file is still rejected. Empty messages may occur anywhere and are reported as ignored. Every non-empty message must have one reliable monotonic counterpart or Preview returns a non-committable conflict with per-source alignment diagnostics. Historical JSON plain fallbacks may pair with rich Markdown only under a unique matching role/timestamp identity.
 
@@ -40,7 +47,6 @@ Owner, Share and derivative content authorization occurs before file stat/read. 
 | Method | Path | 说明 |
 | --- | --- | --- |
 | POST | `/api/imports/preview` | multipart 上传并返回识别、preview 和 warnings |
-| POST | `/api/imports/bundles/preview` | 流式暂存 `.crbundle` 并异步校验 canonical、附件索引和对象 |
 | GET | `/api/imports/{import_id}` | 查询 preview、Draft 校验和、到期时间和任务状态 |
 | DELETE | `/api/imports/{import_id}` | 只清理已过期且未提交的 preview/Draft，其他状态返回 409 |
 | GET | `/api/imports/{import_id}/source-artifacts` | 查看 source artifact 元数据 |
@@ -49,7 +55,21 @@ Owner, Share and derivative content authorization occurs before file stat/read. 
 | GET | `/api/imports/{import_id}/status` | 查询阶段、百分比、消息进度、结果或错误 |
 | GET | `/api/imports/active` | 返回 queued、processing 和待处理 failed 任务 |
 
-产品导入有三类入口：兼容 JSON 必需、Markdown 可选配对；附件 `.crbundle`；旧 `.cr` 兼容归档。CanJSON v1/v2 由 JSON 控件自动识别。JSON 保持 metadata/role/time 和冲突判定权威；配对 Markdown 的标题候选只有在角色、规范化时间和顺序形成唯一最佳完整路径时才作为真实边界，其余候选保留在正文中。`.crbundle` 使用 CanJSONL 作为 canonical truth，兼容原生 attachment bundle 与 `chat-reader-import-bundle v1`；JSON/Markdown 只做一致性报告。官方 OpenAI 图/ZIP、CSV、TXT 和 Markdown 单文件返回 `422 unsupported_source_profile`。Preview 生成带 SHA-256 和到期时间的受控 Draft；Commit 校验并读取同一 Draft。Import 状态为 `previewed / queued / processing / committed / failed`。
+Adaptive JSON / Markdown：
+
+| Method | Path | 说明 |
+| --- | --- | --- |
+| POST | `/api/adaptive-import/sessions` | 有界上传 JSON/Markdown，分析 grouping、Family 与 Profile match；最多 500 文件、每文件 50 MiB、session 总计 512 MiB |
+| GET/DELETE | `/api/adaptive-import/sessions/{id}` | 恢复 session，或明确取消并清理其临时来源 |
+| PUT | `/api/adaptive-import/sessions/{id}/groups` | 仅在 pairing 不明确时确认 InputGroup |
+| POST | `/api/adaptive-import/sessions/{id}/families/{family}/mapping/preview` | 对完整 Family normalization/validation，并返回 canonical sample |
+| POST | `/api/adaptive-import/sessions/{id}/families/{family}/mapping` | 保存 VERIFIED Learned Profile/Revision 并重建 ImportPlan |
+| POST | `/api/adaptive-import/sessions/{id}/families/{family}/profile` | 为 AMBIGUOUS Family 明确选择候选 revision |
+| GET | `/api/import-formats` | 列出 Built-in 与 Learned Profile |
+| PATCH/DELETE | `/api/import-formats/{profile}` | 重命名、启停或删除 Learned Profile；Built-in 拒绝修改 |
+| GET | `/api/import-formats/{profile}/revisions` | 查看不可变历史 revision |
+
+产品导入只有 Adaptive JSON / Markdown 与 `.cr` archive 两类入口。CanJSON v1/v2 与原生 Chat Reader 格式是 Built-in Profile；单 Markdown 是正式 source mode。Import Profile 不保存正文，匹配结果会解释 hard requirements、semantic guards、compatibility 与 drift。READY 后仍使用现有 `/api/imports/{id}/commit` durable commit contract。
 
 ## Conversations
 
@@ -232,7 +252,6 @@ expiry and revocation, and cannot call private owner APIs.
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| POST | `/api/imports/bundles/preview` | 流式接收 `.crbundle`，异步校验 ZIP、哈希、MIME、扫描和引用 |
 | GET | `/api/capabilities` | 上传、scanner provider、未扫描策略、基础/复杂预览和最大文件大小 |
 | POST | `/api/conversations/{id}/attachment-upload-sessions` | 创建有期限的普通上传 session，可绑定目标消息/base version |
 | POST | `/api/attachment-upload-sessions/{id}/items` | 流式上传一个暂存项；返回 MIME/hash/大小/scan 状态 |

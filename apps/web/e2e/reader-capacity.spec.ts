@@ -1,16 +1,14 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import fs from "node:fs";
-import path from "node:path";
 
 const enabled = process.env.E2E_READER_CAPACITY === "1";
 test.skip(!enabled, "E2E_READER_CAPACITY=1 is required");
 test.setTimeout(900_000);
 
 type Tier = 398 | 1000 | 10000;
-type Profile = "plain" | "math" | "mixed" | "attachment_metadata";
+type Profile = "plain" | "math" | "mixed";
 
 const tiers: Tier[] = [398, 1000, 10000];
-const profiles: Profile[] = ["plain", "math", "mixed", "attachment_metadata"];
+const profiles: Profile[] = ["plain", "math", "mixed"];
 
 for (const profile of profiles) {
   for (const messages of tiers) {
@@ -49,34 +47,6 @@ for (const profile of profiles) {
 }
 
 async function seedConversation(request: APIRequestContext, messages: number, profile: Profile): Promise<string> {
-  if (profile === "attachment_metadata") {
-    const fixtureRoot = process.env.E2E_READER_ATTACHMENT_FIXTURE_DIR;
-    if (!fixtureRoot) throw new Error("E2E_READER_ATTACHMENT_FIXTURE_DIR is required for attachment capacity");
-    const bundle = fs.readFileSync(path.join(fixtureRoot, `attachment-${messages}.crbundle`));
-    const preview = await request.post("/api/imports/bundles/preview", {
-      multipart: {
-        file: {
-          name: `release-d-attachment-${messages}.crbundle`,
-          mimeType: "application/vnd.chat-reader.bundle+zip",
-          buffer: bundle,
-        },
-      },
-    });
-    expect(preview.ok()).toBe(true);
-    const accepted = await preview.json() as { import_id: string; status_url: string };
-    await waitForTask(request, accepted.status_url);
-    const conversationId = await commitImport(request, accepted.import_id);
-    const attachmentsResponse = await request.get(`/api/conversations/${conversationId}/attachments`);
-    expect(attachmentsResponse.ok()).toBe(true);
-    const attachments = (await attachmentsResponse.json()) as {
-      items: Array<{ asset_object: { id: string } | null; current_occurrence_count: number }>;
-    };
-    const expectedCount = Math.ceil(messages / 100);
-    expect(attachments.items).toHaveLength(expectedCount);
-    expect(new Set(attachments.items.map((item) => item.asset_object?.id).filter(Boolean)).size).toBe(1);
-    expect(attachments.items.reduce((sum, item) => sum + item.current_occurrence_count, 0)).toBe(expectedCount);
-    return conversationId;
-  }
   const source = JSON.stringify({
     metadata: { title: `Release D ${profile} ${messages}`, powered_by: "ChatGPT Exporter" },
     messages: Array.from({ length: messages }, (_, index) => ({
@@ -113,19 +83,6 @@ async function commitImport(request: APIRequestContext, importId: string): Promi
   throw new Error("capacity fixture import timed out");
 }
 
-async function waitForTask(request: APIRequestContext, statusUrl: string): Promise<void> {
-  const deadline = Date.now() + 900_000;
-  while (Date.now() < deadline) {
-    const response = await request.get(statusUrl);
-    expect(response.ok()).toBe(true);
-    const task = await response.json() as { status: string; error?: string; error_message?: string };
-    if (task.status === "committed") return;
-    if (task.status === "failed") throw new Error(task.error_message ?? task.error ?? "attachment fixture validation failed");
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error("attachment fixture validation timed out");
-}
-
 function buildMessage(index: number, messages: number, profile: Profile): string {
   if (index % 2 === 0) return `Synthetic capacity prompt ${index} seed 20260814.`;
   if (profile === "plain") return `Synthetic capacity response ${index}.\n\nBounded paragraph for tier ${messages}.`;
@@ -142,7 +99,7 @@ function buildMessage(index: number, messages: number, profile: Profile): string
   if (profile === "mixed") {
     return `## Mixed section ${index}\n\nA paragraph with \\(x_{${index}}\\).\n\n| key | value |\n| --- | ---: |\n| row | 1 |\n\n\`\`\`typescript\nconst value = 1;\n\`\`\`\n\n* [ ] pending\n* [x] complete\n\nText[^1]\n\n[^1]: Synthetic footnote.`;
   }
-  return `Attachment metadata row ${index}.\n\n![synthetic-${index}](attachment://synthetic-${index})\n\nThe binary payload is intentionally absent.`;
+  return `Synthetic capacity response ${index}.`;
 }
 
 async function measureReader(page: Page, conversationId: string, run: number) {

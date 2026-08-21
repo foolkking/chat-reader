@@ -12,7 +12,6 @@ class SourceProfile(StrEnum):
     chat_reader_canjson_v1 = "chat_reader_canjson_v1"
     chat_reader_canjson_v2 = "chat_reader_canjson_v2"
     chat_reader_cr_v2 = "chat_reader_cr_v2"
-    chat_reader_bundle_v1 = "chat_reader_bundle_v1"
     unknown = "unknown"
 
 
@@ -103,14 +102,6 @@ class ImportPreviewResponse(BaseModel):
     archive_summary: dict | None = None
     duplicate_conversation_id: UUID | None = None
     compatibility: str | None = None
-
-
-class BundlePreviewAccepted(BaseModel):
-    import_id: UUID
-    task_id: UUID
-    status: str = "queued"
-    status_url: str
-    preview_url: str
 
 
 class ImportCommitOptions(BaseModel):

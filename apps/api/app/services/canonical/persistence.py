@@ -42,7 +42,6 @@ from app.services.projects.project_service import add_conversation_to_project, e
 from app.services.search.search_indexer import rebuild_search_documents_for_conversation
 from app.services.toc.toc_builder import rebuild_headings_for_conversation
 from app.services.exporting.cr_archive import CrArchiveError, import_cr_archive
-from app.services.import_pipeline.bundle_import import BundleImportError, publish_bundle_attachments
 
 
 class CommitImportError(ValueError):
@@ -166,6 +165,7 @@ def commit_import_preview(
         import_record.conversation_id = conversation.id
         import_record.status = "committed"
         import_record.phase = "completed"
+        import_record.session_state = "COMPLETED"
         import_record.progress = 100
         import_record.processed_messages = message_count
         import_record.total_messages = message_count
@@ -246,6 +246,7 @@ def commit_import_preview(
     import_record.conversation_id = conversation_ids[0] if conversation_ids else None
     import_record.status = "committed"
     import_record.phase = "completed"
+    import_record.session_state = "COMPLETED"
     import_record.progress = 100
     import_record.processed_messages = total_messages
     import_record.total_messages = total_expected_messages
@@ -482,22 +483,6 @@ def _persist_conversation(
         total_messages=total_messages,
     )
     _persist_canjson_private_content(db, conversation, draft, identity_map, attachment_map)
-
-    if import_record.source_profile == "chat_reader_bundle_v1":
-        bundle_artifact = next(
-            (artifact for artifact in artifacts if artifact.source_profile == "chat_reader_bundle_v1"),
-            None,
-        )
-        if bundle_artifact is None:
-            raise BundleImportError("Bundle source artifact is missing during commit.")
-        publish_bundle_attachments(
-            db,
-            import_record=import_record,
-            artifact=bundle_artifact,
-            conversation=conversation,
-            draft=draft,
-            identity_map=identity_map,
-        )
 
     event_payload = {
         "import_id": str(import_record.id),

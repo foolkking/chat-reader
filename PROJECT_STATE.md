@@ -1,5 +1,38 @@
 # Project State
 
+## 2026-08-22 Adaptive JSON / Markdown Import
+
+- Chat Reader now owns one deterministic adaptive-import pipeline:
+  source files are analyzed into InputGroups and session-local
+  StructureFamilies, resolved through Built-in or Learned Profile revisions,
+  normalized into the existing `CanonicalConversationDraft`, validated across
+  the full Family, and committed through the existing canonical persistence
+  service. No converted download/re-upload step remains.
+- The user-facing Import surface contains only `JSON / Markdown` and `.cr`.
+  Single JSON, single Markdown, paired sources and batches are supported.
+  Ambiguous mixed-file pairing enters a conditional Group Resolver; normal
+  known formats do not expose grouping or Mapping workspaces.
+- Built-in profiles cover the formats already supported by Chat Reader:
+  Native JSON/Markdown, CanJSON v1/v2 and Prompt/Response Markdown. Unknown
+  structures can create a Learned Profile only after full-family validation.
+  Required-field or semantic drift creates a new immutable revision; verified
+  historical revisions remain match candidates.
+- Mapping separates message locator, role source, role value conversion,
+  content, relation and noise rules. Unknown roles, competing profiles,
+  incomplete relations and invalid canonical drafts fail conservatively.
+  Profile signatures contain no conversation body.
+- The integrated UI uses the existing Chat Reader dialog, overlay, form,
+  token and settings patterns. Import Overview, conditional Group Resolver,
+  unified Mapping Workspace, canonical Preview and actionable Diagnostics
+  replace the retired standalone conversion workbench.
+- `.crbundle` import UI, API, parser, result/download workflow and dedicated
+  tests are removed. Ordinary attachments, AssetObject behavior, Share,
+  Offline and independent `.cr` archive restore remain supported.
+- Alembic source head is `20260822_0025`; it adds adaptive session grouping,
+  Family, Profile and immutable revision persistence without changing the
+  Conversation canonical schema. The retired Gateway's SQLite profile tables
+  were empty, so no historical user mapping data required migration.
+
 ## 2026-08-22 Current-project drop target and project workspace
 
 - An open Project page is now a first-class sidebar conversation drop target.

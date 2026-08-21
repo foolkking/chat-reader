@@ -11,7 +11,6 @@ from app.core.database import SessionLocal
 from app.core.config import get_settings
 from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
-from app.models.import_record import ImportRecord
 from app.models.project import Project
 from app.services.editing.message_edit_service import (
     MessageEditError,
@@ -28,7 +27,6 @@ from app.services.offline_packages import build_catalog, build_offline_package, 
 from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
-from app.services.import_pipeline.bundle_import import preview_bundle_import
 from app.services.assets.derivatives import build_asset_derivative
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.core.observability import structured_event
@@ -41,24 +39,6 @@ ProgressCallback = Callable[[str, int, int, int], None]
 
 class BackgroundJobCancelled(RuntimeError):
     pass
-
-
-def queue_bundle_preview(db: Session, *, import_id: uuid.UUID, filename: str) -> BackgroundJob:
-    job = BackgroundJob(
-        id=uuid.uuid4(),
-        job_type="bundle_preview",
-        status="queued",
-        phase="queued",
-        progress=0,
-        processed_items=0,
-        total_items=0,
-        payload={"import_id": str(import_id), "title": filename},
-        result={},
-        idempotency_key=f"bundle-preview:{import_id}",
-    )
-    db.add(job)
-    db.flush()
-    return job
 
 
 def queue_conversation_merge(
@@ -825,18 +805,6 @@ def process_background_job(
                     "download_url": f"/api/exports/{artifact.id}/download",
                 }
                 processed_items = len(attachment_ids)
-            elif job.job_type == "bundle_preview":
-                import_id = uuid.UUID(payload["import_id"])
-                preview = preview_bundle_import(db, import_id=import_id, progress_callback=report)
-                job_result = {
-                    "import_id": str(import_id),
-                    "message_count": preview.message_count,
-                    "attachment_count": preview.attachment_count,
-                    "object_count": preview.object_count,
-                    "can_commit": True,
-                    "preview_url": f"/api/imports/{import_id}/preview",
-                }
-                processed_items = preview.object_count
             elif job.job_type == "attachment_derivative":
                 derivative = build_asset_derivative(
                     db,
@@ -923,15 +891,6 @@ def process_background_job(
                 job.error_message = None if cancelled else _safe_error(exc)
                 job.heartbeat_at = now
                 job.completed_at = now
-                if job.job_type == "bundle_preview" and job.payload.get("import_id"):
-                    import_record = db.get(ImportRecord, uuid.UUID(job.payload["import_id"]))
-                    if import_record is not None:
-                        import_record.status = "failed"
-                        import_record.phase = "failed"
-                        import_record.progress = 0
-                        import_record.error_message = _safe_error(exc)
-                        import_record.heartbeat_at = now
-                        import_record.completed_at = now
                 db.commit()
 
 

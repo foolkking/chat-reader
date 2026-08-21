@@ -70,10 +70,13 @@ local:default -> UserPreference / RecentItem
 ## 导入流程
 
 ```text
-upload JSON (+ optional Markdown), .crbundle or legacy .cr -> detect -> parse/validate
--> durable ImportDraft JSONL + checksum -> explicit enqueue (202)
-worker -> verify/read the same Draft -> clean -> canonicalize
-       -> blocks -> headings -> search -> atomic publish
+JSON / Markdown files -> analyze -> InputGroup -> StructureFamily
+-> Built-in/Learned ImportProfileRevision or Mapping
+-> CanonicalConversationDraft -> full-family validation
+-> durable ImportDraft -> explicit enqueue (202)
+worker -> canonical persistence -> blocks -> headings -> search -> atomic publish
+
+.cr archive -> independent archive preview/restore pipeline
 ```
 
 Import queue 持久化在 PostgreSQL。独立单并发 worker 使用 `FOR UPDATE SKIP LOCKED` 领取任务，并写入阶段、百分比、消息计数和 heartbeat；崩溃任务超过五分钟会重新排队。导入主体在 worker 事务中完成，conversation 在成功前保持 `importing`，不会进入列表、搜索或分享。
@@ -82,7 +85,7 @@ Import queue 持久化在 PostgreSQL。独立单并发 worker 使用 `FOR UPDATE
 
 大批量 `RenderBlock`、`Heading` 和 `SearchDocument` 在 PostgreSQL 使用 COPY；SQLite 测试使用 SQLAlchemy Core fallback。导入版本的 `MessageVersion.blocks` 保持兼容但写入空数组，正式 block 来源为 `render_blocks`，避免双份 JSON。
 
-raw artifact 存在受控 storage 中，只用于追踪和诊断。reader 和 share 页面不直接渲染 raw artifact。新导入主链路不解析 OpenAI 官方图结构；历史 official source profile 只作为既有记录保留。
+raw artifact 存在受控 storage 中，只用于追踪和诊断。reader 和 share 页面不直接渲染 raw artifact。Profile 只保存结构、Mapping、role 字典、relation、noise 与 matcher metadata，不保存正文。详见 [Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)。
 
 ## 阅读与性能
 

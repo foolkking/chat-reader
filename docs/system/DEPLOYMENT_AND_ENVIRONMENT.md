@@ -8,6 +8,10 @@ sets `client_max_body_size 110m` only for the exact
 `/api/imports/preview` location, allowing multipart overhead for a maximum-size
 pair. The server-wide 60 MiB boundary remains in force for every other route.
 
+Adaptive batches use the separate exact `/api/adaptive-import/sessions`
+location with `client_max_body_size 520m`; application limits remain 50 MiB
+per file, 512 MiB total and 500 files. No other route inherits this allowance.
+
 ## Worker memory boundary
 
 Production Compose sets `import-worker.mem_limit` to `${IMPORT_WORKER_MEMORY_LIMIT:-640m}`. Override it only through the production environment; do not replace `.env.production` and do not remove named volumes. Conversation merge must remain below this limit through bounded canonical copy batches.

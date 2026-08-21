@@ -29,8 +29,11 @@ import type {
   HealthResponse,
   ImportDuplicatePolicy,
   ImportPreviewResponse,
-  BundlePreviewAccepted,
   ImportStatusResponse,
+  AdaptiveImportSession,
+  AdaptiveMappingPreview,
+  ImportFormatProfile,
+  ImportFormatRevision,
   NotebookRead,
   MessageEditResponse,
   MessageDeleteResponse,
@@ -576,15 +579,6 @@ export async function previewImport(files: File[]): Promise<ImportPreviewRespons
   });
 }
 
-export async function previewAttachmentBundle(file: File): Promise<BundlePreviewAccepted> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return fetchJson<BundlePreviewAccepted>("/api/imports/bundles/preview", {
-    method: "POST",
-    body: formData,
-  });
-}
-
 export async function getImportPreview(importId: string): Promise<ImportPreviewResponse> {
   return fetchJson<ImportPreviewResponse>(`/api/imports/${importId}/preview`);
 }
@@ -973,6 +967,89 @@ export async function updateShare(shareId: string, input: ShareUpdateInput): Pro
 export async function getSharedConversation(token: string): Promise<SharedConversationBootstrap> {
   const response = await fetchJson<SharedConversationBootstrap>(`/api/shared/${encodeURIComponent(token)}`);
   return { ...response, share: normalizeShareUrl(response.share) };
+}
+
+export async function createAdaptiveImportSession(files: File[], repairProfileId?: string | null): Promise<AdaptiveImportSession> {
+  const formData = new FormData();
+  for (const file of files) formData.append("files", file);
+  if (repairProfileId) formData.append("repair_profile_id", repairProfileId);
+  return fetchJson<AdaptiveImportSession>("/api/adaptive-import/sessions", { method: "POST", body: formData });
+}
+
+export async function getAdaptiveImportSession(importId: string): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}`);
+}
+
+export async function cancelAdaptiveImportSession(importId: string): Promise<void> {
+  await fetchJson<void>(`/api/adaptive-import/sessions/${importId}`, { method: "DELETE" });
+}
+
+export async function resolveAdaptiveImportGroups(
+  importId: string,
+  groups: Array<{ artifact_ids: string[]; display_name?: string }>,
+): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/groups`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ groups }),
+  });
+}
+
+export async function previewAdaptiveFamilyMapping(
+  importId: string,
+  familyId: string,
+  input: { profileName: string; mappingSpec: Record<string, unknown>; sampleGroupId?: string },
+): Promise<AdaptiveMappingPreview> {
+  return fetchJson<AdaptiveMappingPreview>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/mapping/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      profile_name: input.profileName,
+      mapping_spec: input.mappingSpec,
+      sample_group_id: input.sampleGroupId,
+    }),
+  });
+}
+
+export async function saveAdaptiveFamilyMapping(
+  importId: string,
+  familyId: string,
+  input: { profileName: string; mappingSpec: Record<string, unknown> },
+): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/mapping`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ profile_name: input.profileName, mapping_spec: input.mappingSpec }),
+  });
+}
+
+export async function selectAdaptiveFamilyProfile(importId: string, familyId: string, revisionId: string): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/profile`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ revision_id: revisionId }),
+  });
+}
+
+export async function getImportFormats(): Promise<ImportFormatProfile[]> {
+  return fetchJson<ImportFormatProfile[]>("/api/import-formats");
+}
+
+export async function updateImportFormat(profileId: string, input: { name?: string; status?: "ACTIVE" | "DISABLED" }): Promise<ImportFormatProfile> {
+  return fetchJson<ImportFormatProfile>(`/api/import-formats/${profileId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteImportFormat(profileId: string): Promise<void> {
+  const response = await fetch(`/api/import-formats/${profileId}`, { method: "DELETE" });
+  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+}
+
+export async function getImportFormatRevisions(profileId: string): Promise<ImportFormatRevision[]> {
+  return fetchJson<ImportFormatRevision[]>(`/api/import-formats/${profileId}/revisions`);
 }
 
 export async function unlockSharedConversation(token: string, password: string): Promise<void> {

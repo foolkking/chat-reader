@@ -8,8 +8,10 @@
 
 ## Current access boundary
 
-Release N protects all business content, including Share and direct artifact
-downloads, with one owner password and server-side per-device sessions. A
+Release N protects private business content and direct owner artifact
+downloads with one owner password and server-side per-device sessions. An
+explicit Share URL is a separately scoped public-by-link capability and may
+use an independent Share password. A
 trusted browser remains signed in for 48 hours of sliding inactivity; logout
 and owner-password changes revoke sessions. The reserved principal/session
 boundary is not a multi-user feature. Historical notes below that describe an
@@ -20,7 +22,7 @@ unauthenticated deployment are superseded by
 
 ## 定位
 
-Chat Reader 是单资料拥有者使用的标准化 AI 对话资料库，不是在线聊天客户端、OpenAI 官方导出解析器或任意厂商原始格式兼容层。它接收已经线性化的内容并转换为稳定 canonical 数据，帮助用户长期阅读、检索、批注、整理、分享和备份。
+Chat Reader 是单资料拥有者使用的 AI 对话资料库，不是在线聊天客户端。它通过确定性的 Adaptive Import 学习用户确认过的 JSON / Markdown 结构，并转换为稳定 canonical 数据，帮助用户长期阅读、检索、批注、整理、分享和备份。
 
 ## 主要工作流
 
@@ -33,10 +35,10 @@ Chat Reader 是单资料拥有者使用的标准化 AI 对话资料库，不是�
 
 ## 导入与数据
 
-- 产品导入支持兼容 JSON（Markdown 可选配对）、标准附件 `.crbundle` 和旧 Chat Reader `.cr` 兼容归档。CanJSON v1/v2 由 JSON 控件自动识别。
-- OpenAI 官方 conversations JSON/ZIP、CSV、TXT、第三方 splitter 和 Markdown 单文件提交均返回 `422 unsupported_source_profile`；既有历史 conversation 不迁移、不删除。
-- 形式 1 以 JSON 的 metadata/role/time、源索引和冲突判断为权威；配对时用完整 JSON 角色/时间/顺序序列排除正文和代码示例中的伪 `Prompt`/`Response` 标题，只有唯一最佳完整路径才放行。消息配对有效时以 Markdown 为显示正文，未提供 Markdown 时才使用 JSON `say`。
-- preview 写入带校验和和过期时间的受控 ImportDraft JSONL，不写 canonical；commit 校验并流式读取同一 Draft 后进入 PostgreSQL durable queue。
+- 产品导入只有 Adaptive JSON / Markdown 与 `.cr` 归档两类入口。前者支持单 JSON、单 Markdown、JSON + Markdown 与批量来源；Chat Reader Native、CanJSON v1/v2 和 Prompt/Response Markdown 是 Built-in Profile。
+- 未知 Structure Family 只需 Mapping 一次；全 Family 验证成功后保存 Learned Profile。后续兼容来源自动匹配；required structure 或 role 语义漂移时创建新 Revision，旧 Revision 保留兼容能力。
+- 来源先规范化为 `CanonicalConversationDraft`，再进入现有 ImportDraft/canonical persistence；不会生成中间转换文件让用户下载后重新上传。
+- `.cr` 继续走独立归档恢复。`.crbundle` 用户入口、解析 route 和转换结果流程已删除；普通附件及 `.cr` 中的附件关系不受影响。
 - 第一版消息版本永久不可覆盖/删除；第二版及以后只有用户显式选择“保存到当前版本”时可覆盖，普通编辑仍创建新版本。Reader 只读取 current version 和对应 RenderBlock，不直接渲染 raw source artifact。
 
 ## 阅读体验
@@ -80,10 +82,10 @@ Chat Reader 是单资料拥有者使用的标准化 AI 对话资料库，不是�
 
 ## 当前限制
 
-- 固定主体 `local:default`，没有登录、多用户、租户隔离或应用内管理员。
+- 固定 owner 主体，没有多用户、租户隔离或应用内管理员。
 - 不提供在线 AI 回答、streaming、重新生成或分支切换 UI。
 - 没有完整消息/轮次虚拟列表；极长消息 blocks 会虚拟化 DOM，但该轮完整正文数据仍进入内存。
-- 不提供标签、全局笔记中心或语义搜索；`.crbundle` 是附件导入包。普通上传、左侧对话文件管理工作区、已有附件拖入源码、消息插入和基础预览已经实现；King 扫描器关闭时附件显示“未扫描/scanner_disabled”。消息保存不重新上传或扫描已提升的文件，Reader 只局部替换受影响消息。
+- 不提供标签、全局笔记中心或语义搜索。普通附件上传、左侧对话文件管理工作区、已有附件拖入源码、消息插入和基础预览已经实现；King 扫描器关闭时附件显示“未扫描/scanner_disabled”。消息保存不重新上传或扫描已提升的文件，Reader 只局部替换受影响消息。
 - 附件文件名和受限 `text_extract` 派生文本进入现有全文搜索；复杂 Office/OCR/CAD/压缩包预览为 `NOT_IMPLEMENTED`，只提供受控下载，不阻塞基础附件链路。
 - 浏览器离线数据受配额、持久化授权和清除站点数据影响。
 - 应用本身不构成公网访问控制；部署方必须提供 HTTPS、认证/网络限制和备份。

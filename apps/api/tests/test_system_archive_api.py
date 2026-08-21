@@ -20,16 +20,30 @@ from app.models.reading_position import ReadingPosition
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
 from app.models.source_message_ref import SourceMessageRef
-from test_attachment_bundle_api import _bundle_bytes, _process_task
+from background_job_test_utils import process_queued_jobs
 from test_import_preview_api import client  # noqa: F401
+
+
+def _process_task(task_id: str) -> None:
+    process_queued_jobs(until_job_id=task_id)
 
 
 def _import_attachment_conversation(client) -> str:
     preview = client.post(
-        "/api/imports/bundles/preview",
-        files={"file": ("archive.crbundle", _bundle_bytes(), "application/vnd.chat-reader.bundle+zip")},
+        "/api/imports/preview",
+        files={
+            "files": (
+                "archive-source.json",
+                json.dumps(
+                    {
+                        "metadata": {"powered_by": "ChatGPT Exporter", "title": "System archive fixture"},
+                        "messages": [{"role": "Prompt", "say": "Attach evidence here."}],
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
     ).json()
-    _process_task(preview["task_id"])
     commit = client.post(f"/api/imports/{preview['import_id']}/commit")
     assert commit.status_code == 200, commit.text
     return commit.json()["conversation_ids"][0]
@@ -48,26 +62,34 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
         f"/api/conversations/{conversation_id}/attachment-upload-sessions",
         json={},
     ).json()
-    unreferenced_items = []
-    for filename in ("round-trip-unreferenced-a.txt", "round-trip-unreferenced-b.txt"):
+    upload_items = []
+    for filename, content in (
+        ("evidence.txt", b"attachment body\n"),
+        ("round-trip-unreferenced-a.txt", b"shared unreferenced bytes\n"),
+        ("round-trip-unreferenced-b.txt", b"shared unreferenced bytes\n"),
+    ):
         item = client.post(
             f"/api/attachment-upload-sessions/{upload_session['id']}/items",
-            files={"file": (filename, b"shared unreferenced bytes\n", "text/plain")},
+            files={"file": (filename, content, "text/plain")},
         )
         assert item.status_code == 201, item.text
-        unreferenced_items.append(item.json()["id"])
+        upload_items.append(item.json()["id"])
     finalized = client.post(
         f"/api/conversations/{conversation_id}/attachments",
-        json={"upload_item_ids": unreferenced_items},
+        json={"upload_item_ids": upload_items},
     )
     assert finalized.status_code == 201, finalized.text
-    assert len(finalized.json()["items"]) == 2
+    assert len(finalized.json()["items"]) == 3
+    referenced_attachment_id = next(
+        item["id"] for item in finalized.json()["items"] if item["display_name"] == "evidence.txt"
+    )
     detail = client.get(f"/api/conversations/{conversation_id}/message-window", params={"limit": 10}).json()
     message = detail["items"][0]
     edited = client.patch(
         f"/api/messages/{message['id']}",
         json={
-            "display_text": message["current_version"]["display_text"] + "\n\nSystem archive edit.",
+            "content_markdown": message["current_version"]["display_text"]
+            + f"\n\n[Evidence](cr-asset://{referenced_attachment_id})\n\nSystem archive edit.",
             "base_version_id": message["current_version"]["id"],
         },
     )
@@ -152,7 +174,7 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
     assert restored.status_code == 200, restored.text
     assert restored.json()["restored"]["conversations"] == 1
     assert restored.json()["restored"]["attachments"] == 3
-    assert restored.json()["restored"]["attachment_occurrences"] == 2
+    assert restored.json()["restored"]["attachment_occurrences"] == 1
 
     generator = override()
     db = next(generator)
@@ -185,7 +207,7 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
         assert unreferenced_attachments[0].asset_object_id == unreferenced_attachments[1].asset_object_id
         assert db.query(MessageVersionAttachment).filter(
             MessageVersionAttachment.attachment_id == referenced_attachment.id
-        ).count() == 2
+        ).count() == 1
         attachment_id = referenced_attachment.id
     finally:
         db.close()

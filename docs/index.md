@@ -2,6 +2,8 @@
 
 当前渲染合同：[AI Rich Markdown Renderer](system/AI_RICH_MARKDOWN_CONTRACT.md)，定义 Reader、源码预览和 Markdown 附件共享的 Math/GFM/Footnote、安全、无障碍、溢出与离线资源行为。
 
+当前 Adaptive Import 合同：[Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)，定义 JSON/Markdown 的 session、group、family、profile revision、Mapping、canonical draft、直接导入和 `.cr` 独立恢复边界。
+
 Single-owner authentication and the public-by-link Share/search navigation
 enhancement are deployed and accepted. Current facts are in
 [Project State](../PROJECT_STATE.md), [testing](testing.md),
@@ -33,7 +35,7 @@ their earlier incomplete verification records.
 - [Release N single-owner authentication contract](system/AUTHENTICATION_CONTRACT.md)
 - [Conversation/import/viewer test addendum](testing.md)
 
-当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-16。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-22。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 
 ## 开始这里
 

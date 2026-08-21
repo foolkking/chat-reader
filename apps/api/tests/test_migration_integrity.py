@@ -30,7 +30,7 @@ def test_alembic_current_matches_repository_head() -> None:
         capture_output=True,
         check=True,
     )
-    expected_head = "20260817_0024"
+    expected_head = "20260822_0025"
     assert heads.stdout.strip() == f"{expected_head} (head)"
     if expected_head not in current.stdout:
         import pytest
@@ -45,6 +45,16 @@ def test_latest_migration_has_upgrade_and_downgrade() -> None:
     assert "def downgrade()" in source
     assert "idx_attachments_conversation_id_id" in source
     assert "idx_message_versions_message_created_at" in source
+
+
+def test_adaptive_import_migration_has_profile_and_session_boundaries() -> None:
+    migration = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "20260822_0025_adaptive_import_profiles.py"
+    source = migration.read_text(encoding="utf-8")
+    assert "def upgrade()" in source
+    assert "def downgrade()" in source
+    for table in ("import_profiles", "import_profile_revisions", "import_structure_families", "import_input_groups"):
+        assert table in source
+    assert "fk_import_profiles_current_revision" in source
 
 
 def test_search_document_model_uses_postgresql_tsvector_type() -> None:

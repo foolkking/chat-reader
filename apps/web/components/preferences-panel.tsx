@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { usePreferences, useTranslations } from "./preferences-provider";
 import { DataBackupPanel } from "./data-backup-panel";
 import { AccountSecurityPanel } from "./account-security-panel";
+import { ImportFormatSettings } from "./import-format-settings";
 
 export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/" }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string }) {
   const preferences = usePreferences();
@@ -91,6 +92,7 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
           <Segment active={annotationPosition === "docked"} onClick={() => updateAnnotationPosition("docked")}>{t("docked")}</Segment>
         </SettingGroup>
         {!libraryMode ? <DataBackupPanel /> : null}
+        {!libraryMode ? <ImportFormatSettings /> : null}
         {!libraryMode ? <AccountSecurityPanel /> : null}
       </div> : null}
     </section>

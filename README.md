@@ -2,17 +2,19 @@
 
 ## Current access boundary
 
-Chat Reader is deployed as a single-owner application. Business content,
-including Share and direct artifact downloads, requires the owner password on
-a new browser. Authentication uses server-side per-device sessions with a
-48-hour sliding inactivity timeout; no multi-user product feature is exposed.
+Chat Reader is deployed as a single-owner application. Private business
+content and owner artifact downloads require the owner password on a new
+browser. Explicit Share URLs are public-by-link capabilities and may have an
+independent Share password. Authentication uses server-side per-device
+sessions with a 48-hour sliding inactivity timeout; no multi-user product
+feature is exposed.
 See [`docs/system/AUTHENTICATION_CONTRACT.md`](docs/system/AUTHENTICATION_CONTRACT.md).
 
-Chat Reader 是面向已经线性化、标准化的 AI 对话内容的长期阅读与管理系统。普通导入使用兼容 JSON（可附 Markdown 做一致性校验），完整恢复使用 `.cr`；系统提供长对话阅读、搜索、批注、Project 管理、分享、导出和离线资料库，但不解析 OpenAI 官方对话图或 ZIP。
+Chat Reader 是面向 AI 对话内容的长期阅读与管理系统。Adaptive Import 能确定性识别内置或用户学习过的 JSON / Markdown 格式；陌生结构只需 Mapping 一次，之后会成为可复用的导入格式。完整恢复继续使用 `.cr`。
 
 ## 核心能力
 
-- 三类导入入口：兼容 JSON（含 CanJSON 自动识别、可选 Markdown）、附件 `.crbundle` 和旧 `.cr` 兼容归档；预览通过后才提交。
+- 两类导入入口：Adaptive JSON / Markdown（单文件、配对或批量）和 `.cr` 归档恢复；CanJSON v1/v2 与 Chat Reader 原生格式作为 Built-in Profile 自动识别。
 - 对话级附件支持普通上传、当前对话文件、版本 occurrence、Reader/Share/Offline 和基础预览；轻量部署可明确使用 disabled scanner。
 - 以完整对话轮次加载长正文，支持远距离定位、连续滚动和稳定阅读位置恢复。
 - GFM、Shiki、KaTeX、Mermaid、callout、代码复制及安全链接渲染。
@@ -70,4 +72,4 @@ corepack pnpm run dev:web
 - [生产部署](docs/deployment.md)
 - [故障排查](docs/troubleshooting.md)
 
-当前没有应用内认证、多用户隔离、在线 AI 生成、完整消息/轮次虚拟列表、HTML/PDF 导出、标签系统或语义搜索。极长消息仅在 blocks 层动态虚拟化；公网部署必须由反向代理提供 HTTPS 和访问控制。
+当前没有多用户产品功能、在线 AI 生成、完整消息/轮次虚拟列表、HTML/PDF 导出、标签系统或语义搜索。极长消息仅在 blocks 层动态虚拟化；公网部署必须由反向代理提供 HTTPS。
