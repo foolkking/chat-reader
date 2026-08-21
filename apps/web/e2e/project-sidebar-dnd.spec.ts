@@ -3,25 +3,20 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from "@
 const runDndFlow = process.env.E2E_DND_FLOW === "1";
 
 test.skip(!runDndFlow, "E2E_DND_FLOW=1 is required");
+test.use({ serviceWorkers: "block" });
 
 async function createConversation(request: APIRequestContext, title: string): Promise<string> {
-  const preview = await request.post("/api/imports/preview", {
-    multipart: {
-      files: {
-        name: `${title}.json`,
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify({
-          metadata: { title, powered_by: "ChatGPT Exporter" },
-          messages: [{ role: "Prompt", say: `Synthetic drag fixture for ${title}.` }],
-        })),
-      },
+  const response = await request.post("/api/conversations", {
+    data: {
+      title,
+      messages: [
+        { role: "user", content_markdown: `Synthetic drag fixture for ${title}.` },
+        { role: "assistant", content_markdown: "Project drag fixture response." },
+      ],
     },
   });
-  expect(preview.ok()).toBeTruthy();
-  const previewBody = await preview.json();
-  const commit = await request.post(`/api/imports/${previewBody.import_id}/commit`);
-  expect(commit.ok()).toBeTruthy();
-  return (await commit.json()).conversation_ids[0] as string;
+  expect(response.ok()).toBeTruthy();
+  return (await response.json()).conversation.id as string;
 }
 
 async function pointerDrag(page: Page, source: Locator, target: Locator, hoverMs = 100): Promise<void> {
@@ -130,5 +125,65 @@ test("conversation drop targets do not collide with project sorting targets", as
     await page.request.delete(`/api/conversations/${secondId}`);
     await page.request.patch(`/api/projects/${firstProjectId}`, { data: { is_archived: true } });
     await page.request.patch(`/api/projects/${secondProjectId}`, { data: { is_archived: true } });
+  }
+});
+
+test("open project page accepts a conversation from the sidebar without leaving the page", async ({ page }) => {
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const conversationId = await createConversation(page.request, `Current project drop ${suffix}`);
+  const projectResponse = await page.request.post("/api/projects", { data: { name: `Current drop ${suffix}` } });
+  expect(projectResponse.ok()).toBeTruthy();
+  const projectId = (await projectResponse.json()).id as string;
+
+  try {
+    await page.goto(`/projects/${projectId}`);
+    await expect(page.getByTestId("current-project-drop-zone")).toHaveCount(1);
+    await pointerDrag(
+      page,
+      page.getByTestId(`conversation-row-${conversationId}`),
+      page.getByTestId("current-project-drop-zone"),
+    );
+
+    await expect.poll(() => conversationProject(page.request, conversationId)).toBe(projectId);
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}$`));
+    await expect(page.getByRole("article").getByRole("link", { name: `Current project drop ${suffix}`, exact: true })).toBeVisible();
+    await expect(page.getByTestId("current-project-drop-zone")).toHaveCount(1);
+    await expect(page.getByText(/Move failed|移动失败/)).toHaveCount(0);
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}`);
+    await page.request.patch(`/api/projects/${projectId}`, { data: { is_archived: true } });
+  }
+});
+
+test("failed current-project drop restores the sidebar and project caches", async ({ page }) => {
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const title = `Failed current drop ${suffix}`;
+  const conversationId = await createConversation(page.request, title);
+  const projectResponse = await page.request.post("/api/projects", { data: { name: `Rollback target ${suffix}` } });
+  expect(projectResponse.ok()).toBeTruthy();
+  const projectId = (await projectResponse.json()).id as string;
+
+  try {
+    await page.goto(`/projects/${projectId}`);
+    await page.route(`**/api/conversations/${conversationId}/placement`, async (route) => {
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Revision conflict" }),
+      });
+    });
+    await pointerDrag(
+      page,
+      page.getByTestId(`conversation-row-${conversationId}`),
+      page.getByTestId("current-project-drop-zone"),
+    );
+
+    await expect(page.getByRole("alert").filter({ hasText: /Move failed|移动失败/ })).toContainText(/conversation changed|对话刚刚发生了变化/);
+    await expect.poll(() => conversationProject(page.request, conversationId)).toBeNull();
+    await expect(page.getByTestId(`conversation-row-${conversationId}`)).toHaveAttribute("data-project-id", "unclassified");
+    await expect(page.getByRole("article").getByRole("link", { name: title, exact: true })).toHaveCount(0);
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}`);
+    await page.request.patch(`/api/projects/${projectId}`, { data: { is_archived: true } });
   }
 });

@@ -1,5 +1,21 @@
 # Project State
 
+## 2026-08-22 Current-project drop target and project workspace
+
+- An open Project page is now a first-class sidebar conversation drop target.
+  Dropping an unclassified or cross-project conversation into the right-hand
+  workspace keeps the current URL and scroll context, updates the destination
+  list immediately and reports success without navigating the Reader.
+- Optimistic project-list entries always include a valid `project_relation`.
+  A failed placement restores the project, project-conversation and sidebar
+  conversation caches together and reports a localized retryable error.
+- The desktop Project workspace now separates title/count authority and list
+  controls from its compact divided conversation list. During a conversation
+  drag, an amber-to-accent target layer names the current project and does not
+  occupy layout or intercept input outside the drag. Existing menu and keyboard
+  movement remain the non-pointer alternatives.
+- No API, database schema, dependency, Reader, Files or Share contract changed.
+
 ## 2026-08-21 Large import and semantic Markdown copy deployment
 
 - The scoped import-pairing and Reader Markdown-copy changes are deployed from

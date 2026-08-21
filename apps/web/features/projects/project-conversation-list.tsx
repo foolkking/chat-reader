@@ -136,7 +136,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar currentProjectId={projectId} mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />
+      <ProjectSidebar currentProjectId={projectId} currentProjectDropTargetId={projectId} mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />
       <section className="flex min-w-0 flex-1 flex-col">
         <MobilePageHeader
           title={project?.name ?? (zh ? "项目" : "Project")}
@@ -144,15 +144,27 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
           onOpenSidebar={() => setMobileSidebarOpenSignal((value) => value + 1)}
           className="md:px-6"
           actions={
-            <>
-            <div className="hidden sm:block"><ConversationSortMenu /></div>
-            {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} onClick={() => setSelectionMode(true)} /> : null}
-            </>
+            <div className="flex items-center gap-2 md:hidden">
+              <div className="hidden sm:block"><ConversationSortMenu /></div>
+              {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} onClick={() => setSelectionMode(true)} /> : null}
+            </div>
           }
         />
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto max-w-5xl space-y-5 px-4 py-8 md:px-6">
+        <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div data-project-drop-target={projectId} className="pointer-events-none absolute inset-0 z-20" />
+          <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-10">
+            <header className="hidden items-end justify-between gap-6 border-b border-ui pb-6 md:flex">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-accent">{zh ? "项目工作区" : "Project workspace"}</p>
+                <h1 className="mt-2 truncate text-2xl font-semibold text-primary">{project?.name ?? (zh ? "项目" : "Project")}</h1>
+                <p className="mt-2 text-sm text-secondary">{zh ? `${project?.conversation_count ?? 0} 个对话，${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <ConversationSortMenu />
+                {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} onClick={() => setSelectionMode(true)} /> : null}
+              </div>
+            </header>
             {undo ? (
               <UndoToast
                 undo={undo}
@@ -267,7 +279,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             ) : null}
 
             {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
-              <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
+              <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">
                 {conversationsQuery.data.map((conversation) => (
                   <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article {...linearSelection.itemHandlers(conversation.id)} className={`group border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}>
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">

@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-08-22 current-project movement synchronization: the right-hand Project
+workspace drop target, stable optimistic `project_relation`, URL-preserving
+success behavior and multi-cache failure rollback are recorded in
+`PROJECT_STATE.md` and `docs/system/USER_FLOWS.md`. No API, migration,
+dependency or new documentation category was introduced.
+
 2026-08-21 large paired-import and Reader-copy synchronization: the current
 linear unique-identity pairing rule, 50 MiB per-file/two-file Preview boundary,
 route-specific proxy allowance and shared Owner/Share/Offline semantic Markdown

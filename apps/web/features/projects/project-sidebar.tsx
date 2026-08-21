@@ -11,6 +11,7 @@ import {
   rectIntersection,
   useDraggable,
   useDroppable,
+  useDndContext,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -25,6 +26,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   createProject,
   getConversations,
@@ -119,12 +121,14 @@ export function MobileSidebarTrigger({
 
 export function ProjectSidebar({
   currentProjectId,
+  currentProjectDropTargetId,
   onImportClick,
   readerMode = false,
   mobileOpenSignal = 0,
   showMobileTrigger = false,
 }: {
   currentProjectId?: string;
+  currentProjectDropTargetId?: string;
   onImportClick?: () => void;
   readerMode?: boolean;
   mobileOpenSignal?: number;
@@ -146,6 +150,7 @@ export function ProjectSidebar({
   const [dropIntent, setDropIntent] = useState<DropIntent | null>(null);
   const dropIntentRef = useRef<DropIntent | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
+  const [dragNotice, setDragNotice] = useState<string | null>(null);
   const autoExpandRef = useRef<{ projectId: string; timer: ReturnType<typeof setTimeout> } | null>(null);
   const pendingGlobalSearchFocusRef = useRef(false);
   const sensors = useSensors(
@@ -191,6 +196,7 @@ export function ProjectSidebar({
       }),
     onMutate: async (variables) => {
       setDragError(null);
+      setDragNotice(null);
       await Promise.all([
         queryClient.cancelQueries({ queryKey: ["projects"] }),
         queryClient.cancelQueries({ queryKey: ["project-conversations"] }),
@@ -202,20 +208,30 @@ export function ProjectSidebar({
       const targetProject = projects.find((project) => project.id === variables.projectId);
       const optimisticConversation = findConversationInSnapshots(variables.conversationId, branchSnapshots, historySnapshots);
       if (optimisticConversation) {
-        const moved = {
+        const moved: ConversationListItem = {
           ...optimisticConversation,
           project_id: variables.projectId,
           project_name: targetProject?.name ?? null,
           offline_revision: optimisticConversation.offline_revision + 1,
-          ...(isProjectConversation(optimisticConversation)
-            ? { project_relation: { ...optimisticConversation.project_relation, is_pinned: false, pinned_at: null } }
-            : {}),
-        } as ProjectConversationRead;
+        };
+        const movedProjectConversation: ProjectConversationRead = {
+          ...moved,
+          project_relation: {
+            is_pinned: false,
+            pinned_at: null,
+            added_at: isProjectConversation(optimisticConversation)
+              ? optimisticConversation.project_relation.added_at
+              : new Date().toISOString(),
+            sort_order: isProjectConversation(optimisticConversation)
+              ? optimisticConversation.project_relation.sort_order
+              : 0,
+          },
+        };
         for (const [key, rows] of branchSnapshots) {
           if (!rows) continue;
           const projectId = String(key[1] ?? "");
           const without = rows.filter((item) => item.id !== variables.conversationId);
-          queryClient.setQueryData(key, projectId === variables.projectId ? insertConversation(without, moved, variables.beforeId, variables.afterId) : without);
+          queryClient.setQueryData(key, projectId === variables.projectId ? insertConversation(without, movedProjectConversation, variables.beforeId, variables.afterId) : without);
         }
         for (const [key, rows] of historySnapshots) {
           if (!rows) continue;
@@ -239,12 +255,17 @@ export function ProjectSidebar({
     onSuccess: (_result, variables) => {
       const movedProjectId = variables.projectId;
       if (typeof movedProjectId === "string") setExpandedProjects((current) => new Set(current).add(movedProjectId));
+      const targetName = projects.find((project) => project.id === movedProjectId)?.name;
+      setDragNotice(movedProjectId
+        ? (resolvedLocale === "zh-CN" ? `已移入「${targetName ?? "项目"}」` : `Moved to “${targetName ?? "project"}”`)
+        : (resolvedLocale === "zh-CN" ? "已移至未分类" : "Moved to unclassified"));
+      window.setTimeout(() => setDragNotice(null), 3200);
     },
     onError: (error, _variables, context) => {
       for (const [key, value] of context?.projectSnapshots ?? []) queryClient.setQueryData(key, value);
       for (const [key, value] of context?.branchSnapshots ?? []) queryClient.setQueryData(key, value);
       for (const [key, value] of context?.historySnapshots ?? []) queryClient.setQueryData(key, value);
-      setDragError(error.message);
+      setDragError(formatMoveError(error, resolvedLocale === "zh-CN"));
     },
     onSettled: () => {
       void refreshSidebar();
@@ -461,6 +482,8 @@ export function ProjectSidebar({
       </ReaderSidebarFrame>
       <DragOverlay>{activeDrag ? <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="max-w-[15rem] truncate rounded-lg border border-[var(--accent)] bg-raised px-3 py-2 text-sm text-primary shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
       {dragError ? <div role="alert" className="fixed bottom-4 left-1/2 z-[240] max-w-sm -translate-x-1/2 rounded-lg border border-[var(--danger)] bg-raised px-4 py-3 text-sm text-[var(--danger)] shadow-xl">{dragError}</div> : null}
+      {dragNotice ? <div role="status" className="fixed bottom-4 left-1/2 z-[240] -translate-x-1/2 rounded-lg border border-[var(--callout-tip-border)] bg-[var(--callout-tip-bg)] px-4 py-3 text-sm text-[var(--callout-tip-text)] shadow-xl">{dragNotice}</div> : null}
+      {currentProjectDropTargetId ? <CurrentProjectDropPortal projectId={currentProjectDropTargetId} projectName={projects.find((project) => project.id === currentProjectDropTargetId)?.name} zh={resolvedLocale === "zh-CN"} /> : null}
       <NewConversationDialog
         open={showNewConversation}
         projects={projects}
@@ -475,6 +498,57 @@ export function ProjectSidebar({
       />
     </DndContext>
   );
+}
+
+function CurrentProjectDropPortal({ projectId, projectName, zh }: { projectId: string; projectName?: string; zh: boolean }) {
+  const { active } = useDndContext();
+  const { setNodeRef, isOver } = useDroppable({
+    id: `current-project-drop:${projectId}`,
+    data: { dropType: "project-conversation-container", projectId } satisfies ConversationContainerDrop,
+  });
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const activeType = active?.data.current?.activeType;
+  const activeConversation = activeType === "conversation";
+
+  useEffect(() => {
+    const selector = `[data-project-drop-target="${projectId}"]`;
+    setHost(document.querySelector<HTMLElement>(selector));
+  }, [projectId]);
+
+  if (!host) return null;
+  return createPortal(
+    <div
+      data-testid="current-project-drop-zone"
+      ref={setNodeRef}
+      role={activeConversation ? "region" : undefined}
+      aria-label={zh ? `放入当前项目${projectName ? `：${projectName}` : ""}` : `Move into current project${projectName ? `: ${projectName}` : ""}`}
+      aria-hidden={!activeConversation}
+      tabIndex={activeConversation ? 0 : -1}
+      className={`absolute inset-3 z-30 flex items-end justify-center rounded-lg border-2 border-dashed pb-10 transition-[opacity,background-color,border-color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 motion-reduce:transition-none ${
+        activeConversation
+          ? isOver
+            ? "pointer-events-auto scale-[1.005] border-[var(--accent)] bg-[var(--accent-soft)]/90 opacity-100 shadow-[var(--shadow-medium)]"
+            : "pointer-events-auto border-[var(--callout-warning-border)] bg-[var(--callout-warning-bg)]/90 opacity-100"
+          : "pointer-events-none border-transparent opacity-0"
+      }`}
+    >
+      {activeConversation ? (
+        <div className="max-w-sm px-6 text-center">
+          <p className="text-sm font-semibold text-primary">{isOver ? (zh ? "松开以放入当前项目" : "Drop into the current project") : (zh ? "拖到这里放入当前项目" : "Drag here to move into this project")}</p>
+          <p className="mt-1 text-xs text-secondary">{projectName ?? (zh ? "当前项目" : "Current project")} · {zh ? "移动后保留当前页面" : "This page stays open"}</p>
+        </div>
+      ) : null}
+    </div>,
+    host,
+  );
+}
+
+function formatMoveError(error: Error, zh: boolean): string {
+  const message = error.message.toLowerCase();
+  if (message.includes("revision conflict") || message.includes("其他操作中更新")) {
+    return zh ? "移动失败：对话刚刚发生了变化，请重试。" : "Move failed because the conversation changed. Try again.";
+  }
+  return zh ? `移动失败：${error.message}` : `Move failed: ${error.message}`;
 }
 
 type SidebarContentProps = {

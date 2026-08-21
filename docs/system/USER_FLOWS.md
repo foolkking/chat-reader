@@ -51,7 +51,7 @@ Project/未归类/归档列表 -> checkbox/Shift/键盘/移动长按
 - 拖到 fenced code block 时先选择放到代码块之后、仍按普通文本插入或取消；拖到现有 Markdown 链接内部时移到完整链接之后。多文件保持原始顺序并分别生成 occurrence。
 - 关闭尚未保存的源码时，已完成上传可保留为“当前对话文件”的未放置附件，也可删除；正在上传的项会取消。源码中手动删除附件语法只影响当前新版本 occurrence，不删除对话级 Attachment。
 - 桌面“当前对话文件”默认在 Reader 右上安全区域打开为注释式浮窗；整个表头可拖动，边缘可缩放，位置/尺寸可复位并持久化。表头使用抓手光标和附件专属图标；移动端使用全宽 sheet。该入口管理 Attachment，源码编辑器继续负责 occurrence 编排。
-- 拖拽使用 Pointer/Touch/Keyboard sensors：项目排序槽、Project 对话接收区、conversation row/insert slot 与未分类标题行是不同 drop target；跨项目移动只更新单一关系，移回未归类不删除会话，失败按 revision 回滚 optimistic cache。侧栏查询刷新保留上一份数据，避免拖拽期间卸载目标。
+- 拖拽使用 Pointer/Touch/Keyboard sensors：项目排序槽、Project 对话接收区、conversation row/insert slot 与未分类标题行是不同 drop target；打开的 Project 右侧工作区也是明确的当前项目接收区，移动成功后保留当前 URL 和滚动上下文。跨项目移动只更新单一关系，移回未归类不删除会话，失败按 revision 同时回滚项目列表、项目对话和侧栏 optimistic cache。侧栏查询刷新保留上一份数据，避免拖拽期间卸载目标；菜单和键盘移动仍是非拖拽替代路径。
 
 ## 3. 阅读长对话并恢复位置
 
