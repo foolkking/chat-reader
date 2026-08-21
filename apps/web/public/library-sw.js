@@ -164,7 +164,12 @@ async function inspectActiveShell() {
   const cache = await caches.open(record.cacheName);
   const matches = await Promise.all(record.assets.map((asset) => cache.match(asset)));
   const missing = record.assets.filter((_, index) => !matches[index]);
-  const criticalAssets = Array.isArray(record.criticalAssets) ? record.criticalAssets : record.assets;
+  // Older shell records did not persist criticalAssets. Treat only known
+  // optional resources as non-critical when reading those records so an
+  // optional cache miss cannot make an otherwise usable shell unavailable.
+  const criticalAssets = Array.isArray(record.criticalAssets)
+    ? record.criticalAssets
+    : record.assets.filter((asset) => !asset.startsWith("/skills/"));
   const criticalMatches = await Promise.all(criticalAssets.map((asset) => cache.match(asset)));
   const criticalMissing = criticalAssets.filter((_, index) => !criticalMatches[index]);
   return {

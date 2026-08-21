@@ -58,6 +58,15 @@ export function LibraryShell() {
     getOfflineShellStatus,
   );
 
+  // A cached Library navigation can complete without replaying the global
+  // window-load hook that normally starts shell reconciliation. Keep the
+  // status indicator truthful by retrying the same idempotent preparation
+  // from the page that owns the offline shell.
+  useEffect(() => {
+    if (offlineShellStatus.availability !== "unknown" && offlineShellStatus.updatePhase !== "checking") return;
+    void prepareOfflineShell().catch(() => undefined);
+  }, [offlineShellStatus.availability, offlineShellStatus.updatePhase]);
+
   const catalogQuery = useQuery({
     queryKey: ["offline-catalog"],
     queryFn: getOfflineCatalog,
