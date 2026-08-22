@@ -177,6 +177,14 @@ jobs:
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/release-mutation-lifecycle.spec.ts
 
+      - name: Source Editor content cleanup browser gate
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_CONTENT_CLEANUP: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/content-cleanup.spec.ts
+
       - name: Release I upload-token atomicity matrix
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
