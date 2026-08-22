@@ -30,7 +30,7 @@ def test_alembic_current_matches_repository_head() -> None:
         capture_output=True,
         check=True,
     )
-    expected_head = "20260822_0025"
+    expected_head = "20260822_0026"
     assert heads.stdout.strip() == f"{expected_head} (head)"
     if expected_head not in current.stdout:
         import pytest

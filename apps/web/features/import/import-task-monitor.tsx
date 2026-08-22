@@ -1,17 +1,19 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, CheckCircle2, RefreshCw, X } from "lucide-react";
+import { Ban, CheckCircle2, RefreshCw, X, Eraser } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { cancelTask, getActiveTasks, getTask, retryTask } from "../../lib/api";
-import type { BackgroundTaskRead } from "../../lib/types";
+import { cancelTask, dismissCleanupScan, getActiveTasks, getPendingCleanupScans, getTask, retryTask } from "../../lib/api";
+import type { BackgroundTaskRead, CleanupScanRead } from "../../lib/types";
+import { ContentCleanupDialog } from "../conversations/content-cleanup-panel";
 
 export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobile" }) {
   const queryClient = useQueryClient();
   const previousTasks = useRef<BackgroundTaskRead[]>([]);
   const [completedTask, setCompletedTask] = useState<BackgroundTaskRead | null>(null);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<Set<string>>(new Set());
+  const [reviewScanId, setReviewScanId] = useState<string | null>(null);
   useEffect(() => {
     try {
       const stored = JSON.parse(window.localStorage.getItem("chat-reader-dismissed-task-ids") ?? "[]") as string[];
@@ -33,6 +35,11 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
     queryFn: getActiveTasks,
     refetchInterval: (query) =>
       query.state.data?.some((task) => ["queued", "processing", "cancelling"].includes(task.status)) ? 1500 : false,
+  });
+  const scansQuery = useQuery({
+    queryKey: ["content-cleanup-pending"],
+    queryFn: getPendingCleanupScans,
+    refetchInterval: (query) => (query.state.data ?? []).some((scan) => ["QUEUED", "SCANNING"].includes(scan.status)) ? 1500 : 10_000,
   });
   const retryMutation = useMutation({
     mutationFn: retryTask,
@@ -60,7 +67,7 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
   });
 
   useEffect(() => {
-    const current = tasksQuery.data ?? [];
+    const current = (tasksQuery.data ?? []).filter((task) => task.job_type !== "content_noise_scan");
     const currentIds = new Set(current.map((task) => task.job_id));
     const finished = previousTasks.current.filter(
       (task) => ["queued", "processing", "cancelling"].includes(task.status) && !currentIds.has(task.job_id),
@@ -79,16 +86,13 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
     }
   }, [queryClient, tasksQuery.data]);
 
-  const tasks = (tasksQuery.data ?? []).filter((task) => !dismissedTaskIds.has(task.job_id));
+  const tasks = (tasksQuery.data ?? []).filter((task) => task.job_type !== "content_noise_scan" && !dismissedTaskIds.has(task.job_id));
   const visibleTask = tasks.find((task) => task.status === "processing") ?? tasks[0] ?? completedTask;
-  if (!visibleTask) return null;
+  const scans = scansQuery.data ?? [];
+  if (!visibleTask && !scans.length) return null;
 
   if (placement === "mobile") {
-    return (
-      <div className="fixed inset-x-3 bottom-3 z-40 rounded-xl border border-[#d8dee9] bg-white p-3 shadow-xl md:hidden">
-        <TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} />
-      </div>
-    );
+    return <><div className="fixed inset-x-3 bottom-3 z-40 space-y-2 rounded-xl border border-[#d8dee9] bg-white p-3 shadow-xl md:hidden">{visibleTask ? <TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} /> : null}<NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></div>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</>;
   }
 
   return (
@@ -112,8 +116,20 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
           {completedTask.result.download_url ? <a className="mt-1 inline-block underline" href={String(completedTask.result.download_url)}>下载归档</a> : null}
         </div>
       ) : null}
+      <NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />
+      {reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}
     </div>
   );
+}
+
+function NoiseReviewSummary({ scans, onReview, onDismiss }: { scans: CleanupScanRead[]; onReview: (id: string) => void; onDismiss: (id: string) => void }) {
+  const visible = scans.filter((scan) => scan.source === "IMPORT");
+  if (!visible.length) return null;
+  return <div className="space-y-2 border-t border-[#e5e7eb] pt-3" aria-label="Import noise reviews">{visible.map((scan) => <div key={scan.id} className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-950"><p className="flex items-center gap-1.5 font-medium"><Eraser className="h-3.5 w-3.5" />{scan.status === "READY" ? `${scan.occurrence_count} noise candidates ready for review` : `Noise review ${scan.progress}%`}</p><div className="mt-2 h-1 overflow-hidden rounded-full bg-amber-100"><div className="h-full bg-amber-500 transition-[width]" style={{ width: `${Math.max(scan.progress, 2)}%` }} /></div><div className="mt-2 flex items-center gap-3"><button type="button" onClick={() => onReview(scan.id)} disabled={scan.status !== "READY"} className="font-medium underline disabled:opacity-50">Open review</button><button type="button" onClick={() => onDismiss(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="text-amber-800 underline disabled:opacity-50">Ignore this result</button></div></div>)}</div>;
+}
+
+function NoiseReviewDialog({ scanId, onClose }: { scanId: string; onClose: () => void }) {
+  return <ContentCleanupDialog open initialScanId={scanId} onClose={onClose} />;
 }
 
 function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {

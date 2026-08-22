@@ -14,7 +14,8 @@ not authorize production stress testing.
 - Fixtures use seed `20260814` and fixture version
   `release-d-reader-capacity-v1`. They contain no user content.
 - Raw evidence belongs to the corresponding GitHub Actions run. Test and build
-  caches downloaded locally are kept under `C:\Users\86182\Desktop\wkkk`.
+  caches downloaded locally belong in an operator-designated directory outside
+  the repository.
 - Three browser cold runs are reported with median and worst values. Warm
   revisit is measured separately.
 - API and worker RSS are sampled from Linux `/proc` every 50 ms. This is a

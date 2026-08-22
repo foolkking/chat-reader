@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.database import SessionLocal
 from app.core.config import get_settings
 from app.models.background_job import BackgroundJob
+from app.models.content_cleanup import ContentCleanupScan
 from app.models.conversation import Conversation
 from app.models.project import Project
 from app.services.editing.message_edit_service import (
@@ -28,6 +29,7 @@ from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
 from app.services.assets.derivatives import build_asset_derivative
+from app.services.content_cleanup import process_scan_chunk
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.core.observability import structured_event
 
@@ -544,10 +546,19 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
     return len(jobs)
 
 
-def claim_next_job(db: Session) -> uuid.UUID | None:
+def claim_next_job(
+    db: Session,
+    *,
+    job_type: str | None = None,
+    exclude_job_types: tuple[str, ...] = ("content_noise_scan",),
+) -> uuid.UUID | None:
+    query = db.query(BackgroundJob).filter(BackgroundJob.status == "queued")
+    if job_type is not None:
+        query = query.filter(BackgroundJob.job_type == job_type)
+    if exclude_job_types:
+        query = query.filter(BackgroundJob.job_type.notin_(exclude_job_types))
     job = (
-        db.query(BackgroundJob)
-        .filter(BackgroundJob.status == "queued")
+        query
         .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
         .with_for_update(skip_locked=True)
         .first()
@@ -727,6 +738,27 @@ def process_background_job(
                     "cleaned_messages": result.cleaned_messages,
                 }
                 processed_items = result.scanned_messages
+            elif job.job_type == "content_noise_scan":
+                scan_id = uuid.UUID(str(payload["scan_id"]))
+                result = process_scan_chunk(db, scan_id)
+                if not bool(result.get("done")):
+                    scan_payload = dict(payload)
+                    scan = db.get(ContentCleanupScan, scan_id)
+                    scan_payload["cursor_message_id"] = str(scan.cursor_message_id) if scan and scan.cursor_message_id else None
+                    job.payload = scan_payload
+                    job.status = "queued"
+                    job.phase = "scanning"
+                    job.progress = int(result.get("processed", 0) * 100 / max(int(result.get("total", 1)), 1))
+                    job.processed_items = int(result.get("processed", 0))
+                    job.total_items = int(result.get("total", 0))
+                    job.heartbeat_at = datetime.now(timezone.utc)
+                    db.commit()
+                    return
+                job_result = {
+                    "scan_id": str(scan_id),
+                    "occurrence_count": int(result.get("occurrences", 0)),
+                }
+                processed_items = int(result.get("processed", 0))
             elif job.job_type == "conversation_derived_rebuild":
                 conversation_id = uuid.UUID(payload["conversation_id"])
                 result = rebuild_conversation_derived_data(

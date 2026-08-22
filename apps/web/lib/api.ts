@@ -1,5 +1,9 @@
 import type {
   CommitImportResponse,
+  CleanupApplyResult,
+  CleanupOccurrenceRead,
+  CleanupRuleRead,
+  CleanupScanRead,
   BackgroundTaskRead,
   AnnotationCreateInput,
   AnnotationRead,
@@ -967,6 +971,54 @@ export async function updateShare(shareId: string, input: ShareUpdateInput): Pro
 export async function getSharedConversation(token: string): Promise<SharedConversationBootstrap> {
   const response = await fetchJson<SharedConversationBootstrap>(`/api/shared/${encodeURIComponent(token)}`);
   return { ...response, share: normalizeShareUrl(response.share) };
+}
+
+export async function getCleanupRules(): Promise<CleanupRuleRead[]> {
+  return fetchJson<CleanupRuleRead[]>("/api/content-cleanup/rules");
+}
+
+export async function createCleanupRule(input: { name: string; match_value: string; case_sensitive?: boolean; role_filter?: string | null }): Promise<CleanupRuleRead> {
+  return fetchJson<CleanupRuleRead>("/api/content-cleanup/rules", jsonRequest("POST", input));
+}
+
+export async function updateCleanupRule(ruleId: string, input: { name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null }): Promise<CleanupRuleRead> {
+  return fetchJson<CleanupRuleRead>(`/api/content-cleanup/rules/${ruleId}`, jsonRequest("PATCH", input));
+}
+
+export async function deleteCleanupRule(ruleId: string): Promise<void> {
+  await fetchJson<void>(`/api/content-cleanup/rules/${ruleId}`, { method: "DELETE" });
+}
+
+export async function createCleanupScan(input: { source?: "READER" | "BATCH"; scope_type: "CURRENT_CONVERSATION" | "SELECTED_CONVERSATIONS" | "ALL_ACTIVE"; conversation_ids: string[]; message_id?: string; selection_start_offset?: number; selection_end_offset?: number }): Promise<CleanupScanRead> {
+  return fetchJson<CleanupScanRead>("/api/content-cleanup/scans", jsonRequest("POST", input));
+}
+
+export async function getCleanupScan(scanId: string): Promise<CleanupScanRead> {
+  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}`);
+}
+
+export async function getPendingCleanupScans(): Promise<CleanupScanRead[]> {
+  return fetchJson<CleanupScanRead[]>("/api/content-cleanup/scans/pending");
+}
+
+export async function getCleanupOccurrences(scanId: string, input: { limit?: number; offset?: number } = {}): Promise<CleanupOccurrenceRead[]> {
+  const params = new URLSearchParams();
+  if (input.limit != null) params.set("limit", String(input.limit));
+  if (input.offset != null) params.set("offset", String(input.offset));
+  const query = params.size ? `?${params.toString()}` : "";
+  return fetchJson<CleanupOccurrenceRead[]>(`/api/content-cleanup/scans/${scanId}/occurrences${query}`);
+}
+
+export async function updateCleanupDecisions(scanId: string, decisions: Array<{ occurrence_id: string; decision: "DELETE" | "KEEP" }>): Promise<CleanupScanRead> {
+  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}/decisions`, jsonRequest("PATCH", { decisions }));
+}
+
+export async function applyCleanupScan(scanId: string): Promise<CleanupApplyResult> {
+  return fetchJson<CleanupApplyResult>(`/api/content-cleanup/scans/${scanId}/apply`, { method: "POST" });
+}
+
+export async function dismissCleanupScan(scanId: string): Promise<void> {
+  await fetchJson<void>(`/api/content-cleanup/scans/${scanId}`, { method: "DELETE" });
 }
 
 export async function createAdaptiveImportSession(files: File[], repairProfileId?: string | null): Promise<AdaptiveImportSession> {

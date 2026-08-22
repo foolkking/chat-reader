@@ -12,6 +12,13 @@ from app.models.attachment import (
 )
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
+from app.models.content_cleanup import (
+    ContentCleanupOccurrence,
+    ContentCleanupRule,
+    ContentCleanupRuleRevision,
+    ContentCleanupScan,
+    ContentCleanupScanTarget,
+)
 from app.models.export_artifact import ExportArtifact
 from app.models.heading import Heading
 from app.models.import_record import ImportRecord
@@ -47,6 +54,11 @@ __all__ = [
     "ConversationAnnotation",
     "ConversationNotebook",
     "ConversationEvent",
+    "ContentCleanupOccurrence",
+    "ContentCleanupRule",
+    "ContentCleanupRuleRevision",
+    "ContentCleanupScan",
+    "ContentCleanupScanTarget",
     "ExportArtifact",
     "Heading",
     "ImportRecord",

@@ -876,8 +876,8 @@ redeploy was needed for this verification-only change.
 Current results: artifact/diagnostics subset `21 passed / 1 skipped`; full API
 `280 passed / 6 skipped`; Web lint/typecheck/production build PASS; Alembic
 heads/current `20260806_0021 (head)`. The Windows symlink path-escape test is
-the single skip and is not counted as PASS. Build cache was kept under
-`C:\Users\86182\Desktop\wkkk\next-build-release-c`.
+the single skip and is not counted as PASS. Build cache was kept in an
+operator-designated directory outside the repository.
 
 ## Release C Production Closure - 2026-08-14
 

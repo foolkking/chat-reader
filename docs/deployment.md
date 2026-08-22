@@ -1,5 +1,18 @@
 # 生产部署
 
+## Final consolidation deployment contract
+
+This source moves production from Alembic `20260822_0025` to
+`20260822_0026` and ships the Source Editor content-cleanup review with the
+final Adaptive Import state-machine closeout. Before replacement, retain the
+normal PostgreSQL, imports, exports, offline and assets backup. Run migration
+with the versioned API image, then replace API, worker and Web with the same
+release image set. Verify public health, private-route denial, worker liveness,
+protected diagnostics and the Source Editor cleanup boundary. No standalone
+gateway service, `.crbundle` route or conversion-download service may be
+deployed. Retain the current image generation and the generation it replaces;
+remove only older unreferenced Chat Reader images after acceptance.
+
 ## 2026-08-22 Adaptive Import recovery deployment
 
 GitHub Actions run `32550720450` passed the complete quality and image-build

@@ -114,6 +114,7 @@ def _job_label(job_type: str) -> str:
         "conversation_merge": "合并对话",
         "conversation_export": "导出归档",
         "conversation_auto_clean": "清理对话内容",
+        "content_noise_scan": "审查导入噪音",
         "conversation_derived_rebuild": "重建派生数据",
         "toc_refresh": "更新目录",
         "offline_package": "生成离线资料库",

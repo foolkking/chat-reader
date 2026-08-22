@@ -43,13 +43,14 @@ def run_task_worker_iteration(settings, reporter: WorkerHeartbeatReporter) -> bo
         recover_stale_imports(db, settings.import_stale_after_seconds)
         recover_stale_jobs(db, settings.import_stale_after_seconds)
         task_kind = _oldest_task_kind(db)
-        task_id = claim_next_import(db) if task_kind == "import" else claim_next_job(db) if task_kind == "job" else None
+        task_id = claim_next_import(db) if task_kind == "import" else claim_next_job(db, job_type="content_noise_scan", exclude_job_types=()) if task_kind == "noise" else claim_next_job(db) if task_kind == "job" else None
         db.commit()
     if task_id is None or task_kind is None:
         reporter.set_idle()
         return False
-    if not reporter.set_busy(task_kind, task_id):
-        _requeue_unstarted_task(task_kind, task_id)
+    worker_kind = "job" if task_kind == "noise" else task_kind
+    if not reporter.set_busy(worker_kind, task_id):
+        _requeue_unstarted_task(worker_kind, task_id)
         return False
     try:
         if task_kind == "import":
@@ -93,12 +94,20 @@ def _oldest_task_kind(db) -> str | None:
     )
     job_row = (
         db.query(BackgroundJob.id, BackgroundJob.queued_at)
-        .filter(BackgroundJob.status == "queued")
+        .filter(BackgroundJob.status == "queued", BackgroundJob.job_type != "content_noise_scan")
+        .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
+        .first()
+    )
+    noise_row = (
+        db.query(BackgroundJob.id, BackgroundJob.queued_at)
+        .filter(BackgroundJob.status == "queued", BackgroundJob.job_type == "content_noise_scan")
         .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
         .first()
     )
     if import_row is None:
-        return "job" if job_row is not None else None
+        return "job" if job_row is not None else "noise" if noise_row is not None else None
+    if job_row is None and noise_row is None:
+        return "import"
     if job_row is None:
         return "import"
     import_time = import_row.queued_at or datetime.min.replace(tzinfo=timezone.utc)

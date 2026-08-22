@@ -34,6 +34,7 @@ export function EditMessageForm({
   pendingAttachmentInsertion,
   versionNumber,
   onCursorOffsetChange,
+  onSelectionChange,
   onDirtyChange,
   onCancel,
   onSave,
@@ -55,6 +56,7 @@ export function EditMessageForm({
   pendingAttachmentInsertion?: { referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null;
   versionNumber: number;
   onCursorOffsetChange?: (offset: number) => void;
+  onSelectionChange?: (selection: SourceTextSelection | null) => void;
   onDirtyChange?: (dirty: boolean) => void;
   onCancel: (dirty: boolean) => void | Promise<void>;
   onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>) => Promise<void>;
@@ -74,6 +76,8 @@ export function EditMessageForm({
   const editorHostRef = useRef<HTMLDivElement | null>(null);
   const cursorOffsetChangeRef = useRef(onCursorOffsetChange);
   cursorOffsetChangeRef.current = onCursorOffsetChange;
+  const selectionChangeRef = useRef(onSelectionChange);
+  selectionChangeRef.current = onSelectionChange;
   const insertFilesRef = useRef<(files: File[], position: number, originalCodePosition?: number) => void>(() => undefined);
   const insertExistingAttachmentRef = useRef<(attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void>(() => undefined);
   const queuedFilesRef = useRef<File[]>([]);
@@ -238,6 +242,19 @@ export function EditMessageForm({
     const offset = update.state.selection.main.head;
     if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(offset);
     cursorOffsetChangeRef.current?.(offset);
+    const selection = update.state.selection.main;
+    if (selection.empty) {
+      selectionChangeRef.current?.(null);
+      return;
+    }
+    const source = update.state.doc.toString();
+    const from = Math.min(selection.from, selection.to);
+    const to = Math.max(selection.from, selection.to);
+    selectionChangeRef.current?.({
+      startOffset: unicodeCodePointOffset(source, from),
+      endOffset: unicodeCodePointOffset(source, to),
+      text: update.state.doc.sliceString(from, to),
+    });
   }, []);
 
   useEffect(() => {
@@ -442,6 +459,7 @@ export function EditMessageForm({
             view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
             if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(anchor);
             cursorOffsetChangeRef.current?.(anchor);
+            selectionChangeRef.current?.(null);
             view.focus();
             if (pendingAttachmentInsertion) applyAttachmentInsertion(view, pendingAttachmentInsertion);
             if (queuedFilesRef.current.length) {
@@ -523,6 +541,16 @@ export function EditMessageForm({
       ) : null}
     </form>
   );
+}
+
+export type SourceTextSelection = {
+  startOffset: number;
+  endOffset: number;
+  text: string;
+};
+
+function unicodeCodePointOffset(source: string, utf16Offset: number): number {
+  return Array.from(source.slice(0, utf16Offset)).length;
 }
 
 function isRevisionConflictMessage(message: string): boolean {

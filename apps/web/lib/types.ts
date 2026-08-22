@@ -78,6 +78,67 @@ export type ConversationDetail = ConversationListItem & {
   sort_time: string | null;
 };
 
+export type CleanupRuleRead = {
+  id: string;
+  name: string;
+  kind: "BUILTIN" | "USER_LITERAL" | string;
+  status: "ACTIVE" | "DISABLED" | string;
+  scope: string;
+  detector_id: string | null;
+  revision: number;
+  match_value: string | null;
+  case_sensitive: boolean;
+  role_filter: string | null;
+  last_used_at: string | null;
+};
+
+export type CleanupScanRead = {
+  id: string;
+  source: string;
+  status: string;
+  scope_type: string;
+  background_job_id: string | null;
+  progress: number;
+  processed_messages: number;
+  total_messages: number;
+  occurrence_count: number;
+  delete_count: number;
+  keep_count: number;
+  protected_count: number;
+  created_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+};
+
+export type CleanupApplyResult = {
+  applied: number;
+  conflicts: number;
+};
+
+export type CleanupOccurrenceRead = {
+  id: string;
+  conversation_id: string;
+  conversation_title: string;
+  message_id: string;
+  message_version_id: string;
+  role: string;
+  rule_id: string;
+  rule_name: string;
+  detector_id: string | null;
+  kind: string;
+  reason_code: string;
+  confidence: string;
+  decision: "DELETE" | "KEEP" | "PROTECTED" | "CONFLICT";
+  start_offset: number;
+  end_offset: number;
+  line_start: number;
+  column_start: number;
+  match_text: string;
+  context_before: string;
+  context_after: string;
+  stale: boolean;
+};
+
 export type ConversationUpdateInput = {
   title?: string | null;
   display_title?: string | null;

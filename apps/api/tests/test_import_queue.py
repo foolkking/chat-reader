@@ -52,6 +52,9 @@ def test_claim_order_and_stale_recovery(tmp_path) -> None:
 
     with factory() as db:
         assert claim_next_import(db) == first_id
+        first = db.get(ImportRecord, first_id)
+        assert first is not None
+        assert first.session_state == "IMPORTING"
         db.commit()
 
     with factory() as db:
@@ -66,6 +69,7 @@ def test_claim_order_and_stale_recovery(tmp_path) -> None:
         first = db.get(ImportRecord, first_id)
         assert first is not None
         assert first.status == "queued"
+        assert first.session_state == "READY"
         assert first.error_message is not None
 
 
@@ -90,6 +94,7 @@ def test_stale_import_recovery_is_bounded_and_manual_retry_starts_a_new_bounded_
         record = db.get(ImportRecord, import_id)
         assert record is not None
         assert record.status == "failed"
+        assert record.session_state == "FAILED"
         assert "Automatic recovery stopped" in (record.error_message or "")
 
     with factory() as db:
@@ -99,6 +104,7 @@ def test_stale_import_recovery_is_bounded_and_manual_retry_starts_a_new_bounded_
         retry_import_manually(record, db)
         db.commit()
         assert record.status == "queued"
+        assert record.session_state == "READY"
         assert record.attempt_count == 0
 
     for expected_attempt in range(1, MAX_AUTOMATIC_ATTEMPTS + 1):

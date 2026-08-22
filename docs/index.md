@@ -4,6 +4,8 @@
 
 当前 Adaptive Import 合同：[Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)，定义 JSON/Markdown 的 session、group、family、profile revision、Mapping、canonical draft、直接导入和 `.cr` 独立恢复边界。
 
+当前内容清理合同：[Content Cleanup Contract](system/CONTENT_CLEANUP_CONTRACT.md)，定义规则 revision、位置存储、活动对话范围、导入后低优先级扫描、显式审查与 MessageVersion 应用边界。
+
 Single-owner authentication and the public-by-link Share/search navigation
 enhancement are deployed and accepted. Current facts are in
 [Project State](../PROJECT_STATE.md), [testing](testing.md),

@@ -42,6 +42,7 @@ from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdo
 from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v1, parse_canjson_v2
 from app.services.import_pipeline.draft_store import attach_import_draft
 from app.services.import_pipeline.source_detector import detect_source_profile
+from app.services.content_cleanup import queue_import_scan
 from app.services.storage.local_storage import save_import_file
 from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
@@ -418,6 +419,14 @@ def commit_import(
     db.commit()
     try:
         result = commit_import_preview(import_id, db)
+        # Import commit is authoritative; noise review is an independent,
+        # low-priority follow-up and must not make a successful import fail.
+        try:
+            with db.begin_nested():
+                queue_import_scan(db, result.conversation_ids)
+        except Exception as exc:  # pragma: no cover - operational guard
+            logger.warning("post_import_noise_scan_queue_failed", extra={"error": str(exc), "import_id": str(import_id)})
+        db.commit()
     except CommitImportError as exc:
         message = str(exc)
         status_code = status.HTTP_404_NOT_FOUND if "not found" in message.lower() else status.HTTP_400_BAD_REQUEST

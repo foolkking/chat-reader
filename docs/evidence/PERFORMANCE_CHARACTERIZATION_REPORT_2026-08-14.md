@@ -240,8 +240,8 @@ No runtime optimization was required, so no production deployment or image
 build was performed for Release D. Existing Release C runtime
 `e58b750357d92bba314737582a94493829c038e2`, Actions `31856041473`, production
 health, Alembic head `20260806_0021`, and rollback evidence remain unchanged.
-All downloaded logs, reports and artifacts used during analysis are under
-`C:\Users\86182\Desktop\wkkk\release-d-31865404393` and are not part of the
+All downloaded logs, reports and artifacts used during analysis are in an
+operator-designated cache outside the repository and are not part of the
 runtime bundle or PWA precache.
 
 Remaining debt is explicitly limited to the PWA negative matrix, Next supported

@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+2026-08-22 content-cleanup synchronization: Source Editor selection authority,
+central review and embedded rule management are current in `PROJECT_STATE.md`,
+`docs/system/CONTENT_CLEANUP_CONTRACT.md`, `docs/api-reference.md` and
+`.interface-design/system.md`. Deterministic built-in and literal
+rule revisions, current/selected/all-active scan scopes, occurrence-only
+position persistence, low-priority post-import review and MessageVersion-based
+explicit apply are current in `PROJECT_STATE.md` and
+`docs/system/CONTENT_CLEANUP_CONTRACT.md`. Alembic head is `20260822_0026`.
+
 2026-08-22 Adaptive Import synchronization: the two-entry import surface,
 session/group/family model, Built-in and Learned Profile revisions, canonical
 draft boundary, full-family validation, direct commit and retired `.crbundle`
@@ -7,7 +16,8 @@ product contract are recorded in `PROJECT_STATE.md`,
 `docs/system/ADAPTIVE_IMPORT_CONTRACT.md`, `docs/product.md`,
 `docs/architecture.md`, `docs/api-reference.md`,
 `docs/system/BACKEND_AND_API.md`, `docs/system/FEATURE_INVENTORY.md` and
-`docs/testing.md`. Migration `20260822_0025` adds only adaptive-import
+`docs/testing.md`. Migration `20260822_0025` adds adaptive-import persistence;
+`20260822_0026` adds content-cleanup review persistence. The current
 operational/profile state; existing Conversation and `.cr` schema remains
 unchanged.
 

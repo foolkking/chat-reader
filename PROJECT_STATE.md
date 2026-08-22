@@ -1,5 +1,57 @@
 # Project State
 
+## 2026-08-22 Final Chat Reader consolidation
+
+- Chat Reader is the only product and runtime boundary. The retired standalone
+  normalization gateway has no tracked dependency, package link, submodule,
+  HTTP call, container, environment variable, route or deployment service in
+  this repository. The former sibling project was made unavailable before
+  install, migration, build and focused Adaptive Import tests passed, and its
+  remaining processes and files were then removed.
+- The product import surface is Adaptive JSON/Markdown plus independent `.cr`
+  archive restore. `.crbundle`, download-first conversion, standalone result
+  pages and duplicate Mapping pages remain removed; the sole route regression
+  deliberately asserts that the retired `.crbundle` endpoint returns 404.
+- Adaptive Import now records the full session lifecycle: collection starts in
+  `COLLECTING`, analysis enters `ANALYZING`, a validated plan queues as `READY`,
+  worker ownership enters `IMPORTING`, and bounded terminal failures enter
+  `FAILED`. Item-level invalid input remains recoverable in `RESOLVING` and
+  cannot globally revive the retired `BLOCKED` behavior.
+- Final local gates after removing the sibling project: API `358 passed / 5
+  skipped`, default PWA/Playwright `75 passed / 72 conditional skipped`,
+  Adaptive Import browser `3 passed / 1 real-file condition skipped`, Content
+  Cleanup browser `1 passed`, Web lint/typecheck/build PASS, clean and current
+  database migration PASS, dependency policy PASS with zero high/critical
+  advisories, and Alembic single head `20260822_0026`.
+
+## 2026-08-22 Content cleanup rules and asynchronous review
+
+- Content cleanup now uses a server-side rule registry and immutable rule
+  revisions. Built-in citation, exporter-footer and thinking-summary detectors
+  plus user literal rules share one deterministic scanner; no user regular
+  expressions, scripts or message copies are persisted.
+- The primary cleanup entry lives in the Markdown Source Editor. The owner
+  selects persisted source text and opens a centered review dialog; the server
+  records only the current MessageVersion identity and Unicode code-point
+  offsets. Dirty editor text must be saved before it can be reviewed.
+- The same review surface can still scan a current, selected-active or
+  all-active scope when invoked by a background/import task. Archived
+  conversations are rejected while creating targets, scanning and applying.
+- Scan occurrences store only message/version identity, Unicode offsets,
+  line/column metadata, rule revision and decision. Preview context is derived
+  from the current MessageVersion and is marked stale when that version changes.
+- Import commits enqueue a low-priority, chunked `content_noise_scan` after the
+  canonical import. Import success does not depend on scanner availability;
+  the task monitor exposes progress, review and ignore actions without a modal
+  interruption.
+- Applying cleanup revalidates versions, protects code/math/link/asset regions,
+  creates normal MessageVersion history and rebuilds search/TOC. There is no
+  cleanup-specific undo; existing MessageVersion history remains authoritative.
+  Zero-match, successfully applied and explicitly ignored scans are deleted
+  with their occurrence rows. The dialog contains the single rule-library entry for viewing,
+  disabling and deleting unused user literal rules.
+- Alembic head is `20260822_0026` and there is no additional dependency.
+
 ## 2026-08-22 Adaptive Import recovery UX
 
 - A source-analysis failure is now scoped to its `InputGroup`. An `INVALID`
@@ -83,7 +135,8 @@
 - `.crbundle` import UI, API, parser, result/download workflow and dedicated
   tests are removed. Ordinary attachments, AssetObject behavior, Share,
   Offline and independent `.cr` archive restore remain supported.
-- Alembic source head is `20260822_0025`; it adds adaptive session grouping,
+- Alembic source head is `20260822_0026`; migrations `20260822_0025` and
+  `20260822_0026` add adaptive session grouping and content-cleanup review,
   Family, Profile and immutable revision persistence without changing the
   Conversation canonical schema. The retired Gateway's SQLite profile tables
   were empty, so no historical user mapping data required migration.
@@ -613,8 +666,8 @@
   `RUNNING_IMAGE_IDENTITY = PASS`, and `ROLLBACK_RELEASE_E = RETAINED`.
 - Release F changes must be selectively staged. Existing API/editor,
   screenshots, storage and build-cache paths in the worktree are unrelated
-  and remain untouched. Build logs and caches for this closure are kept under
-  `C:\Users\86182\Desktop\wkkk`.
+  and remain untouched. Build logs and caches for this closure are kept in an
+  operator-designated cache outside the repository.
 
 ## 2026-08-15 Release E PWA negative matrix and offline resilience
 
@@ -692,7 +745,7 @@
 - The final evidence is in
   `docs/evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md` and the
   contract in `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md`. Benchmark logs and
-  artifacts were kept under `C:\Users\86182\Desktop\wkkk`; no synthetic fixture
+  artifacts were kept in an operator-designated cache outside the repository; no synthetic fixture
   entered the product bundle, PWA cache, King, or user data.
 
 ## 2026-08-15 Release C superseding production closure
@@ -751,8 +804,7 @@
   full API `280 passed / 6 skipped`; Web lint, typecheck and production build
   PASS; Alembic heads/current `20260806_0021 (head)`. The Windows skip is the
   known symlink path-escape case and is not counted as PASS. Build output was
-  redirected through the junction-backed cache under
-  `C:\Users\86182\Desktop\wkkk\next-build-release-c`.
+  redirected through a junction-backed operator cache outside the repository.
 
 ## 2026-08-14 Release C Production Closure (final)
 
@@ -1061,7 +1113,7 @@ CSP_ENFORCING = NOT_IMPLEMENTED
 ## 当前目的与边界
 
 - 导入并长期阅读、搜索、批注、整理、分享和导出已经线性化、标准化的 AI 对话资料。
-- 新导入接受兼容 JSON（Markdown 可选校验，CanJSON v1/v2 自动识别）、附件 `.crbundle` 和旧 `.cr` 兼容归档；不接收未经 Adapter 标准化的 OpenAI 官方图结构/ZIP、CSV、TXT 或 Markdown 单文件提交。
+- 新导入接受 Adaptive JSON/Markdown（单 JSON、单 Markdown、JSON+Markdown，含 CanJSON v1/v2 内置识别）与独立 `.cr` 归档恢复；`.crbundle` 产品入口已移除，不接收未经 Adapter 标准化的 OpenAI 官方图结构/ZIP、CSV、TXT 或 Markdown 单文件提交。
 - 主要身份是固定主体 `local:default`；Share 访客仅凭 token 访问授权范围。
 - 没有应用内认证、多用户 ACL、在线 AI 生成、标签或语义搜索；复杂 Office 预览仍退化为下载。
 - 公网访问控制、TLS、证书与限流属于反向代理/基础设施边界。

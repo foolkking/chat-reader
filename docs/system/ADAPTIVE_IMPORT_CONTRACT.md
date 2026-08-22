@@ -9,7 +9,7 @@ Chat Reader 只有两个导入入口：
 - `JSON / Markdown`：确定性分析已知或用户学习过的对话格式；支持单 JSON、单 Markdown、JSON + Markdown 和批量文件。
 - `.cr` 归档：独立的完整归档恢复流程，不进入 Mapping 或 Profile 匹配。
 
-原 AI Conversation Normalization Gateway 已退役，不存在独立品牌、页面、转换结果、下载后再上传或 `.crbundle` 产品流程。它的确定性 Analyzer、候选检测与 Mapping 思路被内化为 Chat Reader 能力；不使用 LLM、爬虫或用户脚本。
+Chat Reader 是唯一产品。原 AI Conversation Normalization Gateway 已退役，不存在独立品牌、页面、转换结果、下载后再上传或 `.crbundle` 产品流程。它的确定性 Analyzer、候选检测与 Mapping 思路被内化为 Chat Reader 能力；不使用 LLM、爬虫或用户脚本。
 
 ## 稳定数据流
 

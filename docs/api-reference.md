@@ -334,3 +334,19 @@ routes return `401`; all authenticated, auth and shared-capability responses
 are `Cache-Control: no-store`. Unsafe mutations require the configured same
 origin. A Share token authorizes only its exact scoped public Share resources;
 it is never a global owner or artifact bypass.
+
+## Content cleanup review
+
+All `/api/content-cleanup/*` routes remain inside the owner authentication
+boundary. `GET/POST/PATCH/DELETE /rules` manage built-in and literal rule
+revisions. `POST /scans` accepts current, selected-active or all-active scope;
+archived conversations are rejected. A Source Editor selection additionally
+sends `message_id`, `selection_start_offset` and `selection_end_offset` as one
+all-or-none set. Offsets are server Unicode code-point offsets over the current
+persisted MessageVersion; unsaved source is not accepted. Scan status and
+occurrence preview are read separately, decisions are updated through
+`PATCH /scans/{id}/decisions`, and `POST /scans/{id}/apply` revalidates current
+MessageVersion authority before creating reviewed versions. Successful apply
+and `DELETE /scans/{id}` both remove the scan and occurrence records.
+Occurrence responses derive bounded context at read time; persisted scan rows
+contain positions and identities, not copied message bodies.

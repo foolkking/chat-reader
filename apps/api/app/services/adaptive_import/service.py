@@ -62,7 +62,7 @@ def begin_session(db: Session, file_count: int, *, repair_profile_id: uuid.UUID 
         warnings=[],
         file_count=file_count,
         total_bytes=0,
-        session_state="ANALYZING",
+        session_state="COLLECTING",
         analysis_summary={"repair_profile_id": str(repair_profile_id)} if repair_profile_id else {},
     )
     db.add(record)

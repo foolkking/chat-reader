@@ -13,6 +13,7 @@ from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
 from app.services.canonical.persistence import CommitImportResult, commit_import_preview
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
+from app.services.content_cleanup import queue_import_scan
 from app.core.observability import structured_event
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ def queue_import(record: ImportRecord, db: Session) -> ImportRecord:
     now = datetime.now(timezone.utc)
     record.status = "queued"
     record.phase = "queued"
+    record.session_state = "READY"
     record.progress = 0
     record.processed_messages = 0
     record.queued_at = now
@@ -62,6 +64,7 @@ def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
         if record.attempt_count >= MAX_AUTOMATIC_ATTEMPTS:
             record.status = "failed"
             record.phase = "failed"
+            record.session_state = "FAILED"
             record.heartbeat_at = now
             record.completed_at = now
             record.error_message = (
@@ -78,6 +81,7 @@ def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
             continue
         record.status = "queued"
         record.phase = "queued"
+        record.session_state = "READY"
         record.queued_at = now
         record.started_at = None
         record.heartbeat_at = None
@@ -107,6 +111,7 @@ def claim_next_import(db: Session) -> uuid.UUID | None:
     now = datetime.now(timezone.utc)
     record.status = "processing"
     record.phase = "parsing"
+    record.session_state = "IMPORTING"
     record.progress = max(record.progress, 1)
     record.started_at = now
     record.heartbeat_at = now
@@ -142,6 +147,14 @@ def process_import(
     try:
         with session_factory() as db:
             result = commit_import_preview(import_id, db, progress_callback=report)
+            # Noise review is deliberately best-effort: a scanner outage must
+            # never turn a successful canonical import into a failed import.
+            try:
+                with db.begin_nested():
+                    queue_import_scan(db, result.conversation_ids)
+            except Exception as exc:  # pragma: no cover - operational guard
+                logger.warning("post_import_noise_scan_queue_failed", extra={"error": str(exc), "import_id": str(import_id)})
+            db.commit()
             structured_event(logger, logging.INFO, "import_committed", import_id=str(import_id))
             return result
     except Exception as exc:
@@ -157,6 +170,7 @@ def process_import(
             if record is not None:
                 record.status = "failed"
                 record.phase = "failed"
+                record.session_state = "FAILED"
                 record.error_message = _safe_error(exc)
                 record.heartbeat_at = datetime.now(timezone.utc)
                 record.completed_at = datetime.now(timezone.utc)

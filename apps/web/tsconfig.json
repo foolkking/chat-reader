@@ -30,7 +30,9 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     ".next-pwa-negative/types/**/*.ts",
-    ".next-pwa-negative/dev/types/**/*.ts"
+    ".next-pwa-negative/dev/types/**/*.ts",
+    ".next-cleanup-e2e/types/**/*.ts",
+    ".next-cleanup-e2e/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

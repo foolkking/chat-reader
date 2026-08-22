@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll, Search, Undo2, Upload, X } from "lucide-react";
+import { Eraser, Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll, Search, Undo2, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
 import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
 import type { AttachmentRead, MessageEditResponse, MessageListItem } from "../../lib/types";
-import { EditMessageForm } from "./edit-message-form";
+import { ContentCleanupDialog, type CleanupSourceSelection } from "../conversations/content-cleanup-panel";
+import { EditMessageForm, type SourceTextSelection } from "./edit-message-form";
 import { blockIndexForSourceOffset, normalizedMessageBlocks } from "./message-source-position";
 import type { AttachmentDraft, AttachmentDraftCallbacks } from "./source-attachment-drop";
 
@@ -70,6 +71,9 @@ export function SourceEditorWorkspace({
   const [showPreview, setShowPreview] = useState(false);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
   const [saveBaseVersionId, setSaveBaseVersionId] = useState(message.current_version?.id);
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [sourceSelection, setSourceSelection] = useState<SourceTextSelection | null>(null);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
 
   const conversationAttachmentsQuery = useQuery({
     queryKey: ["conversation-attachments", message.conversation_id],
@@ -186,6 +190,8 @@ export function SourceEditorWorkspace({
 
   useEffect(() => {
     setSaveBaseVersionId(message.current_version?.id);
+    setSourceSelection(null);
+    setCleanupOpen(false);
   }, [message.id, message.current_version?.id]);
 
   function requestClose() {
@@ -197,6 +203,29 @@ export function SourceEditorWorkspace({
     const blockIndex = blockIndexForSourceOffset(text, normalizedMessageBlocks(message), cursorOffsetRef.current);
     await onLocate(message.id, blockIndex);
   }
+
+  async function loadLatestMessage(): Promise<MessageListItem> {
+    const [conversation, turn] = await Promise.all([
+      getConversation(message.conversation_id),
+      getConversationReaderTurn(message.conversation_id, message.id),
+    ]);
+    const latestMessage = turn.items.find((item) => item.id === message.id);
+    if (!latestMessage?.current_version?.id) {
+      throw new Error(zh ? "无法加载最新消息状态。" : "Unable to load the latest message state.");
+    }
+    setSaveBaseVersionId(latestMessage.current_version.id);
+    onConversationRevision?.(conversation.offline_revision);
+    await onMessageChanged(latestMessage);
+    onTargetUpdated({ message: latestMessage, cursorOffset: cursorOffsetRef.current });
+    return latestMessage;
+  }
+
+  const cleanupSelection: CleanupSourceSelection | null = sourceSelection ? {
+    messageId: message.id,
+    startOffset: sourceSelection.startOffset,
+    endOffset: sourceSelection.endOffset,
+    text: sourceSelection.text,
+  } : null;
 
   const pendingBanner = pendingTarget ? (
     <div className="shrink-0 border-b border-[var(--mark-border)] bg-[var(--mark-bg)] p-3 text-sm text-primary" role="status">
@@ -211,6 +240,7 @@ export function SourceEditorWorkspace({
   ) : null;
 
   return (
+    <>
     <FloatingWorkspacePanel
       storageKey="chat-reader:source-editor-panel"
       placement="left-overlay"
@@ -224,12 +254,13 @@ export function SourceEditorWorkspace({
       <div className="flex h-full min-h-0 flex-col">
         <div className="flex min-h-10 shrink-0 items-center justify-between border-b border-ui bg-surface px-2">
           <div className="flex min-w-0 items-center gap-1">
-            <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle"><Upload className="h-4 w-4" />{zh ? "添加附件" : "Add attachment"}</label>
-            <button type="button" onClick={() => setAttachmentPickerOpen(true)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle"><Paperclip className="h-4 w-4" />{zh ? "选择当前对话文件" : "Choose conversation file"}</button>
+            <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "添加附件" : "Add attachment"} title={zh ? "添加附件" : "Add attachment"}><Upload className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "添加附件" : "Add attachment"}</span></label>
+            <button type="button" onClick={() => setAttachmentPickerOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "选择当前对话文件" : "Choose conversation file"} title={zh ? "选择当前对话文件" : "Choose conversation file"}><Paperclip className="h-4 w-4" /></button>
           </div>
           <div className="flex items-center gap-1">
-            <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{zh ? "\u9884\u89c8" : "Preview"}</button>
-            <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle" title={zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}><LocateFixed className="h-4 w-4" />{zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}</button>
+            <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">{zh ? "\u9884\u89c8" : "Preview"}</span></button>
+            <button type="button" data-testid="source-editor-cleanup-selection" disabled={!sourceSelection || editorDirty} onClick={() => setCleanupOpen(true)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40 sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "清理噪声" : "Clean noise"} title={!sourceSelection ? (zh ? "先在 Markdown 源码中选择需要清理的文本" : "Select text in the Markdown source first") : editorDirty ? (zh ? "请先保存源码修改，再清理已保存版本" : "Save source changes before cleaning the persisted version") : (zh ? "审查并清理选中的噪声" : "Review and clean the selected noise")}><Eraser className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "清理噪声" : "Clean noise"}</span></button>
+            <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "在正文中定位" : "Locate in reader"} title={zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}><LocateFixed className="h-4 w-4" /></button>
           </div>
         </div>
         <div className="min-h-0 flex-1">
@@ -244,7 +275,8 @@ export function SourceEditorWorkspace({
             messageId={message.id}
             versionNumber={versionNumber}
             onCursorOffsetChange={(offset) => { cursorOffsetRef.current = offset; }}
-            onDirtyChange={onDirtyChange}
+            onSelectionChange={setSourceSelection}
+            onDirtyChange={(dirty) => { setEditorDirty(dirty); onDirtyChange(dirty); }}
             onCancel={() => onClose()}
             onAttachmentFiles={handleAttachmentFiles}
             onAttachmentRetry={retryAttachment}
@@ -252,19 +284,7 @@ export function SourceEditorWorkspace({
             onAttachmentCancel={handleAttachmentCancel}
             conversationAttachments={conversationAttachmentsQuery.data ?? []}
             showPreview={showPreview}
-            onReloadLatest={async () => {
-              const [conversation, turn] = await Promise.all([
-                getConversation(message.conversation_id),
-                getConversationReaderTurn(message.conversation_id, message.id),
-              ]);
-              const latestMessage = turn.items.find((item) => item.id === message.id);
-              if (!latestMessage?.current_version?.id) {
-                throw new Error(zh ? "\u65e0\u6cd5\u52a0\u8f7d\u6700\u65b0\u6d88\u606f\u72b6\u6001\u3002" : "Unable to load the latest message state.");
-              }
-              setSaveBaseVersionId(latestMessage.current_version.id);
-              onConversationRevision?.(conversation.offline_revision);
-              await onMessageChanged(latestMessage);
-            }}
+            onReloadLatest={async () => { await loadLatestMessage(); }}
             onSave={async (nextText, reason, saveMode, removedActions) => {
               const clickedAt = window.performance.now();
               const requestStartedAt = window.performance.now();
@@ -323,6 +343,14 @@ export function SourceEditorWorkspace({
         ) : null}
       </div>
     </FloatingWorkspacePanel>
+    <ContentCleanupDialog
+      open={cleanupOpen}
+      conversationId={message.conversation_id}
+      selection={cleanupSelection}
+      onClose={() => setCleanupOpen(false)}
+      onApplied={async () => { await loadLatestMessage(); setSourceSelection(null); }}
+    />
+    </>
   );
 }
 

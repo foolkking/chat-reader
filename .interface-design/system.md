@@ -78,3 +78,21 @@ Import Format revision ledger.
 - At desktop widths the three panes remain balanced and independently
   scannable; narrower layouts collapse naturally into source, mapping, preview
   document order without horizontal page overflow.
+
+## Source Cleanup Rules
+
+- Content cleanup begins from a real selection in the Markdown Source Editor,
+  not from a global Reader drawer. The selection is the visible authority for
+  what may change; dirty source must be saved first.
+- Source tools use stable 40px icon buttons on narrow screens. Desktop labels
+  are reserved for Add attachment, Preview and Clean noise; Choose file and
+  Locate remain familiar icon commands with accessible names and tooltips.
+- Review opens as one centered, compact document dialog on desktop and a
+  bottom sheet on mobile. It shows the selected text, exact candidates and the
+  apply command without decorative nested cards or unused vertical space.
+- Rules are a secondary view inside the review dialog, not a duplicate Settings
+  destination. Repeated candidates and rules use divided ledger rows. Deletion
+  of a user rule requires inline confirmation; built-in rules are never
+  deletable.
+- A completed or explicitly ignored review disappears. Do not add cleanup-only
+  undo UI; existing MessageVersion history is the recovery authority.
