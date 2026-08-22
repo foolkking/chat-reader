@@ -13,6 +13,24 @@ gateway service, `.crbundle` route or conversion-download service may be
 deployed. Retain the current image generation and the generation it replaces;
 remove only older unreferenced Chat Reader images after acceptance.
 
+Final deployment result (2026-08-22): GitHub Actions run `32578788677` passed
+quality and image construction on attempt 2; attempt 1 ended only because the
+bundled Chromium process exited with `SIGSEGV` in the final PWA matrix. The
+deployed image set was built at `2026-08-22T14:47:26Z`. The retained backup has
+a readable PostgreSQL custom dump plus readable imports, exports, offline and
+assets archives; no separate manual checksum confirmation was used.
+
+Migration to `20260822_0026` completed before API, worker and Web replacement.
+All three application services and PostgreSQL are healthy, public health is
+200, anonymous cleanup/import requests return 401, and public diagnostics
+returns 404. The SSH + container-loopback diagnostic reports an idle live
+worker with a recent heartbeat. The interrupted partial backup and deployment
+transfer cache were removed. The server retains the final image generation and
+the generation it immediately replaced. PostgreSQL, business volumes,
+`.env.production` and the retained backup were not deleted or overwritten.
+Authenticated production UI acceptance is `NOT VERIFIED`; the same production
+build passed isolated Adaptive Import and Source Editor cleanup browser gates.
+
 ## 2026-08-22 Adaptive Import recovery deployment
 
 GitHub Actions run `32550720450` passed the complete quality and image-build

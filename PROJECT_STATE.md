@@ -23,6 +23,21 @@
   Cleanup browser `1 passed`, Web lint/typecheck/build PASS, clean and current
   database migration PASS, dependency policy PASS with zero high/critical
   advisories, and Alembic single head `20260822_0026`.
+- The final consolidation image set was built at `2026-08-22T14:47:26Z` after
+  GitHub Actions run `32578788677` passed on attempt 2. Attempt 1 reached the
+  final PWA matrix before the bundled Chromium process exited with `SIGSEGV`;
+  the rerun passed quality and image construction without a product change.
+  Production now runs the final API, worker and Web images, Alembic current is
+  `20260822_0026`, public health is 200, private cleanup/import APIs deny
+  anonymous requests, and public diagnostics remains 404. The protected
+  loopback diagnostic reports `alive_idle` with a recent worker heartbeat.
+- The retained final backup contains a readable PostgreSQL custom dump and
+  readable imports, exports, offline and assets archives. The interrupted
+  partial backup and deployment transfer cache were removed. Production keeps
+  exactly the current and immediately replaced Chat Reader image generations;
+  PostgreSQL, business volumes, `.env.production` and the retained backup were
+  not modified by cleanup. Authenticated production UI acceptance remains
+  `NOT VERIFIED`; the same production build passed the isolated browser gates.
 
 ## 2026-08-22 Content cleanup rules and asynchronous review
 
@@ -79,11 +94,9 @@
   attempt had already passed the new Adaptive Import browser gate, then the
   bundled Chromium process crashed with `SIGSEGV` while opening the final CSP
   test context; the exact-source rerun passed every quality and image-build
-  step. Production now runs images built at `2026-08-22T04:19:59Z`; public
-  health is 200, the worker reports `alive_idle`, Alembic remains
-  `20260822_0025`, and unauthenticated Adaptive Import recovery requests are
-  denied. The server retains only the current and immediately replaced image
-  generations.
+  step. That recovery-stage image set was built at `2026-08-22T04:19:59Z` and
+  has since been superseded by the final consolidation deployment recorded
+  above.
 
 ## 2026-08-22 Adaptive Markdown role-boundary fix
 
