@@ -1,5 +1,29 @@
 # Project State
 
+## 2026-08-22 Adaptive Import recovery UX
+
+- A source-analysis failure is now scoped to its `InputGroup`. An `INVALID`
+  Family keeps the session in `RESOLVING`, so valid UNKNOWN/DRIFTED Families in
+  the same batch can still be mapped and completed. `BLOCKED` is reserved for
+  legacy or genuinely unrecoverable session state rather than ordinary bad
+  input.
+- Import Overview shows the affected files and a specific recovery action.
+  The owner can replace one source file in place, exclude one conversation
+  group, reopen Group Resolver, or reanalyze a legacy blocked session without
+  discarding completed Profile work. The final Import action remains disabled
+  until every included group has a safe normalization path.
+- Replacement and exclusion use commit-before-cleanup filesystem semantics:
+  database/session reanalysis commits before superseded temporary source files
+  are removed. The last remaining group cannot be excluded. No Conversation,
+  attachment, schema or canonical persistence contract changed.
+- The reported three-file selection was reproduced read-only in the browser:
+  explicit grouping produced one JSON/Markdown pair plus one standalone
+  Markdown conversation, both Families were mapped in the same session, and
+  the two-conversation plan reached `READY` in about 2.1 seconds. The sources
+  were not committed as Conversations. The recovery regression additionally
+  covers a valid Family beside malformed JSON, continued Mapping, exclusion,
+  replacement and transition to `READY` without restarting the session.
+
 ## 2026-08-22 Adaptive Markdown role-boundary fix
 
 - Adaptive Import now recognizes deterministic Chinese line-label roles such as

@@ -30,9 +30,11 @@ SourceFile[]
 
 ## Session、Group 与 Family
 
-`ImportSession` 使用 `COLLECTING / ANALYZING / NEEDS_GROUPING / RESOLVING / READY / IMPORTING / COMPLETED`，并可进入 `BLOCKED / FAILED / CANCELED`。关闭 Overlay 会在当前浏览器会话中保留可恢复的 session；明确重新选择文件会取消 session 并清理该 session 的临时来源。
+`ImportSession` 使用 `COLLECTING / ANALYZING / NEEDS_GROUPING / RESOLVING / READY / IMPORTING / COMPLETED`，并可进入 `BLOCKED / FAILED / CANCELED`。`INVALID` 是 Family/InputGroup 的条目级状态，不会把整个 session 变成 `BLOCKED`；同一批次中其他 UNKNOWN/DRIFTED Family 仍可完成 Mapping。`BLOCKED` 只保留给旧会话恢复或真正无法继续的 session 状态。关闭 Overlay 会在当前浏览器会话中保留可恢复的 session；明确重新选择文件会取消 session 并清理该 session 的临时来源。
 
 一个 `InputGroup` 是最终形成一个 Conversation 的 JSON、Markdown 或配对文件集合。文件名只作保守 pairing hint。一个 JSON 和一个 Markdown 可直接配对；多文件混合时只有 normalized stem 唯一匹配的 pair 自动成立，其余进入 Group Resolver。
+
+未提交 session 可以随时重新打开 Group Resolver。分析失败的 Group 可以原位替换单个来源文件，或从本次导入中排除；最后一个 Group 不能被排除，必须替换来源或取消 session。替换/排除完成后自动重建 Family 与 ImportPlan。数据库状态先提交，随后才删除被替代的 session 临时文件，因此恢复失败不会先破坏原选择。
 
 `StructureFamily` 只属于当前 session。系统按无正文的结构签名聚类，让同一 Family 只 Mapping 一次，再对 Family 的全部 InputGroup 执行 normalization 和 validation。
 
@@ -59,7 +61,7 @@ Role source 与 role value conversion 分开保存。`human/ai` 等来源值可�
 
 Markdown Analyzer 只把已识别的角色标签作为消息边界。当前确定性词典包括常见英文标签以及 `用户`、`提问者`、`助手`、`AI助手` 等中文标签；`ChatGPT *(model-name)*` 一类模型装饰不属于角色身份。Normalization 必须复用 Mapping 已确认的标签集合，因此消息正文里的同级标题或以冒号结尾的普通句子不会被切成伪消息。
 
-Preview 展示 canonical title、message sequence、role、content 和 timestamp。验证覆盖当前 Family 的所有 InputGroup；Diagnostic 包含 layer、pointer、阻断状态和 action，UI 可定位到来源结构、locator、role mapping 或 relation。
+Preview 展示 canonical title、message sequence、role、content 和 timestamp。验证覆盖当前 Family 的所有 InputGroup；Diagnostic 包含 layer、pointer、阻断状态和 action。Mapping 内的 Diagnostic 可定位到来源结构、locator、role mapping 或 relation；文件级错误在 Import Overview 显示只读位置上下文以及替换、排除和重新组合动作，不提供无效的 Mapping 定位按钮。
 
 ## UI 与设置
 

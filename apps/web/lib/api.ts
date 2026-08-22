@@ -995,6 +995,29 @@ export async function resolveAdaptiveImportGroups(
   });
 }
 
+export async function reanalyzeAdaptiveImportSession(importId: string): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/reanalyze`, { method: "POST" });
+}
+
+export async function replaceAdaptiveImportArtifact(
+  importId: string,
+  artifactId: string,
+  file: File,
+): Promise<AdaptiveImportSession> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/artifacts/${artifactId}`, {
+    method: "PUT",
+    body: formData,
+  });
+}
+
+export async function excludeAdaptiveImportGroup(importId: string, groupId: string): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/groups/${groupId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function previewAdaptiveFamilyMapping(
   importId: string,
   familyId: string,
@@ -1276,6 +1299,19 @@ function localizedImportError(code: string): string | null {
     pairing_timeout: "JSON 与 Markdown 配对超时，请检查是否选择了同一段对话的文件。",
     pairing_ambiguous: "JSON 与 Markdown 存在多个同等可靠的配对结果，无法确定消息对应关系。",
     alignment_failed: "无法建立可靠的 JSON 与 Markdown 消息对应关系。",
+    JSON_INVALID: "JSON 文件不完整、编码错误或语法无效。请修正后替换文件。",
+    NO_MESSAGE_STRUCTURE: "文件中没有找到可确认的消息结构。请替换文件或调整文件组合。",
+    MARKDOWN_ENCODING_INVALID: "Markdown 不是有效的 UTF-8 文本。请转换编码后替换文件。",
+    MARKDOWN_EMPTY: "Markdown 文件没有可导入内容。请替换文件或不导入这一项。",
+    MARKDOWN_FENCE_UNCLOSED: "Markdown 中有未闭合的代码块。请修正后替换文件。",
+    GROUP_AMBIGUOUS: "当前文件不能安全组成一个对话，请调整文件组合。",
+    GROUPING_INCOMPLETE: "每个文件必须且只能属于一个对话组合。",
+    SESSION_WOULD_BE_EMPTY: "最后一项不能排除，请替换它的源文件或重新选择文件。",
+    SOURCE_UNSUPPORTED: "只支持 JSON、JSONL、GZip JSON 与 Markdown 文件。",
+    FILE_EMPTY: "所选文件为空，请选择包含对话内容的文件。",
+    FILE_TOO_LARGE: "所选文件超过当前单文件大小限制。",
+    SESSION_TOO_LARGE: "替换后的文件会超过本次导入总容量限制。",
+    SESSION_STATE_INVALID: "当前导入状态已经变化，请返回概览后重试。",
   };
   return messages[code] ?? null;
 }

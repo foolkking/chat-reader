@@ -2,6 +2,31 @@
 
 ## Adaptive Import (2026-08-22)
 
+Recovery coverage verifies that malformed input remains an item-level
+`INVALID` Family while valid Families continue Mapping in the same session.
+The API matrix covers in-place source replacement, Group exclusion,
+last-Group rejection, regrouping from `READY`, reanalysis and
+commit-before-cleanup storage behavior. Browser coverage performs Mapping with
+two malformed siblings, excludes one, replaces the other and reaches `READY`
+without reopening Import. Desktop 1440 px, narrow 900 px and mobile 390 px
+layouts were rendered in Chromium with no horizontal overflow; diagnostic
+locations are read-only outside Mapping so the UI does not expose a fake
+navigation action.
+
+Current local evidence for this recovery scope is `24 passed` focused Adaptive
+Import API tests, `349 passed / 6 skipped` for the full API suite, and `3 passed
+/ 1 conditional skipped` for the Adaptive Import browser file. The related
+Import contract and PWA/Offline browser regression is `11 passed`. The three
+reported desktop files also reached a two-conversation `READY` plan in a
+read-only browser acceptance run in about 2.1 seconds; the source conversations
+were not committed. Web lint, typecheck, the production build, dependency
+policy and `git diff --check` pass. CI and production acceptance are not claimed
+until the exact committed source completes those stages.
+
+The release workflow runs `e2e/import-markdown.spec.ts` with
+`E2E_IMPORT_FLOW=1` as a dedicated gate after the API starts. This is separate
+from the broad default PWA matrix and adds only the focused import workflows.
+
 Focused API coverage is in `apps/api/tests/test_adaptive_import_api.py`. It
 covers UNKNOWN Mapping through direct commit, second-use exact matching,
 Built-in native JSON, Family-level batch reuse, full-family rejection,

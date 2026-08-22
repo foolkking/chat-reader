@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.import_profile import ImportProfile, ImportProfileRevision, ImportStructureFamily
+from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileRevision, ImportStructureFamily
 from app.models.import_record import ImportRecord
+from app.models.source_artifact import SourceArtifact
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.adaptive_import.service import (
     MAX_ADAPTIVE_FILES,
@@ -21,7 +22,11 @@ from app.services.adaptive_import.service import (
     finalize_session,
     list_profiles,
     preview_family_mapping,
+    reanalyze_session,
+    remove_input_group,
+    remove_source_paths,
     remove_session_files,
+    replace_session_artifact,
     resolve_grouping,
     select_profile_revision,
     session_payload,
@@ -141,6 +146,77 @@ def update_adaptive_import_groups(
         resolve_grouping(db, record, [item.model_dump(mode="json") for item in payload.groups])
         db.commit()
         db.refresh(record)
+        return session_payload(record)
+    except AdaptiveImportError as exc:
+        db.rollback()
+        raise _http_error(exc) from exc
+
+
+@router.post("/api/adaptive-import/sessions/{import_id}/reanalyze")
+def reanalyze_adaptive_import_session(import_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, Any]:
+    record = _record(import_id, db)
+    try:
+        reanalyze_session(db, record)
+        db.commit()
+        db.refresh(record)
+        return session_payload(record)
+    except AdaptiveImportError as exc:
+        db.rollback()
+        raise _http_error(exc) from exc
+
+
+@router.put("/api/adaptive-import/sessions/{import_id}/artifacts/{artifact_id}")
+async def replace_adaptive_import_artifact(
+    import_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    record = _record(import_id, db)
+    artifact = _artifact(import_id, artifact_id, db)
+    new_path = None
+    try:
+        max_bytes = get_settings().max_import_file_size_mb * 1024 * 1024
+        content = await _read_upload_bounded(file, max_bytes)
+        old_path, new_path = replace_session_artifact(
+            db,
+            record,
+            artifact,
+            filename=file.filename or "replacement",
+            content=content,
+        )
+        db.commit()
+        db.refresh(record)
+        remove_source_paths([old_path])
+        return session_payload(record)
+    except AdaptiveImportError as exc:
+        db.rollback()
+        if new_path is not None:
+            remove_source_paths([new_path])
+        raise _http_error(exc) from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        if new_path is not None:
+            remove_source_paths([new_path])
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "SOURCE_REPLACEMENT_FAILED", "message": "The replacement could not be saved."},
+        ) from exc
+
+
+@router.delete("/api/adaptive-import/sessions/{import_id}/groups/{group_id}")
+def exclude_adaptive_import_group(
+    import_id: uuid.UUID,
+    group_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    record = _record(import_id, db)
+    group = _group(import_id, group_id, db)
+    try:
+        removed_paths = remove_input_group(db, record, group)
+        db.commit()
+        db.refresh(record)
+        remove_source_paths(removed_paths)
         return session_payload(record)
     except AdaptiveImportError as exc:
         db.rollback()
@@ -277,6 +353,24 @@ def _family(import_id: uuid.UUID, family_id: uuid.UUID, db: Session) -> ImportSt
     return family
 
 
+def _artifact(import_id: uuid.UUID, artifact_id: uuid.UUID, db: Session) -> SourceArtifact:
+    artifact = db.get(SourceArtifact, artifact_id)
+    if artifact is None or artifact.import_id != import_id:
+        raise HTTPException(status_code=404, detail="Source file not found.")
+    return artifact
+
+
+def _group(import_id: uuid.UUID, group_id: uuid.UUID, db: Session) -> ImportInputGroup:
+    group = db.get(ImportInputGroup, group_id)
+    if group is None or group.import_id != import_id:
+        raise HTTPException(status_code=404, detail="Input group not found.")
+    return group
+
+
 def _http_error(exc: AdaptiveImportError) -> HTTPException:
-    status_code = 413 if exc.code in {"FILE_TOO_LARGE", "SESSION_TOO_LARGE"} else 409 if exc.code == "SESSION_STATE_INVALID" else 422
+    status_code = 413 if exc.code in {"FILE_TOO_LARGE", "SESSION_TOO_LARGE"} else 409 if exc.code in {
+        "SESSION_STATE_INVALID",
+        "SESSION_WOULD_BE_EMPTY",
+        "GROUP_ARTIFACT_SHARED",
+    } else 422
     return HTTPException(status_code=status_code, detail={"code": exc.code, "message": str(exc), "diagnostic": exc.diagnostic()})

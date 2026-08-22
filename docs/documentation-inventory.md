@@ -11,6 +11,14 @@ product contract are recorded in `PROJECT_STATE.md`,
 operational/profile state; existing Conversation and `.cr` schema remains
 unchanged.
 
+2026-08-22 Adaptive Import recovery synchronization: item-level `INVALID`
+semantics, continued Mapping beside malformed siblings, in-place source
+replacement, Group exclusion/regrouping, legacy reanalysis, commit-before-file
+cleanup and responsive recovery UX are current in `PROJECT_STATE.md`,
+`docs/system/ADAPTIVE_IMPORT_CONTRACT.md`, `docs/api-reference.md`,
+`docs/system/BACKEND_AND_API.md` and `docs/testing.md`. No migration,
+dependency or new documentation category was introduced.
+
 2026-08-22 current-project movement synchronization: the right-hand Project
 workspace drop target, stable optimistic `project_relation`, URL-preserving
 success behavior and multi-cache failure rollback are recorded in

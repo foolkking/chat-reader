@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.models.import_profile import ImportProfile, ImportProfileRevision
+from app.models.import_record import ImportRecord
 from app.core.config import get_settings
 from app.services.adaptive_import.analysis import analyze_documents, default_mapping
 from app.services.adaptive_import.contracts import AdaptiveImportError, SourceDocument
@@ -42,6 +43,20 @@ def _save_mapping(client: TestClient, session: dict, name: str = "Learned fixtur
     assert preview.status_code == 200, preview.text
     assert preview.json()["validation"]["verified_on_full_family"] is True
     assert preview.json()["sample_group_id"] == family["group_ids"][-1]
+    saved = client.post(
+        f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping",
+        json={"profile_name": name, "mapping_spec": family["mapping_draft"]},
+    )
+    assert saved.status_code == 200, saved.text
+    return saved.json()
+
+
+def _save_family_mapping(client: TestClient, session: dict, family: dict, name: str) -> dict:
+    preview = client.post(
+        f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping/preview",
+        json={"profile_name": name, "mapping_spec": family["mapping_draft"], "sample_group_id": family["group_ids"][0]},
+    )
+    assert preview.status_code == 200, preview.text
     saved = client.post(
         f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping",
         json={"profile_name": name, "mapping_spec": family["mapping_draft"]},
@@ -122,6 +137,111 @@ def test_invalid_member_blocks_family_profile_verification(client: TestClient) -
     assert response.status_code == 422
     formats = client.get("/api/import-formats").json()
     assert all(item["name"] != "Must not persist" for item in formats)
+
+
+def test_invalid_group_does_not_block_mapping_and_can_be_excluded(client: TestClient, tmp_path: Path) -> None:
+    session = _create(
+        client,
+        [
+            ("good.json", _json_bytes(body="Keep this conversation"), "application/json"),
+            ("broken.json", b'{"thread":', "application/json"),
+        ],
+    )
+
+    assert session["state"] == "RESOLVING"
+    assert {family["resolution_status"] for family in session["families"]} == {"UNKNOWN", "INVALID"}
+    valid_family = next(family for family in session["families"] if family["resolution_status"] == "UNKNOWN")
+    invalid_family = next(family for family in session["families"] if family["resolution_status"] == "INVALID")
+
+    partially_resolved = _save_family_mapping(client, session, valid_family, "Recoverable batch")
+    assert partially_resolved["state"] == "RESOLVING"
+    assert {family["resolution_status"] for family in partially_resolved["families"]} == {"EXACT_MATCH", "INVALID"}
+
+    excluded = client.delete(
+        f"/api/adaptive-import/sessions/{session['import_id']}/groups/{invalid_family['group_ids'][0]}"
+    )
+    assert excluded.status_code == 200, excluded.text
+    payload = excluded.json()
+    assert payload["state"] == "READY"
+    assert payload["file_count"] == 1
+    assert payload["conversation_count"] == 1
+    stored_names = {path.name for path in (tmp_path / "storage" / "imports" / session["import_id"]).iterdir()}
+    assert "broken.json" not in stored_names
+    assert "good.json" in stored_names
+
+
+def test_invalid_group_can_be_replaced_without_restarting_session(client: TestClient, tmp_path: Path) -> None:
+    session = _create(
+        client,
+        [
+            ("good.json", _json_bytes(body="Known structure"), "application/json"),
+            ("broken.json", b"not json", "application/json"),
+        ],
+    )
+    valid_family = next(family for family in session["families"] if family["resolution_status"] == "UNKNOWN")
+    invalid_family = next(family for family in session["families"] if family["resolution_status"] == "INVALID")
+    partially_resolved = _save_family_mapping(client, session, valid_family, "Replacement batch")
+    invalid_group = next(group for group in partially_resolved["groups"] if group["id"] in invalid_family["group_ids"])
+    artifact_id = invalid_group["files"][0]["artifact_id"]
+
+    replaced = client.put(
+        f"/api/adaptive-import/sessions/{session['import_id']}/artifacts/{artifact_id}",
+        files={"file": ("replacement.json", _json_bytes(body="Recovered conversation"), "application/json")},
+    )
+    assert replaced.status_code == 200, replaced.text
+    payload = replaced.json()
+    assert payload["state"] == "READY"
+    assert payload["conversation_count"] == 2
+    assert payload["family_count"] == 1
+    stored_names = {path.name for path in (tmp_path / "storage" / "imports" / session["import_id"]).iterdir()}
+    assert "broken.json" not in stored_names
+    assert "replacement.json" in stored_names
+
+
+def test_last_group_cannot_be_excluded_and_ready_session_can_be_regrouped(client: TestClient) -> None:
+    content = json.dumps(
+        {
+            "metadata": {"powered_by": "ChatGPT Exporter", "title": "Native fixture"},
+            "messages": [{"role": "Prompt", "say": "Hello"}, {"role": "Response", "say": "World"}],
+        }
+    ).encode()
+    session = _create(client, [("native.json", content, "application/json")])
+    assert session["state"] == "READY"
+
+    excluded = client.delete(
+        f"/api/adaptive-import/sessions/{session['import_id']}/groups/{session['groups'][0]['id']}"
+    )
+    assert excluded.status_code == 409
+    assert excluded.json()["detail"]["code"] == "SESSION_WOULD_BE_EMPTY"
+
+    regrouped = client.put(
+        f"/api/adaptive-import/sessions/{session['import_id']}/groups",
+        json={"groups": [{"artifact_ids": session["groups"][0]["artifact_ids"], "display_name": "Native fixture"}]},
+    )
+    assert regrouped.status_code == 200, regrouped.text
+    assert regrouped.json()["state"] == "READY"
+
+    reanalyzed = client.post(f"/api/adaptive-import/sessions/{session['import_id']}/reanalyze")
+    assert reanalyzed.status_code == 200, reanalyzed.text
+    assert reanalyzed.json()["state"] == "READY"
+
+
+def test_legacy_blocked_session_can_be_reanalyzed_in_place(client: TestClient, tmp_path: Path) -> None:
+    session = _create(client, [("legacy.json", _json_bytes(), "application/json")])
+    engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
+    with Session(engine) as db:
+        record = db.get(ImportRecord, uuid.UUID(session["import_id"]))
+        assert record is not None
+        record.session_state = "BLOCKED"
+        record.status = "blocked"
+        record.phase = "analysis_failed"
+        db.commit()
+    engine.dispose()
+
+    recovered = client.post(f"/api/adaptive-import/sessions/{session['import_id']}/reanalyze")
+    assert recovered.status_code == 200, recovered.text
+    assert recovered.json()["state"] == "RESOLVING"
+    assert recovered.json()["families"][0]["resolution_status"] == "UNKNOWN"
 
 
 def test_drift_creates_revision_and_old_revision_remains_matchable(client: TestClient) -> None:

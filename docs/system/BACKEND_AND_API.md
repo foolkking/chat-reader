@@ -92,6 +92,8 @@ JSON/Markdown SourceFile[] -> Analyzer -> InputGroup[] -> StructureFamily[]
 
 Session、Group、Family、Profile/Revision 与 Mapping/validation 合同见 [Adaptive Import Contract](ADAPTIVE_IMPORT_CONTRACT.md)。CanJSON v1/v2、Chat Reader Native 与 Prompt/Response Markdown 通过 Built-in Profile 使用同一上层 resolution contract。Learned Profile 仅保存无正文 signature、selector、role 字典、relation、noise 与受控 transform。
 
+来源解析错误保持在 `InputGroup/INVALID Family`，不会阻塞同 session 中其他 Family 的 Mapping。未提交 session 可通过 reanalyze、artifact replacement、Group exclusion 或 regrouping 恢复；恢复操作重建 Family/ImportPlan，最终 commit 仍要求所有保留 Group 都处于可验证的 EXACT/COMPATIBLE 路径。替换与排除遵循数据库提交后再清理旧临时源文件的边界。
+
 形式 1 会分别删除 JSON/Markdown 尾部的空白消息，再按非空消息顺序校验 role 与 timestamp。配对解析枚举全部 `Prompt`/`Response` 标题候选，以 JSON 的角色、规范化时间和顺序建立完整单调路径，再按正文相似度和长度偏差选择唯一最佳路径；未选候选作为 Markdown 正文保留。只有完整路径唯一时启用辅助分段，同分、缺失或顺序冲突仍产生 conflict 并阻止 commit。消息状态为 exact、normalized 或 by_order 时，canonical `display_markdown` 取 Markdown；JSON-only 仍取 JSON。Markdown-only 与无可靠时间序列继续使用保守兼容解析，未闭合围栏恢复保持不变。parser/Markdown parser 当前为 v4，`ChatGPT Exporter (https://www.chatgptexporter.com)` 是受支持的 `powered_by` 值。
 
 ### 阅读与定位

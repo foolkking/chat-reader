@@ -31,6 +31,7 @@ from app.services.import_pipeline.draft_store import attach_import_draft
 from app.services.storage.local_storage import save_import_file
 
 MAX_ADAPTIVE_FILES = 500
+RECOVERABLE_SESSION_STATES = {"NEEDS_GROUPING", "RESOLVING", "READY", "BLOCKED"}
 
 
 def create_session(db: Session, uploads: list[tuple[str, bytes]]) -> ImportRecord:
@@ -108,6 +109,7 @@ def finalize_session(db: Session, record: ImportRecord) -> ImportRecord:
 
 
 def analyze_session(db: Session, record: ImportRecord) -> None:
+    _clear_import_plan(record)
     record.session_state = "ANALYZING"
     record.status = "analyzing"
     record.phase = "analyzing"
@@ -212,7 +214,7 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
 
 
 def resolve_grouping(db: Session, record: ImportRecord, groups: list[dict[str, Any]]) -> None:
-    _require_session_state(record, {"NEEDS_GROUPING"})
+    _require_session_state(record, RECOVERABLE_SESSION_STATES)
     artifact_ids = {str(artifact.id) for artifact in record.artifacts}
     submitted = [str(item) for group in groups for item in group.get("artifact_ids", [])]
     if set(submitted) != artifact_ids or len(submitted) != len(set(submitted)):
@@ -234,6 +236,108 @@ def resolve_grouping(db: Session, record: ImportRecord, groups: list[dict[str, A
     db.flush()
     db.expire(record, ["input_groups"])
     analyze_session(db, record)
+
+
+def reanalyze_session(db: Session, record: ImportRecord) -> None:
+    _require_session_state(record, RECOVERABLE_SESSION_STATES)
+    analyze_session(db, record)
+
+
+def replace_session_artifact(
+    db: Session,
+    record: ImportRecord,
+    artifact: SourceArtifact,
+    *,
+    filename: str,
+    content: bytes,
+) -> tuple[Path, Path]:
+    _require_session_state(record, RECOVERABLE_SESSION_STATES)
+    settings = get_settings()
+    max_bytes = settings.max_import_file_size_mb * 1024 * 1024
+    total_limit = settings.max_adaptive_import_total_mb * 1024 * 1024
+    extension = _extension(filename)
+    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown"}:
+        raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
+    if not content:
+        raise AdaptiveImportError("FILE_EMPTY", f"{filename} is empty.", layer="file")
+    if len(content) > max_bytes:
+        raise AdaptiveImportError("FILE_TOO_LARGE", f"{filename} exceeds the {settings.max_import_file_size_mb} MB limit.", layer="file")
+    projected_total = record.total_bytes - artifact.byte_size + len(content)
+    if projected_total > total_limit:
+        raise AdaptiveImportError(
+            "SESSION_TOO_LARGE",
+            f"This import session exceeds the {settings.max_adaptive_import_total_mb} MB total limit.",
+            layer="file",
+        )
+
+    old_path = _source_path(record, artifact)
+    stored = save_import_file(record.id, filename, content)
+    new_path = _session_root(record.id) / stored.safe_filename
+    try:
+        artifact.filename = filename
+        artifact.safe_filename = stored.safe_filename
+        artifact.sha256 = hashlib.sha256(content).hexdigest()
+        artifact.byte_size = len(content)
+        artifact.mime_guess = "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/markdown"
+        artifact.file_extension = extension
+        artifact.raw_storage_uri = stored.raw_storage_uri
+        artifact.parsed_summary = {}
+        record.total_bytes = projected_total
+
+        artifacts_by_id = {str(item.id): item for item in record.artifacts}
+        for group in record.input_groups:
+            if str(artifact.id) not in group.artifact_ids:
+                continue
+            group_artifacts = [artifacts_by_id[item_id] for item_id in group.artifact_ids if item_id in artifacts_by_id]
+            mode = _mode_for_artifacts(group_artifacts)
+            group.mode = mode or "UNKNOWN"
+            group.display_name = " + ".join(item.filename for item in group_artifacts)
+            group.grouping_status = "RESOLVED" if mode else "AMBIGUOUS"
+            group.profile_resolution = {}
+            group.diagnostics = [] if mode else [{
+                "code": "GROUP_AMBIGUOUS",
+                "layer": "grouping",
+                "blocking": True,
+                "message": "This replacement no longer forms one JSON/Markdown conversation group.",
+                "action": "open_group_resolver",
+                "group_id": str(group.id),
+            }]
+        _refresh_source_fingerprint(record)
+        analyze_session(db, record)
+        return old_path, new_path
+    except Exception:
+        _remove_source_path(new_path)
+        raise
+
+
+def remove_input_group(db: Session, record: ImportRecord, group: ImportInputGroup) -> list[Path]:
+    _require_session_state(record, RECOVERABLE_SESSION_STATES)
+    if len(record.input_groups) <= 1:
+        raise AdaptiveImportError(
+            "SESSION_WOULD_BE_EMPTY",
+            "The last conversation group cannot be excluded. Replace its source file or cancel this import instead.",
+            layer="grouping",
+        )
+
+    artifact_ids = set(group.artifact_ids)
+    if any(artifact_ids.intersection(other.artifact_ids) for other in record.input_groups if other.id != group.id):
+        raise AdaptiveImportError(
+            "GROUP_ARTIFACT_SHARED",
+            "This group shares a source file with another group and must be regrouped before it can be excluded.",
+            layer="grouping",
+        )
+    artifacts = [item for item in record.artifacts if str(item.id) in artifact_ids]
+    paths = [_source_path(record, item) for item in artifacts]
+    record.file_count -= len(artifacts)
+    record.total_bytes -= sum(item.byte_size for item in artifacts)
+    for artifact in artifacts:
+        db.delete(artifact)
+    db.delete(group)
+    db.flush()
+    db.expire(record, ["artifacts", "input_groups", "structure_families"])
+    _refresh_source_fingerprint(record)
+    analyze_session(db, record)
+    return paths
 
 
 def verify_family_mapping(
@@ -529,18 +633,13 @@ def _validate_resolved_family(
 
 def _update_session_state(db: Session, record: ImportRecord) -> None:
     statuses = {family.resolution_status for family in record.structure_families}
-    if "INVALID" in statuses:
-        record.session_state = "BLOCKED"
-        record.status = "blocked"
-        record.phase = "analysis_failed"
-        record.progress = 40
-    elif statuses <= {"EXACT_MATCH", "COMPATIBLE"} and statuses:
+    if statuses <= {"EXACT_MATCH", "COMPATIBLE"} and statuses:
         _prepare_plan(db, record)
     else:
         record.session_state = "RESOLVING"
         record.status = "resolving"
-        record.phase = "profile_resolution"
-        record.progress = 55
+        record.phase = "input_recovery" if "INVALID" in statuses else "profile_resolution"
+        record.progress = 45 if "INVALID" in statuses else 55
     record.analysis_summary = _summary(record)
 
 
@@ -578,15 +677,11 @@ def _analysis_for_family(record: ImportRecord, family: ImportStructureFamily) ->
 def _group_documents(record: ImportRecord, group: ImportInputGroup) -> list[SourceDocument]:
     result = []
     artifacts = {str(item.id): item for item in record.artifacts}
-    root = Path(get_settings().import_storage_dir).resolve()
-    session_root = (root / str(record.id)).resolve()
     for artifact_id in group.artifact_ids:
         artifact = artifacts.get(str(artifact_id))
         if artifact is None:
             raise AdaptiveImportError("SOURCE_MISSING", "An input group references a missing source file.", layer="grouping")
-        path = (session_root / artifact.safe_filename).resolve()
-        if not path.is_relative_to(session_root) or not path.is_file():
-            raise AdaptiveImportError("SOURCE_MISSING", "A source file is missing from import storage.", layer="file")
+        path = _source_path(record, artifact)
         result.append(SourceDocument(
             artifact_id=str(artifact.id), filename=artifact.filename, extension=artifact.file_extension or _extension(artifact.filename), content=path.read_bytes()
         ))
@@ -611,6 +706,46 @@ def _summary(record: ImportRecord) -> dict[str, Any]:
         "group_count": len(record.input_groups), "family_count": len(record.structure_families),
         "resolution_counts": statuses, "ready": record.session_state == "READY",
     }
+
+
+def _clear_import_plan(record: ImportRecord) -> None:
+    record.draft_storage_uri = None
+    record.draft_sha256 = None
+    record.draft_summary = {}
+    record.draft_expires_at = None
+    record.total_messages = 0
+
+
+def _refresh_source_fingerprint(record: ImportRecord) -> None:
+    record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
+
+
+def _session_root(import_id: uuid.UUID) -> Path:
+    root = Path(get_settings().import_storage_dir).resolve()
+    session_root = (root / str(import_id)).resolve()
+    if session_root.parent != root or session_root.name != str(import_id):
+        raise AdaptiveImportError("SOURCE_PATH_INVALID", "The import session storage path is invalid.", layer="file")
+    return session_root
+
+
+def _source_path(record: ImportRecord, artifact: SourceArtifact) -> Path:
+    session_root = _session_root(record.id)
+    path = (session_root / artifact.safe_filename).resolve()
+    if not path.is_relative_to(session_root) or not path.is_file():
+        raise AdaptiveImportError("SOURCE_MISSING", "A source file is missing from import storage.", layer="file")
+    return path
+
+
+def _remove_source_path(path: Path) -> None:
+    root = Path(get_settings().import_storage_dir).resolve()
+    resolved = path.resolve()
+    if resolved.is_relative_to(root) and resolved.parent.parent == root:
+        resolved.unlink(missing_ok=True)
+
+
+def remove_source_paths(paths: list[Path]) -> None:
+    for path in paths:
+        _remove_source_path(path)
 
 
 def _count_statuses(values) -> dict[str, int]:

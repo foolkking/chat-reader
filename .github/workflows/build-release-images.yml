@@ -131,6 +131,14 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
 
+      - name: Adaptive Import recovery browser flow
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          E2E_IMPORT_FLOW: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/import-markdown.spec.ts
+
       - name: Release H enforced CSP browser matrix
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"

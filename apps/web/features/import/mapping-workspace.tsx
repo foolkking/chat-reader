@@ -40,8 +40,8 @@ export function MappingWorkspace({ session, family, onBack, onSession }: { sessi
         </div></div>
         <CanonicalPreviewPane preview={preview} loading={previewMutation.isPending} />
       </div>
-      {previewMutation.isError ? <ErrorLine message={previewMutation.error.message} /> : null}
-      {saveMutation.isError ? <ErrorLine message={saveMutation.error.message} /> : null}
+      {previewMutation.isError ? <ErrorLine message={previewMutation.error.message} onBack={onBack} /> : null}
+      {saveMutation.isError ? <ErrorLine message={saveMutation.error.message} onBack={onBack} /> : null}
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4"><p className="text-xs text-secondary">验证会运行此格式的全部 {family.group_count} 个对话，不只检查示例。</p><div className="flex gap-2"><button type="button" disabled={previewMutation.isPending || !profileName.trim()} onClick={() => previewMutation.mutate()} className="btn-secondary min-h-10 px-4 text-sm font-medium">{previewMutation.isPending ? "正在验证" : "验证映射"}</button><button type="button" disabled={!preview?.validation.valid || saveMutation.isPending || !profileName.trim()} onClick={() => saveMutation.mutate()} className="btn-primary min-h-10 px-4 text-sm font-medium">{saveMutation.isPending ? "正在保存" : family.resolution_status === "DRIFTED" ? "保存新版本并继续" : "保存映射并继续"}</button></div></footer>
     </section>
   );
@@ -106,7 +106,9 @@ type FormProps = { mapping: MappingSpec; candidates: Record<string, unknown>; on
 function MappingSelect({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) { return <label htmlFor={id} className="block text-xs font-semibold text-secondary">{label}<select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-ui bg-surface px-3 font-mono text-xs text-primary">{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
 function ReadOnlyMapping({ label, value }: { label: string; value: string }) { return <div><p className="text-xs font-semibold text-secondary">{label}</p><p className="mt-1 rounded-md bg-subtle px-3 py-2 font-mono text-xs text-primary">{value}</p></div>; }
 function Segment({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) { return <button type="button" aria-pressed={active} onClick={onClick} className={`min-h-9 rounded-md px-2 text-xs ${active ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary"}`}>{children}</button>; }
-function ErrorLine({ message }: { message: string }) { return <div role="alert" className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{message}</div>; }
+function ErrorLine({ message, onBack }: { message: string; onBack: () => void }) {
+  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"><span>{message}</span><button type="button" onClick={onBack} className="text-xs font-semibold underline">返回概览处理输入</button></div>;
+}
 function suggestedProfileName(family: AdaptiveImportFamily): string { return family.source_mode === "JSON_MARKDOWN" ? "自定义 JSON + Markdown" : family.source_mode === "MARKDOWN" ? "自定义 Markdown" : "自定义 JSON"; }
 function roleLabel(role: string): string { return role === "user" ? "你" : role === "assistant" ? "ChatGPT" : role; }
 function roleSuggestions(values: unknown): Record<string, string> { const aliases: Record<string, string> = { user: "user", human: "user", you: "user", prompt: "user", "我": "user", "用户": "user", assistant: "assistant", ai: "assistant", chatgpt: "assistant", response: "assistant", "助手": "assistant", system: "system", developer: "developer", tool: "tool" }; return asArray(values).reduce<Record<string, string>>((result, value) => { const source = String(value); if (aliases[source.toLowerCase()]) result[source] = aliases[source.toLowerCase()]; return result; }, {}); }

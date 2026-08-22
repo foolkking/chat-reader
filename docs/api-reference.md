@@ -61,7 +61,10 @@ Adaptive JSON / Markdown：
 | --- | --- | --- |
 | POST | `/api/adaptive-import/sessions` | 有界上传 JSON/Markdown，分析 grouping、Family 与 Profile match；最多 500 文件、每文件 50 MiB、session 总计 512 MiB |
 | GET/DELETE | `/api/adaptive-import/sessions/{id}` | 恢复 session，或明确取消并清理其临时来源 |
-| PUT | `/api/adaptive-import/sessions/{id}/groups` | 仅在 pairing 不明确时确认 InputGroup |
+| PUT | `/api/adaptive-import/sessions/{id}/groups` | 在任意未提交可恢复状态确认或调整 InputGroup；每个来源必须且只能出现一次 |
+| POST | `/api/adaptive-import/sessions/{id}/reanalyze` | 使用当前 Analyzer 恢复并重建未提交 session 的 Family/Profile resolution |
+| PUT | `/api/adaptive-import/sessions/{id}/artifacts/{artifact}` | 原位替换一个 session 临时来源，保留 Group 身份并自动重新分析 |
+| DELETE | `/api/adaptive-import/sessions/{id}/groups/{group}` | 从本次导入排除一个 Conversation Group；拒绝删除最后一个 Group |
 | POST | `/api/adaptive-import/sessions/{id}/families/{family}/mapping/preview` | 对完整 Family normalization/validation，并返回 canonical sample |
 | POST | `/api/adaptive-import/sessions/{id}/families/{family}/mapping` | 保存 VERIFIED Learned Profile/Revision 并重建 ImportPlan |
 | POST | `/api/adaptive-import/sessions/{id}/families/{family}/profile` | 为 AMBIGUOUS Family 明确选择候选 revision |
