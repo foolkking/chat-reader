@@ -1,5 +1,30 @@
 # 生产部署
 
+## 2026-08-23 layered content-cleanup detection
+
+Production now runs the layered content-noise detector and Alembic
+`20260823_0027`. GitHub Actions run `32588592205` passed all quality and image
+jobs on attempt 2; attempt 1 stopped only after bundled Chromium crashed while
+creating the last CSP browser context. The exact-source rerun passed the full
+CSP, cleanup, Reader, Share, authentication and PWA matrices. The deployed
+image set was built at `2026-08-22T18:00:33Z`.
+
+Before migration, production created a five-part backup containing a readable
+PostgreSQL custom dump and readable imports, exports, offline and assets
+archives. Deployment loaded the externally built images, ran the migration,
+then replaced API/worker before Web. Public health is 200, API/Web/PostgreSQL
+are healthy, worker diagnostics report `alive_idle`, anonymous cleanup access
+returns 401 and public diagnostics remains 404. Synthetic read-only checks in
+the production API container cover private markers, normalized syntax, bounded
+fuzzy review, ordinary-prose rejection and Markdown code-span protection.
+
+The transfer archive was removed after loading. Targeted image cleanup retains
+only the current generation and its direct rollback generation for API,
+worker, migrate and Web. No PostgreSQL data, business volume, production
+environment file, backup or unrelated image was removed. Authenticated
+production UI remains `NOT VERIFIED`; the deployed build passed the isolated
+Source Editor cleanup browser gate.
+
 ## Final consolidation deployment contract
 
 This source moves production from Alembic `20260822_0025` to

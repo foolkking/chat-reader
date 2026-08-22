@@ -25,6 +25,20 @@
   passed`, full API `368 passed / 5 skipped`, browser/PWA `76 passed / 71
   conditional skipped`, Web lint/typecheck/build PASS, dependency policy PASS
   with zero high or critical advisories, and `git diff --check` PASS.
+- GitHub Actions run `32588592205` passed on attempt 2. Attempt 1 completed the
+  API, migration, dependency and first three CSP checks before bundled Chromium
+  exited with `SIGSEGV` while creating the final isolated browser context; the
+  exact-source rerun passed every browser gate and image construction. The
+  deployed images were built at `2026-08-22T18:00:33Z`.
+- Production migrated to `20260823_0027`; API, Web and PostgreSQL are healthy,
+  the worker reports `alive_idle`, public health returns 200, anonymous cleanup
+  access returns 401 and public diagnostics returns 404. A production-container
+  synthetic smoke verified private, normalized and bounded-fuzzy citation
+  behavior plus the ordinary-prose and separate-inline-code negative cases.
+  The current five-part backup is retained, transfer caches were removed and
+  exactly the current and immediately replaced Chat Reader image generations
+  remain. Authenticated production UI was not claimed without an owner browser
+  session; the same production build passed the isolated cleanup browser gate.
 
 ## 2026-08-22 Final Chat Reader consolidation
 
