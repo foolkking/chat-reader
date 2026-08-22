@@ -20,8 +20,19 @@ Import contract and PWA/Offline browser regression is `11 passed`. The three
 reported desktop files also reached a two-conversation `READY` plan in a
 read-only browser acceptance run in about 2.1 seconds; the source conversations
 were not committed. Web lint, typecheck, the production build, dependency
-policy and `git diff --check` pass. CI and production acceptance are not claimed
-until the exact committed source completes those stages.
+policy and `git diff --check` pass.
+
+GitHub Actions run `32550720450` passed on attempt 2, including the dedicated
+Adaptive Import flow and all existing browser, auth, PWA, API, migration and
+image-build gates. Attempt 1 passed the Import gate but the bundled Chromium
+headless shell crashed with `SIGSEGV` while creating the final CSP test context;
+the same CSP matrix passed on the exact-source rerun, confirming a recoverable
+browser-runner failure rather than a product assertion failure. Production
+health is 200 after deployment, worker diagnostics report `alive_idle`, and
+anonymous Adaptive Import session/recovery mutations are denied. Authenticated
+production Mapping is not claimed because this execution session has no owner
+credential or connected browser-control surface; the real three-file browser
+acceptance was completed against the isolated production build before deploy.
 
 The release workflow runs `e2e/import-markdown.spec.ts` with
 `E2E_IMPORT_FLOW=1` as a dedicated gate after the API starts. This is separate

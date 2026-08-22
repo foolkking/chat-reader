@@ -1,5 +1,26 @@
 # 生产部署
 
+## 2026-08-22 Adaptive Import recovery deployment
+
+GitHub Actions run `32550720450` passed the complete quality and image-build
+workflow on its second attempt. Attempt 1 passed the new Adaptive Import browser
+gate, then bundled Chromium crashed while creating the last CSP test context;
+the exact-source rerun passed that matrix and every remaining gate. The deployed
+API/worker/Web images were built at `2026-08-22T04:19:59Z`.
+
+Before replacement, production created the retained five-part recovery point
+`/opt/chat-reader/backups/import-recovery-20260822T042839Z-ea459e4` containing a
+readable PostgreSQL custom dump plus readable imports, exports, offline and
+assets archives. No schema migration was added; Alembic remains
+`20260822_0025 (head/current)`.
+
+Public health returns 200, API and Web are healthy, the worker reports
+`alive_idle`, and anonymous Adaptive Import creation/recovery requests remain
+denied. The server retains only the image generation built at the timestamp
+above and the generation it immediately replaced. The older third generation
+and release-transfer archives were removed without modifying PostgreSQL,
+business volumes or `.env.production`.
+
 ## 2026-08-22 Adaptive Markdown role-boundary deployment
 
 GitHub Actions run `32544978132` passed the complete quality and image-build

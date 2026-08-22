@@ -23,6 +23,15 @@
   were not committed as Conversations. The recovery regression additionally
   covers a valid Family beside malformed JSON, continued Mapping, exclusion,
   replacement and transition to `READY` without restarting the session.
+- GitHub Actions run `32550720450` passed on its second attempt. The first
+  attempt had already passed the new Adaptive Import browser gate, then the
+  bundled Chromium process crashed with `SIGSEGV` while opening the final CSP
+  test context; the exact-source rerun passed every quality and image-build
+  step. Production now runs images built at `2026-08-22T04:19:59Z`; public
+  health is 200, the worker reports `alive_idle`, Alembic remains
+  `20260822_0025`, and unauthenticated Adaptive Import recovery requests are
+  denied. The server retains only the current and immediately replaced image
+  generations.
 
 ## 2026-08-22 Adaptive Markdown role-boundary fix
 
