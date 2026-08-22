@@ -57,6 +57,8 @@ Profile 只保存结构、selector、role value mapping、relation、noise rule�
 
 Role source 与 role value conversion 分开保存。`human/ai` 等来源值可映射为 canonical role；未知值必须由用户确认，不能静默降级为 assistant。Noise v1 只支持确定性的 `KEEP / IGNORE`。Transform 仅允许系统定义、可序列化且不可执行任意代码的操作。
 
+Markdown Analyzer 只把已识别的角色标签作为消息边界。当前确定性词典包括常见英文标签以及 `用户`、`提问者`、`助手`、`AI助手` 等中文标签；`ChatGPT *(model-name)*` 一类模型装饰不属于角色身份。Normalization 必须复用 Mapping 已确认的标签集合，因此消息正文里的同级标题或以冒号结尾的普通句子不会被切成伪消息。
+
 Preview 展示 canonical title、message sequence、role、content 和 timestamp。验证覆盖当前 Family 的所有 InputGroup；Diagnostic 包含 layer、pointer、阻断状态和 action，UI 可定位到来源结构、locator、role mapping 或 relation。
 
 ## UI 与设置

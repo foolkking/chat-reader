@@ -259,6 +259,51 @@ def test_markdown_heading_roles_accept_trailing_colons_and_ignore_fenced_boundar
     assert draft.messages[1].display_text == "Answer"
 
 
+def test_markdown_chinese_line_labels_ignore_colon_ended_body_lines() -> None:
+    document = SourceDocument(
+        "md-cn-labels",
+        "formula.md",
+        ".md",
+        (
+            "### 公式展示测试\n\n"
+            "用户:\n请输出公式测试。\n"
+            "AI助手:\n可以，下面是完整测试集。\n\n"
+            "### 1. 行内公式\n\n"
+            "这是行内公式，例如：\\(E=mc^2\\)\n"
+        ).encode(),
+    )
+
+    analysis = analyze_documents([document])
+    draft = normalize_group([document], default_mapping(analysis), "Chinese Markdown fixture")[0]
+
+    assert analysis.semantic["role_suggestions"] == {"AI助手": "assistant", "用户": "user"}
+    assert [message.role for message in draft.messages] == ["user", "assistant"]
+    assert "这是行内公式" in draft.messages[1].display_text
+
+
+def test_markdown_model_emphasis_in_heading_is_decoration_not_role() -> None:
+    json_document = SourceDocument("json", "pair.json", ".json", _json_bytes())
+    markdown_document = SourceDocument(
+        "md",
+        "pair.md",
+        ".md",
+        (
+            "# Pair\n\n"
+            "## You — Aug 22, 2026\nHello\n\n"
+            "## ChatGPT *(gpt-5-6-thinking)* — Aug 22, 2026\nWorld\n\n"
+            "## 可能的原因\nThis is body content\n"
+        ).encode(),
+    )
+
+    analysis = analyze_documents([json_document, markdown_document])
+    draft = normalize_group([json_document, markdown_document], default_mapping(analysis), "Paired Markdown fixture")[0]
+
+    assert analysis.semantic["markdown"]["role_suggestions"] == {"ChatGPT": "assistant", "You": "user"}
+    assert [message.role for message in draft.messages] == ["user", "assistant"]
+    assert draft.messages[1].display_text.startswith("World")
+    assert "## 可能的原因" in draft.messages[1].display_text
+
+
 def test_json_markdown_order_id_and_role_timestamp_relations() -> None:
     json_document = SourceDocument("json", "pair.json", ".json", _json_bytes())
     markdown_document = SourceDocument(
@@ -320,6 +365,64 @@ def test_mixed_batch_with_unmatched_files_requires_group_resolution(client: Test
 
     assert session["state"] == "NEEDS_GROUPING"
     assert sorted(group["grouping_status"] for group in session["groups"]) == ["AMBIGUOUS", "RESOLVED"]
+
+
+def test_json_markdown_pair_with_chinese_markdown_family_does_not_block_session(client: TestClient) -> None:
+    paired_markdown = (
+        "# Pair\n\n"
+        "## You — Aug 22, 2026\nHello\n\n"
+        "## ChatGPT *(gpt-5-6-thinking)* — Aug 22, 2026\nWorld\n"
+    ).encode()
+    formula_markdown = (
+        "### 公式展示测试\n\n"
+        "用户:\n请输出公式测试。\n"
+        "AI助手:\n可以，下面是完整测试集。\n\n"
+        "### 1. 行内公式\n\n"
+        "这是行内公式，例如：\\(E=mc^2\\)\n"
+    ).encode()
+
+    session = _create(
+        client,
+        [
+            ("conversation.json", _json_bytes(), "application/json"),
+            ("conversation.md", paired_markdown, "text/markdown"),
+            ("formula.md", formula_markdown, "text/markdown"),
+        ],
+    )
+
+    assert session["state"] == "NEEDS_GROUPING"
+    artifacts = {
+        file["filename"]: file["artifact_id"]
+        for group in session["groups"]
+        for file in group["files"]
+    }
+    resolved_response = client.put(
+        f"/api/adaptive-import/sessions/{session['import_id']}/groups",
+        json={
+            "groups": [
+                {"artifact_ids": [artifacts["conversation.json"], artifacts["conversation.md"]]},
+                {"artifact_ids": [artifacts["formula.md"]]},
+            ]
+        },
+    )
+    assert resolved_response.status_code == 200, resolved_response.text
+    resolved = resolved_response.json()
+    assert resolved["state"] == "RESOLVING"
+    assert resolved["family_count"] == 2
+    assert all(family["resolution_status"] != "INVALID" for family in resolved["families"])
+    assert sorted(group["mode"] for group in resolved["groups"]) == ["JSON_MARKDOWN", "MARKDOWN"]
+
+    current = resolved
+    while current["state"] == "RESOLVING":
+        family = next(item for item in current["families"] if item["resolution_status"] not in {"EXACT_MATCH", "COMPATIBLE"})
+        mapped = client.post(
+            f"/api/adaptive-import/sessions/{current['import_id']}/families/{family['id']}/mapping",
+            json={"profile_name": f"Three-file {family['source_mode']}", "mapping_spec": family["mapping_draft"]},
+        )
+        assert mapped.status_code == 200, mapped.text
+        current = mapped.json()
+    assert current["state"] == "READY"
+    assert current["conversation_count"] == 2
 
 
 def test_cancel_marks_session_and_removes_temporary_source(client: TestClient, tmp_path: Path) -> None:

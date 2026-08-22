@@ -11,6 +11,13 @@ unknown-role blocking, ambiguous mixed-file grouping and explicit session
 cancellation. `.cr` archive regression remains in
 `test_system_archive_api.py`; the removed `.crbundle` route is asserted `404`.
 
+Markdown adaptive-import regressions also cover Chinese line-label roles,
+emphasized model-name decoration in role headings, and body headings/colon-ended
+sentences that must remain inside the current message. A mixed three-file
+session verifies explicit grouping into one JSON/Markdown pair plus one
+standalone Markdown Family, full-Family Mapping, and transition to `READY`
+without a false `BLOCKED` state.
+
 Required gates for this change are the full API suite, migration single-head,
 Web lint/typecheck/build, focused Adaptive Import browser flow, PWA regression,
 dependency/security policy and `git diff --check`. Results are recorded only

@@ -15,8 +15,8 @@ _CONTENT_KEYS = ("content", "text", "say", "message", "body", "parts")
 _TITLE_KEYS = ("title", "name", "subject")
 _TIME_KEYS = ("created_at", "create_time", "timestamp", "time", "date")
 _ROLE_ALIASES = {
-    "user": "user", "human": "user", "you": "user", "prompt": "user", "me": "user", "我": "user", "用户": "user",
-    "assistant": "assistant", "ai": "assistant", "chatgpt": "assistant", "response": "assistant", "bot": "assistant", "助手": "assistant",
+    "user": "user", "human": "user", "you": "user", "prompt": "user", "me": "user", "我": "user", "用户": "user", "提问": "user", "提问者": "user",
+    "assistant": "assistant", "ai": "assistant", "chatgpt": "assistant", "response": "assistant", "bot": "assistant", "助手": "assistant", "ai助手": "assistant", "ai 助手": "assistant",
     "system": "system", "系统": "system", "developer": "developer", "tool": "tool",
 }
 
@@ -363,6 +363,10 @@ def _heading_role(label: str) -> str | None:
 
 def _heading_metadata(label: str) -> dict[str, str | None]:
     value = re.split(r"\s+(?:[-–—·]|\|)\s+", label.strip(), maxsplit=1)[0]
+    # Exporters commonly wrap a model name in Markdown emphasis, e.g.
+    # ``ChatGPT *(gpt-5)*``. It is decoration, not a distinct role label.
+    value = re.sub(r"\s*[*_]{0,3}\s*\([^)]*\)\s*[*_]{0,3}\s*$", "", value)
+    value = re.sub(r"^[*_]{1,3}|[*_]{1,3}$", "", value).strip()
     value = re.sub(r"\s*\([^)]*\)\s*$", "", value).strip().rstrip(":：").strip()
     external_id_match = re.search(
         r"(?:^|[\s|,;\[(])(?:id|message[_\s-]?id|uuid)\s*[:=]\s*([A-Za-z0-9._:-]{1,200})",

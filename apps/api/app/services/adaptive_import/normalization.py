@@ -106,8 +106,8 @@ def _normalize_markdown(document: SourceDocument, spec: dict[str, Any], profile_
     except UnicodeDecodeError as exc:
         raise AdaptiveImportError("MARKDOWN_ENCODING_INVALID", "Markdown must be UTF-8.", layer="normalization") from exc
     boundary = (spec.get("messages") or {}).get("boundary") or {}
-    sections, preamble = _markdown_sections(text, boundary)
     role_mapping = {str(key).casefold(): value for key, value in (spec.get("role_mapping") or {}).items()}
+    sections, preamble = _markdown_sections(text, boundary, allowed_labels=set(role_mapping))
     messages: list[CanonicalDraftMessage] = []
     for source_index, section in enumerate(sections):
         role = role_mapping.get(section["label"].casefold())
@@ -188,7 +188,12 @@ def _merge_pair(
     return _draft_conversation(json_draft.title or markdown_draft.title, output, profile_name, source_type="adaptive_json_markdown")
 
 
-def _markdown_sections(text: str, boundary: dict[str, Any]) -> tuple[list[dict[str, Any]], str]:
+def _markdown_sections(
+    text: str,
+    boundary: dict[str, Any],
+    *,
+    allowed_labels: set[str] | None = None,
+) -> tuple[list[dict[str, Any]], str]:
     kind = boundary.get("kind")
     level = boundary.get("level")
     heading = re.compile(rf"^ {{0,3}}#{{{int(level)}}}[ \t]+(.+?)\s*#*\s*$") if kind == "HEADING" and level else None
@@ -208,6 +213,8 @@ def _markdown_sections(text: str, boundary: dict[str, Any]) -> tuple[list[dict[s
         match = heading.match(line) if heading else line_label.match(line) if line_label else None
         if match:
             metadata = _boundary_metadata(match.group(1))
+            if allowed_labels is not None and metadata["label"].casefold() not in allowed_labels:
+                continue
             boundaries.append({"index": index, **metadata})
     if not boundaries:
         raise AdaptiveImportError("MARKDOWN_BOUNDARY_MISSING", "Configured Markdown boundaries were not found.", layer="normalization")
@@ -225,6 +232,8 @@ def _boundary_role_label(label: str) -> str:
 
 def _boundary_metadata(label: str) -> dict[str, str | None]:
     value = re.split(r"\s+(?:[-–—·]|\|)\s+", label.strip(), maxsplit=1)[0]
+    value = re.sub(r"\s*[*_]{0,3}\s*\([^)]*\)\s*[*_]{0,3}\s*$", "", value)
+    value = re.sub(r"^[*_]{1,3}|[*_]{1,3}$", "", value).strip()
     role = re.sub(r"\s*\([^)]*\)\s*$", "", value).strip().rstrip(":：").strip()
     external_id_match = re.search(
         r"(?:^|[\s|,;\[(])(?:id|message[_\s-]?id|uuid)\s*[:=]\s*([A-Za-z0-9._:-]{1,200})",
