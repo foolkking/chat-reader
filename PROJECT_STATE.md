@@ -1,5 +1,31 @@
 # Project State
 
+## 2026-08-23 Layered content-noise detection
+
+- Source Editor cleanup now evaluates active built-in and user rules inside the
+  selected MessageVersion range before using a manual-selection fallback. A
+  complete citation selection retains structural detector authority; a partial
+  selection expands to the complete candidate and stays unselected for review.
+- Built-in citation recognition combines exact private/visible grammar with
+  narrowly bounded syntax-token normalization. A tolerant candidate still
+  requires an exact `turn...search/news/view...` reference sequence. User rules
+  support raw exact, NFKC/case/whitespace normalized and anchored approximate
+  modes plus anywhere, whole-line and block-end boundaries.
+- Occurrences record detector version, match mode, evidence codes and optional
+  similarity without storing message copies. Only high-confidence detections
+  default to processing; medium and low confidence remain `KEEP` until the
+  owner explicitly selects them.
+- Markdown protection covers variable-length fenced/inline code, indented code,
+  math, link destinations, reference definitions, autolinks and asset URLs.
+  Apply rechecks the current role, immutable MessageVersion range and detector
+  evidence before creating a normal replacement version.
+- Alembic source and local development database have one head,
+  `20260823_0027`. No new dependency or automatic deletion path was added.
+- Final local evidence for the complete scope is focused cleanup API `17
+  passed`, full API `368 passed / 5 skipped`, browser/PWA `76 passed / 71
+  conditional skipped`, Web lint/typecheck/build PASS, dependency policy PASS
+  with zero high or critical advisories, and `git diff --check` PASS.
+
 ## 2026-08-22 Final Chat Reader consolidation
 
 - Chat Reader is the only product and runtime boundary. The retired standalone

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import unicodedata
 import re
 import uuid
 from dataclasses import dataclass
@@ -36,11 +37,28 @@ BUILTIN_RULES = (
     ("manual-selection-v1", "手动选择的内容", "manual_selection", "MANUAL_SELECTION"),
 )
 MANUAL_SELECTION_DETECTOR = "manual-selection-v1"
+MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE = 256
 
-PRIVATE_CITATION = re.compile(r"\ue200(?:cite\ue202[^\ue201\r\n]+|memcite)\ue201")
+PRIVATE_CITATION = re.compile(
+    r"\ue200\s*(?:cite|memcite)\s*\ue202\s*"
+    r"(?:[☆★\u200b\s]*turn\d+(?:search|news|view)\d+)+"
+    r"[\u200b☆★\s]*\ue201",
+    re.IGNORECASE,
+)
+PRIVATE_CITATION_BROKEN = re.compile(
+    r"(?:\ue200\s*)?(?:cite|memcite)[\u200b\s]*(?:\ue202[\u200b\s]*)?"
+    r"(?:[☆★\u200b\s]*turn\d+(?:search|news|view)\d+){1,}"
+    r"[\u200b☆★\s]*(?:\ue201)?",
+    re.IGNORECASE,
+)
 VISIBLE_CITATION = re.compile(
-    r"(?i)\bCite\s+(?:[☆★]\s*)?turn\d+(?:search|news|view)\d+"
-    r"(?:[☆★]\s*turn\d+(?:search|news|view)\d+)*[☆★]?"
+    r"(?i)\bcite\b[\s\u200b]*(?:[☆★]\s*)?turn\d+(?:search|news|view)\d+"
+    r"(?:[☆★\s\u200b]*turn\d+(?:search|news|view)\d+)*[☆★]?"
+)
+REFERENCE_SEQUENCE = re.compile(
+    r"turn\d+(?:search|news|view)\d+"
+    r"(?:[\s\u200b\ue000-\uf8ff*]*turn\d+(?:search|news|view)\d+)*",
+    re.IGNORECASE,
 )
 EXPORTER_FOOTER = re.compile(
     r"(?s)(?:\n[ \t]*){0,2}(?:---[ \t]*\n)?[ \t]*Powered by "
@@ -57,6 +75,9 @@ class DetectedOccurrence:
     reason_code: str
     confidence: str
     decision: str
+    match_mode: str = "RAW_EXACT"
+    evidence_codes: tuple[str, ...] = ()
+    similarity_score: float | None = None
 
 
 def ensure_builtin_rules(db: Session) -> list[ContentCleanupRuleRevision]:
@@ -79,12 +100,15 @@ def ensure_builtin_rules(db: Session) -> list[ContentCleanupRuleRevision]:
             .order_by(ContentCleanupRuleRevision.revision.desc())
             .first()
         )
-        if revision is None:
+        if revision is None or revision.matcher_version != "noise-v2":
             revision = ContentCleanupRuleRevision(
                 rule_id=rule.id,
-                revision=1,
-                matcher_version="noise-v1",
+                revision=(revision.revision + 1) if revision is not None else 1,
+                matcher_version="noise-v2",
+                matcher_mode="EXACT",
+                normalization_profile="NONE",
                 default_decision="DELETE",
+                supersedes_revision_id=revision.id if revision is not None else None,
             )
             db.add(revision)
             db.flush()
@@ -99,24 +123,36 @@ def create_literal_rule(
     match_value: str,
     case_sensitive: bool = True,
     role_filter: str | None = None,
+    matcher_mode: str = "EXACT",
+    boundary_mode: str = "ANYWHERE",
 ) -> ContentCleanupRule:
     value = match_value.strip()
-    if not value or len(value) > 500:
-        raise ValueError("Noise rule text must contain 1-500 characters.")
+    validate_literal_rule(value, matcher_mode)
     rule = ContentCleanupRule(name=name.strip()[:200], kind="USER_LITERAL", status="ACTIVE", scope="MESSAGE")
     db.add(rule)
     db.flush()
     db.add(ContentCleanupRuleRevision(
         rule_id=rule.id,
         revision=1,
-        matcher_version="noise-v1",
+        matcher_version="noise-v2",
         match_value=value,
         case_sensitive=case_sensitive,
         role_filter=role_filter,
+        matcher_mode=matcher_mode,
+        normalization_profile="NFKC_CASEFOLD_WHITESPACE" if matcher_mode in {"NORMALIZED", "APPROXIMATE"} else "NONE",
+        max_edit_distance=1 if matcher_mode == "APPROXIMATE" else None,
+        boundary_mode=boundary_mode,
         default_decision="DELETE",
     ))
     db.flush()
     return rule
+
+
+def validate_literal_rule(value: str, matcher_mode: str) -> None:
+    if not value or len(value) > 500:
+        raise ValueError("Noise rule text must contain 1-500 characters.")
+    if matcher_mode == "APPROXIMATE" and len(value) < 6:
+        raise ValueError("Approximate noise rules require at least 6 characters.")
 
 
 def active_revisions(db: Session) -> list[ContentCleanupRuleRevision]:
@@ -257,8 +293,6 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
         raise ValueError("Noise scan not found.")
     revisions = active_revisions(db)
     manual_revision = _manual_selection_revision(db) if scan.selection_message_id is not None else None
-    if manual_revision is not None:
-        revisions = []
     target_ids = [row[0] for row in db.query(ContentCleanupScanTarget.conversation_id).filter(ContentCleanupScanTarget.scan_id == scan_id).all()]
     cursor = scan.cursor_message_id
     query = (
@@ -307,33 +341,8 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
             ContentCleanupScanTarget.scan_id == scan_id,
             ContentCleanupScanTarget.conversation_id == message.conversation_id,
         ).update({ContentCleanupScanTarget.status: "SCANNING"}, synchronize_session=False)
-        if manual_revision is not None:
-            assert scan.selection_start_offset is not None and scan.selection_end_offset is not None
-            start = scan.selection_start_offset
-            end = scan.selection_end_offset
-            protected = any(
-                start < protected_end and end > protected_start
-                for protected_start, protected_end in protected_ranges(version.display_text)
-            )
-            deletes_entire_message = not (version.display_text[:start] + version.display_text[end:]).strip()
-            db.add(ContentCleanupOccurrence(
-                scan_id=scan.id,
-                rule_revision_id=manual_revision.id,
-                conversation_id=message.conversation_id,
-                message_id=message.id,
-                message_version_id=version.id,
-                start_offset=start,
-                end_offset=end,
-                line_start=version.display_text.count("\n", 0, start) + 1,
-                column_start=start - version.display_text.rfind("\n", 0, start),
-                line_end=version.display_text.count("\n", 0, end) + 1,
-                column_end=end - version.display_text.rfind("\n", 0, end),
-                kind="manual_selection",
-                confidence="HIGH",
-                reason_code="MANUAL_SELECTION",
-                decision="PROTECTED" if protected or deletes_entire_message else "DELETE",
-            ))
-            manual_revision.rule.last_used_at = utc_now()
+        detected_rows: list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = []
+        partial_rows: list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = []
         for revision in revisions:
             rule = revision.rule
             if rule.scope == "ASSISTANT_ONLY" and message.role != "assistant":
@@ -341,24 +350,76 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
             if revision.role_filter and revision.role_filter != message.role:
                 continue
             for detected in detect_occurrences(message.role, version.display_text, rule, revision):
-                db.add(ContentCleanupOccurrence(
-                    scan_id=scan.id,
-                    rule_revision_id=revision.id,
-                    conversation_id=message.conversation_id,
-                    message_id=message.id,
-                    message_version_id=version.id,
-                    start_offset=detected.start,
-                    end_offset=detected.end,
-                    line_start=version.display_text.count("\n", 0, detected.start) + 1,
-                    column_start=detected.start - version.display_text.rfind("\n", 0, detected.start),
-                    line_end=version.display_text.count("\n", 0, detected.end) + 1,
-                    column_end=detected.end - version.display_text.rfind("\n", 0, detected.end),
-                    kind=detected.kind,
-                    confidence=detected.confidence,
-                    reason_code=detected.reason_code,
-                    decision=detected.decision,
-                ))
-                rule.last_used_at = utc_now()
+                if scan.selection_message_id is not None:
+                    assert scan.selection_start_offset is not None and scan.selection_end_offset is not None
+                    selected_start, selected_end = scan.selection_start_offset, scan.selection_end_offset
+                    if detected.end <= selected_start or detected.start >= selected_end:
+                        continue
+                    if not (selected_start <= detected.start and detected.end <= selected_end):
+                        partial_rows.append((revision, DetectedOccurrence(
+                            detected.start,
+                            detected.end,
+                            detected.kind,
+                            "PARTIAL_SELECTION",
+                            "LOW",
+                            "KEEP",
+                            detected.match_mode,
+                            (*detected.evidence_codes, "PARTIAL_SELECTION"),
+                            detected.similarity_score,
+                        )))
+                        continue
+                detected_rows.append((revision, detected))
+        if scan.selection_message_id is not None:
+            assert scan.selection_start_offset is not None and scan.selection_end_offset is not None
+            selected_start, selected_end = scan.selection_start_offset, scan.selection_end_offset
+            if not detected_rows and partial_rows:
+                detected_rows.extend(partial_rows)
+            elif not detected_rows and manual_revision is not None:
+                protected = any(
+                    selected_start < protected_end and selected_end > protected_start
+                    for protected_start, protected_end in protected_ranges(version.display_text)
+                )
+                deletes_entire_message = not (version.display_text[:selected_start] + version.display_text[selected_end:]).strip()
+                detected_rows.append((manual_revision, DetectedOccurrence(
+                    selected_start,
+                    selected_end,
+                    "manual_selection",
+                    "MANUAL_SELECTION",
+                    "HIGH",
+                    "PROTECTED" if protected or deletes_entire_message else "DELETE",
+                    "MANUAL",
+                    ("MANUAL_SELECTION",),
+                    None,
+                )))
+        deduped: dict[tuple[int, int], tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = {}
+        rank = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+        for revision, detected in detected_rows:
+            key = (detected.start, detected.end)
+            previous = deduped.get(key)
+            if previous is None or rank.get(detected.confidence, 0) > rank.get(previous[1].confidence, 0):
+                deduped[key] = (revision, detected)
+        for revision, detected in deduped.values():
+            db.add(ContentCleanupOccurrence(
+                scan_id=scan.id,
+                rule_revision_id=revision.id,
+                conversation_id=message.conversation_id,
+                message_id=message.id,
+                message_version_id=version.id,
+                start_offset=detected.start,
+                end_offset=detected.end,
+                line_start=version.display_text.count("\n", 0, detected.start) + 1,
+                column_start=detected.start - version.display_text.rfind("\n", 0, detected.start),
+                line_end=version.display_text.count("\n", 0, detected.end) + 1,
+                column_end=detected.end - version.display_text.rfind("\n", 0, detected.end),
+                kind=detected.kind,
+                confidence=detected.confidence,
+                reason_code=detected.reason_code,
+                decision=detected.decision,
+                match_mode=detected.match_mode,
+                evidence_codes=list(detected.evidence_codes),
+                similarity_score=detected.similarity_score,
+            ))
+            revision.rule.last_used_at = utc_now()
     scan.cursor_message_id = rows[-1][0].id
     scan.processed_messages += len(rows)
     scan.progress = min(99, int(scan.processed_messages * 100 / max(scan.total_messages, 1)))
@@ -372,43 +433,325 @@ def detect_occurrences(
     rule: ContentCleanupRule,
     revision: ContentCleanupRuleRevision,
 ) -> list[DetectedOccurrence]:
-    values: list[tuple[int, int, str, str, str]] = []
+    values: list[DetectedOccurrence] = []
     detector_id = rule.detector_id
     if detector_id == "openai-private-citation-v1":
-        values.extend((match.start(), match.end(), "citation", "PRIVATE_CITATION", "HIGH") for match in PRIVATE_CITATION.finditer(text))
+        values.extend(_detected(match.start(), match.end(), "citation", "PRIVATE_CITATION", "HIGH", "STRUCTURAL", ("PUA_WRAPPER", "REFERENCE_SEQUENCE")) for match in PRIVATE_CITATION.finditer(text))
+        if "\ue200" in text or "\ue201" in text:
+            values.extend(
+                _detected(match.start(), match.end(), "citation", "PRIVATE_CITATION_BROKEN", "MEDIUM", "STRUCTURAL", ("REFERENCE_SEQUENCE", "MISSING_WRAPPER"))
+                for match in PRIVATE_CITATION_BROKEN.finditer(text)
+                if any(marker in match.group(0) for marker in ("\ue200", "\ue201", "\ue202"))
+                and not _covered(match.start(), match.end(), values)
+            )
     elif detector_id == "visible-turn-citation-v1":
-        values.extend((match.start(), match.end(), "citation", "VISIBLE_CITATION", "HIGH") for match in VISIBLE_CITATION.finditer(text))
+        values.extend(_detected(match.start(), match.end(), "citation", "VISIBLE_CITATION", "HIGH", "STRUCTURAL", ("REFERENCE_SEQUENCE",)) for match in VISIBLE_CITATION.finditer(text))
+        values.extend(_tolerant_visible_citations(text, values))
     elif detector_id == "chatgpt-exporter-footer-v1":
         match = EXPORTER_FOOTER.search(text)
         if match:
-            values.append((match.start(), match.end(), "footer", "EXPORTER_FOOTER", "HIGH"))
+            values.append(_detected(match.start(), match.end(), "footer", "EXPORTER_FOOTER", "HIGH", "STRUCTURAL", ("BLOCK_END",)))
     elif detector_id == "thinking-summary-v1":
         cleaned = clean_thinking_summary(role, text)
         if cleaned.removed and cleaned.removed_text:
             start = text.find(cleaned.removed_text)
             if start >= 0:
-                values.append((start, start + len(cleaned.removed_text), "thinking_summary", "THINKING_SUMMARY", "HIGH"))
+                values.append(_detected(start, start + len(cleaned.removed_text), "thinking_summary", "THINKING_SUMMARY", "HIGH", "STRUCTURAL", ("PREFIX_BOUNDARY", "ANSWER_BOUNDARY")))
     elif revision.match_value:
-        flags = 0 if revision.case_sensitive else re.IGNORECASE
-        pattern = re.compile(re.escape(revision.match_value), flags)
-        values.extend((match.start(), match.end(), "custom", "USER_LITERAL", "MEDIUM") for match in pattern.finditer(text))
+        values.extend(_literal_occurrences(text, revision))
     protected = protected_ranges(text)
     result: list[DetectedOccurrence] = []
-    for start, end, kind, reason, confidence in values:
-        is_protected = any(start < protected_end and end > protected_start for protected_start, protected_end in protected)
-        result.append(DetectedOccurrence(start, end, kind, reason, confidence, "PROTECTED" if is_protected else "DELETE"))
+    for item in values:
+        is_protected = any(item.start < protected_end and item.end > protected_start for protected_start, protected_end in protected)
+        decision = "PROTECTED" if is_protected else (item.decision if item.confidence == "HIGH" else "KEEP")
+        result.append(DetectedOccurrence(item.start, item.end, item.kind, item.reason_code, item.confidence, decision, item.match_mode, item.evidence_codes, item.similarity_score))
     return result
 
 
 def protected_ranges(text: str) -> list[tuple[int, int]]:
     ranges: list[tuple[int, int]] = []
+    lines = list(re.finditer(r".*(?:\n|$)", text))
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        value = line.group(0)
+        fence = re.match(r"^[ ]{0,3}(`{3,}|~{3,})[^\n]*", value)
+        if fence:
+            marker = fence.group(1)
+            start = line.start()
+            end = line.end()
+            index += 1
+            while index < len(lines):
+                candidate = lines[index].group(0)
+                end = lines[index].end()
+                index += 1
+                closing_pattern = rf"^[ ]{{0,3}}{re.escape(marker[0])}{{{len(marker)},}}[ \t]*$"
+                closing = re.match(closing_pattern, candidate.rstrip("\n"))
+                if closing:
+                    end = lines[index - 1].start() + closing.end()
+                    break
+            ranges.append((start, end))
+            continue
+        if re.match(r"^(?: {4}|\t)", value):
+            start = line.start()
+            end = line.end()
+            index += 1
+            while index < len(lines) and re.match(r"^(?: {4}|\t|\s*$)", lines[index].group(0)):
+                end = lines[index].end()
+                index += 1
+            ranges.append((start, end))
+            continue
+        index += 1
+    inline_runs = list(re.finditer(r"`+", text))
+    run_index = 0
+    while run_index < len(inline_runs):
+        opening = inline_runs[run_index]
+        if any(start <= opening.start() < end for start, end in ranges):
+            run_index += 1
+            continue
+        closing_index = run_index + 1
+        while closing_index < len(inline_runs):
+            closing = inline_runs[closing_index]
+            if len(closing.group(0)) == len(opening.group(0)):
+                ranges.append((opening.start(), closing.end()))
+                run_index = closing_index + 1
+                break
+            closing_index += 1
+        else:
+            run_index += 1
     for pattern in (
-        re.compile(r"(?ms)^\s*(?:```|~~~).*?^\s*(?:```|~~~)\s*"),
-        re.compile(r"(?s)(?<!`)`[^`\n]+`(?!`)|\$\$.*?\$\$|(?<!\$)\$[^$\n]+\$(?!\$)"),
-        re.compile(r"\]\((?:cr-asset://|https?://)[^)]*\)"),
+        re.compile(r"(?s)\$\$.*?\$\$|(?<!\$)\$[^$\n]+\$(?!\$)"),
+        re.compile(r"\]\((?:<[^>\n]+>|[^)\n]+)\)"),
+        re.compile(r"(?m)^\s*\[[^\]]+\]:\s*(?:<[^>]+>|\S+)(?:\s+.*)?$"),
+        re.compile(r"<(?:https?://|mailto:)[^>\n]+>"),
+        re.compile(r"cr-asset://[0-9a-f-]{36}", re.IGNORECASE),
     ):
         ranges.extend((match.start(), match.end()) for match in pattern.finditer(text))
-    return ranges
+    return _merge_ranges(ranges)
+
+
+def _detected(start: int, end: int, kind: str, reason_code: str, confidence: str, match_mode: str, evidence_codes: tuple[str, ...], similarity_score: float | None = None) -> DetectedOccurrence:
+    return DetectedOccurrence(start, end, kind, reason_code, confidence, "DELETE", match_mode, evidence_codes, similarity_score)
+
+
+def _covered(start: int, end: int, values: list[DetectedOccurrence]) -> bool:
+    return any(item.start <= start and end <= item.end for item in values)
+
+
+def _syntax_token(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    return "".join(char for char in normalized if char.isalnum())
+
+
+def _tolerant_visible_citations(
+    text: str,
+    existing: list[DetectedOccurrence],
+) -> list[DetectedOccurrence]:
+    """Recover damaged citation tokens only when an exact reference grammar follows."""
+    result: list[DetectedOccurrence] = []
+    targets = ("cite", "memcite")
+    for references in REFERENCE_SEQUENCE.finditer(text):
+        if _covered(references.start(), references.end(), existing):
+            continue
+        best: tuple[int, int, str, str] | None = None
+        lower_bound = max(0, references.start() - 20)
+        for start in range(lower_bound, references.start()):
+            if start > 0 and text[start - 1].isalnum():
+                continue
+            token = _syntax_token(text[start:references.start()])
+            if not token or len(token) > 9:
+                continue
+            for target in targets:
+                distance = _levenshtein_bounded(token, target, 1)
+                if distance is None:
+                    continue
+                match_mode = "NORMALIZED_EXACT" if distance == 0 else "BOUNDED_FUZZY"
+                candidate = (distance, -start, target, match_mode)
+                if best is None or candidate[:2] < best[:2]:
+                    best = candidate
+        if best is None:
+            continue
+        distance, negative_start, target, match_mode = best
+        start = -negative_start
+        end = references.end()
+        if _covered(start, end, existing) or _covered(start, end, result):
+            continue
+        if distance == 0:
+            result.append(_detected(
+                start,
+                end,
+                "citation",
+                "VISIBLE_CITATION_NORMALIZED",
+                "HIGH",
+                match_mode,
+                ("SYNTAX_TOKEN_NFKC", "REFERENCE_SEQUENCE", f"TOKEN_{target.upper()}"),
+                1.0,
+            ))
+        else:
+            score = 1.0 - distance / len(target)
+            result.append(_detected(
+                start,
+                end,
+                "citation",
+                "VISIBLE_CITATION_FUZZY_TOKEN",
+                "MEDIUM",
+                match_mode,
+                ("SYNTAX_TOKEN_EDIT_DISTANCE_1", "REFERENCE_SEQUENCE", f"TOKEN_{target.upper()}"),
+                score,
+            ))
+    return result
+
+
+def _merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    merged: list[tuple[int, int]] = []
+    for start, end in sorted((item for item in ranges if item[0] < item[1])):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _shadow(text: str, *, case_sensitive: bool) -> tuple[str, list[tuple[int, int]]]:
+    output: list[str] = []
+    mapping: list[tuple[int, int]] = []
+    for index, char in enumerate(text):
+        value = unicodedata.normalize("NFKC", char)
+        if not case_sensitive:
+            value = value.casefold()
+        if value.isspace():
+            value = " "
+        for item in value:
+            if item == " " and output and output[-1] == " ":
+                mapping[-1] = (mapping[-1][0], index + 1)
+                continue
+            output.append(item)
+            mapping.append((index, index + 1))
+    return "".join(output), mapping
+
+
+def _literal_occurrences(text: str, revision: ContentCleanupRuleRevision) -> list[DetectedOccurrence]:
+    value = revision.match_value
+    if not value:
+        return []
+    mode = getattr(revision, "matcher_mode", "EXACT")
+    if mode == "EXACT":
+        flags = 0 if revision.case_sensitive else re.IGNORECASE
+        pattern = re.compile(re.escape(value), flags)
+        return [_detected(match.start(), match.end(), "custom", "USER_LITERAL", "HIGH", "RAW_EXACT", ("LITERAL_EXACT",)) for match in pattern.finditer(text) if _boundary_allows(text, match.start(), match.end(), getattr(revision, "boundary_mode", "ANYWHERE"))]
+    shadow, mapping = _shadow(text, case_sensitive=revision.case_sensitive)
+    needle, _ = _shadow(value, case_sensitive=revision.case_sensitive)
+    if not needle:
+        return []
+    result: list[DetectedOccurrence] = []
+    if mode == "NORMALIZED":
+        for start in _find_all(shadow, needle):
+            end = start + len(needle)
+            original_start, original_end = mapping[start][0], mapping[end - 1][1]
+            if _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
+                result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_NORMALIZED", "HIGH", "NORMALIZED_EXACT", ("NFKC", "WHITESPACE_NORMALIZED")))
+        return result
+    exact_ranges: set[tuple[int, int]] = set()
+    for start in _find_all(shadow, needle):
+        end = start + len(needle)
+        original_start, original_end = mapping[start][0], mapping[end - 1][1]
+        if _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
+            exact_ranges.add((original_start, original_end))
+            result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_NORMALIZED", "HIGH", "NORMALIZED_EXACT", ("LITERAL_EXACT", "NFKC")))
+    max_edits = max(1, min(getattr(revision, "max_edit_distance", None) or 1, 2))
+    window = len(needle)
+    if window < 6:
+        return []
+    anchors = _fuzzy_anchor_starts(shadow, needle, limit=MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE)
+    seen: set[tuple[int, int]] = set()
+    for start in anchors:
+        best: tuple[int, int] | None = None
+        for candidate_length in range(max(1, window - max_edits), window + max_edits + 1):
+            if start + candidate_length > len(shadow):
+                continue
+            candidate = shadow[start:start + candidate_length]
+            distance = _levenshtein_bounded(needle, candidate, max_edits)
+            if distance is None or candidate == needle:
+                continue
+            candidate_rank = (distance, abs(candidate_length - window))
+            if best is None or candidate_rank < (best[0], abs(best[1] - window)):
+                best = (distance, candidate_length)
+        if best is None:
+            continue
+        distance, candidate_length = best
+        score = max(0.0, 1.0 - distance / max(len(needle), 1))
+        original_start, original_end = mapping[start][0], mapping[start + candidate_length - 1][1]
+        if (original_start, original_end) in seen or (original_start, original_end) in exact_ranges or not _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
+            continue
+        seen.add((original_start, original_end))
+        result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_APPROXIMATE", "LOW", "BOUNDED_FUZZY", ("LITERAL_ANCHORED", f"EDIT_DISTANCE_{distance}"), score))
+        if len(seen) >= MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE:
+            break
+    return result
+
+
+def _find_all(text: str, needle: str) -> list[int]:
+    positions: list[int] = []
+    cursor = 0
+    while True:
+        index = text.find(needle, cursor)
+        if index < 0:
+            return positions
+        positions.append(index)
+        cursor = index + max(1, len(needle))
+
+
+def _fuzzy_anchor_starts(text: str, needle: str, *, limit: int) -> list[int]:
+    width = min(4, max(2, len(needle) // 4))
+    offsets = sorted({0, max(0, len(needle) // 2 - width // 2), len(needle) - width})
+    starts: set[int] = set()
+    for offset in offsets:
+        anchor = needle[offset:offset + width]
+        cursor = 0
+        while True:
+            found = text.find(anchor, cursor)
+            if found < 0:
+                break
+            candidate_start = found - offset
+            if candidate_start >= 0:
+                starts.add(candidate_start)
+                if len(starts) >= limit:
+                    return sorted(starts)
+            cursor = found + 1
+    return sorted(starts)
+
+
+def _boundary_allows(text: str, start: int, end: int, mode: str) -> bool:
+    if mode == "WHOLE_LINE":
+        return not text[text.rfind("\n", 0, start) + 1:start].strip() and not text[end:text.find("\n", end) if "\n" in text[end:] else len(text)].strip()
+    if mode == "BLOCK_END":
+        return not text[end:].strip()
+    return True
+
+
+def _levenshtein_bounded(left: str, right: str, limit: int) -> int | None:
+    if abs(len(left) - len(right)) > limit:
+        return None
+    sentinel = limit + 1
+    previous = [sentinel] * (len(right) + 1)
+    for column in range(min(len(right), limit) + 1):
+        previous[column] = column
+    for row, left_char in enumerate(left, 1):
+        current = [sentinel] * (len(right) + 1)
+        if row <= limit:
+            current[0] = row
+        first_column = max(1, row - limit)
+        last_column = min(len(right), row + limit)
+        for column in range(first_column, last_column + 1):
+            current[column] = min(
+                current[column - 1] + 1,
+                previous[column] + 1,
+                previous[column - 1] + (left_char != right[column - 1]),
+            )
+        if min(current[first_column:last_column + 1], default=sentinel) > limit:
+            return None
+        previous = current
+    return previous[-1] if previous[-1] <= limit else None
 
 
 def preview_occurrences(
@@ -458,6 +801,9 @@ def preview_occurrences(
             "reason_code": occurrence.reason_code,
             "confidence": occurrence.confidence,
             "decision": occurrence.decision,
+            "match_mode": occurrence.match_mode,
+            "similarity_score": occurrence.similarity_score,
+            "evidence_codes": occurrence.evidence_codes or [],
             "start_offset": occurrence.start_offset,
             "end_offset": occurrence.end_offset,
             "line_start": occurrence.line_start,
@@ -534,7 +880,7 @@ def apply_scan(db: Session, scan_id: uuid.UUID) -> dict[str, object]:
                 for occurrence in message_occurrences:
                     occurrence.decision = "CONFLICT"
                 continue
-            if any(not _occurrence_still_matches(db, text, item) for item in message_occurrences):
+            if any(not _occurrence_still_matches(db, message.role, text, item) for item in message_occurrences):
                 conflicts += len(message_occurrences)
                 for occurrence in message_occurrences:
                     occurrence.decision = "CONFLICT"
@@ -591,7 +937,7 @@ def dismiss_scan(db: Session, scan_id: uuid.UUID) -> None:
     db.delete(scan)
 
 
-def _occurrence_still_matches(db: Session, text: str, occurrence: ContentCleanupOccurrence) -> bool:
+def _occurrence_still_matches(db: Session, role: str, text: str, occurrence: ContentCleanupOccurrence) -> bool:
     revision = db.get(ContentCleanupRuleRevision, occurrence.rule_revision_id)
     rule = db.get(ContentCleanupRule, revision.rule_id) if revision is not None else None
     if revision is None or rule is None:
@@ -599,8 +945,10 @@ def _occurrence_still_matches(db: Session, text: str, occurrence: ContentCleanup
     if rule.detector_id == MANUAL_SELECTION_DETECTOR:
         return 0 <= occurrence.start_offset < occurrence.end_offset <= len(text)
     return any(
-        item.start == occurrence.start_offset and item.end == occurrence.end_offset
-        for item in detect_occurrences("assistant" if rule.scope == "ASSISTANT_ONLY" else revision.role_filter or "user", text, rule, revision)
+        item.start == occurrence.start_offset
+        and item.end == occurrence.end_offset
+        and item.decision != "PROTECTED"
+        for item in detect_occurrences(role, text, rule, revision)
     )
 
 

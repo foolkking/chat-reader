@@ -31,6 +31,7 @@ from app.services.content_cleanup import (
     ensure_builtin_rules,
     preview_occurrences,
     update_decisions,
+    validate_literal_rule,
 )
 
 router = APIRouter(prefix="/api/content-cleanup", tags=["content-cleanup"])
@@ -80,16 +81,26 @@ def update_rule(rule_id: uuid.UUID, payload: CleanupRuleUpdate, db: Session = De
     revision = db.query(ContentCleanupRuleRevision).filter(ContentCleanupRuleRevision.rule_id == rule.id).order_by(ContentCleanupRuleRevision.revision.desc()).first()
     if revision is None:
         raise HTTPException(status_code=409, detail="Noise rule has no revision.")
-    if payload.match_value is not None or payload.case_sensitive is not None or payload.role_filter is not None:
+    if payload.match_value is not None or payload.case_sensitive is not None or payload.role_filter is not None or payload.matcher_mode is not None or payload.boundary_mode is not None:
         if rule.kind != "USER_LITERAL":
             raise HTTPException(status_code=409, detail="Built-in detector configuration is read-only.")
+        next_value = payload.match_value.strip() if payload.match_value is not None else revision.match_value
+        next_mode = payload.matcher_mode if payload.matcher_mode is not None else revision.matcher_mode
+        try:
+            validate_literal_rule(next_value or "", next_mode)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         revision = ContentCleanupRuleRevision(
             rule_id=rule.id,
             revision=revision.revision + 1,
-            matcher_version="noise-v1",
-            match_value=payload.match_value.strip() if payload.match_value is not None else revision.match_value,
+            matcher_version="noise-v2",
+            match_value=next_value,
             case_sensitive=payload.case_sensitive if payload.case_sensitive is not None else revision.case_sensitive,
             role_filter=payload.role_filter if payload.role_filter is not None else revision.role_filter,
+            matcher_mode=next_mode,
+            normalization_profile="NFKC_CASEFOLD_WHITESPACE" if next_mode in {"NORMALIZED", "APPROXIMATE"} else "NONE",
+            max_edit_distance=1 if next_mode == "APPROXIMATE" else None,
+            boundary_mode=payload.boundary_mode if payload.boundary_mode is not None else revision.boundary_mode,
             default_decision="DELETE",
             supersedes_revision_id=revision.id,
         )
@@ -219,6 +230,9 @@ def _rule_read(rule: ContentCleanupRule, revision: ContentCleanupRuleRevision) -
         match_value=revision.match_value,
         case_sensitive=revision.case_sensitive,
         role_filter=revision.role_filter,
+        matcher_mode=revision.matcher_mode,
+        normalization_profile=revision.normalization_profile,
+        boundary_mode=revision.boundary_mode,
         last_used_at=rule.last_used_at,
     )
 

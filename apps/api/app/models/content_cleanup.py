@@ -37,6 +37,10 @@ class ContentCleanupRuleRevision(Base):
     revision: Mapped[int] = mapped_column(Integer, nullable=False)
     matcher_version: Mapped[str] = mapped_column(String(40), nullable=False, default="noise-v1")
     match_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    matcher_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="EXACT")
+    normalization_profile: Mapped[str] = mapped_column(String(48), nullable=False, default="NONE")
+    max_edit_distance: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    boundary_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="ANYWHERE")
     case_sensitive: Mapped[bool] = mapped_column(default=True, nullable=False)
     role_filter: Mapped[str | None] = mapped_column(String(24), nullable=True)
     default_decision: Mapped[str] = mapped_column(String(12), nullable=False, default="DELETE")
@@ -120,6 +124,10 @@ class ContentCleanupOccurrence(Base):
     confidence: Mapped[str] = mapped_column(String(16), nullable=False, default="HIGH")
     reason_code: Mapped[str] = mapped_column(String(80), nullable=False)
     decision: Mapped[str] = mapped_column(String(16), nullable=False, default="DELETE")
+    match_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="RAW_EXACT")
+    similarity_score: Mapped[float | None] = mapped_column(nullable=True)
+    detector_version: Mapped[str] = mapped_column(String(40), nullable=False, default="noise-v2")
+    evidence_codes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     scan = relationship("ContentCleanupScan", back_populates="occurrences")
 

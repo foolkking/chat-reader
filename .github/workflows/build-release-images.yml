@@ -94,8 +94,8 @@ jobs:
       - name: Alembic single-head and current validation
         run: |
           cd apps/api
-          test "$(python -m alembic heads)" = "20260822_0026 (head)"
-          python -m alembic current | grep -F "20260822_0026"
+          test "$(python -m alembic heads)" = "20260823_0027 (head)"
+          python -m alembic current | grep -F "20260823_0027"
 
       - name: Dependency audit from official npm registry
         run: |

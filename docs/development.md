@@ -28,7 +28,7 @@ python -m alembic heads
 Set-Location ../..
 ```
 
-`alembic heads` 应只有一个结果。当前源码 head 是 `20260822_0026`。
+`alembic heads` 应只有一个结果。当前源码 head 是 `20260823_0027`。
 
 ## 环境变量
 

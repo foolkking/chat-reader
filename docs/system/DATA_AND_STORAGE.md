@@ -4,7 +4,7 @@
 
 ## PostgreSQL
 
-当前源码增加 Adaptive Import 的 Profile、Revision、InputGroup 与 StructureFamily 持久化，以及 Content Cleanup 的规则、扫描和 occurrence 审查持久化；Alembic 单一 head 为 `20260822_0026`。生产部署后必须执行 `alembic current` 核对该 head。
+当前源码增加 Adaptive Import 的 Profile、Revision、InputGroup 与 StructureFamily 持久化，以及 Content Cleanup 的规则、扫描、occurrence 审查和 versioned detection evidence 持久化；Alembic 单一 head 为 `20260823_0027`。生产部署后必须执行 `alembic current` 核对该 head。
 
 | 领域 | 表 |
 | --- | --- |

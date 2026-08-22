@@ -10,6 +10,8 @@ class CleanupRuleCreate(BaseModel):
     match_value: str = Field(min_length=1, max_length=500)
     case_sensitive: bool = True
     role_filter: Literal["user", "assistant", "system", "tool"] | None = None
+    matcher_mode: Literal["EXACT", "NORMALIZED", "APPROXIMATE"] = "EXACT"
+    boundary_mode: Literal["ANYWHERE", "WHOLE_LINE", "BLOCK_END"] = "ANYWHERE"
 
 
 class CleanupRuleUpdate(BaseModel):
@@ -18,6 +20,8 @@ class CleanupRuleUpdate(BaseModel):
     match_value: str | None = Field(default=None, min_length=1, max_length=500)
     case_sensitive: bool | None = None
     role_filter: Literal["user", "assistant", "system", "tool"] | None = None
+    matcher_mode: Literal["EXACT", "NORMALIZED", "APPROXIMATE"] | None = None
+    boundary_mode: Literal["ANYWHERE", "WHOLE_LINE", "BLOCK_END"] | None = None
 
 
 class CleanupRuleRead(BaseModel):
@@ -31,6 +35,9 @@ class CleanupRuleRead(BaseModel):
     match_value: str | None
     case_sensitive: bool
     role_filter: str | None
+    matcher_mode: str
+    normalization_profile: str
+    boundary_mode: str
     last_used_at: datetime | None
 
 
@@ -83,6 +90,9 @@ class CleanupOccurrenceRead(BaseModel):
     context_before: str
     context_after: str
     stale: bool
+    match_mode: str
+    similarity_score: float | None
+    evidence_codes: list[str] | None
 
 
 class CleanupDecisionInput(BaseModel):

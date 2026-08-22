@@ -977,11 +977,11 @@ export async function getCleanupRules(): Promise<CleanupRuleRead[]> {
   return fetchJson<CleanupRuleRead[]>("/api/content-cleanup/rules");
 }
 
-export async function createCleanupRule(input: { name: string; match_value: string; case_sensitive?: boolean; role_filter?: string | null }): Promise<CleanupRuleRead> {
+export async function createCleanupRule(input: { name: string; match_value: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }): Promise<CleanupRuleRead> {
   return fetchJson<CleanupRuleRead>("/api/content-cleanup/rules", jsonRequest("POST", input));
 }
 
-export async function updateCleanupRule(ruleId: string, input: { name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null }): Promise<CleanupRuleRead> {
+export async function updateCleanupRule(ruleId: string, input: { name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }): Promise<CleanupRuleRead> {
   return fetchJson<CleanupRuleRead>(`/api/content-cleanup/rules/${ruleId}`, jsonRequest("PATCH", input));
 }
 

@@ -240,14 +240,15 @@ export function EditMessageForm({
   const handleEditorUpdate = useCallback((update: ViewUpdate) => {
     if (!update.docChanged && !update.selectionSet) return;
     const offset = update.state.selection.main.head;
-    if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(offset);
-    cursorOffsetChangeRef.current?.(offset);
+    const source = update.state.doc.toString();
+    const codePointOffset = unicodeCodePointOffset(source, offset);
+    if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(codePointOffset);
+    cursorOffsetChangeRef.current?.(codePointOffset);
     const selection = update.state.selection.main;
     if (selection.empty) {
       selectionChangeRef.current?.(null);
       return;
     }
-    const source = update.state.doc.toString();
     const from = Math.min(selection.from, selection.to);
     const to = Math.max(selection.from, selection.to);
     selectionChangeRef.current?.({
@@ -263,9 +264,9 @@ export function EditMessageForm({
       if (!messageId || detail?.messageId !== messageId || detail.cursorOffset === undefined) return;
       const view = editorViewRef.current;
       if (!view) return;
-      const anchor = Math.max(0, Math.min(detail.cursorOffset, view.state.doc.length));
+      const anchor = codePointToUtf16Offset(view.state.doc.toString(), detail.cursorOffset);
       view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
-      cursorOffsetChangeRef.current?.(anchor);
+      cursorOffsetChangeRef.current?.(detail.cursorOffset);
     };
     window.addEventListener("chat-reader:source-editor-locate", onSourceLocate);
     return () => window.removeEventListener("chat-reader:source-editor-locate", onSourceLocate);
@@ -299,9 +300,9 @@ export function EditMessageForm({
   useEffect(() => {
     const view = editorViewRef.current;
     if (!view || requestedCursorOffset === undefined) return;
-    const anchor = Math.max(0, Math.min(requestedCursorOffset, view.state.doc.length));
+    const anchor = codePointToUtf16Offset(view.state.doc.toString(), requestedCursorOffset);
     view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
-    cursorOffsetChangeRef.current?.(anchor);
+    cursorOffsetChangeRef.current?.(requestedCursorOffset);
   }, [requestedCursorOffset]);
 
   useEffect(() => {
@@ -334,7 +335,7 @@ export function EditMessageForm({
     const value = `${before}${markdown}${after}`;
     view.dispatch({ changes: { from: target, insert: value }, selection: { anchor: target + value.length }, effects: EditorView.scrollIntoView(target + value.length, { y: "center" }) });
     appliedInsertionRef.current = key;
-    cursorOffsetChangeRef.current?.(target + value.length);
+    cursorOffsetChangeRef.current?.(unicodeCodePointOffset(view.state.doc.toString(), target + value.length));
     onAttachmentInsertionApplied?.();
   }
 
@@ -455,10 +456,10 @@ export function EditMessageForm({
           onCreateEditor={(view) => {
             editorViewRef.current = view;
             view.dispatch({ effects: themeCompartmentRef.current.reconfigure(codeMirrorTheme(resolvedTheme)) });
-            const anchor = Math.max(0, Math.min(initialCursorOffset, view.state.doc.length));
+            const anchor = codePointToUtf16Offset(view.state.doc.toString(), initialCursorOffset);
             view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
-            if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(anchor);
-            cursorOffsetChangeRef.current?.(anchor);
+            if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(initialCursorOffset);
+            cursorOffsetChangeRef.current?.(unicodeCodePointOffset(view.state.doc.toString(), anchor));
             selectionChangeRef.current?.(null);
             view.focus();
             if (pendingAttachmentInsertion) applyAttachmentInsertion(view, pendingAttachmentInsertion);
@@ -551,6 +552,10 @@ export type SourceTextSelection = {
 
 function unicodeCodePointOffset(source: string, utf16Offset: number): number {
   return Array.from(source.slice(0, utf16Offset)).length;
+}
+
+function codePointToUtf16Offset(source: string, codePointOffset: number): number {
+  return Array.from(source).slice(0, Math.max(0, codePointOffset)).join("").length;
 }
 
 function isRevisionConflictMessage(message: string): boolean {

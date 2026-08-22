@@ -89,6 +89,9 @@ export type CleanupRuleRead = {
   match_value: string | null;
   case_sensitive: boolean;
   role_filter: string | null;
+  matcher_mode: string;
+  normalization_profile: string;
+  boundary_mode: string;
   last_used_at: string | null;
 };
 
@@ -137,6 +140,9 @@ export type CleanupOccurrenceRead = {
   context_before: string;
   context_after: string;
   stale: boolean;
+  match_mode: string;
+  similarity_score: number | null;
+  evidence_codes: string[] | null;
 };
 
 export type ConversationUpdateInput = {

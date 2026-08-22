@@ -113,7 +113,8 @@ test("source cursor location is a one-shot request and cannot replay after a dir
   expect(editForm).toContain("const handleEditorUpdate = useCallback");
   expect(editForm).toContain("basicSetup={sourceEditorBasicSetup}");
   expect(editForm).toContain("onUpdate={handleEditorUpdate}");
-  expect(editForm).toContain("dataset.cursorOffset = String(offset)");
+  expect(editForm).toContain("dataset.cursorOffset = String(codePointOffset)");
+  expect(editForm).toContain("codePointToUtf16Offset");
   expect(editForm).toContain("const [editorDocument, setEditorDocument] = useState(initialText)");
   expect(editForm).toContain("value={editorDocument}");
   expect(editForm).not.toContain("value={text}");
