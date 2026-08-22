@@ -1,5 +1,27 @@
 # Project State
 
+## 2026-08-22 Adaptive Markdown role-boundary fix
+
+- Adaptive Import now recognizes deterministic Chinese line-label roles such as
+  `用户` and `AI助手`, and treats emphasized model-name decorations such as
+  `ChatGPT *(model-name)*` as role metadata rather than a distinct role.
+- Markdown normalization uses only the role labels confirmed by the mapping.
+  Same-level headings and colon-ended prose inside a message therefore remain
+  message content instead of becoming false boundaries.
+- The reported three-file workflow was reproduced without persisting its
+  source data. After explicit grouping, the JSON/Markdown pair normalizes to
+  five messages and the standalone formula Markdown normalizes to two; the
+  session can resolve both Families and reach `READY` instead of `BLOCKED`.
+- GitHub Actions run `32544978132` passed quality and image-build jobs. The
+  production image set was built at `2026-08-22T02:09:40Z`; API, worker and Web
+  are healthy, public health returns 200, and Alembic remains
+  `20260822_0025 (head/current)`.
+- The verified five-component pre-deploy backup is retained at
+  `/opt/chat-reader/backups/import-role-fix-20260822T021617Z-8b5b0e4`.
+  Production retains the current image generation and the immediately replaced
+  generation only; the older third generation and old transfer archive were
+  removed without touching PostgreSQL or business volumes.
+
 ## 2026-08-22 Adaptive JSON / Markdown Import
 
 - Chat Reader now owns one deterministic adaptive-import pipeline:

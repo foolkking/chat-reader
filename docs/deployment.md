@@ -1,5 +1,26 @@
 # 生产部署
 
+## 2026-08-22 Adaptive Markdown role-boundary deployment
+
+GitHub Actions run `32544978132` passed the complete quality and image-build
+workflow. The deployed API/worker/Web images were built at
+`2026-08-22T02:09:40Z`. Public health returns 200, API and Web are healthy, the
+worker is running, and Alembic remains `20260822_0025 (head/current)`.
+
+The pre-deploy recovery point is
+`/opt/chat-reader/backups/import-role-fix-20260822T021617Z-8b5b0e4`. Its
+PostgreSQL dump and imports, exports, offline and assets archives passed
+readability checks. No manual archive checksum confirmation is part of this
+report.
+
+The deployed runtime parsed the reported source shapes without persisting the
+source data: the JSON/Markdown pair produced five messages and the standalone
+Chinese line-label Markdown produced two. Post-deploy logs contained no
+ERROR/Traceback entries. Image cleanup retained only the current generation and
+the immediately replaced generation; the older third generation and old
+transfer archive were removed without changing volumes, PostgreSQL or
+`.env.production`.
+
 ## 2026-08-22 Adaptive Import deployment
 
 Adaptive JSON / Markdown import was deployed from `master` after GitHub

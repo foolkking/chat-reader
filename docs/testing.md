@@ -18,6 +18,14 @@ session verifies explicit grouping into one JSON/Markdown pair plus one
 standalone Markdown Family, full-Family Mapping, and transition to `READY`
 without a false `BLOCKED` state.
 
+For the deployed fix, focused Adaptive Import coverage passed `20/20` and the
+full API suite passed `345 passed / 6 skipped`. Web lint, typecheck, production
+build, Alembic single-head validation and `git diff --check` passed. GitHub
+Actions run `32544978132` then passed the complete quality and image-build jobs.
+The production image accepted the reported source shapes as a five-message
+paired draft and a two-message standalone Markdown draft; this check did not
+commit either source to the business database.
+
 Required gates for this change are the full API suite, migration single-head,
 Web lint/typecheck/build, focused Adaptive Import browser flow, PWA regression,
 dependency/security policy and `git diff --check`. Results are recorded only
