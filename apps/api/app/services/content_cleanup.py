@@ -38,16 +38,21 @@ BUILTIN_RULES = (
 )
 MANUAL_SELECTION_DETECTOR = "manual-selection-v1"
 MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE = 256
+PRIVATE_REFERENCE_TOKEN = r"turn\d+[A-Za-z][A-Za-z0-9_-]*\d+"
 
 PRIVATE_CITATION = re.compile(
-    r"\ue200\s*(?:cite|memcite)\s*\ue202\s*"
-    r"(?:[☆★\u200b\s]*turn\d+(?:search|news|view)\d+)+"
-    r"[\u200b☆★\s]*\ue201",
+    r"\ue200\s*(?:cite|memcite)\s*(?:"
+    r"\ue201"
+    r"|"
+    rf"(?:(?:\ue202)?[☆★\u200b\s]*)?{PRIVATE_REFERENCE_TOKEN}"
+    rf"(?:(?:[☆★\u200b\s]*\ue202)?[☆★\u200b\s]*{PRIVATE_REFERENCE_TOKEN})*"
+    r"[\u200b☆★\s]*\ue201"
+    r")",
     re.IGNORECASE,
 )
 PRIVATE_CITATION_BROKEN = re.compile(
     r"(?:\ue200\s*)?(?:cite|memcite)[\u200b\s]*(?:\ue202[\u200b\s]*)?"
-    r"(?:[☆★\u200b\s]*turn\d+(?:search|news|view)\d+){1,}"
+    rf"(?:[☆★\u200b\s]*{PRIVATE_REFERENCE_TOKEN}){{1,}}"
     r"[\u200b☆★\s]*(?:\ue201)?",
     re.IGNORECASE,
 )
@@ -100,11 +105,11 @@ def ensure_builtin_rules(db: Session) -> list[ContentCleanupRuleRevision]:
             .order_by(ContentCleanupRuleRevision.revision.desc())
             .first()
         )
-        if revision is None or revision.matcher_version != "noise-v2":
+        if revision is None or revision.matcher_version != "noise-v3":
             revision = ContentCleanupRuleRevision(
                 rule_id=rule.id,
                 revision=(revision.revision + 1) if revision is not None else 1,
-                matcher_version="noise-v2",
+                matcher_version="noise-v3",
                 matcher_mode="EXACT",
                 normalization_profile="NONE",
                 default_decision="DELETE",
@@ -134,7 +139,7 @@ def create_literal_rule(
     db.add(ContentCleanupRuleRevision(
         rule_id=rule.id,
         revision=1,
-        matcher_version="noise-v2",
+        matcher_version="noise-v3",
         match_value=value,
         case_sensitive=case_sensitive,
         role_filter=role_filter,
@@ -391,14 +396,20 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                     ("MANUAL_SELECTION",),
                     None,
                 )))
-        deduped: dict[tuple[int, int], tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = {}
-        rank = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+        deduped: list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = []
         for revision, detected in detected_rows:
-            key = (detected.start, detected.end)
-            previous = deduped.get(key)
-            if previous is None or rank.get(detected.confidence, 0) > rank.get(previous[1].confidence, 0):
-                deduped[key] = (revision, detected)
-        for revision, detected in deduped.values():
+            overlapping = [
+                index
+                for index, (_previous_revision, previous) in enumerate(deduped)
+                if detected.start < previous.end and previous.start < detected.end
+            ]
+            if not overlapping:
+                deduped.append((revision, detected))
+                continue
+            if all(_prefer_detected_occurrence(detected, deduped[index][1]) for index in overlapping):
+                deduped = [item for index, item in enumerate(deduped) if index not in overlapping]
+                deduped.append((revision, detected))
+        for revision, detected in sorted(deduped, key=lambda item: (item[1].start, item[1].end)):
             db.add(ContentCleanupOccurrence(
                 scan_id=scan.id,
                 rule_revision_id=revision.id,
@@ -536,6 +547,24 @@ def _detected(start: int, end: int, kind: str, reason_code: str, confidence: str
 
 def _covered(start: int, end: int, values: list[DetectedOccurrence]) -> bool:
     return any(item.start <= start and end <= item.end for item in values)
+
+
+def _prefer_detected_occurrence(candidate: DetectedOccurrence, current: DetectedOccurrence) -> bool:
+    """Choose one authority when detectors report overlapping views of one marker."""
+    if (candidate.decision == "PROTECTED") != (current.decision == "PROTECTED"):
+        return candidate.decision == "PROTECTED"
+    confidence_rank = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+    candidate_rank = (
+        confidence_rank.get(candidate.confidence, 0),
+        candidate.match_mode == "STRUCTURAL",
+        candidate.end - candidate.start,
+    )
+    current_rank = (
+        confidence_rank.get(current.confidence, 0),
+        current.match_mode == "STRUCTURAL",
+        current.end - current.start,
+    )
+    return candidate_rank > current_rank
 
 
 def _syntax_token(value: str) -> str:
@@ -825,9 +854,12 @@ def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID,
         decision = decisions[row.id]
         if decision not in {"DELETE", "KEEP"}:
             raise ValueError("Noise decision must be DELETE or KEEP.")
-        if row.decision in {"PROTECTED", "CONFLICT"} and decision == "DELETE":
-            raise ValueError("Protected or conflicted cleanup candidates cannot be deleted.")
         if row.decision in {"PROTECTED", "CONFLICT"}:
+            if row.decision == "CONFLICT":
+                continue
+            # Protected ranges are deliberately surfaced as KEEP candidates,
+            # but an explicit user decision may override that default.
+            row.decision = decision
             continue
         row.decision = decision
 
@@ -947,7 +979,6 @@ def _occurrence_still_matches(db: Session, role: str, text: str, occurrence: Con
     return any(
         item.start == occurrence.start_offset
         and item.end == occurrence.end_offset
-        and item.decision != "PROTECTED"
         for item in detect_occurrences(role, text, rule, revision)
     )
 

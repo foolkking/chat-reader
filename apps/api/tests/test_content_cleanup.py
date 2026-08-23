@@ -33,6 +33,52 @@ def test_selection_uses_builtin_detector_before_manual_fallback() -> None:
     assert matches[0].match_mode == "STRUCTURAL"
 
 
+def test_private_citation_detector_covers_repeated_reference_separators() -> None:
+    text = (
+        "before "
+        "\ue200cite\ue202turn800379search4\ue202turn800379search9"
+        "\ue202turn800379search24\ue202turn115162search7\ue201"
+        " after"
+    )
+    matches = detect_occurrences(
+        "assistant",
+        text,
+        _rule("openai-private-citation-v1", "ASSISTANT_ONLY"),
+        _revision(),
+    )
+    assert len(matches) == 1
+    assert matches[0].reason_code == "PRIVATE_CITATION"
+    assert matches[0].confidence == "HIGH"
+    assert matches[0].decision == "DELETE"
+    assert text[matches[0].start:matches[0].end].count("turn") == 4
+
+
+def test_private_memcite_without_references_is_noise() -> None:
+    text = "before \ue200memcite\ue201 after"
+    matches = detect_occurrences(
+        "assistant",
+        text,
+        _rule("openai-private-citation-v1", "ASSISTANT_ONLY"),
+        _revision(),
+    )
+    assert len(matches) == 1
+    assert matches[0].reason_code == "PRIVATE_CITATION"
+    assert matches[0].confidence == "HIGH"
+
+
+def test_private_citation_accepts_new_reference_kinds_inside_wrapper() -> None:
+    text = "\ue200cite\ue202turn4finance1\ue202turn9image2\ue201"
+    matches = detect_occurrences(
+        "assistant",
+        text,
+        _rule("openai-private-citation-v1", "ASSISTANT_ONLY"),
+        _revision(),
+    )
+    assert len(matches) == 1
+    assert matches[0].confidence == "HIGH"
+    assert matches[0].decision == "DELETE"
+
+
 def test_private_citation_variants_and_real_url_marker() -> None:
     text = "\ue200 cite \ue202 turn1search0 \ue201 and \ue200cite\u200bturn2news3"
     matches = detect_occurrences("assistant", text, _rule("openai-private-citation-v1", "ASSISTANT_ONLY"), _revision())
@@ -182,6 +228,59 @@ def test_reader_scan_requires_active_conversation_and_applies_reviewed_match(cli
         json={"source": "READER", "scope_type": "CURRENT_CONVERSATION", "conversation_ids": [conversation_id]},
     )
     assert rejected.status_code == 422
+
+
+def test_reader_scan_applies_all_multi_reference_private_markers(client) -> None:
+    marker = (
+        "\ue200cite\ue202turn800379search4\ue202turn800379search9"
+        "\ue202turn800379search24\ue202turn115162search7\ue201"
+    )
+    source = f"Keep this sentence. {marker} Also remove \ue200memcite\ue201."
+    created = client.post(
+        "/api/conversations",
+        json={
+            "title": "multi-reference cleanup fixture",
+            "messages": [
+                {"role": "user", "content_markdown": "Keep."},
+                {"role": "assistant", "content_markdown": source},
+            ],
+        },
+    )
+    assert created.status_code == 201, created.text
+    response = created.json()
+    conversation_id = response["conversation"]["id"]
+    scan = client.post(
+        "/api/content-cleanup/scans",
+        json={"source": "READER", "scope_type": "CURRENT_CONVERSATION", "conversation_ids": [conversation_id]},
+    )
+    assert scan.status_code == 202, scan.text
+    scan_id = scan.json()["id"]
+
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        while not process_scan_chunk(db, uuid.UUID(scan_id))["done"]:
+            db.commit()
+        db.commit()
+    finally:
+        db.close()
+        generator.close()
+
+    occurrences = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences").json()
+    assert len(occurrences) == 2
+    assert all(item["confidence"] == "HIGH" and item["decision"] == "DELETE" for item in occurrences)
+    assert client.post(f"/api/content-cleanup/scans/{scan_id}/apply").json() == {"applied": 2, "conflicts": 0}
+
+    generator = override()
+    db = next(generator)
+    try:
+        message = db.query(Message).filter(Message.conversation_id == uuid.UUID(conversation_id), Message.role == "assistant").one()
+        version = db.get(MessageVersion, message.current_version_id)
+        assert version.display_text == "Keep this sentence.  Also remove ."
+    finally:
+        db.close()
+        generator.close()
 
 
 def test_literal_rule_updates_create_an_immutable_revision(client) -> None:
@@ -380,7 +479,7 @@ def test_partial_selection_expands_to_candidate_without_preselecting_delete(clie
     assert item["confidence"] == "LOW"
 
 
-def test_source_selection_rejects_partial_or_protected_ranges(client) -> None:
+def test_source_selection_surfaces_protected_ranges_for_explicit_review(client) -> None:
     created = client.post(
         "/api/conversations",
         json={"title": "protected selection cleanup", "messages": [{"role": "user", "content_markdown": "Keep this prompt."}, {"role": "assistant", "content_markdown": "Keep `NOISE` here."}]},
@@ -425,5 +524,10 @@ def test_source_selection_rejects_partial_or_protected_ranges(client) -> None:
         generator.close()
     occurrence = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences").json()[0]
     assert occurrence["decision"] == "PROTECTED"
-    assert client.delete(f"/api/content-cleanup/scans/{scan_id}").status_code == 204
+    updated = client.patch(
+        f"/api/content-cleanup/scans/{scan_id}/decisions",
+        json={"decisions": [{"occurrence_id": occurrence["id"], "decision": "DELETE"}]},
+    )
+    assert updated.status_code == 200, updated.text
+    assert client.post(f"/api/content-cleanup/scans/{scan_id}/apply").json() == {"applied": 1, "conflicts": 0}
     assert client.get(f"/api/content-cleanup/scans/{scan_id}").status_code == 404

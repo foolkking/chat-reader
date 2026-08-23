@@ -686,7 +686,7 @@ function ReviewResults({
                   <input
                     type="checkbox"
                     checked={isSelected(item)}
-                    disabled={item.decision === "PROTECTED" || item.stale}
+                    disabled={item.stale}
                     onChange={() => toggle(item)}
                     className="mt-1 h-4 w-4 accent-[var(--accent)]"
                     aria-label={`${zh ? "处理" : "Process"} ${item.match_text}`}
@@ -696,7 +696,11 @@ function ReviewResults({
                       <span className="text-secondary">
                         {item.context_before}
                       </span>
-                      <mark className="rounded bg-[var(--warning-soft)] px-0.5 text-primary">
+                      <mark
+                        data-testid="content-cleanup-match"
+                        className="rounded bg-[var(--warning-soft)] px-0.5 font-semibold text-primary underline decoration-[var(--warning)] decoration-2 underline-offset-2"
+                        title={zh ? "检测到的噪声标记" : "Detected noise marker"}
+                      >
                         {item.match_text}
                       </mark>
                       <span className="text-secondary">
@@ -721,8 +725,8 @@ function ReviewResults({
                     {item.decision === "PROTECTED" ? (
                       <p className="mt-1 text-xs text-[var(--warning)]">
                         {zh
-                          ? "该选区位于受保护的 Markdown 结构内，或删除后会使消息为空。"
-                          : "This selection is inside protected Markdown or would empty the message."}
+                          ? "这是受保护的 Markdown 结构，默认保留；明确勾选后会按你的选择处理。"
+                          : "This is a protected Markdown structure. It stays by default and is processed only when explicitly selected."}
                       </p>
                     ) : null}
                     {item.confidence !== "HIGH" &&
