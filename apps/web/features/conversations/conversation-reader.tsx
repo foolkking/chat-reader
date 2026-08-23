@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
@@ -75,6 +75,7 @@ export function ConversationReader({
   const t = useTranslations();
   const { readerDensityMode, readerFontSizePx, readerWidthMode, resolvedLocale } = usePreferences();
   const dialog = useInteractionDialog();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectContextId = searchParams?.get("projectId") ?? undefined;
   const queryClient = useQueryClient();
@@ -419,8 +420,13 @@ export function ConversationReader({
   const canLoadInitialWindow = Boolean(targetMessageId) || positionQuery.isSuccess || positionQuery.isError;
 
   const windowQuery = useQuery({
-    queryKey: ["reader-turn-window", dataSource.mode, conversationId, conversationQuery.data?.offline_revision ?? "initial", initialAnchorMessageId],
-    queryFn: () => loadCompleteTurnWindow(
+    // The reader window is maintained locally after a mutation. Including the
+    // conversation revision here would cause React Query to clear/refetch the
+    // whole window whenever delete/merge/restore commits, which loses the
+    // user's reading anchor. Explicit mutation reconciliation below refreshes
+    // only the current window and restores its stable DOM anchor.
+    queryKey: ["reader-turn-window", dataSource.mode, conversationId, initialAnchorMessageId],
+    queryFn: () => loadCompleteTurnWindowWithAnchorFallback(
       dataSource,
       conversationId,
       initialAnchorMessageId ?? undefined,
@@ -1041,11 +1047,23 @@ export function ConversationReader({
     const anchor = position.anchor_data ?? {};
     const headingBlockIndex = numberOrNull(anchor.heading_block_index);
     const anchorBlockId = typeof anchor.block_id === "string" ? anchor.block_id : null;
-    const orderKey = typeof anchor.order_key === "string" ? anchor.order_key : null;
-    const restoreMessage = loadedWindowRef.current.items.find((message) => message.id === position.message_id) ??
-      loadedWindowRef.current.items.find((message) => orderKey !== null && message.order_key === orderKey);
-    const restoreMessageId = restoreMessage?.id ?? position.message_id;
-    if (!restoreMessageId) return;
+    // Message ids are the only stable mutation authority. An old order key can
+    // be reassigned after delete/merge renumbering, so never use it to jump to
+    // a different message when the remembered id is gone.
+    const restoreMessage = loadedWindowRef.current.items.find((message) => message.id === position.message_id);
+    if (!restoreMessage) {
+      // The remembered message may have been deleted or absorbed by a merge.
+      // The initial window query already fell back to the first turn in this
+      // case. Do not retry the stale target and leave the reader blank; allow
+      // the next real scroll to persist a new position.
+      restoreAttemptedRef.current = true;
+      restoreInProgressRef.current = false;
+      const firstMessage = loadedWindowRef.current.items[0];
+      setActiveMessageId(firstMessage?.id ?? null);
+      setActiveBlockId(null);
+      return;
+    }
+    const restoreMessageId = restoreMessage.id;
     const blockIdIndex = findBlockIndexById(restoreMessage, anchorBlockId);
     const blockIndex = position.block_index;
     const isBlockRelative = anchor.position_mode === "block-relative-v1" || anchor.position_mode === "block-relative-v2";
@@ -1478,22 +1496,87 @@ export function ConversationReader({
     };
   }, [focusMode, sourceEditorTarget]);
 
-  async function refreshReader() {
-    windowGenerationRef.current += 1;
-    const emptyWindow = emptyLoadedWindow(windowGenerationRef.current);
-    loadedWindowRef.current = emptyWindow;
-    setLoadedWindow(emptyWindow);
-    initialWindowAppliedRef.current = false;
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["reader-turn-window", dataSource.mode, conversationId] }),
-      queryClient.invalidateQueries({ queryKey: ["toc", readerSourceKey, conversationId] }),
-      queryClient.invalidateQueries({ queryKey: ["conversation", dataSource.mode, conversationId] }),
+  async function reloadReaderWindowPreservingPosition({
+    removedMessageIds = [],
+    changedMessageIds = [],
+    preferredAnchorMessageId,
+  }: {
+    removedMessageIds?: string[];
+    changedMessageIds?: string[];
+    preferredAnchorMessageId?: string;
+  } = {}) {
+    const root = scrollContainerRef.current;
+    const current = loadedWindowRef.current;
+    const removedIds = new Set(removedMessageIds);
+    const unstableIds = new Set([...removedMessageIds, ...changedMessageIds]);
+    const initialAnchor = captureMutationScrollAnchor(
+      root,
+      current,
+      removedIds,
+      unstableIds,
+      preferredAnchorMessageId,
+    );
+    const initialAnchorMessageId = initialAnchor ? messageIdForScrollAnchor(initialAnchor) : null;
+    const requestAnchorMessageId = initialAnchorMessageId
+      ?? preferredAnchorMessageId
+      ?? current.items.find((message) => !removedIds.has(message.id))?.id;
+
+    const [page, nextConversation] = await Promise.all([
+      loadCompleteTurnWindowWithAnchorFallback(dataSource, conversationId, requestAnchorMessageId),
+      dataSource.getConversation(conversationId).catch(() => null),
     ]);
+
+    // The request does not replace the DOM while it is in flight. If the user
+    // scrolls during that time, prefer their latest visible anchor when the
+    // refreshed window still contains it.
+    const latestCurrent = loadedWindowRef.current;
+    const latestAnchor = captureMutationScrollAnchor(
+      root,
+      latestCurrent,
+      removedIds,
+      unstableIds,
+      preferredAnchorMessageId,
+    );
+    const latestAnchorMessageId = latestAnchor ? messageIdForScrollAnchor(latestAnchor) : null;
+    const pageIds = new Set(page.items.map((message) => message.id));
+    const anchor = latestAnchorMessageId && pageIds.has(latestAnchorMessageId)
+      ? latestAnchor
+      : initialAnchorMessageId && pageIds.has(initialAnchorMessageId)
+        ? initialAnchor
+        : null;
+    const anchorMessageId = anchor ? messageIdForScrollAnchor(anchor) : null;
+    const generation = windowGenerationRef.current + 1;
+    windowGenerationRef.current = generation;
+    const transitionIsCurrent = () => loadedWindowRef.current.generation === generation;
+    const anchorLease = anchor ? await acquireScrollAnchorLease(anchor, () => true) : null;
+
+    if (nextConversation) {
+      queryClient.setQueryData<ConversationDetail>(
+        ["conversation", dataSource.mode, conversationId],
+        nextConversation,
+      );
+    }
+    const nextWindow = replaceLoadedWindow(page, generation);
+    syncTurnAnchorRefs(nextWindow, previousTurnAnchorRef, nextTurnAnchorRef);
+    applyLoadedWindow(nextWindow);
+    if (anchorMessageId) await waitForMountedMessage(anchorMessageId, transitionIsCurrent);
+    notifyReaderWindowLayoutChanged();
+    if (root && anchor) {
+      await restoreScrollAnchor({
+        root,
+        anchor,
+        tokenIsCurrent: transitionIsCurrent,
+      });
+    }
+    anchorLease?.release();
+    void queryClient.invalidateQueries({ queryKey: ["toc", readerSourceKey, conversationId] });
+    void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    void queryClient.invalidateQueries({ queryKey: ["projects"] });
   }
 
   async function applyMessageChange(nextMessage?: MessageListItem, conversationRevision?: number) {
     if (!nextMessage) {
-      await refreshReader();
+      await reloadReaderWindowPreservingPosition();
       return;
     }
     if (conversationRevision !== undefined) applyConversationRevision(conversationRevision);
@@ -1522,9 +1605,18 @@ export function ConversationReader({
     if (selectedIds.length < 2) return;
     if (!(await closeSourceEditorForWorkspace())) return;
     if (!(await dialog.confirm({ title: `Merge ${selectedIds.length} selected messages?`, description: "The selected adjacent messages will be merged into the first message.", confirmLabel: "Merge" }))) return;
-    await mergeMessages({ messageIds: selectedIds });
-    setSelectedMessageIds(new Set());
-    await refreshReader();
+    try {
+      const result = await mergeMessages({ messageIds: selectedIds });
+      const removedMessageIds = result.merged_message_ids.filter((messageId) => messageId !== result.survivor_message_id);
+      setSelectedMessageIds(new Set());
+      await reloadReaderWindowPreservingPosition({
+        removedMessageIds,
+        changedMessageIds: [result.survivor_message_id],
+        preferredAnchorMessageId: result.survivor_message_id,
+      });
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: error instanceof Error ? error.message : "Merge failed", tone: "error" } }));
+    }
   }
 
   async function deleteReaderMessage(message: MessageListItem) {
@@ -1538,7 +1630,7 @@ export function ConversationReader({
       const result = await deleteMessage(message.id, conversation?.offline_revision);
       applyConversationRevision(result.conversation_revision);
       setDeletedMessage({ message, conversationRevision: result.conversation_revision, status: "deleted" });
-      await refreshReader();
+      await reloadReaderWindowPreservingPosition({ removedMessageIds: [message.id] });
       window.setTimeout(() => setDeletedMessage((current) => current?.message.id === message.id && current.status === "deleted" ? null : current), 8000);
     } catch (error) {
       setNavigationStatus("failed");
@@ -1554,7 +1646,7 @@ export function ConversationReader({
       const result = await restoreDeletedMessage(message.id, deletedMessage.conversationRevision);
       applyConversationRevision(result.conversation_revision);
       setDeletedMessage(null);
-      await refreshReader();
+      await reloadReaderWindowPreservingPosition({ preferredAnchorMessageId: message.id });
     } catch {
       const messageText = resolvedLocale === "zh-CN"
         ? "\u64a4\u9500\u5931\u8d25\uff0c\u6d88\u606f\u5c1a\u672a\u6062\u590d\u3002"
@@ -1941,7 +2033,7 @@ export function ConversationReader({
             <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); void openUtilityPanel("search"); }} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-surface">{resolvedLocale === "zh-CN" ? "返回搜索" : "Return to search"}</button>
             <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); setTargetHighlightId(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
           </div> : null}
-          {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => { window.location.href = buildReaderUrl("/library", currentReaderLocation()); }} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
+          {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
 
         <div ref={scrollContainerRef} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
@@ -2169,9 +2261,10 @@ export function ConversationReader({
         revision={conversation.offline_revision}
         onClose={() => setMessageInsertTarget(null)}
         onSubmitted={async (result) => {
+          const anchorMessageId = messageInsertTarget?.id;
           setMessageInsertTarget(null);
           applyConversationRevision(result.conversation.offline_revision);
-          await refreshReader();
+          await reloadReaderWindowPreservingPosition({ preferredAnchorMessageId: anchorMessageId });
         }}
       /> : null}
       {canManageCanonical ? <TocRefreshDialog
@@ -2271,6 +2364,27 @@ async function loadCompleteTurnWindow(
   );
 }
 
+async function loadCompleteTurnWindowWithAnchorFallback(
+  dataSource: ReaderDataSource,
+  conversationId: string,
+  anchorMessageId?: string,
+  targetTurnCount?: number,
+): Promise<CompleteTurnWindow> {
+  try {
+    return await loadCompleteTurnWindow(dataSource, conversationId, anchorMessageId, targetTurnCount);
+  } catch (error) {
+    // A delete/merge can legitimately invalidate the remembered message id.
+    // The first turn is the safe compatibility fallback: it renders a usable
+    // reader and lets the next user scroll persist a fresh anchor.
+    if (!anchorMessageId || !isMissingReaderAnchorError(error)) throw error;
+    return loadCompleteTurnWindow(dataSource, conversationId, undefined, targetTurnCount);
+  }
+}
+
+function isMissingReaderAnchorError(error: unknown): boolean {
+  return error instanceof Error && /anchor message not found|message not found/i.test(error.message);
+}
+
 function syncTurnAnchorRefs(
   window: LoadedMessageWindow,
   previousRef: { current: string | null },
@@ -2284,6 +2398,44 @@ function messageIdForScrollAnchor(anchor: ScrollAnchorSnapshot): string | null {
   return document.getElementById(anchor.targetId)
     ?.closest<HTMLElement>("article[data-message-id]")
     ?.dataset.messageId ?? null;
+}
+
+function captureMutationScrollAnchor(
+  root: HTMLElement | null,
+  current: LoadedMessageWindow,
+  removedMessageIds: Set<string>,
+  unstableMessageIds: Set<string>,
+  preferredAnchorMessageId?: string,
+): ScrollAnchorSnapshot | null {
+  if (!root) return null;
+  const readingAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+  const readingMessageId = readingAnchor ? messageIdForScrollAnchor(readingAnchor) : null;
+  if (readingAnchor && readingMessageId && !unstableMessageIds.has(readingMessageId)) {
+    return readingAnchor;
+  }
+
+  const readingIndex = readingMessageId
+    ? current.items.findIndex((message) => message.id === readingMessageId)
+    : -1;
+  const candidates = readingIndex >= 0
+    ? [
+        ...current.items.slice(readingIndex + 1),
+        ...current.items.slice(0, readingIndex).reverse(),
+      ]
+    : current.items;
+  const fallbackMessageId = candidates.find((message) => (
+    !removedMessageIds.has(message.id) && !unstableMessageIds.has(message.id)
+  ))?.id
+    ?? (preferredAnchorMessageId && !removedMessageIds.has(preferredAnchorMessageId)
+      ? preferredAnchorMessageId
+      : current.items.find((message) => !removedMessageIds.has(message.id))?.id);
+  if (!fallbackMessageId) return null;
+  const target = document.getElementById(`message-${fallbackMessageId}`);
+  if (!target || !root.contains(target)) return null;
+  return {
+    targetId: target.id,
+    offset: target.getBoundingClientRect().top - root.getBoundingClientRect().top,
+  };
 }
 
 async function acquireScrollAnchorLease(

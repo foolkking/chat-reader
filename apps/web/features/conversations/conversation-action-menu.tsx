@@ -364,10 +364,11 @@ export function ConversationActionMenu({
                     icon={<FileText className="h-4 w-4" />}
                     disabled={busy !== null}
                     onClick={() => {
-                      window.location.href = getConversationExportUrl(conversation.id, {
+                      triggerConversationDownload(getConversationExportUrl(conversation.id, {
                         format: "markdown_v2",
                         tocMode: "none",
-                      });
+                      }));
+                      setOpen(false);
                     }}
                   >
                     {zh ? "导出 Markdown" : "Export Markdown"}
@@ -376,7 +377,8 @@ export function ConversationActionMenu({
                     icon={<FileJson className="h-4 w-4" />}
                     disabled={busy !== null}
                     onClick={() => {
-                      window.location.href = getConversationExportUrl(conversation.id, { format: "canjson_v2" });
+                      triggerConversationDownload(getConversationExportUrl(conversation.id, { format: "canjson_v2" }));
+                      setOpen(false);
                     }}
                   >
                     {zh ? "导出 CanJSON" : "Export CanJSON"}
@@ -464,6 +466,17 @@ export function ConversationActionMenu({
         : null}
     </>
   );
+}
+
+function triggerConversationDownload(url: string): void {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "";
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function MenuButton({

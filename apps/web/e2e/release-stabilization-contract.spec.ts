@@ -8,6 +8,7 @@ function source(path: string): string {
 
 test("conversation mutations hand the committed revision to the client", () => {
   const reader = source("features/conversations/conversation-reader.tsx");
+  const actionMenu = source("features/conversations/conversation-action-menu.tsx");
   const dataSource = source("lib/reader-data-source.ts");
   const createDialog = source("features/conversations/new-conversation-dialog.tsx");
   const insertDialog = source("features/conversations/message-insert-dialog.tsx");
@@ -17,6 +18,19 @@ test("conversation mutations hand the committed revision to the client", () => {
   expect(insertDialog).toContain("onSubmitted(result)");
   expect(reader).toContain("applyConversationRevision(result.conversation_revision)");
   expect(reader).toContain("applyConversationRevision(result.conversation.offline_revision)");
+  expect(reader).toContain("reloadReaderWindowPreservingPosition");
+  expect(reader).toContain("captureMutationScrollAnchor");
+  expect(reader).toContain("loadCompleteTurnWindowWithAnchorFallback");
+  expect(reader).toContain("isMissingReaderAnchorError");
+  expect(reader).toContain("The remembered message may have been deleted or absorbed by a merge");
+  expect(reader).toContain("removedMessageIds: [message.id]");
+  expect(reader).toContain("changedMessageIds: [result.survivor_message_id]");
+  expect(reader).not.toContain("async function refreshReader");
+  expect(reader).not.toContain('["reader-turn-window", dataSource.mode, conversationId, conversationQuery.data?.offline_revision');
+  expect(actionMenu).toContain("triggerConversationDownload");
+  expect(actionMenu).not.toContain("window.location.href = getConversationExportUrl");
+  expect(reader).toContain("router.push(buildReaderUrl");
+  expect(reader).not.toContain("window.location.href = buildReaderUrl");
   expect(reader).toContain("canonicalConversation.offline_revision");
   expect(reader).toContain("recordedRecentConversationRef.current === conversationId");
   expect(reader).toContain("if (!conversationQuery.data");
