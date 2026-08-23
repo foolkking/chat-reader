@@ -79,11 +79,11 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
     await expect(assistant).toHaveCount(0);
     const preservedNextMessage = page.locator(`#message-${nextMessageId}`);
     await expect(preservedNextMessage).toBeVisible();
-    await expect.poll(() => preservedNextMessage.evaluate((article) => {
+    await expect.poll(() => preservedNextMessage.evaluate((article, expectedOffset) => {
       const root = article.closest<HTMLElement>("[data-reader-scroll-root='true']");
       if (!root) return Number.POSITIVE_INFINITY;
-      return Math.abs((article.getBoundingClientRect().top - root.getBoundingClientRect().top) - nextOffsetBefore);
-    })).toBeLessThanOrEqual(24);
+      return Math.abs((article.getBoundingClientRect().top - root.getBoundingClientRect().top) - expectedOffset);
+    }, nextOffsetBefore)).toBeLessThanOrEqual(24);
     await expect(scrollRoot).toHaveAttribute("data-test-became-empty", "false");
 
     const undo = page.getByRole("button", { name: /Undo|\u64a4\u9500/ });

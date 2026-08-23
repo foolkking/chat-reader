@@ -191,6 +191,7 @@ export function ConversationReader({
   const previousSentinelVisibleRef = useRef(false);
   const nextSentinelVisibleRef = useRef(false);
   const navigationTokenRef = useRef(0);
+  const targetNavigationKeyRef = useRef<string | null>(null);
   const previousTurnAnchorRef = useRef<string | null>(null);
   const nextTurnAnchorRef = useRef<string | null>(null);
   const focusAnchorRef = useRef<ReturnType<typeof captureScrollAnchor>>(null);
@@ -559,6 +560,7 @@ export function ConversationReader({
     setPendingSourceEditorTarget(null);
     setSourceEditorDirty(false);
     setPendingTargetMessageId(targetMessageId);
+    targetNavigationKeyRef.current = null;
     userScrollIntentRef.current = false;
     scrollDirectionRef.current = null;
     scrollIntentSequenceRef.current += 1;
@@ -1012,6 +1014,11 @@ export function ConversationReader({
     if (!messageId) {
       return;
     }
+    const navigationKey = `${messageId}:${targetBlockIndex ?? ""}:${targetCharacterOffset ?? ""}`;
+    if (targetNavigationKeyRef.current === navigationKey) {
+      return;
+    }
+    targetNavigationKeyRef.current = navigationKey;
     void navigateToTarget({
       messageId,
       blockIndex: targetBlockIndex ?? undefined,
@@ -1505,6 +1512,15 @@ export function ConversationReader({
     changedMessageIds?: string[];
     preferredAnchorMessageId?: string;
   } = {}) {
+    // A target URL navigation may still be settling when a mutation is
+    // submitted. Cancel it before replacing the window so its late restore
+    // pass cannot overwrite the mutation anchor or jump to a deleted message.
+    navigationTokenRef.current += 1;
+    navigationInProgressRef.current = false;
+    readingRestoreTokenRef.current += 1;
+    restoreInProgressRef.current = false;
+    setPendingTargetMessageId(null);
+    setNavigationStatus("idle");
     const root = scrollContainerRef.current;
     const current = loadedWindowRef.current;
     const removedIds = new Set(removedMessageIds);
