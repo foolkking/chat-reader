@@ -20,7 +20,7 @@ complete private markers, damaged private wrappers, visible references,
 full-width syntax tokens, one-edit syntax damage and ordinary-prose false
 positives. User literal tests cover exact, NFKC/case/whitespace normalized and
 anchored approximate matching with a bounded candidate budget. All detections
-are explicit review items and default to `KEEP`; no confidence or similarity
+are explicit review items and actionable matches default to `DELETE`; no confidence or similarity
 classification is part of the current cleanup contract.
 
 Source Editor browser coverage uses a non-BMP character before the selected

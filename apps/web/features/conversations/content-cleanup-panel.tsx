@@ -162,6 +162,7 @@ export function ContentCleanupPanel({
         message_id: activeSelection?.messageId,
         selection_start_offset: activeSelection?.startOffset,
         selection_end_offset: activeSelection?.endOffset,
+        selection_text: activeSelection?.text,
       });
     },
     onSuccess: (scan) => {

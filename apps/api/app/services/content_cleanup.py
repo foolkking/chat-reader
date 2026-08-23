@@ -223,6 +223,7 @@ def create_scan(
     selection_message_id: uuid.UUID | None = None,
     selection_start_offset: int | None = None,
     selection_end_offset: int | None = None,
+    selection_text: str | None = None,
     excluded_archived_count: int = 0,
 ) -> tuple[ContentCleanupScan, BackgroundJob]:
     if not conversation_ids:
@@ -258,12 +259,26 @@ def create_scan(
             raise ValueError("The selected source message is not available in this conversation.")
         selected_version = db.get(MessageVersion, selected_message.current_version_id)
         assert selection_start_offset is not None and selection_end_offset is not None
-        if (
-            selected_version is None
-            or selection_start_offset >= selection_end_offset
-            or selection_end_offset > len(selected_version.display_text)
-        ):
+        if selected_version is None:
             raise ValueError("The selected source range is invalid or empty.")
+        normalized_selection = normalize_selection_offsets(
+            selected_version.display_text,
+            selection_start_offset,
+            selection_end_offset,
+        )
+        if normalized_selection is None and selection_text:
+            matches = [
+                index
+                for index in range(len(selected_version.display_text))
+                if selected_version.display_text.startswith(selection_text, index)
+            ]
+            if len(matches) == 1:
+                selection_start_offset = matches[0]
+                selection_end_offset = matches[0] + len(selection_text)
+                normalized_selection = (selection_start_offset, selection_end_offset)
+        if normalized_selection is None:
+            raise ValueError("The selected source range is invalid or empty.")
+        selection_start_offset, selection_end_offset = normalized_selection
     wanted_ids = set(conversation_ids)
     wanted_revision_ids = {revision.id for revision in revisions}
     for existing in (
@@ -437,7 +452,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                             detected.end,
                             detected.kind,
                             "PARTIAL_SELECTION",
-                            "KEEP",
+                            "DELETE",
                             detected.match_mode,
                             (*detected.evidence_codes, "PARTIAL_SELECTION"),
                         )))
@@ -459,7 +474,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                     selected_end,
                     "manual_selection",
                     "MANUAL_SELECTION",
-                    "PROTECTED" if protected or deletes_entire_message else "KEEP",
+                    "PROTECTED" if protected or deletes_entire_message else "DELETE",
                     "MANUAL",
                     ("MANUAL_SELECTION",),
                 )))
@@ -563,7 +578,7 @@ def detect_occurrences(
     result: list[DetectedOccurrence] = []
     for item in values:
         is_protected = any(item.start < protected_end and item.end > protected_start for protected_start, protected_end in protected)
-        decision = "PROTECTED" if is_protected else "KEEP"
+        decision = "PROTECTED" if is_protected else "DELETE"
         result.append(DetectedOccurrence(item.start, item.end, item.kind, item.reason_code, decision, item.match_mode, item.evidence_codes))
     return result
 
@@ -631,7 +646,7 @@ def protected_ranges(text: str) -> list[tuple[int, int]]:
 
 
 def _detected(start: int, end: int, kind: str, reason_code: str, match_mode: str, evidence_codes: tuple[str, ...]) -> DetectedOccurrence:
-    return DetectedOccurrence(start, end, kind, reason_code, "KEEP", match_mode, evidence_codes)
+    return DetectedOccurrence(start, end, kind, reason_code, "DELETE", match_mode, evidence_codes)
 
 
 def _covered(start: int, end: int, values: list[DetectedOccurrence]) -> bool:
@@ -1076,6 +1091,46 @@ def _manual_selection_revision(db: Session) -> ContentCleanupRuleRevision:
         if revision.rule.detector_id == MANUAL_SELECTION_DETECTOR:
             return revision
     raise ValueError("The manual selection cleanup rule is unavailable.")
+
+
+def normalize_selection_offsets(
+    text: str,
+    start_offset: int,
+    end_offset: int,
+) -> tuple[int, int] | None:
+    """Accept canonical code-point offsets and recover legacy UTF-16 offsets.
+
+    CodeMirror and browser Selection APIs expose UTF-16 code-unit positions in
+    some paths, while the cleanup contract stores Unicode code-point offsets.
+    If a client sends a range that only fits the UTF-16 length (usually because
+    an emoji precedes the selection), convert it before validating.  Valid
+    code-point offsets are left untouched, so this remains backwards compatible.
+    """
+    if start_offset < 0 or end_offset <= start_offset:
+        return None
+    code_point_length = len(text)
+    if end_offset <= code_point_length:
+        return start_offset, end_offset
+    utf16_length = len(text.encode("utf-16-le")) // 2
+    if end_offset > utf16_length:
+        return None
+
+    def utf16_to_code_point(offset: int) -> int:
+        consumed = 0
+        for index, character in enumerate(text):
+            units = 2 if ord(character) > 0xFFFF else 1
+            if consumed + units > offset:
+                return index
+            consumed += units
+            if consumed == offset:
+                return index + 1
+        return len(text)
+
+    converted_start = utf16_to_code_point(start_offset)
+    converted_end = utf16_to_code_point(end_offset)
+    if converted_end <= converted_start:
+        return None
+    return converted_start, converted_end
 
 
 def queue_import_scan(db: Session, conversation_ids: list[uuid.UUID]) -> ContentCleanupScan | None:

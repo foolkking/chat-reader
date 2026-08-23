@@ -10,7 +10,7 @@ Rules have immutable revisions. Built-in rules reference versioned detector iden
 
 Detection is layered rather than a single global regular expression. Built-in syntax noise first uses exact structural grammar. Known short syntax tokens may then use NFKC normalization or at most one edit only when an exact citation-reference grammar anchors the candidate. User literals use their selected exact, normalized or bounded-approximate mode. Approximate scanning does not compare arbitrary full message windows and has bounded anchors, length and edit distance.
 
-Each occurrence records detector version, match mode and evidence codes in addition to its location. Every detected candidate is shown to the owner and defaults to `KEEP`; protected Markdown ranges remain `PROTECTED`. There is no confidence or similarity classification in the cleanup contract.
+Each occurrence records detector version, match mode and evidence codes in addition to its location. Every actionable detected candidate is shown to the owner and defaults to `DELETE` (selected); protected Markdown ranges remain `PROTECTED`. The owner can deselect any candidate to persist `KEEP` before applying. There is no confidence or similarity classification in the cleanup contract.
 
 ## Scan Scope
 

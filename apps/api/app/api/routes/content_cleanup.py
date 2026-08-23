@@ -189,6 +189,7 @@ def start_scan(payload: CleanupScanCreate, db: Session = Depends(get_db)) -> Cle
             selection_message_id=payload.message_id,
             selection_start_offset=payload.selection_start_offset,
             selection_end_offset=payload.selection_end_offset,
+            selection_text=payload.selection_text,
         )
         db.commit()
         db.refresh(scan)

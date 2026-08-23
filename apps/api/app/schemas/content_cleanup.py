@@ -48,6 +48,7 @@ class CleanupScanCreate(BaseModel):
     message_id: UUID | None = None
     selection_start_offset: int | None = Field(default=None, ge=0)
     selection_end_offset: int | None = Field(default=None, ge=0)
+    selection_text: str | None = Field(default=None, max_length=500)
 
 
 class CleanupScanRead(BaseModel):

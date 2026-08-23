@@ -13,8 +13,9 @@
   responsive.
 - Scan progress reports total, project and unclassified targets, archived
   exclusions, processed messages and candidate count. The existing review
-  dialog is reused; every occurrence defaults to `KEEP` and is removed with
-  its scan after successful apply or ignore. No confidence or similarity
+  dialog is reused; every actionable occurrence defaults to `DELETE` (selected)
+  and is removed with its scan after successful apply or ignore. Protected or
+  stale occurrences remain unselected. No confidence or similarity
   fields are part of the current model/API.
 - Alembic source head is `20260823_0028`, adding per-scan rule snapshots and
   archived-exclusion progress while removing the current occurrence
@@ -41,7 +42,7 @@
 - The pre-scan production baseline recorded detector version, match mode and
   evidence codes without storing message copies. The current implementation
   supersedes its confidence-based presentation: every occurrence is now an
-  explicit review item and defaults to `KEEP`.
+  explicit review item; actionable occurrences now default to `DELETE`.
 - Markdown protection covers variable-length fenced/inline code, indented code,
   math, link destinations, reference definitions, autolinks and asset URLs.
   Apply rechecks the current role, immutable MessageVersion range and detector

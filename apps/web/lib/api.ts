@@ -993,7 +993,7 @@ export async function scanExistingConversations(): Promise<CleanupScanRead> {
   return fetchJson<CleanupScanRead>("/api/content-cleanup/rules/scan-existing", jsonRequest("POST", {}));
 }
 
-export async function createCleanupScan(input: { source?: "READER" | "BATCH"; scope_type: "CURRENT_CONVERSATION" | "SELECTED_CONVERSATIONS" | "ALL_ACTIVE"; conversation_ids: string[]; message_id?: string; selection_start_offset?: number; selection_end_offset?: number }): Promise<CleanupScanRead> {
+export async function createCleanupScan(input: { source?: "READER" | "BATCH"; scope_type: "CURRENT_CONVERSATION" | "SELECTED_CONVERSATIONS" | "ALL_ACTIVE"; conversation_ids: string[]; message_id?: string; selection_start_offset?: number; selection_end_offset?: number; selection_text?: string }): Promise<CleanupScanRead> {
   return fetchJson<CleanupScanRead>("/api/content-cleanup/scans", jsonRequest("POST", input));
 }
 

@@ -59,9 +59,7 @@ test("reviews a deterministic noise occurrence without silently changing content
     const candidateCheckbox = page.getByRole("checkbox", {
       name: /Process Cite turn2search1|处理 Cite turn2search1/,
     });
-    await expect(candidateCheckbox).not.toBeChecked({ timeout: 30_000 });
-    await candidateCheckbox.check();
-    await expect(candidateCheckbox).toBeChecked();
+    await expect(candidateCheckbox).toBeChecked({ timeout: 30_000 });
     await expect(page.getByTestId("content-cleanup-scroll")).toHaveCSS(
       "overflow-y",
       "auto",
