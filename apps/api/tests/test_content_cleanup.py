@@ -79,6 +79,21 @@ def test_private_citation_accepts_new_reference_kinds_inside_wrapper() -> None:
     assert matches[0].decision == "DELETE"
 
 
+def test_unknown_private_marker_is_surfaced_for_user_review() -> None:
+    text = "before \ue200url\ue202opaque-resource-42\ue201 after"
+    matches = detect_occurrences(
+        "assistant",
+        text,
+        _rule("openai-private-marker-v1", "ASSISTANT_ONLY"),
+        _revision(),
+    )
+    assert len(matches) == 1
+    assert matches[0].reason_code == "PRIVATE_MARKER"
+    assert matches[0].confidence == "MEDIUM"
+    assert matches[0].decision == "KEEP"
+    assert text[matches[0].start:matches[0].end] == "\ue200url\ue202opaque-resource-42\ue201"
+
+
 def test_private_citation_variants_and_real_url_marker() -> None:
     text = "\ue200 cite \ue202 turn1search0 \ue201 and \ue200cite\u200bturn2news3"
     matches = detect_occurrences("assistant", text, _rule("openai-private-citation-v1", "ASSISTANT_ONLY"), _revision())

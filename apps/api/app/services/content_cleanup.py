@@ -31,6 +31,7 @@ from app.services.search.search_indexer import rebuild_search_and_toc_for_conver
 
 BUILTIN_RULES = (
     ("openai-private-citation-v1", "ChatGPT 私有引用标记", "citation", "PRIVATE_CITATION"),
+    ("openai-private-marker-v1", "ChatGPT 私有标记（待确认）", "marker", "PRIVATE_MARKER"),
     ("visible-turn-citation-v1", "导出器可见引用标记", "citation", "VISIBLE_CITATION"),
     ("chatgpt-exporter-footer-v1", "ChatGPT Exporter 页脚", "footer", "EXPORTER_FOOTER"),
     ("thinking-summary-v1", "导出的思考摘要", "thinking_summary", "THINKING_SUMMARY"),
@@ -55,6 +56,12 @@ PRIVATE_CITATION_BROKEN = re.compile(
     rf"(?:[☆★\u200b\s]*{PRIVATE_REFERENCE_TOKEN}){{1,}}"
     r"[\u200b☆★\s]*(?:\ue201)?",
     re.IGNORECASE,
+)
+# Some exporters wrap non-citation metadata in the same private Unicode
+# envelope. Surface those complete envelopes for review instead of silently
+# discarding an unknown marker or guessing that it is safe to delete.
+PRIVATE_MARKER_ENVELOPE = re.compile(
+    r"\ue200(?:(?!\ue200|\ue201)[\s\S]){1,4096}\ue201",
 )
 VISIBLE_CITATION = re.compile(
     r"(?i)\bcite\b[\s\u200b]*(?:[☆★]\s*)?turn\d+(?:search|news|view)\d+"
@@ -455,6 +462,19 @@ def detect_occurrences(
                 if any(marker in match.group(0) for marker in ("\ue200", "\ue201", "\ue202"))
                 and not _covered(match.start(), match.end(), values)
             )
+    elif detector_id == "openai-private-marker-v1":
+        values.extend(
+            _detected(
+                match.start(),
+                match.end(),
+                "marker",
+                "PRIVATE_MARKER",
+                "MEDIUM",
+                "STRUCTURAL",
+                ("PUA_ENVELOPE", "UNCLASSIFIED_MARKER"),
+            )
+            for match in PRIVATE_MARKER_ENVELOPE.finditer(text)
+        )
     elif detector_id == "visible-turn-citation-v1":
         values.extend(_detected(match.start(), match.end(), "citation", "VISIBLE_CITATION", "HIGH", "STRUCTURAL", ("REFERENCE_SEQUENCE",)) for match in VISIBLE_CITATION.finditer(text))
         values.extend(_tolerant_visible_citations(text, values))
