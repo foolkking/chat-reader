@@ -10,8 +10,12 @@ from app.models.content_cleanup import (
     ContentCleanupRule,
     ContentCleanupRuleRevision,
     ContentCleanupScan,
+    ContentCleanupScanRule,
+    ContentCleanupScanTarget,
 )
 from app.models.conversation import Conversation
+from app.models.project import Project
+from app.models.project_conversation import ProjectConversation
 from app.schemas.content_cleanup import (
     CleanupApplyRead,
     CleanupDecisionBatch,
@@ -35,6 +39,32 @@ from app.services.content_cleanup import (
 )
 
 router = APIRouter(prefix="/api/content-cleanup", tags=["content-cleanup"])
+
+
+@router.post("/rules/scan-existing", response_model=CleanupScanRead, status_code=status.HTTP_202_ACCEPTED)
+def scan_existing_conversations(db: Session = Depends(get_db)) -> CleanupScanRead:
+    """Queue one explicit review of every active project and unclassified conversation."""
+    active_ids = [
+        row[0]
+        for row in db.query(Conversation.id)
+        .filter(Conversation.status == "active", Conversation.deleted_at.is_(None))
+        .all()
+    ]
+    archived_count = db.query(Conversation.id).filter(Conversation.status == "archived", Conversation.deleted_at.is_(None)).count()
+    try:
+        scan, _job = create_scan(
+            db,
+            source="BATCH",
+            scope_type="ALL_ACTIVE",
+            conversation_ids=active_ids,
+            excluded_archived_count=archived_count,
+        )
+        db.commit()
+        db.refresh(scan)
+        return _scan_read(db, scan)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/rules", response_model=list[CleanupRuleRead])
@@ -126,6 +156,18 @@ def delete_rule(rule_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
     )
     if active_occurrences:
         raise HTTPException(status_code=409, detail="Dismiss or finish pending reviews before deleting this rule.")
+    active_snapshot = (
+        db.query(ContentCleanupScanRule.id)
+        .join(ContentCleanupScan, ContentCleanupScan.id == ContentCleanupScanRule.scan_id)
+        .join(ContentCleanupRuleRevision, ContentCleanupRuleRevision.id == ContentCleanupScanRule.rule_revision_id)
+        .filter(
+            ContentCleanupRuleRevision.rule_id == rule.id,
+            ContentCleanupScan.status.in_(("QUEUED", "SCANNING", "READY", "APPLYING")),
+        )
+        .first()
+    )
+    if active_snapshot:
+        raise HTTPException(status_code=409, detail="Dismiss or finish the existing-conversation scan before deleting this rule.")
     db.delete(rule)
     db.commit()
     return Response(status_code=204)
@@ -253,6 +295,26 @@ def _scan_read(db: Session, scan: ContentCleanupScan) -> CleanupScanRead:
         progress=scan.progress,
         processed_messages=scan.processed_messages,
         total_messages=scan.total_messages,
+        excluded_archived_count=scan.excluded_archived_count,
+        target_count=db.query(ContentCleanupScanTarget).filter(ContentCleanupScanTarget.scan_id == scan.id).count(),
+        project_target_count=(
+            db.query(ContentCleanupScanTarget)
+            .join(ProjectConversation, ProjectConversation.conversation_id == ContentCleanupScanTarget.conversation_id)
+            .join(Project, Project.id == ProjectConversation.project_id)
+            .filter(ContentCleanupScanTarget.scan_id == scan.id)
+            .filter(Project.is_default.is_(False))
+            .count()
+        ),
+        unassigned_target_count=(
+            db.query(ContentCleanupScanTarget)
+            .filter(ContentCleanupScanTarget.scan_id == scan.id)
+            .filter(~ContentCleanupScanTarget.conversation_id.in_(
+                db.query(ProjectConversation.conversation_id)
+                .join(Project, Project.id == ProjectConversation.project_id)
+                .filter(Project.is_default.is_(False))
+            ))
+            .count()
+        ),
         occurrence_count=sum(counts.values()),
         delete_count=counts.get("DELETE", 0),
         keep_count=counts.get("KEEP", 0),

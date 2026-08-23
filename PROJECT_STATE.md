@@ -1,6 +1,27 @@
 # Project State
 
-## 2026-08-23 Layered content-noise detection
+## 2026-08-23 Rule-library existing-conversation review
+
+- Content Cleanup now exposes an explicit rule-library action for one-shot
+  `BATCH / ALL_ACTIVE` background review. The target snapshot includes active
+  conversations in projects and the default/unclassified area, and excludes
+  archived or deleted conversations.
+- Each scan snapshots the enabled rule revisions in
+  `content_cleanup_scan_rules`; disabling or editing a rule after the scan
+  starts does not change that scan. The worker processes bounded chunks and
+  requeues low-priority noise work so imports and interactive jobs remain
+  responsive.
+- Scan progress reports total, project and unclassified targets, archived
+  exclusions, processed messages and candidate count. The existing review
+  dialog is reused; every occurrence defaults to `KEEP` and is removed with
+  its scan after successful apply or ignore. No confidence or similarity
+  fields are part of the current model/API.
+- Alembic source head is `20260823_0028`, adding per-scan rule snapshots and
+  archived-exclusion progress while removing the current occurrence
+  confidence/similarity columns. This change is implemented locally and has
+  not been deployed.
+
+## 2026-08-23 Layered content-noise detection (pre-scan baseline)
 
 - Source Editor cleanup now evaluates active built-in and user rules inside the
   selected MessageVersion range before using a manual-selection fallback. A
@@ -11,16 +32,17 @@
   requires an exact `turn...search/news/view...` reference sequence. User rules
   support raw exact, NFKC/case/whitespace normalized and anchored approximate
   modes plus anywhere, whole-line and block-end boundaries.
-- Occurrences record detector version, match mode, evidence codes and optional
-  similarity without storing message copies. Only high-confidence detections
-  default to processing; medium and low confidence remain `KEEP` until the
-  owner explicitly selects them.
+- The pre-scan production baseline recorded detector version, match mode and
+  evidence codes without storing message copies. The current implementation
+  supersedes its confidence-based presentation: every occurrence is now an
+  explicit review item and defaults to `KEEP`.
 - Markdown protection covers variable-length fenced/inline code, indented code,
   math, link destinations, reference definitions, autolinks and asset URLs.
   Apply rechecks the current role, immutable MessageVersion range and detector
   evidence before creating a normal replacement version.
-- Alembic source and local development database have one head,
-  `20260823_0027`. No new dependency or automatic deletion path was added.
+- The pre-scan source head was `20260823_0027`; the current source head is
+  `20260823_0028` as documented above. No new dependency or automatic
+  deletion path was added.
 - Final local evidence for the complete scope is focused cleanup API `17
   passed`, full API `368 passed / 5 skipped`, browser/PWA `76 passed / 71
   conditional skipped`, Web lint/typecheck/build PASS, dependency policy PASS

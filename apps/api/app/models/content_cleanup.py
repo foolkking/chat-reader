@@ -65,6 +65,7 @@ class ContentCleanupScan(Base):
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     processed_messages: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_messages: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    excluded_archived_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cursor_message_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     selection_message_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), nullable=True
@@ -78,10 +79,31 @@ class ContentCleanupScan(Base):
 
     targets = relationship("ContentCleanupScanTarget", back_populates="scan", cascade="all, delete-orphan")
     occurrences = relationship("ContentCleanupOccurrence", back_populates="scan", cascade="all, delete-orphan")
+    rule_snapshots = relationship("ContentCleanupScanRule", back_populates="scan", cascade="all, delete-orphan")
 
 
 Index("idx_content_cleanup_scans_status", ContentCleanupScan.status)
 Index("idx_content_cleanup_scans_job", ContentCleanupScan.background_job_id)
+
+
+class ContentCleanupScanRule(Base):
+    __tablename__ = "content_cleanup_scan_rules"
+    __table_args__ = (UniqueConstraint("scan_id", "rule_revision_id", name="uq_content_cleanup_scan_rule"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("content_cleanup_scans.id", ondelete="CASCADE"), nullable=False
+    )
+    rule_revision_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("content_cleanup_rule_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+
+    scan = relationship("ContentCleanupScan", back_populates="rule_snapshots")
+    rule_revision = relationship("ContentCleanupRuleRevision")
+
+
+Index("idx_content_cleanup_scan_rules_scan", ContentCleanupScanRule.scan_id)
+Index("idx_content_cleanup_scan_rules_revision", ContentCleanupScanRule.rule_revision_id)
 
 
 class ContentCleanupScanTarget(Base):
@@ -121,11 +143,9 @@ class ContentCleanupOccurrence(Base):
     column_end: Mapped[int] = mapped_column(Integer, nullable=False)
     block_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     kind: Mapped[str] = mapped_column(String(40), nullable=False)
-    confidence: Mapped[str] = mapped_column(String(16), nullable=False, default="HIGH")
     reason_code: Mapped[str] = mapped_column(String(80), nullable=False)
     decision: Mapped[str] = mapped_column(String(16), nullable=False, default="DELETE")
     match_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="RAW_EXACT")
-    similarity_score: Mapped[float | None] = mapped_column(nullable=True)
     detector_version: Mapped[str] = mapped_column(String(40), nullable=False, default="noise-v2")
     evidence_codes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 

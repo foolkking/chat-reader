@@ -297,7 +297,6 @@ export function ContentCleanupPanel({
           .filter(
             (item) =>
               item.decision !== "PROTECTED" &&
-              item.confidence === "HIGH" &&
               !item.stale,
           )
           .map((item) => [item.id, "DELETE" as const]),
@@ -728,7 +727,7 @@ function ReviewResults({
           onClick={selectVisible}
           className="text-xs font-medium text-accent underline"
         >
-          {zh ? "选择本页可处理项" : "Select safe matches on page"}
+          {zh ? "选择本页候选" : "Select candidates on page"}
         </button>
       </div>
       {Object.entries(groups).map(([name, items]) => (
@@ -770,8 +769,7 @@ function ReviewResults({
                       </span>{" "}
                       · {item.role} · {zh ? "第" : "line "}
                       {item.line_start}
-                      {zh ? "行" : ""} · {item.confidence}
-                      {" · "}
+                      {zh ? "行" : ""} ·
                       {cleanupDetectionLabel(item, zh)}
                       {item.stale
                         ? zh
@@ -786,16 +784,12 @@ function ReviewResults({
                           : "This is a protected Markdown structure. It stays by default and is processed only when explicitly selected."}
                       </p>
                     ) : null}
-                    {item.confidence !== "HIGH" &&
+                    {item.reason_code === "PARTIAL_SELECTION" &&
                     item.decision !== "PROTECTED" ? (
                       <p className="mt-1 text-xs text-[var(--warning)]">
-                        {item.reason_code === "PARTIAL_SELECTION"
-                          ? zh
-                            ? "当前只选中了标记的一部分；候选已扩展到完整范围，请确认后再处理。"
-                            : "The selection covers only part of the marker. Review the expanded range before processing."
-                          : zh
-                            ? "这是近似识别候选，默认保留，只有你明确勾选后才会处理。"
-                            : "This approximate candidate is kept by default and is processed only when explicitly selected."}
+                        {zh
+                          ? "当前只选中了标记的一部分；候选已扩展到完整范围，请确认后再处理。"
+                          : "The selection covers only part of the marker. Review the expanded range before processing."}
                       </p>
                     ) : null}
                     {onLocate && item.conversation_id === conversationId ? (

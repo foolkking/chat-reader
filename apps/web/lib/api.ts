@@ -989,6 +989,10 @@ export async function deleteCleanupRule(ruleId: string): Promise<void> {
   await fetchJson<void>(`/api/content-cleanup/rules/${ruleId}`, { method: "DELETE" });
 }
 
+export async function scanExistingConversations(): Promise<CleanupScanRead> {
+  return fetchJson<CleanupScanRead>("/api/content-cleanup/rules/scan-existing", jsonRequest("POST", {}));
+}
+
 export async function createCleanupScan(input: { source?: "READER" | "BATCH"; scope_type: "CURRENT_CONVERSATION" | "SELECTED_CONVERSATIONS" | "ALL_ACTIVE"; conversation_ids: string[]; message_id?: string; selection_start_offset?: number; selection_end_offset?: number }): Promise<CleanupScanRead> {
   return fetchJson<CleanupScanRead>("/api/content-cleanup/scans", jsonRequest("POST", input));
 }

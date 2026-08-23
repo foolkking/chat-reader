@@ -17,6 +17,7 @@ from app.models.content_cleanup import (
     ContentCleanupRule,
     ContentCleanupRuleRevision,
     ContentCleanupScan,
+    ContentCleanupScanRule,
     ContentCleanupScanTarget,
 )
 from app.models.export_artifact import ExportArtifact
@@ -58,6 +59,7 @@ __all__ = [
     "ContentCleanupRule",
     "ContentCleanupRuleRevision",
     "ContentCleanupScan",
+    "ContentCleanupScanRule",
     "ContentCleanupScanTarget",
     "ExportArtifact",
     "Heading",

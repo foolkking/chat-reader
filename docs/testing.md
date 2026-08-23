@@ -1,5 +1,17 @@
 # Testing Addendum 2026-08-09
 
+## Existing-conversation rule-library scan (2026-08-23)
+
+The current local implementation adds the explicit `BATCH / ALL_ACTIVE` rule
+library scan, project/unclassified target accounting, archived-target
+exclusion, per-scan rule revision snapshots, and no-confidence occurrence
+responses. Focused cleanup coverage is `28 passed`; migration integrity is
+`4 passed / 1 skipped`; Web lint, typecheck and production build pass; and
+local Alembic current/heads are both `20260823_0028`. The full API suite was
+started but exceeded the five-minute local command limit without a completed
+result, so it is `NOT VERIFIED` for this change. Production deployment remains
+deferred by plan.
+
 ## Layered content-noise detection (2026-08-23)
 
 Content cleanup coverage now separates structural exact, normalized exact,
@@ -7,9 +19,9 @@ bounded fuzzy and manual-selection evidence. Built-in citation tests cover
 complete private markers, damaged private wrappers, visible references,
 full-width syntax tokens, one-edit syntax damage and ordinary-prose false
 positives. User literal tests cover exact, NFKC/case/whitespace normalized and
-anchored approximate matching with a bounded candidate budget. Only
-high-confidence results default to processing; medium and low results remain
-explicit review items.
+anchored approximate matching with a bounded candidate budget. All detections
+are explicit review items and default to `KEEP`; no confidence or similarity
+classification is part of the current cleanup contract.
 
 Source Editor browser coverage uses a non-BMP character before the selected
 citation to verify that CodeMirror UTF-16 positions are converted to the
@@ -23,7 +35,8 @@ The completed local quality gates for this scope are: focused cleanup API
 `17 passed`; full API `368 passed / 5 skipped`; Web lint, typecheck and
 production build PASS; browser/PWA `76 passed / 71 conditional skipped`;
 dependency policy PASS with zero high or critical advisories; Alembic single
-head/current `20260823_0027`; and `git diff --check` PASS. These are local and
+head/current `20260823_0027`; and `git diff --check` PASS. These are historical
+pre-scan evidence and local/production-equivalent results; production deployment is recorded separately
 production-equivalent results; production deployment is recorded separately
 after the running services are upgraded.
 

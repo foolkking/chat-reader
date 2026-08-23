@@ -30,7 +30,7 @@ def test_alembic_current_matches_repository_head() -> None:
         capture_output=True,
         check=True,
     )
-    expected_head = "20260823_0027"
+    expected_head = "20260823_0028"
     assert heads.stdout.strip() == f"{expected_head} (head)"
     if expected_head not in current.stdout:
         import pytest
@@ -72,6 +72,15 @@ def test_cleanup_detection_migration_records_match_evidence() -> None:
         "evidence_codes",
     ):
         assert column in source
+
+
+def test_background_cleanup_scan_migration_snapshots_rules_and_removes_current_scores() -> None:
+    migration = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "20260823_0028_background_cleanup_scan.py"
+    source = migration.read_text(encoding="utf-8")
+    assert "content_cleanup_scan_rules" in source
+    assert "excluded_archived_count" in source
+    assert 'op.drop_column("content_cleanup_occurrences", "confidence")' in source
+    assert 'op.drop_column("content_cleanup_occurrences", "similarity_score")' in source
 
 
 def test_search_document_model_uses_postgresql_tsvector_type() -> None:

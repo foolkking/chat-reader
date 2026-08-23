@@ -59,6 +59,10 @@ class CleanupScanRead(BaseModel):
     progress: int
     processed_messages: int
     total_messages: int
+    excluded_archived_count: int
+    target_count: int
+    project_target_count: int
+    unassigned_target_count: int
     occurrence_count: int
     delete_count: int
     keep_count: int
@@ -80,7 +84,6 @@ class CleanupOccurrenceRead(BaseModel):
     detector_id: str | None
     kind: str
     reason_code: str
-    confidence: str
     decision: str
     start_offset: int
     end_offset: int
@@ -91,7 +94,6 @@ class CleanupOccurrenceRead(BaseModel):
     context_after: str
     stale: bool
     match_mode: str
-    similarity_score: float | None
     evidence_codes: list[str] | None
 
 

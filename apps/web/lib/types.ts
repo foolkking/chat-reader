@@ -104,6 +104,10 @@ export type CleanupScanRead = {
   progress: number;
   processed_messages: number;
   total_messages: number;
+  excluded_archived_count: number;
+  target_count: number;
+  project_target_count: number;
+  unassigned_target_count: number;
   occurrence_count: number;
   delete_count: number;
   keep_count: number;
@@ -130,7 +134,6 @@ export type CleanupOccurrenceRead = {
   detector_id: string | null;
   kind: string;
   reason_code: string;
-  confidence: string;
   decision: "DELETE" | "KEEP" | "PROTECTED" | "CONFLICT";
   start_offset: number;
   end_offset: number;
@@ -141,7 +144,6 @@ export type CleanupOccurrenceRead = {
   context_after: string;
   stale: boolean;
   match_mode: string;
-  similarity_score: number | null;
   evidence_codes: string[] | null;
 };
 

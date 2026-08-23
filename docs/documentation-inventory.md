@@ -8,7 +8,13 @@ rule revisions, layered structural/normalized/bounded matching,
 current/selected/all-active scan scopes, occurrence-only evidence persistence,
 low-priority post-import review and MessageVersion-based explicit apply are
 current in `PROJECT_STATE.md` and `docs/system/CONTENT_CLEANUP_CONTRACT.md`.
-Alembic head is `20260823_0027`.
+Alembic head is `20260823_0028`.
+
+The current cleanup contract also includes an explicit rule-library action for a
+low-priority `BATCH / ALL_ACTIVE` review of project and unclassified active
+conversations. Archived conversations are excluded, rule revisions are
+snapshotted per scan, and every occurrence defaults to `KEEP` for explicit
+review.
 
 2026-08-22 Adaptive Import synchronization: the two-entry import surface,
 session/group/family model, Built-in and Learned Profile revisions, canonical

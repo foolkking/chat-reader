@@ -341,6 +341,8 @@ All `/api/content-cleanup/*` routes remain inside the owner authentication
 boundary. `GET/POST/PATCH/DELETE /rules` manage built-in and literal rule
 revisions. Literal create/update accepts `matcher_mode` (`EXACT`, `NORMALIZED`,
 `APPROXIMATE`) and `boundary_mode` (`ANYWHERE`, `WHOLE_LINE`, `BLOCK_END`).
+`POST /rules/scan-existing` queues one low-priority scan of all active project
+and unclassified conversations using a snapshot of enabled rule revisions.
 `POST /scans` accepts current, selected-active or all-active scope;
 archived conversations are rejected. A Source Editor selection additionally
 sends `message_id`, `selection_start_offset` and `selection_end_offset` as one
@@ -352,6 +354,6 @@ MessageVersion authority before creating reviewed versions. Successful apply
 and `DELETE /scans/{id}` both remove the scan and occurrence records.
 Occurrence responses derive bounded context at read time; persisted scan rows
 contain positions and identities, not copied message bodies. Occurrences also
-return detector versioned `match_mode`, confidence evidence and optional
-similarity. Only high-confidence matches are preselected; medium/low matches
-remain retained until the owner explicitly selects them.
+return detector-versioned `match_mode` and evidence codes. All candidates
+default to `KEEP` and require explicit review; confidence and similarity are
+not part of the cleanup API.

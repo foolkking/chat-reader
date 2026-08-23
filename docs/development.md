@@ -28,7 +28,12 @@ python -m alembic heads
 Set-Location ../..
 ```
 
-`alembic heads` 应只有一个结果。当前源码 head 是 `20260823_0027`。
+`alembic heads` 应只有一个结果。当前源码 head 是 `20260823_0028`。
+
+当前 Content Cleanup 支持从规则库主动启动一次低优先级的
+`BATCH / ALL_ACTIVE` 后台审查。目标包括项目内和未分类的活动对话，归档
+对话在目标快照阶段排除；扫描使用启动时的规则 revision 快照，命中默认
+`KEEP`，当前 API 和 schema 不使用 confidence/similarity 字段。
 
 ## 环境变量
 

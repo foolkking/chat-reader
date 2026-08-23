@@ -2,8 +2,9 @@
 
 ## 2026-08-23 layered content-cleanup detection
 
-Production now runs the layered content-noise detector and Alembic
-`20260823_0027`. GitHub Actions run `32588592205` passed all quality and image
+Production currently runs the previously deployed layered content-noise
+detector and Alembic `20260823_0027`. GitHub Actions run `32588592205` passed
+all quality and image
 jobs on attempt 2; attempt 1 stopped only after bundled Chromium crashed while
 creating the last CSP browser context. The exact-source rerun passed the full
 CSP, cleanup, Reader, Share, authentication and PWA matrices. The deployed

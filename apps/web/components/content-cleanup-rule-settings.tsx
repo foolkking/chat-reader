@@ -7,6 +7,8 @@ import {
   createCleanupRule,
   deleteCleanupRule,
   getCleanupRules,
+  getPendingCleanupScans,
+  scanExistingConversations,
   updateCleanupRule,
 } from "../lib/api";
 import { cleanupRuleLabel } from "../lib/content-cleanup";
@@ -39,6 +41,19 @@ export function ContentCleanupRuleSettings({
   const [boundaryMode, setBoundaryMode] = useState<
     "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END"
   >("ANYWHERE");
+  const [confirmScan, setConfirmScan] = useState(false);
+  const pendingScansQuery = useQuery({
+    queryKey: ["content-cleanup-pending"],
+    queryFn: getPendingCleanupScans,
+    refetchInterval: 5_000,
+  });
+  const scanMutation = useMutation({
+    mutationFn: scanExistingConversations,
+    onSuccess: () => {
+      setConfirmScan(false);
+      void client.invalidateQueries({ queryKey: ["content-cleanup-pending"] });
+    },
+  });
   const invalidate = () =>
     void client.invalidateQueries({ queryKey: ["content-cleanup-rules"] });
   const createMutation = useMutation({
@@ -137,7 +152,39 @@ export function ContentCleanupRuleSettings({
           )}
           {showCreate ? (zh ? "取消" : "Cancel") : zh ? "新建规则" : "New rule"}
         </button>
+        <button
+          type="button"
+          onClick={() => setConfirmScan(true)}
+          disabled={scanMutation.isPending}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--text)] px-3 text-xs font-medium text-[var(--surface)] disabled:opacity-50"
+        >
+          {scanMutation.isPending
+            ? zh ? "正在排队…" : "Queuing…"
+            : zh ? "扫描现有对话" : "Scan existing conversations"}
+        </button>
       </header>
+      {confirmScan ? (
+        <div className="mt-4 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent-soft)] p-4 text-sm text-primary">
+          <p className="font-medium">{zh ? "扫描现有对话" : "Scan existing conversations"}</p>
+          <p className="mt-1 text-xs leading-5 text-secondary">
+            {zh
+              ? "将使用当前启用的规则扫描项目内和未分类的活动对话。归档对话不会处理。扫描只生成候选，不会自动修改正文。"
+              : "Enabled rules will scan active project and unclassified conversations. Archived conversations are excluded. The scan only creates review candidates and never edits content automatically."}
+          </p>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <button type="button" onClick={() => setConfirmScan(false)} className="min-h-9 rounded-lg border border-ui px-3 text-xs text-secondary hover:bg-subtle">
+              {zh ? "取消" : "Cancel"}
+            </button>
+            <button type="button" onClick={() => scanMutation.mutate()} className="min-h-9 rounded-lg bg-[var(--text)] px-3 text-xs font-medium text-[var(--surface)]">
+              {zh ? "开始后台扫描" : "Start background scan"}
+            </button>
+          </div>
+          {scanMutation.isError ? <p className="mt-2 text-xs text-[var(--danger)]" role="alert">{scanMutation.error.message}</p> : null}
+        </div>
+      ) : null}
+      {pendingScansQuery.data?.some((scan) => scan.source === "BATCH" && ["QUEUED", "SCANNING"].includes(scan.status)) ? (
+        <p className="mt-3 text-xs text-secondary">{zh ? "已有全库扫描在后台运行，前台可以继续使用。" : "An existing-conversation scan is running in the background."}</p>
+      ) : null}
 
       {showCreate ? (
         <div className="border-b border-ui py-4">
@@ -198,8 +245,8 @@ export function ContentCleanupRuleSettings({
             </select>
             <span className="mt-1 block text-[11px] font-normal leading-5 text-secondary">
               {zh
-                ? "近似识别只生成低置信候选，不会默认处理。"
-                : "Approximate matching creates low-confidence candidates and is never preselected."}
+                ? "近似识别会把所有候选交给你逐项确认，不会自动处理。"
+                : "Approximate matching shows every candidate for explicit review."}
             </span>
           </label>
           <label className="mt-3 block text-xs font-medium text-secondary">

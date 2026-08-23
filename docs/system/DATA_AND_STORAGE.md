@@ -4,7 +4,7 @@
 
 ## PostgreSQL
 
-当前源码增加 Adaptive Import 的 Profile、Revision、InputGroup 与 StructureFamily 持久化，以及 Content Cleanup 的规则、扫描、occurrence 审查和 versioned detection evidence 持久化；Alembic 单一 head 为 `20260823_0027`。生产部署后必须执行 `alembic current` 核对该 head。
+当前源码增加 Adaptive Import 的 Profile、Revision、InputGroup 与 StructureFamily 持久化，以及 Content Cleanup 的规则、扫描、occurrence 审查、每次扫描的规则 revision 快照和 versioned detection evidence 持久化；Alembic 单一 head 为 `20260823_0028`。规则库可主动启动低优先级 `BATCH / ALL_ACTIVE` 审查，覆盖项目内与未分类活动对话并排除归档对话。生产部署后必须执行 `alembic current` 核对该 head。
 
 | 领域 | 表 |
 | --- | --- |
@@ -14,6 +14,7 @@
 | 搜索 | `search_documents` |
 | 批注 | `conversation_annotations`, `conversation_notebooks`, `annotation_sync_receipts` |
 | 分享/文件 | `shares`, `export_artifacts`, `offline_package_artifacts`, `asset_objects`, `attachments`, `message_version_attachments`, `asset_derivatives`, `asset_object_leases`, `attachment_upload_sessions`, `attachment_upload_items` |
+| Content Cleanup | `content_cleanup_rules`, `content_cleanup_rule_revisions`, `content_cleanup_scans`, `content_cleanup_scan_rules`, `content_cleanup_scan_targets`, `content_cleanup_occurrences` |
 | Operational liveness | `worker_runtime_states` (single-worker heartbeat/state only; no payload or task ID) |
 | Authentication | `auth_principals`, `auth_sessions`, `auth_login_throttles` (single-owner credential hash, opaque-session digest and bounded throttle only; no plaintext password or token) |
 
