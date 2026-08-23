@@ -123,6 +123,7 @@ export function ContentCleanupPanel({
     Record<string, "DELETE" | "KEEP">
   >({});
   const [scopeType, setScopeType] = useState<ScopeType>("CURRENT_CONVERSATION");
+  const [scanWholeConversation, setScanWholeConversation] = useState(false);
   const [selectedConversationIds, setSelectedConversationIds] = useState<
     string[]
   >(conversationId ? [conversationId] : []);
@@ -134,9 +135,13 @@ export function ContentCleanupPanel({
     staleTime: 30_000,
   });
   const candidates = candidatesQuery.data ?? [];
+  // A source-editor selection is a focused review, not an implicit claim that
+  // the rest of the conversation was scanned. The owner can promote it to a
+  // full current-conversation scan without leaving this review surface.
+  const activeSelection = selection && !scanWholeConversation ? selection : null;
   const startMutation = useMutation({
     mutationFn: () => {
-      const ids = selection
+      const ids = activeSelection
         ? conversationId
           ? [conversationId]
           : []
@@ -149,14 +154,14 @@ export function ContentCleanupPanel({
             : selectedConversationIds;
       return createCleanupScan({
         source:
-          selection || scopeType === "CURRENT_CONVERSATION"
+          activeSelection || scopeType === "CURRENT_CONVERSATION"
             ? "READER"
             : "BATCH",
-        scope_type: selection ? "CURRENT_CONVERSATION" : scopeType,
+        scope_type: activeSelection ? "CURRENT_CONVERSATION" : scopeType,
         conversation_ids: ids,
-        message_id: selection?.messageId,
-        selection_start_offset: selection?.startOffset,
-        selection_end_offset: selection?.endOffset,
+        message_id: activeSelection?.messageId,
+        selection_start_offset: activeSelection?.startOffset,
+        selection_end_offset: activeSelection?.endOffset,
       });
     },
     onSuccess: (scan) => {
@@ -165,10 +170,15 @@ export function ContentCleanupPanel({
     },
   });
   useEffect(() => {
-    if (!selection || initialScanId || scanId || autoStartedRef.current) return;
+    if (!activeSelection || initialScanId || scanId || autoStartedRef.current) return;
     autoStartedRef.current = true;
     startMutation.mutate();
-  }, [initialScanId, scanId, selection, startMutation]);
+  }, [activeSelection, initialScanId, scanId, startMutation]);
+  useEffect(() => {
+    if (!scanWholeConversation || initialScanId || scanId || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    startMutation.mutate();
+  }, [initialScanId, scanId, scanWholeConversation, startMutation]);
 
   const scanQuery = useQuery({
     queryKey: ["content-cleanup-scan", scanId],
@@ -183,7 +193,7 @@ export function ContentCleanupPanel({
     id: scanId,
     status: scanQuery.data?.status,
   };
-  const isSelectionReview = Boolean(selection);
+  const isSelectionReview = Boolean(activeSelection);
   useEffect(
     () => () => {
       if (!isSelectionReview) return;
@@ -322,7 +332,7 @@ export function ContentCleanupPanel({
           </h2>
           {view === "review" ? (
             <p className="mt-1 text-xs leading-5 text-secondary">
-              {selection
+              {activeSelection
                 ? zh
                   ? "只审查你在当前 Markdown 源码中选择的内容；应用后会创建正常的消息版本。"
                   : "Review only the selected Markdown source. Applying creates a normal message version."
@@ -365,20 +375,44 @@ export function ContentCleanupPanel({
             onBack={() => setView("review")}
           />
         ) : null}
-        {view === "review" && selection ? (
+        {view === "review" && activeSelection ? (
           <div className="mb-4 border-y border-ui bg-surface px-3 py-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-semibold text-primary">
                 {zh ? "当前选区" : "Current selection"}
               </span>
               <span className="text-[11px] text-secondary">
-                {Array.from(selection.text).length}{" "}
+                {Array.from(activeSelection.text).length}{" "}
                 {zh ? "个字符" : "characters"}
               </span>
             </div>
             <p className="mt-2 line-clamp-3 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-secondary">
-              {selection.text}
+              {activeSelection.text}
             </p>
+            {status === "READY" ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ui pt-3">
+                <p className="text-xs text-secondary">
+                  {zh
+                    ? "当前只审查选区；要覆盖本对话的所有消息，请启动完整扫描。"
+                    : "This review covers the selection only. Scan the full conversation to check every message."}
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (scanId) await dismissCleanupScan(scanId).catch(() => undefined);
+                    setScanWholeConversation(true);
+                    setScanId(null);
+                    setPage(0);
+                    setDecisionOverrides({});
+                    setBaselineDecisions({});
+                    autoStartedRef.current = false;
+                  }}
+                  className="min-h-9 rounded-lg border border-ui bg-page px-3 text-xs font-medium text-primary hover:bg-subtle"
+                >
+                  {zh ? "扫描整个当前对话" : "Scan full conversation"}
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
         {view === "review" && !initialScanId && !selection && !scanId ? (
@@ -406,7 +440,7 @@ export function ContentCleanupPanel({
         (startMutation.isPending || (scanId && !scanQuery.data)) ? (
           <div className="flex items-center gap-2 py-8 text-sm text-secondary">
             <LoaderCircle className="h-4 w-4 animate-spin" />
-            {selection
+            {activeSelection
               ? zh
                 ? "正在校验选区…"
                 : "Checking selection…"
@@ -420,7 +454,7 @@ export function ContentCleanupPanel({
         !["READY", "FAILED", "STALE"].includes(status) ? (
           <div className="space-y-2 py-6">
             <p className="text-sm text-secondary">
-              {selection
+              {activeSelection
                 ? zh
                   ? "正在定位选区…"
                   : "Locating selection…"
@@ -479,6 +513,9 @@ export function ContentCleanupPanel({
             onApply={() => applyMutation.mutate()}
             onDismiss={() => dismissMutation.mutate()}
             error={applyMutation.isError ? applyMutation.error.message : null}
+            processedMessages={scanQuery.data?.processed_messages ?? 0}
+            totalMessages={scanQuery.data?.total_messages ?? 0}
+            scopeType={scanQuery.data?.scope_type ?? scopeType}
           />
         ) : null}
       </div>
@@ -641,6 +678,9 @@ function ReviewResults({
   onApply,
   onDismiss,
   error,
+  processedMessages,
+  totalMessages,
+  scopeType,
 }: {
   zh: boolean;
   groups: Record<string, CleanupOccurrenceRead[]>;
@@ -659,13 +699,27 @@ function ReviewResults({
   onApply: () => void;
   onDismiss: () => void;
   error: string | null;
+  processedMessages: number;
+  totalMessages: number;
+  scopeType: string;
 }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 border-b border-ui pb-3">
-        <p className="text-sm font-medium text-primary">
-          {occurrences.length} {zh ? "个当前页候选" : "candidates on this page"}
-        </p>
+        <div>
+          <p className="text-sm font-medium text-primary">
+            {occurrences.length} {zh ? "个当前页候选" : "candidates on this page"}
+          </p>
+          <p className="mt-1 text-xs text-secondary">
+            {scopeType === "CURRENT_CONVERSATION"
+              ? zh
+                ? `已扫描 ${processedMessages} / ${totalMessages} 条消息；候选按页显示`
+                : `Scanned ${processedMessages} / ${totalMessages} messages; candidates are paged`
+              : zh
+                ? `已扫描 ${processedMessages} / ${totalMessages} 条消息`
+                : `Scanned ${processedMessages} / ${totalMessages} messages`}
+          </p>
+        </div>
         <button
           type="button"
           onClick={selectVisible}

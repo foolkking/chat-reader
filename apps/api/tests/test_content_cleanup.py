@@ -94,6 +94,35 @@ def test_unknown_private_marker_is_surfaced_for_user_review() -> None:
     assert text[matches[0].start:matches[0].end] == "\ue200url\ue202opaque-resource-42\ue201"
 
 
+def test_damaged_private_citation_is_surfaced_without_auto_delete() -> None:
+    # Exporters occasionally lose one wrapper code point while preserving the
+    # citation verb and stable turn reference. It must remain reviewable.
+    text = "before cite\ue202turn115162search3 after"
+    matches = detect_occurrences(
+        "assistant",
+        text,
+        _rule("openai-private-citation-v1", "ASSISTANT_ONLY"),
+        _revision(),
+    )
+    assert len(matches) == 1
+    assert matches[0].reason_code == "PRIVATE_CITATION_FRAGMENT"
+    assert matches[0].confidence == "MEDIUM"
+    assert matches[0].decision == "KEEP"
+
+
+def test_generic_private_marker_is_reviewable_in_any_message_role() -> None:
+    text = "user note \ue200url\ue202opaque-resource-42\ue201"
+    matches = detect_occurrences(
+        "user",
+        text,
+        _rule("openai-private-marker-v1", "MESSAGE"),
+        _revision(),
+    )
+    assert len(matches) == 1
+    assert matches[0].reason_code == "PRIVATE_MARKER"
+    assert matches[0].decision == "KEEP"
+
+
 def test_private_citation_variants_and_real_url_marker() -> None:
     text = "\ue200 cite \ue202 turn1search0 \ue201 and \ue200cite\u200bturn2news3"
     matches = detect_occurrences("assistant", text, _rule("openai-private-citation-v1", "ASSISTANT_ONLY"), _revision())
@@ -296,6 +325,83 @@ def test_reader_scan_applies_all_multi_reference_private_markers(client) -> None
     finally:
         db.close()
         generator.close()
+
+
+def test_full_conversation_scan_finds_markers_across_all_messages(client) -> None:
+    marker = "\ue200cite\ue202turn800379search0\ue201"
+    source = f"first {marker}\n\nsecond {marker}\n\nthird {marker}"
+    user_marker = "\ue200url\ue202opaque-resource-42\ue201"
+    created = client.post(
+        "/api/conversations",
+        json={
+            "title": "whole conversation coverage",
+            "messages": [
+                {"role": "user", "content_markdown": f"Question {user_marker}"},
+                {"role": "assistant", "content_markdown": source},
+            ],
+        },
+    )
+    assert created.status_code == 201, created.text
+    conversation_id = created.json()["conversation"]["id"]
+    scan = client.post(
+        "/api/content-cleanup/scans",
+        json={
+            "source": "READER",
+            "scope_type": "CURRENT_CONVERSATION",
+            "conversation_ids": [conversation_id],
+        },
+    )
+    assert scan.status_code == 202, scan.text
+    scan_id = scan.json()["id"]
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        while not process_scan_chunk(db, uuid.UUID(scan_id))["done"]:
+            db.commit()
+        db.commit()
+    finally:
+        db.close()
+        generator.close()
+    occurrences = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences?limit=500").json()
+    assert len(occurrences) == 4
+    assert {item["reason_code"] for item in occurrences} == {"PRIVATE_CITATION", "PRIVATE_MARKER"}
+    assert any(item["role"] == "user" and item["decision"] == "KEEP" for item in occurrences)
+
+
+def test_selection_scan_does_not_reuse_stale_full_scan(client) -> None:
+    created = client.post(
+        "/api/conversations",
+        json={
+            "title": "scan identity",
+            "messages": [
+                {"role": "user", "content_markdown": "Question"},
+                {"role": "assistant", "content_markdown": "Answer Cite turn2search1"},
+            ],
+        },
+    )
+    assert created.status_code == 201
+    payload = created.json()
+    conversation_id = payload["conversation"]["id"]
+    message_id = payload["messages"][1]["id"]
+    full = client.post(
+        "/api/content-cleanup/scans",
+        json={"source": "READER", "scope_type": "CURRENT_CONVERSATION", "conversation_ids": [conversation_id]},
+    )
+    assert full.status_code == 202
+    selected = client.post(
+        "/api/content-cleanup/scans",
+        json={
+            "source": "READER",
+            "scope_type": "CURRENT_CONVERSATION",
+            "conversation_ids": [conversation_id],
+            "message_id": message_id,
+            "selection_start_offset": 7,
+            "selection_end_offset": 23,
+        },
+    )
+    assert selected.status_code == 202
+    assert selected.json()["id"] != full.json()["id"]
 
 
 def test_literal_rule_updates_create_an_immutable_revision(client) -> None:

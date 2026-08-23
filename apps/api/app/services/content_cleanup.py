@@ -63,6 +63,17 @@ PRIVATE_CITATION_BROKEN = re.compile(
 PRIVATE_MARKER_ENVELOPE = re.compile(
     r"\ue200(?:(?!\ue200|\ue201)[\s\S]){1,4096}\ue201",
 )
+# Exporters have emitted the same private citation protocol with a damaged
+# opener/closer or a different private-use wrapper over time. Keep this
+# detector deliberately narrow: it requires a citation verb and at least one
+# stable turn reference, but does not require every wrapper code point to be
+# present. These candidates are review-only by default.
+PRIVATE_CITATION_FRAGMENT = re.compile(
+    r"(?is)(?:(?:[\ue000-\uf8ff]\s*)?(?:cite|memcite)|(?:cite|memcite)\s*[\ue000-\uf8ff])"
+    rf"[\ue000-\uf8ff\u200b\s:]*{PRIVATE_REFERENCE_TOKEN}"
+    rf"(?:[\ue000-\uf8ff\u200b\s:]*{PRIVATE_REFERENCE_TOKEN})*"
+    r"[\ue000-\uf8ff\u200b\s]*",
+)
 VISIBLE_CITATION = re.compile(
     r"(?i)\bcite\b[\s\u200b]*(?:[☆★]\s*)?turn\d+(?:search|news|view)\d+"
     r"(?:[☆★\s\u200b]*turn\d+(?:search|news|view)\d+)*[☆★]?"
@@ -96,16 +107,22 @@ def ensure_builtin_rules(db: Session) -> list[ContentCleanupRuleRevision]:
     revisions: list[ContentCleanupRuleRevision] = []
     for detector_id, name, kind, reason_code in BUILTIN_RULES:
         rule = db.query(ContentCleanupRule).filter(ContentCleanupRule.detector_id == detector_id).first()
+        expected_scope = "ASSISTANT_ONLY" if kind in {"citation", "footer", "thinking_summary"} else "MESSAGE"
         if rule is None:
             rule = ContentCleanupRule(
                 name=name,
                 kind="BUILTIN",
                 status="ACTIVE",
-                scope="ASSISTANT_ONLY" if kind in {"citation", "footer", "thinking_summary"} else "MESSAGE",
+                scope=expected_scope,
                 detector_id=detector_id,
             )
             db.add(rule)
             db.flush()
+        elif rule.scope != expected_scope:
+            # Older deployments created the generic marker detector with the
+            # assistant-only scope. Repair that metadata in place so a full
+            # conversation scan cannot silently skip user/system messages.
+            rule.scope = expected_scope
         revision = (
             db.query(ContentCleanupRuleRevision)
             .filter(ContentCleanupRuleRevision.rule_id == rule.id)
@@ -247,6 +264,8 @@ def create_scan(
         .limit(50)
         .all()
     ):
+        if existing.source != source or existing.scope_type != scope_type:
+            continue
         existing_ids = {
             row[0]
             for row in db.query(ContentCleanupScanTarget.conversation_id)
@@ -259,6 +278,18 @@ def create_scan(
             and existing.selection_end_offset == selection_end_offset
         )
         if existing_ids == wanted_ids and same_selection and existing.background_job_id is not None:
+            current_revisions = {
+                conversation.id: conversation.offline_revision
+                for conversation in conversations
+            }
+            target_revisions = {
+                row.conversation_id: row.base_conversation_revision
+                for row in db.query(ContentCleanupScanTarget)
+                .filter(ContentCleanupScanTarget.scan_id == existing.id)
+                .all()
+            }
+            if any(target_revisions.get(conversation_id) != revision for conversation_id, revision in current_revisions.items()):
+                continue
             existing_job = db.get(BackgroundJob, existing.background_job_id)
             if existing_job is not None:
                 return existing, existing_job
@@ -269,6 +300,7 @@ def create_scan(
         total_messages=1 if has_selection else db.query(func.count(Message.id)).filter(
             Message.conversation_id.in_(conversation_ids),
             Message.is_deleted.is_(False),
+            Message.current_version_id.is_not(None),
         ).scalar() or 0,
         selection_message_id=selection_message_id,
         selection_start_offset=selection_start_offset,
@@ -462,6 +494,19 @@ def detect_occurrences(
                 if any(marker in match.group(0) for marker in ("\ue200", "\ue201", "\ue202"))
                 and not _covered(match.start(), match.end(), values)
             )
+        values.extend(
+            _detected(
+                match.start(),
+                match.end(),
+                "citation",
+                "PRIVATE_CITATION_FRAGMENT",
+                "MEDIUM",
+                "BOUNDED_FUZZY",
+                ("PRIVATE_USE_MARKER", "REFERENCE_SEQUENCE", "PARTIAL_WRAPPER"),
+            )
+            for match in PRIVATE_CITATION_FRAGMENT.finditer(text)
+            if _contains_private_use(match.group(0)) and not _overlaps(match.start(), match.end(), values)
+        )
     elif detector_id == "openai-private-marker-v1":
         values.extend(
             _detected(
@@ -567,6 +612,14 @@ def _detected(start: int, end: int, kind: str, reason_code: str, confidence: str
 
 def _covered(start: int, end: int, values: list[DetectedOccurrence]) -> bool:
     return any(item.start <= start and end <= item.end for item in values)
+
+
+def _overlaps(start: int, end: int, values: list[DetectedOccurrence]) -> bool:
+    return any(start < item.end and item.start < end for item in values)
+
+
+def _contains_private_use(value: str) -> bool:
+    return any("\ue000" <= character <= "\uf8ff" for character in value)
 
 
 def _prefer_detected_occurrence(candidate: DetectedOccurrence, current: DetectedOccurrence) -> bool:
