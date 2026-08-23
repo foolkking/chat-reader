@@ -20,8 +20,11 @@
 - Alembic source head is `20260823_0028`, adding per-scan rule snapshots and
   archived-exclusion progress while removing the current occurrence
   confidence/similarity columns. Production runs this head and the externally
-  built image set created at `2026-08-23T09:21:16Z`.
-- GitHub Actions run `32630280224` passed the complete quality and image jobs.
+  built image set for source `6f674cb` created at `2026-08-23T11:52:16Z`.
+- GitHub Actions run `32637260713` passed the complete quality and image jobs
+  for source `6f674cb`. Dynamic API reads now bypass browser HTTP caching, and
+  cleanup refreshes the focused source editor before broad Reader invalidation,
+  so an applied MessageVersion is visible without a page refresh.
   Production API, worker, Web and PostgreSQL are healthy; public health is 200,
   anonymous cleanup access is 401, public internal diagnostics is 404 and the
   protected diagnostic reports `alive_idle`. The pre-deploy five-component
