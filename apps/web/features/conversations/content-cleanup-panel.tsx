@@ -89,7 +89,7 @@ export function ContentCleanupDialog(
         aria-label="Close cleanup review"
       />
       <div
-        className={`relative w-full overflow-hidden rounded-t-2xl border border-ui bg-page shadow-2xl sm:max-w-4xl sm:rounded-xl ${panelProps.selection ? "max-h-[88dvh]" : "h-[min(88dvh,800px)]"}`}
+        className="relative h-[min(88dvh,800px)] max-h-[88dvh] min-h-0 w-full overflow-hidden rounded-t-2xl border border-ui bg-page shadow-2xl sm:max-w-4xl sm:rounded-xl"
       >
         <ContentCleanupPanel {...panelProps} onClose={onClose} />
       </div>
@@ -368,7 +368,10 @@ export function ContentCleanupPanel({
         ) : null}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5"
+        data-testid="content-cleanup-scroll"
+      >
         {view === "rules" ? (
           <ContentCleanupRuleSettings
             embedded

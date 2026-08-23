@@ -61,6 +61,10 @@ test("reviews a deterministic noise occurrence without silently changing content
         name: /Process Cite turn2search1|处理 Cite turn2search1/,
       }),
     ).toBeChecked({ timeout: 30_000 });
+    await expect(page.getByTestId("content-cleanup-scroll")).toHaveCSS(
+      "overflow-y",
+      "auto",
+    );
     await page.getByRole("button", { name: /Rules|规则库/ }).click();
     await expect(
       page.getByRole("heading", { name: /Noise rule library|噪声规则库/ }),
