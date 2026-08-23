@@ -590,8 +590,8 @@ function codeMirrorExtensions(
 function codeMirrorTheme(theme: "light" | "dark") {
   const dark = theme === "dark";
   const colors = dark
-    ? { bg: "#202120", raised: "#282a28", text: "#f2f3ef", muted: "#a9aca6", line: "#343734", active: "#303430", selection: "#315b50", accent: "#6fd0b4", keyword: "#e7a66f", string: "#9fce7c", link: "#77b7e8", comment: "#8b9189", heading: "#f0c96b" }
-    : { bg: "#ffffff", raised: "#f4f5f2", text: "#1f211f", muted: "#6c716b", line: "#dfe2dc", active: "#f2f7f4", selection: "#cceadf", accent: "#087f68", keyword: "#9b4d12", string: "#437b22", link: "#236ea1", comment: "#747a73", heading: "#7a5a00" };
+    ? { bg: "#202120", raised: "#282a28", text: "#f2f3ef", muted: "#a9aca6", line: "#343734", active: "#303430", selection: "#397b67", selectionText: "#ffffff", accent: "#6fd0b4", keyword: "#e7a66f", string: "#9fce7c", link: "#77b7e8", comment: "#8b9189", heading: "#f0c96b" }
+    : { bg: "#ffffff", raised: "#f4f5f2", text: "#1f211f", muted: "#6c716b", line: "#dfe2dc", active: "#f2f7f4", selection: "#9adbc6", selectionText: "#14231e", accent: "#087f68", keyword: "#9b4d12", string: "#437b22", link: "#236ea1", comment: "#747a73", heading: "#7a5a00" };
   return [
     EditorView.theme({
       "&": { height: "100%", color: colors.text, backgroundColor: colors.bg },
@@ -599,7 +599,14 @@ function codeMirrorTheme(theme: "light" | "dark") {
       ".cm-content": { caretColor: colors.accent, padding: "12px 0" },
       ".cm-cursor, .cm-dropCursor": { borderLeftColor: colors.accent },
       "&.cr-attachment-dragover .cm-cursor": { borderLeftWidth: "3px", borderLeftColor: colors.accent },
-      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: colors.selection },
+      // Keep source selections legible even when CodeMirror loses focus while
+      // the cleanup review dialog is opening.  A stronger, opaque range makes
+      // the exact text the user selected unambiguous without changing the
+      // document or selection offsets.
+      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+        backgroundColor: colors.selection,
+        color: colors.selectionText,
+      },
       ".cm-gutters": { backgroundColor: colors.raised, color: colors.muted, borderRight: `1px solid ${colors.line}` },
       ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: colors.active },
       ".cm-foldPlaceholder": { backgroundColor: colors.raised, borderColor: colors.line, color: colors.muted },
