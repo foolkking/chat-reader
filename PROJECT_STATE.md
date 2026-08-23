@@ -18,8 +18,14 @@
   fields are part of the current model/API.
 - Alembic source head is `20260823_0028`, adding per-scan rule snapshots and
   archived-exclusion progress while removing the current occurrence
-  confidence/similarity columns. This change is implemented locally and has
-  not been deployed.
+  confidence/similarity columns. Production runs this head and the externally
+  built image set created at `2026-08-23T09:21:16Z`.
+- GitHub Actions run `32630280224` passed the complete quality and image jobs.
+  Production API, worker, Web and PostgreSQL are healthy; public health is 200,
+  anonymous cleanup access is 401, public internal diagnostics is 404 and the
+  protected diagnostic reports `alive_idle`. The pre-deploy five-component
+  backup is retained, and the server keeps only the current image generation
+  plus the one it replaced. Authenticated production UI is `NOT VERIFIED`.
 
 ## 2026-08-23 Layered content-noise detection (pre-scan baseline)
 

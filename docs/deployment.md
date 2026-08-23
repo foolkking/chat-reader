@@ -1,5 +1,26 @@
 # 生产部署
 
+## 2026-08-23 existing-conversation cleanup scan
+
+Production runs Alembic `20260823_0028` and the API, worker and Web images
+built at `2026-08-23T09:21:16Z`. GitHub Actions run `32630280224` passed the
+complete API, Web, browser, authentication, PWA, dependency and image gates.
+An earlier exact-source attempt ended only after bundled Chromium crashed in
+the default PWA matrix; the successful rerun passed that same matrix.
+
+Before migration, production created and verified a retained five-component
+backup containing a PostgreSQL custom dump plus imports, exports, offline and
+assets archives. Migration ran before API/worker and Web replacement. All
+application services and PostgreSQL are healthy, public health is 200,
+anonymous cleanup access is 401, public internal diagnostics is 404, and the
+protected container-loopback diagnostic reports `alive_idle`.
+
+The release transfer archive was removed after acceptance. Targeted cleanup
+retains only the current Chat Reader image generation and the generation it
+replaced; no database, business volume, production environment file, backup or
+unrelated image was removed. Authenticated production UI remains
+`NOT VERIFIED`; the deployed build passed the isolated cleanup browser gate.
+
 ## 2026-08-23 layered content-cleanup detection
 
 Production currently runs the previously deployed layered content-noise
