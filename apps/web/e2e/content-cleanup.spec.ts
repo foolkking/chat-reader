@@ -56,11 +56,12 @@ test("reviews a deterministic noise occurrence without silently changing content
       page.getByText("Cite turn2search1", { exact: true }),
     ).toBeVisible();
     await expect(page.getByText(/结构识别|structural/)).toBeVisible();
-    await expect(
-      page.getByRole("checkbox", {
-        name: /Process Cite turn2search1|处理 Cite turn2search1/,
-      }),
-    ).toBeChecked({ timeout: 30_000 });
+    const candidateCheckbox = page.getByRole("checkbox", {
+      name: /Process Cite turn2search1|处理 Cite turn2search1/,
+    });
+    await expect(candidateCheckbox).not.toBeChecked({ timeout: 30_000 });
+    await candidateCheckbox.check();
+    await expect(candidateCheckbox).toBeChecked();
     await expect(page.getByTestId("content-cleanup-scroll")).toHaveCSS(
       "overflow-y",
       "auto",
