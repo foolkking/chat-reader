@@ -1286,10 +1286,14 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...init.headers,
+      ...init,
+      // Conversation and task reads are mutable canonical data.  Letting the
+      // browser HTTP cache satisfy a repeated GET can leave an editor showing
+      // the pre-mutation version until the whole page is refreshed.
+      cache: init.cache ?? "no-store",
+      headers: {
+        Accept: "application/json",
+        ...init.headers,
     },
     });
   } catch {

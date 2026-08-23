@@ -267,6 +267,11 @@ export function ContentCleanupPanel({
       return applyCleanupScan(scanId!);
     },
     onSuccess: async (result) => {
+      // Refresh the active source/editor target first.  The cleanup endpoint
+      // commits the new MessageVersion before returning; updating the focused
+      // editor before broad query invalidation prevents a stale reader query
+      // from winning the render race and hiding the change until refresh.
+      await onApplied?.();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["reader-turn-window"] }),
         queryClient.invalidateQueries({ queryKey: ["conversation"] }),
@@ -274,7 +279,6 @@ export function ContentCleanupPanel({
         queryClient.invalidateQueries({ queryKey: ["toc"] }),
         queryClient.invalidateQueries({ queryKey: ["conversations"] }),
       ]);
-      await onApplied?.();
       if (result.conflicts === 0) onClose?.();
     },
   });
