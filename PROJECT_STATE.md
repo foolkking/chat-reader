@@ -1,5 +1,26 @@
 # Project State
 
+## 2026-08-24 Performance optimization deployment
+
+- The current `master` runtime source is `111874782e963b9271b0385963be8edc6e6525e8`.
+  The release workflow completed successfully, including the full quality job
+  and image construction. The deployed images were built at
+  `2026-08-24T01:55:40Z`.
+- The change reduces duplicate browser preference reads and broad cache
+  invalidation, defers annotation data until the workspace is opened, and
+  removes repeated list/project/search database queries through eager loading,
+  aggregate counts and batched render-block reads. No migration or dependency
+  was added.
+- Production was backed up before replacement. The PostgreSQL dump and the
+  imports, exports, offline and assets archives are readable. API, worker, Web
+  and PostgreSQL are healthy; public health is 200, anonymous private access is
+  401, public diagnostics is 404, and protected diagnostics reports
+  `alive_idle`. Alembic is `20260823_0028 (head)`.
+- Targeted image cleanup retains only the deployed Chat Reader generation and
+  its direct rollback generation. No production volume, database, environment
+  file, backup, import storage or unrelated image was removed. Authenticated
+  production UI remains `NOT VERIFIED`.
+
 ## 2026-08-23 Rule-library existing-conversation review
 
 - Content Cleanup now exposes an explicit rule-library action for one-shot

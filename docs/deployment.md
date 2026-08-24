@@ -1,5 +1,21 @@
 # 生产部署
 
+## 2026-08-24 performance optimization deployment
+
+The `master` runtime source was rebuilt after the list, project and search
+query optimizations. The complete quality and image workflow passed, and the
+new API/worker/Web images were built at `2026-08-24T01:55:40Z`. Production was
+backed up before migration and replacement; the PostgreSQL dump and all four
+business-volume archives are readable. API, worker, Web and PostgreSQL are
+healthy, public health is 200, anonymous private access is 401, public
+diagnostics is 404, protected diagnostics reports `alive_idle`, and Alembic is
+`20260823_0028 (head)`.
+
+The server retains only the current Chat Reader image generation and its direct
+rollback generation. No production volume, database, environment file,
+backup, import storage or unrelated image was removed. Authenticated production
+UI remains `NOT VERIFIED`.
+
 ## 2026-08-23 existing-conversation cleanup scan
 
 Production runs Alembic `20260823_0028` and the API, worker and Web images
