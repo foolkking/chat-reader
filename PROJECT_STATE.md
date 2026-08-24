@@ -1,26 +1,22 @@
 # Project State
 
-## 2026-08-24 Formula rendering and cleanup review deployment
+## 2026-08-24 Formula rendering and source-position deployment
 
-- Runtime source commit `33f5a3dedccf4db835ed9c0df4f4a168631f3fb5` was pushed
-  to the single `master` branch. GitHub Actions run `32692079211` passed the
+- Runtime source commit `7ff2f92b3aea707b9db3826907c7016d3ac9ac8e` was pushed
+  to the single `master` branch. GitHub Actions run `32698108862` passed the
   complete quality job and built the deployable API/worker/Web image set.
-- Reader rendering now recovers escaped display-math blocks that CommonMark
-  would otherwise split at standalone operators. The canonical Markdown source
-  remains unchanged. Content Cleanup review candidates are selected by the
-  current deletion decision, including protected-range matches as explicit
-  user-review candidates, so the visible selection and apply count stay in
-  sync.
-- Production was backed up before replacement at
-  `/opt/chat-reader/backups/formula-cleanup-predeploy-20260824T052110Z-33f5a3d`.
-  The PostgreSQL dump and imports, exports, offline and assets archives were
-  readable before the deployment.
-- Production now runs the `33f5a3d` image generation for API, import-worker and
+- Source-to-reader locate now centers the selected rendered block in the reader
+  viewport, while ordinary search, TOC and annotation navigation retain their
+  existing alignment. Fenced `latex`, `tex` and `ltx` blocks use the LaTeX
+  syntax highlighter without changing canonical source or math semantics.
+- A temporary pre-deploy backup was verified readable before replacement and
+  deleted after production health acceptance by explicit operator request.
+- Production now runs the `7ff2f92` image generation for API, import-worker and
   Web. API, worker, Web and PostgreSQL are healthy; public health is 200,
   public diagnostics is 404, protected diagnostics reports `alive_idle`, and
   Alembic is `20260823_0028 (head)`. The direct rollback image generation is
-  retained; no production volume, database, environment file or backup was
-  deleted. Authenticated production UI remains `NOT VERIFIED`.
+  retained; no production volume, database or environment file was deleted.
+  Authenticated production UI remains `NOT VERIFIED`.
 
 ## 2026-08-24 Performance optimization deployment
 
