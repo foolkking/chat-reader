@@ -1,4 +1,4 @@
-# Testing Addendum 2026-08-09
+# Testing Addendum 2026-08-24
 
 ## Existing-conversation rule-library scan (2026-08-23)
 
@@ -9,8 +9,10 @@ responses. Focused cleanup coverage is `28 passed`; migration integrity is
 `4 passed / 1 skipped`; Web lint, typecheck and production build pass; and
 local Alembic current/heads are both `20260823_0028`. The full API suite was
 started but exceeded the five-minute local command limit without a completed
-result, so it is `NOT VERIFIED` for this change. Production deployment remains
-deferred by plan.
+result, so it is `NOT VERIFIED` for this historical local invocation. The
+resulting source was subsequently covered by the exact-source GitHub Actions
+run and deployed; current production authority is recorded in
+`PROJECT_STATE.md` and `docs/deployment.md`.
 
 ## Layered content-noise detection (2026-08-23)
 
@@ -36,9 +38,8 @@ The completed local quality gates for this scope are: focused cleanup API
 production build PASS; browser/PWA `76 passed / 71 conditional skipped`;
 dependency policy PASS with zero high or critical advisories; Alembic single
 head/current `20260823_0027`; and `git diff --check` PASS. These are historical
-pre-scan evidence and local/production-equivalent results; production deployment is recorded separately
-production-equivalent results; production deployment is recorded separately
-after the running services are upgraded.
+pre-scan and local/production-equivalent results; production deployment is
+recorded separately in `PROJECT_STATE.md` and `docs/deployment.md`.
 
 ## Adaptive Import (2026-08-22)
 

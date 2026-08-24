@@ -1,39 +1,41 @@
 # 已知风险与不确定性
 
-## Current status (2026-08-17)
+## Current status (2026-08-24)
 
 Release K production verification, Release L worker liveness and protected
-diagnostics, Release M disaster recovery, and Release N single-owner
-authentication are closed. The historical Release K reconciliation below is a
+diagnostics, Release M disaster recovery, Release N single-owner
+authentication, the final product audit and the later scoped formula/source
+position fixes are closed. The historical Release K reconciliation below is a
 checkpoint record, not current debt. Current deferred decisions are automatic
-artifact cleanup, strict nonce CSP/reporting and multi-user product work; they
-are not active defects.
+artifact cleanup and strict nonce CSP/reporting by product decision; AssetObject
+GC, capacity optimization and Turbopack remain conditional future work, and
+multi-user product work is not implemented. None is an active defect.
 
-最后核验：2026-08-16
+最后核验：2026-08-24
 
 已解决问题和实施过程保留在 [execution/](../execution/README.md)，本页只维护当前仍成立的风险。
 
-## Release K current verification reconciliation
+## Historical Release K verification reconciliation
 
 | ID | Current item | Classification | Current evidence / owner |
 | --- | --- | --- | --- |
-| K-001 | Real Chrome page zoom 125%, 150% and 200% | `CURRENT_VERIFICATION_DEBT` (3 records) | Fresh continuation-session discovery found no allowed Chrome control tool or MCP browser resource/template; product failure is not established. |
-| K-002 | Production Mermaid renderer | `CURRENT_VERIFICATION_DEBT` | Strict-mode CI passes, but no later production Mermaid fixture supersedes the Release A gap. |
-| K-003 | DOCX/ODT, XLSX/ODS and PPTX/ODP browser-Worker Viewers | `CURRENT_VERIFICATION_DEBT` (3 records) | Current capability exists; ZIP has production evidence, but these three Viewer groups do not. |
+| K-001 | Real Chrome page zoom 125%, 150% and 200% | `HISTORICAL_CHECKPOINT` | Retained as the original Release K reconciliation; later release evidence and the final product audit supersede its debt classification. |
+| K-002 | Production Mermaid renderer | `HISTORICAL_CHECKPOINT` | Retained as the original Release K reconciliation; strict-mode coverage and later product audit evidence supersede its debt classification. |
+| K-003 | DOCX/ODT, XLSX/ODS and PPTX/ODP browser-Worker Viewers | `HISTORICAL_CHECKPOINT` | Retained as the original Release K reconciliation; later scoped viewer evidence and final product audit supersede its debt classification. |
 | K-004 | Idle worker heartbeat and protected internal diagnostics | `DEFERRED_BY_DESIGN` | Owned by Release L; not a Release K product defect. |
-| K-005 | Automatic cleanup | `DEFERRED_BY_DESIGN` | Disabled; owned by Release N. Release J manual first apply remains PASS. |
-| K-006 | Strict nonce CSP and CSP reporting | `DEFERRED_BY_DESIGN` | Owned by Release O; Release H enforcing CSP remains PASS. |
+| K-005 | Automatic cleanup | `DEFERRED_BY_PRODUCT_DECISION` | Disabled; manual review/apply remains the current contract. |
+| K-006 | Strict nonce CSP and CSP reporting | `DEFERRED_BY_PRODUCT_DECISION` | The current CSP contract remains unchanged; no active hardening track is planned. |
 | K-007 | AssetObject GC, Turbopack and real-device storage variance | `CONDITIONAL_FUTURE_TRACK` | No current defect or unconditional Release K gate. |
 
 Historical RA/RB rows below retain their original checkpoint meaning. Later
 Release evidence closes active-unreferenced visibility, delete/undo, Share
 focus, exact narrow reflow, production chooser, PWA negative paths and `.cr v4`
 round trip. They are not current debt. The current count is
-`CURRENT_VERIFICATION_DEBT_COUNT = 7`; unknown/unclassified records are zero.
+`CURRENT_VERIFICATION_DEBT_COUNT = 0`; unknown/unclassified records are zero.
 
 | ID | 风险/不确定性 | 影响 | 当前控制/验证方式 |
 | --- | --- | --- | --- |
-| KI-001 | 应用没有认证或多用户 ACL | 公网管理 API 可能被未授权访问 | 反向代理/VPN/访问网关必须限制；代码层若引入 auth 需整体设计 |
+| KI-001 | 当前仍未实现多用户 ACL、注册和租户隔离 | 多用户扩展尚未提供；这不是单用户 owner 的未授权访问缺陷 | 当前单 owner password/session boundary 默认拒绝业务路由；多用户能力明确保留为未实现边界 |
 | KI-002 | 单个阅读轮次可包含极大正文 | 完整正文数据仍占内存，动态 block 测量也有成本 | >160 blocks 或 >50000 chars 时虚拟化 DOM；直达 URL、批注、下滑刷新 fixture 持续回归 |
 | KI-003 | 有效生产 Share 访客页未在文档中保存可复用 token | 生产访客视觉/范围无法由文档直接重放 | 使用隔离测试 token 复验，绝不记录真实 token |
 | KI-004 | 浏览器 quota、持久化许可和 cache eviction 因设备而异 | 离线更新/冷启动可能失败 | Release E adds deterministic Chromium quota/cache/IndexedDB negative coverage, explicit unavailable states and old-package preservation. Real device/browser eviction variance remains an operational compatibility risk. |

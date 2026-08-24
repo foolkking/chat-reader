@@ -1,10 +1,14 @@
 # Project State
 
-## 2026-08-24 Formula rendering and source-position deployment
+## 2026-08-24 Current authority and formula/source-position deployment
 
-- Runtime source commit `7ff2f92b3aea707b9db3826907c7016d3ac9ac8e` was pushed
-  to the single `master` branch. GitHub Actions run `32698108862` passed the
-  complete quality job and built the deployable API/worker/Web image set.
+- The repository remains on the single `master` branch. The current follow-up
+  is documentation-only and does not change the production runtime authority,
+  which remains source commit
+  `7ff2f92b3aea707b9db3826907c7016d3ac9ac8e`; no runtime redeploy was needed
+  for the follow-up documentation commit. GitHub Actions run `32698108862`
+  passed the complete quality job and built the deployable API/worker/Web
+  image set for the runtime source.
 - Source-to-reader locate now centers the selected rendered block in the reader
   viewport, while ordinary search, TOC and annotation navigation retain their
   existing alignment. Fenced `latex`, `tex` and `ltx` blocks use the LaTeX

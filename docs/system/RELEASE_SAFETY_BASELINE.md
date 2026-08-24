@@ -5,7 +5,7 @@ application response mode with an evidence-derived enforcing policy; see
 `CSP_ENFORCEMENT_CONTRACT.md`. The Release A history below remains the baseline
 record and is not retroactively rewritten as enforcement evidence.
 
-Last audited: 2026-08-13
+Last audited: 2026-08-24
 
 This contract defines the Release A security and provenance gate. It does not change product data, Reader behavior, attachment lifecycle, Share, export formats, or offline package formats.
 
@@ -62,7 +62,13 @@ Release images must be `linux/amd64`, carry the exact OCI revision label, expose
 
 King never runs a Next production build. Deployment uses an externally built archive, validates its versioned build metadata, validates PostgreSQL and business-volume backup readability/listings, runs migration preflight, and recreates services with `--no-build`. It never runs `down -v`, deletes business volumes, replaces `.env.production`, or enables Scanner. Manual SHA/checksum confirmation is not a release-report gate.
 
-The application has no account system. TLS and owner access control remain the responsibility of the external gateway/VPN. The repository owns application headers; the gateway must preserve or deliberately supersede them, forward the expected proxy headers, and monitor `/api/health`.
+The application has a single-owner password/session boundary but no multi-user
+account system. Owner authorization, session expiry and private business-route
+protection are application responsibilities defined by
+`AUTHENTICATION_CONTRACT.md`; TLS and external network access remain the
+responsibility of the gateway/VPN. The repository owns application headers;
+the gateway must preserve or deliberately supersede them, forward the expected
+proxy headers, and monitor `/api/health`.
 
 ## Current verification rules
 

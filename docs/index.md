@@ -37,7 +37,7 @@ their earlier incomplete verification records.
 - [Release N single-owner authentication contract](system/AUTHENTICATION_CONTRACT.md)
 - [Conversation/import/viewer test addendum](testing.md)
 
-当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-22。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-24。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 
 ## 开始这里
 

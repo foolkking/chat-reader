@@ -1,6 +1,6 @@
 # 文档维护规则
 
-最后核验：2026-07-29
+最后核验：2026-08-24
 
 完整文件分类见 [Markdown 文档台账](../documentation-inventory.md)。
 

@@ -1,6 +1,14 @@
 # Markdown 文档台账
 
-2026-08-22 content-cleanup synchronization: Source Editor selection authority,
+2026-08-24 knowledge closeout: the repository remains on the single `master`
+branch and the current follow-up is documentation-only. Production runtime
+remains the verified `7ff2f92` image generation from Actions run `32698108862`.
+The temporary pre-deploy backup was deleted
+after health acceptance at the operator's request; the current and direct
+rollback image generations remain. Authenticated production UI is explicitly
+`NOT VERIFIED` in the current deployment record.
+
+2026-08-24 content-cleanup synchronization: Source Editor selection authority,
 central review and embedded rule management are current in `PROJECT_STATE.md`,
 `docs/system/CONTENT_CLEANUP_CONTRACT.md`, `docs/api-reference.md` and
 `.interface-design/system.md`. Deterministic built-in and literal
@@ -13,8 +21,9 @@ Alembic head is `20260823_0028`.
 The current cleanup contract also includes an explicit rule-library action for a
 low-priority `BATCH / ALL_ACTIVE` review of project and unclassified active
 conversations. Archived conversations are excluded, rule revisions are
-snapshotted per scan, and every occurrence defaults to `KEEP` for explicit
-review.
+snapshotted per scan. Actionable detected occurrences default to `DELETE`
+(selected) for review; protected or stale occurrences remain unselected. The
+owner can deselect any candidate to keep it.
 
 2026-08-22 Adaptive Import synchronization: the two-entry import surface,
 session/group/family model, Built-in and Learned Profile revisions, canonical
@@ -53,13 +62,14 @@ copy contract are recorded in `PROJECT_STATE.md`,
 `docs/testing.md`. No migration, dependency or new documentation category was
 introduced.
 
-2026-08-17 public Share/search enhancement synchronization: the current
+2026-08-24 public Share/search enhancement synchronization: the current
 public-by-link Share contract, independent optional Share password and
 reference-style exact occurrence navigation are recorded in
 `PROJECT_STATE.md`, `docs/system/AUTHENTICATION_CONTRACT.md`,
 `docs/api-reference.md`, `docs/product.md`, `docs/architecture.md` and
-`docs/testing.md`. Production acceptance remains pending for the working
-change.
+`docs/testing.md`. Production acceptance covered passwordless and protected
+Share access, revocation and exact search occurrence navigation; disposable QA
+data was removed through the product UI.
 
 2026-08-17 Release N synchronization is complete. The current auth
 contract, configuration, single-owner/session schema and tests are recorded in
