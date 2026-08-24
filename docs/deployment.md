@@ -1,5 +1,27 @@
 # 生产部署
 
+## 2026-08-24 Formula rendering and cleanup review deployment
+
+GitHub Actions run `32692079211` passed the complete quality and image-build
+workflow for source commit `33f5a3dedccf4db835ed9c0df4f4a168631f3fb5` on the
+single `master` branch. The deployable image archive was loaded on King and
+the existing production Compose migration and `--no-build` replacement flow
+was used for API, import-worker and Web.
+
+The pre-deploy recovery point is retained at
+`/opt/chat-reader/backups/formula-cleanup-predeploy-20260824T052110Z-33f5a3d`.
+Its PostgreSQL dump and all four business-volume archives were readable before
+replacement. The temporary transfer directory was removed after acceptance;
+production volumes, database data, environment configuration and backups were
+not removed.
+
+Production API, worker, Web and PostgreSQL are healthy, public health returns
+200, the public diagnostics path returns 404, protected diagnostics reports
+`alive_idle`, and Alembic is `20260823_0028 (head)`. The current image
+generation and its direct rollback generation are retained. Authenticated
+production UI acceptance remains `NOT VERIFIED` because no owner credential or
+approved browser-control session was used during this deployment.
+
 ## 2026-08-24 performance optimization deployment
 
 The `master` runtime source was rebuilt after the list, project and search
