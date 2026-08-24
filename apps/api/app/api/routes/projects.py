@@ -29,6 +29,7 @@ from app.services.projects.project_service import (
     list_projects,
     place_project,
     project_counts,
+    project_counts_many,
     record_project_recent,
     remove_conversation_from_project,
     set_project_conversation_pin,
@@ -50,7 +51,8 @@ def get_projects(
 ) -> list[ProjectRead]:
     projects = list_projects(db, include_archived=include_archived, sort=sort, direction=direction)
     db.commit()
-    return [_project_read(project, db) for project in projects]
+    counts = project_counts_many(db, [project.id for project in projects])
+    return [_project_read(project, db, counts=counts.get(project.id)) for project in projects]
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
@@ -244,8 +246,8 @@ def _get_project_or_404(project_id: uuid.UUID, db: Session) -> Project:
     return project
 
 
-def _project_read(project: Project, db: Session) -> ProjectRead:
-    counts = project_counts(db, project.id)
+def _project_read(project: Project, db: Session, *, counts=None) -> ProjectRead:
+    counts = counts or project_counts(db, project.id)
     return ProjectRead(
         id=project.id,
         name=project.name,

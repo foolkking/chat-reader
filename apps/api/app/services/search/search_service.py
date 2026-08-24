@@ -185,24 +185,15 @@ def search(
         SearchDocument.document_type,
         SearchDocument.conversation_id,
         SearchDocument.message_id,
+        Message.content_hash.label("content_hash"),
         Conversation.display_title.label("conversation_title"),
         rank_expr.label("rank"),
-    ).all()
-    message_ids = {
-        row.message_id
-        for row in rows
-        if row.document_type == "message" and row.message_id is not None
-    }
-    content_hashes = (
-        dict(db.query(Message.id, Message.content_hash).filter(Message.id.in_(message_ids)).all())
-        if message_ids
-        else {}
-    )
+    ).outerjoin(Message, Message.id == SearchDocument.message_id).all()
     grouped_rows: list[tuple[uuid.UUID, str, uuid.UUID, uuid.UUID | None, str, float, int]] = []
     group_positions: dict[tuple[str, str], int] = {}
     group_conversations: list[set[uuid.UUID]] = []
     for row in rows:
-        content_hash = content_hashes.get(row.message_id)
+        content_hash = row.content_hash
         key = (
             ("message", content_hash)
             if row.document_type == "message" and content_hash
@@ -237,26 +228,30 @@ def search(
         .filter(SearchDocument.id.in_([row[0] for row in page_rows]))
         .all()
     }
+    message_version_ids = {
+        document.message_version_id
+        for document in documents.values()
+        if document.message_version_id is not None
+    }
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]] = {}
+    if message_version_ids:
+        block_rows = (
+            db.query(RenderBlock.message_version_id, RenderBlock.block_index, RenderBlock.plain_text)
+            .filter(RenderBlock.message_version_id.in_(message_version_ids))
+            .order_by(RenderBlock.message_version_id.asc(), RenderBlock.block_index.asc())
+            .all()
+        )
+        for version_id, block_index, plain_text in block_rows:
+            block_texts_by_version.setdefault(version_id, []).append((block_index, plain_text or ""))
     items = [
-        SearchResult(
-            document_id=document.id,
-            document_type=document.document_type,
-            conversation_id=document.conversation_id,
+        _build_search_result(
+            document,
             conversation_title=conversation_title,
-            message_id=document.message_id,
-            message_version_id=document.message_version_id,
-            role=document.role,
-            order_key=document.order_key,
-            block_index=_document_block_index(document),
-            character_offset=_document_character_offset(document),
-            snippet=_result_snippet(document, normalized_query, db),
+            normalized_query=normalized_query,
             rank=rank,
-            source_profile=document.source_profile,
             occurrence_count=occurrence_count,
-            matches=_document_matches(document, normalized_query, db),
-            annotation_id=_annotation_fields(document)[0],
-            annotation_type=_annotation_fields(document)[1],
-            annotation_color=_annotation_fields(document)[2],
+            block_texts_by_version=block_texts_by_version,
+            db=db,
         )
         for document_id, _, _, _, conversation_title, rank, occurrence_count in page_rows
         if (document := documents.get(document_id)) is not None
@@ -320,28 +315,70 @@ def _snippet(text: str, query: str) -> str:
     return f"{prefix}{normalized_text[start:end]}{suffix}"
 
 
-def _result_snippet(document: SearchDocument, query: str, db: Session) -> str:
-    matches = _document_matches(document, query, db)
+def _build_search_result(
+    document: SearchDocument,
+    *,
+    conversation_title: str,
+    normalized_query: str,
+    rank: float,
+    occurrence_count: int,
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]],
+    db: Session,
+) -> SearchResult:
+    matches = _document_matches(document, normalized_query, db, block_texts_by_version)
+    annotation_id, annotation_type, annotation_color = _annotation_fields(document)
+    return SearchResult(
+        document_id=document.id,
+        document_type=document.document_type,
+        conversation_id=document.conversation_id,
+        conversation_title=conversation_title,
+        message_id=document.message_id,
+        message_version_id=document.message_version_id,
+        role=document.role,
+        order_key=document.order_key,
+        block_index=_document_block_index(document),
+        character_offset=_document_character_offset(document),
+        snippet=_result_snippet(document, normalized_query, matches, block_texts_by_version),
+        rank=rank,
+        source_profile=document.source_profile,
+        occurrence_count=occurrence_count,
+        matches=matches,
+        annotation_id=annotation_id,
+        annotation_type=annotation_type,
+        annotation_color=annotation_color,
+    )
+
+
+def _result_snippet(
+    document: SearchDocument,
+    query: str,
+    matches: list[SearchMatch],
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]],
+) -> str:
     if matches:
         match = matches[0]
         text = document.plain_text or document.search_text
         if match.block_index is not None:
-            block = db.query(RenderBlock).filter(
-                RenderBlock.message_version_id == document.message_version_id,
-                RenderBlock.block_index == match.block_index,
-            ).one_or_none()
-            text = (block.plain_text if block is not None else text) or text
+            block_texts = dict(block_texts_by_version.get(document.message_version_id, []))
+            text = block_texts.get(match.block_index, text) or text
         return _snippet(text, match.quote)
     return _snippet(document.plain_text or document.search_text, query)
 
 
-def _document_matches(document: SearchDocument, query: str, db: Session) -> list[SearchMatch]:
+def _document_matches(
+    document: SearchDocument,
+    query: str,
+    db: Session,
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]] | None = None,
+) -> list[SearchMatch]:
     if document.message_version_id is None:
         return []
-    blocks = db.query(RenderBlock).filter(
-        RenderBlock.message_version_id == document.message_version_id,
-    ).order_by(RenderBlock.block_index.asc()).all()
-    candidates = [(block.block_index, block.plain_text or "") for block in blocks]
+    candidates = (block_texts_by_version or {}).get(document.message_version_id)
+    if candidates is None:
+        blocks = db.query(RenderBlock).filter(
+            RenderBlock.message_version_id == document.message_version_id,
+        ).order_by(RenderBlock.block_index.asc()).all()
+        candidates = [(block.block_index, block.plain_text or "") for block in blocks]
     if not candidates:
         candidates = [(None, document.plain_text or document.search_text)]
     matches: list[SearchMatch] = []

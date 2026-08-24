@@ -58,6 +58,9 @@ export function ConversationList({
       direction: conversationSortDirection,
       limit: 5000,
     }),
+    // Keep the visible list stable while a sort change or mutation refreshes it.
+    placeholderData: (previous) => previous,
+    staleTime: 10_000,
   });
   const projectsQuery = useQuery({
     queryKey: ["projects", "bulk-actions"],
@@ -73,7 +76,9 @@ export function ConversationList({
       direction: "desc",
       limit: 1,
     }),
-    enabled: mode === "active",
+    // Only needed to distinguish the empty active state. Avoid an extra list
+    // request when the primary query already returned conversations.
+    enabled: mode === "active" && conversationsQuery.isSuccess && conversationsQuery.data.length === 0,
     staleTime: 30_000,
   });
   const isArchivedMode = mode === "archived";
@@ -209,7 +214,7 @@ export function ConversationList({
   }
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" aria-busy={conversationsQuery.isFetching}>
       {undo ? (
         <UndoToast
           undo={undo}
@@ -223,6 +228,7 @@ export function ConversationList({
           <h2 className="text-lg font-semibold text-primary">
             {isArchivedMode ? (resolvedLocale === "zh-CN" ? "已归档对话" : "Archived conversations") : (resolvedLocale === "zh-CN" ? "对话记录" : "Conversation history")}
           </h2>
+          {conversationsQuery.isFetching ? <span role="status" className="text-xs text-secondary">{resolvedLocale === "zh-CN" ? "正在更新" : "Updating"}</span> : null}
           <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `共 ${conversations.length} 个` : `${conversations.length} total`}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">

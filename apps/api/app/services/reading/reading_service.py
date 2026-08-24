@@ -1,11 +1,12 @@
 import uuid
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.conversation import Conversation
 from app.models.import_record import utc_now
 from app.models.message import Message
 from app.models.project import Project
+from app.models.project_conversation import ProjectConversation
 from app.models.reading_position import ReadingPosition
 from app.models.recent_item import RecentItem
 
@@ -163,6 +164,12 @@ def _touch_recent_item(
 def list_recent_items(db: Session, limit: int) -> list[RecentItem]:
     return (
         db.query(RecentItem)
+        .options(
+            selectinload(RecentItem.conversation).selectinload(Conversation.recent_item),
+            selectinload(RecentItem.conversation)
+            .selectinload(Conversation.project_links)
+            .selectinload(ProjectConversation.project),
+        )
         .join(Conversation, Conversation.id == RecentItem.conversation_id)
         .filter(Conversation.status == "active", Conversation.deleted_at.is_(None))
         .order_by(RecentItem.last_opened_at.desc())

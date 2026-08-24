@@ -139,7 +139,13 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     setNotebookConflicts(conflictRows);
   }, [conversationId, repository]);
 
-  useEffect(() => { void reload(); }, [reload]);
+  // Annotation and notebook data are only needed by the workspace itself.
+  // Defer the read until the panel is opened so every Reader visit does not
+  // pay for three background requests that most users never use.
+  useEffect(() => {
+    if (!open) return;
+    void reload();
+  }, [open, reload]);
   useEffect(() => {
     const media = window.matchMedia("(min-width: 768px)");
     const update = () => {

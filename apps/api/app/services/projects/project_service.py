@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
@@ -409,6 +409,12 @@ def list_project_conversations(
         raise ProjectServiceError("Project not found.")
     query = (
         db.query(ProjectConversation)
+        .options(
+            selectinload(ProjectConversation.conversation).selectinload(Conversation.recent_item),
+            selectinload(ProjectConversation.conversation)
+            .selectinload(Conversation.project_links)
+            .selectinload(ProjectConversation.project),
+        )
         .join(ProjectConversation.conversation)
         .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
         .filter(
@@ -499,6 +505,35 @@ def project_counts(db: Session, project_id: uuid.UUID) -> ProjectCounts:
         or 0
     )
     return ProjectCounts(conversation_count=conversation_count, pinned_count=pinned_count)
+
+
+def project_counts_many(db: Session, project_ids: list[uuid.UUID]) -> dict[uuid.UUID, ProjectCounts]:
+    """Load active conversation and pinned counts for several projects in one query."""
+    if not project_ids:
+        return {}
+    rows = (
+        db.query(
+            ProjectConversation.project_id,
+            func.count(ProjectConversation.id),
+            func.count(case((ProjectConversation.is_pinned.is_(True), ProjectConversation.id))),
+        )
+        .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
+        .filter(
+            ProjectConversation.project_id.in_(project_ids),
+            Conversation.deleted_at.is_(None),
+            Conversation.status == "active",
+        )
+        .group_by(ProjectConversation.project_id)
+        .all()
+    )
+    counts = {
+        project_id: ProjectCounts(conversation_count=int(conversation_count or 0), pinned_count=int(pinned_count or 0))
+        for project_id, conversation_count, pinned_count in rows
+    }
+    return {
+        project_id: counts.get(project_id, ProjectCounts(conversation_count=0, pinned_count=0))
+        for project_id in project_ids
+    }
 
 
 def _get_relation(db: Session, project_id: uuid.UUID, conversation_id: uuid.UUID) -> ProjectConversation | None:

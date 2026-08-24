@@ -154,7 +154,10 @@ def list_conversations(
     query = (
         db.query(Conversation)
         .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
-        .options(selectinload(Conversation.recent_item))
+        .options(
+            selectinload(Conversation.recent_item),
+            selectinload(Conversation.project_links).selectinload(ProjectConversation.project),
+        )
     )
     if status_scope == "active":
         query = query.filter(Conversation.status == "active", Conversation.deleted_at.is_(None))

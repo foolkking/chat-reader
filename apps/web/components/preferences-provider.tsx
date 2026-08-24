@@ -102,19 +102,26 @@ export function PreferencesProvider({
 
   useEffect(() => {
     const cached = readCachedPreferences();
-    if (cached) applyPreferences(cached);
-    void getPreferences().then(async (fresh) => {
-      if (cached && timestamp(cached.updated_at) > timestamp(fresh.updated_at)) {
-        try {
-          applyPreferences(await updatePreferences(preferenceUpdate(cached)));
-        } catch {
-          applyPreferences(cached);
-        }
-        return;
-      }
-      applyPreferences(fresh);
-    }).catch(() => undefined);
-  }, [applyPreferences]);
+    const initialTimestamp = timestamp(initialPreferences.updated_at);
+    const cachedTimestamp = cached ? timestamp(cached.updated_at) : 0;
+
+    // The server-rendered layout already fetched the current preference snapshot.
+    // Reusing it avoids a duplicate request on every first page load. A newer
+    // local cache still wins and is reconciled server-side; an epoch fallback
+    // means the server was unavailable and needs the client retry.
+    if (cached && cachedTimestamp > initialTimestamp) {
+      applyPreferences(cached);
+      void updatePreferences(preferenceUpdate(cached)).then(applyPreferences).catch(() => undefined);
+      return;
+    }
+    if (initialTimestamp > 0) {
+      applyPreferences(initialPreferences);
+      return;
+    }
+    void getPreferences().then(applyPreferences).catch(() => {
+      if (cached) applyPreferences(cached);
+    });
+  }, [applyPreferences, initialPreferences]);
 
   useEffect(() => {
     const syncCachedPreferences = () => {

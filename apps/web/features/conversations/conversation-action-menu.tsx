@@ -141,6 +141,14 @@ export function ConversationActionMenu({
   }, [open]);
 
   async function finish() {
+    // Always refresh the detail that was edited. The owning list already knows
+    // its smallest safe refresh scope and handles it through onChanged; avoid
+    // invalidating the same list queries twice after every menu action.
+    await queryClient.invalidateQueries({ queryKey: ["conversation", conversation.id] });
+    if (onChanged) {
+      await onChanged();
+      return;
+    }
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["conversations"] }),
       queryClient.invalidateQueries({ queryKey: ["sidebar-conversations"] }),
@@ -148,9 +156,7 @@ export function ConversationActionMenu({
       projectId
         ? queryClient.invalidateQueries({ queryKey: ["project-conversations", projectId] })
         : Promise.resolve(),
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversation.id] }),
     ]);
-    await onChanged?.();
   }
 
   async function run(label: string, action: () => Promise<void>) {

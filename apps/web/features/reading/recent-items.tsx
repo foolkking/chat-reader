@@ -11,7 +11,12 @@ import { formatActivityTime } from "../../lib/activity-time";
 export function RecentItems({ compact = false, showHeading = true }: { compact?: boolean; showHeading?: boolean }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const recentQuery = useQuery({ queryKey: ["recent-items"], queryFn: getRecentItems });
+  const recentQuery = useQuery({
+    queryKey: ["recent-items"],
+    queryFn: getRecentItems,
+    placeholderData: (previous) => previous,
+    staleTime: 10_000,
+  });
 
   if (recentQuery.isLoading) return <StateLine label={zh ? "正在加载最近内容…" : "Loading recent items…"} loading />;
   if (recentQuery.isError) return <StateLine label={recentQuery.error.message} retryLabel={zh ? "重试" : "Retry"} retry={() => void recentQuery.refetch()} />;
@@ -21,6 +26,7 @@ export function RecentItems({ compact = false, showHeading = true }: { compact?:
   return (
     <section className="space-y-3" aria-labelledby={showHeading ? "recent-heading" : undefined} aria-label={!showHeading ? (zh ? "继续阅读" : "Continue reading") : undefined}>
       {showHeading ? <div className="flex items-center justify-between">
+        {recentQuery.isFetching ? <span role="status" className="sr-only">{zh ? "正在更新" : "Updating"}</span> : null}
         <div><h1 id="recent-heading" className={compact ? "text-sm font-semibold" : "text-xl font-semibold"}>{zh ? "继续阅读" : "Continue reading"}</h1>{!compact ? <p className="mt-1 text-sm text-secondary">{zh ? "回到上次离开的消息和位置。" : "Return to the message and position where you left off."}</p> : null}</div>
         {compact ? <Link href="/recent" className="text-xs font-medium text-accent">{zh ? "查看全部" : "View all"}</Link> : null}
       </div> : null}

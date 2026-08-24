@@ -50,10 +50,14 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const projectsQuery = useQuery({
     queryKey: ["projects", projectSortMode, projectSortDirection],
     queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
+    placeholderData: (previous) => previous,
+    staleTime: 10_000,
   });
   const conversationsQuery = useQuery({
     queryKey: ["project-conversations", projectId, conversationSortMode, conversationSortDirection],
     queryFn: () => getProjectConversations(projectId, { sort: conversationSortMode, direction: conversationSortDirection, limit: 5000 }),
+    placeholderData: (previous) => previous,
+    staleTime: 10_000,
   });
   const project = projectsQuery.data?.find((item) => item.id === projectId);
   const zh = resolvedLocale === "zh-CN";
@@ -151,10 +155,11 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
           }
         />
 
-        <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden" aria-busy={conversationsQuery.isFetching || projectsQuery.isFetching}>
           <div data-project-drop-target={projectId} className="pointer-events-none absolute inset-0 z-20" />
           <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8 md:py-10">
             <header className="hidden items-end justify-between gap-6 border-b border-ui pb-6 md:flex">
+              {conversationsQuery.isFetching || projectsQuery.isFetching ? <span role="status" className="sr-only">{zh ? "正在更新" : "Updating"}</span> : null}
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-accent">{zh ? "项目工作区" : "Project workspace"}</p>
                 <h1 className="mt-2 truncate text-2xl font-semibold text-primary">{project?.name ?? (zh ? "项目" : "Project")}</h1>
