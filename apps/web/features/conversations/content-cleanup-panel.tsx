@@ -119,9 +119,6 @@ export function ContentCleanupPanel({
   const [decisionOverrides, setDecisionOverrides] = useState<
     Record<string, "DELETE" | "KEEP">
   >({});
-  const [baselineDecisions, setBaselineDecisions] = useState<
-    Record<string, "DELETE" | "KEEP">
-  >({});
   const [scopeType, setScopeType] = useState<ScopeType>("CURRENT_CONVERSATION");
   const [scanWholeConversation, setScanWholeConversation] = useState(false);
   const [selectedConversationIds, setSelectedConversationIds] = useState<
@@ -219,13 +216,19 @@ export function ContentCleanupPanel({
   });
   const occurrences = occurrencesQuery.data ?? [];
   useEffect(() => {
-    if (!occurrences.length) return;
-    setBaselineDecisions((current) => {
+    // Legacy reviews can contain PROTECTED decisions from the former default.
+    // Select those candidates when their page is first opened so every rule
+    // match follows the current default-selected review contract.
+    setDecisionOverrides((current) => {
+      let changed = false;
       const next = { ...current };
-      for (const item of occurrences)
-        if (item.decision === "DELETE" || item.decision === "KEEP")
-          next[item.id] = item.decision;
-      return next;
+      for (const item of occurrences) {
+        if (!item.stale && item.decision === "PROTECTED" && next[item.id] === undefined) {
+          next[item.id] = "DELETE";
+          changed = true;
+        }
+      }
+      return changed ? next : current;
     });
   }, [occurrences]);
   const groups = useMemo(
@@ -240,15 +243,24 @@ export function ContentCleanupPanel({
       ),
     [occurrences, zh],
   );
+  const isSelected = (item: CleanupOccurrenceRead) =>
+    (decisionOverrides[item.id] ?? item.decision) === "DELETE";
   const deleteCount = useMemo(() => {
-    let count = scanQuery.data?.delete_count ?? 0;
-    for (const [id, decision] of Object.entries(decisionOverrides)) {
-      const baseline = baselineDecisions[id];
-      if (baseline === decision || !baseline) continue;
-      count += decision === "DELETE" ? 1 : -1;
-    }
-    return Math.max(0, count);
-  }, [baselineDecisions, decisionOverrides, scanQuery.data?.delete_count]);
+    // The scan response is authoritative for pages that have not been opened
+    // yet. Reconcile only the visible page so a checked item can never leave
+    // the Apply button at zero while its decision is DELETE in the scan.
+    const serverCount = Math.max(0, scanQuery.data?.delete_count ?? 0);
+    const visibleBaseline = occurrences.reduce(
+      (count, item) => count + (item.decision === "DELETE" && !item.stale ? 1 : 0),
+      0,
+    );
+    const visibleSelected = occurrences.reduce(
+      (count, item) => count + (isSelected(item) && !item.stale ? 1 : 0),
+      0,
+    );
+    const reconciled = serverCount - visibleBaseline + visibleSelected;
+    return Math.max(visibleSelected, reconciled, 0);
+  }, [occurrences, scanQuery.data?.delete_count, decisionOverrides]);
   const decisionMutation = useMutation({
     mutationFn: async () => {
       const decisions = Object.entries(decisionOverrides).map(
@@ -287,8 +299,6 @@ export function ContentCleanupPanel({
     onSuccess: () => onClose?.(),
   });
   const status = scanQuery.data?.status;
-  const isSelected = (item: CleanupOccurrenceRead) =>
-    (decisionOverrides[item.id] ?? item.decision) === "DELETE";
   const toggle = (item: CleanupOccurrenceRead) =>
     setDecisionOverrides((current) => ({
       ...current,
@@ -299,11 +309,7 @@ export function ContentCleanupPanel({
       ...current,
       ...Object.fromEntries(
         occurrences
-          .filter(
-            (item) =>
-              item.decision !== "PROTECTED" &&
-              !item.stale,
-          )
+          .filter((item) => !item.stale)
           .map((item) => [item.id, "DELETE" as const]),
       ),
     }));
@@ -411,7 +417,6 @@ export function ContentCleanupPanel({
                     setScanId(null);
                     setPage(0);
                     setDecisionOverrides({});
-                    setBaselineDecisions({});
                     autoStartedRef.current = false;
                   }}
                   className="min-h-9 rounded-lg border border-ui bg-page px-3 text-xs font-medium text-primary hover:bg-subtle"
@@ -505,7 +510,6 @@ export function ContentCleanupPanel({
           <ReviewResults
             zh={zh}
             groups={groups}
-            occurrences={occurrences}
             conversationId={conversationId}
             onLocate={onLocate}
             isSelected={isSelected}
@@ -515,6 +519,7 @@ export function ContentCleanupPanel({
             pageCount={pageCount}
             setPage={setPage}
             deleteCount={deleteCount}
+            totalOccurrences={scanQuery.data?.occurrence_count ?? 0}
             applying={applyMutation.isPending}
             dismissing={dismissMutation.isPending}
             onApply={() => applyMutation.mutate()}
@@ -670,7 +675,6 @@ function EmptyReview({
 function ReviewResults({
   zh,
   groups,
-  occurrences,
   conversationId,
   onLocate,
   isSelected,
@@ -680,6 +684,7 @@ function ReviewResults({
   pageCount,
   setPage,
   deleteCount,
+  totalOccurrences,
   applying,
   dismissing,
   onApply,
@@ -691,7 +696,6 @@ function ReviewResults({
 }: {
   zh: boolean;
   groups: Record<string, CleanupOccurrenceRead[]>;
-  occurrences: CleanupOccurrenceRead[];
   conversationId?: string;
   onLocate?: (occurrence: CleanupOccurrenceRead) => Promise<void> | void;
   isSelected: (item: CleanupOccurrenceRead) => boolean;
@@ -701,6 +705,7 @@ function ReviewResults({
   pageCount: number;
   setPage: React.Dispatch<React.SetStateAction<number>>;
   deleteCount: number;
+  totalOccurrences: number;
   applying: boolean;
   dismissing: boolean;
   onApply: () => void;
@@ -715,7 +720,7 @@ function ReviewResults({
       <div className="flex items-center justify-between gap-3 border-b border-ui pb-3">
         <div>
           <p className="text-sm font-medium text-primary">
-            {occurrences.length} {zh ? "个当前页候选" : "candidates on this page"}
+            {totalOccurrences} {zh ? "个候选" : "candidates found"}
           </p>
           <p className="mt-1 text-xs text-secondary">
             {scopeType === "CURRENT_CONVERSATION"
@@ -782,15 +787,15 @@ function ReviewResults({
                           : " · version changed"
                         : ""}
                     </p>
-                    {item.decision === "PROTECTED" ? (
+                    {isProtectedCandidate(item) ? (
                       <p className="mt-1 text-xs text-[var(--warning)]">
                         {zh
-                          ? "这是受保护的 Markdown 结构，默认保留；明确勾选后会按你的选择处理。"
-                          : "This is a protected Markdown structure. It stays by default and is processed only when explicitly selected."}
+                          ? "此命中位于 Markdown 结构中，已默认选中；应用前请确认删除后结构仍然正确。"
+                          : "This match is inside Markdown structure. It is selected by default; review the resulting structure before applying."}
                       </p>
                     ) : null}
                     {item.reason_code === "PARTIAL_SELECTION" &&
-                    item.decision !== "PROTECTED" ? (
+                    !isProtectedCandidate(item) ? (
                       <p className="mt-1 text-xs text-[var(--warning)]">
                         {zh
                           ? "当前只选中了标记的一部分；候选已扩展到完整范围，请确认后再处理。"
@@ -892,4 +897,8 @@ function cleanupDetectionLabel(
   if (item.match_mode === "STRUCTURAL") return zh ? "结构识别" : "structural";
   if (item.match_mode === "MANUAL") return zh ? "手动选择" : "manual";
   return zh ? "精确匹配" : "exact";
+}
+
+function isProtectedCandidate(item: CleanupOccurrenceRead): boolean {
+  return item.decision === "PROTECTED" || Boolean(item.evidence_codes?.includes("PROTECTED_RANGE"));
 }

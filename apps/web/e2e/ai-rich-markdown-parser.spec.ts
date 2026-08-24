@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { remarkAiMathCompatibility } from "../features/rich-markdown/remark-ai-math-compatibility";
+import {
+  normalizeDisplayMathForRenderer,
+  remarkAiMathCompatibility,
+} from "../features/rich-markdown/remark-ai-math-compatibility";
 
 test("ChatGPT bracket and parenthesis delimiters become semantic math nodes", () => {
   const source = String.raw`\[
@@ -34,6 +37,56 @@ Chinese \(x^2+y^2\) text.`;
     { type: "text", value: " text." },
   ]);
   expect(source).toBe(canonicalBefore);
+});
+
+test("long escaped display math spanning parsed headings is recovered as one node", () => {
+  const source = String.raw`\[
+\mathbb E[f(X)]
+=
+\int_{\mathbb R^n}
+f(\mathbf x)
+\frac{1}{(2\pi)^{n/2}|\Sigma|^{1/2}}
+\exp\left[-\frac12(\mathbf x-\boldsymbol\mu)^\top\Sigma^{-1}(\mathbf x-\boldsymbol\mu)\right]
+\,d\mathbf x
+\]`;
+  const split = source.indexOf("\\int");
+  const tree = {
+    type: "root",
+    children: [
+      {
+        type: "heading",
+        position: { start: { offset: 0 }, end: { offset: split - 1 } },
+        children: [],
+      },
+      {
+        type: "paragraph",
+        position: { start: { offset: split }, end: { offset: source.length } },
+        children: [],
+      },
+    ],
+  };
+
+  remarkAiMathCompatibility()(tree, { value: source });
+
+  expect(tree.children).toHaveLength(1);
+  expect(tree.children[0]).toMatchObject({
+    type: "math",
+    data: { aiMathDelimiter: "bracket" },
+  });
+  expect((tree.children[0] as { value?: string }).value).toContain("\\mathbb E[f(X)]");
+  expect(normalizeDisplayMathForRenderer(source)).toContain("\\left\\lbrack");
+  expect(normalizeDisplayMathForRenderer(source)).toContain("\\right\\rbrack");
+});
+
+test("render normalization separates an exported display formula from prose without touching line breaks", () => {
+  const source = String.raw`*italic* and formula \[
+\int_0^1 x^2\,dx=\frac13
+\]
+
+\begin{aligned}a&=b\\[4pt]c&=d\end{aligned}`;
+  const normalized = normalizeDisplayMathForRenderer(source);
+  expect(normalized).toContain("formula\n\n\\[\n\\int");
+  expect(normalized).toContain("a&=b\\\\[4pt]c&=d");
 });
 
 test("currency is text and math delimiters inside code stay code", () => {

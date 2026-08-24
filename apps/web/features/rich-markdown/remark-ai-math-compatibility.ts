@@ -14,6 +14,7 @@ type MarkdownNode = {
 type MarkdownFile = { value?: unknown };
 
 const DISPLAY_MATH = /^\s*\\\[\s*\r?\n?([\s\S]*?)\r?\n?\s*\\\]\s*$/;
+const ESCAPED_DISPLAY_MATH = /^[\t ]*\\\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\\\][\t ]*$/gm;
 const BARE_BRACKET_DISPLAY = /^[\t ]*\/?\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\]\/?[\t ]*$/gm;
 const BARE_BRACKET_DISPLAY_EXACT = /^[\t ]*\/?\[[\t ]*\r?\n([\s\S]*?)^[\t ]*\]\/?[\t ]*$/m;
 const LATEX_COMMAND = /\\(?:alpha|approx|begin|beta|boxed|cap|cases|cdot|cdots|chi|cup|delta|dfrac|div|dots|epsilon|equiv|eta|exists|forall|frac|gamma|geq?|in|infty|int|iota|kappa|lambda|langle|ldots|left|leq?|lim|ln|log|longrightarrow|mathbb|mathbf|mathcal|mathit|mathrm|mathsf|mathtt|matrix|max|min|mp|mu|nabla|neq|notin|nu|omega|overline|partial|phi|pi|pm|pmatrix|prod|propto|psi|quad|qquad|rangle|rho|right|rightarrow|sigma|sim|sin|sqrt|subset|subseteq|sum|supset|supseteq|tan|tau|text|theta|times|to|upsilon|varphi|varepsilon|varrho|varsigma|vartheta|vec|xrightarrow|xi|zeta)(?=[^A-Za-z]|$)/;
@@ -23,6 +24,20 @@ const CURRENCY_WORDS = /\b(?:and|or|to|usd|eur|gbp|cny|rmb|dollars?|euros?|yuan)
 const BARE_MATH_CHARACTERS = /^[A-Za-z0-9\\{}()[\]^_+\-*/=<>.,|!:'\s]+$/;
 const BARE_MATH_WORDS = new Set(["cos", "det", "exp", "gcd", "lim", "ln", "log", "max", "min", "mod", "sin", "tan"]);
 const DISPLAY_LABEL_TOKEN = /^[A-Z][A-Za-z0-9]*(?:[-/][A-Za-z0-9]+)*$/;
+
+/** Normalize only nested display-math brackets for rendering. The canonical
+ * Markdown source remains unchanged so editing/copying preserves the export. */
+export function normalizeDisplayMathForRenderer(source: string): string {
+  const separated = source
+    .replace(/([^\r\n\\\s])[\t ]*\\\[(?=\r?\n)/g, "$1\n\n\\[")
+    .replace(/(\r?\n)\\\]([^\r\n])/g, "$1\\]\n\n$2");
+  return separated.replace(/(?<!\\)\\\[([\s\S]*?)(?<!\\)\\\]/g, (_full, body: string) => {
+    const normalized = body
+      .replace(/\\left\[/g, "\\left\\lbrack")
+      .replace(/\\right\]/g, "\\right\\rbrack");
+    return `\\[${normalized}\\]`;
+  });
+}
 
 /**
  * ChatGPT emits LaTeX using \(...\) and \[...\]. CommonMark consumes the
@@ -37,12 +52,70 @@ const DISPLAY_LABEL_TOKEN = /^[A-Z][A-Za-z0-9]*(?:[-/][A-Za-z0-9]+)*$/;
 export function remarkAiMathCompatibility() {
   return (tree: MarkdownNode, file: MarkdownFile) => {
     const source = typeof file.value === "string" ? file.value : String(file.value ?? "");
+    // CommonMark can consume the outer backslashes and split a long `\\[...\\]`
+    // block into headings/paragraphs before remark-math sees it. Recover the
+    // complete source-range candidate first; the existing paragraph transform
+    // remains useful for short inline-compatible blocks.
+    replaceEscapedDisplayMath(tree, source);
     replaceBareBracketDisplayMath(tree, source);
     replaceDisplayMath(tree, source);
     replaceInlineParenMath(tree, source);
     replaceBareInlineParenMath(tree, source);
     demoteCurrencyMath(tree);
   };
+}
+
+function replaceEscapedDisplayMath(parent: MarkdownNode, source: string): void {
+  if (!parent.children?.length) return;
+  const candidates = Array.from(source.matchAll(ESCAPED_DISPLAY_MATH))
+    .map((match) => ({
+      start: match.index ?? -1,
+      end: (match.index ?? -1) + match[0].length,
+      value: match[1].trim(),
+    }))
+    .filter((candidate) => candidate.start >= 0 && candidate.value);
+  if (candidates.length) {
+    const next: MarkdownNode[] = [];
+    let childIndex = 0;
+    for (const candidate of candidates) {
+      while (
+        childIndex < parent.children.length &&
+        nodeEnd(parent.children[childIndex]) <= candidate.start
+      ) {
+        next.push(parent.children[childIndex]);
+        childIndex += 1;
+      }
+      const rangeStart = childIndex;
+      while (
+        childIndex < parent.children.length &&
+        nodeStart(parent.children[childIndex]) < candidate.end
+      ) {
+        childIndex += 1;
+      }
+      const covered = parent.children.slice(rangeStart, childIndex);
+      if (
+        !covered.length ||
+        covered.some(isUnsafeBareBracketNode) ||
+        nodeStart(covered[0]) > candidate.start ||
+        nodeEnd(covered[covered.length - 1]) < candidate.end
+      ) {
+        next.push(...covered);
+        continue;
+      }
+      next.push({
+        type: "math",
+        value: candidate.value,
+        data: displayMathData(candidate.value, "bracket"),
+        position: {
+          start: covered[0].position?.start,
+          end: covered[covered.length - 1].position?.end,
+        },
+      });
+    }
+    next.push(...parent.children.slice(childIndex));
+    parent.children = next;
+  }
+  parent.children.forEach((child) => replaceEscapedDisplayMath(child, source));
 }
 
 export function isChatGptBareBracketMath(source: string): boolean {

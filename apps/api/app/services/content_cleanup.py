@@ -469,14 +469,19 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                     for protected_start, protected_end in protected_ranges(version.display_text)
                 )
                 deletes_entire_message = not (version.display_text[:selected_start] + version.display_text[selected_end:]).strip()
+                evidence_codes = ["MANUAL_SELECTION"]
+                if protected:
+                    evidence_codes.append("PROTECTED_RANGE")
+                if deletes_entire_message:
+                    evidence_codes.append("ENTIRE_MESSAGE")
                 detected_rows.append((manual_revision, DetectedOccurrence(
                     selected_start,
                     selected_end,
                     "manual_selection",
                     "MANUAL_SELECTION",
-                    "PROTECTED" if protected or deletes_entire_message else "DELETE",
+                    "DELETE",
                     "MANUAL",
-                    ("MANUAL_SELECTION",),
+                    tuple(evidence_codes),
                 )))
         deduped: list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = []
         for revision, detected in detected_rows:
@@ -578,8 +583,8 @@ def detect_occurrences(
     result: list[DetectedOccurrence] = []
     for item in values:
         is_protected = any(item.start < protected_end and item.end > protected_start for protected_start, protected_end in protected)
-        decision = "PROTECTED" if is_protected else "DELETE"
-        result.append(DetectedOccurrence(item.start, item.end, item.kind, item.reason_code, decision, item.match_mode, item.evidence_codes))
+        evidence_codes = (*item.evidence_codes, "PROTECTED_RANGE") if is_protected else item.evidence_codes
+        result.append(DetectedOccurrence(item.start, item.end, item.kind, item.reason_code, "DELETE", item.match_mode, evidence_codes))
     return result
 
 

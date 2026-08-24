@@ -18,6 +18,7 @@ import {
   richMarkdownRemarkPlugins,
   scopedRichMarkdownRehypePlugins,
 } from "../rich-markdown/rich-markdown-config";
+import { normalizeDisplayMathForRenderer } from "../rich-markdown/remark-ai-math-compatibility";
 
 export type MarkdownTaskItem = {
   taskKey: string;
@@ -364,6 +365,7 @@ export function AssistantMarkdownPart({
     return null;
   }
   recordRichMarkdownPerformance(text);
+  const renderText = normalizeDisplayMathForRenderer(text);
   const interactiveComponents = createTaskAwareComponents(taskItems, pendingTaskKeys, onTaskToggle);
   const taskPlugin = taskItems.length > 0 ? remarkTaskKeys(taskItems) : null;
   if (onTaskToggle && taskItems.length > 0) {
@@ -376,7 +378,7 @@ export function AssistantMarkdownPart({
           remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
           skipHtml
         >
-          {text}
+          {renderText}
         </ReactMarkdown>
       </div>
     );
@@ -390,6 +392,7 @@ export function AssistantMarkdownPart({
         remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
         components={interactiveComponents}
         componentsByLanguage={{ mermaid: { SyntaxHighlighter: MermaidDiagram, CodeHeader: MermaidCodeHeader } }}
+        preprocess={normalizeDisplayMathForRenderer}
         skipHtml
       />
     </TextMessagePartProvider>

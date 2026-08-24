@@ -184,7 +184,8 @@ def test_literal_detector_is_case_sensitive_by_default_and_can_ignore_code() -> 
     text = "keep NOISE and `NOISE` and noise"
     matches = detect_occurrences("assistant", text, _rule(), _revision("NOISE"))
     assert len(matches) == 2
-    assert matches[1].decision == "PROTECTED"
+    assert matches[1].decision == "DELETE"
+    assert "PROTECTED_RANGE" in matches[1].evidence_codes
 
 
 def test_protected_ranges_cover_fenced_code_math_and_asset_links() -> None:
@@ -804,7 +805,8 @@ def test_source_selection_surfaces_protected_ranges_for_explicit_review(client) 
         db.close()
         generator.close()
     occurrence = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences").json()[0]
-    assert occurrence["decision"] == "PROTECTED"
+    assert occurrence["decision"] == "DELETE"
+    assert "PROTECTED_RANGE" in occurrence["evidence_codes"]
     updated = client.patch(
         f"/api/content-cleanup/scans/{scan_id}/decisions",
         json={"decisions": [{"occurrence_id": occurrence["id"], "decision": "DELETE"}]},

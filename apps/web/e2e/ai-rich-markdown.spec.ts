@@ -209,6 +209,40 @@ x^2 & x>0 \\
   }
 });
 
+test("long display integrals with nested delimiters remain semantic math", async ({ page }) => {
+  const source = String.raw`### Long integral
+
+\[
+\mathbb E[f(X)]
+=
+\int_{\mathbb R^n}
+f(\mathbf x)
+\frac{
+1
+}{
+(2\pi)^{n/2}
+|\Sigma|^{1/2}
+}
+\exp
+\left[
+-\frac12
+(\mathbf x-\boldsymbol\mu)^\top
+\Sigma^{-1}
+\right]
+\,d\mathbf x
+\]`;
+  const conversationId = await importFixture(page, source);
+  try {
+    await page.goto(`/conversations/${conversationId}`);
+    const assistant = page.locator("article[data-message-id]").last();
+    await expect(assistant.locator(".katex-display")).toHaveCount(1);
+    await expect(assistant.locator(".katex-mathml math")).toHaveCount(1);
+    await expect(assistant.locator('[data-math-error="true"]')).toHaveCount(0);
+  } finally {
+    await page.request.delete(`/api/conversations/${conversationId}`);
+  }
+});
+
 test("invalid and untrusted math is isolated without external fetch", async ({ page }) => {
   const externalRequests: string[] = [];
   page.on("request", (request) => {
