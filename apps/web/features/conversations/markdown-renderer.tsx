@@ -1059,10 +1059,12 @@ function normalizeLanguage(language: string): BundledLanguage | null {
   }
   const aliases: Record<string, BundledLanguage> = {
     js: "javascript",
+    ltx: "latex",
     md: "markdown",
     py: "python",
     shell: "bash",
     ts: "typescript",
+    tex: "latex",
     yml: "yaml",
   };
   return aliases[normalized] ?? (normalized as BundledLanguage);

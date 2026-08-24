@@ -59,6 +59,16 @@ import { ReaderMarkdownCopyBoundary } from "./reader-markdown-copy";
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
 
+// Source-to-reader navigation should preserve the relationship between the
+// two panes. Centering the located block gives the user enough surrounding
+// context and avoids the source line appearing to point at the previous
+// heading when the rendered block is tall (for example, a matrix or code
+// block).
+function sourceLocateAlignmentOffset(root: HTMLElement | null): number {
+  const viewportHeight = root?.clientHeight ?? (typeof window === "undefined" ? 720 : window.innerHeight);
+  return Math.max(120, Math.round(viewportHeight * 0.5));
+}
+
 export function ConversationReader({
   conversationId,
   dataSource = remoteReaderDataSource,
@@ -2173,7 +2183,14 @@ export function ConversationReader({
           setSourceEditorDirty(false);
           window.requestAnimationFrame(() => window.dispatchEvent(new Event("chat-reader:reader-layout-did-change")));
         }}
-        onLocate={async (messageId, blockIndex) => { await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }}
+        onLocate={async (messageId, blockIndex) => {
+          await navigateToTarget({
+            messageId,
+            blockIndex,
+            alignmentOffset: sourceLocateAlignmentOffset(scrollContainerRef.current),
+            source: "message-action",
+          });
+        }}
         onDiscardAndSwitch={() => {
           if (!pendingSourceEditorTarget) return;
           setSourceEditorDirty(false);
