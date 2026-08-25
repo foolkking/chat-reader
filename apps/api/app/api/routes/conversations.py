@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.models.conversation import Conversation
-from app.models.attachment import AssetObject, Attachment
 from app.models.conversation_event import ConversationEvent
 from app.models.message import Message
 from app.models.message_version import MessageVersion
@@ -49,7 +48,7 @@ from app.schemas.message import (
 )
 from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
-from app.schemas.task import BackgroundTaskRead, ConversationProjectMoveRequest
+from app.schemas.task import BackgroundTaskRead, ConversationBatchDeleteRequest, ConversationProjectMoveRequest
 from app.models.import_record import utc_now
 from app.services.editing.message_edit_service import (
     MessageEditError,
@@ -59,7 +58,7 @@ from app.services.editing.message_edit_service import (
     plan_conversation_split,
     split_conversation,
 )
-from app.services.background_jobs import queue_conversation_merge
+from app.services.background_jobs import queue_conversation_batch_delete, queue_conversation_merge
 from app.services.projects.project_service import (
     ProjectServiceError,
     add_conversation_to_project,
@@ -72,8 +71,7 @@ from app.services.projects.project_service import (
 from app.services.reader_preview import dialogue_preview
 from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn
 from app.api.routes.tasks import background_job_read
-from app.services.assets.asset_store import get_asset_store
-from app.services.assets.lifecycle import asset_object_has_live_references
+from app.services.conversations.conversation_deletion import delete_conversation_record
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -318,33 +316,30 @@ def unarchive_conversation(conversation_id: uuid.UUID, db: Session = Depends(get
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
-    asset_ids = {
-        row[0]
-        for row in db.query(Attachment.asset_object_id).filter(
-            Attachment.conversation_id == conversation.id,
-            Attachment.asset_object_id.is_not(None),
-        ).all()
-    }
-    db.delete(conversation)
-    db.flush()
-    removable_keys: list[str] = []
-    for asset_id in asset_ids:
-        if asset_object_has_live_references(db, asset_id):
-            continue
-        asset = db.get(AssetObject, asset_id)
-        if asset is not None:
-            removable_keys.append(asset.storage_key)
-            db.delete(asset)
-    db.commit()
-    for storage_key in removable_keys:
-        try:
-            get_asset_store().delete_key(storage_key)
-        except Exception:
-            # Database deletion is authoritative; periodic asset GC removes leftover bytes.
-            pass
+    try:
+        delete_conversation_record(db, conversation_id)
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/batch-delete", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
+def queue_batch_delete(
+    payload: ConversationBatchDeleteRequest,
+    db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> BackgroundTaskRead:
+    try:
+        job = queue_conversation_batch_delete(
+            db,
+            conversation_ids=payload.conversation_ids,
+            idempotency_key=idempotency_key,
+        )
+        db.commit()
+    except MessageEditError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return background_job_read(job)
 
 
 @router.put("/{conversation_id}/placement", response_model=ConversationPlacementResponse)

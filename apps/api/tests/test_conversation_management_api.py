@@ -1,7 +1,10 @@
+import uuid
+
 from fastapi.testclient import TestClient
 
 from test_import_preview_api import client  # noqa: F401
 from test_projects_api import _commit_conversation
+from background_job_test_utils import process_queued_jobs
 
 
 def test_update_conversation_renames_archives_and_writes_events(client: TestClient) -> None:
@@ -51,6 +54,46 @@ def test_delete_conversation_is_permanent_and_hides_from_list(client: TestClient
 
     assert client.patch(f"/api/conversations/{conversation_id}", json={"status": "active"}).status_code == 404
     assert client.post(f"/api/conversations/{conversation_id}/restore").status_code == 404
+
+
+def test_batch_delete_is_ordered_background_job_and_commits_each_item(client: TestClient) -> None:
+    conversation_ids = [_commit_conversation(client, f"Batch delete {index}") for index in range(3)]
+    for conversation_id in conversation_ids:
+        assert client.post(f"/api/conversations/{conversation_id}/archive").status_code == 200
+
+    queued = client.post(
+        "/api/conversations/batch-delete",
+        headers={"Idempotency-Key": "batch-delete-test"},
+        json={"conversation_ids": conversation_ids},
+    )
+    assert queued.status_code == 202
+    assert queued.json()["job_type"] == "conversation_batch_delete"
+    assert queued.json()["total_items"] == 3
+
+    # Deletion deliberately yields after each conversation so imports and
+    # interactive jobs can run between items.
+    processed = process_queued_jobs(max_jobs=10)
+    assert str(queued.json()["job_id"]) in {str(item) for item in processed}
+    assert processed.count(uuid.UUID(queued.json()["job_id"])) == 3
+    task = client.get(f"/api/tasks/{queued.json()['job_id']}")
+    assert task.status_code == 200
+    assert task.json()["status"] == "committed"
+    assert task.json()["result"]["deleted_ids"] == conversation_ids
+    assert client.get("/api/conversations", params={"status_scope": "archived"}).json() == []
+
+
+def test_batch_delete_can_stop_before_the_next_item(client: TestClient) -> None:
+    conversation_ids = [_commit_conversation(client, f"Batch cancel {index}") for index in range(2)]
+    queued = client.post(
+        "/api/conversations/batch-delete",
+        json={"conversation_ids": conversation_ids},
+    )
+    assert queued.status_code == 202
+    cancelled = client.post(f"/api/tasks/{queued.json()['job_id']}/cancel")
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+    assert process_queued_jobs() == []
+    assert {item["id"] for item in client.get("/api/conversations").json()} >= set(conversation_ids)
 
 
 def test_explicit_archive_and_permanent_delete_filter_all_views(client: TestClient) -> None:

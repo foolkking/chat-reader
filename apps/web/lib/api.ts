@@ -304,6 +304,17 @@ export async function deleteConversation(conversationId: string): Promise<void> 
   await fetchJson<void>(`/api/conversations/${conversationId}`, { method: "DELETE" });
 }
 
+export async function queueConversationBatchDelete(conversationIds: string[]): Promise<BackgroundTaskRead> {
+  const request = jsonRequest("POST", { conversation_ids: conversationIds });
+  return fetchJson<BackgroundTaskRead>("/api/conversations/batch-delete", {
+    ...request,
+    headers: {
+      ...request.headers,
+      "Idempotency-Key": `conversation-delete-${crypto.randomUUID()}`,
+    },
+  });
+}
+
 export async function archiveConversation(conversationId: string): Promise<ConversationManagementResponse> {
   return fetchJson<ConversationManagementResponse>(`/api/conversations/${conversationId}/archive`, { method: "POST" });
 }

@@ -36,11 +36,23 @@ weakening either per-file bound.
 
 | Endpoint/state | Contract |
 | --- | --- |
-| `POST /api/tasks/{job_id}/cancel` | Merge only; queued jobs become `cancelled`, processing jobs become `cancelling`; repeats are idempotent. |
-| `cancelling` | Worker finishes the current database call, detects the state, rolls back, then records `cancelled`. |
+| `POST /api/tasks/{job_id}/cancel` | Merge or ordered conversation deletion; queued jobs become `cancelled`, processing jobs become `cancelling`; repeats are idempotent. |
+| `cancelling` | Merge finishes its current call and rolls back before publish; deletion finishes the current conversation commit, then records `cancelled` before starting another item. |
 | stale recovery | At most three automatic attempts; exhausted jobs become `failed`. Explicit retry resets `attempt_count`. |
 
 `BackgroundTaskRead` includes `cancellable` and `attempt_count`. Production Compose limits the worker to `${IMPORT_WORKER_MEMORY_LIMIT:-640m}`.
+
+Bulk and row-level permanent conversation deletion use
+`POST /api/conversations/batch-delete` and the `conversation_batch_delete`
+background job. IDs are processed in the visible top-to-bottom order, one
+conversation per worker turn, and each conversation commits independently.
+The job yields and requeues after every completed item so imports and other
+interactive work remain responsive. Progress includes the IDs already deleted
+so lists can remove completed rows without waiting for the whole batch.
+Cancellation finishes the current deletion and prevents the next one; failed
+items remain available and are reported in the task result. The existing
+single-conversation DELETE route remains a synchronous compatibility endpoint
+for API clients, while the Web UI uses the queued path.
 
 ### Artifact publication and import recovery
 

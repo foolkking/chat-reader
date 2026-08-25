@@ -565,7 +565,7 @@ export type ImportFormatRevision = {
 
 export type BackgroundTaskRead = {
   job_id: string;
-  job_type: "import" | "conversation_merge" | string;
+  job_type: "import" | "conversation_merge" | "conversation_batch_delete" | string;
   status: "queued" | "processing" | "cancelling" | "cancelled" | "committed" | "failed" | string;
   phase: string;
   progress: number;
@@ -575,6 +575,8 @@ export type BackgroundTaskRead = {
   result: {
     conversation_ids?: string[];
     conversation_id?: string;
+    deleted_ids?: string[];
+    failed?: Array<{ id: string; error: string }>;
     title?: string;
     message_count?: number;
     artifact_id?: string;

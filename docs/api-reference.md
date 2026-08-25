@@ -27,9 +27,11 @@ Owner, Share and derivative content authorization occurs before file stat/read. 
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/tasks/{job_id}/cancel` | Cancel a conversation merge. A running job returns `cancelling`; a queued/already-cancelled job returns `cancelled`; completed or unsupported tasks return `409`. |
+| `POST` | `/api/tasks/{job_id}/cancel` | Cancel a conversation merge or ordered deletion. A running job returns `cancelling`; a queued/already-cancelled job returns `cancelled`; completed or unsupported tasks return `409`. |
 
-`GET /api/tasks/{job_id}` and `GET /api/tasks/active` expose `cancellable` and `attempt_count`. Task status includes `cancelling` and `cancelled`. Merge results preserve canonical versions, render blocks, source refs and annotation mappings and commit atomically.
+| `POST` | `/api/conversations/batch-delete` | Queue ordered permanent deletion of one or more conversations; returns `202 BackgroundTaskRead`. The task commits one conversation at a time, reports `deleted_ids` progress, and supports stopping only the not-yet-started items via `/api/tasks/{job_id}/cancel`. |
+
+`GET /api/tasks/{job_id}` and `GET /api/tasks/active` expose `cancellable` and `attempt_count`. Task status includes `cancelling` and `cancelled`. Merge results preserve canonical versions, render blocks, source refs and annotation mappings and commit atomically. Deletion task results contain `deleted_ids` and per-item `failed` entries when applicable.
 
 所有业务接口以 `/api` 为前缀。浏览器应使用相对 URL，不应直接拼接 FastAPI 的主机或端口。
 
@@ -192,7 +194,7 @@ Owner 可通过 `POST /api/conversations/{id}/toc/refresh` 手动排队目录更
 | --- | --- | --- |
 | POST | `/api/conversations/{id}/archive` | 软归档并从 active 列表移除 |
 | POST | `/api/conversations/{id}/unarchive` | 取消归档并恢复项目归属 |
-| DELETE | `/api/conversations/{id}` | 二次确认后立即硬删除，无 Trash/restore |
+| DELETE | `/api/conversations/{id}` | 兼容单项硬删除接口；产品批量/列表删除使用后台有序任务，无 Trash/restore |
 | PUT | `/api/conversations/{id}/placement` | 单事务跨 Project/未分类移动或同区排序，支持 revision 冲突检查 |
 
 ## Shares

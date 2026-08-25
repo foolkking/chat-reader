@@ -10,15 +10,15 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import {
   archiveConversation,
-  deleteConversation,
   getConversations,
   getProjects,
   mergeConversations,
   moveConversationToProject,
+  queueConversationBatchDelete,
   unarchiveConversation,
   updateConversationOrder,
 } from "../../lib/api";
-import type { ConversationListItem, ProjectRead } from "../../lib/types";
+import type { BackgroundTaskRead, ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
 import { MergeOrderList } from "./merge-order-list";
@@ -96,6 +96,20 @@ export function ConversationList({
   useEffect(() => {
     if (selectedConversationIds.size > 0) setSelectionMode(true);
   }, [selectedConversationIds.size]);
+
+  useEffect(() => {
+    const handleDeleteProgress = (event: Event) => {
+      const detail = (event as CustomEvent<{ deletedIds?: string[] }>).detail;
+      const deletedIds = new Set(detail?.deletedIds ?? []);
+      if (!deletedIds.size) return;
+      queryClient.setQueriesData<ConversationListItem[] | undefined>(
+        { queryKey: ["conversations"] },
+        (current) => current?.filter((conversation) => !deletedIds.has(conversation.id)),
+      );
+    };
+    window.addEventListener("chat-reader:conversation-delete-progress", handleDeleteProgress);
+    return () => window.removeEventListener("chat-reader:conversation-delete-progress", handleDeleteProgress);
+  }, [queryClient]);
 
   function clearSelection() {
     setSelectedConversationIds(new Set());
@@ -327,14 +341,28 @@ export function ConversationList({
               }
             }}
             onDelete={async (ids) => {
-              if (!(await dialog.confirm({ title: resolvedLocale === "zh-CN" ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: resolvedLocale === "zh-CN" ? "这些对话及其历史版本会立即删除，无法在系统内恢复。" : "These conversations and their version histories are deleted immediately and cannot be restored in the app.", confirmLabel: resolvedLocale === "zh-CN" ? "永久删除" : "Delete permanently", danger: true }))) {
+              if (!(await dialog.confirm({ title: resolvedLocale === "zh-CN" ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: resolvedLocale === "zh-CN" ? "这些对话会在后台按列表顺序逐项删除，无法在系统内恢复；可在任务区域停止后续项目。" : "These conversations are deleted in order in the background and cannot be restored in the app. You can stop pending items in the task area.", confirmLabel: resolvedLocale === "zh-CN" ? "永久删除" : "Delete permanently", danger: true }))) {
                 return;
               }
               setBulkBusy("delete");
               try {
-                const result = await runBatchSelection(ids, deleteConversation);
-                applyBatchResult(result);
-                await refreshLists();
+                // Preserve the visual top-to-bottom order regardless of the
+                // merge-order editor's temporary ordering. The server deletes
+                // one item at a time in this order.
+                const requested = new Set(ids);
+                const orderedIds = conversations
+                  .map((conversation) => conversation.id)
+                  .filter((conversationId) => requested.has(conversationId));
+                const task = await queueConversationBatchDelete(orderedIds);
+                queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
+                  task,
+                  ...current.filter((item) => item.job_id !== task.job_id),
+                ]);
+                applySelection([]);
+                setSelectionMode(false);
+                setBatchNotice(resolvedLocale === "zh-CN"
+                  ? `已开始按顺序删除 ${orderedIds.length} 个对话；可在左侧任务区域查看进度并停止后续删除`
+                  : `Deletion started for ${orderedIds.length} conversations in order. Track progress or stop pending items in the task area.`);
               } finally {
                 setBulkBusy(null);
               }

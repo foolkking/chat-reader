@@ -104,12 +104,14 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         started_at=job.started_at,
         heartbeat_at=job.heartbeat_at,
         completed_at=job.completed_at,
-        cancellable=job.job_type == "conversation_merge" and job.status in {"queued", "processing", "cancelling"},
+        cancellable=job.job_type in {"conversation_merge", "conversation_batch_delete"} and job.status in {"queued", "processing", "cancelling"},
         attempt_count=job.attempt_count,
     )
 
 
 def _job_label(job_type: str) -> str:
+    if job_type == "conversation_batch_delete":
+        return "\u5220\u9664\u5bf9\u8bdd"
     return {
         "conversation_merge": "合并对话",
         "conversation_export": "导出归档",

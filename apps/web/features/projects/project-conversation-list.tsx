@@ -10,17 +10,17 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import {
   archiveConversation,
-  deleteConversation,
   getProjectConversations,
   getProjects,
   mergeConversations,
   moveConversationToProject,
+  queueConversationBatchDelete,
   removeConversationFromProject,
   recordRecentProject,
   unarchiveConversation,
   updateProjectConversationOrder,
 } from "../../lib/api";
-import type { ProjectConversationRead, ProjectRead } from "../../lib/types";
+import type { BackgroundTaskRead, ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu, type UndoAction } from "../conversations/conversation-action-menu";
 import { MergeOrderList } from "../conversations/merge-order-list";
 import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
@@ -128,6 +128,20 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   useEffect(() => {
     if (selectedConversationIds.size > 0) setSelectionMode(true);
   }, [selectedConversationIds.size]);
+
+  useEffect(() => {
+    const handleDeleteProgress = (event: Event) => {
+      const detail = (event as CustomEvent<{ deletedIds?: string[] }>).detail;
+      const deletedIds = new Set(detail?.deletedIds ?? []);
+      if (!deletedIds.size) return;
+      queryClient.setQueryData<ProjectConversationRead[] | undefined>(
+        ["project-conversations", projectId, conversationSortMode, conversationSortDirection],
+        (current) => current?.filter((conversation) => !deletedIds.has(conversation.id)),
+      );
+    };
+    window.addEventListener("chat-reader:conversation-delete-progress", handleDeleteProgress);
+    return () => window.removeEventListener("chat-reader:conversation-delete-progress", handleDeleteProgress);
+  }, [conversationSortDirection, conversationSortMode, projectId, queryClient]);
 
   async function refreshProject() {
     await Promise.all([
@@ -262,14 +276,25 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                   }
                 }}
                 onDelete={async (ids) => {
-                  if (!(await dialog.confirm({ title: zh ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: zh ? "这些对话及其历史版本会立即删除，无法在系统内恢复。" : "These conversations and their version histories are deleted immediately and cannot be restored in the app.", confirmLabel: zh ? "永久删除" : "Delete permanently", danger: true }))) {
+                  if (!(await dialog.confirm({ title: zh ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: zh ? "这些对话会在后台按列表顺序逐项删除，无法在系统内恢复；可在任务区域停止后续项目。" : "These conversations are deleted in order in the background and cannot be restored in the app. You can stop pending items in the task area.", confirmLabel: zh ? "永久删除" : "Delete permanently", danger: true }))) {
                     return;
                   }
                   setBulkBusy("delete");
                   try {
-                    const result = await runBatchSelection(ids, deleteConversation);
-                    applyBatchResult(result);
-                    await refreshProject();
+                    const requested = new Set(ids);
+                    const orderedIds = conversations
+                      .map((conversation) => conversation.id)
+                      .filter((conversationId) => requested.has(conversationId));
+                    const task = await queueConversationBatchDelete(orderedIds);
+                    queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
+                      task,
+                      ...current.filter((item) => item.job_id !== task.job_id),
+                    ]);
+                    clearSelection();
+                    setSelectionMode(false);
+                    setBatchNotice(zh
+                      ? `已开始按顺序删除 ${orderedIds.length} 个对话；可在任务区域查看进度并停止后续删除`
+                      : `Deletion started for ${orderedIds.length} conversations in order. Track progress or stop pending items in the task area.`);
                   } finally {
                     setBulkBusy(null);
                   }

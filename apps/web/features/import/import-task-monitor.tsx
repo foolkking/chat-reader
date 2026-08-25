@@ -41,6 +41,16 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
     queryFn: getPendingCleanupScans,
     refetchInterval: (query) => (query.state.data ?? []).some((scan) => ["QUEUED", "SCANNING"].includes(scan.status)) ? 1500 : 10_000,
   });
+  useEffect(() => {
+    for (const task of tasksQuery.data ?? []) {
+      if (task.job_type !== "conversation_batch_delete") continue;
+      const deletedIds = Array.isArray(task.result.deleted_ids) ? task.result.deleted_ids : [];
+      if (!deletedIds.length) continue;
+      window.dispatchEvent(new CustomEvent("chat-reader:conversation-delete-progress", {
+        detail: { jobId: task.job_id, deletedIds },
+      }));
+    }
+  }, [tasksQuery.data]);
   const retryMutation = useMutation({
     mutationFn: retryTask,
     onSuccess: (task) => {
@@ -106,7 +116,9 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
         <div className={`rounded-xl border p-3 text-xs ${completedTask.status === "cancelled" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
           <p className="flex items-center gap-1.5 font-medium">
             {completedTask.status === "cancelled" ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-            {completedTask.status === "cancelled" ? "合并已取消" : completedLabel(completedTask.job_type)}
+            {completedTask.status === "cancelled"
+              ? (completedTask.job_type === "conversation_batch_delete" ? "后续删除已停止" : "合并已取消")
+              : completedLabel(completedTask.job_type)}
           </p>
           {taskConversationId(completedTask) ? (
             <Link className="mt-1 inline-block underline" href={`/conversations/${taskConversationId(completedTask)}`}>
@@ -136,6 +148,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { 
   const failed = task.status === "failed";
   const committed = task.status === "committed";
   const conversationId = taskConversationId(task);
+  const itemFailures = Array.isArray(task.result.failed) ? task.result.failed.length : 0;
   return (
     <div className="min-w-0 text-xs text-[#475569]" data-testid={`task-${task.job_type}-${task.status}`}>
       <div className="flex items-center justify-between gap-3">
@@ -165,10 +178,11 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { 
           ) : null}
         </div>
       ) : null}
-      {task.status === "cancelling" ? <p className="mt-2 font-medium text-amber-700">正在取消并回滚…</p> : null}
+      {committed && itemFailures > 0 ? <p className="mt-2 text-amber-700">{itemFailures} 个项目删除失败，已保留并恢复到列表</p> : null}
+      {task.status === "cancelling" ? <p className="mt-2 font-medium text-amber-700">{task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在取消并回滚…"}</p> : null}
       {task.cancellable && task.status !== "cancelling" && onCancel ? (
         <button type="button" onClick={onCancel} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
-          <Ban className="h-3.5 w-3.5" />取消合并
+          <Ban className="h-3.5 w-3.5" />{task.job_type === "conversation_batch_delete" ? "停止后续删除" : "取消合并"}
         </button>
       ) : null}
       {compact && committed && conversationId ? (
@@ -187,6 +201,7 @@ function phaseLabel(task: BackgroundTaskRead): string {
   if (task.status === "failed") return "处理失败";
   if (task.status === "committed") return "处理完成";
   const labels: Record<string, string> = {
+    deleting: "按顺序删除对话",
     messages: "复制消息",
     source_refs: "复制来源引用",
     versions: "复制完整版本",
@@ -209,6 +224,7 @@ function phaseLabel(task: BackgroundTaskRead): string {
 
 function taskTypeLabel(task: BackgroundTaskRead): string {
   return {
+    conversation_batch_delete: "删除归档对话",
     conversation_merge: "合并会话",
     conversation_export: "导出归档",
     conversation_auto_clean: "清理对话",

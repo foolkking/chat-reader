@@ -30,6 +30,7 @@ from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
 from app.services.assets.derivatives import build_asset_derivative
 from app.services.content_cleanup import process_scan_chunk
+from app.services.conversations.conversation_deletion import delete_conversation_record
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.core.observability import structured_event
 
@@ -273,6 +274,51 @@ def queue_conversation_auto_clean(
         processed_items=0,
         total_items=conversation.message_count,
         payload={"conversation_id": str(conversation.id), "title": conversation.display_title},
+        result={},
+        idempotency_key=idempotency_key,
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
+def queue_conversation_batch_delete(
+    db: Session,
+    *,
+    conversation_ids: list[uuid.UUID],
+    idempotency_key: str | None,
+) -> BackgroundJob:
+    ordered_ids = list(dict.fromkeys(conversation_ids))
+    if not ordered_ids:
+        raise MessageEditError("At least one conversation is required.", 422)
+    existing = db.query(Conversation.id).filter(
+        Conversation.id.in_(ordered_ids),
+        Conversation.deleted_at.is_(None),
+    ).all()
+    if {row[0] for row in existing} != set(ordered_ids):
+        raise MessageEditError("One or more conversations were not found.", 404)
+    if idempotency_key:
+        previous = (
+            db.query(BackgroundJob)
+            .filter(
+                BackgroundJob.job_type == "conversation_batch_delete",
+                BackgroundJob.idempotency_key == idempotency_key,
+                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
+            )
+            .order_by(BackgroundJob.created_at.desc())
+            .first()
+        )
+        if previous is not None:
+            return previous
+    job = BackgroundJob(
+        id=uuid.uuid4(),
+        job_type="conversation_batch_delete",
+        status="queued",
+        phase="queued",
+        progress=0,
+        processed_items=0,
+        total_items=len(ordered_ids),
+        payload={"conversation_ids": [str(item) for item in ordered_ids]},
         result={},
         idempotency_key=idempotency_key,
     )
@@ -589,7 +635,13 @@ def process_background_job(
     job_id: uuid.UUID,
     session_factory: sessionmaker = SessionLocal,
 ) -> None:
-    def persist_report(phase: str, progress: int, processed: int, total: int) -> None:
+    def persist_report(
+        phase: str,
+        progress: int,
+        processed: int,
+        total: int,
+        result: dict[str, object] | None = None,
+    ) -> None:
         with session_factory() as progress_db:
             job = progress_db.get(BackgroundJob, job_id)
             if job is None:
@@ -602,6 +654,8 @@ def process_background_job(
             job.progress = max(0, min(progress, 99))
             job.processed_items = processed
             job.total_items = total
+            if result is not None:
+                job.result = result
             job.heartbeat_at = datetime.now(timezone.utc)
             progress_db.commit()
 
@@ -625,9 +679,15 @@ def process_background_job(
             payload = job.payload or {}
             is_sqlite = db.get_bind().dialect.name == "sqlite"
 
-            def report(phase: str, progress: int, processed: int, total: int) -> None:
+            def report(
+                phase: str,
+                progress: int,
+                processed: int,
+                total: int,
+                result: dict[str, object] | None = None,
+            ) -> None:
                 if not is_sqlite:
-                    persist_report(phase, progress, processed, total)
+                    persist_report(phase, progress, processed, total, result)
                     return
                 if job.status in {"cancelling", "cancelled"}:
                     raise BackgroundJobCancelled("Background job cancellation requested.")
@@ -637,6 +697,8 @@ def process_background_job(
                 job.progress = max(0, min(progress, 99))
                 job.processed_items = processed
                 job.total_items = total
+                if result is not None:
+                    job.result = result
                 job.heartbeat_at = datetime.now(timezone.utc)
 
             report("validating", 5, 0, job.total_items)
@@ -738,6 +800,99 @@ def process_background_job(
                     "cleaned_messages": result.cleaned_messages,
                 }
                 processed_items = result.scanned_messages
+            elif job.job_type == "conversation_batch_delete":
+                conversation_ids = [uuid.UUID(value) for value in payload.get("conversation_ids", [])]
+                prior_result = job.result or {}
+                succeeded_ids = [str(value) for value in prior_result.get("deleted_ids", [])]
+                failed = [
+                    {"id": str(item.get("id")), "error": str(item.get("error"))}
+                    for item in prior_result.get("failed", [])
+                    if isinstance(item, dict) and item.get("id")
+                ]
+                total = len(conversation_ids)
+                next_index = max(0, min(int(payload.get("next_index", 0)), total))
+                if next_index >= total:
+                    job_result = {"deleted_ids": succeeded_ids, "failed": failed}
+                    processed_items = total
+                else:
+                    # Complete one conversation per worker turn. This keeps the
+                    # single worker responsive to imports and interactive jobs,
+                    # while preserving the requested top-to-bottom order.
+                    index = next_index + 1
+                    conversation_id = conversation_ids[next_index]
+                    report(
+                        "deleting",
+                        int(next_index * 100 / max(total, 1)),
+                        next_index,
+                        total,
+                        {"deleted_ids": succeeded_ids, "failed": failed},
+                    )
+                    last_error: Exception | None = None
+                    for _attempt in range(2):
+                        try:
+                            delete_conversation_record(db, conversation_id)
+                            succeeded_ids.append(str(conversation_id))
+                            last_error = None
+                            break
+                        except LookupError:
+                            db.rollback()
+                            # A concurrent delete already reached the desired
+                            # terminal state, so treat it as idempotent success.
+                            succeeded_ids.append(str(conversation_id))
+                            last_error = None
+                            break
+                        except Exception as exc:
+                            db.rollback()
+                            last_error = exc
+                    if last_error is not None:
+                        failed.append({"id": str(conversation_id), "error": _safe_error(last_error)})
+                    next_index = index
+                    result = {"deleted_ids": succeeded_ids, "failed": failed}
+                    if next_index < total:
+                        # Requeue at the item boundary. A cancellation arriving
+                        # during the delete is observed here and cannot start the
+                        # following item.
+                        now = datetime.now(timezone.utc)
+                        updated = (
+                            db.query(BackgroundJob)
+                            .filter(BackgroundJob.id == job.id, BackgroundJob.status == "processing")
+                            .update(
+                                {
+                                    BackgroundJob.payload: {**payload, "next_index": next_index},
+                                    BackgroundJob.result: result,
+                                    BackgroundJob.status: "queued",
+                                    BackgroundJob.phase: "deleting",
+                                    BackgroundJob.progress: int(next_index * 100 / max(total, 1)),
+                                    BackgroundJob.processed_items: next_index,
+                                    BackgroundJob.total_items: total,
+                                    BackgroundJob.queued_at: now,
+                                    BackgroundJob.started_at: None,
+                                    BackgroundJob.heartbeat_at: now,
+                                    BackgroundJob.attempt_count: 0,
+                                    BackgroundJob.error_message: None,
+                                },
+                                synchronize_session=False,
+                            )
+                        )
+                        if updated != 1:
+                            db.refresh(job)
+                        if updated != 1 and job.status in {"cancelling", "cancelled"}:
+                            now = datetime.now(timezone.utc)
+                            job.status = "cancelled"
+                            job.phase = "cancelled"
+                            job.progress = int(next_index * 100 / max(total, 1))
+                            job.processed_items = next_index
+                            job.result = result
+                            job.heartbeat_at = now
+                            job.completed_at = now
+                            db.commit()
+                            return
+                        if updated != 1:
+                            raise BackgroundJobCancelled("Background job state changed before requeue.")
+                        db.commit()
+                        return
+                    job_result = result
+                    processed_items = total
             elif job.job_type == "content_noise_scan":
                 scan_id = uuid.UUID(str(payload["scan_id"]))
                 result = process_scan_chunk(db, scan_id)
@@ -751,7 +906,11 @@ def process_background_job(
                     job.progress = int(result.get("processed", 0) * 100 / max(int(result.get("total", 1)), 1))
                     job.processed_items = int(result.get("processed", 0))
                     job.total_items = int(result.get("total", 0))
+                    job.queued_at = datetime.now(timezone.utc)
+                    job.started_at = None
                     job.heartbeat_at = datetime.now(timezone.utc)
+                    job.attempt_count = 0
+                    job.error_message = None
                     db.commit()
                     return
                 job_result = {
@@ -946,8 +1105,8 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
 
 
 def request_background_job_cancellation(job: BackgroundJob) -> BackgroundJob:
-    if job.job_type != "conversation_merge":
-        raise MessageEditError("Only conversation merge tasks can be cancelled.", 409)
+    if job.job_type not in {"conversation_merge", "conversation_batch_delete"}:
+        raise MessageEditError("This background task cannot be cancelled.", 409)
     now = datetime.now(timezone.utc)
     if job.status == "queued":
         job.status = "cancelled"

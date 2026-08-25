@@ -25,3 +25,7 @@ class BackgroundTaskRead(BaseModel):
 
 class ConversationProjectMoveRequest(BaseModel):
     project_id: UUID | None = None
+
+
+class ConversationBatchDeleteRequest(BaseModel):
+    conversation_ids: list[UUID] = Field(min_length=1, max_length=5000)

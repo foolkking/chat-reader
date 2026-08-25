@@ -23,16 +23,16 @@ import { useInteractionDialog } from "../../components/interaction-dialog-provid
 import { usePreferences } from "../../components/preferences-provider";
 import {
   archiveConversation,
-  deleteConversation,
   getConversationExportUrl,
   getProjects,
   placeConversation,
+  queueConversationBatchDelete,
   setConversationGlobalPin,
   setProjectConversationPin,
   unarchiveConversation,
   updateConversation,
 } from "../../lib/api";
-import type { ConversationListItem, ProjectConversationRead } from "../../lib/types";
+import type { BackgroundTaskRead, ConversationListItem, ProjectConversationRead } from "../../lib/types";
 
 export type UndoAction = {
   label: string;
@@ -446,15 +446,23 @@ export function ConversationActionMenu({
                     const confirmed = await dialog.confirm({
                       title: zh ? `永久删除“${title}”？` : `Permanently delete “${title}”?`,
                       description: zh
-                        ? "此操作会立即删除对话及其历史版本，无法在系统内恢复。"
-                        : "This immediately deletes the conversation and its version history. It cannot be restored in the app.",
+                        ? "对话会在后台删除，无法在系统内恢复；可在任务区域查看进度。"
+                        : "The conversation and its version history will be deleted in the background. It cannot be restored in the app.",
                       confirmLabel: zh ? "永久删除" : "Delete permanently",
                       danger: true,
                     });
                     if (!confirmed) return;
-                    await run("delete", async () => {
-                      await deleteConversation(conversation.id);
-                    });
+                    setBusy("delete");
+                    try {
+                      const task = await queueConversationBatchDelete([conversation.id]);
+                      queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
+                        task,
+                        ...current.filter((item) => item.job_id !== task.job_id),
+                      ]);
+                    } finally {
+                      setBusy(null);
+                      setOpen(false);
+                    }
                     if (pathname === `/conversations/${conversation.id}`) router.replace("/");
                   })()}
                 >
