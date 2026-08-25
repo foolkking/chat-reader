@@ -1,5 +1,26 @@
 # 当前用户流程
 
+## Settings, Tasks and import completion (2026-08-25, local)
+
+The global shell footer is named `Settings`. Its lightweight surface owns
+appearance/reading preferences and links to three predictable categories:
+`Data & import`, `Import formats` and `Account & security`. Consequential or
+multi-field work opens a focused dialog; dirty password, profile or backup
+options cannot be silently discarded, and closing returns through the Settings
+hub to the original opener without reloading Reader content.
+
+`Tasks` is a global shell entry for delayed owner work. The existing monitor is
+reused for imports, merges, ordered batch deletion, exports and cleanup scans.
+Leaving the originating page, refreshing, or switching desktop/mobile
+presentation does not change task ownership. Closing the task surface only
+dismisses presentation; cancellation keeps the existing per-task semantics.
+
+Import commit has an explicit terminal state. A batch remains in the Import
+surface with committed conversation/message counts, warnings and actions to
+view the imported set in Library, open the first conversation, or close and
+return to the opener. A single import keeps a direct `Open conversation`
+action, but no import silently navigates to the first item.
+
 ## Offline Reader and Context Package (2026-08-11)
 
 When the user opens `/library`, an existing complete offline shell is immediately readable. Resource reconciliation runs in the background and may show a non-blocking update failure; it must not disable `Update conversations`. A first-time device may show that the shell is still preparing, but online navigation remains usable.

@@ -36,7 +36,7 @@ export function ImportPanel({
   const [commitResult, setCommitResult] = useState<CommitImportResponse | null>(null);
   const [dragging, setDragging] = useState(false);
   const [duplicatePolicy, setDuplicatePolicy] = useState<ImportDuplicatePolicy>("clone");
-  const navigatedImportRef = useRef<string | null>(null);
+  const completedImportRef = useRef<string | null>(null);
   const activeSessionKey = sessionStorageKey(repairProfileId);
 
   useEffect(() => onWorkspaceChange?.(Boolean(session)), [onWorkspaceChange, session]);
@@ -55,19 +55,19 @@ export function ImportPanel({
   }, [activeSessionKey, session]);
 
   const finishCommittedImport = useCallback((result: CommitImportResponse) => {
-    if (navigatedImportRef.current === result.import_id) return;
-    navigatedImportRef.current = result.import_id;
+    if (completedImportRef.current === result.import_id) return;
+    completedImportRef.current = result.import_id;
     window.sessionStorage.removeItem(activeSessionKey);
+    // The adaptive workspace owns the pre-commit session. Once the server has
+    // committed it, release that surface so the terminal result summary can be
+    // rendered and the user can choose where to go next.
+    setSession(null);
     setPendingImportId(null);
     setCommitResult(result);
     void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
-    const conversationId = result.conversation_ids[0];
-    if (!conversationId) return;
-    onImportCommitted?.();
-    router.push(`/conversations/${conversationId}`);
-  }, [activeSessionKey, onImportCommitted, queryClient, router]);
+  }, [activeSessionKey, queryClient]);
 
   const importStatusQuery = useQuery({
     queryKey: ["import-status", pendingImportId],
@@ -117,7 +117,7 @@ export function ImportPanel({
     setPendingImportId(null);
     setCommitResult(null);
     setDuplicatePolicy("clone");
-    navigatedImportRef.current = null;
+    completedImportRef.current = null;
     adaptiveMutation.reset();
     archiveMutation.reset();
     commitMutation.reset();
@@ -171,7 +171,7 @@ export function ImportPanel({
         <p className="my-2 text-xs text-secondary">或</p>
         <label className="btn-secondary inline-flex min-h-10 cursor-pointer items-center justify-center px-4 text-sm font-medium">
           {mode === "adaptive" ? "选择 JSON / Markdown 文件" : "选择 .cr 归档"}
-          <input key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown" : ".cr"} onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
+          <input key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
         </label>
         <p className="mt-3 break-all text-sm text-secondary">{selectedLabel}</p>
         <p className="mt-1 text-xs text-secondary">{mode === "adaptive" ? "支持单 JSON、单 Markdown、JSON + Markdown 及批量文件" : ".cr 使用独立归档恢复流程"}</p>
@@ -188,8 +188,37 @@ export function ImportPanel({
       </div>
       {archivePreview ? <ImportPreviewCard preview={archivePreview} /> : null}
       {archivePreview?.duplicate_conversation_id ? <div className="border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary"><p>系统中已有相同归档。默认会创建副本，不覆盖原记录。</p><Link href={`/conversations/${archivePreview.duplicate_conversation_id}`} className="mt-2 inline-block font-medium text-accent underline">打开已有对话</Link></div> : null}
-      {commitResult && !pendingImportId ? <div role="status" className="border-l-2 border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-2 text-sm text-accent">已导入 {commitResult.conversation_count} 个对话。</div> : null}
+      {commitResult && !pendingImportId ? <ImportCompletionSummary result={commitResult} onClose={() => onImportCommitted?.()} onOpenFirst={(conversationId) => { onImportCommitted?.(); router.push(`/conversations/${conversationId}`); }} /> : null}
     </section>
+  );
+}
+
+function ImportCompletionSummary({
+  result,
+  onClose,
+  onOpenFirst,
+}: {
+  result: CommitImportResponse;
+  onClose: () => void;
+  onOpenFirst: (conversationId: string) => void;
+}) {
+  const firstConversationId = result.conversation_ids[0] ?? null;
+  const multiple = result.conversation_count > 1;
+  const visibleIds = result.conversation_ids.slice(0, 8);
+  return (
+    <div role="status" data-testid="import-completion-summary" className="space-y-3 border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-4 text-sm text-primary">
+      <div>
+        <p className="font-semibold text-accent">导入已完成</p>
+        <p className="mt-1 text-secondary">已提交 {result.conversation_count} 个对话，共 {result.message_count} 条消息。</p>
+      </div>
+      {result.warnings.length ? <div className="border-l-2 border-[var(--warning)] pl-3 text-xs text-secondary"><p className="font-medium text-primary">导入提示</p><ul className="mt-1 list-disc space-y-1 pl-4">{result.warnings.slice(0, 4).map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul></div> : null}
+      {visibleIds.length ? <div className="space-y-1"><p className="text-xs font-medium text-secondary">{multiple ? "已导入的对话" : "已导入对话"}</p><div className="flex flex-wrap gap-x-3 gap-y-1">{visibleIds.map((conversationId, index) => <button key={conversationId} type="button" onClick={() => onOpenFirst(conversationId)} className="text-xs text-accent underline underline-offset-2 hover:text-primary">打开第 {index + 1} 条</button>)}</div>{result.conversation_ids.length > visibleIds.length ? <p className="text-xs text-secondary">另有 {result.conversation_ids.length - visibleIds.length} 个对话可在资料库中查看。</p> : null}</div> : null}
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {multiple ? <Link href="/" onClick={onClose} className="btn-primary min-h-9 px-3 text-sm font-medium">查看导入的对话</Link> : firstConversationId ? <button type="button" onClick={() => onOpenFirst(firstConversationId)} className="btn-primary min-h-9 px-3 text-sm font-medium">打开对话</button> : null}
+        {multiple && firstConversationId ? <button type="button" onClick={() => onOpenFirst(firstConversationId)} className="btn-secondary min-h-9 px-3 text-sm font-medium">打开第一条</button> : null}
+        <button type="button" onClick={onClose} className="btn-secondary min-h-9 px-3 text-sm font-medium">关闭</button>
+      </div>
+    </div>
   );
 }
 
@@ -201,7 +230,7 @@ function validateFiles(files: File[], mode: ImportMode): string | null {
   if (!files.length) return null;
   const extensions = files.map((file) => fileExtension(file.name));
   if (mode === "archive") return files.length === 1 && extensions[0] === ".cr" ? null : ".cr 归档必须单独导入。";
-  if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown"].includes(extension))) return "只支持 JSON 和 Markdown 对话源文件。";
+  if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"].includes(extension))) return "仅支持 JSON、Markdown 或文本源文件。";
   if (files.length > 500) return "一次最多分析 500 个文件。";
   return null;
 }

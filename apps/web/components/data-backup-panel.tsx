@@ -2,16 +2,19 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Archive, Download } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getTask, queueSystemArchiveExport } from "../lib/api";
 import { usePreferences } from "./preferences-provider";
 
-export function DataBackupPanel() {
+export function DataBackupPanel({ focused = false, onDirtyChange }: { focused?: boolean; onDirtyChange?: (dirty: boolean) => void }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [includeArchived, setIncludeArchived] = useState(true);
   const [jobId, setJobId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    onDirtyChange?.(!includeArchived);
+  }, [includeArchived, onDirtyChange]);
   const taskQuery = useQuery({
     queryKey: ["task", jobId],
     queryFn: () => getTask(jobId!),
@@ -24,8 +27,8 @@ export function DataBackupPanel() {
   const downloadUrl = taskQuery.data?.status === "committed" ? taskQuery.data.result.download_url : null;
 
   return (
-    <div className="space-y-3 border-t border-ui pt-3">
-      <div className="flex items-center gap-2 text-xs font-semibold text-primary"><Archive className="h-4 w-4" />{zh ? "数据与备份" : "Data and backup"}</div>
+    <div className={focused ? "space-y-4" : "space-y-3 border-t border-ui pt-3"}>
+      <div className="flex items-center gap-2 text-sm font-semibold text-primary"><Archive className="h-4 w-4" />{zh ? "数据与备份" : "Data and backup"}</div>
       <p className="text-xs leading-5 text-secondary">
         {zh ? "系统归档包含项目、全部消息版本、附件、批注和笔记。附件会自动包含。" : "The system archive includes projects, all message versions, attachments, annotations, and notes. Attachments are always included."}
       </p>

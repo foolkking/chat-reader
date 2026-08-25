@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.import_profile import ImportProfile, ImportProfileRevision
 from app.services.adaptive_import.analysis import default_mapping
+from app.services.adaptive_import.normalization import _draft_conversation, _draft_message
 from app.services.adaptive_import.contracts import AnalysisResult, MatchResult, SourceDocument
 from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v1, parse_canjson_v2
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
@@ -30,6 +31,7 @@ class BuiltinProfile:
 
 BUILTINS = (
     BuiltinProfile("builtin:chat-reader-exporter", "Chat Reader Native JSON / Markdown", "JSON_MARKDOWN", "Chat Reader exporter JSON with optional Markdown body."),
+    BuiltinProfile("builtin:chat-reader-markdown-v2", "Chat Reader Native Markdown Export v2", "MARKDOWN", "Chat Reader canonical Markdown export, version 2."),
     BuiltinProfile("builtin:canjson-v1", "CanJSON v1", "JSON", "CanJSON compatibility document, version 1."),
     BuiltinProfile("builtin:canjson-v2", "CanJSON v2", "JSON", "CanJSON compatibility document, version 2."),
     BuiltinProfile("builtin:chat-reader-markdown", "Chat Reader Prompt / Response Markdown", "MARKDOWN", "Prompt and Response Markdown conversation."),
@@ -81,6 +83,8 @@ def match_profile(db: Session, analysis: AnalysisResult, documents: list[SourceD
 
 
 def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> BuiltinProfile | None:
+    if analysis.signature.get("builtin") == "chat-reader-markdown-v2":
+        return _builtin("builtin:chat-reader-markdown-v2")
     json_doc = next((item for item in documents if item.extension in {".json", ".jsonl", ".gz"}), None)
     markdown_doc = next((item for item in documents if item.extension in {".md", ".markdown"}), None)
     if json_doc:
@@ -116,6 +120,27 @@ def normalize_builtin(key: str, documents: list[SourceDocument]):
     if key == "builtin:canjson-v2" and json_doc:
         try: return [parse_canjson_v2(json_doc.content, compressed=json_doc.filename.casefold().endswith(".gz")).conversation]
         except CanJsonParseError as exc: raise ValueError(str(exc)) from exc
+    if key == "builtin:chat-reader-markdown-v2" and markdown_doc:
+        try:
+            parsed = parse_exporter_markdown(markdown_doc.content)
+        except ExporterMarkdownPairingError as exc:
+            raise ValueError(str(exc)) from exc
+        messages = [
+            _draft_message(
+                section.role,
+                section.markdown_text,
+                index,
+                section.time,
+                None,
+                source_markdown_index=section.index,
+            )
+            for index, section in enumerate(parsed.sections)
+            if section.role in {"user", "assistant", "system", "developer", "tool"}
+        ]
+        if not messages:
+            raise ValueError("Native Markdown export contains no canonical messages.")
+        title = parsed.title or markdown_doc.filename.rsplit(".", 1)[0]
+        return [_draft_conversation(title, messages, "Chat Reader Native Markdown Export v2", source_type="adaptive_markdown")]
     if key == "builtin:chat-reader-exporter" and json_doc:
         parsed_json = parse_exporter_json(json_doc.content)
         parsed_markdown = parse_exporter_markdown(markdown_doc.content, parsed_json.messages) if markdown_doc else None

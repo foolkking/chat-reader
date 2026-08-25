@@ -1,5 +1,49 @@
 # Project State
 
+## 2026-08-25 Adaptive import handling classes and Conversation Rescue (local, not committed or deployed)
+
+- Import analysis now returns explicit `SUPPORTED`, `MAPPABLE` or
+  `NOT_MAPPABLE` handling classes per StructureFamily. Native Markdown Export
+  v2 is recognized directly; instruction/document sources are rejected from
+  Mapping with a diagnostic instead of being presented as a repairable format.
+- The existing Import Session keeps unresolved files in place and offers
+  diagnosis, replacement, exclusion and a contextual Conversation Rescue
+  dialog. The dialog only copies/downloads the supplied static skill files;
+  Chat Reader does not call an external model or upload source content.
+- The supplied bilingual 25k Skill resources are served from both the
+  import-rescue URLs and the existing export Skill URLs; the export picker
+  therefore uses the same current Chinese/English 25k source without a new
+  route or local-path dependency.
+  Replacement uses the existing artifact replacement and re-analysis flow;
+  no database migration or new product route was added.
+- Focused Adaptive Import API tests, Web typecheck, lint and production build
+  pass locally. The full API suite exceeded the available five-minute command
+  window and remains unverified; no commit or deployment was performed.
+
+## 2026-08-25 IA Round 2 implementation (local, not committed or deployed)
+
+- Implemented the adopted IA-R2-001 Settings boundary: the global footer now
+  presents `Settings`, while data/import, learned import formats and account
+  security open focused state-owning dialogs with guarded dirty dismissal and
+  return-to-opener focus restoration. Reader and import contextual shortcuts
+  remain available.
+- Implemented IA-R2-002 global Tasks ownership: the authenticated shell has a
+  stable `Tasks` launcher that opens the existing task monitor for import,
+  merge, delete, export and cleanup work. The worker, cancellation semantics,
+  retention and cleanup review paths are unchanged; no task-history model was
+  added.
+- Implemented IA-R2-003 import completion: committed imports remain in the
+  Import surface and show the committed count, message count, warnings and
+  explicit `View imported conversations`, `Open first` and `Close` actions.
+  Multi-item completion no longer silently opens the first conversation.
+- Replaced the two exported Context Acquisition Skill assets with the supplied
+  bilingual v2 files while preserving the existing public filenames/URLs.
+  The viewer no longer presents a manual SHA/checksum confirmation; the assets
+  remain inert static text resources.
+- Local verification: Web typecheck and lint PASS. Browser/API/build gates and
+  production deployment are intentionally pending for this uncommitted local
+  change.
+
 ## 2026-08-24 Current authority and formula/source-position deployment
 
 - The repository remains on the single `master` branch. The current follow-up

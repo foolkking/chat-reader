@@ -1,5 +1,34 @@
 # Adaptive Import Contract
 
+## Adaptive handling classes (2026-08-25)
+
+The analysis response exposes an explicit `handling_class` for every
+StructureFamily. The UI uses this field for its primary action:
+
+- `SUPPORTED`: a verified Chat Reader or CanJSON profile is available; show a
+  direct-import state and do not open Mapping.
+- `MAPPABLE`: deterministic message boundaries were found, but a profile or
+  role/content mapping still needs one user confirmation; open the existing
+  Mapping Workspace.
+- `NOT_MAPPABLE`: the source is not a safely segmentable conversation (for
+  example an instruction/document file or invalid source); do not create a
+  mapping plan or learned profile. Keep it in the current Import Session and
+  offer diagnosis, replacement, exclusion, or contextual Conversation Rescue.
+
+`handling_reason` is explanatory metadata with a stable code, detail and
+recovery action. `resolution_status` remains the profile/session state and is
+not a substitute for the user-facing handling class. A mixed session keeps
+resolved families and only blocks import for unresolved retained items.
+
+Conversation Rescue is a user-operated external conversion aid. Chat Reader
+does not call an LLM or upload source content. The bilingual 25k skill files
+are static resources at `/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md`
+and `/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md`; the export
+Skill picker uses the same source at its existing
+`/skills/chat-reader-conversation-context-acquisition-skill.v1*.md` URLs. A
+converted Native Markdown Export v2 file returns through the existing
+artifact-replace and re-analysis path.
+
 最后核验：2026-08-22。
 
 ## 产品边界

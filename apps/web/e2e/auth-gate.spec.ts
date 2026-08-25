@@ -36,8 +36,8 @@ test.describe("single-owner authentication boundary", () => {
     });
     await page.goto(`${baseURL}/`);
     await page.getByRole("button", { name: /Appearance|外观/ }).click();
-    await page.getByRole("button", { name: /More settings|更多设置/ }).click();
-    await page.getByRole("button", { name: "Log out" }).click();
+    await page.getByRole("button", { name: /Account & security|账户与安全/ }).click();
+    await page.getByRole("button", { name: "Log out", exact: true }).click();
     await expect(page).toHaveURL(/\/login(?:\?|$)/);
     expect(await page.evaluate(() => caches.has("chat-reader-offline-assets-v1"))).toBe(false);
     expect((await context.cookies()).find((item) => item.name === "chat_reader_session")).toBeUndefined();
@@ -125,8 +125,7 @@ test.describe("single-owner authentication boundary", () => {
     }
 
     await pageA.getByRole("button", { name: /Appearance|外观/ }).click();
-    await pageA.getByRole("button", { name: /More settings|更多设置/ }).click();
-    await pageA.getByRole("button", { name: "Change password", exact: true }).click();
+    await pageA.getByRole("button", { name: /Account & security|账户与安全/ }).click();
     await pageA.getByLabel("Current password").fill(password!);
     await pageA.getByLabel("New password", { exact: true }).fill(newPassword);
     await pageA.getByLabel("Confirm new password").fill(newPassword);

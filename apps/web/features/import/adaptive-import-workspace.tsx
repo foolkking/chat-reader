@@ -5,8 +5,10 @@ import {
   ArrowLeft,
   Braces,
   CheckCircle2,
+  Clipboard,
   ChevronRight,
   CircleAlert,
+  Download,
   FileText,
   FileUp,
   FolderCog,
@@ -14,9 +16,10 @@ import {
   LoaderCircle,
   RotateCcw,
   Settings2,
+  ShieldAlert,
   Trash2,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   excludeAdaptiveImportGroup,
   reanalyzeAdaptiveImportSession,
@@ -43,8 +46,14 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
   const [groupingOpen, setGroupingOpen] = useState(false);
   const activeFamily = session.families.find((family) => family.id === activeFamilyId) ?? null;
-  const invalidCount = session.families.filter((family) => family.resolution_status === "INVALID").reduce((sum, family) => sum + family.group_count, 0);
-  const pendingCount = session.families.filter((family) => !["EXACT_MATCH", "COMPATIBLE"].includes(family.resolution_status)).reduce((sum, family) => sum + family.group_count, 0);
+  const supportedFamilies = session.families.filter((family) => handlingClass(family) === "SUPPORTED");
+  const mappableFamilies = session.families.filter((family) => handlingClass(family) === "MAPPABLE");
+  const notMappableFamilies = session.families.filter((family) => handlingClass(family) === "NOT_MAPPABLE");
+  const supportedCount = supportedFamilies.reduce((sum, family) => sum + family.group_count, 0);
+  const mappableCount = mappableFamilies.reduce((sum, family) => sum + family.group_count, 0);
+  const notMappableCount = notMappableFamilies.reduce((sum, family) => sum + family.group_count, 0);
+  const invalidCount = notMappableCount;
+  const pendingCount = mappableCount + notMappableCount;
 
   if (activeFamily) {
     return (
@@ -85,7 +94,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         <StateBadge state={session.state} pendingCount={pendingCount} />
       </div>
 
-      {invalidCount > 0 ? (
+      {session.state === "BLOCKED" && invalidCount > 0 ? (
         <div className="flex flex-wrap items-start justify-between gap-3 border-l-2 border-[var(--warning)] bg-[var(--warning-soft)] px-4 py-3">
           <div className="flex min-w-0 gap-3">
             <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warning)]" aria-hidden="true" />
@@ -100,17 +109,14 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         </div>
       ) : null}
 
-      <div className="divide-y divide-ui border-y border-ui">
-        {session.families.map((family) => (
-          <FamilyRow
-            key={family.id}
-            session={session}
-            family={family}
-            onConfigure={() => setActiveFamilyId(family.id)}
-            onSession={onSession}
-          />
-        ))}
+      <div className="flex flex-wrap gap-2 border-y border-ui py-3 text-xs" aria-label="导入格式处理状态">
+        <StatusSummary icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="已支持" count={supportedCount} tone="success" />
+        <StatusSummary icon={<Settings2 className="h-3.5 w-3.5" />} label="可设置格式" count={mappableCount} tone="warning" />
+        <StatusSummary icon={<ShieldAlert className="h-3.5 w-3.5" />} label="暂不可映射" count={notMappableCount} tone="danger" />
       </div>
+      <FamilySection title="已支持 · 可直接导入" families={supportedFamilies} session={session} onConfigure={(id) => setActiveFamilyId(id)} onSession={onSession} />
+      <FamilySection title="可设置格式 · 需要确认一次" families={mappableFamilies} session={session} onConfigure={(id) => setActiveFamilyId(id)} onSession={onSession} />
+      <FamilySection title="暂不可映射 · 需要先转换" families={notMappableFamilies} session={session} onConfigure={() => undefined} onSession={onSession} />
 
       {session.state === "BLOCKED" ? <LegacyBlockedRecovery session={session} onSession={onSession} onRegroup={() => setGroupingOpen(true)} /> : null}
       {error ? <ErrorLine message={error} /> : null}
@@ -137,6 +143,16 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   );
 }
 
+function StatusSummary({ icon, label, count, tone }: { icon: ReactNode; label: string; count: number; tone: "success" | "warning" | "danger" }) {
+  const styles = tone === "success" ? "bg-[var(--accent-soft)] text-accent" : tone === "danger" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-[var(--warning-soft)] text-[var(--warning)]";
+  return <span className={`inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 font-semibold ${styles}`}>{icon}{label} {count}</span>;
+}
+
+function FamilySection({ title, families, session, onConfigure, onSession }: { title: string; families: AdaptiveImportFamily[]; session: AdaptiveImportSession; onConfigure: (id: string) => void; onSession: (session: AdaptiveImportSession) => void }) {
+  if (!families.length) return null;
+  return <section aria-labelledby={`family-section-${title}`}><h4 id={`family-section-${title}`} className="mb-1 text-sm font-semibold text-primary">{title}</h4><div className="divide-y divide-ui border-y border-ui">{families.map((family) => <FamilyRow key={family.id} session={session} family={family} onConfigure={() => onConfigure(family.id)} onSession={onSession} />)}</div></section>;
+}
+
 function FamilyRow({ session, family, onConfigure, onSession }: {
   session: AdaptiveImportSession;
   family: AdaptiveImportFamily;
@@ -147,7 +163,8 @@ function FamilyRow({ session, family, onConfigure, onSession }: {
     mutationFn: (revisionId: string) => selectAdaptiveFamilyProfile(session.import_id, family.id, revisionId),
     onSuccess: onSession,
   });
-  const actionable = ["UNKNOWN", "DRIFTED"].includes(family.resolution_status);
+  const handling = handlingClass(family);
+  const actionable = handling === "MAPPABLE";
   const candidates = asArray(family.match_evidence.candidates).map(asObject);
   return (
     <article className="py-4">
@@ -155,12 +172,12 @@ function FamilyRow({ session, family, onConfigure, onSession }: {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <FormatIcon mode={family.source_mode} />
-            <h4 className="truncate text-sm font-semibold text-primary">{family.resolution_status === "INVALID" ? invalidFamilyTitle(family) : familyDisplayName(family)}</h4>
-            <ResolutionBadge status={family.resolution_status} />
+            <h4 className="truncate text-sm font-semibold text-primary">{handling === "NOT_MAPPABLE" ? "无法安全映射" : familyDisplayName(family)}</h4>
+            <HandlingBadge handling={handling} />
           </div>
           <p className="mt-1 text-sm text-secondary">{family.group_count} 个对话 · {modeLabel(family.source_mode)}</p>
           {family.resolution_status === "DRIFTED" ? <p className="mt-1 text-xs text-[var(--warning)]">检测到来源结构变化，需要保存一个新版本。</p> : null}
-          {family.resolution_status !== "INVALID" && family.diagnostics[0] ? <DiagnosticLine diagnostic={family.diagnostics[0]} /> : null}
+          {handling !== "NOT_MAPPABLE" && family.diagnostics[0] ? <DiagnosticLine diagnostic={family.diagnostics[0]} /> : null}
           {family.resolution_status === "AMBIGUOUS" && candidates.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {candidates.map((candidate) => (
@@ -177,18 +194,19 @@ function FamilyRow({ session, family, onConfigure, onSession }: {
           </button>
         ) : null}
       </div>
-      {family.resolution_status === "INVALID" ? <InvalidFamilyRecovery session={session} family={family} onSession={onSession} /> : null}
+      {handling === "NOT_MAPPABLE" ? <NotMappableRecovery session={session} family={family} onSession={onSession} /> : null}
       {selectMutation.isError ? <div className="mt-3"><ErrorLine message={selectMutation.error.message} /></div> : null}
     </article>
   );
 }
 
-function InvalidFamilyRecovery({ session, family, onSession }: {
+function NotMappableRecovery({ session, family, onSession }: {
   session: AdaptiveImportSession;
   family: AdaptiveImportFamily;
   onSession: (session: AdaptiveImportSession) => void;
 }) {
   const [confirmGroupId, setConfirmGroupId] = useState<string | null>(null);
+  const [rescueArtifact, setRescueArtifact] = useState<{ id: string; filename: string } | null>(null);
   const groups = session.groups.filter((group) => family.group_ids.includes(group.id));
   const replaceMutation = useMutation({
     mutationFn: ({ artifactId, file }: { artifactId: string; file: File }) => replaceAdaptiveImportArtifact(session.import_id, artifactId, file),
@@ -204,6 +222,12 @@ function InvalidFamilyRecovery({ session, family, onSession }: {
 
   return (
     <div className="mt-4 border-t border-ui pt-3">
+      {family.handling_reason.detail ? (
+        <div className="mb-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-xs leading-5 text-secondary">
+          <p className="font-semibold text-primary">无法安全映射</p>
+          <p>{family.handling_reason.detail}</p>
+        </div>
+      ) : null}
       {groups.map((group) => (
         <div key={group.id} className="grid gap-3 py-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
@@ -222,6 +246,9 @@ function InvalidFamilyRecovery({ session, family, onSession }: {
                     pending={replaceMutation.isPending}
                     onSelect={(replacement) => replaceMutation.mutate({ artifactId: file.artifact_id, file: replacement })}
                   />
+                  <button type="button" onClick={() => setRescueArtifact({ id: file.artifact_id, filename: file.filename })} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium">
+                    <ShieldAlert className="h-4 w-4" />使用 Conversation Rescue
+                  </button>
                 </div>
               ))}
             </div>
@@ -251,6 +278,48 @@ function InvalidFamilyRecovery({ session, family, onSession }: {
       ))}
       {replaceMutation.isError ? <div className="mt-3"><ErrorLine message={replaceMutation.error.message} /></div> : null}
       {excludeMutation.isError ? <div className="mt-3"><ErrorLine message={excludeMutation.error.message} /></div> : null}
+      {rescueArtifact ? <RescueDialog filename={rescueArtifact.filename} onClose={() => setRescueArtifact(null)} onReplace={(file) => { setRescueArtifact(null); replaceMutation.mutate({ artifactId: rescueArtifact.id, file }); }} /> : null}
+    </div>
+  );
+}
+
+function RescueDialog({ filename, onClose, onReplace }: { filename: string; onClose: () => void; onReplace: (file: File) => void }) {
+  const [language, setLanguage] = useState<"zh" | "en">("zh");
+  const [copied, setCopied] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const resources = {
+    zh: "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md",
+    en: "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md",
+  } as const;
+  const request = language === "zh"
+    ? "请严格按照附带的 Chat Reader Conversation Rescue Skill，将源文件恢复为一个 Chat Reader Native Markdown Export v2 文件。不要总结、改写、补造或回答原对话内容。输出一个可重新上传的 .md 文件。"
+    : "Use the attached Chat Reader Conversation Rescue Skill to recover this source as one Chat Reader Native Markdown Export v2 file. Do not summarize, rewrite, invent, or answer the transcript. Output one .md file that can be uploaded again.";
+  async function copy(label: string, value: string) {
+    await navigator.clipboard?.writeText(value);
+    setCopied(label);
+    window.setTimeout(() => setCopied(null), 1800);
+  }
+  async function copySkill() {
+    const response = await fetch(resources[language]);
+    await copy("skill", await response.text());
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+      <section role="dialog" aria-modal="true" aria-labelledby="rescue-dialog-title" className="flex max-h-[min(760px,calc(100vh-2rem))] w-full max-w-[740px] flex-col overflow-hidden rounded-lg border border-ui bg-surface shadow-xl">
+        <header className="flex items-start justify-between gap-4 border-b border-ui px-5 py-4">
+          <div><h2 id="rescue-dialog-title" className="text-base font-semibold text-primary">使用 Conversation Rescue</h2><p className="mt-1 text-xs leading-5 text-secondary">将不可映射的源文件恢复为 Chat Reader 可导入的 Markdown。Chat Reader 不会自动上传原文。</p></div>
+          <button type="button" onClick={onClose} className="btn-ghost" aria-label="关闭"><span aria-hidden="true">×</span></button>
+        </header>
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          <details className="border border-ui px-3 py-2 text-xs text-secondary"><summary className="cursor-pointer font-medium text-primary">查看 Skill 摘要</summary><p className="mt-2 leading-5">Skill 只负责把无法安全映射的源文件整理为 Chat Reader Native Markdown Export v2；不会回答、总结或改写原对话。</p></details>
+          <div className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-3 text-sm"><p className="font-semibold text-primary">当前文件：{filename}</p><p className="mt-1 text-secondary">当前结构没有可靠的消息边界。继续设置角色或内容字段无法安全得到 Conversation。</p></div>
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-secondary"><li>复制或下载 Rescue Skill。</li><li>将源文件和 Skill 提供给你选择的大模型。</li><li>要求输出 Chat Reader Native Markdown Export v2。</li><li>回到这里替换当前文件，再重新分析。</li></ol>
+          <div className="border border-ui bg-subtle p-3"><div className="flex flex-wrap gap-2" role="tablist" aria-label="Rescue Skill language"><button type="button" role="tab" aria-selected={language === "zh"} onClick={() => setLanguage("zh")} className={`min-h-9 px-3 text-sm ${language === "zh" ? "bg-surface font-semibold text-primary shadow-sm" : "text-secondary"}`}>中文 Skill</button><button type="button" role="tab" aria-selected={language === "en"} onClick={() => setLanguage("en")} className={`min-h-9 px-3 text-sm ${language === "en" ? "bg-surface font-semibold text-primary shadow-sm" : "text-secondary"}`}>English Skill</button></div><div className="mt-3 flex flex-wrap gap-2"><a href={resources[language]} download className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs"><Download className="h-4 w-4" />下载 Skill</a><button type="button" onClick={() => void copySkill()} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs"><Clipboard className="h-4 w-4" />复制 Skill</button></div><p className="mt-2 text-xs text-secondary">{copied === "skill" ? "已复制，可粘贴到大模型。" : "下载文件后，与源文件一起提供给外部大模型。"}</p></div>
+          <div className="border border-ui p-3"><div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-primary">转换请求模板</p><button type="button" onClick={() => void copy("request", request)} className="btn-secondary inline-flex min-h-8 items-center gap-2 px-2.5 text-xs"><Clipboard className="h-3.5 w-3.5" />复制模板</button></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-secondary">{request}</p><p className="mt-2 text-xs text-accent">{copied === "request" ? "已复制。" : "输出后请重新上传生成的 .md 文件。"}</p></div>
+          <p className="text-xs leading-5 text-secondary">隐私提示：外部大模型可能会读取源文件中的对话内容。Chat Reader 不会代替你向第三方服务上传文件，请自行确认隐私范围。</p>
+        </div>
+        <footer className="flex flex-wrap justify-end gap-2 border-t border-ui px-5 py-3"><button type="button" onClick={() => inputRef.current?.click()} className="btn-primary min-h-10 px-4 text-sm">替换当前文件</button><button type="button" onClick={onClose} className="btn-secondary min-h-10 px-4 text-sm">稍后处理</button><input ref={inputRef} type="file" accept=".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ""; if (file) onReplace(file); }} /></footer>
+      </section>
     </div>
   );
 }
@@ -272,7 +341,7 @@ function ReplaceFileButton({ artifactId, filename, disabled, pending, onSelect }
         ref={inputRef}
         type="file"
         data-testid={`replace-import-file-${artifactId}`}
-        accept=".json,.jsonl,.gz,.md,.markdown,application/json,text/markdown"
+        accept=".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,application/json,text/markdown,text/plain,text/html"
         className="hidden"
         disabled={disabled}
         onChange={(event) => {
@@ -394,6 +463,17 @@ export function ResolutionBadge({ status }: { status: AdaptiveImportFamily["reso
   return <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${tone}`}>{labels[status]}</span>;
 }
 
+function HandlingBadge({ handling }: { handling: AdaptiveImportFamily["handling_class"] }) {
+  const labels = { SUPPORTED: "已支持", MAPPABLE: "可设置格式", NOT_MAPPABLE: "暂不可映射" } as const;
+  const tone = handling === "SUPPORTED" ? "bg-[var(--accent-soft)] text-accent" : handling === "NOT_MAPPABLE" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-[var(--warning-soft)] text-[var(--warning)]";
+  return <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${tone}`}>{labels[handling]}</span>;
+}
+
+function handlingClass(family: AdaptiveImportFamily): AdaptiveImportFamily["handling_class"] {
+  if (family.handling_class) return family.handling_class;
+  return ["EXACT_MATCH", "COMPATIBLE"].includes(family.resolution_status) ? "SUPPORTED" : family.resolution_status === "INVALID" ? "NOT_MAPPABLE" : "MAPPABLE";
+}
+
 export function DiagnosticLine({ diagnostic, locatable = true }: { diagnostic: Pick<AdaptiveImportDiagnostic, "code" | "message" | "pointer" | "action">; locatable?: boolean }) {
   function locate() {
     const targetId = diagnostic.action === "map_roles"
@@ -431,7 +511,7 @@ function diagnosticMessage(diagnostic: Pick<AdaptiveImportDiagnostic, "code" | "
   return messages[diagnostic.code] ?? diagnostic.message;
 }
 
-function invalidFamilyTitle(family: AdaptiveImportFamily): string {
+function _invalidFamilyTitle(family: AdaptiveImportFamily): string {
   return family.source_mode === "JSON_MARKDOWN" ? "无法分析的 JSON + Markdown" : family.source_mode === "MARKDOWN" ? "无法分析的 Markdown" : "无法分析的 JSON";
 }
 
@@ -446,10 +526,10 @@ function pointerLabel(pointer: string): string {
 }
 
 export function FormatIcon({ mode }: { mode: string }) {
-  return mode === "JSON_MARKDOWN" ? <Layers3 className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" /> : mode === "MARKDOWN" ? <FileText className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" /> : <Braces className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />;
+  return mode === "JSON_MARKDOWN" ? <Layers3 className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" /> : mode === "MARKDOWN" || mode === "UNKNOWN" ? <FileText className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" /> : <Braces className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />;
 }
 
-export function modeLabel(mode: string): string { return mode === "JSON_MARKDOWN" ? "JSON + Markdown" : mode === "MARKDOWN" ? "Markdown" : "JSON"; }
+export function modeLabel(mode: string): string { return mode === "JSON_MARKDOWN" ? "JSON + Markdown" : mode === "MARKDOWN" ? "Markdown" : mode === "JSON" ? "JSON" : "文本文件"; }
 export function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1024 * 1024 ? `${Math.round(value / 1024)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`; }
 export function asObject(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 export function asArray(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }

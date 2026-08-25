@@ -12,6 +12,8 @@
 | preview -> ImportDraft -> commit | 已确认 | preview 写受控 JSONL/digest metadata；commit 校验路径、统计和到期并读取同一 Draft，幂等排队 |
 | CanJSON v2 | 已确认 | JSONL 流式导入/导出；正文一次；支持 gzip、selected、可选 versions/annotations/notebooks/source refs |
 | durable worker | 已确认 | PostgreSQL queue、heartbeat、stale recovery、retry；单并发 |
+| 全局任务入口 | 已确认 | Shell `任务` 打开现有 ImportTaskMonitor；导入、合并、删除、导出和内容审查共用同一后台任务 owner，不新增历史表 |
+| 导入完成态 | 已确认 | Import surface 展示批量提交数量、消息数、warnings，并提供查看导入对话、打开第一条和关闭返回入口 |
 | `.cr` round-trip | 已确认 | 后台 ZIP64 JSONL 导出、校验 preview、确定性 ID 重映射导入 |
 | 历史 auto-clean | 已确认 | 新建消息版本并重建 blocks/TOC/search，不覆盖历史 |
 
@@ -26,6 +28,13 @@
 | 批量操作 | 已确认 | 移动、归档/恢复、导出；合并/删除进入更多并确认 |
 | 拆分与合并 | 已确认 | 消息原位版本化；会话变换非破坏式创建新会话 |
 | 最近记录 | 已确认 | 路由/API 保留；仅移动端显示入口/继续阅读卡片 |
+
+## 设置与账户
+
+| 能力 | 状态 | 当前语义 |
+| --- | --- | --- |
+| Settings hub | 已确认 | 全局入口表达设置；外观/阅读保留轻量偏好，数据与导入、导入格式、账户安全进入 focused dialog |
+| Consequential settings dismissal | 已确认 | 密码、导入格式名称和备份选项的未提交状态不能被 incidental close 静默丢弃 |
 
 ## Reader、渲染与导航
 

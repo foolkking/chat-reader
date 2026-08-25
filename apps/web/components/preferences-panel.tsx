@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Library } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Library, ShieldCheck, SlidersHorizontal, Database } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePreferences, useTranslations } from "./preferences-provider";
-import { DataBackupPanel } from "./data-backup-panel";
-import { AccountSecurityPanel } from "./account-security-panel";
-import { ImportFormatSettings } from "./import-format-settings";
 
-export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/" }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string }) {
+export type SettingsCategory = "data" | "security" | "formats";
+
+export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/", onOpenCategory }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string; onOpenCategory?: (category: SettingsCategory) => void }) {
   const preferences = usePreferences();
   const t = useTranslations();
   const [focusDefault, setFocusDefault] = useState(false);
@@ -37,7 +36,12 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
     window.dispatchEvent(new CustomEvent("chat-reader:annotation-workspace-mode-change", { detail: value }));
   };
   return (
-    <section className={compact ? "space-y-3" : "space-y-4"} aria-label={t("appearanceLanguage")}>
+    <section className={compact ? "space-y-3" : "space-y-4"} aria-label={`${t("settings")} (${t("appearanceLanguage")})`}>
+      {!(compact && libraryMode) ? <div className="rounded-lg border border-ui bg-subtle px-3 py-2.5">
+        <p className="text-sm font-semibold text-primary">{t("settings")}</p>
+        <p className="mt-0.5 text-xs leading-5 text-secondary">{t("settingsHint")}</p>
+      </div> : null}
+      {!(compact && libraryMode) ? <p className="text-xs font-semibold text-secondary">{t("appearanceReading")}</p> : null}
       <SettingGroup label={t("theme")} compact={compact}>
         {(["light", "dark", "system"] as const).map((mode) => (
           <Segment key={mode} active={preferences.themeMode === mode} onClick={() => void preferences.setThemeMode(mode)}>
@@ -49,6 +53,12 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         {libraryMode ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <Library className="h-4 w-4" aria-hidden="true" />}
         {libraryMode ? t("backOnline") : t("offlineLibrary")}
       </Link>
+      {!libraryMode ? <div className="space-y-2 border-t border-ui pt-3">
+        <p className="text-xs font-semibold text-secondary">{t("settings")}</p>
+        <SettingsCategoryButton icon={Database} label={t("dataImport")} description={t("importData")} onClick={() => onOpenCategory?.("data")} />
+        <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
+        <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
+      </div> : null}
       <button type="button" onClick={() => setMoreOpen((value) => !value)} className="flex min-h-9 w-full items-center justify-between border-t border-ui pt-2 text-sm font-medium text-secondary hover:text-primary" aria-expanded={moreOpen}>
         {moreOpen ? t("collapseSettings") : t("moreSettings")}
         {moreOpen ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
@@ -91,12 +101,17 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
           <Segment active={annotationPosition === "floating"} onClick={() => updateAnnotationPosition("floating")}>{t("floating")}</Segment>
           <Segment active={annotationPosition === "docked"} onClick={() => updateAnnotationPosition("docked")}>{t("docked")}</Segment>
         </SettingGroup>
-        {!libraryMode ? <DataBackupPanel /> : null}
-        {!libraryMode ? <ImportFormatSettings /> : null}
-        {!libraryMode ? <AccountSecurityPanel /> : null}
       </div> : null}
     </section>
   );
+}
+
+function SettingsCategoryButton({ icon: Icon, label, description, onClick }: { icon: typeof Database; label: string; description: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-ui bg-surface px-3 py-2 text-left transition-colors hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent"><Icon className="h-4 w-4" aria-hidden="true" /></span>
+    <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-primary">{label}</span><span className="mt-0.5 block text-xs text-secondary">{description}</span></span>
+    <ChevronDown className="h-4 w-4 -rotate-90 shrink-0 text-secondary" aria-hidden="true" />
+  </button>;
 }
 
 function SettingGroup({ label, children, columns = 3, compact = false }: { label: string; children: React.ReactNode; columns?: 2 | 3; compact?: boolean }) {

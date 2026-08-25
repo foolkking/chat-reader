@@ -2,12 +2,15 @@
 
 import { ChevronDown, ChevronUp, Settings, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { PreferencesPanel } from "./preferences-panel";
+import { PreferencesPanel, type SettingsCategory } from "./preferences-panel";
+import { SettingsFocusedDialog } from "./settings-focused-dialog";
 import { useTranslations } from "./preferences-provider";
 
 export function SidebarPreferences({ libraryMode = false, onlineHref = "/" }: { libraryMode?: boolean; onlineHref?: string }) {
   const [open, setOpen] = useState(false);
+  const [focusedCategory, setFocusedCategory] = useState<SettingsCategory | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
   const t = useTranslations();
 
@@ -30,19 +33,20 @@ export function SidebarPreferences({ libraryMode = false, onlineHref = "/" }: { 
   return (
     <div ref={rootRef} className="relative">
       {open ? (
-        <div id={panelId} role="dialog" aria-label={t("appearanceLanguage")} className="absolute bottom-[calc(100%+0.5rem)] left-0 right-0 z-50 max-h-[min(72vh,30rem)] overflow-y-auto rounded-lg border border-ui bg-raised p-3 shadow-xl">
+        <div id={panelId} role="dialog" aria-label={`${t("settings")} (${t("appearanceLanguage")})`} className="absolute bottom-[calc(100%+0.5rem)] left-0 right-0 z-50 max-h-[min(72vh,30rem)] overflow-y-auto rounded-lg border border-ui bg-raised p-3 shadow-xl">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-primary">{t("appearanceLanguage")}</p>
+          <p className="text-xs font-semibold text-primary">{t("settings")}</p>
             <button type="button" onClick={() => setOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-subtle hover:text-primary" aria-label={t("close")} title={t("close")}><X className="h-4 w-4" /></button>
           </div>
-          <PreferencesPanel compact libraryMode={libraryMode} onlineHref={onlineHref} />
+          <PreferencesPanel compact libraryMode={libraryMode} onlineHref={onlineHref} onOpenCategory={(category) => { setOpen(false); setFocusedCategory(category); }} />
         </div>
       ) : null}
-      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls={panelId} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-secondary hover:bg-surface hover:text-primary">
+      <button ref={triggerRef} type="button" onClick={() => setOpen((value) => !value)} aria-label={`${t("settings")} (${t("appearanceLanguage")})`} aria-expanded={open} aria-controls={panelId} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-secondary hover:bg-surface hover:text-primary">
         <Settings className="h-4 w-4" />
-        <span className="min-w-0 flex-1 text-left">{t("appearanceLanguage")}</span>
+        <span className="min-w-0 flex-1 text-left">{t("settings")}</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
       </button>
+      {focusedCategory ? <SettingsFocusedDialog category={focusedCategory} onClose={() => { setFocusedCategory(null); setOpen(true); }} restoreFocus={() => triggerRef.current} /> : null}
     </div>
   );
 }

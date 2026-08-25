@@ -20,19 +20,16 @@ const CONTEXT_SKILLS: Record<SkillLocale, {
   url: string;
   filename: string;
   label: string;
-  sha256: string;
 }> = {
   "zh-CN": {
     url: "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
     filename: "Chat-Reader-Conversation-Context-Acquisition-Skill.v1.md",
     label: "中文",
-    sha256: "BF467029CE810249701DCB21E0642ECEDF55F7B61ADA1C597BA386B891F9D08E",
   },
   en: {
     url: "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
     filename: "Chat-Reader-Conversation-Context-Acquisition-Skill.v1-en.md",
     label: "English",
-    sha256: "BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613",
   },
 };
 
@@ -299,7 +296,7 @@ function ContextSkillDialog({ open, onClose, skill, text, onCopy }: {
         <header className="flex min-h-14 shrink-0 items-center gap-3 border-b border-ui bg-surface px-4">
           <div className="min-w-0 flex-1">
             <h2 ref={titleRef} id="context-skill-title" tabIndex={-1} className="truncate text-sm font-semibold text-primary" title={skill.filename}>{zh ? "解析 Skill" : "Parsing Skill"}</h2>
-            <p className="truncate text-[11px] text-secondary" title={skill.sha256}>v1 · SHA-256 {skill.sha256}</p>
+            <p className="truncate text-[11px] text-secondary">Chat Reader Context Acquisition Skill</p>
           </div>
           <button type="button" onClick={onCopy} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Copy className="h-4 w-4" />{zh ? "复制" : "Copy"}</button>
           <a href={skill.url} download={skill.filename} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Download className="h-4 w-4" />{zh ? "下载" : "Download"}</a>

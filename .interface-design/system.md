@@ -1,6 +1,6 @@
 # Chat Reader Interface System
 
-Last synchronized: 2026-08-22.
+Last synchronized: 2026-08-25.
 
 ## Direction
 
@@ -63,6 +63,15 @@ Import Format revision ledger.
 - Forms: label above input, inset `bg-surface`, `border-ui`, visible `--focus`.
 - Data rows: stable alignment, quiet separators, hover state and explicit
   selected/current state.
+- Settings: keep the shell entry lightweight; consequential categories use a
+  focused state-owning dialog with explicit dirty dismissal and return-to-opener
+  focus restoration.
+- Background tasks: one global Tasks owner may have sidebar/mobile summaries,
+  but those are representations of the same monitor rather than separate task
+  products.
+- Import completion: a committed batch stays on the Import surface until the
+  user chooses Library, the first conversation, or close; do not auto-collapse
+  a multi-item result into one Reader.
 
 ## Adaptive Import Rules
 

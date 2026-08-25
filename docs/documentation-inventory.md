@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-08-25 Adaptive Import handling classes and Conversation Rescue are
+current in `PROJECT_STATE.md` and `system/ADAPTIVE_IMPORT_CONTRACT.md`.
+Static bilingual Rescue Skill assets are runtime resources under
+`apps/web/public/import-rescue/`; they are not documentation authority or
+database data.
+
 2026-08-24 knowledge closeout: the repository remains on the single `master`
 branch and the current follow-up is documentation-only. Production runtime
 remains the verified `7ff2f92` image generation from Actions run `32698108862`.
@@ -278,8 +284,8 @@ are current in `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md`,
 | `apps/web/features/attachments/offline-conversation-files-panel.tsx` | Current | Read-only offline current-conversation attachments and cached/unavailable states. |
 | `apps/web/lib/offline-export.ts` | Current | Bounded browser-local CanJSON/Markdown/context package projection from the downloaded snapshot. |
 | `apps/web/features/exporting/offline-export-panel.tsx` | Current | Offline export controls and local result delivery. |
-| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1.md` | Current static asset | Chinese inert parsing Skill; SHA-256 `BF467029CE810249701DCB21E0642ECEDF55F7B61ADA1C597BA386B891F9D08E`. |
-| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md` | Current static asset | English inert parsing Skill; SHA-256 `BE2F289E8D45F659F6A9AECFC43C2491058DF940EC5416062F6FA55FEF6AC613`. |
+| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1.md` | Current static asset | Supplied bilingual v2 Chinese inert parsing Skill; stable public filename retained, no manual checksum confirmation in the UI. |
+| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md` | Current static asset | Supplied bilingual v2 English inert parsing Skill; stable public filename retained, no manual checksum confirmation in the UI. |
 
 2026-08-10 synchronization: Reader scrollbar-jump coordinate recovery and pointer-held edge-loading rules are current in `PROJECT_STATE.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md`, and `results.md`.
 

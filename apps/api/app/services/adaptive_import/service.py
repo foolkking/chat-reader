@@ -75,7 +75,7 @@ def add_session_source(db: Session, record: ImportRecord, filename: str, content
     max_bytes = settings.max_import_file_size_mb * 1024 * 1024
     total_limit = settings.max_adaptive_import_total_mb * 1024 * 1024
     extension = _extension(filename)
-    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown"}:
+    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"}:
         raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
     if not content:
         raise AdaptiveImportError("FILE_EMPTY", f"{filename} is empty.", layer="file")
@@ -92,7 +92,7 @@ def add_session_source(db: Session, record: ImportRecord, filename: str, content
     db.add(SourceArtifact(
         id=uuid.uuid4(), import_id=record.id, source_type="adaptive_source", source_profile=SourceProfile.unknown.value,
         filename=filename, safe_filename=stored.safe_filename, sha256=digest, byte_size=len(content),
-        mime_guess="application/json" if extension in {".json", ".jsonl", ".gz"} else "text/markdown",
+        mime_guess="application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
         file_extension=extension, raw_storage_uri=stored.raw_storage_uri, parsed_summary={},
     ))
     record.total_bytes += len(content)
@@ -138,6 +138,7 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
                     "mode": analysis.mode,
                     "mapping_candidates": analysis.mapping_candidates,
                     "semantic": analysis.semantic,
+                    "handling_class": analysis.handling_class,
                 }
             }
             group.diagnostics = analysis.diagnostics
@@ -189,7 +190,11 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
             matched_revision_id=uuid.UUID(match.revision_id) if match.revision_id else None,
             mapping_draft=default_mapping(representative),
             validation_result={},
-            match_evidence=match.evidence,
+            match_evidence={
+                **match.evidence,
+                "handling_class": "SUPPORTED" if match.status in {"EXACT_MATCH", "COMPATIBLE"} else "MAPPABLE",
+                "handling_reason": _handling_reason(match.status, representative),
+            },
         )
         db.add(family)
         db.flush()
@@ -201,7 +206,11 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
         family = ImportStructureFamily(
             import_id=record.id, source_mode=group.mode, signature={}, signature_digest=hashlib.sha256(str(group.id).encode()).hexdigest(),
             resolution_status="INVALID", display_name="Invalid source", mapping_draft={}, validation_result={},
-            match_evidence={"diagnostic": exc.diagnostic(group_id=str(group.id))},
+            match_evidence={
+                "diagnostic": exc.diagnostic(group_id=str(group.id)),
+                "handling_class": "NOT_MAPPABLE",
+                "handling_reason": _handling_reason_for_error(exc),
+            },
         )
         db.add(family)
         db.flush()
@@ -256,7 +265,7 @@ def replace_session_artifact(
     max_bytes = settings.max_import_file_size_mb * 1024 * 1024
     total_limit = settings.max_adaptive_import_total_mb * 1024 * 1024
     extension = _extension(filename)
-    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown"}:
+    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"}:
         raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
     if not content:
         raise AdaptiveImportError("FILE_EMPTY", f"{filename} is empty.", layer="file")
@@ -278,7 +287,7 @@ def replace_session_artifact(
         artifact.safe_filename = stored.safe_filename
         artifact.sha256 = hashlib.sha256(content).hexdigest()
         artifact.byte_size = len(content)
-        artifact.mime_guess = "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/markdown"
+        artifact.mime_guess = "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain"
         artifact.file_extension = extension
         artifact.raw_storage_uri = stored.raw_storage_uri
         artifact.parsed_summary = {}
@@ -487,6 +496,8 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
                 "mapping_draft": family.mapping_draft,
                 "validation_result": family.validation_result,
                 "match_evidence": family.match_evidence,
+                "handling_class": family.match_evidence.get("handling_class") or _handling_class_for_status(family.resolution_status),
+                "handling_reason": family.match_evidence.get("handling_reason") or {},
                 "diagnostics": [diagnostic for group in family.groups for diagnostic in group.diagnostics],
             }
             for family in families
@@ -706,6 +717,37 @@ def _summary(record: ImportRecord) -> dict[str, Any]:
         "group_count": len(record.input_groups), "family_count": len(record.structure_families),
         "resolution_counts": statuses, "ready": record.session_state == "READY",
     }
+
+
+def _handling_class_for_status(status: str) -> str:
+    if status in {"EXACT_MATCH", "COMPATIBLE"}:
+        return "SUPPORTED"
+    if status in {"UNKNOWN", "DRIFTED", "AMBIGUOUS"}:
+        return "MAPPABLE"
+    return "NOT_MAPPABLE"
+
+
+def _handling_reason(status: str, analysis: AnalysisResult) -> dict[str, str]:
+    if status in {"EXACT_MATCH", "COMPATIBLE"}:
+        return {"code": "SUPPORTED_PROFILE", "title": "已识别的导入格式", "detail": "Chat Reader 已验证该格式，可以直接导入。", "recovery_action": "DIRECT_IMPORT"}
+    if status == "DRIFTED":
+        return {"code": "PROFILE_DRIFTED", "title": "结构发生变化", "detail": "该格式仍有可解释的消息结构，需要修复映射后才能导入。", "recovery_action": "OPEN_MAPPING"}
+    if status == "AMBIGUOUS":
+        return {"code": "PROFILE_AMBIGUOUS", "title": "存在多个可能的格式", "detail": "请选择一个已保存格式，或设置一次新的映射。", "recovery_action": "OPEN_MAPPING"}
+    return {"code": "UNKNOWN_MESSAGE_FORMAT", "title": "未知但可设置格式", "detail": "已找到可解释的消息边界和正文来源，需要设置一次映射。", "recovery_action": "OPEN_MAPPING"}
+
+
+def _handling_reason_for_error(error: AdaptiveImportError) -> dict[str, str]:
+    details = {
+        "NO_MESSAGE_STRUCTURE": ("NO_MESSAGE_BOUNDARY", "没有可靠的消息边界", "当前内容不足以安全分割为 Conversation 消息。", "OPEN_RESCUE"),
+        "DOCUMENT_NOT_TRANSCRIPT": ("DOCUMENT_NOT_TRANSCRIPT", "这不是对话记录", "当前文件是说明文档或转换指令，不是可直接分段的 Conversation。", "OPEN_RESCUE"),
+        "MARKDOWN_EMPTY": ("EMPTY_SOURCE", "文件没有可导入内容", "文件为空，无法建立 Conversation。", "OPEN_RESCUE"),
+        "SOURCE_UNSUPPORTED": ("UNSUPPORTED_SOURCE_TYPE", "文件类型不属于标准导入格式", "当前文件类型没有可用的确定性解析器。", "OPEN_RESCUE"),
+        "JSON_INVALID": ("INVALID_JSON", "JSON 无法解析", "语法或编码错误无法通过字段映射解决。", "OPEN_RESCUE"),
+        "MARKDOWN_ENCODING_INVALID": ("INVALID_ENCODING", "文本编码无法读取", "请先转换为 UTF-8 文本，或使用 Conversation Rescue。", "OPEN_RESCUE"),
+    }
+    code, title, detail, action = details.get(error.code, ("NOT_MAPPABLE", "暂不可映射", "当前结构不足以安全生成 Conversation。", "OPEN_RESCUE"))
+    return {"code": code, "title": title, "detail": detail, "recovery_action": action}
 
 
 def _clear_import_plan(record: ImportRecord) -> None:

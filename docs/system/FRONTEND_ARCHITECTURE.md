@@ -1,5 +1,24 @@
 # 前端架构
 
+## IA Round 2 shell ownership (2026-08-25, local)
+
+`SidebarPreferences` is a lightweight Settings hub. Data/backup, learned
+Import Format management and Account Security are rendered in the shared
+focused dialog pattern (`SettingsFocusedDialog`) so dirty state, Escape/close
+and focus restoration are owned by the focused surface rather than a transient
+popover. Existing Reader and import contextual shortcuts still call the same
+underlying panels.
+
+`ProjectSidebar` exposes a stable `Tasks` launcher. `TaskCenterDialog` renders
+the existing `ImportTaskMonitor` in a global surface; sidebar and mobile
+representations are shortcuts to that same monitor, not separate task stores.
+No worker, queue or task-history model was added.
+
+`ImportPanel` keeps a committed import open long enough to present a truthful
+terminal summary. The response's existing conversation IDs are used for
+compact direct links and Library return; no ImportBatch entity or persistent
+results route is introduced.
+
 ## Reader semantic Markdown copy (current)
 
 Owner Reader, public Share and Offline Reader use one copy boundary. Complete

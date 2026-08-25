@@ -54,6 +54,7 @@ def analyze_documents(documents: list[SourceDocument]) -> AnalysisResult:
             },
             diagnostics=[*json_analysis.diagnostics, *markdown_analysis.diagnostics],
             semantic={"json": json_analysis.semantic, "markdown": markdown_analysis.semantic},
+            handling_class="MAPPABLE",
         )
     if json_docs:
         from app.schemas.import_schema import SourceProfile
@@ -63,10 +64,13 @@ def analyze_documents(documents: list[SourceDocument]) -> AnalysisResult:
             signature = {"version": ANALYZER_VERSION, "mode": "JSON", "builtin": "canjson-v2"}
             return AnalysisResult(
                 mode="JSON", signature=signature, signature_digest=signature_digest(signature),
-                mapping_candidates={"message_locators": [], "suggested": {}}, semantic={},
+                mapping_candidates={"message_locators": [], "suggested": {}}, semantic={}, handling_class="SUPPORTED",
             )
         return analyze_json(json_docs[0].content)
     if markdown_docs:
+        native = _analyze_native_markdown(markdown_docs[0].content)
+        if native is not None:
+            return native
         return analyze_markdown(markdown_docs[0].content)
     raise AdaptiveImportError("SOURCE_UNSUPPORTED", "Only JSON and Markdown files can be analyzed.", layer="file")
 
@@ -115,6 +119,7 @@ def analyze_json(content: bytes) -> AnalysisResult:
         mapping_candidates=candidates,
         diagnostics=diagnostics,
         semantic=semantic,
+        handling_class="MAPPABLE",
     )
 
 
@@ -125,6 +130,13 @@ def analyze_markdown(content: bytes) -> AnalysisResult:
         raise AdaptiveImportError("MARKDOWN_ENCODING_INVALID", "Markdown must be UTF-8.", layer="file") from exc
     if not text.strip():
         raise AdaptiveImportError("MARKDOWN_EMPTY", "The Markdown file is empty.", layer="file")
+    if re.search(r"^name:\s*chat-reader-conversation-rescue\s*$", text, re.MULTILINE) or "Conversation Rescue & Canonicalization Skill" in text:
+        raise AdaptiveImportError(
+            "DOCUMENT_NOT_TRANSCRIPT",
+            "This file is a conversion instruction document, not a Conversation transcript.",
+            layer="analysis",
+            action="open_rescue",
+        )
     patterns, fence_unclosed = _markdown_patterns(text)
     if fence_unclosed:
         raise AdaptiveImportError(
@@ -171,6 +183,45 @@ def analyze_markdown(content: bytes) -> AnalysisResult:
         mapping_candidates=candidates,
         diagnostics=diagnostics,
         semantic={"role_values": role_values, "role_suggestions": role_suggestions},
+        handling_class="MAPPABLE",
+    )
+
+
+def _analyze_native_markdown(content: bytes) -> AnalysisResult | None:
+    """Recognize Chat Reader's own Markdown export before generic boundary discovery."""
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None
+    front_matter = re.match(r"\A---\r?\n(?P<body>.*?)(?:\r?\n---)\s*", text, re.DOTALL)
+    if front_matter is None or not re.search(r'^format:\s*["\']chat-reader-markdown-export["\']\s*$', front_matter.group("body"), re.MULTILINE):
+        return None
+    version = re.search(r'^version:\s*["\']?2["\']?\s*$', front_matter.group("body"), re.MULTILINE)
+    markers = len(re.findall(r"^<!--\s*chat-reader-message\b", text, re.MULTILINE))
+    if version is None or markers < 1:
+        return None
+    signature = {
+        "version": ANALYZER_VERSION,
+        "mode": "MARKDOWN",
+        "builtin": "chat-reader-markdown-v2",
+        "message_markers": markers,
+    }
+    return AnalysisResult(
+        mode="MARKDOWN",
+        signature=signature,
+        signature_digest=signature_digest(signature),
+        mapping_candidates={
+            "boundaries": [],
+            "suggested": {
+                "native": True,
+                "title": "FIRST_H1_OR_FILENAME",
+                "boundary": {"kind": "NATIVE_MARKER", "level": None},
+                "role_mapping": {},
+                "preamble": "IGNORE",
+            },
+        },
+        semantic={"native": True},
+        handling_class="SUPPORTED",
     )
 
 

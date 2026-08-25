@@ -7,8 +7,10 @@ import { useEffect, useRef, useState } from "react";
 import { cancelTask, dismissCleanupScan, getActiveTasks, getPendingCleanupScans, getTask, retryTask } from "../../lib/api";
 import type { BackgroundTaskRead, CleanupScanRead } from "../../lib/types";
 import { ContentCleanupDialog } from "../conversations/content-cleanup-panel";
+import { useTranslations } from "../../components/preferences-provider";
 
-export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobile" }) {
+export function ImportTaskMonitor({ placement, forceVisible = false }: { placement: "sidebar" | "mobile" | "center"; forceVisible?: boolean }) {
+  const t = useTranslations();
   const queryClient = useQueryClient();
   const previousTasks = useRef<BackgroundTaskRead[]>([]);
   const [completedTask, setCompletedTask] = useState<BackgroundTaskRead | null>(null);
@@ -99,10 +101,14 @@ export function ImportTaskMonitor({ placement }: { placement: "sidebar" | "mobil
   const tasks = (tasksQuery.data ?? []).filter((task) => task.job_type !== "content_noise_scan" && !dismissedTaskIds.has(task.job_id));
   const visibleTask = tasks.find((task) => task.status === "processing") ?? tasks[0] ?? completedTask;
   const scans = scansQuery.data ?? [];
-  if (!visibleTask && !scans.length) return null;
+  if (!visibleTask && !scans.length && !forceVisible) return null;
 
   if (placement === "mobile") {
     return <><div className="fixed inset-x-3 bottom-3 z-40 space-y-2 rounded-xl border border-[#d8dee9] bg-white p-3 shadow-xl md:hidden">{visibleTask ? <TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} /> : null}<NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></div>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</>;
+  }
+
+  if (placement === "center") {
+    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-primary">{t("backgroundTasks")}</p><p className="mt-1 text-xs text-secondary">{t("backgroundTasksHint")}</p></div><span className="text-xs text-secondary">{tasks.length + scans.length} 项</span></div>{!visibleTask && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}{tasks.map((task) => <div key={task.job_id} className="rounded-xl border border-ui bg-surface p-4"><TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={task.status === "failed" ? () => dismissTask(task.job_id) : undefined} /></div>)}{completedTask ? <div className="rounded-xl border border-ui bg-subtle p-4"><TaskContent task={completedTask} onRetry={() => retryMutation.mutate(completedTask.job_id)} /></div> : null}<NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
   }
 
   return (

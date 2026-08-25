@@ -488,7 +488,7 @@ export type AdaptiveImportGroup = {
 
 export type AdaptiveImportFamily = {
   id: string;
-  source_mode: "JSON" | "MARKDOWN" | "JSON_MARKDOWN";
+  source_mode: "JSON" | "MARKDOWN" | "JSON_MARKDOWN" | "UNKNOWN";
   display_name: string;
   resolution_status: "EXACT_MATCH" | "COMPATIBLE" | "DRIFTED" | "AMBIGUOUS" | "UNKNOWN" | "INVALID";
   group_count: number;
@@ -500,6 +500,13 @@ export type AdaptiveImportFamily = {
   validation_result: Record<string, unknown>;
   match_evidence: Record<string, unknown>;
   diagnostics: AdaptiveImportDiagnostic[];
+  handling_class: "SUPPORTED" | "MAPPABLE" | "NOT_MAPPABLE";
+  handling_reason: {
+    code?: string;
+    title?: string;
+    detail?: string;
+    recovery_action?: "DIRECT_IMPORT" | "OPEN_MAPPING" | "OPEN_RESCUE" | string;
+  };
 };
 
 export type AdaptiveImportSession = {

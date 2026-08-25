@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-SourceMode = Literal["JSON", "MARKDOWN", "JSON_MARKDOWN"]
+SourceMode = Literal["JSON", "MARKDOWN", "JSON_MARKDOWN", "UNKNOWN"]
 ResolutionStatus = Literal["EXACT_MATCH", "COMPATIBLE", "DRIFTED", "AMBIGUOUS", "UNKNOWN", "INVALID"]
+HandlingClass = Literal["SUPPORTED", "MAPPABLE", "NOT_MAPPABLE"]
 CANONICAL_ROLES = frozenset({"user", "assistant", "system", "developer", "tool"})
 
 
@@ -24,6 +25,7 @@ class AnalysisResult:
     mapping_candidates: dict[str, Any]
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
     semantic: dict[str, Any] = field(default_factory=dict)
+    handling_class: HandlingClass = "MAPPABLE"
 
 
 @dataclass(frozen=True)

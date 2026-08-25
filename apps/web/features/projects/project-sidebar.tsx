@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Clock3, Folder, GripVertical, Import, PanelLeftClose, Plus } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Clock3, Folder, GripVertical, Import, ListTodo, PanelLeftClose, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,6 +39,7 @@ import type { ConversationCreateResponse, ConversationListItem, ProjectConversat
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
 import { NewConversationDialog } from "../conversations/new-conversation-dialog";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
+import { TaskCenterDialog } from "../import/task-center-dialog";
 import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
 import { SidebarPreferences } from "../../components/sidebar-preferences";
 import { useTranslations } from "../../components/preferences-provider";
@@ -144,6 +145,7 @@ export function ProjectSidebar({
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [showTaskCenter, setShowTaskCenter] = useState(false);
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | null>(null);
@@ -449,6 +451,7 @@ export function ProjectSidebar({
         setShowMobileDrawer(false);
         (onImportClick ?? openImportDialog)();
       }}
+      onTasksClick={() => { setShowMobileDrawer(false); setShowTaskCenter(true); }}
       onNewConversation={() => {
         setShowMobileDrawer(false);
         setShowNewConversation(true);
@@ -496,6 +499,7 @@ export function ProjectSidebar({
           router.push(`/conversations/${result.conversation.id}`);
         }}
       />
+      <TaskCenterDialog open={showTaskCenter} onClose={() => setShowTaskCenter(false)} />
     </DndContext>
   );
 }
@@ -563,6 +567,7 @@ type SidebarContentProps = {
   expandedProjects: Set<string>;
   toggleProject: (projectId: string) => void;
   onImportClick: () => void;
+  onTasksClick: () => void;
   onNewConversation: () => void;
   showProjectForm: boolean;
   setShowProjectForm: (value: boolean) => void;
@@ -598,6 +603,7 @@ function SidebarContent(props: SidebarContentProps) {
           <button type="button" data-testid="sidebar-import-button" onClick={props.onImportClick} className="min-h-11 w-full rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><span className="inline-flex items-center justify-center gap-2"><Import className="h-4 w-4" />{t("importData")}</span></button>
         </div>
         <SidebarSearch onNavigate={props.closeMobile} />
+        <button type="button" data-testid="sidebar-tasks-button" onClick={props.onTasksClick} className="mt-2 flex min-h-10 w-full items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"><ListTodo className="h-4 w-4 text-accent" />{t("tasks")}</button>
         <ImportTaskMonitor placement="sidebar" />
         <nav className="grid grid-cols-2 gap-1 md:grid-cols-1" aria-label={t("quickNavigation")}>
           <NavLink href="/recent" label={t("recent")} active={props.pathname === "/recent"} icon={<Clock3 className="h-4 w-4" />} onClick={props.closeMobile} className="md:hidden" />

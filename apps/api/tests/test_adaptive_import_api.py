@@ -2,6 +2,7 @@ import json
 import uuid
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -69,6 +70,7 @@ def test_unknown_mapping_direct_import_then_same_structure_matches(client: TestC
     first = _create(client, [("first.json", _json_bytes(), "application/json")])
     assert first["state"] == "RESOLVING"
     assert first["families"][0]["resolution_status"] == "UNKNOWN"
+    assert first["families"][0]["handling_class"] == "MAPPABLE"
 
     ready = _save_mapping(client, first)
     assert ready["state"] == "READY"
@@ -150,6 +152,7 @@ def test_invalid_group_does_not_block_mapping_and_can_be_excluded(client: TestCl
 
     assert session["state"] == "RESOLVING"
     assert {family["resolution_status"] for family in session["families"]} == {"UNKNOWN", "INVALID"}
+    assert next(family for family in session["families"] if family["resolution_status"] == "INVALID")["handling_class"] == "NOT_MAPPABLE"
     valid_family = next(family for family in session["families"] if family["resolution_status"] == "UNKNOWN")
     invalid_family = next(family for family in session["families"] if family["resolution_status"] == "INVALID")
 
@@ -357,6 +360,62 @@ def test_markdown_noise_and_role_mapping() -> None:
     mapping["noise_rules"] = [{"region": "PREAMBLE", "action": "KEEP"}]
     kept = normalize_group([document], mapping, "Markdown fixture")[0]
     assert kept.messages[0].display_text.startswith("# Export note")
+
+
+def test_native_markdown_is_supported_without_mapping() -> None:
+    document = SourceDocument(
+        "native",
+        "native.md",
+        ".md",
+        b'---\nformat: "chat-reader-markdown-export"\nversion: 2\n---\n'
+        b'<!-- chat-reader-message role="user" -->\nHello\n',
+    )
+    analysis = analyze_documents([document])
+    assert analysis.handling_class == "SUPPORTED"
+    assert analysis.signature["builtin"] == "chat-reader-markdown-v2"
+
+
+def test_native_markdown_session_is_ready_for_direct_import(client: TestClient) -> None:
+    session = _create(
+        client,
+        [
+            (
+                "native.md",
+                b'---\nformat: "chat-reader-markdown-export"\nversion: 2\n---\n'
+                b'<!-- chat-reader-message\nrole: "user"\norder_key: "0001"\n-->'
+                b'\nHello\n<!-- /chat-reader-message -->\n',
+                "text/markdown",
+            )
+        ],
+    )
+    assert session["families"][0]["handling_class"] == "SUPPORTED"
+    assert session["state"] == "READY"
+
+
+def test_rescue_instruction_document_is_not_mappable() -> None:
+    document = SourceDocument(
+        "rescue",
+        "rescue.md",
+        ".md",
+        b"---\nname: chat-reader-conversation-rescue\n---\n"
+        b"# Conversation Rescue & Canonicalization Skill\n",
+    )
+    with pytest.raises(AdaptiveImportError) as caught:
+        analyze_documents([document])
+    assert caught.value.code == "DOCUMENT_NOT_TRANSCRIPT"
+    assert caught.value.action == "open_rescue"
+
+
+def test_rescue_instruction_session_exposes_not_mappable_recovery(client: TestClient) -> None:
+    session = _create(
+        client,
+        [("rescue.md", b"---\nname: chat-reader-conversation-rescue\n---\n# Conversation Rescue & Canonicalization Skill\n", "text/markdown")],
+    )
+    family = session["families"][0]
+    assert session["state"] == "RESOLVING"
+    assert family["resolution_status"] == "INVALID"
+    assert family["handling_class"] == "NOT_MAPPABLE"
+    assert family["handling_reason"]["recovery_action"] == "OPEN_RESCUE"
 
 
 def test_markdown_heading_roles_accept_trailing_colons_and_ignore_fenced_boundaries() -> None:
