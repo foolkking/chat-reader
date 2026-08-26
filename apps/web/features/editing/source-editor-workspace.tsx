@@ -164,7 +164,10 @@ export function SourceEditorWorkspace({
     if (previousSessionId && previousItemId && !job.attachmentId) {
       job.sessionId = undefined;
       job.itemId = undefined;
-      await deleteAttachmentUploadItem(previousSessionId, previousItemId).catch(() => undefined);
+      // Cleanup is best-effort and must not hold the user-facing retry path.
+      // The upload session/item has already failed finalization; retry with a
+      // fresh item while the server reclaims the stale staging row.
+      void deleteAttachmentUploadItem(previousSessionId, previousItemId).catch(() => undefined);
     }
     job.inFlight = false;
     await startUploadJob(job);
