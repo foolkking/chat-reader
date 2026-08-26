@@ -137,6 +137,18 @@ def analyze_markdown(content: bytes) -> AnalysisResult:
             layer="analysis",
             action="open_rescue",
         )
+    # Context packages and similar instruction/document exports can contain
+    # repeated role labels, but they are not transcripts.  Treating those
+    # labels as message boundaries would incorrectly send the user into the
+    # mapping workbench.  Require several structural signals so ordinary
+    # conversations that merely mention a context package are unaffected.
+    if _looks_like_context_package(text):
+        raise AdaptiveImportError(
+            "DOCUMENT_NOT_TRANSCRIPT",
+            "This file is a context/instruction document, not a Conversation transcript.",
+            layer="analysis",
+            action="open_rescue",
+        )
     patterns, fence_unclosed = _markdown_patterns(text)
     if fence_unclosed:
         raise AdaptiveImportError(
@@ -185,6 +197,32 @@ def analyze_markdown(content: bytes) -> AnalysisResult:
         semantic={"role_values": role_values, "role_suggestions": role_suggestions},
         handling_class="MAPPABLE",
     )
+
+
+def _looks_like_context_package(text: str) -> bool:
+    """Return True for exported context/instruction documents, not chats.
+
+    These documents often include ``用户:``/``Assistant:`` labels and many
+    line-reference markers, which makes the generic Markdown analyzer see
+    plausible message boundaries.  The combination of an explicit context
+    package marker, instruction-oriented headings and line references is a
+    deterministic document signal and does not rely on filenames or content
+    similarity.
+    """
+    package_marker = bool(re.search(
+        r"(?:conversation\s+context\s+package|context\s+package|接续上下文)",
+        text,
+        re.IGNORECASE,
+    ))
+    if not package_marker:
+        return False
+    line_reference_count = len(re.findall(r"^\s*\[L\d+(?:[-–]\d+)?\]", text, re.MULTILINE))
+    instruction_marker = bool(re.search(
+        r"(?:instruction\s+boundary|当前有效指令|历史上下文|你的任务不是简单总结|\bfull\s+file\s+size\b)",
+        text,
+        re.IGNORECASE,
+    ))
+    return line_reference_count >= 3 and instruction_marker
 
 
 def _analyze_native_markdown(content: bytes) -> AnalysisResult | None:

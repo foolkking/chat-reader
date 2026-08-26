@@ -496,8 +496,20 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
                 "mapping_draft": family.mapping_draft,
                 "validation_result": family.validation_result,
                 "match_evidence": family.match_evidence,
-                "handling_class": family.match_evidence.get("handling_class") or _handling_class_for_status(family.resolution_status),
-                "handling_reason": family.match_evidence.get("handling_reason") or {},
+                # The persisted evidence describes the profile match at the
+                # start of analysis.  Full-family validation can subsequently
+                # move a family to DRIFTED, so status is authoritative for
+                # the user-facing handling class/recovery action.
+                "handling_class": (
+                    _handling_class_for_status(family.resolution_status)
+                    if family.resolution_status in {"DRIFTED", "INVALID", "AMBIGUOUS", "UNKNOWN"}
+                    else family.match_evidence.get("handling_class") or _handling_class_for_status(family.resolution_status)
+                ),
+                "handling_reason": (
+                    _handling_reason_for_status(family.resolution_status)
+                    if family.resolution_status == "DRIFTED"
+                    else family.match_evidence.get("handling_reason") or {}
+                ),
                 "diagnostics": [diagnostic for group in family.groups for diagnostic in group.diagnostics],
             }
             for family in families
@@ -614,6 +626,11 @@ def _resolve_known_families(db: Session, record: ImportRecord) -> None:
         except (AdaptiveImportError, ValueError) as exc:
             family.resolution_status = "DRIFTED"
             family.validation_result = {"valid": False, "message": str(exc)}
+            family.match_evidence = {
+                **(family.match_evidence or {}),
+                "handling_class": "MAPPABLE",
+                "handling_reason": _handling_reason_for_status("DRIFTED"),
+            }
             for group in family.groups:
                 diagnostic = exc.diagnostic(group_id=str(group.id)) if isinstance(exc, AdaptiveImportError) else {
                     "code": "NORMALIZATION_FAILED", "layer": "normalization", "blocking": True,
@@ -728,6 +745,10 @@ def _handling_class_for_status(status: str) -> str:
 
 
 def _handling_reason(status: str, analysis: AnalysisResult) -> dict[str, str]:
+    return _handling_reason_for_status(status)
+
+
+def _handling_reason_for_status(status: str) -> dict[str, str]:
     if status in {"EXACT_MATCH", "COMPATIBLE"}:
         return {"code": "SUPPORTED_PROFILE", "title": "已识别的导入格式", "detail": "Chat Reader 已验证该格式，可以直接导入。", "recovery_action": "DIRECT_IMPORT"}
     if status == "DRIFTED":

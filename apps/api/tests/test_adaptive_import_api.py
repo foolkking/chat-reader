@@ -252,6 +252,10 @@ def test_drift_creates_revision_and_old_revision_remains_matchable(client: TestC
     profile_id = original["families"][0]["matched_profile_id"]
     changed = _create(client, [("v2.json", _json_bytes(content_key="parts"), "application/json")])
     assert changed["families"][0]["resolution_status"] == "DRIFTED"
+    # A profile can match initially but fail full-family normalization.  The
+    # overview must not keep the stale SUPPORTED evidence in that case.
+    assert changed["families"][0]["handling_class"] == "MAPPABLE"
+    assert changed["families"][0]["handling_reason"]["recovery_action"] == "OPEN_MAPPING"
     repaired = _save_mapping(client, changed, "Versioned fixture")
     assert repaired["families"][0]["matched_profile_id"] == profile_id
     revisions = client.get(f"/api/import-formats/{profile_id}/revisions").json()
@@ -404,6 +408,32 @@ def test_rescue_instruction_document_is_not_mappable() -> None:
         analyze_documents([document])
     assert caught.value.code == "DOCUMENT_NOT_TRANSCRIPT"
     assert caught.value.action == "open_rescue"
+
+
+def test_context_package_document_with_role_labels_is_not_mappable(client: TestClient) -> None:
+    # Context packages intentionally contain repeated 用户:/Assistant: labels;
+    # line references and instruction sections distinguish them from a chat
+    # transcript so they must go to Conversation Rescue, not Mapping.
+    content = (
+        "### Continuation context\n\n"
+        "This is a Conversation Context Package.\n\n"
+        "## Instruction Boundary\n"
+        "The task is not a summary.\n\n"
+        "用户:\nPlease continue from the supplied context.\n"
+        "Assistant:\nAcknowledged.\n\n"
+        "[L1] historical message\n[L2] another message\n[L3] more context\n"
+    ).encode()
+    document = SourceDocument("context-package", "context.md", ".md", content)
+    with pytest.raises(AdaptiveImportError) as caught:
+        analyze_documents([document])
+    assert caught.value.code == "DOCUMENT_NOT_TRANSCRIPT"
+    assert caught.value.action == "open_rescue"
+
+    session = _create(client, [("context.md", content, "text/markdown")])
+    family = session["families"][0]
+    assert family["resolution_status"] == "INVALID"
+    assert family["handling_class"] == "NOT_MAPPABLE"
+    assert family["handling_reason"]["recovery_action"] == "OPEN_RESCUE"
 
 
 def test_rescue_instruction_session_exposes_not_mappable_recovery(client: TestClient) -> None:

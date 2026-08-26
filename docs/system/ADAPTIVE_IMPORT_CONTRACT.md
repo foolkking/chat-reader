@@ -20,6 +20,13 @@ recovery action. `resolution_status` remains the profile/session state and is
 not a substitute for the user-facing handling class. A mixed session keeps
 resolved families and only blocks import for unresolved retained items.
 
+Repeated role-looking labels alone are not sufficient evidence that Markdown
+is a transcript. Context or instruction packages that combine explicit package
+markers, instruction sections and line-reference records are classified as
+`NOT_MAPPABLE`, even when their historical text contains labels such as
+`用户:` or `Assistant:`. They remain eligible for replacement, exclusion and
+Conversation Rescue, but never enter Mapping.
+
 Conversation Rescue is a user-operated external conversion aid. Chat Reader
 does not call an LLM or upload source content. The bilingual 25k skill files
 are static resources at `/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md`
