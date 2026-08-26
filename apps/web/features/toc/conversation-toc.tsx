@@ -54,12 +54,12 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
     const frame = window.requestAnimationFrame(() => {
       const rowRect = row.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
-      const inset = 8;
-      if (rowRect.top < containerRect.top + inset) {
-        container.scrollTop -= containerRect.top + inset - rowRect.top;
-      } else if (rowRect.bottom > containerRect.bottom - inset) {
-        container.scrollTop += rowRect.bottom - (containerRect.bottom - inset);
-      }
+      const rowTop = rowRect.top - containerRect.top + container.scrollTop;
+      const rowHeight = Math.max(1, rowRect.height);
+      const centeredTop = rowTop - Math.max(0, (container.clientHeight - rowHeight) / 2);
+      const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
+      const nextTop = Math.max(0, Math.min(maxTop, centeredTop));
+      if (Math.abs(container.scrollTop - nextTop) > 1) container.scrollTop = nextTop;
     });
     return () => window.cancelAnimationFrame(frame);
   }, [activeHeadingId, visibleItems]);
