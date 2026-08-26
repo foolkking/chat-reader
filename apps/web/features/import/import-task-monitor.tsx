@@ -113,11 +113,11 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
 
   return (
     <div className="mb-3 space-y-2">
-      {tasks.map((task) => (
-        <div key={task.job_id} className="rounded-xl border border-[#d8dee9] bg-white p-3 shadow-sm">
-          <TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={task.status === "failed" ? () => dismissTask(task.job_id) : undefined} />
+      {visibleTask ? (
+        <div key={visibleTask.job_id} className="rounded-xl border border-[#d8dee9] bg-white p-3 shadow-sm">
+          <TaskContent task={visibleTask} onRetry={() => retryMutation.mutate(visibleTask.job_id)} onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} />
         </div>
-      ))}
+      ) : null}
       {completedTask ? (
         <div className={`rounded-xl border p-3 text-xs ${completedTask.status === "cancelled" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
           <p className="flex items-center gap-1.5 font-medium">
