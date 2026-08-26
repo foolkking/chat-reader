@@ -46,6 +46,7 @@ import { offlineAnnotationRepository, remoteAnnotationRepository } from "../../l
 import { ResizableDockPanel } from "../../components/resizable-pane";
 import { ReaderUtilityDrawer } from "../../components/reader-utility-drawer";
 import { MobilePageHeader } from "../../components/mobile-page-header";
+import { useWorkspaceShell } from "../../components/workspace-shell";
 import { acquireReaderBlockLease, notifyReaderMessageLayoutChanged, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "./block-virtualization";
 import { SourceEditorWorkspace, type SourceEditorTarget } from "../editing/source-editor-workspace";
 import { normalizedMessageBlocks, sourceOffsetForBlock } from "../editing/message-source-position";
@@ -85,6 +86,7 @@ export function ConversationReader({
   const t = useTranslations();
   const { readerDensityMode, readerFontSizePx, readerWidthMode, resolvedLocale } = usePreferences();
   const dialog = useInteractionDialog();
+  const workspace = useWorkspaceShell();
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectContextId = searchParams?.get("projectId") ?? undefined;
@@ -1986,8 +1988,8 @@ export function ConversationReader({
   );
 
   return (
-    <main className={`flex overflow-hidden bg-page text-primary ${libraryMode ? "h-full w-full" : "h-screen w-screen"}`}>
-      {!isOffline && !focusMode ? <ProjectSidebar
+    <main className={`flex min-h-0 min-w-0 overflow-hidden bg-page text-primary ${libraryMode || workspace.embedded ? "h-full w-full flex-1" : "h-screen w-screen"}`}>
+      {!workspace.embedded && !isOffline && !focusMode ? <ProjectSidebar
         currentProjectId={projectContextId}
         readerMode
         mobileOpenSignal={mobileSidebarOpenSignal}
@@ -2028,7 +2030,7 @@ export function ConversationReader({
           </div>
           {focusMode ? <div className="flex min-h-14 items-center justify-end px-[3vw] py-2 md:hidden"><button type="button" onClick={toggleFocusMode} className="inline-flex h-10 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
             <MobileSidebarTrigger
-              onOpen={() => isOffline ? onOpenLibrary?.() : setMobileSidebarOpenSignal((value) => value + 1)}
+              onOpen={() => isOffline ? onOpenLibrary?.() : workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
             />
             <div className={`min-w-0 flex-1 overflow-hidden transition-opacity duration-150 ${mobileActionsExpanded ? "pointer-events-none opacity-0" : "opacity-100"}`}>
               <h1 className="truncate text-[15px] font-semibold text-primary">{conversation.display_title || conversation.title}</h1>
@@ -2787,15 +2789,17 @@ function ReaderState({
 
 function ReaderLoadingShell({ progress, embedded = false }: { progress: number; embedded?: boolean }) {
   const t = useTranslations();
+  const workspace = useWorkspaceShell();
   const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
+  const inWorkspace = embedded || workspace.embedded;
   return (
-    <main className={`flex overflow-hidden bg-page text-primary ${embedded ? "h-full w-full" : "h-screen w-screen"}`}>
-      {!embedded ? <ProjectSidebar mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} /> : null}
-      <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+    <main className={`flex min-h-0 min-w-0 overflow-hidden bg-page text-primary ${inWorkspace ? "h-full w-full flex-1" : "h-screen w-screen"}`}>
+      {!inWorkspace ? <ProjectSidebar mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} /> : null}
+      <section className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-subtle">
           <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${progress}%` }} />
         </div>
-        {!embedded ? <MobilePageHeader title="Chat Reader" description={t("loadingMessages")} onOpenSidebar={() => setMobileSidebarOpenSignal((value) => value + 1)} className="md:hidden" /> : null}
+        {!inWorkspace ? <MobilePageHeader title="Chat Reader" description={t("loadingMessages")} onOpenSidebar={() => setMobileSidebarOpenSignal((value) => value + 1)} className="md:hidden" /> : null}
         <div className="mx-auto w-full max-w-3xl animate-pulse space-y-10 px-3 py-12 sm:px-6 md:py-20">
           <div className="h-5 w-48 rounded bg-subtle" />
           <div className="ml-auto h-28 w-full rounded-2xl bg-subtle sm:w-2/3" />

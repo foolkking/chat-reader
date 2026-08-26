@@ -34,6 +34,10 @@ from app.services.search.search_indexer import (
 )
 from app.services.annotations import relocate_annotations_for_new_version
 from app.services.editing.conversation_merge_service import copy_conversation_history
+from app.services.editing.attachment_reference_rewriter import (
+    assert_attachment_references_mapped,
+    rewrite_attachment_text,
+)
 from app.services.assets.scanner import scan_status_allows_use
 from app.services.database.bulk_insert import insert_rows
 from app.services.editing.transient_upload_references import find_transient_upload_references
@@ -1585,11 +1589,13 @@ def _copy_messages_to_conversation(
     )
     count = 0
     for index, (source_message, version) in enumerate(zip(source_messages, source_versions, strict=True), start=1):
+        assert_attachment_references_mapped(version.display_text or "", attachment_id_map)
+        assert_attachment_references_mapped(version.blocks or [], attachment_id_map)
         copied_message, copied_version = _create_message_with_version(
             db=db,
             conversation_id=target.id,
             role=source_message.role,
-            text=_rewrite_split_attachment_text(version.display_text, attachment_id_map),
+            text=rewrite_attachment_text(version.display_text, attachment_id_map),
             order_key=f"{index:06d}",
             turn_index=source_message.turn_index,
             created_at=source_message.created_at,
@@ -1712,13 +1718,6 @@ def _copy_split_attachment_occurrences(
             alt_text=row.alt_text,
             caption=row.caption,
         ))
-
-
-def _rewrite_split_attachment_text(value: str, attachment_id_map: dict[uuid.UUID, uuid.UUID]) -> str:
-    rewritten = value
-    for source_id, target_id in attachment_id_map.items():
-        rewritten = rewritten.replace(f"cr-asset://{source_id}", f"cr-asset://{target_id}")
-    return rewritten
 
 
 def _report_merge(

@@ -34,11 +34,13 @@ import { SelectionModeButton, SelectionToolbar } from "../../components/selectio
 import { useLinearSelection } from "../../components/use-linear-selection";
 import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
 import { MobilePageHeader } from "../../components/mobile-page-header";
+import { useWorkspaceShell } from "../../components/workspace-shell";
 
 export function ProjectConversationList({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { conversationSortMode, conversationSortDirection, projectSortMode, projectSortDirection, resolvedLocale } = usePreferences();
   const dialog = useInteractionDialog();
+  const workspace = useWorkspaceShell();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
@@ -152,14 +154,12 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
     ]);
   }
 
-  return (
-    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar currentProjectId={projectId} currentProjectDropTargetId={projectId} mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />
-      <section className="flex min-w-0 flex-1 flex-col">
+  const content = (
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <MobilePageHeader
           title={project?.name ?? (zh ? "项目" : "Project")}
           description={zh ? `${project?.conversation_count ?? 0} 个对话 · ${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}
-          onOpenSidebar={() => setMobileSidebarOpenSignal((value) => value + 1)}
+          onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
           className="md:px-6"
           actions={
             <div className="flex items-center gap-2 md:hidden">
@@ -361,8 +361,9 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
           </div>
         </div>
       </section>
-    </main>
   );
+  if (workspace.embedded) return content;
+  return <main className="flex h-screen w-screen overflow-hidden bg-page text-primary"><ProjectSidebar currentProjectId={projectId} currentProjectDropTargetId={projectId} mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />{content}</main>;
 }
 
 function ReadingProgress({ value, zh }: { value: number; zh: boolean }) {

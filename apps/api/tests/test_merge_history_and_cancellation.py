@@ -170,6 +170,62 @@ def test_merge_copies_all_versions_blocks_current_pointer_and_annotations(client
         assert merged_block_count == source_block_count
 
 
+def test_merge_rewrites_attachment_references_and_blocks_without_mutating_source(client: TestClient) -> None:
+    source_id = _commit_messages(client, "Attachment source", [{"role": "Prompt", "say": "Attach this file."}])
+    target_id = _commit_messages(client, "Attachment target", [{"role": "Prompt", "say": "Keep target."}])
+    source_message = _window(client, source_id)[0]
+
+    session = client.post(
+        f"/api/conversations/{source_id}/attachment-upload-sessions",
+        json={
+            "target_message_id": source_message["id"],
+            "base_message_version_id": source_message["current_version"]["id"],
+        },
+    )
+    assert session.status_code == 201, session.text
+    uploaded = client.post(
+        f"/api/attachment-upload-sessions/{session.json()['id']}/items",
+        files={"file": ("evidence.txt", b"attachment body", "text/plain")},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    promoted = client.post(
+        f"/api/conversations/{source_id}/attachments",
+        json={"upload_item_ids": [uploaded.json()["id"]]},
+    )
+    assert promoted.status_code == 201, promoted.text
+    source_attachment_id = promoted.json()["items"][0]["id"]
+    source_text = f"Before\n\n[Evidence](cr-asset://{source_attachment_id.upper()})\n\nAfter"
+    saved = client.patch(
+        f"/api/messages/{source_message['id']}",
+        json={"content_markdown": source_text, "base_version_id": source_message["current_version"]["id"]},
+    )
+    assert saved.status_code == 200, saved.text
+
+    queued = client.post(
+        "/api/conversations/merge",
+        json={"conversation_ids": [source_id, target_id], "title": "Attachment merge"},
+    )
+    assert queued.status_code == 202, queued.text
+    _complete_background_job(queued.json()["job_id"])
+    task = client.get(f"/api/tasks/{queued.json()['job_id']}").json()
+    assert task["status"] == "committed", task
+    merged_id = task["result"]["conversation_id"]
+
+    merged_message = next(item for item in _window(client, merged_id) if "Evidence" in item["current_version"]["display_text"])
+    merged_version = merged_message["current_version"]
+    assert source_attachment_id.lower() not in merged_version["display_text"].lower()
+    target_attachment_ids = {
+        item["id"] for item in client.get(f"/api/conversations/{merged_id}/attachments").json()["items"]
+    }
+    assert target_attachment_ids
+    merged_blocks = merged_version["blocks"]
+    assert any(str(attachment_id) in str(merged_blocks) for attachment_id in target_attachment_ids)
+    occurrences = client.get(f"/api/conversations/{merged_id}/attachments").json()["items"][0]["occurrences"]
+    assert occurrences and all(item["message_version_id"] == merged_version["id"] for item in occurrences)
+    source_after = _window(client, source_id)[0]["current_version"]["display_text"]
+    assert source_attachment_id.upper() in source_after
+
+
 def test_cancel_endpoint_and_stale_retry_limit(client: TestClient) -> None:
     first_id = _commit_messages(client, "Cancel one", [{"role": "Prompt", "say": "one"}])
     second_id = _commit_messages(client, "Cancel two", [{"role": "Prompt", "say": "two"}])

@@ -8,6 +8,7 @@ import { ServiceWorkerRegistration } from "../components/service-worker-registra
 import { OfflineSyncManager } from "../components/offline-sync-manager";
 import { AuthBoundary } from "../components/auth-boundary";
 import { AttachmentViewerProvider } from "../features/attachments/attachment-viewer";
+import { WorkspaceShellBoundary } from "../components/workspace-shell";
 import { resolveLocale } from "../lib/i18n";
 import type { UserPreferenceRead } from "../lib/types";
 import { headers } from "next/headers";
@@ -46,7 +47,7 @@ export default async function RootLayout({
         <QueryProvider>
           <AuthBoundary authEnabled={authEnabled}>
             <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
-              <InteractionDialogProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager />{children}</AttachmentViewerProvider></ImportDialogProvider></InteractionDialogProvider>
+              <InteractionDialogProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager /><WorkspaceShellBoundary>{children}</WorkspaceShellBoundary></AttachmentViewerProvider></ImportDialogProvider></InteractionDialogProvider>
             </PreferencesProvider>
           </AuthBoundary>
         </QueryProvider>

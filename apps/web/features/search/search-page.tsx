@@ -10,6 +10,7 @@ import { ProjectSidebar } from "../projects/project-sidebar";
 import { SearchBox } from "./search-box";
 import { SearchResults } from "./search-results";
 import { MobilePageHeader } from "../../components/mobile-page-header";
+import { useWorkspaceShell } from "../../components/workspace-shell";
 
 const PAGE_SIZE = 50;
 
@@ -18,6 +19,7 @@ export function SearchPage() {
   const params = useSearchParams();
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
+  const workspace = useWorkspaceShell();
   const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
   const query = params?.get("q") ?? "";
   const documentType = params?.get("document_type") ?? "all";
@@ -76,11 +78,9 @@ export function SearchPage() {
     }
     router.push(`/conversations/${item.conversation_id}${target.size ? `?${target}` : ""}`);
   };
-  return (
-    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-      <ProjectSidebar mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />
+  const content = (
       <section className="flex min-w-0 flex-1 flex-col">
-        <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码和批注" : "Search conversations, messages, sections, code, and annotations"} onOpenSidebar={() => setMobileSidebarOpenSignal((value) => value + 1)} />
+        <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码和批注" : "Search conversations, messages, sections, code, and annotations"} onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)} />
         <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
           <SearchBox initialQuery={query} onSearch={(value) => update({ q: value })} hasResults={items.length > 0} onMoveSelection={(delta) => setActiveIndex((value) => Math.max(0, Math.min(items.length - 1, value + delta)))} onOpenSelection={openSelected} />
           <div className="grid gap-3 rounded-xl border border-ui bg-surface p-4 md:grid-cols-2 lg:grid-cols-4">
@@ -99,8 +99,9 @@ export function SearchPage() {
           {items.length < total ? <button type="button" onClick={() => setOffset(items.length)} disabled={result.isFetching} className="mx-auto block min-h-10 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
         </div></div>
       </section>
-    </main>
   );
+  if (workspace.embedded) return content;
+  return <main className="flex h-screen w-screen overflow-hidden bg-page text-primary"><ProjectSidebar mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />{content}</main>;
 }
 
 function Filter({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (value: string) => void }) {
