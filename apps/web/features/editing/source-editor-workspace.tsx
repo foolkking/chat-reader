@@ -117,6 +117,10 @@ export function SourceEditorWorkspace({
       job.callbacks.onComplete(job.token, { id: job.itemId, attachmentId: attachment.id });
     } catch (error) {
       if (job.cancelled || (error instanceof DOMException && error.name === "AbortError")) return;
+      // Publish the retryable state only after the job is no longer in flight.
+      // Otherwise the Retry control can render while this guard is still true,
+      // making an immediate user retry a no-op.
+      job.inFlight = false;
       job.callbacks.onError(job.token, error instanceof Error ? error.message : "Attachment upload failed.");
     } finally {
       job.inFlight = false;
