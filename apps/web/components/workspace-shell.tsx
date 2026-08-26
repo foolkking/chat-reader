@@ -29,7 +29,7 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
     <WorkspaceShellContext.Provider value={value}>
       <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
         <ProjectSidebar currentProjectId={projectId} currentProjectDropTargetId={routeProjectId} mobileOpenSignal={mobileOpenSignal} showMobileTrigger={false} />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
       </main>
     </WorkspaceShellContext.Provider>
   );
