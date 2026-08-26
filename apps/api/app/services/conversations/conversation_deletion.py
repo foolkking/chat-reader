@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.models.attachment import AssetObject, Attachment
+from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.lifecycle import asset_object_has_live_references
@@ -24,6 +26,26 @@ def delete_conversation_record(db: Session, conversation_id: uuid.UUID) -> None:
             Attachment.asset_object_id.is_not(None),
         ).all()
     }
+    # Derived rebuilds are best-effort work scheduled after edits.  Cancel
+    # queued rebuilds before removing their conversation so they cannot wake
+    # up after the delete and contend for the same rows.
+    now = datetime.now(timezone.utc)
+    pending_rebuilds = (
+        db.query(BackgroundJob)
+        .filter(
+            BackgroundJob.job_type == "conversation_derived_rebuild",
+            BackgroundJob.status == "queued",
+        )
+        .all()
+    )
+    for job in pending_rebuilds:
+        if str((job.payload or {}).get("conversation_id")) != str(conversation_id):
+            continue
+        job.status = "cancelled"
+        job.phase = "cancelled"
+        job.completed_at = now
+        job.heartbeat_at = now
+        job.error_message = None
     db.delete(conversation)
     db.flush()
     removable_keys: list[str] = []

@@ -351,11 +351,11 @@ def queue_conversation_derived_rebuild(
         if existing is not None:
             return existing
     if not rebuild_versions:
-        queued = (
+        active_rebuilds = (
             db.query(BackgroundJob)
             .filter(
                 BackgroundJob.job_type == "conversation_derived_rebuild",
-                BackgroundJob.status == "queued",
+                BackgroundJob.status.in_(ACTIVE_JOB_STATUSES),
             )
             .order_by(BackgroundJob.created_at.desc())
             .all()
@@ -363,7 +363,7 @@ def queue_conversation_derived_rebuild(
         existing = next(
             (
                 item
-                for item in queued
+                for item in active_rebuilds
                 if str((item.payload or {}).get("conversation_id")) == str(conversation_id)
                 and not bool((item.payload or {}).get("rebuild_versions", True))
             ),
