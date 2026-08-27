@@ -35,6 +35,7 @@ def rebuild_conversation_derived_data(
     *,
     progress_callback=None,
     rebuild_versions: bool = True,
+    commit_batches: bool = False,
 ) -> DerivedRebuildResult:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
@@ -95,6 +96,13 @@ def rebuild_conversation_derived_data(
             rebuilt_versions += 1
             rebuilt_blocks += len(blocks)
         db.flush()
+        # Long rebuilds must not hold message/render-block locks for the
+        # lifetime of the worker task.  The worker opts into a commit at each
+        # bounded batch so interactive deletion can cancel and proceed at a
+        # batch boundary.  Callers that need one transaction retain the
+        # previous default.
+        if commit_batches:
+            db.commit()
         if progress_callback:
             progress_callback("rebuilding_versions", min(85, 10 + round(75 * rebuilt_versions / max(total, 1))), rebuilt_versions, total)
 
@@ -102,6 +110,11 @@ def rebuild_conversation_derived_data(
     # user mutation has committed. They must not create a second conversation
     # revision, otherwise the mutation response becomes stale immediately.
     refresh_conversation_stats(db, conversation_id, bump_revision=False)
+    if commit_batches:
+        # Separate the statistics write from the index rebuild as well.  This
+        # gives a pending conversation delete a transaction boundary before
+        # the comparatively expensive search/TOC derivation begins.
+        db.commit()
     if progress_callback:
         progress_callback("rebuilding_indexes", 90, rebuilt_versions, total)
     rebuild_search_and_toc_for_conversation(db, conversation_id)

@@ -925,6 +925,7 @@ def process_background_job(
                     conversation_id,
                     progress_callback=report,
                     rebuild_versions=bool(payload.get("rebuild_versions", True)),
+                    commit_batches=True,
                 )
                 job_result = {
                     "conversation_id": str(conversation_id),
