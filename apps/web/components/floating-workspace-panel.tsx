@@ -186,9 +186,10 @@ export function FloatingWorkspacePanel({
 function defaultGeometry(placement: WorkspacePlacement = "floating"): Geometry {
   if (placement === "reader-floating") {
     const safeLeft = readerPanelSafeLeft();
+    const safeTop = readerPanelSafeTop();
     const width = Math.min(400, Math.max(1, window.innerWidth - safeLeft - VIEWPORT_MARGIN));
-    const height = Math.min(620, Math.max(1, window.innerHeight - 72 - VIEWPORT_MARGIN));
-    return clampGeometry({ x: window.innerWidth - width - 28, y: 72, width, height }, placement);
+    const height = Math.min(620, Math.max(1, window.innerHeight - safeTop - VIEWPORT_MARGIN));
+    return clampGeometry({ x: window.innerWidth - width - 28, y: safeTop, width, height }, placement);
   }
   const minWidth = placement === "left-overlay" ? 560 : MIN_WIDTH;
   const width = Math.min(placement === "left-overlay" ? 720 : 680, Math.max(minWidth, window.innerWidth * (placement === "left-overlay" ? 0.32 : 0.42)));
@@ -201,7 +202,7 @@ function defaultGeometry(placement: WorkspacePlacement = "floating"): Geometry {
 function clampGeometry(value: Geometry, placement: WorkspacePlacement = "floating"): Geometry {
   if (placement === "reader-floating") {
     const safeLeft = readerPanelSafeLeft();
-    const safeTop = 64;
+    const safeTop = readerPanelSafeTop();
     const maxWidth = Math.max(1, window.innerWidth - safeLeft - VIEWPORT_MARGIN);
     const maxHeight = Math.max(1, window.innerHeight - safeTop - VIEWPORT_MARGIN);
     const width = Math.min(maxWidth, Math.max(Math.min(320, maxWidth), value.width));
@@ -264,6 +265,13 @@ function readerPanelSafeLeft(): number {
   return rect && rect.width > 0 && rect.right > VIEWPORT_MARGIN
     ? Math.min(window.innerWidth - VIEWPORT_MARGIN, rect.right + 12)
     : VIEWPORT_MARGIN;
+}
+
+function readerPanelSafeTop(): number {
+  // Keep the Reader header and the first message's contextual actions above
+  // the floating files workspace. Those controls remain usable while files
+  // stay open, including the common "insert a file, then edit source" flow.
+  return 216;
 }
 
 function ReaderFloatingResizeHandles({ title, onPointerDown }: {
