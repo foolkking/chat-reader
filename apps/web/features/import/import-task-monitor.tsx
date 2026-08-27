@@ -115,7 +115,10 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     <div className="mb-3 space-y-2">
       {visibleTask ? (
         <div key={visibleTask.job_id} className="rounded-xl border border-[#d8dee9] bg-white p-3 shadow-sm">
-          <TaskContent task={visibleTask} onRetry={() => retryMutation.mutate(visibleTask.job_id)} onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} />
+          {/* The compact sidebar is a status indicator only. Retry belongs to
+              the expanded global Tasks surface so contextual retry controls
+              cannot be mistaken for an editor upload retry. */}
+          <TaskContent task={visibleTask} onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} />
         </div>
       ) : null}
       {completedTask ? (

@@ -147,7 +147,13 @@ export function EditMessageForm({
           } : current);
           return;
         }
-        if (findTransientUploadReferences(view.state.doc.toString()).some((reference) => reference.token === token)) {
+        const canonicalDocument = view.state.doc.toString();
+        // A retry can race with a late successful finalize from the previous
+        // attempt. If that callback already replaced this token, the marker is
+        // resolved even when this invocation observes a missing marker.
+        const stillTransient = findTransientUploadReferences(canonicalDocument)
+          .some((reference) => reference.token === token);
+        if (stillTransient) {
           setAttachmentDrafts((current) => current[token] ? {
             ...current,
             [token]: { ...current[token], status: "error", error: "The attachment reference could not be resolved." },
@@ -156,7 +162,6 @@ export function EditMessageForm({
         }
         // EditorView is the save authority. The draft becomes ready only
         // after its canonicalization transaction is visible in that document.
-        const canonicalDocument = view.state.doc.toString();
         if (replacement === "replaced") setEditorDocument(canonicalDocument);
         setText(canonicalDocument);
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
