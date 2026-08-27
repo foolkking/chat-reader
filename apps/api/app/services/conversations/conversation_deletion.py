@@ -53,8 +53,22 @@ def delete_conversation_record(db: Session, conversation_id: uuid.UUID) -> None:
             job.status = "cancelling"
             job.phase = "cancelling"
             job.heartbeat_at = now
-    if pending_rebuilds:
-        db.commit()
+    # Publish the terminal lifecycle state before doing the potentially
+    # expensive cascade.  Rebuild workers use the same row as their guard and
+    # can now observe ``deleted`` at their next boundary instead of holding a
+    # transaction open while the DELETE waits behind them.  The hard delete is
+    # intentionally a second transaction; the endpoint remains idempotent and
+    # no user-visible request waits on derived/index cleanup.
+    conversation.status = "deleted"
+    conversation.deleted_at = now
+    db.commit()
+
+    # Start the destructive cascade from a clean transaction so stale ORM
+    # state (and locks acquired while cancelling jobs) cannot lengthen the
+    # user-facing delete request.
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        return
     db.delete(conversation)
     db.flush()
     removable_keys: list[str] = []
