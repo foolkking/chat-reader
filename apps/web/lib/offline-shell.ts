@@ -30,11 +30,21 @@ type WorkerStatusResponse = {
 const WORKER_PROTOCOL_VERSION = 1;
 const WORKER_HANDSHAKE_TIMEOUT = 3_000;
 const WORKER_ACTIVATION_TIMEOUT = 15_000;
+const SHELL_META_CACHE = "chat-reader-library-meta-v1";
+const ACTIVE_RECORD_KEY = "/__chat_reader_library_active__";
 
 type WorkerProgressResponse = {
   type: "PROGRESS";
   completed: number;
   total: number;
+};
+
+type CachedShellRecord = {
+  revision: string;
+  cacheName: string;
+  assets: string[];
+  criticalAssets?: string[];
+  resourceCount?: number;
 };
 
 const listeners = new Set<() => void>();
@@ -184,6 +194,16 @@ async function prepareOfflineShellInternal(force: boolean): Promise<OfflineShell
   if (typeof window === "undefined" || !window.location.pathname.startsWith("/library")) {
     return currentStatus;
   }
+  // A cached Library page can mount before the Service Worker message channel
+  // is ready. Cache Storage is the source of truth for whether its current
+  // shell can run offline, so establish that state first. In particular, an
+  // optional skill document must never leave the UI stuck at "checking".
+  const cachedStatus = await inspectCachedShellFromWindow();
+  if (cachedStatus?.availability === "ready" && !force) {
+    setStatus(cachedStatus);
+    void reconcileCachedShellInBackground(cachedStatus).catch(() => undefined);
+    return cachedStatus;
+  }
   setStatus({
     ...currentStatus,
     updatePhase: "checking",
@@ -224,6 +244,69 @@ async function prepareOfflineShellInternal(force: boolean): Promise<OfflineShell
     const status = { ...currentStatus, availability: "unavailable" as const, updatePhase: "failed" as const, message };
     setStatus(status);
     throw error;
+  }
+}
+
+async function reconcileCachedShellInBackground(fallback: OfflineShellStatus): Promise<void> {
+  try {
+    const registration = await registerLibraryServiceWorker();
+    const serviceWorker = registration.active;
+    if (!serviceWorker) return;
+    const existing = await postMessage(serviceWorker, { type: "GET_LIBRARY_SHELL_STATUS" });
+    if (!existing.ok || !existing.status?.ready) return;
+    await startOfflineShellReconciliation(serviceWorker, existing);
+  } catch (error) {
+    // The previously verified cache remains readable. Surface a truthful
+    // update failure rather than changing a ready shell into an indeterminate
+    // checking state.
+    setStatus({
+      ...fallback,
+      updatePhase: "failed",
+      message: error instanceof Error ? error.message : "Offline shell update failed.",
+    });
+  }
+}
+
+async function inspectCachedShellFromWindow(): Promise<OfflineShellStatus | null> {
+  if (typeof window === "undefined" || !("caches" in window)) return null;
+  try {
+    const metadata = await caches.open(SHELL_META_CACHE);
+    const response = await metadata.match(ACTIVE_RECORD_KEY);
+    if (!response) return null;
+    const record = await response.json() as CachedShellRecord;
+    if (!record || typeof record.cacheName !== "string" || !Array.isArray(record.assets)) return null;
+    const cacheNames = await caches.keys();
+    if (!cacheNames.includes(record.cacheName)) return null;
+    const criticalAssets = Array.isArray(record.criticalAssets)
+      ? record.criticalAssets
+      : record.assets.filter((asset) => !isOptionalShellAsset(asset));
+    const shell = await caches.open(record.cacheName);
+    const matches = await Promise.all(criticalAssets.map((asset) => shell.match(asset)));
+    const missing = criticalAssets.filter((_, index) => !matches[index]);
+    if (missing.length) {
+      return {
+        availability: "unavailable",
+        updatePhase: "idle",
+        revision: typeof record.revision === "string" ? record.revision : null,
+        resourceCount: record.resourceCount ?? record.assets.length,
+        completed: 0,
+        total: 0,
+        missing,
+        message: "Offline shell resources are incomplete.",
+      };
+    }
+    return {
+      availability: "ready",
+      updatePhase: "idle",
+      revision: typeof record.revision === "string" ? record.revision : null,
+      resourceCount: record.resourceCount ?? record.assets.length,
+      completed: record.resourceCount ?? record.assets.length,
+      total: record.resourceCount ?? record.assets.length,
+      missing: [],
+      message: null,
+    };
+  } catch {
+    return null;
   }
 }
 

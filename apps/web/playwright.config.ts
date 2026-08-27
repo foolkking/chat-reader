@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
 const useBundledChromium = process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1";
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const runPwaNegativeMatrix = process.env.E2E_PWA_NEGATIVE === "1";
 const pnpmCommand = process.env.PNPM_HOME ? "pnpm" : "corepack pnpm";
 
@@ -15,7 +16,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:3107",
-    ...(useBundledChromium ? {} : { channel: "chrome" }),
+    ...(useBundledChromium ? {} : chromiumExecutablePath ? { launchOptions: { executablePath: chromiumExecutablePath } } : { channel: "chrome" }),
     serviceWorkers: "allow",
     trace: "retain-on-failure",
   },
