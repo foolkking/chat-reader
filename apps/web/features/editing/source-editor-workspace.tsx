@@ -150,17 +150,26 @@ export function SourceEditorWorkspace({
   }
 
   async function retryAttachment(token: string): Promise<void> {
-    const job = uploadJobsRef.current.get(token);
-    if (!job || job.inFlight) return;
-    job.cancelled = false;
+    const previousJob = uploadJobsRef.current.get(token);
+    if (!previousJob || previousJob.inFlight) return;
+    previousJob.cancelled = true;
+    const job: UploadJob = {
+      token,
+      file: previousJob.file,
+      callbacks: previousJob.callbacks,
+      inFlight: true,
+    };
+    // Replace the failed job object so late callbacks from the failed attempt
+    // cannot overwrite the retry's ready/error state.
+    uploadJobsRef.current.set(token, job);
     // Claim the retry synchronously before the cleanup await. This prevents
     // two immediate clicks from racing and starting duplicate finalization.
     job.inFlight = true;
     // A failed finalize may leave its staging item ready but unusable (for
     // example after a transient 5xx). Start a fresh idempotent upload attempt
     // instead of reusing that item, while retaining the same editor marker.
-    const previousSessionId = job.sessionId;
-    const previousItemId = job.itemId;
+    const previousSessionId = previousJob.sessionId;
+    const previousItemId = previousJob.itemId;
     if (previousSessionId && previousItemId && !job.attachmentId) {
       job.sessionId = undefined;
       job.itemId = undefined;

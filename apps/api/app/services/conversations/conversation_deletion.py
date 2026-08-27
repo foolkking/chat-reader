@@ -26,26 +26,35 @@ def delete_conversation_record(db: Session, conversation_id: uuid.UUID) -> None:
             Attachment.asset_object_id.is_not(None),
         ).all()
     }
-    # Derived rebuilds are best-effort work scheduled after edits.  Cancel
-    # queued rebuilds before removing their conversation so they cannot wake
-    # up after the delete and contend for the same rows.
+    # Derived rebuilds are best-effort work scheduled after edits. Cancel
+    # queued work and ask processing work to stop before removing the
+    # conversation. Committing this state first lets a worker observe the
+    # cancellation at its next progress/publish boundary instead of holding
+    # the delete request behind a long rebuild transaction.
     now = datetime.now(timezone.utc)
     pending_rebuilds = (
         db.query(BackgroundJob)
         .filter(
             BackgroundJob.job_type == "conversation_derived_rebuild",
-            BackgroundJob.status == "queued",
+            BackgroundJob.status.in_(("queued", "processing", "cancelling")),
         )
         .all()
     )
     for job in pending_rebuilds:
         if str((job.payload or {}).get("conversation_id")) != str(conversation_id):
             continue
-        job.status = "cancelled"
-        job.phase = "cancelled"
-        job.completed_at = now
-        job.heartbeat_at = now
-        job.error_message = None
+        if job.status == "queued":
+            job.status = "cancelled"
+            job.phase = "cancelled"
+            job.completed_at = now
+            job.heartbeat_at = now
+            job.error_message = None
+        elif job.status == "processing":
+            job.status = "cancelling"
+            job.phase = "cancelling"
+            job.heartbeat_at = now
+    if pending_rebuilds:
+        db.commit()
     db.delete(conversation)
     db.flush()
     removable_keys: list[str] = []
