@@ -9,6 +9,8 @@ import { remoteReaderDataSource, type ReaderDataSource } from "../../lib/reader-
 
 export type SearchNavigationTarget = {
   messageId: string;
+  messageVersionId?: string | null;
+  renderBlockId?: string | null;
   blockIndex?: number;
   characterOffset?: number;
   endCharacterOffset?: number;
@@ -141,6 +143,8 @@ function toOccurrences(item: SearchResultItem): SearchOccurrence[] {
     item,
     target: {
       messageId: item.message_id as string,
+      messageVersionId: item.message_version_id,
+      renderBlockId: match.render_block_id ?? item.render_block_id,
       blockIndex: match.block_index ?? item.block_index ?? undefined,
       characterOffset: match.match_start,
       endCharacterOffset: match.match_end,

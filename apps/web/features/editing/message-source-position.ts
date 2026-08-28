@@ -2,16 +2,17 @@ import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 
 export function sourceOffsetForBlock(text: string, blocks: RenderBlockRead[], blockId?: string | null): number {
   const targetIndex = blockIndexFromDomId(blockId);
-  if (targetIndex === null) return 0;
+  const targetBlockId = blockId && blocks.some((block) => block.id === blockId) ? blockId : null;
+  if (targetIndex === null && !targetBlockId) return 0;
   let cursor = 0;
   for (const block of blocks) {
     const blockText = block.plain_text ?? readTextFromData(block.data);
-    const found = blockText ? text.indexOf(blockText, cursor) : cursor;
+    const found = findBlockStart(text, blockText, cursor);
     const start = found >= 0 ? found : cursor;
-    if (block.block_index === targetIndex) return start;
+    if ((targetIndex !== null && block.block_index === targetIndex) || block.id === targetBlockId) return start;
     cursor = Math.max(start + blockText.length, cursor);
   }
-  return Math.round((targetIndex / Math.max(blocks.length - 1, 1)) * text.length);
+  return Math.round(((targetIndex ?? 0) / Math.max(blocks.length - 1, 1)) * text.length);
 }
 
 export function blockIndexForSourceOffset(text: string, blocks: RenderBlockRead[], offset: number): number {
@@ -19,7 +20,7 @@ export function blockIndexForSourceOffset(text: string, blocks: RenderBlockRead[
   let nearest = blocks[0]?.block_index ?? 0;
   for (const block of blocks) {
     const blockText = block.plain_text ?? readTextFromData(block.data);
-    const found = blockText ? text.indexOf(blockText, cursor) : cursor;
+    const found = findBlockStart(text, blockText, cursor);
     const start = found >= 0 ? found : cursor;
     if (start > offset) return nearest;
     nearest = block.block_index;
@@ -60,4 +61,32 @@ function readRecord(value: unknown): Record<string, unknown> | null {
 function readTextFromData(data: Record<string, unknown>): string {
   const value = data.text ?? data.title ?? data.code;
   return typeof value === "string" ? value : "";
+}
+
+function findBlockStart(source: string, blockText: string, cursor: number): number {
+  if (!blockText) return cursor;
+  const direct = source.indexOf(blockText, cursor);
+  if (direct >= 0) return direct;
+  const normalized = normalizeSourceText(blockText);
+  if (!normalized) return -1;
+  let offset = cursor;
+  for (const rawLine of source.slice(cursor).split(/\r?\n/)) {
+    const line = normalizeSourceText(rawLine);
+    if (line && (line === normalized || line.includes(normalized) || normalized.includes(line))) {
+      return offset + Math.max(0, rawLine.indexOf(rawLine.trim()));
+    }
+    offset += rawLine.length + 1;
+  }
+  return -1;
+}
+
+function normalizeSourceText(value: string): string {
+  return value
+    .replace(/^\s{0,3}#{1,6}\s+/, "")
+    .replace(/^\s*(?:[-+*]|\d+[.)])\s+/, "")
+    .replace(/[`*_~]/g, "")
+    .replace(/!?(\[[^\]]*\])\([^)]*\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase();
 }

@@ -170,6 +170,10 @@ export function captureScrollAnchor(
   return {
     targetId: target.id,
     offset: target.getBoundingClientRect().top - rootTop,
+    messageId: article.dataset.messageId ?? null,
+    messageVersionId: article.dataset.messageVersionId ?? null,
+    blockId: target.dataset.blockId ?? null,
+    blockIndex: target.dataset.blockIndex ? Number(target.dataset.blockIndex) : null,
   };
 }
 
@@ -181,7 +185,9 @@ export async function restoreScrollAnchor({
   settleMs = 120,
   timeoutMs = 1500,
 }: RestoreScrollAnchorOptions): Promise<boolean> {
-  const target = document.getElementById(anchor.targetId);
+  const target = document.getElementById(anchor.targetId)
+    ?? (anchor.blockId ? document.querySelector<HTMLElement>(`[data-block-id="${anchor.blockId}"]`) : null)
+    ?? (anchor.messageId ? document.querySelector<HTMLElement>(`article[data-message-id="${anchor.messageId}"]`) : null);
   if (!target || !tokenIsCurrent()) return false;
   const startedAt = window.performance.now();
   let lastChangeAt = startedAt;

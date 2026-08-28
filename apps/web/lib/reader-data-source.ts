@@ -239,9 +239,9 @@ export const offlineReaderDataSource: ReaderDataSource = {
           .filter((block) => requestedBlockIndex === null || block.block_index === requestedBlockIndex)
         : [];
       const candidates = blocks.length
-        ? blocks.map((block) => ({ blockIndex: block.block_index, text: block.plain_text ?? "" }))
-        : [{ blockIndex: requestedBlockIndex, text: item.plain_text }];
-      const matches = candidates.flatMap((candidate) => findOfflineSearchMatches(candidate.text, options.query, candidate.blockIndex)).slice(0, 100);
+        ? blocks.map((block) => ({ blockIndex: block.block_index, renderBlockId: block.id, text: block.plain_text ?? "" }))
+        : [{ blockIndex: requestedBlockIndex, renderBlockId: null, text: item.plain_text }];
+      const matches = candidates.flatMap((candidate) => findOfflineSearchMatches(candidate.text, options.query, candidate.blockIndex, candidate.renderBlockId)).slice(0, 100);
       const firstMatch = matches[0];
       const snippet = firstMatch
         ? `${firstMatch.context_before ? "..." : ""}${firstMatch.context_before}${firstMatch.quote}${firstMatch.context_after}${firstMatch.context_after ? "..." : ""}`
@@ -255,7 +255,8 @@ export const offlineReaderDataSource: ReaderDataSource = {
         message_version_id: message?.current_version?.id ?? null,
         role: item.role,
         order_key: item.order_key,
-        block_index: requestedBlockIndex,
+        block_index: firstMatch?.block_index ?? requestedBlockIndex,
+        render_block_id: firstMatch?.render_block_id ?? null,
         character_offset: firstMatch?.match_start ?? metadataNumber(item.metadata, "character_offset"),
         snippet,
         rank: documents.length - index,
@@ -298,7 +299,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
   },
 };
 
-function findOfflineSearchMatches(text: string, query: string, blockIndex: number | null): SearchMatch[] {
+function findOfflineSearchMatches(text: string, query: string, blockIndex: number | null, renderBlockId: string | null = null): SearchMatch[] {
   const normalizedText = text.replace(/\s+/g, " ").trim();
   const normalizedQuery = query.replace(/\s+/g, " ").trim();
   if (!normalizedText || !normalizedQuery) return [];
@@ -309,24 +310,25 @@ function findOfflineSearchMatches(text: string, query: string, blockIndex: numbe
   while (cursor <= lowerText.length - lowerQuery.length) {
     const index = lowerText.indexOf(lowerQuery, cursor);
     if (index < 0) break;
-    matches.push(offlineSearchMatch(normalizedText, index, index + normalizedQuery.length, blockIndex));
+    matches.push(offlineSearchMatch(normalizedText, index, index + normalizedQuery.length, blockIndex, renderBlockId));
     cursor = index + Math.max(1, normalizedQuery.length);
   }
   if (!matches.length) {
     const token = lowerQuery.split(/\s+/).find(Boolean);
     if (token) {
       const index = lowerText.indexOf(token);
-      if (index >= 0) matches.push(offlineSearchMatch(normalizedText, index, index + token.length, blockIndex));
+      if (index >= 0) matches.push(offlineSearchMatch(normalizedText, index, index + token.length, blockIndex, renderBlockId));
     }
   }
   return matches;
 }
 
-function offlineSearchMatch(text: string, start: number, end: number, blockIndex: number | null): SearchMatch {
+function offlineSearchMatch(text: string, start: number, end: number, blockIndex: number | null, renderBlockId: string | null): SearchMatch {
   const beforeStart = Math.max(0, start - 80);
   const afterEnd = Math.min(text.length, end + 80);
   return {
     block_index: blockIndex,
+    render_block_id: renderBlockId,
     match_start: start,
     match_end: end,
     quote: text.slice(start, end),
@@ -386,13 +388,12 @@ async function loadTargetContext(
   const dialogueIndexPromise = dataSource.getDialogueIndex(conversationId, {
     anchorMessageId: target.messageId,
     limit: 80,
-  });
-  const tocPromise = dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200 });
+  }).catch(() => emptyDialogueIndex(conversationId));
+  const tocPromise = dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200 }).catch(() => emptyToc(conversationId));
   const [turn, dialogueIndex, toc] = await Promise.all([turnPromise, dialogueIndexPromise, tocPromise]);
-  if (!dialogueIndex.items.some((item) => item.message_id === target.messageId)) {
-    throw new Error("The target message is not present in the dialogue index.");
-  }
-  const blockIndex = target.blockIndex;
+  // The dialogue index is an auxiliary projection and can legitimately lag
+  // after merge/delete. The canonical turn response remains the authority;
+  // do not fail an otherwise valid target just because the index is stale.
   const messageWindow: MessageWindowResponse = {
     items: turn.items,
     limit: turn.items.length,
@@ -403,11 +404,34 @@ async function loadTargetContext(
   };
   const targetMessage = messageWindow.items.find((item) => item.id === target.messageId);
   if (!targetMessage) throw new Error("The target message could not be loaded.");
+  const resolvedBlockIndex = target.blockIndex ?? (
+    target.renderBlockId
+      ? targetMessage.render_blocks?.find((block) => block.id === target.renderBlockId)?.block_index
+      : undefined
+  );
   const targetBlocks = targetMessage.render_blocks ?? [];
-  const nearestHeading = blockIndex === undefined
+  const nearestHeading = resolvedBlockIndex === undefined
     ? null
-    : toc.items.filter((item) => item.block_index <= blockIndex).at(-1) ?? null;
+    : toc.items.filter((item) => item.block_index <= resolvedBlockIndex).at(-1) ?? null;
   return { messageWindow, targetMessage, targetBlocks, dialogueIndex, toc, nearestHeading };
+}
+
+function emptyDialogueIndex(conversationId: string): DialogueIndexResponse {
+  return {
+    conversation_id: conversationId,
+    items: [],
+    message_count: 0,
+    turn_count: 0,
+    limit: 0,
+    offset: 0,
+    total: 0,
+    has_previous: false,
+    has_more: false,
+  };
+}
+
+function emptyToc(conversationId: string): TocResponse {
+  return { conversation_id: conversationId, items: [], limit: 0, offset: 0, total: 0, has_more: false };
 }
 
 function readerTurnRanges(messages: MessageWindowResponse["items"]): Array<{ start: number; end: number }> {

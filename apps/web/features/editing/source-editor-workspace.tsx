@@ -6,10 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
 import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
-import type { AttachmentRead, MessageEditResponse, MessageListItem } from "../../lib/types";
+import type { AttachmentRead, MessageEditResponse, MessageListItem, NavigateTarget } from "../../lib/types";
 import { ContentCleanupDialog, type CleanupSourceSelection } from "../conversations/content-cleanup-panel";
 import { EditMessageForm, type SourceTextSelection } from "./edit-message-form";
-import { blockIndexForSourceOffset, normalizedMessageBlocks } from "./message-source-position";
+import { blockIndexForSourceOffset, normalizedMessageBlocks, sourceOffsetForBlock } from "./message-source-position";
 import type { AttachmentDraft, AttachmentDraftCallbacks } from "./source-attachment-drop";
 
 export type SourceEditorTarget = {
@@ -54,7 +54,7 @@ export function SourceEditorWorkspace({
   onMessageChanged: (message: MessageListItem) => Promise<void> | void;
   onConversationRevision?: (revision: number) => void;
   onClose: () => void;
-  onLocate: (messageId: string, blockIndex: number) => void | Promise<void>;
+  onLocate: (target: NavigateTarget) => void | Promise<void>;
   onDiscardAndSwitch: () => void;
   onAttachmentInsertionApplied?: () => void;
 }) {
@@ -230,8 +230,26 @@ export function SourceEditorWorkspace({
   }
 
   async function locateCurrentSource() {
-    const blockIndex = blockIndexForSourceOffset(text, normalizedMessageBlocks(message), cursorOffsetRef.current);
-    await onLocate(message.id, blockIndex);
+    const blocks = normalizedMessageBlocks(message);
+    const sourceOffset = Math.max(0, Math.min(cursorOffsetRef.current, text.length));
+    const blockIndex = blockIndexForSourceOffset(text, blocks, sourceOffset);
+    const blockStart = sourceOffsetForBlock(text, blocks, `block-${message.id}-${blockIndex}`);
+    const localOffset = Math.max(0, sourceOffset - blockStart);
+    const quoteStart = Math.max(0, sourceOffset - 80);
+    const quoteEnd = Math.min(text.length, sourceOffset + 80);
+    await onLocate({
+      messageId: message.id,
+      messageVersionId: message.current_version?.id,
+      blockIndex,
+      characterOffset: localOffset,
+      endCharacterOffset: localOffset,
+      canonicalStart: sourceOffset,
+      canonicalEnd: sourceOffset,
+      quote: text.slice(quoteStart, quoteEnd).trim() || undefined,
+      prefix: text.slice(Math.max(0, quoteStart - 40), quoteStart),
+      suffix: text.slice(quoteEnd, Math.min(text.length, quoteEnd + 40)),
+      source: "message-action",
+    });
   }
 
   async function loadLatestMessage(): Promise<MessageListItem> {
@@ -256,6 +274,12 @@ export function SourceEditorWorkspace({
     endOffset: sourceSelection.endOffset,
     text: sourceSelection.text,
   } : null;
+  const selectionState = editorDirty
+    ? "dirty-blocked"
+    : sourceSelection
+      ? (sourceSelection.startOffset === sourceSelection.endOffset ? "collapsed" : "active")
+      : "none";
+  const selectedCharacterCount = sourceSelection ? Array.from(sourceSelection.text).length : 0;
 
   const pendingBanner = pendingTarget ? (
     <div className="shrink-0 border-b border-[var(--mark-border)] bg-[var(--mark-bg)] p-3 text-sm text-primary" role="status">
@@ -281,7 +305,7 @@ export function SourceEditorWorkspace({
       onClose={requestClose}
       banner={pendingBanner}
     >
-      <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-col" data-source-selection-state={selectionState}>
         <div className="flex min-h-10 shrink-0 items-center justify-between border-b border-ui bg-surface px-2">
           <div className="flex min-w-0 items-center gap-1">
             <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "添加附件" : "Add attachment"} title={zh ? "添加附件" : "Add attachment"}><Upload className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "添加附件" : "Add attachment"}</span></label>
@@ -289,6 +313,7 @@ export function SourceEditorWorkspace({
           </div>
           <div className="flex items-center gap-1">
             <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">{zh ? "\u9884\u89c8" : "Preview"}</span></button>
+            {sourceSelection && selectedCharacterCount > 0 ? <span className="source-editor-selection-status hidden sm:inline-flex" data-testid="source-editor-selection-status">{zh ? `已选择 ${selectedCharacterCount} 个字符` : `${selectedCharacterCount} chars selected`}</span> : null}
             <button type="button" data-testid="source-editor-cleanup-selection" disabled={!sourceSelection || editorDirty} onClick={() => setCleanupOpen(true)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40 sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "清理噪声" : "Clean noise"} title={!sourceSelection ? (zh ? "先在 Markdown 源码中选择需要清理的文本" : "Select text in the Markdown source first") : editorDirty ? (zh ? "请先保存源码修改，再清理已保存版本" : "Save source changes before cleaning the persisted version") : (zh ? "审查并清理选中的噪声" : "Review and clean the selected noise")}><Eraser className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "清理噪声" : "Clean noise"}</span></button>
             <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "在正文中定位" : "Locate in reader"} title={zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}><LocateFixed className="h-4 w-4" /></button>
           </div>
@@ -420,6 +445,9 @@ function patchConversationAttachmentCache(
         occurrence_key: occurrence.occurrence_key,
         placement: occurrence.placement,
         block_index: occurrence.block_index,
+        render_block_id: occurrence.render_block_id,
+        start_offset: occurrence.start_offset,
+        end_offset: occurrence.end_offset,
       }));
       const occurrences = [...retained, ...next];
       const currentOccurrenceCount = occurrences.filter((occurrence) => occurrence.is_current_version).length;
