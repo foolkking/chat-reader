@@ -481,7 +481,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     const result = await onNavigate(target);
     if (result.ok) {
       setNavigationFeedback({ status: result.fallback ? "stale" : "idle", target });
-      if (!desktop) onOpenChange(false);
+      onOpenChange(false);
       return;
     }
     if (result.reason !== "cancelled") setNavigationFeedback({ status: "failed", target });
@@ -533,7 +533,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   </>;
 }
 
-function AnnotationList({ items, editable, messages, focusedAnnotationId, selectionMode, selectedAnnotationIds, onToggleSelected, onNavigate, onUpdate, onStyle, onDelete, onAddToNotebook, reviewMode = "continuous", reviewIndex = 0, onReviewIndexChange }: {
+function AnnotationList({ items, editable, messages, focusedAnnotationId, selectionMode, selectedAnnotationIds, onToggleSelected, onNavigate, onUpdate: onUpdateRaw, onStyle, onDelete, onAddToNotebook, reviewMode = "continuous", reviewIndex = 0, onReviewIndexChange }: {
   items: AnnotationRead[];
   editable: boolean;
   messages: MessageListItem[];
@@ -552,6 +552,20 @@ function AnnotationList({ items, editable, messages, focusedAnnotationId, select
 }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveErrorId, setSaveErrorId] = useState<string | null>(null);
+  const onUpdate = async (annotation: AnnotationRead, comment: string) => {
+    setSavingId(annotation.id);
+    setSaveErrorId(null);
+    try {
+      await onUpdateRaw(annotation, comment);
+    } catch {
+      setSaveErrorId(annotation.id);
+      throw new Error("annotation-save-failed");
+    } finally {
+      setSavingId(null);
+    }
+  };
   if (!items.length) return <p className="py-8 text-center text-sm text-secondary">暂无批注</p>;
   const displayedItems = reviewMode === "single" ? [items[Math.min(reviewIndex, items.length - 1)]] : items;
   const currentIndex = Math.min(reviewIndex, items.length - 1);
@@ -564,6 +578,7 @@ function AnnotationList({ items, editable, messages, focusedAnnotationId, select
     const blockIndex = hasUnresolvedAnchor(annotation) ? undefined : annotation.start_block_index ?? undefined;
     const selected = selectedAnnotationIds.has(annotation.id);
     return <article id={`annotation-${annotation.id}`} key={annotation.id} className={`rounded-sm border-b border-ui pb-4 last:border-0 ${focusedAnnotationId === annotation.id ? "bg-[var(--accent-soft)] ring-2 ring-[var(--focus)]" : ""}`}>
+      {savingId === annotation.id ? <p className="mb-1 text-[11px] text-secondary" role="status">{zh ? "正在保存…" : "Saving…"}</p> : saveErrorId === annotation.id ? <p className="mb-1 text-[11px] text-[var(--danger)]" role="alert">{zh ? "保存失败，请重试" : "Save failed; try again"}</p> : null}
       <div className="flex items-start gap-1">
         {selectionMode ? <button type="button" onClick={() => onToggleSelected(annotation.id)} className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={selected ? "取消选择批注" : "选择批注"}>{selected ? <CheckSquare2 className="h-4 w-4 text-accent" /> : <Square className="h-4 w-4" />}</button> : null}
         <button type="button" onClick={() => selectionMode ? onToggleSelected(annotation.id) : void onNavigate(annotationNavigateTarget(annotation, blockIndex))} className="min-w-0 flex-1 px-1 text-left">
@@ -594,7 +609,22 @@ function AnnotationContextMenu({ item, x, y, onClose, onNavigate, onDelete, onSt
   const zh = resolvedLocale === "zh-CN";
   const [type, setType] = useState<Exclude<AnnotationType, "bookmark">>(item.annotation_type === "bookmark" ? "highlight" : item.annotation_type);
   const [color, setColor] = useState<AnnotationColor>(item.color ?? "yellow");
-  return <div className="fixed z-[130] w-64 rounded-md border border-ui bg-raised p-2 shadow-2xl" style={{ left: x, top: y }} role="dialog" aria-label="Annotation actions">
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const closeOnOutside = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) onClose();
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onClose]);
+  return <div ref={menuRef} className="fixed z-[130] w-64 rounded-md border border-ui bg-raised p-2 shadow-2xl" style={{ left: x, top: y }} role="dialog" aria-label="Annotation actions">
     <div className="mb-2 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-xs font-semibold">{localizedAnnotationType(item.annotation_type, zh)}</span><button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></div>
     <div className="space-y-2"><select value={type} disabled={item.annotation_type === "bookmark"} onChange={(event) => setType(event.target.value as Exclude<AnnotationType, "bookmark">)} className="min-h-8 w-full rounded-md border border-ui bg-page px-2 text-xs">{TEXT_TYPES.map((option) => <option key={option.value} value={option.value}>{localizedAnnotationType(option.value, zh)}</option>)}</select><AnnotationColorPicker value={color} disabled={item.annotation_type === "bookmark"} onChange={setColor} zh={zh} /></div>
     <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={onNavigate} className="min-h-8 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle">{zh ? "定位" : "Locate"}</button><button type="button" onClick={onSelect} className="min-h-8 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle">{zh ? "选择" : "Select"}</button><button type="button" disabled={item.annotation_type === "bookmark"} onClick={() => onStyle(type, color)} className="min-h-8 rounded-md border border-ui px-2 text-xs text-accent hover:bg-subtle disabled:opacity-40">{zh ? "保存样式" : "Save style"}</button><button type="button" onClick={onAddToNotebook} className="min-h-8 rounded-md border border-ui px-2 text-xs text-accent hover:bg-subtle">{zh ? "加入精选笔记" : "Add to notes"}</button><button type="button" onClick={onDelete} className="col-span-2 inline-flex min-h-8 items-center justify-center gap-1 rounded-md px-2 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)]"><Trash2 className="h-3.5 w-3.5" />{zh ? "删除" : "Delete"}</button></div>
@@ -655,6 +685,7 @@ function NotebookView({ notebook, conflicts, annotations, editable, onSave, onNa
   const [blocks, setBlocks] = useState<NotebookBlock[]>(notebook?.blocks ?? []);
   const [title, setTitle] = useState(notebook?.title ?? "");
   const dragIndex = useRef<number | null>(null);
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   useEffect(() => { setBlocks(notebook?.blocks ?? []); setTitle(notebook?.title ?? ""); }, [notebook]);
   async function persist(next: NotebookBlock[]) { setBlocks(next); await onSave(next); }
   async function persistTitle(nextTitle: string) { setTitle(nextTitle); await onSave(blocks, nextTitle || null); }
@@ -667,7 +698,7 @@ function NotebookView({ notebook, conflicts, annotations, editable, onSave, onNa
     </section>)}
     {blocks.map((block, index) => {
       const annotation = block.annotation_id ? annotations.find((item) => item.id === block.annotation_id) : null;
-      return <div key={block.id} draggable={editable} onDragStart={() => { dragIndex.current = index; }} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragIndex.current === null || dragIndex.current === index) return; const next = [...blocks]; const [moved] = next.splice(dragIndex.current, 1); next.splice(index, 0, moved); dragIndex.current = null; void persist(next); }} className="group flex gap-2 border-b border-ui pb-3 last:border-0">
+      return <div key={block.id} draggable={editable} onDragStart={() => { dragIndex.current = index; setDraggingBlockId(block.id); }} onDragEnd={() => { dragIndex.current = null; setDraggingBlockId(null); }} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragIndex.current === null || dragIndex.current === index) return; const next = [...blocks]; const [moved] = next.splice(dragIndex.current, 1); next.splice(index, 0, moved); dragIndex.current = null; setDraggingBlockId(null); void persist(next); }} data-state={draggingBlockId === block.id ? "dragging" : undefined} className={`reader-interactive-row group flex gap-2 border-b border-ui pb-3 last:border-0 ${editable ? "cursor-grab active:cursor-grabbing" : ""}`}>
         {editable ? <GripVertical className="mt-2 h-4 w-4 shrink-0 cursor-grab text-secondary" /> : null}
         <div className="min-w-0 flex-1">{block.type === "markdown" ? editable ? <textarea defaultValue={block.markdown ?? ""} onBlur={(event) => { const next = blocks.map((item) => item.id === block.id ? { ...item, markdown: event.target.value } : item); void persist(next); }} className="min-h-24 w-full resize-y rounded-md border border-ui bg-page px-3 py-2 text-sm outline-none" /> : <MarkdownRenderer text={block.markdown ?? ""} /> : annotation ? <button type="button" data-annotation-color={annotation.color ?? "yellow"} onClick={() => void onNavigate(annotationNavigateTarget(annotation))} className="annotation-quote w-full border-l-2 px-3 py-2 text-left text-sm leading-6">{annotation.quote || "整条消息书签"}</button> : <p className="text-sm text-[var(--danger)]">引用的批注不可用</p>}</div>{editable && block.type === "annotation_reference" ? <button type="button" onClick={() => void persist(blocks.filter((item) => item.id !== block.id))} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]" aria-label="Remove from notes" title="Remove from notes"><Trash2 className="h-4 w-4" /></button> : null}
       </div>;

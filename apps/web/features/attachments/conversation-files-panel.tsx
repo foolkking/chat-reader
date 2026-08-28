@@ -18,10 +18,12 @@ import {
   Search,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import {
   cloneElement,
   useMemo,
+  useEffect,
   useRef,
   useState,
   type DragEvent,
@@ -37,7 +39,7 @@ import {
   updateConversationAttachment,
   uploadAttachmentItem,
 } from "../../lib/api";
-import type { AttachmentRead } from "../../lib/types";
+import type { AttachmentRead, NavigateTarget } from "../../lib/types";
 import { AttachmentPreviewDialog, readableBytes } from "./attachment-block";
 import { attachmentExtension } from "./preview-adapter-registry";
 import { useDialogFocus } from "../../components/use-dialog-focus";
@@ -48,7 +50,7 @@ type FileSort = "recent" | "name" | "type" | "size" | "usage";
 
 type ConversationFilesPanelProps = {
   conversationId: string;
-  onLocate: (messageId: string, blockIndex?: number) => void | Promise<void>;
+  onLocate: (target: NavigateTarget) => void | Promise<void>;
   onInsert: (attachment: AttachmentRead, placement: Placement) => void;
 };
 
@@ -282,6 +284,7 @@ export function ConversationFilesPanel({
                   onSelect={() => toggleSelected(attachment.id)}
                   onPreview={() => setPreview(attachment)}
                   onShowDetails={() => setDetails(attachment)}
+                  onLocate={(occurrence) => void onLocate(attachmentOccurrenceTarget(attachment, occurrence))}
                   onCopyReference={() => void navigator.clipboard.writeText(`cr-asset://${attachment.id}`)}
                   onInsert={(placement) => onInsert(attachment, placement)}
                   onDragStart={(event) => {
@@ -323,6 +326,7 @@ function FileRow({
   onSelect,
   onPreview,
   onShowDetails,
+  onLocate,
   onCopyReference,
   onInsert,
   onRename,
@@ -335,6 +339,7 @@ function FileRow({
   onSelect: () => void;
   onPreview: () => void;
   onShowDetails: () => void;
+  onLocate: (occurrence: NonNullable<AttachmentRead["occurrences"]>[number]) => void;
   onCopyReference: () => void;
   onInsert: (placement: Placement) => void;
   onRename: () => void;
@@ -346,6 +351,36 @@ function FileRow({
   const unscanned = ["scanner_disabled", "unscanned", "scan_skipped_by_deployment_policy"].includes(attachment.scan_status);
   const zeroBytes = attachment.asset_object?.byte_size === 0;
   const created = new Date(attachment.created_at).toLocaleDateString();
+  const occurrences = attachment.occurrences ?? [];
+  const [referencesOpen, setReferencesOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      if (!moreRef.current?.contains(event.target as Node)) { setMoreOpen(false); moreButtonRef.current?.focus(); }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setMoreOpen(false); moreButtonRef.current?.focus(); }
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [moreOpen]);
+
+  const locateReferences = () => {
+    if (occurrences.length === 1) {
+      onLocate(occurrences[0]);
+      return;
+    }
+    setReferencesOpen((value) => !value);
+    setMoreOpen(false);
+  };
 
   return (
     <article
@@ -387,22 +422,29 @@ function FileRow({
       <div className="mt-1 flex justify-end gap-1 border-t border-ui pt-1">
         <IconButton label={zh ? "插入" : "Insert"} onClick={() => onInsert("inline")}><Plus /></IconButton>
         <IconButton label={zh ? "预览" : "Preview"} onClick={onPreview}><Eye /></IconButton>
-        <details className="relative">
-          <summary
+        {occurrences.length === 1 ? <IconButton label="Locate in conversation" onClick={() => onLocate(occurrences[0])}><LocateFixed /></IconButton> : null}
+        {occurrences.length > 1 ? <IconButton label={referencesOpen ? "Hide references" : "Show references"} onClick={locateReferences}><LocateFixed /></IconButton> : null}
+        <div ref={moreRef} className="relative">
+          <button
+            ref={moreButtonRef}
+            type="button"
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+            onClick={() => setMoreOpen((value) => !value)}
             className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded text-secondary hover:bg-subtle"
             aria-label={zh ? "更多文件操作" : "More file actions"}
             title={zh ? "更多" : "More"}
           >
-            <MoreHorizontal className="h-4 w-4" />
-          </summary>
-          <div className="absolute right-0 z-20 mt-1 min-w-44 rounded-md border border-ui bg-raised p-1 shadow-xl">
+            {moreOpen ? <X className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
+          </button>
+          {moreOpen ? <div role="menu" className="absolute right-0 z-20 mt-1 min-w-44 rounded-md border border-ui bg-raised p-1 shadow-xl">
             {attachment.download_url ? (
               <a href={attachment.download_url} className="flex min-h-8 items-center gap-2 rounded px-2 text-xs text-primary hover:bg-subtle">
                 <Download className="h-3.5 w-3.5" />{zh ? "下载" : "Download"}
               </a>
             ) : null}
-            {(attachment.occurrences?.length ?? 0) > 0 ? (
-              <button type="button" onClick={onShowDetails} className="flex min-h-8 w-full items-center gap-2 rounded px-2 text-left text-xs text-primary hover:bg-subtle">
+            {occurrences.length > 1 ? (
+              <button type="button" onClick={locateReferences} className="flex min-h-8 w-full items-center gap-2 rounded px-2 text-left text-xs text-primary hover:bg-subtle">
                 <LocateFixed className="h-3.5 w-3.5" />{zh ? "查看引用位置" : "Locate references"}
               </button>
             ) : null}
@@ -425,11 +467,28 @@ function FileRow({
                 <Trash2 className="h-3.5 w-3.5" />{zh ? "从当前对话文件移除" : "Detach"}
               </button>
             ) : null}
-          </div>
-        </details>
+          </div> : null}
+        </div>
       </div>
+      {referencesOpen && occurrences.length > 1 ? <div className="mt-2 space-y-1 border-t border-ui pt-2" role="list" aria-label="Message references">
+        {occurrences.map((occurrence, index) => <button key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`} type="button" onClick={() => onLocate(occurrence)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-secondary hover:bg-subtle hover:text-primary"><LocateFixed className="h-3.5 w-3.5 shrink-0" /><span className="min-w-0 flex-1 truncate">{zh ? `引用 ${index + 1}` : `Reference ${index + 1}`}</span><span className="text-[10px]">{occurrence.is_current_version ? (zh ? "当前" : "Current") : (zh ? "历史" : "History")}</span></button>)}
+      </div> : null}
     </article>
   );
+}
+
+function attachmentOccurrenceTarget(attachment: AttachmentRead, occurrence: NonNullable<AttachmentRead["occurrences"]>[number]): NavigateTarget {
+  return {
+    messageId: occurrence.message_id,
+    messageVersionId: occurrence.message_version_id,
+    renderBlockId: occurrence.render_block_id,
+    blockIndex: occurrence.block_index ?? undefined,
+    characterOffset: occurrence.start_offset ?? undefined,
+    endCharacterOffset: occurrence.end_offset ?? undefined,
+    occurrenceKey: occurrence.occurrence_key,
+    attachmentId: attachment.id,
+    source: "message-action",
+  };
 }
 
 function AttachmentDetailsDialog({
@@ -441,7 +500,7 @@ function AttachmentDetailsDialog({
   attachment: AttachmentRead;
   zh: boolean;
   onClose: () => void;
-  onLocate: (messageId: string, blockIndex?: number) => void | Promise<void>;
+  onLocate: (target: NavigateTarget) => void | Promise<void>;
 }) {
   const occurrences = attachment.occurrences ?? [];
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -469,7 +528,7 @@ function AttachmentDetailsDialog({
             <button
               key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`}
               type="button"
-              onClick={() => { onClose(); void onLocate(occurrence.message_id, occurrence.block_index ?? undefined); }}
+              onClick={() => { onClose(); void onLocate({ messageId: occurrence.message_id, messageVersionId: occurrence.message_version_id, renderBlockId: occurrence.render_block_id, blockIndex: occurrence.block_index ?? undefined, occurrenceKey: occurrence.occurrence_key, attachmentId: attachment.id, source: "message-action" }); }}
               className="block w-full rounded-md border border-ui bg-surface p-3 text-left hover:border-[var(--accent)]"
             >
               <span className="flex items-center justify-between gap-2 text-xs font-medium text-primary">
