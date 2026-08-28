@@ -481,7 +481,9 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     const result = await onNavigate(target);
     if (result.ok) {
       setNavigationFeedback({ status: result.fallback ? "stale" : "idle", target });
-      onOpenChange(false);
+      // Keep the desktop workspace available for continued review; mobile
+      // sheets close after navigation so the target content is unobstructed.
+      if (!desktop) onOpenChange(false);
       return;
     }
     if (result.reason !== "cancelled") setNavigationFeedback({ status: "failed", target });
