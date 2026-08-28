@@ -267,6 +267,9 @@ export type AttachmentRead = {
     occurrence_key: string;
     placement: string;
     block_index?: number | null;
+    render_block_id?: string | null;
+    start_offset?: number | null;
+    end_offset?: number | null;
   }>;
   content_url?: string | null;
   download_url?: string | null;
@@ -722,6 +725,7 @@ export type SearchResultItem = {
   role: string | null;
   order_key: string | null;
   block_index: number | null;
+  render_block_id?: string | null;
   character_offset?: number | null;
   snippet: string;
   rank: number;
@@ -735,6 +739,7 @@ export type SearchResultItem = {
 
 export type SearchMatch = {
   block_index: number | null;
+  render_block_id?: string | null;
   match_start: number;
   match_end: number;
   quote: string;
@@ -763,6 +768,8 @@ export type TocItem = {
   text: string;
   slug: string;
   message_id: string;
+  message_version_id?: string | null;
+  render_block_id?: string | null;
   message_order_key: string;
   block_index: number;
 };
@@ -813,6 +820,10 @@ export type LoadedMessageWindow = {
 export type ScrollAnchorSnapshot = {
   targetId: string;
   offset: number;
+  messageId?: string | null;
+  messageVersionId?: string | null;
+  blockId?: string | null;
+  blockIndex?: number | null;
 };
 
 export type MessageSplitResponse = {
@@ -841,6 +852,11 @@ export type ConversationTransformResponse = {
 export type NavigateTarget = {
   messageId: string;
   messageVersionId?: string | null;
+  renderBlockId?: string | null;
+  occurrenceKey?: string | null;
+  attachmentId?: string | null;
+  canonicalStart?: number;
+  canonicalEnd?: number;
   blockIndex?: number;
   characterOffset?: number;
   endCharacterOffset?: number;
@@ -860,7 +876,7 @@ export type NavigationResult = {
   ok: boolean;
   targetId: string;
   fallback?: boolean;
-  reason?: "cancelled" | "target-context-failed" | "target-not-mounted" | "block-not-found" | "target-not-aligned" | "load-failed" | "stale-anchor" | "message-fallback";
+  reason?: "cancelled" | "target-context-failed" | "target-not-mounted" | "block-not-found" | "target-not-aligned" | "load-failed" | "stale-anchor" | "message-fallback" | "ambiguous" | "attachment-not-found";
 };
 
 export type NavigationState = {
@@ -888,6 +904,9 @@ export type MessageEditResponse = {
     relation_type: string;
     display_order: number;
     block_index?: number | null;
+    render_block_id?: string | null;
+    start_offset?: number | null;
+    end_offset?: number | null;
     display_mode: string;
     alt_text?: string | null;
     caption?: string | null;

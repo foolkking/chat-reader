@@ -838,10 +838,23 @@ export function ConversationReader({
         if (!knownMessage) {
           knownMessage = (await dataSource.getReaderTurn(conversationId, messageId)).items.find((message) => message.id === messageId);
         }
+
         if (!knownMessage) {
           setNavigationStatus("failed");
           return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-not-mounted" };
         }
+        const resolvedMessage = knownMessage;
+        const exactVersionMatches = !target.messageVersionId
+          || target.messageVersionId === resolvedMessage.current_version?.id;
+        const targetBlockIndex = exactVersionMatches
+          ? blockIndex ?? (
+            target.renderBlockId
+              ? resolvedMessage.render_blocks?.find((block) => block.id === target.renderBlockId)?.block_index
+              : undefined
+          )
+          : target.renderBlockId
+            ? resolvedMessage.render_blocks?.find((block) => block.id === target.renderBlockId)?.block_index
+            : undefined;
 
         if (navigationTokenRef.current !== token) {
           return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
@@ -858,28 +871,48 @@ export function ConversationReader({
           setNavigationStage(scrollContainerRef.current, "target-window-committed");
         }
 
-        const resolvedTargetId = blockId ?? messageIdDom;
-        if (blockIndex !== undefined) {
+        let resolvedTargetId = exactVersionMatches ? (blockId ?? messageIdDom) : messageIdDom;
+        const resolveStableTarget = () => {
+          const messageScope = document.getElementById(messageIdDom) ?? document;
+          let blockScope: HTMLElement | Document = messageScope;
+          if (target.renderBlockId) {
+            const blockByStableId = messageScope.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(target.renderBlockId)}"]`);
+            if (blockByStableId?.id) {
+              resolvedTargetId = blockByStableId.id;
+              blockScope = blockByStableId;
+            }
+          }
+          if (target.occurrenceKey && target.attachmentId) {
+            const occurrenceElement = blockScope.querySelector<HTMLElement>(`[data-attachment-id="${CSS.escape(target.attachmentId)}"][data-occurrence-key="${CSS.escape(target.occurrenceKey)}"]`)
+              ?? blockScope.querySelector<HTMLElement>(`[data-attachment-id="${CSS.escape(target.attachmentId)}"]`);
+            if (occurrenceElement?.id) resolvedTargetId = occurrenceElement.id;
+          }
+        };
+        resolveStableTarget();
+        if (targetBlockIndex !== undefined) {
           blockLease = await acquireReaderBlockLease(
             messageId,
-            blockIndex,
+            targetBlockIndex,
             () => navigationTokenRef.current === token,
           );
         }
+        // A virtualized block may not exist during the first lookup. Resolve
+        // its stable id again after the lease has mounted the target row.
+        resolveStableTarget();
         setNavigationStage(scrollContainerRef.current, `aligning:${resolvedTargetId}`);
         const mountedResult = await navigateMountedTarget({
           root: scrollContainerRef.current,
           targetId: resolvedTargetId,
-          fallbackId: resolvedTargetId === blockId ? messageIdDom : undefined,
+          fallbackId: resolvedTargetId === messageIdDom ? undefined : messageIdDom,
           tokenIsCurrent: () => navigationTokenRef.current === token,
           offset: resolvedAlignmentOffset,
-          characterOffset: resolvedTargetId === blockId ? characterOffset : undefined,
-          endCharacterOffset: resolvedTargetId === blockId ? endCharacterOffset : undefined,
-          quote: resolvedTargetId === blockId ? quote : null,
-          prefix: resolvedTargetId === blockId ? prefix : null,
-          suffix: resolvedTargetId === blockId ? suffix : null,
+          characterOffset: exactVersionMatches && (resolvedTargetId === blockId || Boolean(target.renderBlockId)) ? characterOffset : undefined,
+          endCharacterOffset: exactVersionMatches && (resolvedTargetId === blockId || Boolean(target.renderBlockId)) ? endCharacterOffset : undefined,
+          quote: resolvedTargetId === blockId || target.renderBlockId ? quote : null,
+          prefix: resolvedTargetId === blockId || target.renderBlockId ? prefix : null,
+          suffix: resolvedTargetId === blockId || target.renderBlockId ? suffix : null,
           timeoutMs: 8000,
-          allowFallback: allowMessageFallback ?? Boolean(quote || characterOffset !== undefined),
+          allowFallback: allowMessageFallback ?? Boolean(quote || characterOffset !== undefined || target.renderBlockId || target.occurrenceKey),
         });
         if (navigationTokenRef.current !== token) {
           return { ok: false, targetId: mountedResult.targetId, reason: "cancelled" };
@@ -889,7 +922,7 @@ export function ConversationReader({
         if (result.ok) {
           setNavigationStatus(result.fallback ? "stale" : "idle");
           setActiveMessageId(messageId);
-          setActiveBlockId(blockId);
+          setActiveBlockId(resolvedTargetId === messageIdDom ? null : resolvedTargetId);
           const root = scrollContainerRef.current;
           const stableAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET) ?? {
             targetId: result.targetId,
@@ -939,6 +972,8 @@ export function ConversationReader({
   ): Promise<NavigationResult> => {
     const result = await navigateToTarget({
       messageId: target.messageId,
+      messageVersionId: target.messageVersionId,
+      renderBlockId: target.renderBlockId,
       blockIndex: target.blockIndex,
       characterOffset: target.characterOffset,
       endCharacterOffset: target.endCharacterOffset,
@@ -960,6 +995,8 @@ export function ConversationReader({
     if (!context || !target) return;
     const result = await navigateToTarget({
       messageId: target.messageId,
+      messageVersionId: target.messageVersionId,
+      renderBlockId: target.renderBlockId,
       blockIndex: target.blockIndex,
       characterOffset: target.characterOffset,
       endCharacterOffset: target.endCharacterOffset,
@@ -1083,8 +1120,12 @@ export function ConversationReader({
       return;
     }
     const restoreMessageId = restoreMessage.id;
-    const blockIdIndex = findBlockIndexById(restoreMessage, anchorBlockId);
-    const blockIndex = position.block_index;
+    const savedVersionId = typeof anchor.version_id === "string"
+      ? anchor.version_id
+      : typeof anchor.current_version_id === "string" ? anchor.current_version_id : null;
+    const versionMatches = !savedVersionId || savedVersionId === restoreMessage.current_version?.id;
+    const blockIdIndex = versionMatches ? findBlockIndexById(restoreMessage, anchorBlockId) : null;
+    const blockIndex = versionMatches ? position.block_index : null;
     const isBlockRelative = anchor.position_mode === "block-relative-v1" || anchor.position_mode === "block-relative-v2";
     const blockOffset = numberOrNull(anchor.block_offset) ?? position.scroll_offset;
     const savedCharacterOffset = numberOrNull(anchor.character_offset);
@@ -1109,6 +1150,8 @@ export function ConversationReader({
         const result = await navigateToTarget({
           messageId: restoreMessageId,
           blockIndex: candidate,
+          messageVersionId: savedVersionId ?? undefined,
+          renderBlockId: versionMatches ? anchorBlockId ?? undefined : undefined,
           characterOffset: useCharacterAnchor ? savedCharacterOffset : undefined,
           alignmentOffset,
           source: "message-action",
@@ -1981,7 +2024,7 @@ export function ConversationReader({
   ) : (
     <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
-      const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, source: "section-toc" });
+      const result = await navigateToTarget({ messageId: item.message_id, messageVersionId: item.message_version_id, renderBlockId: item.render_block_id, blockIndex: item.block_index, source: "section-toc" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
       if (result.ok) setUtilityPanel(null);
     }} />
@@ -2185,12 +2228,10 @@ export function ConversationReader({
           setSourceEditorDirty(false);
           window.requestAnimationFrame(() => window.dispatchEvent(new Event("chat-reader:reader-layout-did-change")));
         }}
-        onLocate={async (messageId, blockIndex) => {
+        onLocate={async (target) => {
           await navigateToTarget({
-            messageId,
-            blockIndex,
+            ...target,
             alignmentOffset: sourceLocateAlignmentOffset(scrollContainerRef.current),
-            source: "message-action",
           });
         }}
         onDiscardAndSwitch={() => {
@@ -2238,7 +2279,7 @@ export function ConversationReader({
         <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3">{dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact readingStartMessageId={activeMessageId} />}</div>
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "files" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { setUtilityPanel(null); await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} />}
+        {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} />}
       </MobileReaderSheet>
       {!focusMode && (showShare || showExport || showSearch) ? (
         <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels} restoreFocus={restoreDesktopUtilityFocus}>
@@ -2262,9 +2303,9 @@ export function ConversationReader({
         >
           {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel
               conversationId={conversation.id}
-              onLocate={async (messageId, blockIndex) => { await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }}
+              onLocate={async (target) => { await navigateToTarget(target); }}
               onInsert={insertConversationAttachment}
-            /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (messageId, blockIndex) => { await navigateToTarget({ messageId, blockIndex, source: "message-action" }); }} />}
+            /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { await navigateToTarget(target); }} />}
         </FloatingWorkspacePanel>
       ) : null}
       <AnnotationWorkspace
@@ -2546,6 +2587,7 @@ function captureReadingPosition(
     block_index: activeBlockIndex,
     scroll_offset: blockOffset,
     anchor_data: {
+      locator_version: 2,
       position_mode: "block-relative-v2",
       block_id: activeBlock?.dataset.blockId ?? null,
       version_id: message?.current_version?.id ?? null,
