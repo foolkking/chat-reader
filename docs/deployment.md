@@ -856,6 +856,7 @@ chmod +x deploy/backup.sh
 ./deploy/backup.sh
 sha256sum -c backups/chat-reader-<timestamp>/SHA256SUMS
 pg_restore --list backups/chat-reader-<timestamp>/postgres.dump >/dev/null
+./deploy/verify_backup.sh backups/chat-reader-<timestamp>
 ```
 
 The backup helper now writes a timestamped directory containing the PostgreSQL
@@ -865,6 +866,10 @@ publishing the directory, then writes `MANIFEST` and `SHA256SUMS`. Set
 `COMPOSE_FILE`, `COMPOSE_ENV_FILE`, or `BACKUP_DIR` to use an explicit
 production location; the helper never deletes existing backups or application
 volumes.
+
+`verify_backup.sh` is a read-only pre-restore check. It validates the manifest,
+all five checksums, four tar archives, and the PostgreSQL custom dump through an
+isolated `postgres:16-alpine` container with no network and no mounted volume.
 
 ## 低内存 King 发布
 

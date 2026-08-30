@@ -20,7 +20,7 @@ are user or operator consequence, not code size.
 | ID | Area | Concrete improvement | Evidence | Impact | Urgency | Confidence | Effort | Risk | Status |
 |---|---|---|---|---:|---:|---|---:|---:|---|
 | CI-001 | Recovery | Make `deploy/backup.sh` create and verify the database plus all five artifact archives under one timestamped manifest. | Strong: current script only dumps PostgreSQL; deployment used manual archive checks. | H | H | Strong | M | M | Completed 2026-08-31; shell-verified |
-| CI-002 | Recovery | Add a dry-run restore verifier that checks archive lists, checksums, and PostgreSQL catalog compatibility without changing live volumes. | Strong: release evidence performs these checks manually. | H | H | Strong | M | L | Candidate |
+| CI-002 | Recovery | Add a dry-run restore verifier that checks archive lists, checksums, and PostgreSQL catalog compatibility without changing live volumes. | Strong: release evidence performs these checks manually. | H | H | Strong | M | L | Completed 2026-08-31; shell-verified |
 | CI-003 | Recovery | Add a documented retention report for backup directories before pruning old releases. | Strong: retained release and backup directories are currently operator-managed. | M | M | Strong | S | M | Candidate |
 | CI-004 | Recovery | Record backup component versions and source SHA in the backup manifest. | Strong: deployment manifest already records image/source metadata separately. | M | M | Strong | S | L | Candidate |
 | CI-005 | Recovery | Add a restore rehearsal fixture for `.cr` archives and attachment assets using disposable volumes. | Strong: `.cr` round-trip is tested, but release restore still needs operational rehearsal. | H | M | Strong | L | L | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 100 |
-| Completed in this backlog | 1 |
+| Completed in this backlog | 2 |
 | Blocked | 0 |
-| Remaining candidates | 99 |
+| Remaining candidates | 98 |
