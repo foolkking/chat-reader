@@ -887,7 +887,12 @@ $COMPOSE run --rm migrate
 $COMPOSE up -d --no-deps api import-worker
 $COMPOSE up -d --no-deps web
 $COMPOSE ps -a
+./deploy/verify_runtime_images.sh <release-sha>
 ```
+
+`verify_runtime_images.sh` is read-only. It fails unless the running API,
+import-worker, and Web containers all carry the expected immutable OCI source
+revision, and prints their image IDs for the release evidence record.
 
 如果使用 `docker save/load`，先在 King `docker load`，再执行同样的 migrate 和 `up -d --no-deps`。不得以增加 swap 或暂停 PostgreSQL 来换取原机 Web 构建。
 
