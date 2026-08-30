@@ -12,7 +12,7 @@ import {
   saveReadingPositionKeepalive,
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
-import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderTurnResponse, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
+import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
 import { ExportPanel } from "../exporting/export-panel";
 import { OfflineExportPanel } from "../exporting/offline-export-panel";
 import { MobileSidebarTrigger, ProjectSidebar } from "../projects/project-sidebar";
@@ -31,7 +31,6 @@ import {
   loadCompleteTurnWindow as loadTurnNeighborhood,
   mergeLoadedTurnWindow,
   replaceLoadedWindow,
-  singleTurnWindow,
   trimLoadedTurnWindow,
   type CompleteTurnWindow,
 } from "./reader-window";
@@ -798,32 +797,17 @@ export function ConversationReader({
       try {
         let targetPage: CompleteTurnWindow | null = null;
         let knownMessage: MessageListItem | undefined;
-        let prefetchSeedTurn: ReaderTurnResponse | null = null;
-
         if (targetFirst) {
-          let targetContext: ReaderTargetContext | null = null;
+          let targetContext: ReaderTargetContext;
           let completeWindow: CompleteTurnWindow;
-          const includeNavigation = target.source === "annotation" || target.preferTocPipeline;
-          const seededTurn = !includeNavigation
-            ? loadedWindowRef.current.turns.find((turn) => turn.items.some((item) => item.id === messageId))
-            : undefined;
-          if (seededTurn) {
-            // Search/source targets often arrive immediately after the
-            // initial window query. Reuse that canonical turn instead of
-            // issuing a duplicate reader-turn request.
-            completeWindow = singleTurnWindow(seededTurn);
-            prefetchSeedTurn = seededTurn;
-          } else {
-            try {
-              targetContext = await dataSource.getTargetContext(conversationId, target, { includeNavigation });
-              // Commit the target turn as soon as it arrives. Neighbor turns
-              // are useful for continuity but must not delay an exact jump.
-              completeWindow = singleTurnWindow(targetContext.readerTurn);
-              prefetchSeedTurn = targetContext.readerTurn;
-            } catch {
-              if (navigationTokenRef.current === token) setNavigationStatus("failed");
-              return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-context-failed" };
-            }
+          try {
+            [targetContext, completeWindow] = await Promise.all([
+              dataSource.getTargetContext(conversationId, target),
+              loadCompleteTurnWindow(dataSource, conversationId, messageId),
+            ]);
+          } catch {
+            if (navigationTokenRef.current === token) setNavigationStatus("failed");
+            return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-context-failed" };
           }
           if (navigationTokenRef.current !== token) {
             return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
@@ -831,14 +815,12 @@ export function ConversationReader({
           targetPage = completeWindow;
           previousTurnAnchorRef.current = completeWindow.previousTurnAnchorMessageId;
           nextTurnAnchorRef.current = completeWindow.nextTurnAnchorMessageId;
-          knownMessage = completeWindow.items.find((message) => message.id === messageId) ?? targetContext?.targetMessage;
+          knownMessage = completeWindow.items.find((message) => message.id === messageId) ?? targetContext.targetMessage;
           setNavigationStage(scrollContainerRef.current, "target-context-ready");
-          if (targetContext) {
-            const sourceKey = readerCacheIdentity(dataSource, conversationQuery.data);
-            for (const mode of ["rail", "sheet"] as const) {
-              queryClient.setQueryData(["conversation-index", sourceKey, conversationId, messageId, mode], targetContext.dialogueIndex);
-              queryClient.setQueryData(["toc", sourceKey, conversationId, messageId, mode], targetContext.toc);
-            }
+          const sourceKey = readerCacheIdentity(dataSource, conversationQuery.data);
+          for (const mode of ["rail", "sheet"] as const) {
+            queryClient.setQueryData(["conversation-index", sourceKey, conversationId, messageId, mode], targetContext.dialogueIndex);
+            queryClient.setQueryData(["toc", sourceKey, conversationId, messageId, mode], targetContext.toc);
           }
         } else if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) {
           const page = await loadCompleteTurnWindow(dataSource, conversationId, messageId);
@@ -928,7 +910,7 @@ export function ConversationReader({
           quote: resolvedTargetId === blockId || target.renderBlockId ? quote : null,
           prefix: resolvedTargetId === blockId || target.renderBlockId ? prefix : null,
           suffix: resolvedTargetId === blockId || target.renderBlockId ? suffix : null,
-          timeoutMs: 4500,
+          timeoutMs: 8000,
           allowFallback: allowMessageFallback ?? Boolean(quote || characterOffset !== undefined || target.renderBlockId || target.occurrenceKey),
         });
         if (navigationTokenRef.current !== token) {
@@ -936,32 +918,23 @@ export function ConversationReader({
         }
         const result: NavigationResult = mountedResult;
         setNavigationStage(scrollContainerRef.current, result.ok ? "resolved" : `failed:${result.reason ?? "unknown"}`);
-          if (result.ok) {
+        if (result.ok) {
           setNavigationStatus(result.fallback ? "stale" : "idle");
           setActiveMessageId(messageId);
           setActiveBlockId(resolvedTargetId === messageIdDom ? null : resolvedTargetId);
           const root = scrollContainerRef.current;
-          // Exact text/offset navigation has already aligned the canonical
-          // range. Re-capturing and restoring that same anchor adds a second
-          // layout-stability wait without improving accuracy. Keep the
-          // stabilization pass only for message/block fallbacks.
-          const exactTarget = !result.fallback && Boolean(
-            characterOffset !== undefined || quote || target.renderBlockId || target.occurrenceKey,
-          );
-          if (!exactTarget) {
-            const stableAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET) ?? {
-              targetId: result.targetId,
-              offset: resolvedAlignmentOffset,
-            };
-            await restoreScrollAnchor({
-              root,
-              anchor: stableAnchor,
-              tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
-              minimumMs: targetFirst ? 180 : 120,
-              settleMs: targetFirst ? 120 : 80,
-              timeoutMs: targetFirst ? 900 : 700,
-            });
-          }
+          const stableAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET) ?? {
+            targetId: result.targetId,
+            offset: resolvedAlignmentOffset,
+          };
+          await restoreScrollAnchor({
+            root,
+            anchor: stableAnchor,
+            tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
+            minimumMs: targetFirst ? 1400 : 700,
+            settleMs: targetFirst ? 360 : 220,
+            timeoutMs: targetFirst ? 5000 : 2800,
+          });
           if (navigationTokenRef.current !== token) {
             return { ok: false, targetId: result.targetId, reason: "cancelled" };
           }
@@ -973,34 +946,6 @@ export function ConversationReader({
                 setNavigationStatus("idle");
               }
             }, 2000);
-          }
-          if (prefetchSeedTurn && targetPage?.turns.length === 1) {
-            const seedTurn = prefetchSeedTurn;
-            // Expand the reader window after the exact target is visible. The
-            // merge is non-destructive and keeps the current scroll anchor.
-            void loadCompleteTurnWindow(dataSource, conversationId, messageId, INITIAL_WINDOW_TURNS, seedTurn)
-              .then((expanded) => {
-                if (navigationTokenRef.current !== token || expanded.turns.length <= 1) return;
-                const current = loadedWindowRef.current;
-                const anchor = captureScrollAnchor(scrollContainerRef.current, ACTIVE_READING_OFFSET);
-                const merged = mergeLoadedTurnWindow(current, expanded);
-                applyLoadedWindow({ ...merged, generation: current.generation });
-                syncTurnAnchorRefs(merged, previousTurnAnchorRef, nextTurnAnchorRef);
-                if (anchor) {
-                  void restoreScrollAnchor({
-                    root: scrollContainerRef.current,
-                    anchor,
-                    tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
-                    minimumMs: 0,
-                    settleMs: 40,
-                    timeoutMs: 500,
-                  });
-                }
-              })
-              .catch(() => {
-                // Neighbor prefetch is opportunistic; the target remains
-                // usable when an adjacent turn is unavailable.
-              });
           }
         } else {
           setNavigationStatus("failed");
@@ -2486,13 +2431,11 @@ async function loadCompleteTurnWindow(
   conversationId: string,
   anchorMessageId?: string,
   targetTurnCount?: number,
-  seedTurn?: ReaderTurnResponse,
 ): Promise<CompleteTurnWindow> {
   return loadTurnNeighborhood(
     (anchor) => dataSource.getReaderTurn(conversationId, anchor),
     anchorMessageId,
     targetTurnCount,
-    seedTurn,
   );
 }
 
