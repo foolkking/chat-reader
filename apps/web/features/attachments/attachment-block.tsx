@@ -107,13 +107,13 @@ export function AttachmentBlock(props: AttachmentBlockProps) {
   if (presentation === "gallery" && plan.inline === "media" && plan.viewerKind === "image" && attachment.content_url) {
     content = <InlineImage attachment={attachment} props={props} onOpen={openViewer} onRuntime={updateRuntime} />;
   } else if ((presentation === "reading" || presentation === "data") && plan.inline === "preview-panel" && ["markdown", "text", "code", "json", "table"].includes(plan.viewerKind ?? "")) {
-    content = <InlineTextPreview attachment={attachment} kind={plan.viewerKind!} caption={caption} onOpen={openViewer} onRuntime={updateRuntime} presentation={presentation} />;
+    content = <InlineTextPreview attachment={attachment} kind={plan.viewerKind!} caption={caption} onOpen={openViewer} onRuntime={updateRuntime} presentation={presentation} locator={props} />;
   } else if (presentation === "audio-list" && plan.viewerKind === "audio" && attachment.content_url) {
-    content = <InlineAudio attachment={attachment} onOpen={openViewer} onRuntime={updateRuntime} />;
+    content = <InlineAudio attachment={attachment} onOpen={openViewer} onRuntime={updateRuntime} locator={props} />;
   } else if (presentation === "video" && plan.viewerKind === "video" && attachment.content_url) {
-    content = <InlineVideo attachment={attachment} onOpen={openViewer} onRuntime={updateRuntime} />;
+    content = <InlineVideo attachment={attachment} onOpen={openViewer} onRuntime={updateRuntime} locator={props} />;
   } else {
-    content = <FileRow attachment={attachment} plan={plan} onOpen={openViewer} onRetry={() => updateRuntime({ status: "idle" })} />;
+    content = <FileRow attachment={attachment} plan={plan} onOpen={openViewer} onRetry={() => updateRuntime({ status: "idle" })} locator={props} />;
   }
   return wrapStandalone(content, presentation, props.grouped);
 }
@@ -139,10 +139,10 @@ function InlineImage({ attachment, props, onOpen, onRuntime }: {
   const visibleCaption = normalizeVisibleCaption(props.caption, attachment.display_name);
   return (
     <figure
+      {...attachmentLocatorAttributes(attachment, props)}
       className="attachment-gallery-item"
       style={props.galleryItemStyle}
       data-testid="attachment-block"
-      data-attachment-id={attachment.id}
       data-attachment-mode="media"
       data-display-mode={displayMode}
     >
@@ -171,13 +171,14 @@ function InlineImage({ attachment, props, onOpen, onRuntime }: {
   );
 }
 
-function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, presentation }: {
+function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, presentation, locator }: {
   attachment: AttachmentRead;
   kind: AttachmentViewerKind;
   caption?: string;
   onOpen?: () => void;
   onRuntime: (state: AttachmentRuntimeRenderState) => void;
   presentation: "reading" | "data";
+  locator: AttachmentBlockProps;
 }) {
   const [text, setText] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -195,7 +196,7 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, prese
   }, [attachment.content_url, onRuntime]);
   const isLong = Boolean(text && text.split(/\r?\n/).length > (presentation === "data" ? 8 : 10));
   return (
-    <figure className={`attachment-preview attachment-preview--${presentation}`} data-testid="attachment-block" data-attachment-id={attachment.id} data-attachment-mode="preview-panel">
+    <figure {...attachmentLocatorAttributes(attachment, locator)} className={`attachment-preview attachment-preview--${presentation}`} data-testid="attachment-block" data-attachment-mode="preview-panel">
       <AttachmentMeta attachment={attachment} kind={kind} onOpen={onOpen} />
       <div className={`attachment-preview-body ${expanded ? "attachment-preview-body--expanded" : ""}`}>
         {text === null ? <div className="flex min-h-20 items-center justify-center text-secondary"><Loader2 className="h-4 w-4 animate-spin" /></div> : renderBoundedText(text, kind, attachment.display_name, attachment.id, expanded)}
@@ -212,9 +213,9 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, prese
   );
 }
 
-function InlineAudio({ attachment, onOpen, onRuntime }: MediaProps) {
+function InlineAudio({ attachment, onOpen, onRuntime, locator }: MediaProps) {
   return (
-    <div className="attachment-audio-row" data-testid="attachment-block" data-attachment-id={attachment.id} data-attachment-mode="preview-panel">
+    <div {...attachmentLocatorAttributes(attachment, locator)} className="attachment-audio-row" data-testid="attachment-block" data-attachment-mode="preview-panel">
       <div className="attachment-audio-heading">
         <button type="button" onClick={onOpen} disabled={!onOpen} className="min-w-0 truncate text-left text-sm font-medium text-primary disabled:cursor-default" title={attachment.display_name}>{attachment.display_name}</button>
         <span className="text-xs text-secondary">{attachmentMeta(attachment)}</span>
@@ -227,9 +228,9 @@ function InlineAudio({ attachment, onOpen, onRuntime }: MediaProps) {
   );
 }
 
-function InlineVideo({ attachment, onOpen, onRuntime }: MediaProps) {
+function InlineVideo({ attachment, onOpen, onRuntime, locator }: MediaProps) {
   return (
-    <figure className="attachment-video-preview" data-testid="attachment-block" data-attachment-id={attachment.id} data-attachment-mode="preview-panel">
+    <figure {...attachmentLocatorAttributes(attachment, locator)} className="attachment-video-preview" data-testid="attachment-block" data-attachment-mode="preview-panel">
       <header className="attachment-video-heading">
         <span className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</span>
         <DownloadButton attachment={attachment} />
@@ -243,7 +244,7 @@ function InlineVideo({ attachment, onOpen, onRuntime }: MediaProps) {
   );
 }
 
-type MediaProps = { attachment: AttachmentRead; onOpen?: () => void; onRuntime: (state: AttachmentRuntimeRenderState) => void };
+type MediaProps = { attachment: AttachmentRead; onOpen?: () => void; onRuntime: (state: AttachmentRuntimeRenderState) => void; locator: AttachmentBlockProps };
 
 function mediaFailure(attachment: AttachmentRead, kind: "audio" | "video"): AttachmentRuntimeRenderState {
   const mime = attachment.detected_mime_type || attachment.asset_object?.detected_mime_type || attachment.declared_mime_type || "";
@@ -254,11 +255,12 @@ function mediaFailure(attachment: AttachmentRead, kind: "audio" | "video"): Atta
     : { status: "failed", requestId: crypto.randomUUID(), reason: "decode" };
 }
 
-function FileRow({ attachment, plan, onOpen, onRetry }: {
+function FileRow({ attachment, plan, onOpen, onRetry, locator }: {
   attachment: AttachmentRead;
   plan: ReturnType<typeof buildAttachmentRenderPlan>;
   onOpen?: () => void;
   onRetry: () => void;
+  locator: AttachmentBlockProps;
 }) {
   const variant = plan.fileRowVariant ?? "normal";
   const message = variant === "empty" ? "空文件 · 0 B"
@@ -268,7 +270,7 @@ function FileRow({ attachment, plan, onOpen, onRetry }: {
           : variant === "offline-unavailable" ? "离线资源未缓存"
             : attachmentMeta(attachment);
   return (
-    <div className="attachment-file-list-row" data-testid="attachment-block" data-attachment-id={attachment.id} data-attachment-mode="file-row" data-file-row-variant={variant}>
+    <div {...attachmentLocatorAttributes(attachment, locator)} className="attachment-file-list-row" data-testid="attachment-block" data-attachment-mode="file-row" data-file-row-variant={variant}>
       <KindIcon kind={plan.capability.viewerKind} warning={variant !== "normal" && variant !== "empty"} />
       <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</p><p className="mt-0.5 truncate text-xs text-secondary">{message}</p></div>
       {plan.actions.retry ? <button type="button" onClick={onRetry} className="attachment-icon-action" aria-label="重试预览" title="重试预览"><RotateCcw className="h-4 w-4" /></button> : null}
@@ -276,6 +278,14 @@ function FileRow({ attachment, plan, onOpen, onRetry }: {
       {plan.actions.download ? <DownloadButton attachment={attachment} /> : null}
     </div>
   );
+}
+
+function attachmentLocatorAttributes(attachment: AttachmentRead, props: Pick<AttachmentBlockProps, "occurrenceKey">) {
+  return {
+    id: props.occurrenceKey ? `attachment-occurrence-${props.occurrenceKey}` : undefined,
+    "data-attachment-id": attachment.id,
+    "data-occurrence-key": props.occurrenceKey,
+  };
 }
 
 function AttachmentMeta({ attachment, kind, onOpen }: { attachment: AttachmentRead; kind: AttachmentViewerKind; onOpen?: () => void }) {

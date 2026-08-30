@@ -2338,9 +2338,9 @@ export function ConversationReader({
         >
           {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel
               conversationId={conversation.id}
-              onLocate={async (target) => { await navigateToTarget(target); }}
+              onLocate={async (target) => { setShowFiles(false); await navigateToTarget(target); }}
               onInsert={insertConversationAttachment}
-            /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { await navigateToTarget(target); }} />}
+            /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setShowFiles(false); await navigateToTarget(target); }} />}
         </FloatingWorkspacePanel>
       ) : null}
       <AnnotationWorkspace

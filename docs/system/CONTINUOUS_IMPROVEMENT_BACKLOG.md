@@ -131,7 +131,7 @@ are user or operator consequence, not code size.
 | PERF-009 | Performance | Add a bounded search index bulk-write benchmark for 15k-document imports. | Observed: prior IndexedDB failure involved 15,448 operations. | H | H | Observed | M | M | Candidate |
 | PERF-010 | Performance | Add production diagnostic percentiles for queue wait, execution, and artifact packaging duration. | Observed: diagnostics currently expose averages such as 5.02s queue and 19.675s execution. | M | M | Observed | M | L | Candidate |
 | TEST-001 | Testing | Add authenticated browser acceptance for the current deployed SHA using disposable owner credentials. | Observed: production owner-authenticated UI remains NOT VERIFIED. | H | H | Observed | M | M | Candidate |
-| TEST-002 | Testing | Add desktop/mobile tests for direct attachment locate with single and multiple occurrences. | Strong: prior flow opened details instead of navigating. | H | H | Strong | M | L | Candidate |
+| TEST-002 | Testing | Add desktop/mobile tests for direct attachment locate with single and multiple occurrences. | Strong: prior flow opened details instead of navigating. | H | H | Strong | M | L | Completed 2026-08-31; desktop/mobile single and repeated occurrence flows passed without opening file details |
 | TEST-003 | Testing | Add browser tests for More-menu outside click, Escape, and focus restoration in Files and Annotations. | Strong: inconsistent menu contracts were observed. | M | M | Strong | M | L | Candidate |
 | TEST-004 | Testing | Add browser tests for project/list row hover preview timing and viewport collision. | Strong: delayed preview contract is explicit. | M | L | Strong | M | L | Candidate |
 | TEST-005 | Testing | Add browser tests that drag overlays preserve source row dimensions within 2px. | Strong: source-sized overlay is a product acceptance requirement. | M | M | Strong | S | L | Candidate |
@@ -169,7 +169,7 @@ are user or operator consequence, not code size.
 
 | Metric | Count |
 |---|---:|
-| Discovered candidates | 130 |
-| Completed in this backlog | 17 |
+| Discovered candidates | 131 |
+| Completed in this backlog | 19 |
 | Blocked | 0 |
-| Remaining candidates | 113 |
+| Remaining candidates | 112 |

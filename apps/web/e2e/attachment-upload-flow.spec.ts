@@ -104,7 +104,60 @@ async function deleteConversation(request: APIRequestContext, conversationId: st
   throw new Error(`Conversation cleanup failed with HTTP ${lastStatus}`);
 }
 
+type LocatorAttachment = {
+  id: string;
+  display_name: string;
+  occurrence_count: number;
+  scan_status: string;
+  occurrences: Array<{
+    occurrence_key: string;
+    is_current_version: boolean;
+  }>;
+};
+
+async function openConversationFiles(page: Page): Promise<void> {
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await page.getByRole("button", { name: /More|更多/, exact: true }).click();
+  } else {
+    await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
+  }
+  await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
+  await expect(page.getByTestId("conversation-files-panel")).toBeVisible();
+}
+
+async function expectExactAttachmentOccurrence(page: Page, attachmentId: string, occurrenceKey: string): Promise<void> {
+  await expect(page.getByTestId("conversation-files-panel")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: /inline-image\.png|later-file\.txt/ })).toHaveCount(0);
+  await expect(page.locator(
+    `[data-attachment-id="${attachmentId}"][data-occurrence-key="${occurrenceKey}"]`,
+  ).first()).toBeInViewport();
+}
+
+async function verifyDirectAttachmentLocate(
+  page: Page,
+  single: LocatorAttachment,
+  multiple: LocatorAttachment,
+): Promise<void> {
+  const singleOccurrence = single.occurrences[0];
+  const currentMultipleOccurrence = multiple.occurrences.find((occurrence) => occurrence.is_current_version);
+  expect(singleOccurrence).toBeTruthy();
+  expect(currentMultipleOccurrence).toBeTruthy();
+
+  await openConversationFiles(page);
+  const singleRow = page.getByTestId("conversation-file-row").filter({ hasText: single.display_name });
+  await singleRow.getByRole("button", { name: "Locate in conversation" }).click();
+  await expectExactAttachmentOccurrence(page, single.id, singleOccurrence.occurrence_key);
+
+  await openConversationFiles(page);
+  const multipleRow = page.getByTestId("conversation-file-row").filter({ hasText: multiple.display_name });
+  await multipleRow.getByRole("button", { name: "Show references" }).click();
+  await expect(multipleRow.getByRole("list", { name: "Message references" })).toBeVisible();
+  await multipleRow.getByRole("button").filter({ hasText: /Current|当前/ }).click();
+  await expectExactAttachmentOccurrence(page, multiple.id, currentMultipleOccurrence!.occurrence_key);
+}
+
 test("uploads, inserts, versions, and reuses conversation attachments", async ({ page }) => {
+  test.setTimeout(180_000);
   const { conversationId, messageId } = await createConversation(page.request);
   const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 
@@ -149,11 +202,27 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
     await expect(message.getByTestId("attachment-block")).toHaveCount(2);
 
     const attachmentResponse = await page.request.get(`/api/conversations/${conversationId}/attachments`);
-    const attachments = ((await attachmentResponse.json()) as { items: Array<{ occurrence_count: number; scan_status: string }> }).items;
+    const attachments = ((await attachmentResponse.json()) as { items: LocatorAttachment[] }).items;
     expect(attachments).toHaveLength(2);
     expect(attachments.reduce((sum, item) => sum + item.occurrence_count, 0)).toBe(3);
     expect(attachments.every((item) => item.scan_status === "scanner_disabled")).toBeTruthy();
 
+    const single = attachments.find((item) => item.display_name === "later-file.txt");
+    const multiple = attachments.find((item) => item.display_name === "inline-image.png");
+    expect(single?.occurrences).toHaveLength(1);
+    expect(multiple?.occurrences).toHaveLength(2);
+
+    await test.step("desktop locates single and repeated references without opening file details", async () => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await verifyDirectAttachmentLocate(page, single!, multiple!);
+    });
+
+    await test.step("mobile locates single and repeated references through the same contract", async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await verifyDirectAttachmentLocate(page, single!, multiple!);
+    });
+
+    await page.setViewportSize({ width: 1440, height: 900 });
     await message.getByRole("button", { name: /Previous version|上一版/ }).click();
     await expect(message.getByTestId("attachment-block")).toHaveCount(1);
     await message.getByRole("button", { name: /Next version|下一版/ }).click();
