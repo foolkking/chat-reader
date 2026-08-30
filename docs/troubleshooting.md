@@ -81,6 +81,36 @@ PWA service worker 只在 secure context 注册。普通 LAN HTTP 作为响应�
 
 Dexie 当前为 version 2，并兼容读取既有 v1 数据；Offline package 当前写 v3、读 v1/v2/v3。不要用升级/清库处理普通 revision 不一致。Offline package 与系统归档 `.cr` 是不同协议。
 
+## Offline Library reports `bulkPut` / `AbortError` or opens with 0 messages
+
+`searchDocuments.bulkPut(): ... AbortError` means the browser aborted the
+IndexedDB transaction. It does not by itself prove that the server package is
+invalid. Check browser storage quota/eviction state and whether another Library
+tab is writing the same database. Do not immediately delete the whole Chat
+Reader IndexedDB, because that also removes valid offline packages and local
+annotation state.
+
+The current importer writes large stores in bounded chunks and verifies each
+conversation's message rows before committing package metadata. Recovery order:
+
+1. Keep the server package and reload `/library`; retry the failed update once
+   with other Chat Reader Library tabs closed.
+2. Check browser site-storage availability. A quota denial needs space or
+   persistence permission; repeated `AbortError` without quota pressure needs a
+   browser console/IndexedDB error capture.
+3. If one package still fails, remove or update that package through the
+   Offline Library UI. Do not clear unrelated stores manually.
+4. If the package is marked current but Reader shows `0 / 0`, treat it as an
+   import-integrity failure. The local `messages` store must contain rows for
+   the selected conversation before the package is accepted; retry the package
+   and preserve the error evidence without recording message text.
+5. If retry still produces zero rows, record the package schema version,
+   conversation count, store counts, and browser version only. Do not put
+   titles,正文, IDs, attachments, or credentials in diagnostics.
+
+Offline package v1 read compatibility remains mandatory; this procedure must
+not be replaced by a database-version reset.
+
 ## 附件显示“未扫描”或无法使用
 
 先检查运行时能力，而不是仅检查环境文件：
