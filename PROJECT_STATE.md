@@ -1,6 +1,31 @@
 # Project State
 
-## 2026-08-31 Sidebar state, custom project order, drag feedback and batch merge (local)
+## 2026-08-31 Sidebar state, custom project order, drag feedback and batch merge (deployed)
+
+- Production runtime is source `9cc7c4e2b6065bf3bce333a2fc8bb3cfb0ac94fd`,
+  built externally by GitHub Actions run `33325329338` attempt 2. The exact
+  archive SHA-256 is
+  `bb46bc1e497408b1abece1662dcbccad4830185946c0ca7c501bcba996b191ab`.
+- The retained pre-deploy recovery point is
+  `/opt/chat-reader/backups/predeploy-20260830T175500Z-9cc7c4e` (540 MiB).
+  Its PostgreSQL custom dump passed `pg_restore --list`; imports, exports,
+  offline and assets archives passed tar listing and all five files passed
+  `SHA256SUMS` verification.
+- King loaded the externally built images, ran the existing migration, and
+  recreated API/import-worker/Web with `--no-build --no-deps --force-recreate`.
+  PostgreSQL was not restarted; no volume, `.env.production`, import storage or
+  user data was removed or overwritten.
+- API/worker runtime image ID is
+  `sha256:662dd41a676886a2b38d4b0a72c2cc76ec75f719c64dea926d04dd2cf0055125`;
+  Web is
+  `sha256:c9e5efe9cd0ceb9cbce74c4f299cf345be1c8aa462d0251e67ce5329d1f54ba3`.
+  Both OCI revision labels match the runtime source.
+- Production API, Web and PostgreSQL are healthy; worker diagnostics report
+  `alive_idle`; external health is 200, anonymous private access is 401,
+  public diagnostics is 404, and Alembic is `20260829_0029 (head/current)`.
+  Authenticated production UI acceptance remains `NOT VERIFIED` because no
+  owner credential was used. CI production-build browser, PWA, authentication,
+  Reader, Share, Source Editor and attachment gates all passed.
 
 - Project containers now have one product ordering authority: custom drag order.
   New active non-default projects append after the current last project. Project
@@ -16,7 +41,7 @@
 - Batch selection keeps its launcher in place and changes it to `Done`; Merge is
   a first-level action whose title and order are owned by a focused dialog,
   outside the horizontal toolbar's size constraints.
-- Verification at source SHA `bf484c758e3193f7df154954c11a02d2f3b64234`:
+- Pre-deployment local verification:
   Web typecheck, lint, production build, the focused Project API suite (10
   tests), Alembic single head, and `git diff --check` pass locally. The full API
   suite reached 346 passed/6 skipped, then failed with 47 setup errors after the

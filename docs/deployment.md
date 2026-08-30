@@ -1,5 +1,35 @@
 # 生产部署
 
+## 2026-08-31 workspace navigation and batch merge deployment
+
+Production runs source `9cc7c4e2b6065bf3bce333a2fc8bb3cfb0ac94fd`
+from GitHub Actions run `33325329338` attempt 2. The complete API, migration,
+dependency, Reader, Share, Source Editor, attachment, authentication and PWA
+quality matrix passed before image construction. Attempt 1 reached only the
+last PWA negative matrix and timed out in an optional-cache Service Worker
+readiness scenario; the unchanged exact-source attempt 2 passed all ten
+negative cases. The deployable archive SHA-256 is
+`bb46bc1e497408b1abece1662dcbccad4830185946c0ca7c501bcba996b191ab`.
+
+The retained recovery point is
+`/opt/chat-reader/backups/predeploy-20260830T175500Z-9cc7c4e`. Its PostgreSQL
+custom dump and imports/exports/offline/assets archives passed restore/archive
+listings and checksum verification. King fast-forwarded source, loaded the
+prebuilt images, ran migration, and recreated API/import-worker/Web with
+`--no-build --no-deps --force-recreate`. PostgreSQL stayed running; no build,
+volume deletion, environment overwrite, Scanner start or user-data cleanup was
+performed.
+
+API/worker run image
+`sha256:662dd41a676886a2b38d4b0a72c2cc76ec75f719c64dea926d04dd2cf0055125`;
+Web runs
+`sha256:c9e5efe9cd0ceb9cbce74c4f299cf345be1c8aa462d0251e67ce5329d1f54ba3`.
+Runtime image identities and OCI revisions match the CI manifest. API, Web and
+PostgreSQL are healthy, worker diagnostics are `alive_idle`, public health is
+200, anonymous private access is 401, public diagnostics is 404, and Alembic is
+`20260829_0029 (head/current)`. Authenticated production UI acceptance remains
+`NOT VERIFIED`; no owner credential was used during deployment.
+
 ## 2026-08-24 Formula rendering and source-position deployment
 
 GitHub Actions run `32698108862` passed the complete quality and image-build
