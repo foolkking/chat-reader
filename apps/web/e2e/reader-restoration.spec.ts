@@ -226,6 +226,8 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
   if (!await preferencesButton.isVisible()) {
     await page.getByRole("button", { name: /展开侧栏|Open sidebar/ }).click();
   }
+  const preferencesPanelId = await preferencesButton.getAttribute("aria-controls");
+  expect(preferencesPanelId).toBeTruthy();
   await preferencesButton.click();
   const preferences = page.getByRole("region", { name: /设置|Settings|外观与语言|Appearance & language/ });
   await preferences.getByRole("button", { name: /更多设置|More settings/ }).click();
@@ -316,7 +318,7 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
     () => resetFontSize.click(),
     () => readerFrame.evaluate((frame) => getComputedStyle(frame).getPropertyValue("--reader-font-size").trim() === "17px"),
   );
-  await page.getByRole("button", { name: /收回设置|Collapse settings/ }).click();
+  await page.locator(`button[aria-controls="${preferencesPanelId}"]`).click();
 });
 
 test("far annotation jump and refresh restore hydrate heavy content", async ({ page, request }) => {
