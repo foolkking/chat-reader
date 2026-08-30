@@ -76,7 +76,7 @@ are user or operator consequence, not code size.
 | ATT-005 | Attachments | Add a repair command only for UUID mappings that are unique within one conversation. | Strong: plan explicitly forbids filename/order guessing. | H | M | Strong | M | H | Candidate |
 | ATT-006 | Attachments | Add post-merge consistency checks for Reader, Source Editor, Files, Viewer, Search, TOC, and Offline derivations. | Strong: these surfaces must remain coherent after merge. | H | M | Strong | L | M | Candidate |
 | ATT-007 | Attachments | Display an actionable stale-reference state with message fallback and rescan action. | Strong: audit defines explicit recovery actions. | M | M | Strong | S | L | Candidate |
-| ATT-008 | Attachments | Add case-insensitive `cr-asset://UUID` parser tests with query/parenthesis edge cases. | Strong: old replacement was case-sensitive and delimiter-dependent. | M | M | Strong | S | L | Candidate |
+| ATT-008 | Attachments | Add case-insensitive `cr-asset://UUID` parser tests with query/parenthesis edge cases. | Strong: old replacement was case-sensitive and delimiter-dependent. | M | M | Strong | S | L | Completed 2026-08-31; 3 targeted API tests pass |
 | ATT-009 | Attachments | Add regression fixtures for image, file, repeated, historical-version, and merged references. | Strong: required attachment acceptance scenarios are listed. | H | M | Strong | M | L | Candidate |
 | ATT-010 | Attachments | Add a user-visible distinction between file metadata/details and direct body navigation. | Strong: current Files Panel mixed these actions. | M | M | Strong | M | L | Candidate |
 | IMP-001 | Import | Make `SUPPORTED`, `MAPPABLE`, and `NOT_MAPPABLE` server classifications authoritative in every Import surface. | Strong: current UI previously inferred mapping from resolution status. | H | H | Strong | M | M | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 100 |
-| Completed in this backlog | 10 |
+| Completed in this backlog | 11 |
 | Blocked | 0 |
-| Remaining candidates | 90 |
+| Remaining candidates | 89 |
