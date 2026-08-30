@@ -9,6 +9,12 @@ const gateId = (process.env.PLAYWRIGHT_GATE_ID ?? "local")
   .trim()
   .replace(/[^a-zA-Z0-9_-]+/g, "-")
   .replace(/^-+|-+$/g, "") || "local";
+const gateEvidenceReporter = process.env.PLAYWRIGHT_GATE_ID
+  ? [["./e2e/gate-evidence-reporter.ts", {
+      gateId,
+      outputFile: `test-results/${gateId}/gate-evidence.json`,
+    }]] as const
+  : [];
 
 export default defineConfig({
   testDir: "./e2e",
@@ -18,7 +24,7 @@ export default defineConfig({
   expect: { timeout: 60_000 },
   fullyParallel: false,
   workers: 1,
-  reporter: "list",
+  reporter: [["list"], ...gateEvidenceReporter],
   use: {
     baseURL: "http://127.0.0.1:3107",
     ...(useBundledChromium ? {} : chromiumExecutablePath ? { launchOptions: { executablePath: chromiumExecutablePath } } : { channel: "chrome" }),
