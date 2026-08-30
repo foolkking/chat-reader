@@ -2,7 +2,7 @@
 
 ## 2026-08-31 Continuous improvement register
 
-- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 100 evidence-labeled candidates, 8 completed, 92 remaining, 0 blocked.
+- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 100 evidence-labeled candidates, 9 completed, 91 remaining, 0 blocked.
 - `deploy/backup.sh` now checks target free space before writing, then creates a timestamped, verified five-component recovery directory (PostgreSQL plus imports, exports, offline, and assets) with a schema/source-SHA `MANIFEST` and `SHA256SUMS`; it does not delete volumes or prior backups.
 - `deploy/verify_backup.sh` performs a read-only checksum/archive/catalog check using an isolated PostgreSQL container with no network or mounted volume. Both helpers have passed `sh -n` and `git diff --check`; production execution remains a separate operator action.
 - `deploy/verify_runtime_images.sh` checks the running API, worker, and Web OCI revisions against an expected release SHA without changing containers.

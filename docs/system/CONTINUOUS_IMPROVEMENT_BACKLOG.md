@@ -143,7 +143,7 @@ are user or operator consequence, not code size.
 | DOC-002 | Documentation | Keep `PROJECT_STATE.md` under the compact snapshot target and link detailed release evidence instead of duplicating logs. | Strong: documentation skill sets a 100–250 line target; current file is large. | M | M | Strong | M | M | Candidate |
 | DOC-003 | Documentation | Add the continuous backlog to the docs index and inventory with lifecycle ownership. | Strong: durable docs must be discoverable. | M | M | Strong | S | L | Candidate |
 | DOC-004 | Documentation | Add a current troubleshooting entry for IndexedDB bulkPut AbortError and recovery steps. | Observed: user encountered this exact error. | M | H | Observed | S | L | Completed 2026-08-31; current recovery order documented |
-| DOC-005 | Documentation | Add a current troubleshooting entry for HTTP-on-HTTPS-port 400 errors. | Observed: screenshot and deployment diagnosis identify this protocol error. | L | M | Observed | S | L | Candidate |
+| DOC-005 | Documentation | Add a current troubleshooting entry for HTTP-on-HTTPS-port 400 errors. | Observed: screenshot and deployment diagnosis identify this protocol error. | L | M | Observed | S | L | Completed 2026-08-31; protocol diagnosis and verifier documented |
 | DOC-006 | Documentation | Record the attachment reference repair boundary and manual-review cases without storing real IDs or正文. | Strong: repair plan forbids guessing and sensitive data persistence. | H | M | Strong | S | L | Candidate |
 | DOC-007 | Documentation | Document the exact current retention window for terminal task results and offline artifacts. | Inferred: retention is used by re-entry contracts but not surfaced in one place. | M | M | Inferred | S | L | Candidate |
 | DOC-008 | Documentation | Add a release checklist item for production owner-authenticated browser status. | Observed: this remains a recurring verification debt. | M | M | Observed | S | L | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 100 |
-| Completed in this backlog | 8 |
+| Completed in this backlog | 9 |
 | Blocked | 0 |
-| Remaining candidates | 92 |
+| Remaining candidates | 91 |

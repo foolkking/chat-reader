@@ -160,3 +160,26 @@ curl -v http://127.0.0.1:3000/api/health
 ```
 
 先确认 Web health，再检查 API 和 migrate。Nginx upstream 应为 `127.0.0.1:3000`，不是容器内部 service name。
+
+## Nginx returns `400 The plain HTTP request was sent to HTTPS port`
+
+This response means the request used plain `http://` against a TLS listener,
+commonly `http://<host>:443`. It is an entry-protocol error, not a Conversation
+route or Reader data failure.
+
+- Use the configured HTTPS hostname, for example
+  `https://chat.example.com/`; do not use `http://IP:443`.
+- If an IP address is required, its TLS certificate and SNI/Host routing must
+  still match the configured ingress. A successful raw IP TCP connection does
+  not prove valid HTTPS routing.
+- Port 80 should only redirect to the same HTTPS origin. Port 443 must be
+  accepted by a TLS listener; never forward plain HTTP into it.
+- Verify the public boundary without touching application data:
+
+```bash
+./deploy/verify_https_entry.sh https://chat.example.com
+```
+
+The script requires HTTPS health 200 and an HTTP 301/302/307/308 redirect to
+the expected HTTPS origin. Do not interpret that transport check as an
+authenticated Reader acceptance pass.
