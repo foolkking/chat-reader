@@ -345,7 +345,10 @@ def _write_conversation_payload(
         "description_markdown": conversation.description_markdown,
         "source_type": conversation.source_type,
         "source_profile": conversation.source_profile,
-        "message_count": conversation.message_count,
+        # The package aggregate is a completeness contract for the embedded
+        # array, so derive it from the exact rows serialized below rather than
+        # a conversation aggregate that may still be awaiting reconciliation.
+        "message_count": len(message_rows),
         "turn_count": conversation.turn_count,
         "created_at": conversation.created_at,
         "updated_at": conversation.updated_at,

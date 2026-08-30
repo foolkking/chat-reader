@@ -202,6 +202,18 @@ test.describe("Release E PWA negative matrix", () => {
     expect((await readFixtureState(page)).revision).toBe(2);
   });
 
+  test("PWA-NEG-022 package count mismatch preserves the last readable copy", async ({ page }) => {
+    await seedMinimalOfflineFixture(page, { waitForShell: false });
+    const before = await readFixtureState(page);
+    const failed = await importWithFault(page, createReplacementPackage(2), "package-b-count-mismatch", null);
+    expect(failed.ok).toBe(false);
+    expect(failed.error).toContain("message count does not match");
+    const preserved = await readFixtureState(page);
+    expect(preserved.revision).toBe(before.revision);
+    expect(preserved.assetText).toBe(before.assetText);
+    expect(preserved.packageCount).toBe(before.packageCount);
+  });
+
   test("PWA-NEG-011..013..014..016 partial package and reload never expose false-ready state", async ({ page, context }) => {
     await seedMinimalOfflineFixture(page);
     const before = await readFixtureState(page);
@@ -332,9 +344,9 @@ async function sendShellMessage(page: Page, message: Record<string, unknown>): P
   }, message);
 }
 
-async function seedMinimalOfflineFixture(page: Page): Promise<void> {
+async function seedMinimalOfflineFixture(page: Page, options: { waitForShell?: boolean } = {}): Promise<void> {
   await page.goto("/library");
-  await waitForActiveRecord(page);
+  if (options.waitForShell !== false) await waitForActiveRecord(page);
   await expect.poll(() => page.evaluate(async (databaseName) => {
     const databases = await indexedDB.databases();
     return databases.some((database) => database.name === databaseName);
@@ -377,7 +389,7 @@ async function openOfflineFiles(page: Page): Promise<void> {
   await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).first().click();
 }
 
-function createReplacementPackage(): number[] {
+function createReplacementPackage(messageCount = 1): number[] {
   const binary = new TextEncoder().encode("replacement attachment");
   const secondBinary = new TextEncoder().encode("second replacement attachment");
   const sha256 = createHash("sha256").update(binary).digest("hex");
@@ -393,11 +405,23 @@ function createReplacementPackage(): number[] {
       id: "offline-negative",
       title: "Offline negative fixture",
       display_title: "Offline negative fixture",
-      message_count: 1,
+      message_count: messageCount,
       turn_count: 1,
       offline_revision: 2,
       updated_at: "2026-08-15T01:00:00.000Z",
-      messages: [],
+      messages: [{
+        id: "offline-negative-message-v2",
+        conversation_id: "offline-negative",
+        role: "user",
+        order_key: "000001",
+        turn_index: 1,
+        created_at: "2026-08-15T01:00:00.000Z",
+        current_version: { id: "offline-negative-version-v2", version_number: 1, plain_text: "replacement message", display_text: "replacement message" },
+        render_blocks: [],
+        block_count: 0,
+        char_count: 19,
+        is_heavy: false,
+      }],
       headings: [],
       search_documents: [],
       annotations: [],

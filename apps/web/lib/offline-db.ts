@@ -159,6 +159,27 @@ type OfflinePackagePayload = {
   conversations: PackageConversation[];
 };
 
+function validateOfflinePackageMessageCounts(payload: OfflinePackagePayload): void {
+  for (const conversation of payload.conversations) {
+    if (!Array.isArray(conversation.messages)) {
+      // v1 packages may omit the embedded array; preserve their legacy
+      // metadata-only compatibility. Newer package versions must carry the
+      // records that their aggregate claims to describe.
+      if (payload.version === 1) continue;
+      throw new Error("Offline package conversation is missing message records.");
+    }
+    const declared = conversation.message_count;
+    // Early v1 packages did not require this aggregate. When it is present,
+    // however, it is the package's completeness contract and must agree with
+    // the embedded records before any previous offline copy is touched.
+    if (declared === undefined || declared === null) continue;
+    const expected = Number(declared);
+    if (!Number.isSafeInteger(expected) || expected < 0 || expected !== conversation.messages.length) {
+      throw new Error("Offline package message count does not match its message records.");
+    }
+  }
+}
+
 type BulkPutTable<T> = { bulkPut(items: T[]): Promise<unknown> };
 
 async function bulkPutChunked<T>(table: BulkPutTable<T>, items: T[], chunkSize = 100): Promise<void> {
@@ -182,6 +203,8 @@ export async function importOfflinePackage(packageId: string, response: Response
   if (payload.format !== "chat-reader-offline-package" || ![1, 2, 3].includes(payload.version)) {
     throw new Error("Unsupported offline package version.");
   }
+  if (!Array.isArray(payload.conversations)) throw new Error("Offline package does not contain a valid conversation list.");
+  validateOfflinePackageMessageCounts(payload);
   const now = new Date().toISOString();
   const conversationIds = payload.conversations.map((conversation) => conversation.id);
   if (!conversationIds.length && payload.version === 1) {
@@ -579,7 +602,7 @@ function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: st
     // Prefer the payload's actual message array over a potentially stale
     // server-side aggregate. The Reader uses this value for its header and a
     // stale zero makes a valid offline package look empty.
-    message_count: messageCount || Number(raw.message_count ?? 0),
+    message_count: Array.isArray(raw.messages) ? messageCount : Number(raw.message_count ?? 0),
     turn_count: Number(raw.turn_count ?? 0),
     created_at: typeof raw.created_at === "string" ? raw.created_at : null,
     updated_at: typeof raw.updated_at === "string" ? raw.updated_at : null,

@@ -1563,3 +1563,9 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - Target-first navigation renders the fetched turn immediately and prefetches neighboring turns after alignment. Concurrent identical target-turn/context requests are deduplicated for the request lifetime only.
 - Text-anchor resolution caches the mounted block's text-node index and invalidates it on DOM mutation. Exact text/offset targets skip a redundant scroll-anchor stabilization wait; neighbor-window expansion restores the captured anchor.
 - Verification: API full suite `391 passed, 5 skipped`; Reader/Share performance tests `16 passed` (including a middle-turn boundary case); Web lint, typecheck, production build and Alembic single head `20260823_0028` passed. PWA suite was started but stopped after environment-dependent CSP/offline timeouts; no PWA PASS claim is made for this change.
+
+## 2026-08-31 Offline Package Completeness Guard (Current)
+
+- Offline package import now validates every declared conversation `message_count` against the exact embedded `messages` array before touching Cache Storage or replacing IndexedDB rows. Invalid or incomplete packages fail closed and preserve the last readable offline copy.
+- Package generation derives `message_count` from the serialized active message rows, avoiding stale aggregate metadata. Packages without the field remain compatible with older v1 data.
+- Verification: Web typecheck passed; production Web build passed; Chromium 1234 PWA negative count-mismatch regression passed (`PWA-NEG-022`). The full negative matrix was not claimed locally because its Service Worker shell fixture timed out before reaching the import tests.
