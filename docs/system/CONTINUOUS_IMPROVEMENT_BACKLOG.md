@@ -32,7 +32,7 @@ are user or operator consequence, not code size.
 | CI-011 | CI | Cache the Web production build output between quality and negative-PWA gates where valid. | Observed: workflow runs Web production build before tests and again for PWA negative matrix. | M | M | Observed | M | M | Candidate |
 | CI-012 | CI | Split API-only and Web-only quality jobs so unrelated failures identify their owner faster. | Observed: one quality job contains both suites and browser services. | M | M | Strong | M | M | Candidate |
 | CI-013 | CI | Add explicit timeout and artifact collection for every long browser gate. | Strong: first deployment attempt timed out in optional SW readiness. | H | M | Strong | M | L | Candidate |
-| CI-014 | CI | Publish deployable artifact names with commit SHA and run attempt instead of a constant name. | Observed: workflow artifact is always `chat-reader-images`. | M | M | Observed | S | L | Implemented 2026-08-31; workflow verification pending |
+| CI-014 | CI | Publish deployable artifact names with commit SHA and run attempt instead of a constant name. | Observed: workflow artifact is always `chat-reader-images`. | M | M | Observed | S | L | Completed 2026-08-31; Actions run 33329145714 verified exact name |
 | CI-015 | CI | Add a machine-readable gate summary that distinguishes PASS, NOT VERIFIED, and SKIPPED. | Strong: current reports require manual interpretation of gates. | M | M | Strong | M | L | Candidate |
 | CI-016 | CI | Add pnpm store cache hit/miss metrics to release evidence. | Inferred: setup-node caches pnpm but no effectiveness evidence is recorded. | L | L | Inferred | S | L | Candidate |
 | CI-017 | CI | Add a changed-area test selector while retaining the full release gate before deployment. | Inferred: every local cycle runs broad suites even for narrow docs/UI changes. | M | L | Inferred | M | M | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 100 |
-| Completed in this backlog | 9 |
+| Completed in this backlog | 10 |
 | Blocked | 0 |
-| Remaining candidates | 91 |
+| Remaining candidates | 90 |

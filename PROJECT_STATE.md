@@ -2,12 +2,13 @@
 
 ## 2026-08-31 Continuous improvement register
 
-- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 100 evidence-labeled candidates, 9 completed, 91 remaining, 0 blocked.
+- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 100 evidence-labeled candidates, 10 completed, 90 remaining, 0 blocked.
 - `deploy/backup.sh` now checks target free space before writing, then creates a timestamped, verified five-component recovery directory (PostgreSQL plus imports, exports, offline, and assets) with a schema/source-SHA `MANIFEST` and `SHA256SUMS`; it does not delete volumes or prior backups.
 - `deploy/verify_backup.sh` performs a read-only checksum/archive/catalog check using an isolated PostgreSQL container with no network or mounted volume. Both helpers have passed `sh -n` and `git diff --check`; production execution remains a separate operator action.
 - `deploy/verify_runtime_images.sh` checks the running API, worker, and Web OCI revisions against an expected release SHA without changing containers.
 - `deploy/verify_runtime_health.sh` verifies core container health and the worker heartbeat through protected in-container diagnostics.
 - `deploy/verify_https_entry.sh` rejects plain HTTP HTTPS-port inputs and verifies TLS health plus the HTTP-to-HTTPS redirect boundary.
+- GitHub Actions run `33329145714` passed the complete quality and image jobs for `f182e5872dd4c75058aba16853410b22cf50c2c9`; the deployable artifact is unambiguously named `chat-reader-images-f182e5872dd4c75058aba16853410b22cf50c2c9-1`.
 
 ## 2026-08-31 Sidebar state, custom project order, drag feedback and batch merge (deployed)
 
