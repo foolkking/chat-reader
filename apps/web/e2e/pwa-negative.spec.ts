@@ -174,11 +174,12 @@ test.describe("Release E PWA negative matrix", () => {
   });
 
   test("PWA-NEG-008..009..015 quota/cache failure preserves A and retry commits B idempotently", async ({ page }) => {
-    await seedMinimalOfflineFixture(page);
+    await seedMinimalOfflineFixture(page, { waitForShell: false });
     const before = await readFixtureState(page);
     const packageBytes = createReplacementPackage();
     const failed = await importWithFault(page, packageBytes, "package-b-quota", "cache-put-after-first");
     expect(failed.ok).toBe(false);
+    expect(failed.code).toBe("QUOTA");
     const preserved = await readFixtureState(page);
     expect(preserved.revision).toBe(before.revision);
     expect(preserved.assetText).toBe(before.assetText);
@@ -191,7 +192,7 @@ test.describe("Release E PWA negative matrix", () => {
   });
 
   test("PWA-NEG-012..021 failed Dexie transaction restores the old cache and package", async ({ page }) => {
-    await seedMinimalOfflineFixture(page);
+    await seedMinimalOfflineFixture(page, { waitForShell: false });
     const before = await readFixtureState(page);
     const failed = await importWithFault(page, createReplacementPackage(), "package-b-abort", "idb-put");
     expect(failed.ok).toBe(false);
@@ -207,6 +208,7 @@ test.describe("Release E PWA negative matrix", () => {
     const before = await readFixtureState(page);
     const failed = await importWithFault(page, createReplacementPackage(2), "package-b-count-mismatch", null);
     expect(failed.ok).toBe(false);
+    expect(failed.code).toBe("MALFORMED");
     expect(failed.error).toContain("message count does not match");
     const preserved = await readFixtureState(page);
     expect(preserved.revision).toBe(before.revision);
@@ -437,7 +439,7 @@ function createReplacementPackage(messageCount = 1): number[] {
   return Array.from(entries);
 }
 
-async function importWithFault(page: Page, bytes: number[], packageId: string, fault: "cache-put-after-first" | "idb-put" | null): Promise<{ ok: boolean; error?: string }> {
+async function importWithFault(page: Page, bytes: number[], packageId: string, fault: "cache-put-after-first" | "idb-put" | null): Promise<{ ok: boolean; error?: string; code?: string }> {
   return page.evaluate(async ({ bytes, packageId, fault }) => {
     const hook = window.__chatReaderPwaNegativeTest;
     if (!hook) throw new Error("PWA negative test bridge is not enabled.");
@@ -463,7 +465,8 @@ async function importWithFault(page: Page, bytes: number[], packageId: string, f
       await hook.importOfflinePackage(packageId, new Response(new Uint8Array(bytes), { headers: { "Content-Type": "application/zip", "Content-Length": String(bytes.length) } }));
       return { ok: true };
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
+      return { ok: false, error: error instanceof Error ? error.message : String(error), code };
     } finally {
       Cache.prototype.put = originalCachePut;
       IDBObjectStore.prototype.put = originalStorePut;

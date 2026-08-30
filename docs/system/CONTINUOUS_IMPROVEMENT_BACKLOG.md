@@ -56,7 +56,7 @@ are user or operator consequence, not code size.
 | OFF-005 | Offline | Keep v1 package reads while writing v2 import diagnostics for schema/store mismatches. | Strong: AGENTS requires v1 compatibility. | H | M | Strong | M | M | Candidate |
 | OFF-006 | Offline | Add an offline asset URL lifecycle test covering revoke timing after Viewer close. | Strong: offline attachment URLs are released by timed cleanup. | M | M | Strong | M | M | Candidate |
 | OFF-007 | Offline | Add a visible retry path when one store fails without discarding stores already imported. | Strong: partial package failure is a known recovery concern. | H | M | Strong | M | M | Candidate |
-| OFF-008 | Offline | Add low-storage messaging that differentiates quota denial from malformed package data. | Inferred: both currently surface as import failure to users. | M | M | Inferred | S | L | Candidate |
+| OFF-008 | Offline | Add low-storage messaging that differentiates quota denial from malformed package data. | Inferred: both currently surface as import failure to users. | M | M | Strong | S | L | Completed 2026-08-31; stable error codes and localized recovery copy verified for quota and malformed packages |
 | OFF-009 | Offline | Measure package build and import timings by store and chunk size in redacted diagnostics. | Hypothesis: packaging latency is dominated by one or more unbounded stores. | M | M | Hypothesis | M | L | Candidate |
 | OFF-010 | Offline | Add mobile offline acceptance at 375px for Library, Reader, TOC, and attachment access. | Strong: desktop and production-equivalent coverage do not replace real mobile verification. | M | M | Strong | M | L | Candidate |
 | LOC-001 | Reader | Return a server-resolved locator DTO for every TOC, search, annotation, attachment, and source reference. | Strong: current audit found divergent DOM/block-index authorities. | H | H | Strong | L | H | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 130 |
-| Completed in this backlog | 14 |
+| Completed in this backlog | 15 |
 | Blocked | 0 |
-| Remaining candidates | 116 |
+| Remaining candidates | 115 |

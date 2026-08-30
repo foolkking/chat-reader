@@ -2,7 +2,7 @@
 
 ## 2026-08-31 Continuous improvement register
 
-- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 14 completed, 116 remaining, 0 blocked.
+- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 15 completed, 115 remaining, 0 blocked.
 - All 15 Playwright gates in the release and performance workflows now have explicit 20-30 minute step limits and gate-specific `test-results` directories, so a later invocation does not erase earlier diagnostics before the existing `always()` artifact upload. A bounded custom reporter writes one redacted start/final status file per executed gate, including a durable `running` marker if a step is terminated. YAML contract validation covered 15/15 gates. Build release images run `33331355359` attempt 2 passed quality and image jobs; its quality artifact contains 12/12 release-gate status files marked `passed`, while attempt 1 separately retains 10 status files and the trace from a transient Chromium `SIGSEGV`.
 - `deploy/backup.sh` now checks target free space before writing, then creates a timestamped, verified five-component recovery directory (PostgreSQL plus imports, exports, offline, and assets) with a schema/source-SHA `MANIFEST` and `SHA256SUMS`; it does not delete volumes or prior backups.
 - `deploy/verify_backup.sh` performs a read-only checksum/archive/catalog check using an isolated PostgreSQL container with no network or mounted volume. Both helpers have passed `sh -n` and `git diff --check`; production execution remains a separate operator action.
@@ -1569,3 +1569,9 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - Offline package import now validates every declared conversation `message_count` against the exact embedded `messages` array before touching Cache Storage or replacing IndexedDB rows. Invalid or incomplete packages fail closed and preserve the last readable offline copy.
 - Package generation derives `message_count` from the serialized active message rows, avoiding stale aggregate metadata. Packages without the field remain compatible with older v1 data.
 - Verification: Web typecheck passed; production Web build passed; Chromium 1234 PWA negative count-mismatch regression passed (`PWA-NEG-022`). The full negative matrix was not claimed locally because its Service Worker shell fixture timed out before reaching the import tests.
+
+## 2026-08-31 Offline Import Error Classification (Current)
+
+- Offline package download, storage quota, malformed payload and browser write-abort failures now carry stable error codes. The Library maps those codes to localized, actionable messages while preserving the existing offline copy.
+- Capacity errors ask the user to free browser storage; malformed packages ask for a rebuild rather than implying that storage cleanup will help. Raw package contents and attachment paths are not exposed in the user-facing message.
+- Verification: Web lint/typecheck and the dedicated production PWA build passed. Chromium 1234 passed the targeted quota (`PWA-NEG-008..009..015`) and malformed count (`PWA-NEG-022`) paths. The Service Worker-dependent full negative matrix remains a CI gate, not a local PASS claim.

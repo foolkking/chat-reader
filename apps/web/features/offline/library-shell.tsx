@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ConversationReader } from "../conversations/conversation-reader";
 import { getOfflineCatalog, getTask, queueOfflinePackage } from "../../lib/api";
-import { importOfflinePackage, offlineDb, removeOfflineConversations, requestPersistentStorage, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
+import { importOfflinePackage, OfflinePackageImportError, offlineDb, removeOfflineConversations, requestPersistentStorage, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
 import { offlineReaderDataSource } from "../../lib/reader-data-source";
 import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
 import { getOfflineShellStatus, prepareOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../../lib/offline-shell";
@@ -221,7 +221,7 @@ export function LibraryShell() {
     const available = storageState.quota !== null && storageState.usage !== null
       ? storageState.quota - storageState.usage
       : null;
-    if (available !== null && estimate > available) throw new Error("浏览器可用空间不足，原离线版本已保留。");
+    if (available !== null && estimate > available) throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.");
     const key = `${scope}:${scopeId ?? "all"}`;
     if (!silent) setDownload({ key, progress: 1, label: "正在创建离线包" });
     const queued = await queueOfflinePackage({
@@ -351,7 +351,7 @@ export function LibraryShell() {
       onClose={() => setMobileOpen(false)}
       onCollapse={() => setLibrarySidebarExpanded(false)}
       onOpen={openConversation}
-      onDownload={(scope, id) => { setError(null); void runDownload(scope, id).catch((reason: Error) => { setError(reason.message); setDownload(null); }); }}
+      onDownload={(scope, id) => { setError(null); void runDownload(scope, id).catch((reason: unknown) => { setError(offlineDownloadErrorMessage(reason, zh)); setDownload(null); }); }}
       onAssetModeChange={updateAssetMode}
       onRetryShell={() => { setError(null); void prepareOfflineShell({ force: true }).catch((reason: Error) => setError(reason.message)); }}
       onRemove={(ids) => void removeLocal(ids)}
@@ -360,7 +360,7 @@ export function LibraryShell() {
   const readerContent = selectedId && selectedConversation ? (
     <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams?.get("messageId") ?? ""}:${searchParams?.get("blockIndex") ?? ""}:${searchParams?.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={() => setMobileOpen(true)} onFocusModeChange={setReaderFocusMode} />
   ) : requestedCatalogConversation ? (
-    <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Library className="h-10 w-10 text-accent" /><h1 className="mt-4 max-w-xl text-xl font-semibold">{requestedCatalogConversation.display_title}</h1><p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "该对话尚未下载到离线资料库。联网后可从资料库下载，下载完成后会在这里离线阅读。" : "This conversation has not been downloaded. Connect to download it for offline reading."}</p><button type="button" disabled={!online || Boolean(download)} onClick={() => { setError(null); void runDownload("conversation", requestedCatalogConversation.id).catch((reason: Error) => { setError(reason.message); setDownload(null); }); }} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{zh ? "下载离线副本" : "Download offline copy"}</button><button type="button" onClick={() => setMobileOpen(true)} className="mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary">{zh ? "打开资料库" : "Open library"}</button></div>
+    <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Library className="h-10 w-10 text-accent" /><h1 className="mt-4 max-w-xl text-xl font-semibold">{requestedCatalogConversation.display_title}</h1><p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "该对话尚未下载到离线资料库。联网后可从资料库下载，下载完成后会在这里离线阅读。" : "This conversation has not been downloaded. Connect to download it for offline reading."}</p><button type="button" disabled={!online || Boolean(download)} onClick={() => { setError(null); void runDownload("conversation", requestedCatalogConversation.id).catch((reason: unknown) => { setError(offlineDownloadErrorMessage(reason, zh)); setDownload(null); }); }} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{zh ? "下载离线副本" : "Download offline copy"}</button><button type="button" onClick={() => setMobileOpen(true)} className="mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary">{zh ? "打开资料库" : "Open library"}</button></div>
   ) : selectedId ? (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center"><AlertTriangle className="h-10 w-10 text-amber-600" /><h1 className="mt-4 text-xl font-semibold">{zh ? "该对话尚未下载" : "Conversation not downloaded"}</h1><p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "当前离线资料库中没有这个对话。联网后打开资料库即可下载。" : "This conversation is not in the offline library. Connect to download it."}</p><button type="button" onClick={() => setMobileOpen(true)} className="mt-5 min-h-11 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)]">{zh ? "打开资料库" : "Open library"}</button></div>
   ) : (
@@ -595,6 +595,28 @@ function formatBytes(value: number): string {
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`;
   if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`;
   return `${(value / 1024 ** 3).toFixed(1)} GB`;
+}
+
+function offlineDownloadErrorMessage(reason: unknown, zh: boolean): string {
+  if (reason instanceof OfflinePackageImportError) {
+    if (reason.code === "QUOTA") {
+      return zh
+        ? "浏览器可用空间不足。请移除不需要的离线副本后重试；现有副本已保留。"
+        : "Browser storage is full. Remove unneeded offline copies and retry; the existing copy was preserved.";
+    }
+    if (reason.code === "MALFORMED") {
+      return zh
+        ? "下载的离线资料不完整或已损坏。现有副本已保留，请重新生成后再试。"
+        : "The downloaded offline package is incomplete or damaged. The existing copy was preserved; rebuild it and retry.";
+    }
+    if (reason.code === "STORAGE_WRITE") {
+      return zh
+        ? "浏览器未能完成离线资料写入。现有副本已保留；请确认可用空间后重试。"
+        : "The browser could not finish writing the offline package. The existing copy was preserved; check available storage and retry.";
+    }
+    return zh ? "离线资料下载失败，请检查网络后重试。" : "The offline package download failed. Check the connection and retry.";
+  }
+  return reason instanceof Error ? reason.message : (zh ? "离线资料更新失败。" : "Offline library update failed.");
 }
 
 function offlineTaskLabel(phase: string, processed: number, total: number, zh: boolean): string {

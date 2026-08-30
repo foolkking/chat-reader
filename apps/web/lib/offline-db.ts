@@ -159,6 +159,19 @@ type OfflinePackagePayload = {
   conversations: PackageConversation[];
 };
 
+export type OfflinePackageImportErrorCode = "DOWNLOAD" | "QUOTA" | "MALFORMED" | "STORAGE_WRITE";
+
+export class OfflinePackageImportError extends Error {
+  constructor(
+    public readonly code: OfflinePackageImportErrorCode,
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "OfflinePackageImportError";
+  }
+}
+
 function validateOfflinePackageMessageCounts(payload: OfflinePackagePayload): void {
   for (const conversation of payload.conversations) {
     if (!Array.isArray(conversation.messages)) {
@@ -166,7 +179,7 @@ function validateOfflinePackageMessageCounts(payload: OfflinePackagePayload): vo
       // metadata-only compatibility. Newer package versions must carry the
       // records that their aggregate claims to describe.
       if (payload.version === 1) continue;
-      throw new Error("Offline package conversation is missing message records.");
+      throw new OfflinePackageImportError("MALFORMED", "Offline package conversation is missing message records.");
     }
     const declared = conversation.message_count;
     // Early v1 packages did not require this aggregate. When it is present,
@@ -175,7 +188,7 @@ function validateOfflinePackageMessageCounts(payload: OfflinePackagePayload): vo
     if (declared === undefined || declared === null) continue;
     const expected = Number(declared);
     if (!Number.isSafeInteger(expected) || expected < 0 || expected !== conversation.messages.length) {
-      throw new Error("Offline package message count does not match its message records.");
+      throw new OfflinePackageImportError("MALFORMED", "Offline package message count does not match its message records.");
     }
   }
 }
@@ -189,26 +202,36 @@ async function bulkPutChunked<T>(table: BulkPutTable<T>, items: T[], chunkSize =
 }
 
 export async function importOfflinePackage(packageId: string, response: Response): Promise<OfflinePackageMeta> {
-  if (!response.ok) throw new Error(`Offline package download failed (${response.status}).`);
+  if (!response.ok) throw new OfflinePackageImportError("DOWNLOAD", `Offline package download failed (${response.status}).`);
   const declaredBytes = Number(response.headers.get("content-length") ?? 0);
   const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
   if (declaredBytes > 0 && estimate?.quota !== undefined && estimate?.usage !== undefined && declaredBytes > estimate.quota - estimate.usage) {
-    throw new Error("Browser storage quota is too small for this offline package.");
+    throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.");
   }
   const compressed = new Uint8Array(await response.arrayBuffer());
-  const entries = unzipSync(compressed);
-  const packageEntry = entries["package.json"];
-  if (!packageEntry) throw new Error("Offline package is missing package.json.");
-  const payload = JSON.parse(strFromU8(packageEntry)) as OfflinePackagePayload;
-  if (payload.format !== "chat-reader-offline-package" || ![1, 2, 3].includes(payload.version)) {
-    throw new Error("Unsupported offline package version.");
+  let entries: ReturnType<typeof unzipSync>;
+  try {
+    entries = unzipSync(compressed);
+  } catch (cause) {
+    throw new OfflinePackageImportError("MALFORMED", "Offline package archive could not be read.", { cause });
   }
-  if (!Array.isArray(payload.conversations)) throw new Error("Offline package does not contain a valid conversation list.");
+  const packageEntry = entries["package.json"];
+  if (!packageEntry) throw new OfflinePackageImportError("MALFORMED", "Offline package is missing package.json.");
+  let payload: OfflinePackagePayload;
+  try {
+    payload = JSON.parse(strFromU8(packageEntry)) as OfflinePackagePayload;
+  } catch (cause) {
+    throw new OfflinePackageImportError("MALFORMED", "Offline package metadata could not be read.", { cause });
+  }
+  if (payload.format !== "chat-reader-offline-package" || ![1, 2, 3].includes(payload.version)) {
+    throw new OfflinePackageImportError("MALFORMED", "Unsupported offline package version.");
+  }
+  if (!Array.isArray(payload.conversations)) throw new OfflinePackageImportError("MALFORMED", "Offline package does not contain a valid conversation list.");
   validateOfflinePackageMessageCounts(payload);
   const now = new Date().toISOString();
   const conversationIds = payload.conversations.map((conversation) => conversation.id);
   if (!conversationIds.length && payload.version === 1) {
-    throw new Error("Offline package does not contain conversations.");
+    throw new OfflinePackageImportError("MALFORMED", "Offline package does not contain conversations.");
   }
   // ZIP size can be much smaller than the IndexedDB footprint. Account for
   // the expanded JSON/assets before opening a write transaction so a quota
@@ -216,7 +239,7 @@ export async function importOfflinePackage(packageId: string, response: Response
   // thousands-of-documents bulk write.
   const expandedBytes = Object.values(entries).reduce((sum, value) => sum + value.byteLength, 0);
   if (estimate?.quota !== undefined && estimate.usage !== undefined && expandedBytes > estimate.quota - estimate.usage) {
-    throw new Error("Browser storage quota is too small for this offline package.");
+    throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.");
   }
   const packageMeta: OfflinePackageMeta = {
     id: packageId,
@@ -241,8 +264,8 @@ export async function importOfflinePackage(packageId: string, response: Response
         for (const attachment of conversation.attachments ?? []) {
           if (!attachment.content_path) continue;
           const binary = entries[attachment.content_path];
-          if (!binary) throw new Error(`Offline package is missing ${attachment.content_path}.`);
-          if (binary.byteLength !== attachment.byte_size) throw new Error("Offline attachment size validation failed.");
+          if (!binary) throw new OfflinePackageImportError("MALFORMED", `Offline package is missing ${attachment.content_path}.`);
+          if (binary.byteLength !== attachment.byte_size) throw new OfflinePackageImportError("MALFORMED", "Offline attachment size validation failed.");
           const url = offlineAttachmentCacheUrl(attachment.id, attachment.sha256);
           if (!previousCacheEntries.has(url)) {
             const previous = await cache.match(url);
@@ -334,7 +357,7 @@ export async function importOfflinePackage(packageId: string, response: Response
           if (storedCount === 0) {
             storedCount = (await offlineDb.messages.toArray()).filter((item) => String(item.conversation_id) === String(raw.id)).length;
           }
-          if (storedCount < messages.length) throw new Error("Offline package message records could not be verified.");
+          if (storedCount < messages.length) throw new OfflinePackageImportError("STORAGE_WRITE", "Offline package message records could not be verified.");
         }
         if (blocks.length) await bulkPutChunked(offlineDb.blocks, blocks);
         if (raw.headings?.length) await bulkPutChunked(offlineDb.headings, raw.headings.map((item) => ({ ...item, conversation_id: raw.id })));
@@ -376,8 +399,11 @@ export async function importOfflinePackage(packageId: string, response: Response
     }));
     const errorName = error instanceof Error ? error.name : "";
     const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorName === "QuotaExceededError") {
+      throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.", { cause: error });
+    }
     if (errorName === "AbortError" || /transaction was aborted|operations failed/i.test(errorMessage)) {
-      throw new Error("离线资料写入被浏览器中止，通常是可用存储空间不足。请清理旧离线副本后重试。");
+      throw new OfflinePackageImportError("STORAGE_WRITE", "Offline package storage transaction was aborted.", { cause: error });
     }
     throw error;
   }
