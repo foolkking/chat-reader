@@ -132,23 +132,29 @@ jobs:
         run: pnpm --filter web exec playwright install --with-deps chromium
 
       - name: Adaptive Import recovery browser flow
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: adaptive-import-recovery
           E2E_IMPORT_FLOW: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/import-markdown.spec.ts
 
       - name: Release H enforced CSP browser matrix
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: csp-enforcement
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/csp-enforcement.spec.ts
 
       - name: Focused online browser and security checks
+        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: focused-online-security
           E2E_RICH_MARKDOWN: "1"
           E2E_LONG_READER: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
@@ -162,32 +168,40 @@ jobs:
           e2e/release-stabilization-contract.spec.ts
 
       - name: Release H Share focus checks
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: share-focus
           E2E_SHARE_DRAWER_FOCUS: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/share-drawer-focus.spec.ts
 
       - name: Release H Source Editor and mutation cache checks
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: source-editor-mutation
           E2E_MUTATION_FLOW: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/release-mutation-lifecycle.spec.ts
 
       - name: Source Editor content cleanup browser gate
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: source-editor-cleanup
           E2E_CONTENT_CLEANUP: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/content-cleanup.spec.ts
 
       - name: Release I upload-token atomicity matrix
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: upload-token-atomicity
           E2E_ATTACHMENT_UPLOAD: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
@@ -195,16 +209,20 @@ jobs:
           e2e/attachment-upload-flow.spec.ts
 
       - name: Release H Markdown and image Viewer checks
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: markdown-image-viewer
           E2E_RICH_MARKDOWN_ATTACHMENT: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/ai-rich-markdown-attachment.spec.ts
 
       - name: PDF.js maintained-line browser checks
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: pdfjs-maintained-line
           E2E_PDFJS_MIGRATION: "1"
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: >-
@@ -213,14 +231,18 @@ jobs:
           e2e/pdfjs-share.spec.ts
 
       - name: Default PWA baseline
+        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: default-pwa
           E2E_SCREENSHOT_DIR: ${{ runner.temp }}/screenshots
         run: pnpm --filter web exec playwright test --config=playwright.config.ts
 
       - name: Single-owner authentication browser gate
+        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: single-owner-auth
           AUTH_ENABLED: "true"
           AUTH_SESSION_SECRET: ci-only-auth-session-secret-012345678901234567890
           AUTH_COOKIE_SECURE: "false"
@@ -257,8 +279,10 @@ jobs:
           done
 
       - name: Release E production-build PWA negative matrix
+        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: pwa-negative
           E2E_PWA_NEGATIVE: "1"
           NEXT_PUBLIC_PWA_NEGATIVE_TESTS: "1"
           NEXT_DIST_DIR: ".next-pwa-negative"

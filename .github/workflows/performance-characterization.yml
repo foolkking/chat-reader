@@ -237,8 +237,10 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
       - name: Release A/B/C and Reader focused browser regression
+        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: performance-focused-regression
           E2E_RICH_MARKDOWN: "1"
           E2E_SHARE_DRAWER_FOCUS: "1"
           E2E_LONG_READER: "1"
@@ -251,8 +253,10 @@ jobs:
           e2e/share-drawer-focus.spec.ts
           e2e/reader-restoration.spec.ts
       - name: Default PWA matrix
+        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: performance-default-pwa
         run: pnpm --filter web exec playwright test --config=playwright.config.ts
       - name: Upload regression evidence
         if: always()
@@ -323,8 +327,10 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
       - name: Run Reader capacity characterization
+        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: reader-capacity
           E2E_READER_CAPACITY: "1"
         run: pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts
       - name: Upload Reader evidence

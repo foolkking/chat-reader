@@ -5,10 +5,15 @@ const useBundledChromium = process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1";
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const runPwaNegativeMatrix = process.env.E2E_PWA_NEGATIVE === "1";
 const pnpmCommand = process.env.PNPM_HOME ? "pnpm" : "corepack pnpm";
+const gateId = (process.env.PLAYWRIGHT_GATE_ID ?? "local")
+  .trim()
+  .replace(/[^a-zA-Z0-9_-]+/g, "-")
+  .replace(/^-+|-+$/g, "") || "local";
 
 export default defineConfig({
   testDir: "./e2e",
   testIgnore: runPwaNegativeMatrix ? [] : ["**/pwa-negative.spec.ts"],
+  outputDir: `test-results/${gateId}`,
   timeout: 90_000,
   expect: { timeout: 60_000 },
   fullyParallel: false,
