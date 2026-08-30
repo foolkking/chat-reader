@@ -1,5 +1,42 @@
 # Project State
 
+## 2026-08-31 Direct attachment location verification deployment
+
+- Production runs application source
+  `c625946e5fc1a8c34dc43efd4dbba46ce7004fee`, built by GitHub Actions run
+  `33339045804` attempt 2. Attempt 1 retained a trace for one optional-shell PWA
+  readiness timeout; attempt 2 reran the complete quality job and passed every
+  lint, typecheck, build, API, migration, audit and browser gate before images
+  were created.
+- Files now close their desktop or mobile panel and navigate directly to the
+  selected attachment occurrence. Every rendered attachment presentation
+  exposes stable attachment and occurrence identity, including grouped image,
+  text, audio, video and file rows. The synthetic upload flow passed at
+  1440x900 and 390x844 for both single and repeated references without opening
+  file details.
+- The deployable archive SHA-256 is
+  `d8b7cbde2276d9a796964b32c06439e002ba880fd460ed615094df8cb3896991`.
+  API/worker image ID is
+  `sha256:24f8d6afddf1bc73c96a00a94b48789134f2df1a82ba24c94a1c7086e5ed8163`;
+  Web image ID is
+  `sha256:3a582a9301b50c00833f670299a719b69ba035a198ebc8770faaacbe358e7d20`.
+- The verified five-component pre-deploy recovery point is
+  `/opt/chat-reader/backups/chat-reader-20260830T225916Z` (540 MiB), recording
+  previous runtime source `7d861667e46a6e60092426bf551c975b718c8be7`.
+  PostgreSQL plus imports, exports, offline and assets passed checksums, archive
+  listing and isolated PostgreSQL catalog verification.
+- King loaded CI images, ran migration and recreated only API, import-worker
+  and Web. PostgreSQL retained start time `2026-08-03T04:15:25.356267358Z`.
+  Runtime OCI revisions match the application source; API/Web/PostgreSQL are
+  healthy, worker diagnostics are `alive_idle`, application restart counts are
+  zero, HTTPS health is 200, HTTP redirects with 301, anonymous private access
+  is 401, public diagnostics is 404 and Alembic is
+  `20260829_0029 (head/current)`.
+- Authenticated production UI acceptance is `NOT VERIFIED`; no owner
+  credential was used. CI and local production-equivalent browser acceptance
+  are verified, but they are not represented as authenticated production
+  acceptance.
+
 ## 2026-08-31 Offline resilience and attachment locator deployment
 
 - Production runs source `7d861667e46a6e60092426bf551c975b718c8be7`,
