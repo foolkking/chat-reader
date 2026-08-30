@@ -1,5 +1,11 @@
 # Project State
 
+## 2026-08-31 Continuous improvement register
+
+- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 100 evidence-labeled candidates, 1 completed, 99 remaining, 0 blocked.
+- `deploy/backup.sh` now creates a timestamped, verified five-component recovery directory (PostgreSQL plus imports, exports, offline, and assets) with `MANIFEST` and `SHA256SUMS`; it does not delete volumes or prior backups.
+- The backup helper has passed `sh -n` and `git diff --check`; production execution remains a separate operator action.
+
 ## 2026-08-31 Sidebar state, custom project order, drag feedback and batch merge (deployed)
 
 - Production runtime is source `9cc7c4e2b6065bf3bce333a2fc8bb3cfb0ac94fd`,

@@ -440,6 +440,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` | 压缩并更新 / 现行 | 环境变量与运行拓扑 |
 | `docs/system/EXTERNAL_DEPENDENCIES.md` | 更新 / 现行 | 外部运行依赖 |
 | `docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` | 压缩并更新 / 现行 | 当前风险与待验证事项 |
+| `docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md` | 新建 / 现行 | 按证据维护的持续改进候选队列；每项实施前必须复核 |
 | `docs/system/DOCUMENT_MAINTENANCE.md` | 更新 / 现行 | 文档事实治理和更新触发 |
 
 ## 智能体上下文

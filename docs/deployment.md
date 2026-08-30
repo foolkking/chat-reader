@@ -854,8 +854,17 @@ curl -fsS http://127.0.0.1:3000/api/health
 ```bash
 chmod +x deploy/backup.sh
 ./deploy/backup.sh
-pg_restore --list backups/chat-reader-<timestamp>.dump >/dev/null
+sha256sum -c backups/chat-reader-<timestamp>/SHA256SUMS
+pg_restore --list backups/chat-reader-<timestamp>/postgres.dump >/dev/null
 ```
+
+The backup helper now writes a timestamped directory containing the PostgreSQL
+custom dump plus read-only `imports`, `exports`, `offline`, and `assets`
+archives. It validates the database table-of-contents and each archive before
+publishing the directory, then writes `MANIFEST` and `SHA256SUMS`. Set
+`COMPOSE_FILE`, `COMPOSE_ENV_FILE`, or `BACKUP_DIR` to use an explicit
+production location; the helper never deletes existing backups or application
+volumes.
 
 ## 低内存 King 发布
 

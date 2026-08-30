@@ -14,6 +14,9 @@ enhancement are deployed and accepted. Current facts are in
 rows retain their checkpoint meaning; later Release K/M/N evidence supersedes
 their earlier incomplete verification records.
 
+The living improvement register is [Continuous Improvement Backlog](system/CONTINUOUS_IMPROVEMENT_BACKLOG.md).
+It is a candidate queue, not a replacement for current implementation facts.
+
 ## 2026-08-11 current implementation notes
 
 - [2026-08-11 Final Release Closure](evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md#final-release-closure-2026-08-11): current production lifecycle evidence, release matrix and remaining verification debt.
