@@ -33,9 +33,9 @@ const projectOptions: SortOption<ProjectSortMode>[] = [
   { value: "custom", zh: "自定义", en: "Custom" },
 ];
 
-export function ConversationSortMenu() {
+export function ConversationSortMenu({ compact = false }: { compact?: boolean } = {}) {
   const preferences = usePreferences();
-  return <SortMenu options={conversationOptions} mode={preferences.conversationSortMode} direction={preferences.conversationSortDirection} onChange={preferences.setConversationSort} locale={preferences.resolvedLocale} />;
+  return <SortMenu compact={compact} options={conversationOptions} mode={preferences.conversationSortMode} direction={preferences.conversationSortDirection} onChange={preferences.setConversationSort} locale={preferences.resolvedLocale} />;
 }
 
 export function ProjectSortMenu() {
@@ -43,12 +43,13 @@ export function ProjectSortMenu() {
   return <SortMenu options={projectOptions} mode={preferences.projectSortMode} direction={preferences.projectSortDirection} onChange={preferences.setProjectSort} locale={preferences.resolvedLocale} />;
 }
 
-function SortMenu<T extends string>({ options, mode, direction, onChange, locale }: {
+function SortMenu<T extends string>({ options, mode, direction, onChange, locale, compact = false }: {
   options: SortOption<T>[];
   mode: T;
   direction: SortDirection;
   onChange: (mode: T, direction: SortDirection) => Promise<void>;
   locale: "zh-CN" | "en-US";
+  compact?: boolean;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const [open, setOpen] = useState(false);
@@ -71,9 +72,11 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
           event.preventDefault();
           setOpen((value) => !value);
         }}
-        className="flex min-h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle marker:hidden"
+        aria-label={locale === "zh-CN" ? "对话排序" : "Sort conversations"}
+        title={label}
+        className={`flex cursor-pointer list-none items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle marker:hidden ${compact ? "h-7 w-7 justify-center" : "min-h-9 gap-2 px-3 text-sm"}`}
       >
-        <ArrowUpDown className="h-4 w-4" /><span>{label}</span>
+        <ArrowUpDown className="h-4 w-4" />{compact ? null : <span>{label}</span>}
       </summary>
       <div
         data-testid="sort-menu-panel"

@@ -63,11 +63,12 @@ Offline `Export` creates CanJSON/Markdown locally from the downloaded snapshot. 
 
 ```text
 Project/未归类/归档列表 -> checkbox/Shift/键盘/移动长按
--> 底部上下文栏 -> 移动、归档/恢复、导出、合并或删除
+-> 顶部上下文栏 -> 移动、归档/恢复、导出、合并或删除
 ```
 
 - 桌面对话可拖入折叠 Project 或拖回未归类区。
-- 合并先确认顺序，删除二次确认；部分失败保留失败项选择。
+- “批量操作”入口在选择模式中保持原位和原宽，并切换为“完成批量操作”；不会因工具栏出现而消失。
+- 合并是工具栏一级动作；标题和顺序在脱离工具栏宽度约束的 focused dialog 中确认。删除继续二次确认；部分失败保留失败项选择。
 - Project 与 Conversation 使用独立三点菜单；归档保留 Project 关系，取消归档后回到原位置。删除需要显示标题并二次确认，随后立即事务性硬删除，不进入 Trash，也没有 restore；当前 Reader 被归档后进入 `/archived`，被删除后跳到下一个可用对话或安全空状态。
 
 ## 附件上传、插入与导出
@@ -81,7 +82,7 @@ Project/未归类/归档列表 -> checkbox/Shift/键盘/移动长按
 - 拖到 fenced code block 时先选择放到代码块之后、仍按普通文本插入或取消；拖到现有 Markdown 链接内部时移到完整链接之后。多文件保持原始顺序并分别生成 occurrence。
 - 关闭尚未保存的源码时，已完成上传可保留为“当前对话文件”的未放置附件，也可删除；正在上传的项会取消。源码中手动删除附件语法只影响当前新版本 occurrence，不删除对话级 Attachment。
 - 桌面“当前对话文件”默认在 Reader 右上安全区域打开为注释式浮窗；整个表头可拖动，边缘可缩放，位置/尺寸可复位并持久化。表头使用抓手光标和附件专属图标；移动端使用全宽 sheet。该入口管理 Attachment，源码编辑器继续负责 occurrence 编排。
-- 拖拽使用 Pointer/Touch/Keyboard sensors：项目排序槽、Project 对话接收区、conversation row/insert slot 与未分类标题行是不同 drop target；打开的 Project 右侧工作区也是明确的当前项目接收区，移动成功后保留当前 URL 和滚动上下文。跨项目移动只更新单一关系，移回未归类不删除会话，失败按 revision 同时回滚项目列表、项目对话和侧栏 optimistic cache。侧栏查询刷新保留上一份数据，避免拖拽期间卸载目标；菜单和键盘移动仍是非拖拽替代路径。
+- 拖拽使用 Pointer/Touch/Keyboard sensors：Project 容器始终按自定义顺序展示，新建 Project 追加到项目区末尾；Project 内和未分类 Conversation 继续使用独立的对话排序偏好。项目排序槽、Project 对话接收区、conversation row/insert slot 与未分类标题行是不同 drop target；打开的 Project 右侧工作区也是明确的当前项目接收区。整行是唯一 dnd-kit 拖拽表面，预览保持源行尺寸且不使用浏览器原生链接拖影；普通点击仍导航。移动成功后保留当前 URL 和滚动上下文。跨项目移动只更新单一关系，移回未归类不删除会话，失败按 revision 同时回滚项目列表、项目对话和侧栏 optimistic cache。侧栏查询刷新保留上一份数据，避免拖拽期间卸载目标；菜单和键盘移动仍是非拖拽替代路径。
 
 ## 3. 阅读长对话并恢复位置
 
@@ -104,7 +105,7 @@ conversation + reading position 并行加载
 -> 复校 -> 继续预取
 ```
 
-全局搜索、当前对话搜索、对话索引、章节 TOC、最近位置和批注复用同一事务；失败时保留当前正文并允许重试。
+全局搜索、当前对话搜索、对话索引、章节 TOC、最近位置和批注复用同一事务；失败时保留当前正文并允许重试。定位成功后只在精确文字首个可见行显示约 720ms 的短时脉冲；只能退化到 block/message 时显示左侧短标记，不再给整条消息持续填色。搜索自身的精确命中高亮保持独立。
 
 ### 手动更新目录
 

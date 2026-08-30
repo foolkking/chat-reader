@@ -21,7 +21,7 @@ export function ArchivedProjectList() {
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
   const projectsQuery = useQuery({
     queryKey: ["projects", "archived"],
-    queryFn: () => getProjects({ includeArchived: true }),
+    queryFn: () => getProjects({ includeArchived: true, sort: "custom", direction: "asc" }),
   });
   const restoreMutation = useMutation({
     mutationFn: (projectId: string) => updateProject(projectId, { is_archived: false }),
@@ -129,7 +129,7 @@ export function ArchivedProjectList() {
           <h2 id="archived-projects-heading" className="text-lg font-semibold text-primary">{zh ? "已归档项目" : "Archived projects"}</h2>
           <p className="text-sm text-secondary">{zh ? "可以恢复项目，或永久删除项目容器；删除项目不会删除其中的对话。" : "Restore a project, or permanently delete its container without deleting conversations."}</p>
         </div>
-        {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} context="project" onClick={() => setSelectionMode(true)} /> : null}
+        <SelectionModeButton active={selectionMode} locale={resolvedLocale} context="project" onClick={selectionMode ? exitSelectionMode : () => setSelectionMode(true)} />
       </div>
       {selectionMode ? <SelectionToolbar
         selectedCount={selectedProjectIds.size}

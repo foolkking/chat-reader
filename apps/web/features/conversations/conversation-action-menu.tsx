@@ -62,7 +62,7 @@ export function ConversationActionMenu({
   const pathname = usePathname();
   const router = useRouter();
   const dialog = useInteractionDialog();
-  const { resolvedLocale, projectSortMode, projectSortDirection } = usePreferences();
+  const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -76,8 +76,8 @@ export function ConversationActionMenu({
   const title = conversation.display_title || conversation.title;
 
   const projectsQuery = useQuery({
-    queryKey: ["projects", projectSortMode, projectSortDirection],
-    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
+    queryKey: ["projects", "custom", "asc"],
+    queryFn: () => getProjects({ sort: "custom", direction: "asc" }),
     enabled: open,
   });
   const projects = (projectsQuery.data ?? []).filter(

@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Clock3, Folder, Import, ListTodo, PanelLeftClose, Plus } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Clock3, Folder, Import, ListTodo, PanelLeftClose, Plus, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -46,7 +46,7 @@ import { useTranslations } from "../../components/preferences-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import { useImportDialog } from "../../components/import-dialog-provider";
 import { SidebarSearch } from "../search/sidebar-search";
-import { ProjectSortMenu } from "../../components/sort-menu";
+import { ConversationSortMenu } from "../../components/sort-menu";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { ProjectActionMenu } from "./project-action-menu";
 
@@ -137,7 +137,7 @@ export function ProjectSidebar({
 }) {
   const t = useTranslations();
   const { openImportDialog } = useImportDialog();
-  const { conversationSortMode, conversationSortDirection, projectSortMode, projectSortDirection, resolvedLocale } = usePreferences();
+  const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
@@ -149,6 +149,7 @@ export function ProjectSidebar({
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | DragProject | null>(null);
+  const [activeDragSize, setActiveDragSize] = useState<{ width: number; height: number } | null>(null);
   const [dropIntent, setDropIntent] = useState<DropIntent | null>(null);
   const dropIntentRef = useRef<DropIntent | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
@@ -161,8 +162,8 @@ export function ProjectSidebar({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const projectsQuery = useQuery({
-    queryKey: ["projects", projectSortMode, projectSortDirection],
-    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
+    queryKey: ["projects", "custom", "asc"],
+    queryFn: () => getProjects({ sort: "custom", direction: "asc" }),
     // Keep droppable project rows mounted while a background refresh runs.
     // Unmounting a target mid-drag makes dnd-kit fall back to the unclassified
     // container and loses the placement intent.
@@ -337,8 +338,12 @@ export function ProjectSidebar({
 
   function handleDragStart(event: DragStartEvent) {
     setDragError(null);
+    setDragNotice(null);
+    window.dispatchEvent(new Event("reader:dnd-start"));
     const raw = event.active.data.current as DragConversation | DragProject | undefined;
     if (raw?.activeType === "conversation" || raw?.activeType === "project") setActiveDrag(raw);
+    const initial = event.active.rect.current.initial;
+    setActiveDragSize(initial ? { width: initial.width, height: initial.height } : null);
     updateDropIntent(null);
   }
 
@@ -348,20 +353,23 @@ export function ProjectSidebar({
     updateDropIntent(null);
     if (projectDrag?.activeType === "project") {
       const targetId = intent?.kind === "project-order" ? intent.projectId : null;
-      if (projectSortMode === "custom" && targetId && targetId !== projectDrag.id) await reorderProject(projectDrag.id, targetId, event);
+      if (targetId && targetId !== projectDrag.id) await reorderProject(projectDrag.id, targetId, event);
       setActiveDrag(null);
+      setActiveDragSize(null);
       clearAutoExpand();
       return;
     }
     const data = event.active.data.current as DragConversation | undefined;
     setActiveDrag(null);
+    setActiveDragSize(null);
     clearAutoExpand();
     if (!data || data.activeType !== "conversation" || intent?.kind !== "conversation-placement") return;
     const projectId = intent.projectId;
     if (projectId === data.projectId && !intent.beforeId && !intent.afterId) return;
     if (intent.beforeId || intent.afterId) {
       if (projectId === data.projectId && conversationSortMode !== "custom") {
-        setDragError(t("custom") + (resolvedLocale === "zh-CN" ? "排序下才能调整项目内顺序。" : " sorting is required to reorder within a project."));
+        setDragNotice(resolvedLocale === "zh-CN" ? "切换为“自定义”对话排序后，才能调整项目内顺序。" : "Switch conversation sorting to Custom to reorder within a project.");
+        window.setTimeout(() => setDragNotice(null), 3200);
         return;
       }
       const placeBefore = Boolean(intent.beforeId);
@@ -471,7 +479,7 @@ export function ProjectSidebar({
   );
 
   return (
-    <DndContext sensors={sensors} autoScroll collisionDetection={sidebarCollisionDetection} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={(event) => void handleDragEnd(event)} onDragCancel={() => { setActiveDrag(null); updateDropIntent(null); clearAutoExpand(); }}>
+    <DndContext sensors={sensors} autoScroll collisionDetection={sidebarCollisionDetection} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={(event) => void handleDragEnd(event)} onDragCancel={() => { setActiveDrag(null); setActiveDragSize(null); updateDropIntent(null); clearAutoExpand(); }}>
       {showMobileTrigger ? <button type="button" aria-label={t("openSidebar")} data-testid="mobile-sidebar-button" onClick={() => setShowMobileDrawer(true)} className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-ui bg-surface text-sm font-semibold text-primary shadow-sm md:hidden">CR</button> : null}
       <ImportTaskMonitor placement="mobile" />
       <ReaderSidebarFrame
@@ -483,9 +491,9 @@ export function ProjectSidebar({
       >
         {content}
       </ReaderSidebarFrame>
-      <DragOverlay>{activeDrag ? <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay flex items-center gap-3 px-4 py-3 text-sm text-primary" aria-hidden="true"><div className="min-w-0"><p className="truncate font-semibold">{activeDrag.activeType === "conversation" ? activeDrag.title : projects.find((item) => item.id === activeDrag.id)?.name ?? "项目"}</p><p className="mt-0.5 line-clamp-2 text-xs text-secondary">{activeDrag.activeType === "conversation" ? activeDrag.description : "调整项目顺序"}</p>{activeDrag.activeType === "conversation" && activeDrag.projectName ? <p className="mt-0.5 truncate text-[11px] text-accent">{activeDrag.projectName}</p> : null}{activeDrag.activeType === "project" ? <p className="mt-0.5 text-[11px] text-secondary">{projects.find((item) => item.id === activeDrag.id)?.conversation_count ?? 0} 个对话</p> : null}</div></div> : null}</DragOverlay>
-      {dragError ? <div role="alert" className="fixed bottom-4 left-1/2 z-[240] max-w-sm -translate-x-1/2 rounded-lg border border-[var(--danger)] bg-raised px-4 py-3 text-sm text-[var(--danger)] shadow-xl">{dragError}</div> : null}
-      {dragNotice ? <div role="status" className="fixed bottom-4 left-1/2 z-[240] -translate-x-1/2 rounded-lg border border-[var(--callout-tip-border)] bg-[var(--callout-tip-bg)] px-4 py-3 text-sm text-[var(--callout-tip-text)] shadow-xl">{dragNotice}</div> : null}
+      <DragOverlay adjustScale={false}>{activeDrag ? <SidebarDragPreview drag={activeDrag} size={activeDragSize} dropIntent={dropIntent} project={activeDrag.activeType === "project" ? projects.find((item) => item.id === activeDrag.id) : undefined} locale={resolvedLocale} /> : null}</DragOverlay>
+      {dragError ? <DismissibleDragMessage kind="error" message={dragError} onClose={() => setDragError(null)} /> : null}
+      {dragNotice ? <DismissibleDragMessage kind="notice" message={dragNotice} onClose={() => setDragNotice(null)} /> : null}
       {currentProjectDropTargetId ? <CurrentProjectDropPortal projectId={currentProjectDropTargetId} projectName={projects.find((project) => project.id === currentProjectDropTargetId)?.name} zh={resolvedLocale === "zh-CN"} /> : null}
       <NewConversationDialog
         open={showNewConversation}
@@ -545,6 +553,13 @@ function CurrentProjectDropPortal({ projectId, projectName, zh }: { projectId: s
     </div>,
     host,
   );
+}
+
+function SidebarDragPreview({ drag, size, dropIntent, project, locale }: { drag: DragConversation | DragProject; size: { width: number; height: number } | null; dropIntent: DropIntent | null; project?: ProjectRead; locale: "zh-CN" | "en-US" }) {
+  if (drag.activeType === "project") {
+    return <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay flex items-center gap-2 px-3 text-sm text-primary" style={size ? { width: size.width, height: size.height } : undefined} aria-hidden="true"><Folder className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate font-medium">{project?.name ?? (locale === "zh-CN" ? "项目" : "Project")}</span><span className="shrink-0 text-[11px] text-secondary">{project?.conversation_count ?? 0}</span></div>;
+  }
+  return <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay px-3 py-2 text-sm text-primary" style={size ? { width: size.width, height: size.height } : undefined} aria-hidden="true"><p className="truncate font-medium">{drag.title}</p>{drag.description ? <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{drag.description}</p> : null}{drag.projectName ? <p className="mt-0.5 truncate text-[10px] text-accent">{drag.projectName}</p> : null}</div>;
 }
 
 function formatMoveError(error: Error, zh: boolean): string {
@@ -613,7 +628,7 @@ function SidebarContent(props: SidebarContentProps) {
         <div className="mt-5">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-semibold text-secondary">{t("projects")}</h2>
-            <div className="hidden items-center gap-1 md:flex"><ProjectSortMenu /><button ref={projectCreateTriggerRef} type="button" aria-label="新建项目" title="新建项目" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button></div>
+            <div className="hidden items-center gap-1 md:flex"><button ref={projectCreateTriggerRef} type="button" aria-label="新建项目" title="新建项目" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button></div>
           </div>
           {props.showProjectForm ? <ProjectCreateForm {...props} onCancel={closeProjectCreateForm} /> : null}
           <SortableContext items={props.projects.map((project) => `project-order:${project.id}`)} strategy={verticalListSortingStrategy}><div className="mt-2 space-y-1">
@@ -655,8 +670,8 @@ function ProjectCreateForm(props: SidebarContentProps & { onCancel: () => void }
 }
 
 function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobile, onChanged, onProjectChanged }: { project: ProjectRead; expanded: boolean; active: boolean; pathname: string; toggle: () => void; closeMobile: () => void; onChanged: () => Promise<void>; onProjectChanged: () => Promise<void> }) {
-  const { conversationSortMode, conversationSortDirection, projectSortMode, resolvedLocale } = usePreferences();
-  const sortable = useSortable({ id: `project-order:${project.id}`, disabled: projectSortMode !== "custom", data: { activeType: "project", dropType: "project-order-slot", id: project.id, projectId: project.id } satisfies DragProject & ProjectOrderDrop });
+  const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const sortable = useSortable({ id: `project-order:${project.id}`, data: { activeType: "project", dropType: "project-order-slot", id: project.id, projectId: project.id } satisfies DragProject & ProjectOrderDrop });
   const { setNodeRef, isOver } = useDroppable({ id: `project-conversation-container:${project.id}`, data: { dropType: "project-conversation-container", projectId: project.id } satisfies ConversationContainerDrop });
   const conversationsQuery = useQuery({
     queryKey: ["project-conversations", project.id, conversationSortMode, conversationSortDirection],
@@ -665,12 +680,12 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
     placeholderData: (previous) => previous,
   });
   const conversations = conversationsQuery.data ?? [];
-  const projectActivityTime = projectSortMode === "updated" ? project.updated_at : projectSortMode === "created" ? project.created_at : project.last_read_at;
+  const projectActivityTime = project.last_read_at ?? project.updated_at;
   return (
     <div data-testid={`project-order-slot-${project.id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}><div ref={setNodeRef} data-testid={`project-conversation-container-${project.id}`} className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
-      <div ref={sortable.setNodeRef} {...sortable.attributes} {...sortable.listeners} data-state={sortable.isDragging ? "dragging" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} className={`reader-interactive-row group flex min-h-9 items-center rounded-lg outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-grab"}`}>
+      <div ref={sortable.setNodeRef} {...sortable.attributes} {...sortable.listeners} data-state={sortable.isDragging ? "dragging" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} className={`reader-interactive-row group flex min-h-9 items-center rounded-lg text-primary outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>
         <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`} data-no-dnd onPointerDown={(event) => event.stopPropagation()} onClick={toggle} className="flex h-9 w-8 shrink-0 items-center justify-center text-secondary">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
-        <Link href={`/projects/${project.id}`} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm" title={`${fullActivityTime(projectActivityTime, resolvedLocale)} · ${project.conversation_count}`}><Folder className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate">{project.name}</span><span className="shrink-0 text-[11px] text-secondary">{formatActivityTime(projectActivityTime, resolvedLocale)}</span></Link>
+        <Link href={`/projects/${project.id}`} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm text-primary" title={`${fullActivityTime(projectActivityTime, resolvedLocale)} · ${project.conversation_count}`}><Folder className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate font-medium">{project.name}</span><span className="shrink-0 text-[11px] text-secondary">{formatActivityTime(projectActivityTime, resolvedLocale)}</span></Link>
         <ProjectActionMenu project={project} onChanged={onProjectChanged} />
       </div>
       {expanded ? (
@@ -693,6 +708,7 @@ function HistoryDropZone({ pathname, conversations, loading, error, closeMobile,
       <div ref={setNodeRef} data-testid="unclassified-container" className={`flex min-h-9 items-center justify-between rounded-lg px-2 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
         <h2 className="text-xs font-semibold text-secondary">{t("unclassified")}</h2>
         <div className="flex items-center gap-1">
+          <ConversationSortMenu compact />
           <span className="text-[11px] text-secondary">{conversations.length}</span>
           <button type="button" data-testid="unclassified-new-conversation-button" onClick={() => { onNewConversation(); closeMobile(); }} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface hover:text-primary" aria-label="新建对话" title="新建对话"><Plus className="h-4 w-4" /></button>
         </div>
@@ -720,8 +736,8 @@ function DraggableConversationRow({ conversation, projectId, beforeConversationI
     droppable.setNodeRef(node);
   };
   return (
-    <div ref={setRowRef} data-testid={`conversation-row-${conversation.id}`} data-project-id={projectId ?? "unclassified"} data-state={draggable.isDragging ? "dragging" : droppable.isOver ? "drop-target" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} style={{ transform: CSS.Translate.toString(draggable.transform) }} {...draggable.attributes} {...draggable.listeners} className={`reader-interactive-row group flex min-h-12 touch-pan-y items-start gap-1 rounded-lg pl-1 pr-1 outline-none ${draggable.isDragging ? "cursor-grabbing" : "cursor-grab"}`}>
-      <Link href={`/conversations/${conversation.id}${projectId ? `?projectId=${projectId}` : ""}`} onClick={closeMobile} className="min-w-0 flex-1 py-2"><span className="block truncate text-sm">{title}</span><span className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{conversation.description_markdown || conversation.first_user_message || "无摘要"}</span>{conversation.project_name ? <span className="mt-0.5 block truncate text-[10px] text-accent">{conversation.project_name}</span> : null}</Link>
+    <div ref={setRowRef} data-testid={`conversation-row-${conversation.id}`} data-project-id={projectId ?? "unclassified"} data-state={draggable.isDragging ? "dragging" : droppable.isOver ? "drop-target" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} style={{ transform: CSS.Translate.toString(draggable.transform) }} {...draggable.attributes} {...draggable.listeners} className={`reader-interactive-row group flex min-h-12 touch-pan-y items-start gap-1 rounded-lg pl-1 pr-1 text-primary outline-none ${draggable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>
+      <Link href={`/conversations/${conversation.id}${projectId ? `?projectId=${projectId}` : ""}`} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={closeMobile} className="min-w-0 flex-1 py-2 text-primary"><span className="block truncate text-sm font-medium">{title}</span><span className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{conversation.description_markdown || conversation.first_user_message || "无摘要"}</span>{conversation.project_name ? <span className="mt-0.5 block truncate text-[10px] text-accent">{conversation.project_name}</span> : null}</Link>
       <span className="shrink-0 text-[11px] text-secondary group-hover:hidden group-focus-within:hidden" title={fullActivityTime(conversation.last_read_at, resolvedLocale)}>{formatActivityTime(conversation.last_read_at, resolvedLocale)}</span>
       <div data-no-dnd onPointerDown={(event) => event.stopPropagation()} className={active || menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}><ConversationActionMenu compact conversation={conversation} projectId={projectId ?? undefined} projectPinned={projectPinned} onChanged={onChanged} onOpenChange={setMenuOpen} /></div>
     </div>
@@ -732,6 +748,17 @@ function ConversationInsertSlot({ projectId, beforeConversationId, afterConversa
   const id = `conversation-insert:${projectId ?? "unclassified"}:${beforeConversationId ?? "end"}`;
   const { setNodeRef, isOver } = useDroppable({ id, data: { dropType: "conversation-insert-slot", projectId, beforeConversationId, afterConversationId } satisfies ConversationInsertDrop });
   return <div ref={setNodeRef} data-testid={id} aria-hidden="true" className={`h-1 rounded-full transition-colors ${isOver ? "bg-[var(--accent)]" : "bg-transparent"}`} />;
+}
+
+function DismissibleDragMessage({ kind, message, onClose }: { kind: "error" | "notice"; message: string; onClose: () => void }) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  return <div role={kind === "error" ? "alert" : "status"} className={`fixed bottom-4 left-1/2 z-[240] flex max-w-sm -translate-x-1/2 items-start gap-3 rounded-lg border bg-raised px-4 py-3 text-sm shadow-xl ${kind === "error" ? "border-[var(--danger)] text-[var(--danger)]" : "border-[var(--callout-tip-border)] text-[var(--callout-tip-text)]"}`}><span className="min-w-0 flex-1">{message}</span><button type="button" onClick={onClose} className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-subtle" aria-label="关闭提示"><X className="h-3.5 w-3.5" /></button></div>;
 }
 
 function NavLink({ href, label, active, icon, onClick, className = "" }: { href: string; label: string; active: boolean; icon: React.ReactNode; onClick?: () => void; className?: string }) {

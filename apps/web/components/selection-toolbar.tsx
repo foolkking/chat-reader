@@ -15,17 +15,17 @@ export function SelectionModeButton({
   onClick: () => void;
 }) {
   const zh = locale === "zh-CN";
-  const label = zh ? "批量操作" : `Manage ${context === "project" ? "projects" : "conversations"}`;
-  const compactLabel = zh ? "批量" : "Batch";
+  const label = active ? (zh ? "完成批量操作" : "Done") : (zh ? "批量操作" : `Manage ${context === "project" ? "projects" : "conversations"}`);
+  const compactLabel = active ? (zh ? "完成" : "Done") : (zh ? "批量" : "Batch");
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       aria-label={label}
-      className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary shadow-sm transition hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
+      className="inline-flex min-h-9 w-[7.5rem] shrink-0 items-center justify-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary shadow-sm transition hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
     >
-      <ListChecks className="h-4 w-4" />
+      {active ? <X className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
       <span className="sm:hidden">{compactLabel}</span>
       <span className="hidden sm:inline">{label}</span>
     </button>

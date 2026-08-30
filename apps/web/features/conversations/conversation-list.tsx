@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
@@ -20,7 +19,7 @@ import {
 import type { BackgroundTaskRead, ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
-import { MergeOrderList } from "./merge-order-list";
+import { MergeConversationsDialog } from "./merge-conversations-dialog";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
@@ -29,6 +28,7 @@ import { downloadConversationBundle } from "../../lib/bulk-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
 import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
+import { HoverPreviewLink } from "../../components/hover-preview-link";
 
 export function ConversationList({
   onImportClick,
@@ -49,6 +49,7 @@ export function ConversationList({
   const [selectionMode, setSelectionMode] = useState(false);
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
   const [activeSortId, setActiveSortId] = useState<string | null>(null);
+  const [activeSortSize, setActiveSortSize] = useState<{ width: number; height: number } | null>(null);
   const sortSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
@@ -69,7 +70,7 @@ export function ConversationList({
   });
   const projectsQuery = useQuery({
     queryKey: ["projects", "bulk-actions"],
-    queryFn: () => getProjects(),
+    queryFn: () => getProjects({ sort: "custom", direction: "asc" }),
     enabled: selectionMode && mode === "active",
   });
   const globalExistenceQuery = useQuery({
@@ -139,6 +140,9 @@ export function ConversationList({
 
   function handleSortStart(event: DragStartEvent) {
     setActiveSortId(String(event.active.id));
+    window.dispatchEvent(new Event("reader:dnd-start"));
+    const initial = event.active.rect.current.initial;
+    setActiveSortSize(initial ? { width: initial.width, height: initial.height } : null);
   }
 
   async function refreshLists() {
@@ -256,7 +260,7 @@ export function ConversationList({
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <ConversationSortMenu />
-          {!selectionMode ? <SelectionModeButton active={false} locale={resolvedLocale} onClick={() => setSelectionMode(true)} /> : null}
+          <SelectionModeButton active={selectionMode} locale={resolvedLocale} onClick={selectionMode ? exitSelectionMode : () => setSelectionMode(true)} />
         </div>
       </div>
       {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
@@ -378,7 +382,7 @@ export function ConversationList({
             }}
           />
       </SelectionToolbar> : null}
-      <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => setActiveSortId(null)} onDragEnd={(event) => { setActiveSortId(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
+      <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation) => (
           <SortableConversationRow id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode} key={conversation.id}><article
             {...linearSelection.itemHandlers(conversation.id)}
@@ -406,18 +410,16 @@ export function ConversationList({
                     <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
                       {conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)}
                     </p>
-                  </button> : <>
-                    <Link href={`/conversations/${conversation.id}`}>
+                  </button> : <HoverPreviewLink href={`/conversations/${conversation.id}`} title={conversation.display_title || conversation.title} description={conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)} className="block rounded-md text-left focus:outline-none focus:ring-2 focus:ring-[var(--focus)]">
                       <h3 className="truncate text-base font-semibold text-primary">
                         {conversation.is_global_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}
                         {conversation.display_title || conversation.title}
                       </h3>
-                    </Link>
-                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
+                    <p data-hover-preview-copy className="mt-1 line-clamp-2 text-sm leading-6 text-secondary">
                       {conversation.description_markdown || previewConversationText(conversation.first_user_message, resolvedLocale)}
                     </p>
                     {typeof conversation.reading_progress === "number" ? <ReadingProgress value={conversation.reading_progress} locale={resolvedLocale} /> : null}
-                  </>}
+                  </HoverPreviewLink>}
                 </div>
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
@@ -430,7 +432,7 @@ export function ConversationList({
             </div>
           </article></SortableConversationRow>
         ))}
-      </div></SortableContext><DragOverlay>{activeSortId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
+      </div></SortableContext><DragOverlay adjustScale={false}>{activeSortId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSortSize ? { width: activeSortSize.width, height: activeSortSize.height } : undefined} aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
     </section>
   );
 }
@@ -442,7 +444,7 @@ function ReadingProgress({ value, locale }: { value: number; locale: "zh-CN" | "
 
 function SortableConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
   const sortable = useSortable({ id, disabled: !enabled });
-  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : enabled ? "hover" : undefined} {...sortable.attributes} {...sortable.listeners} className={`reader-interactive-row relative outline-none ${enabled ? "cursor-grab active:cursor-grabbing" : ""}`}>{children}</div>;
+  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : enabled ? "hover" : undefined} {...sortable.attributes} {...sortable.listeners} className={`reader-interactive-row relative outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>{children}</div>;
 }
 
 function previewConversationText(text: string | null | undefined, locale: "zh-CN" | "en-US"): string {
@@ -492,9 +494,9 @@ function BulkActions({
   const isArchivedMode = mode === "archived";
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   useEffect(() => {
-    if (selectedIds.length === 0) setMoreOpen(false);
+    if (selectedIds.length < 2) setMergeOpen(false);
   }, [selectedIds.length]);
   return (
     <>
@@ -530,32 +532,10 @@ function BulkActions({
             {zh ? "归档" : "Archive"}
           </button>
         )}
-        <button type="button" disabled={selectedIds.length === 0} onClick={() => setMoreOpen((value) => !value)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40" aria-expanded={moreOpen}>{zh ? "更多" : "More"}</button>
+        {mode === "active" ? <button type="button" disabled={bulkBusy !== null || selectedIds.length < 2} onClick={() => setMergeOpen(true)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40">{zh ? "合并对话" : "Merge"}</button> : null}
+        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0} onClick={() => void onDelete(selectedIds)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-40">{zh ? "删除所选" : "Delete selected"}</button>
       </div>
-      {moreOpen ? <div className="fixed inset-x-2 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[160] max-h-[min(70dvh,36rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-3 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-[calc(100%+.5rem)] sm:w-[min(30rem,calc(100vw-1rem))]">
-        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0} onClick={() => void onDelete(selectedIds)} className="mb-2 min-h-9 w-full rounded-lg px-3 text-left text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-60">{zh ? "删除所选" : "Delete selected"}</button>
-        {mode === "active" && selectedIds.length >= 2 ? (
-        <div className="rounded-lg bg-subtle p-3">
-          <label className="text-xs font-semibold uppercase tracking-normal text-secondary">
-            {zh ? "合并标题" : "Merge title"}
-            <input
-              value={title}
-              onChange={(event) => onTitleChange(event.target.value)}
-              className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-sm font-normal normal-case text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
-            />
-          </label>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-normal text-secondary">{zh ? "合并顺序" : "Merge order"}</p>
-          <MergeOrderList conversations={selectedConversations} disabled={isMerging} onReorder={onReorder} />
-          <button
-            type="button"
-            disabled={isMerging}
-            onClick={() => void onMerge(selectedIds, title)}
-            className="mt-3 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:cursor-wait disabled:opacity-70"
-          >
-            {isMerging ? (zh ? "正在合并…" : "Merging…") : (zh ? `按此顺序合并 ${selectedIds.length} 个对话` : `Merge ${selectedIds.length} in this order`)}
-          </button>
-        </div>) : null}
-      </div> : null}
+      <MergeConversationsDialog open={mergeOpen} conversations={selectedConversations} title={title} busy={isMerging} onTitleChange={onTitleChange} onReorder={onReorder} onMerge={() => onMerge(selectedIds, title)} onClose={() => { if (!isMerging) setMergeOpen(false); }} />
     </>
   );
 }

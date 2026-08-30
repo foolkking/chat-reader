@@ -103,12 +103,18 @@ def list_projects(
 
 
 def create_project(db: Session, *, name: str, description: str | None, color: str | None, icon: str | None) -> Project:
+    last_sort_order = (
+        db.query(func.max(Project.sort_order))
+        .filter(Project.is_default.is_(False), Project.is_archived.is_(False))
+        .scalar()
+    )
     project = Project(
         id=uuid.uuid4(),
         name=name.strip(),
         description=description,
         color=color,
         icon=icon,
+        sort_order=int(last_sort_order or 0) + PLACEMENT_GAP,
     )
     db.add(project)
     try:

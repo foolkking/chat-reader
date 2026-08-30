@@ -46,7 +46,7 @@ export function SearchPage() {
     }),
     enabled: query.trim().length > 0,
   });
-  const projects = useQuery({ queryKey: ["projects", "search-filter"], queryFn: () => getProjects() });
+  const projects = useQuery({ queryKey: ["projects", "search-filter"], queryFn: () => getProjects({ sort: "custom", direction: "asc" }) });
   useEffect(() => { setOffset(0); setItems([]); setActiveIndex(0); }, [query, documentType, role, projectId, statusScope, dateFrom, dateTo]);
   useEffect(() => {
     if (!result.data) return;

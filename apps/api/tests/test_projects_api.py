@@ -45,6 +45,20 @@ def test_projects_default_inbox_and_create_update(client: TestClient) -> None:
     assert updated.json()["color"] == "#0f172a"
 
 
+def test_new_projects_append_to_custom_order(client: TestClient) -> None:
+    suffix = "append-order"
+    created = [
+        client.post("/api/projects", json={"name": f"{suffix}-{index}"}).json()
+        for index in range(3)
+    ]
+    assert created[0]["sort_order"] < created[1]["sort_order"] < created[2]["sort_order"]
+
+    custom = client.get("/api/projects", params={"sort": "custom", "direction": "asc"}).json()
+    custom_ids = [project["id"] for project in custom if not project["is_default"]]
+    positions = [custom_ids.index(project["id"]) for project in created]
+    assert positions == sorted(positions)
+
+
 def test_default_project_cannot_be_archived(client: TestClient) -> None:
     inbox = client.get("/api/projects").json()[0]
     response = client.patch(project_id_path(inbox["id"]), json={"is_archived": True})

@@ -338,6 +338,7 @@ test("conversation rows use contextual bulk selection", async ({ page }) => {
   const firstArticle = page.locator("article").first();
   await expect(firstArticle.getByRole("button", { name: /管理|Manage/ })).toBeVisible();
   await page.getByRole("button", { name: /批量操作|Manage conversations/ }).click();
+  await expect(page.getByRole("button", { name: /完成批量操作|Done/ }).first()).toBeVisible();
   const checkboxes = page.locator("article input[type=checkbox]");
   await expect.poll(() => checkboxes.count()).toBeGreaterThanOrEqual(2);
   const first = checkboxes.nth(0);
@@ -355,6 +356,13 @@ test("conversation rows use contextual bulk selection", async ({ page }) => {
   await second.click({ modifiers: ["Shift"], force: true });
   await expect(first).toBeChecked();
   await expect(second).toBeChecked();
+  await toolbar.getByRole("button", { name: /合并对话|Merge/ }).click();
+  const mergeDialog = page.getByRole("dialog", { name: /合并对话|Merge conversations/ });
+  await expect(mergeDialog).toBeVisible();
+  await expect(mergeDialog.getByText(/确认 2 个对话的标题与合并顺序|Confirm the title and order for 2 conversations/)).toBeVisible();
+  await mergeDialog.getByRole("button", { name: /取消|Cancel/ }).click();
+  await expect(mergeDialog).toHaveCount(0);
+  await expect(toolbar).toBeVisible();
   await page.keyboard.press("Control+a");
   await expect.poll(async () => page.locator("article input[type=checkbox]:checked").count()).toBe(await checkboxes.count());
   await toolbar.getByRole("button", { name: /清空|Clear/ }).click();
@@ -434,7 +442,7 @@ test("reading preset and focus default are independent", async ({ page }) => {
   const preferencesButton = page.getByRole("button", { name: /设置|Settings|外观与语言|Appearance & language/ });
   await expect(preferencesButton).toBeVisible();
   await preferencesButton.click();
-  const preferences = page.getByRole("dialog", { name: /设置|Settings|外观与语言|Appearance & language/ });
+  const preferences = page.getByRole("region", { name: /设置|Settings|外观与语言|Appearance & language/ });
   await expect(preferences.getByText(/Markdown 间距|Markdown spacing/)).toHaveCount(0);
   const languageButton = preferences.getByRole("button", { name: /Simplified Chinese|\u7b80\u4f53\u4e2d\u6587/ });
   await expect(languageButton).toHaveCount(0);
@@ -452,7 +460,7 @@ test("reading preset and focus default are independent", async ({ page }) => {
   expect(Number.parseFloat(afterFontSize)).toBeGreaterThan(Number.parseFloat(beforeFontSize));
   await resetFontSize.click();
   await preferences.getByRole("button", { name: /舒适|Comfortable/ }).click();
-  await preferences.getByRole("button", { name: /关闭|Close/ }).click();
+  await page.getByRole("button", { name: /收回设置|Collapse settings/ }).click();
 
   await page.evaluate(() => localStorage.setItem("chat-reader:reader-default-focus", "true"));
   await page.reload();

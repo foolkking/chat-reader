@@ -24,7 +24,7 @@ import { usePreferences, useTranslations } from "../../components/preferences-pr
 import { MessageItem } from "./message-item";
 import { MessageInsertDialog } from "./message-insert-dialog";
 import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor } from "./reader-navigation";
-import { resolveTextAnchorRange } from "./text-anchor";
+import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
 import {
   emptyLoadedWindow,
   INITIAL_WINDOW_TURNS,
@@ -177,7 +177,27 @@ export function ConversationReader({
     const timer = window.setInterval(() => void poll(), 900);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [queryClient, resolvedLocale, tocRefreshTask?.input.refreshDialogueIndex, tocRefreshTask?.input.refreshSectionToc, tocRefreshTask?.task.job_id, tocRefreshTask?.task.status]);
-  const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
+  const [locatePulse, setLocatePulse] = useState<{ kind: "text" | "marker"; left: number; top: number; width: number; height: number; key: number } | null>(null);
+  const locatePulseTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!locatePulse) return;
+    const clear = () => setLocatePulse(null);
+    window.addEventListener("scroll", clear, true);
+    window.addEventListener("resize", clear);
+    window.addEventListener("pointerdown", clear, true);
+    window.addEventListener("wheel", clear, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener("scroll", clear, true);
+      window.removeEventListener("resize", clear);
+      window.removeEventListener("pointerdown", clear, true);
+      window.removeEventListener("wheel", clear, true);
+    };
+  }, [locatePulse]);
+
+  useEffect(() => () => {
+    if (locatePulseTimerRef.current) window.clearTimeout(locatePulseTimerRef.current);
+  }, []);
   const [navigationStatus, setNavigationStatus] = useState<"idle" | "loading" | "failed" | "stale">("idle");
   const [pendingTargetMessageId, setPendingTargetMessageId] = useState<string | null>(targetMessageId);
   const [initialPaintReady, setInitialPaintReady] = useState(false);
@@ -790,7 +810,8 @@ export function ConversationReader({
       const messageIdDom = `message-${messageId}`;
       setActiveMessageId(messageId);
       setActiveBlockId(blockId);
-      setTargetHighlightId(blockId ?? messageIdDom);
+      if (locatePulseTimerRef.current) window.clearTimeout(locatePulseTimerRef.current);
+      setLocatePulse(null);
       setNavigationStage(scrollContainerRef.current, targetFirst ? "loading-target-context" : "loading-window");
       let blockLease: ReaderBlockLease | null = null;
 
@@ -939,14 +960,28 @@ export function ConversationReader({
             return { ok: false, targetId: result.targetId, reason: "cancelled" };
           }
           setNavigationStage(root, result.fallback ? "settled:fallback" : "settled");
-          if (target.source !== "search") {
-            window.setTimeout(() => {
-              if (navigationTokenRef.current === token) {
-                setTargetHighlightId(null);
-                setNavigationStatus("idle");
-              }
-            }, 2000);
+          const visualTarget = document.getElementById(result.targetId);
+          if (visualTarget) {
+            const range = !result.fallback && result.targetId !== messageIdDom
+              ? resolveTextAnchorRange(visualTarget, {
+                startOffset: characterOffset,
+                endOffset: endCharacterOffset,
+                quote,
+                prefix,
+                suffix,
+              })
+              : null;
+            const rangeRect = range ? firstVisibleRangeRect(range) : null;
+            const targetRect = visualTarget.getBoundingClientRect();
+            const nextPulse = rangeRect && rangeRect.width > 0 && rangeRect.height > 0
+              ? { kind: "text" as const, left: rangeRect.left, top: rangeRect.top, width: Math.min(rangeRect.width, window.innerWidth - rangeRect.left - 8), height: rangeRect.height, key: token }
+              : { kind: "marker" as const, left: Math.max(4, targetRect.left - 7), top: targetRect.top, width: 3, height: Math.min(32, Math.max(18, targetRect.height)), key: token };
+            setLocatePulse(nextPulse);
+            locatePulseTimerRef.current = window.setTimeout(() => {
+              if (navigationTokenRef.current === token) setLocatePulse(null);
+            }, 720);
           }
+          setNavigationStatus("idle");
         } else {
           setNavigationStatus("failed");
         }
@@ -2101,7 +2136,7 @@ export function ConversationReader({
             <button type="button" onClick={() => void navigateSearchResult(Math.max(0, searchNavigation.index - 1))} disabled={searchNavigation.index === 0} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "上一个匹配" : "Previous match"}><ChevronUp className="h-4 w-4" /></button>
             <button type="button" onClick={() => void navigateSearchResult(Math.min(searchNavigation.targets.length - 1, searchNavigation.index + 1))} disabled={searchNavigation.index >= searchNavigation.targets.length - 1} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "下一个匹配" : "Next match"}><ChevronDown className="h-4 w-4" /></button>
             <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); void openUtilityPanel("search"); }} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-surface">{resolvedLocale === "zh-CN" ? "返回搜索" : "Return to search"}</button>
-            <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); setTargetHighlightId(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
+            <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); setLocatePulse(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
           </div> : null}
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
@@ -2145,7 +2180,7 @@ export function ConversationReader({
                       message={message}
                       onChanged={applyMessageChange}
                       readOnly={!canManageCanonical}
-                      highlightTargetId={targetHighlightId}
+                      highlightTargetId={null}
                       editing={sourceEditorTarget?.message.id === message.id}
                       onEdit={canManageCanonical ? openSourceEditor : undefined}
                       onInsert={canManageCanonical ? setMessageInsertTarget : undefined}
@@ -2206,6 +2241,7 @@ export function ConversationReader({
           />
         </div>
       </section>
+      {locatePulse ? <div key={locatePulse.key} aria-hidden="true" data-locate-pulse={locatePulse.kind} className={`reader-locate-pulse reader-locate-pulse-${locatePulse.kind}`} style={{ left: locatePulse.left, top: locatePulse.top, width: locatePulse.width, height: locatePulse.height }} /> : null}
       {sourceEditorTarget && !focusMode ? <SourceEditorWorkspace
         target={sourceEditorTarget}
         requestedCursorOffset={sourceRequestedCursorOffset}

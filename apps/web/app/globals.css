@@ -837,8 +837,14 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 
 .reader-interactive-row[data-state="current"],
 .reader-interactive-row[data-state="current-selected"] {
-  background: color-mix(in srgb, var(--accent-soft) 78%, var(--surface) 22%);
-  box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--subtle);
+  color: var(--text);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--text) 42%, transparent);
+}
+
+.reader-interactive-row[data-state="current"] :is(h2, h3, a, [data-row-title]),
+.reader-interactive-row[data-state="current-selected"] :is(h2, h3, a, [data-row-title]) {
+  color: var(--text);
 }
 
 .reader-interactive-row[data-state="selected"] {
@@ -864,8 +870,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 
 .reader-interactive-row[data-state="dragging"] {
-  opacity: 0.58;
-  box-shadow: 0 8px 22px rgb(15 23 42 / 0.14);
+  opacity: 0.72;
 }
 
 .reader-interactive-row[data-state="drop-target"] {
@@ -874,7 +879,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 
 .reader-interactive-row[data-state="hover"]:hover {
-  background: var(--surface);
+  background: var(--subtle);
 }
 
 .reader-interactive-row:focus-visible {
@@ -884,12 +889,56 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 
 .reader-drag-overlay {
   pointer-events: none;
-  width: min(28rem, calc(100vw - 2rem));
   border: 1px solid var(--accent);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: var(--surface-raised);
   box-shadow: var(--shadow-medium);
   transform: translateZ(0);
+  cursor: grabbing;
+  overflow: hidden;
+}
+
+.reader-locate-pulse {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+}
+
+.reader-locate-pulse-text {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--accent-soft) 78%, transparent);
+  animation: reader-locate-pulse 720ms ease-out both;
+}
+
+.reader-locate-pulse-marker {
+  border-radius: 999px;
+  background: var(--accent);
+  animation: reader-locate-marker 720ms ease-out both;
+}
+
+@keyframes reader-locate-pulse {
+  0% { opacity: 0; transform: scaleX(0.96); }
+  28% { opacity: 0.82; transform: scaleX(1); }
+  58% { opacity: 0.42; }
+  100% { opacity: 0; }
+}
+
+@keyframes reader-locate-marker {
+  0% { opacity: 0; transform: scaleY(0.7); }
+  28% { opacity: 0.9; transform: scaleY(1); }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-locate-pulse-text,
+  .reader-locate-pulse-marker {
+    animation: reader-locate-static 700ms linear both;
+  }
+  @keyframes reader-locate-static {
+    0%, 78% { opacity: 0.62; }
+    100% { opacity: 0; }
+  }
 }
 
 /* Bulk selection is a short-lived work surface: the selected scope reads as

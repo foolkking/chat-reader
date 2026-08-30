@@ -2,12 +2,28 @@
 
 ## IA Round 2 shell ownership (2026-08-25, local)
 
-`SidebarPreferences` is a lightweight Settings hub. Data/backup, learned
+`SidebarPreferences` is a lightweight, non-modal region that expands upward
+from the persistent sidebar footer without changing the shell layout. It does
+not close on main-content clicks; its footer trigger and Escape own collapse
+and focus restoration. Data/backup, learned
 Import Format management and Account Security are rendered in the shared
 focused dialog pattern (`SettingsFocusedDialog`) so dirty state, Escape/close
 and focus restoration are owned by the focused surface rather than a transient
 popover. Existing Reader and import contextual shortcuts still call the same
 underlying panels.
+
+Project containers are fetched and rendered with the existing custom-order
+contract only; legacy project-sort preferences remain readable for
+compatibility but are not a Web presentation authority. New projects receive
+the next spaced `sort_order`. Conversation sorting remains independent within
+Projects and Unclassified. DnD overlays use the measured source-row geometry,
+disable native Link dragging and remain presentation-only.
+
+Reader navigation keeps canonical target resolution separate from visual
+feedback. Exact quote/offset targets produce a fixed, short-lived first-line
+pulse after alignment; message fallback produces a left marker. Message and
+block components no longer receive a persistent full-surface navigation ring
+from the owner Reader; search match highlighting remains its own layer.
 
 `ProjectSidebar` exposes a stable `Tasks` launcher. `TaskCenterDialog` renders
 the existing `ImportTaskMonitor` in a global surface; sidebar and mobile

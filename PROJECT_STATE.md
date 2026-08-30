@@ -1,5 +1,31 @@
 # Project State
 
+## 2026-08-31 Sidebar state, custom project order, drag feedback and batch merge (local)
+
+- Project containers now have one product ordering authority: custom drag order.
+  New active non-default projects append after the current last project. Project
+  and conversation rows retain normal text contrast; only the current item uses
+  the neutral selected surface.
+- Project/conversation drag previews are inert, source-sized blocks rather than
+  browser link ghosts. Main list rows remain ordinary navigation targets and
+  show a delayed, viewport-aware description preview only after stable hover.
+- Successful Reader navigation now uses a short exact text-line pulse (or a
+  fallback left marker) instead of leaving an entire message highlighted.
+  Sidebar Settings is an upward in-shell region with an explicit Settings /
+  Collapse settings toggle, not a modal dialog.
+- Batch selection keeps its launcher in place and changes it to `Done`; Merge is
+  a first-level action whose title and order are owned by a focused dialog,
+  outside the horizontal toolbar's size constraints.
+- Verification at source SHA `bf484c758e3193f7df154954c11a02d2f3b64234`:
+  Web typecheck, lint, production build, the focused Project API suite (10
+  tests), Alembic single head, and `git diff --check` pass locally. The full API
+  suite reached 346 passed/6 skipped, then failed with 47 setup errors after the
+  Windows temporary drive filled (`sqlite3: database or disk is full`); one
+  import-backed Reader performance case failed in the same run. PWA/browser
+  execution built successfully but service-worker activation stayed false and
+  repeated Offline tests timed out, so browser acceptance is NOT VERIFIED. No
+  commit or deployment was performed.
+
 ## 2026-08-29 User Skill management (local)
 
 - Added owner-scoped `user_skills` and `user_skill_selections` persistence with

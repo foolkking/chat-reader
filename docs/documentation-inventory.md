@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+2026-08-31 sidebar interaction synchronization: fixed custom Project order,
+append-at-bottom creation, source-sized non-native drag previews, delayed list
+description previews, non-modal upward Settings region and short-lived Reader
+locate feedback are current in `PROJECT_STATE.md`,
+`docs/system/USER_FLOWS.md`, `docs/system/FEATURE_INVENTORY.md` and
+`docs/system/FRONTEND_ARCHITECTURE.md`. Legacy project-sort preferences remain
+compatibility data; no migration, dependency or documentation category was
+introduced.
+
 2026-08-25 Adaptive Import handling classes and Conversation Rescue are
 current in `PROJECT_STATE.md` and `system/ADAPTIVE_IMPORT_CONTRACT.md`.
 Static bilingual Rescue Skill assets are runtime resources under

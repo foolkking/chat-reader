@@ -40,6 +40,7 @@ export function MergeOrderList({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeSize, setActiveSize] = useState<{ width: number; height: number } | null>(null);
 
   function handleDragEnd(event: DragEndEvent) {
     if (!event.over || event.active.id === event.over.id) return;
@@ -49,7 +50,7 @@ export function MergeOrderList({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(event: DragStartEvent) => setActiveId(String(event.active.id))} onDragCancel={() => setActiveId(null)} onDragEnd={(event) => { setActiveId(null); handleDragEnd(event); }}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(event: DragStartEvent) => { setActiveId(String(event.active.id)); const initial = event.active.rect.current.initial; setActiveSize(initial ? { width: initial.width, height: initial.height } : null); }} onDragCancel={() => { setActiveId(null); setActiveSize(null); }} onDragEnd={(event) => { setActiveId(null); setActiveSize(null); handleDragEnd(event); }}>
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         <div className="mt-2 space-y-1">
           {conversations.map((conversation, index) => (
@@ -57,7 +58,7 @@ export function MergeOrderList({
           ))}
         </div>
       </SortableContext>
-      <DragOverlay>{activeId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" aria-hidden="true">{conversations.find((item) => item.id === activeId)?.display_title || conversations.find((item) => item.id === activeId)?.title}</div> : null}</DragOverlay>
+      <DragOverlay adjustScale={false}>{activeId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined} aria-hidden="true">{conversations.find((item) => item.id === activeId)?.display_title || conversations.find((item) => item.id === activeId)?.title}</div> : null}</DragOverlay>
     </DndContext>
   );
 }

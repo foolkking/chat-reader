@@ -227,7 +227,7 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
     await page.getByRole("button", { name: /展开侧栏|Open sidebar/ }).click();
   }
   await preferencesButton.click();
-  const preferences = page.getByRole("dialog", { name: /设置|Settings|外观与语言|Appearance & language/ });
+  const preferences = page.getByRole("region", { name: /设置|Settings|外观与语言|Appearance & language/ });
   await preferences.getByRole("button", { name: /更多设置|More settings/ }).click();
 
   await preferences.getByRole("button", { name: /舒适|Comfortable/ }).click();

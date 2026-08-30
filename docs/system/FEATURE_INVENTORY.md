@@ -1,6 +1,6 @@
 # 功能清单
 
-最后核验：2026-08-24
+最后核验：2026-08-31
 
 ## 导入与后台任务
 
@@ -22,10 +22,10 @@
 | 能力 | 状态 | 当前语义 |
 | --- | --- | --- |
 | Project + 未归类单层侧栏 | 已确认 | 同时显示；Project 内对话不在未归类重复 |
-| 移动与排序 | 已确认 | 桌面拖放；移动端 picker；自定义排序与置顶 |
+| 移动与排序 | 已确认 | Project 容器固定为自定义拖放顺序且新建项追加到底部；Project 内/未分类 Conversation 保留独立排序、移动端 picker 与置顶 |
 | 归档/硬删除 | 已确认 | 归档可取消并保留归属；删除二次确认后立即物理执行，无 Trash/restore |
 | Linear 式批量选择 | 已确认 | hover checkbox、Shift 范围、X、Cmd/Ctrl+A、Esc、移动长按 |
-| 批量操作 | 已确认 | 移动、归档/恢复、导出；合并/删除进入更多并确认 |
+| 批量操作 | 已确认 | 顶部入口在选择模式中保持原宽并切换为“完成批量操作”；移动、归档/恢复、导出、合并和删除直接位于上下文工具栏，合并标题与顺序由独立 focused dialog 持有 |
 | 拆分与合并 | 已确认 | 消息原位版本化；会话变换非破坏式创建新会话 |
 | 最近记录 | 已确认 | 路由/API 保留；仅移动端显示入口/继续阅读卡片 |
 
@@ -33,7 +33,7 @@
 
 | 能力 | 状态 | 当前语义 |
 | --- | --- | --- |
-| Settings hub | 已确认 | 全局入口表达设置；外观/阅读保留轻量偏好，数据与导入、导入格式、账户安全进入 focused dialog |
+| Settings hub | 已确认 | 全局入口在侧栏底部向上展开为非模态 region；外观/阅读保留轻量偏好，数据归档、导入格式、账户安全和 Skill 管理进入 focused dialog |
 | Consequential settings dismissal | 已确认 | 密码、导入格式名称和备份选项的未提交状态不能被 incidental close 静默丢弃 |
 
 ## Reader、渲染与导航
@@ -42,7 +42,7 @@
 | --- | --- | --- |
 | 完整轮次窗口 | 已确认 | 稳定 DOM 最多 3 轮，单轮全部 blocks 完成后挂载 |
 | 极长消息 block 虚拟化 | 已确认 | >160 blocks 或 >50000 chars；动态测量、overscan 8、导航目标固定挂载 |
-| 远距离导航 | 已确认 | quote -> character offset -> block -> message；布局稳定后 24px 内复校 |
+| 远距离导航 | 已确认 | quote -> character offset -> block -> message；布局稳定后 24px 内复校；成功后仅显示短时精确文字脉冲或左侧 fallback 标记 |
 | 连续上下阅读 | 已确认 | 相邻轮次预取、prepend/trim 真实锚点补偿 |
 | 阅读位置 | 已确认 | v2 block/version/order/ratio/字符偏移；按 block id -> index/message -> order -> ratio 恢复，兼容 v1 |
 | 双 TOC | 已确认 | 对话索引跨消息；章节 TOC 绑定消息/heading |

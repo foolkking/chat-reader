@@ -37,6 +37,12 @@ async function pointerDrag(page: Page, source: Locator, target: Locator, hoverMs
   await page.mouse.down();
   await page.mouse.move(sourceBox!.x + sourceBox!.width / 2 + 16, sourceBox!.y + sourceBox!.height / 2, { steps: 4 });
   await expect(page.getByTestId("sidebar-drag-overlay")).toBeVisible({ timeout: 5_000 });
+  const overlayBox = await page.getByTestId("sidebar-drag-overlay").boundingBox();
+  expect(overlayBox).not.toBeNull();
+  expect(Math.abs(overlayBox!.width - sourceBox!.width)).toBeLessThanOrEqual(2);
+  expect(Math.abs(overlayBox!.height - sourceBox!.height)).toBeLessThanOrEqual(2);
+  const sourceLink = source.locator("a").first();
+  if (await sourceLink.count()) await expect(sourceLink).toHaveAttribute("draggable", "false");
   // A pointer cannot be released on a DOM target outside the scrollport.
   // Scroll the destination into view after pickup, matching a user dragging
   // through the sidebar's auto-scroll region.
