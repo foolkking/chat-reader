@@ -18,7 +18,7 @@ done
 # pg_restore reads only the dump stream; no database, volume, or network is used.
 toc_path="$(mktemp "$BACKUP_DIR/.postgres-verify.XXXXXX")"
 trap 'rm -f "$toc_path"' EXIT INT TERM
-docker run --rm -i --network none "$POSTGRES_IMAGE" pg_restore --list - \
+docker run --rm -i --network none "$POSTGRES_IMAGE" pg_restore --list \
   < "$BACKUP_DIR/postgres.dump" > "$toc_path"
 test -s "$toc_path"
 

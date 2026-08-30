@@ -1,5 +1,12 @@
 # Markdown 文档台账
 
+2026-08-31 deployment synchronization: production source `7d86166`, release
+run/artifact provenance, the retained verified five-component recovery point,
+runtime health and the corrected PostgreSQL stdin verification command are
+current in `PROJECT_STATE.md` and `docs/deployment.md`. The backup command fix
+changes operator tooling only; authenticated production UI remains explicitly
+`NOT VERIFIED`.
+
 2026-08-31 sidebar interaction synchronization: fixed custom Project order,
 append-at-bottom creation, source-sized non-native drag previews, delayed list
 description previews, non-modal upward Settings region and short-lived Reader

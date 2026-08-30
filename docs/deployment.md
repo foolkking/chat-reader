@@ -1,5 +1,33 @@
 # 生产部署
 
+## 2026-08-31 offline resilience and attachment locator deployment
+
+Production runs source `7d861667e46a6e60092426bf551c975b718c8be7`
+from GitHub Actions run `33335620850`. The full quality job passed before the
+external Linux builder produced and inspected the immutable images. The release
+archive SHA-256 is
+`198a995ca27dd43af6b3936eb9a5b5d9363f526899c38b05d363724096e63ec8`.
+
+The retained five-component recovery point is
+`/opt/chat-reader/backups/chat-reader-20260830T213040Z`. PostgreSQL and all four
+business-volume archives passed checksums, archive listings and isolated
+`pg_restore --list`. During backup creation, PostgreSQL 16 confirmed that
+`pg_restore --list -` treats `-` as a filename rather than stdin; `backup.sh`
+and `verify_backup.sh` now omit that argument and the corrected helpers passed
+both creation and independent verification.
+
+King loaded the exact CI artifact, ran the existing migration, and recreated
+only API/import-worker/Web with `--no-build --no-deps --force-recreate`.
+PostgreSQL was not restarted. API/worker image ID is
+`sha256:3534d485db52bd72f09a032038c275ee9106f58a2b9e9f8923cae7b9187a02ae`;
+Web is
+`sha256:9d015c21a2cd6e4ef5b31ada07dc9a3a6225f18c75c44299e2b34280fde69133`.
+OCI revisions match the release source, health and heartbeat checks pass,
+Alembic is `20260829_0029 (head/current)`, and the HTTPS, redirect and private
+access boundaries are intact. No volume, production environment, import data
+or unrelated server file was removed. Authenticated production UI remains
+`NOT VERIFIED` because no owner credential was used.
+
 ## 2026-08-31 workspace navigation and batch merge deployment
 
 Production runs source `9cc7c4e2b6065bf3bce333a2fc8bb3cfb0ac94fd`

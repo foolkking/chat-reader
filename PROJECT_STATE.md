@@ -1,5 +1,34 @@
 # Project State
 
+## 2026-08-31 Offline resilience and attachment locator deployment
+
+- Production runs source `7d861667e46a6e60092426bf551c975b718c8be7`,
+  built by GitHub Actions run `33335620850`. Web lint, typecheck, production
+  build, the complete API suite, Alembic head/current, dependency audit and all
+  twelve release browser gates passed before image construction.
+- The deployable archive SHA-256 is
+  `198a995ca27dd43af6b3936eb9a5b5d9363f526899c38b05d363724096e63ec8`.
+  API/worker image ID is
+  `sha256:3534d485db52bd72f09a032038c275ee9106f58a2b9e9f8923cae7b9187a02ae`;
+  Web image ID is
+  `sha256:9d015c21a2cd6e4ef5b31ada07dc9a3a6225f18c75c44299e2b34280fde69133`.
+- The retained pre-deploy recovery point is
+  `/opt/chat-reader/backups/chat-reader-20260830T213040Z`. Its PostgreSQL
+  custom dump, imports, exports, offline and assets archives passed SHA-256,
+  archive-list and isolated `pg_restore --list` verification.
+- King loaded the CI images, ran migration, then recreated only API,
+  import-worker and Web with `--no-build --no-deps --force-recreate`.
+  PostgreSQL retained its original start time. Runtime OCI revisions match the
+  release SHA; API/Web/PostgreSQL are healthy, worker diagnostics are
+  `alive_idle`, restart counts are zero, HTTPS health is 200, port 80 redirects
+  to HTTPS, anonymous private access is 401, public diagnostics is 404 and
+  Alembic is `20260829_0029 (head/current)`.
+- Authenticated production UI acceptance is `NOT VERIFIED`; no owner credential
+  was used. The deployment exposed and corrected an operator-tool bug where
+  `pg_restore --list -` treated `-` as a filename. The backup helpers now use
+  stdin correctly; this tooling-only follow-up does not change the running
+  application images.
+
 ## 2026-08-31 Continuous improvement register
 
 - The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 17 completed, 113 remaining, 0 blocked.

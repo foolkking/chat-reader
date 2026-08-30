@@ -42,7 +42,7 @@ compose exec -T postgres \
   > "$dump_path"
 
 # Validate the custom dump using the same PostgreSQL image that produced it.
-compose exec -T postgres pg_restore --list - < "$dump_path" > "$work_dir/postgres.toc"
+compose exec -T postgres pg_restore --list < "$dump_path" > "$work_dir/postgres.toc"
 test -s "$work_dir/postgres.toc"
 
 for component in imports exports offline assets; do
