@@ -27,7 +27,7 @@ are user or operator consequence, not code size.
 | CI-006 | Recovery | Add an operator command to compare current database attachment references with filesystem assets before deploy. | Strong: artifact lifecycle contract requires stage/validate/publish boundaries. | H | H | Strong | M | M | Candidate |
 | CI-007 | Recovery | Emit a bounded report for `SAFE_TEMP`, `ORPHAN_FINAL`, and `SUPERSEDED_ARTIFACT` cleanup debt. | Observed: cleanup classifier exists and production has orphan debt. | H | M | Observed | M | M | Candidate |
 | CI-008 | Recovery | Add a manual, race-safe apply mode for only explicitly approved artifact cleanup candidates. | Strong: automatic cleanup is intentionally disabled; dry-run exists. | H | M | Strong | L | H | Candidate |
-| CI-009 | Recovery | Verify backup storage free space and fail before starting a partial backup. | Inferred: current script writes directly without a preflight capacity check. | H | H | Inferred | S | M | Candidate |
+| CI-009 | Recovery | Verify backup storage free space and fail before starting a partial backup. | Inferred: current script writes directly without a preflight capacity check. | H | H | Inferred | S | M | Completed 2026-08-31; conservative size preflight added |
 | CI-010 | Recovery | Add a backup failure notification hook that contains no conversation content or secrets. | Hypothesis: operators currently discover failures from command output. | M | M | Hypothesis | M | M | Candidate |
 | CI-011 | CI | Cache the Web production build output between quality and negative-PWA gates where valid. | Observed: workflow runs Web production build before tests and again for PWA negative matrix. | M | M | Observed | M | M | Candidate |
 | CI-012 | CI | Split API-only and Web-only quality jobs so unrelated failures identify their owner faster. | Observed: one quality job contains both suites and browser services. | M | M | Strong | M | M | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 100 |
-| Completed in this backlog | 3 |
+| Completed in this backlog | 4 |
 | Blocked | 0 |
-| Remaining candidates | 97 |
+| Remaining candidates | 96 |

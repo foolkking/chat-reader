@@ -864,9 +864,11 @@ custom dump plus read-only `imports`, `exports`, `offline`, and `assets`
 archives. It validates the database table-of-contents and each archive before
 publishing the directory, then writes `MANIFEST` (including source SHA and
 backup schema) and `SHA256SUMS`. Set
-`COMPOSE_FILE`, `COMPOSE_ENV_FILE`, or `BACKUP_DIR` to use an explicit
-production location; the helper never deletes existing backups or application
-volumes.
+`COMPOSE_FILE`, `COMPOSE_ENV_FILE`, `BACKUP_DIR`, or
+`BACKUP_HEADROOM_KB` to use an explicit production location. Before writing,
+the helper requires enough free space for the current uncompressed database and
+business volumes plus 256 MiB default headroom. It never deletes existing
+backups or application volumes.
 
 `verify_backup.sh` is a read-only pre-restore check. It validates the manifest,
 all five checksums, four tar archives, and the PostgreSQL custom dump through an

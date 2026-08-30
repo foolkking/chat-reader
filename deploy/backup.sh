@@ -6,12 +6,28 @@ BACKUP_DIR="${BACKUP_DIR:-./backups}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env.production}"
 SOURCE_SHA="${SOURCE_SHA:-$(git rev-parse HEAD 2>/dev/null || printf 'unknown')}"
+BACKUP_HEADROOM_KB="${BACKUP_HEADROOM_KB:-262144}"
 
 compose() {
   docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
 mkdir -p "$BACKUP_DIR"
+
+database_bytes="$(compose exec -T postgres \
+  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select pg_database_size(current_database())"')"
+required_kb="$((database_bytes / 1024 + BACKUP_HEADROOM_KB))"
+for component in imports exports offline assets; do
+  component_kb="$(compose run --rm --no-deps -T api \
+    sh -c "du -sk '/data/$component' | cut -f1")"
+  required_kb="$((required_kb + component_kb))"
+done
+available_kb="$(df -Pk "$BACKUP_DIR" | awk 'NR == 2 {print $4}')"
+if [ "$available_kb" -lt "$required_kb" ]; then
+  echo "Backup refused: target has ${available_kb} KiB available; ${required_kb} KiB required." >&2
+  exit 1
+fi
+
 work_dir="$(mktemp -d "$BACKUP_DIR/.chat-reader-backup.XXXXXX")"
 final_dir="$BACKUP_DIR/chat-reader-$STAMP"
 cleanup() {
