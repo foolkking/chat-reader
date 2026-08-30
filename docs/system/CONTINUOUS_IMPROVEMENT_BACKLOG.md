@@ -52,7 +52,7 @@ are user or operator consequence, not code size.
 | OFF-001 | Offline | Make offline package import commit in bounded chunks with resumable progress after IndexedDB abort. | Observed: prior `searchDocuments.bulkPut` aborted thousands of operations. | H | H | Observed | L | H | Candidate |
 | OFF-002 | Offline | Add an offline package preflight estimating IndexedDB quota before packaging/import. | Strong: browser quota and eviction variance are documented risks. | H | H | Strong | M | M | Candidate |
 | OFF-003 | Offline | Add an import journal that records the last completed store/chunk without storing conversation content. | Inferred: current abort can leave an apparently downloaded package with no usable content. | H | H | Inferred | L | H | Candidate |
-| OFF-004 | Offline | Validate that offline Reader message counts and TOC entries are non-zero after package import. | Observed: a successful download opened with `0 / 0` messages. | H | H | Observed | M | M | Candidate |
+| OFF-004 | Offline | Validate that offline Reader message counts and TOC entries are non-zero after package import. | Observed: a successful download opened with `0 / 0` messages. | H | H | Observed | M | M | Completed 2026-08-31; package counts are validated before replacement and PWA-NEG-022 proves rollback |
 | OFF-005 | Offline | Keep v1 package reads while writing v2 import diagnostics for schema/store mismatches. | Strong: AGENTS requires v1 compatibility. | H | M | Strong | M | M | Candidate |
 | OFF-006 | Offline | Add an offline asset URL lifecycle test covering revoke timing after Viewer close. | Strong: offline attachment URLs are released by timed cleanup. | M | M | Strong | M | M | Candidate |
 | OFF-007 | Offline | Add a visible retry path when one store fails without discarding stores already imported. | Strong: partial package failure is a known recovery concern. | H | M | Strong | M | M | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 130 |
-| Completed in this backlog | 13 |
+| Completed in this backlog | 14 |
 | Blocked | 0 |
-| Remaining candidates | 117 |
+| Remaining candidates | 116 |

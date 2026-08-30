@@ -2,7 +2,7 @@
 
 ## 2026-08-31 Continuous improvement register
 
-- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 13 completed, 117 remaining, 0 blocked.
+- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 14 completed, 116 remaining, 0 blocked.
 - All 15 Playwright gates in the release and performance workflows now have explicit 20-30 minute step limits and gate-specific `test-results` directories, so a later invocation does not erase earlier diagnostics before the existing `always()` artifact upload. A bounded custom reporter writes one redacted start/final status file per executed gate, including a durable `running` marker if a step is terminated. YAML contract validation covered 15/15 gates. Build release images run `33331355359` attempt 2 passed quality and image jobs; its quality artifact contains 12/12 release-gate status files marked `passed`, while attempt 1 separately retains 10 status files and the trace from a transient Chromium `SIGSEGV`.
 - `deploy/backup.sh` now checks target free space before writing, then creates a timestamped, verified five-component recovery directory (PostgreSQL plus imports, exports, offline, and assets) with a schema/source-SHA `MANIFEST` and `SHA256SUMS`; it does not delete volumes or prior backups.
 - `deploy/verify_backup.sh` performs a read-only checksum/archive/catalog check using an isolated PostgreSQL container with no network or mounted volume. Both helpers have passed `sh -n` and `git diff --check`; production execution remains a separate operator action.
