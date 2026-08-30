@@ -179,15 +179,18 @@ test("mirrors the unified sidebar and keeps preferences compact in library mode"
 
   const preferencesFooter = page.locator("aside footer").first();
   const heightBefore = await preferencesFooter.evaluate((element) => element.getBoundingClientRect().height);
-  await page.getByRole("button", { name: /设置|Settings|外观与语言|Appearance & language/ }).click();
-  await expect(page.getByRole("region", { name: /设置|Settings|外观与语言|Appearance & language/ })).toBeVisible();
+  const preferencesButton = preferencesFooter.locator("button[aria-controls]").first();
+  const preferencesPanelId = await preferencesButton.getAttribute("aria-controls");
+  expect(preferencesPanelId).toBeTruthy();
+  await preferencesButton.click();
+  await expect(page.locator(`#${preferencesPanelId}`)).toBeVisible();
   await expect(page.getByRole("link", { name: /返回在线版|Back online/ })).toHaveAttribute("href", "/conversations/offline-fixture");
   const heightAfter = await preferencesFooter.evaluate((element) => element.getBoundingClientRect().height);
   expect(Math.abs(heightAfter - heightBefore)).toBeLessThanOrEqual(1);
 
-  await page.getByRole("button", { name: /收回设置|Collapse settings/ }).click();
+  await preferencesButton.click();
   await page.goto("/");
-  await page.getByRole("button", { name: /设置|Settings|外观与语言|Appearance & language/ }).click();
+  await page.locator("aside footer button[aria-controls]").first().click();
   await expect(page.getByRole("link", { name: /离线资料库|Offline library/ })).toHaveAttribute("href", "/library");
 });
 
