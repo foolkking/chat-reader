@@ -5,6 +5,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env.production}"
+SOURCE_SHA="${SOURCE_SHA:-$(git rev-parse HEAD 2>/dev/null || printf 'unknown')}"
 
 compose() {
   docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
@@ -19,6 +20,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 dump_path="$work_dir/postgres.dump"
+postgres_tool_version="$(compose exec -T postgres pg_dump --version | tr -d '\r')"
 compose exec -T postgres \
   sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
   > "$dump_path"
@@ -39,6 +41,8 @@ done
 {
   printf 'schema_version=1\n'
   printf 'created_at=%s\n' "$STAMP"
+  printf 'source_sha=%s\n' "$SOURCE_SHA"
+  printf 'postgres_tool=%s\n' "$postgres_tool_version"
   printf 'source=postgres-and-business-volumes\n'
   printf 'components=postgres,imports,exports,offline,assets\n'
   cat "$work_dir/SHA256SUMS"

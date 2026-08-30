@@ -862,7 +862,8 @@ pg_restore --list backups/chat-reader-<timestamp>/postgres.dump >/dev/null
 The backup helper now writes a timestamped directory containing the PostgreSQL
 custom dump plus read-only `imports`, `exports`, `offline`, and `assets`
 archives. It validates the database table-of-contents and each archive before
-publishing the directory, then writes `MANIFEST` and `SHA256SUMS`. Set
+publishing the directory, then writes `MANIFEST` (including source SHA and
+backup schema) and `SHA256SUMS`. Set
 `COMPOSE_FILE`, `COMPOSE_ENV_FILE`, or `BACKUP_DIR` to use an explicit
 production location; the helper never deletes existing backups or application
 volumes.
