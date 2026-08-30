@@ -31,7 +31,7 @@
 
 ## 2026-08-31 Continuous improvement register
 
-- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 17 completed, 113 remaining, 0 blocked.
+- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 131 evidence-labeled candidates, 18 completed, 113 remaining, 0 blocked.
 - All 15 Playwright gates in the release and performance workflows now have explicit 20-30 minute step limits and gate-specific `test-results` directories, so a later invocation does not erase earlier diagnostics before the existing `always()` artifact upload. A bounded custom reporter writes one redacted start/final status file per executed gate, including a durable `running` marker if a step is terminated. YAML contract validation covered 15/15 gates. Build release images run `33331355359` attempt 2 passed quality and image jobs; its quality artifact contains 12/12 release-gate status files marked `passed`, while attempt 1 separately retains 10 status files and the trace from a transient Chromium `SIGSEGV`.
 - The release quality job now always writes `apps/web/test-results/release-gate-summary.json`, indexing all 12 expected browser gates as `PASS`, `FAIL`, `SKIPPED`, or `NOT_VERIFIED`. Missing, unreadable, incomplete and zero-test evidence remains `NOT_VERIFIED`; the summary contains counts and timings but no test content or credentials.
 - Online Files, file details and Offline Files now use one attachment occurrence target builder. Every path preserves attachment/occurrence/version/block identity plus canonical start/end offsets; a same-block second-occurrence contract test passed.
