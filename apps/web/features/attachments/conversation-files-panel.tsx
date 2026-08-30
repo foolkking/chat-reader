@@ -43,6 +43,7 @@ import type { AttachmentRead, NavigateTarget } from "../../lib/types";
 import { AttachmentPreviewDialog, readableBytes } from "./attachment-block";
 import { attachmentExtension } from "./preview-adapter-registry";
 import { useDialogFocus } from "../../components/use-dialog-focus";
+import { attachmentOccurrenceTarget } from "./attachment-location";
 
 type Placement = "inline" | "after_message";
 type FileFilter = "all" | "used" | "unused" | "missing";
@@ -477,20 +478,6 @@ function FileRow({
   );
 }
 
-function attachmentOccurrenceTarget(attachment: AttachmentRead, occurrence: NonNullable<AttachmentRead["occurrences"]>[number]): NavigateTarget {
-  return {
-    messageId: occurrence.message_id,
-    messageVersionId: occurrence.message_version_id,
-    renderBlockId: occurrence.render_block_id,
-    blockIndex: occurrence.block_index ?? undefined,
-    characterOffset: occurrence.start_offset ?? undefined,
-    endCharacterOffset: occurrence.end_offset ?? undefined,
-    occurrenceKey: occurrence.occurrence_key,
-    attachmentId: attachment.id,
-    source: "message-action",
-  };
-}
-
 function AttachmentDetailsDialog({
   attachment,
   zh,
@@ -528,7 +515,7 @@ function AttachmentDetailsDialog({
             <button
               key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`}
               type="button"
-              onClick={() => { onClose(); void onLocate({ messageId: occurrence.message_id, messageVersionId: occurrence.message_version_id, renderBlockId: occurrence.render_block_id, blockIndex: occurrence.block_index ?? undefined, occurrenceKey: occurrence.occurrence_key, attachmentId: attachment.id, source: "message-action" }); }}
+              onClick={() => { onClose(); void onLocate(attachmentOccurrenceTarget(attachment, occurrence)); }}
               className="block w-full rounded-md border border-ui bg-surface p-3 text-left hover:border-[var(--accent)]"
             >
               <span className="flex items-center justify-between gap-2 text-xs font-medium text-primary">

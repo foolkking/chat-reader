@@ -6,6 +6,7 @@ import {
   resolveAttachmentCapability,
 } from "../features/attachments/preview-adapter-registry";
 import type { AttachmentRead } from "../lib/types";
+import { attachmentOccurrenceTarget } from "../features/attachments/attachment-location";
 
 function capability(mime: string, filename: string) {
   return resolveAttachmentCapability({
@@ -89,4 +90,35 @@ test("image display modes are presentation-only bounded values", () => {
   expect(imageDisplayMaxWidth("small")).toBe("280px");
   expect(imageDisplayMaxWidth("medium")).toBe("480px");
   expect(imageDisplayMaxWidth("large")).toBe("100%");
+});
+
+test("attachment occurrence navigation preserves the selected same-block identity and offsets", () => {
+  const attachment = { id: "attachment-2" } as AttachmentRead;
+  const target = attachmentOccurrenceTarget(attachment, {
+    message_id: "message-1",
+    message_version_id: "version-1",
+    is_current_version: true,
+    version_number: 1,
+    message_role: "assistant",
+    message_order_key: "000001",
+    message_preview: "second reference",
+    render_block_id: "block-1",
+    block_index: 4,
+    start_offset: 120,
+    end_offset: 164,
+    occurrence_key: "same-block-occurrence-2",
+    placement: "inline",
+  });
+
+  expect(target).toEqual({
+    messageId: "message-1",
+    messageVersionId: "version-1",
+    renderBlockId: "block-1",
+    blockIndex: 4,
+    characterOffset: 120,
+    endCharacterOffset: 164,
+    occurrenceKey: "same-block-occurrence-2",
+    attachmentId: "attachment-2",
+    source: "message-action",
+  });
 });

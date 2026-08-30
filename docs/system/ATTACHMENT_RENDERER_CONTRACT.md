@@ -107,6 +107,8 @@ A Gallery contains only adjacent image occurrences in one current MessageVersion
 
 Occurrence identity is `message_version_id + occurrence_key`. `block_index` is only a sort/DOM-location hint. File-panel attachments without occurrences may open a single Viewer but never enter message or conversation Gallery.
 
+Files Panel, its details view and Offline Files construct navigation through the same locator adapter. The adapter carries `attachment_id`, `occurrence_key`, `message_version_id`, stable block identity and source offsets; none of these entry points may reconstruct a target from `block_index` alone.
+
 Current-conversation image order is `message order -> current MessageVersion -> RenderBlock order -> display_order -> occurrence_key`. Attachment, derivative, and database return order are not authorities.
 
 ## Unified Viewer And Adaptive Presentation

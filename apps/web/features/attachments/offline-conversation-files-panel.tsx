@@ -12,6 +12,7 @@ import {
 import type { AttachmentRead, NavigateTarget } from "../../lib/types";
 import { buildAttachmentRenderPlan, friendlyAttachmentType } from "./preview-adapter-registry";
 import { formatBytes, useAttachmentViewer } from "./attachment-viewer";
+import { attachmentOccurrenceTarget } from "./attachment-location";
 
 type OfflineFilter = "all" | "used" | "unused" | "unavailable";
 
@@ -135,7 +136,7 @@ function OfflineFileRow({ attachment, zh, divided, onOpen, onDownload, onLocate 
         <p className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</p>
         <p className="truncate text-[11px] text-secondary">{friendlyAttachmentType(attachment)} · {formatBytes(attachment.asset_object?.byte_size ?? 0)} · {available ? (zh ? "已缓存" : "Cached") : attachment.resolution_status === "missing" ? (zh ? "文件缺失" : "Missing") : (zh ? "离线不可用" : "Unavailable offline")}</p>
         {occurrences.length ? <div className="mt-1 flex flex-wrap gap-1">{occurrences.slice(0, 3).map((occurrence, index) => (
-          <button key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`} type="button" onClick={() => void onLocate({ messageId: occurrence.message_id, messageVersionId: occurrence.message_version_id, renderBlockId: occurrence.render_block_id, blockIndex: occurrence.block_index ?? undefined, occurrenceKey: occurrence.occurrence_key, attachmentId: attachment.id, source: "message-action" })} className="inline-flex min-h-7 items-center gap-1 rounded px-1.5 text-[11px] text-secondary hover:bg-subtle hover:text-primary">
+          <button key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`} type="button" onClick={() => void onLocate(attachmentOccurrenceTarget(attachment, occurrence))} className="inline-flex min-h-7 items-center gap-1 rounded px-1.5 text-[11px] text-secondary hover:bg-subtle hover:text-primary">
             <LocateFixed className="h-3 w-3" />{zh ? `引用 ${index + 1}` : `Reference ${index + 1}`}
           </button>
         ))}{occurrences.length > 3 ? <span className="px-1.5 py-1 text-[11px] text-secondary">+{occurrences.length - 3}</span> : null}</div> : null}

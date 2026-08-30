@@ -61,7 +61,7 @@ are user or operator consequence, not code size.
 | OFF-010 | Offline | Add mobile offline acceptance at 375px for Library, Reader, TOC, and attachment access. | Strong: desktop and production-equivalent coverage do not replace real mobile verification. | M | M | Strong | M | L | Candidate |
 | LOC-001 | Reader | Return a server-resolved locator DTO for every TOC, search, annotation, attachment, and source reference. | Strong: current audit found divergent DOM/block-index authorities. | H | H | Strong | L | H | Candidate |
 | LOC-002 | Reader | Replace DOM text reverse lookup with canonical MessageVersion/RenderBlock offsets. | Strong: rendered Markdown differs from source text and causes misses. | H | H | Strong | L | H | Candidate |
-| LOC-003 | Reader | Preserve attachment `occurrence_key` through Files Panel, resolver, and final highlight. | Observed: front-end previously dropped occurrence identity. | H | H | Observed | M | M | Candidate |
+| LOC-003 | Reader | Preserve attachment `occurrence_key` through Files Panel, resolver, and final highlight. | Observed: front-end previously dropped occurrence identity. | H | H | Strong | M | M | Completed 2026-08-31; online/detail/offline targets share identity+offset builder with same-block regression |
 | LOC-004 | Reader | Return all same-block attachment occurrences instead of a single dictionary value. | Observed: single-value `occurrence_by_block` overwrote siblings. | H | H | Observed | M | M | Candidate |
 | LOC-005 | Reader | Add locator version 2 compatibility and stale/ambiguous/not-found status rendering. | Strong: target locator plan defines these statuses. | H | H | Strong | M | M | Candidate |
 | LOC-006 | Reader | Batch target context and turn-window loading into one resolver response. | Strong: current flow makes duplicate target/turn requests. | M | M | Strong | M | M | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 130 |
-| Completed in this backlog | 16 |
+| Completed in this backlog | 17 |
 | Blocked | 0 |
-| Remaining candidates | 114 |
+| Remaining candidates | 113 |
