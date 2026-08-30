@@ -168,7 +168,7 @@ are user or operator consequence, not code size.
 
 | Metric | Count |
 |---|---:|
-| Discovered candidates | 100 |
+| Discovered candidates | 130 |
 | Completed in this backlog | 11 |
 | Blocked | 0 |
-| Remaining candidates | 89 |
+| Remaining candidates | 119 |
