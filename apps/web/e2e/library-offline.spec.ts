@@ -190,7 +190,7 @@ test("mirrors the unified sidebar and keeps preferences compact in library mode"
 
   await preferencesButton.click();
   await page.goto("/");
-  await page.locator("aside footer button[aria-controls]").first().click();
+  await page.getByRole("button", { name: /设置|Settings|外观与语言|Appearance & language/ }).click();
   await expect(page.getByRole("link", { name: /离线资料库|Offline library/ })).toHaveAttribute("href", "/library");
 });
 
