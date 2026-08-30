@@ -4,10 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
 import {
   archiveConversation,
   getConversations,
@@ -49,6 +48,12 @@ export function ConversationList({
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const [activeSortId, setActiveSortId] = useState<string | null>(null);
+  const sortSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const conversationsQuery = useQuery({
     queryKey: ["conversations", mode, conversationSortMode, conversationSortDirection],
     queryFn: () => getConversations({
@@ -130,6 +135,10 @@ export function ConversationList({
     if (oldIndex < 0 || newIndex < 0) return;
     await updateConversationOrder(arrayMove(rows, oldIndex, newIndex).map((item) => item.id));
     await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+  }
+
+  function handleSortStart(event: DragStartEvent) {
+    setActiveSortId(String(event.active.id));
   }
 
   async function refreshLists() {
@@ -369,11 +378,13 @@ export function ConversationList({
             }}
           />
       </SelectionToolbar> : null}
-      <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
+      <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => setActiveSortId(null)} onDragEnd={(event) => { setActiveSortId(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation) => (
           <SortableConversationRow id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode} key={conversation.id}><article
             {...linearSelection.itemHandlers(conversation.id)}
-            className={`group border-b border-ui px-4 py-3 transition last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}
+            data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined}
+            aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined}
+            className="reader-interactive-row group border-b border-ui px-4 py-3 transition last:border-b-0 hover:bg-subtle"
           >
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
               <div className="flex min-w-0 gap-3">
@@ -419,7 +430,7 @@ export function ConversationList({
             </div>
           </article></SortableConversationRow>
         ))}
-      </div></SortableContext></DndContext>
+      </div></SortableContext><DragOverlay>{activeSortId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
     </section>
   );
 }
@@ -431,7 +442,7 @@ function ReadingProgress({ value, locale }: { value: number; locale: "zh-CN" | "
 
 function SortableConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
   const sortable = useSortable({ id, disabled: !enabled });
-  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} className="relative"><button type="button" aria-label="Drag to reorder" title="Drag to reorder" className={`absolute left-1 top-1/2 z-10 flex h-8 w-7 -translate-y-1/2 touch-none items-center justify-center rounded-md text-secondary hover:bg-surface ${enabled ? "opacity-100" : "pointer-events-none opacity-0"}`} {...sortable.attributes} {...sortable.listeners}><GripVertical className="h-4 w-4" /></button>{children}</div>;
+  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : enabled ? "hover" : undefined} {...sortable.attributes} {...sortable.listeners} className={`reader-interactive-row relative outline-none ${enabled ? "cursor-grab active:cursor-grabbing" : ""}`}>{children}</div>;
 }
 
 function previewConversationText(text: string | null | undefined, locale: "zh-CN" | "en-US"): string {
@@ -487,7 +498,7 @@ function BulkActions({
   }, [selectedIds.length]);
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 border-l border-ui pl-2">
+      <div className="selection-toolbar-action-group flex flex-wrap items-center gap-1.5">
         {mode === "active" ? <select
           defaultValue=""
           disabled={bulkBusy !== null || selectedIds.length === 0}

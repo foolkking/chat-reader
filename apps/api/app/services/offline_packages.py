@@ -38,7 +38,9 @@ from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 ProgressCallback = Callable[[str, int, int, int], None]
 MessageProgressCallback = Callable[[int, int], None]
 
-_MESSAGE_BATCH_SIZE = 20
+# A larger read batch keeps large offline exports from issuing one query per
+# handful of messages while still bounding ORM memory for very long threads.
+_MESSAGE_BATCH_SIZE = 100
 _JSON_ENCODER = json.JSONEncoder(
     ensure_ascii=False,
     separators=(",", ":"),
@@ -395,11 +397,10 @@ def _write_conversation_payload(
             if version_ids
             else []
         )
-        occurrences_by_block = {
-            (link.message_version_id, link.block_index): link
-            for link in occurrence_rows
-            if link.block_index is not None
-        }
+        occurrences_by_block: dict[tuple[uuid.UUID, int], list[MessageVersionAttachment]] = defaultdict(list)
+        for link in occurrence_rows:
+            if link.block_index is not None:
+                occurrences_by_block[(link.message_version_id, link.block_index)].append(link)
         blocks_by_version: dict[uuid.UUID, list[RenderBlock]] = defaultdict(list)
         for block in block_rows:
             blocks_by_version[block.message_version_id].append(block)
@@ -425,7 +426,7 @@ def _write_conversation_payload(
                     "render_blocks": [
                         _block_payload(
                             block,
-                            occurrences_by_block.get((block.message_version_id, block.block_index)),
+                            occurrences_by_block.get((block.message_version_id, block.block_index), []),
                         )
                         for block in blocks_by_version.get(message.current_version_id, [])
                     ],
@@ -484,8 +485,13 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
     payloads = []
     for attachment, asset in attachments:
         links = (
-            db.query(MessageVersionAttachment, Message)
+            db.query(MessageVersionAttachment, Message, RenderBlock)
             .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
+            .outerjoin(
+                RenderBlock,
+                (RenderBlock.message_version_id == MessageVersionAttachment.message_version_id)
+                & (RenderBlock.block_index == MessageVersionAttachment.block_index),
+            )
             .filter(MessageVersionAttachment.attachment_id == attachment.id, Message.is_deleted.is_(False))
             .order_by(Message.order_key, MessageVersionAttachment.display_order)
             .all()
@@ -496,7 +502,7 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
             and asset.scan_status in allowed_scan_statuses()
             and (asset_mode == "all" or (asset_mode == "small" and asset.byte_size <= 10 * 1024 * 1024))
         )
-        first_link, first_message = links[0] if links else (None, None)
+        first_link, first_message, _ = links[0] if links else (None, None, None)
         payloads.append({
             "id": str(attachment.id),
             "conversation_id": str(conversation_id),
@@ -514,6 +520,7 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
             "occurrences": [{
                 "message_id": str(message.id),
                 "message_version_id": str(link.message_version_id),
+                "render_block_id": str(block.id) if block else None,
                 "occurrence_key": link.occurrence_key,
                 "placement": link.placement,
                 "relation_type": link.relation_type,
@@ -522,7 +529,7 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
                 "display_mode": link.display_mode,
                 "alt_text": link.alt_text,
                 "caption": link.caption,
-            } for link, message in links],
+            } for link, message, block in links],
             "content_path": f"assets/objects/{asset.id}" if included and asset else None,
         })
     return payloads
@@ -612,18 +619,39 @@ def _version_payload(version: MessageVersion | None) -> dict[str, Any] | None:
 
 def _block_payload(
     block: RenderBlock,
-    occurrence: MessageVersionAttachment | None = None,
+    occurrences: list[MessageVersionAttachment] | None = None,
 ) -> dict[str, Any]:
     data = dict(block.data or {})
-    if occurrence is not None:
+    occurrences = occurrences or []
+    if occurrences:
+        # Keep the legacy singular fields for v1 readers, but expose every
+        # occurrence so a block containing repeated attachments is lossless.
+        first = occurrences[0]
         data.update({
-            "messageVersionId": str(occurrence.message_version_id),
-            "occurrenceKey": occurrence.occurrence_key,
-            "displayOrder": occurrence.display_order,
-            "displayMode": occurrence.display_mode,
-            "alt": occurrence.alt_text,
-            "caption": occurrence.caption,
-            "relationType": occurrence.relation_type,
+            "messageVersionId": str(first.message_version_id),
+            "occurrenceKey": first.occurrence_key,
+            "displayOrder": first.display_order,
+            "displayMode": first.display_mode,
+            "alt": first.alt_text,
+            "caption": first.caption,
+            "relationType": first.relation_type,
+            "attachmentOccurrences": [
+                {
+                    "attachmentId": str(item.attachment_id),
+                    "messageVersionId": str(item.message_version_id),
+                    "occurrenceKey": item.occurrence_key,
+                    "blockIndex": item.block_index,
+                    "renderBlockId": str(block.id),
+                    "startOffset": getattr(item, "start_offset", None),
+                    "endOffset": getattr(item, "end_offset", None),
+                    "displayOrder": item.display_order,
+                    "displayMode": item.display_mode,
+                    "alt": item.alt_text,
+                    "caption": item.caption,
+                    "relationType": item.relation_type,
+                }
+                for item in occurrences
+            ],
         })
     return {
         "id": block.id,
@@ -651,7 +679,7 @@ def _heading_payload(heading: Heading) -> dict[str, Any]:
 
 
 def _search_payload(document: SearchDocument) -> dict[str, Any]:
-    return {
+    payload = {
         "id": document.id,
         "message_id": document.message_id,
         "message_version_id": document.message_version_id,
@@ -659,11 +687,16 @@ def _search_payload(document: SearchDocument) -> dict[str, Any]:
         "role": document.role,
         "title": document.title,
         "plain_text": document.plain_text,
-        "search_text": document.search_text,
         "order_key": document.order_key,
         "turn_index": document.turn_index,
         "metadata": document.metadata_ or {},
     }
+    # Most message documents index the same canonical text they display.
+    # Omitting the duplicate field materially reduces large offline packages;
+    # clients fall back to plain_text when search_text is absent.
+    if document.search_text != document.plain_text:
+        payload["search_text"] = document.search_text
+    return payload
 
 
 def _reading_position_payload(position: ReadingPosition | None) -> dict[str, Any] | None:

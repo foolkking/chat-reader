@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Library, ShieldCheck, SlidersHorizontal, Database } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Library, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePreferences, useTranslations } from "./preferences-provider";
 
-export type SettingsCategory = "data" | "security" | "formats";
+export type SettingsCategory = "data" | "security" | "formats" | "cleanup" | "skills";
 
 export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/", onOpenCategory }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string; onOpenCategory?: (category: SettingsCategory) => void }) {
   const preferences = usePreferences();
@@ -37,10 +37,6 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
   };
   return (
     <section className={compact ? "space-y-3" : "space-y-4"} aria-label={`${t("settings")} (${t("appearanceLanguage")})`}>
-      {!(compact && libraryMode) ? <div className="rounded-lg border border-ui bg-subtle px-3 py-2.5">
-        <p className="text-sm font-semibold text-primary">{t("settings")}</p>
-        <p className="mt-0.5 text-xs leading-5 text-secondary">{t("settingsHint")}</p>
-      </div> : null}
       {!(compact && libraryMode) ? <p className="text-xs font-semibold text-secondary">{t("appearanceReading")}</p> : null}
       <SettingGroup label={t("theme")} compact={compact}>
         {(["light", "dark", "system"] as const).map((mode) => (
@@ -53,17 +49,12 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         {libraryMode ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <Library className="h-4 w-4" aria-hidden="true" />}
         {libraryMode ? t("backOnline") : t("offlineLibrary")}
       </Link>
-      {!libraryMode ? <div className="space-y-2 border-t border-ui pt-3">
-        <p className="text-xs font-semibold text-secondary">{t("settings")}</p>
-        <SettingsCategoryButton icon={Database} label={t("dataImport")} description={t("importData")} onClick={() => onOpenCategory?.("data")} />
-        <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
-        <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
-      </div> : null}
       <button type="button" onClick={() => setMoreOpen((value) => !value)} className="flex min-h-9 w-full items-center justify-between border-t border-ui pt-2 text-sm font-medium text-secondary hover:text-primary" aria-expanded={moreOpen}>
         {moreOpen ? t("collapseSettings") : t("moreSettings")}
         {moreOpen ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
       </button>
-      {moreOpen ? <div className={compact ? "space-y-3" : "space-y-4"}>
+      <div className={`settings-more-panel ${moreOpen ? "settings-more-panel-open" : ""}`} aria-hidden={!moreOpen}>
+        <div className={compact ? "space-y-3" : "space-y-4"}>
         <SettingGroup label={t("readerDensity")} compact={compact}>
           {(["compact", "comfortable", "large"] as const).map((mode) => (
             <Segment key={mode} active={preferences.readerDensityMode === mode} onClick={() => void preferences.setReaderDensityMode(mode)}>
@@ -101,6 +92,14 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
           <Segment active={annotationPosition === "floating"} onClick={() => updateAnnotationPosition("floating")}>{t("floating")}</Segment>
           <Segment active={annotationPosition === "docked"} onClick={() => updateAnnotationPosition("docked")}>{t("docked")}</Segment>
         </SettingGroup>
+        </div>
+      </div>
+      {!libraryMode ? <div className="settings-category-list space-y-2 border-t border-ui pt-3">
+        <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
+        <SettingsCategoryButton icon={Eraser} label={t("noiseRuleLibrary")} description={t("noiseRuleLibraryDescription")} onClick={() => onOpenCategory?.("cleanup")} />
+        <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
+        <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
+        <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
       </div> : null}
     </section>
   );

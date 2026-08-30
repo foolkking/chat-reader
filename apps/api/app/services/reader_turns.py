@@ -5,7 +5,8 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_, func
+from sqlalchemy.orm import Query, Session, joinedload
 
 from app.models.attachment import Attachment, MessageVersionAttachment
 from app.models.message import Message
@@ -22,18 +23,134 @@ class _Turn:
     end: int
 
 
+@dataclass(frozen=True)
+class _SelectedTurn:
+    messages: list[Message]
+    start_offset: int
+    end_offset: int
+    total_messages: int
+    previous_anchor_message_id: uuid.UUID | None
+    next_anchor_message_id: uuid.UUID | None
+
+
 class ReaderTurnHydrationError(RuntimeError):
     """Raised when canonical block rows cannot satisfy the complete-turn contract."""
 
 
 def load_reader_turn(db: Session, conversation_id: uuid.UUID, anchor_message_id: uuid.UUID | None = None) -> ReaderTurnResponse:
-    messages = (
-        db.query(Message)
-        .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
-        .order_by(Message.order_key.asc())
-        .all()
+    base = db.query(Message).filter(
+        Message.conversation_id == conversation_id,
+        Message.is_deleted.is_(False),
     )
-    return build_reader_turn(db, conversation_id, messages, anchor_message_id)
+    return load_reader_turn_from_query(db, conversation_id, base, anchor_message_id)
+
+
+def load_reader_turn_from_query(
+    db: Session,
+    conversation_id: uuid.UUID,
+    base: Query,
+    anchor_message_id: uuid.UUID | None = None,
+    *,
+    attachment_content_prefix: str = "/api/attachments",
+) -> ReaderTurnResponse:
+    """Load one complete Reader turn from an already permission-scoped query.
+
+    Share uses this entry point so the public scope predicate is applied to
+    every boundary/count query. It avoids materializing the entire shared
+    conversation while retaining the same fallback for legacy turn data.
+    """
+    # The old implementation loaded every message before grouping turns. A
+    # citation into a long conversation therefore paid an O(N) database read
+    # even when only one turn was needed. Resolve the turn boundaries with
+    # indexed order-key queries and hydrate only that bounded range.
+    selected = _load_selected_turn(db, base, anchor_message_id)
+    if selected is None:
+        # Mixed/null turn indexes are legacy data for which the bounded SQL
+        # path cannot prove the same grouping semantics. Preserve the
+        # canonical fallback rather than guessing a boundary.
+        messages = base.order_by(Message.order_key.asc()).all()
+        return build_reader_turn(
+            db,
+            conversation_id,
+            messages,
+            anchor_message_id,
+            attachment_content_prefix=attachment_content_prefix,
+        )
+    return build_reader_turn(
+        db,
+        conversation_id,
+        selected.messages,
+        attachment_content_prefix=attachment_content_prefix,
+        turn_metadata=selected,
+    )
+
+
+def _load_selected_turn(
+    db: Session,
+    base: Query,
+    anchor_message_id: uuid.UUID | None,
+) -> _SelectedTurn | None:
+    total_messages = base.count()
+    if total_messages == 0:
+        return _SelectedTurn([], 0, 0, 0, None, None)
+
+    anchor = (
+        base.filter(Message.id == anchor_message_id).one_or_none()
+        if anchor_message_id is not None
+        else base.order_by(Message.order_key.asc()).first()
+    )
+    if anchor is None:
+        raise ValueError("Anchor message not found.")
+
+    # A user/prompt/human message starts a turn in the canonical Reader
+    # contract. Use case-insensitive SQL predicates so imported role casing
+    # does not force a fallback to full-message loading.
+    user_roles = ("user", "prompt", "human")
+    has_user_role = base.filter(func.lower(Message.role).in_(user_roles)).first() is not None
+    if has_user_role:
+        user_role_filter = func.lower(Message.role).in_(user_roles)
+        start_anchor = (
+            base.filter(user_role_filter, Message.order_key <= anchor.order_key)
+            .order_by(Message.order_key.desc())
+            .first()
+        )
+        first_message = base.order_by(Message.order_key.asc()).first()
+        start_order = start_anchor.order_key if start_anchor is not None else first_message.order_key
+        next_anchor = (
+            base.filter(user_role_filter, Message.order_key > anchor.order_key)
+            .order_by(Message.order_key.asc())
+            .first()
+        )
+        previous_anchor = (
+            base.filter(user_role_filter, Message.order_key < start_order)
+            .order_by(Message.order_key.desc())
+            .first()
+        )
+    elif base.filter(Message.turn_index.is_not(None)).first() is not None:
+        # Explicit turn_index data can repeat non-contiguously. The canonical
+        # Python grouper treats each contiguous run as a distinct turn, so a
+        # SQL equality range could silently join unrelated runs. Keep this
+        # legacy shape on the correctness-first fallback path.
+        return None
+    else:
+        previous_anchor = base.filter(Message.order_key < anchor.order_key).order_by(Message.order_key.desc()).first()
+        next_anchor = base.filter(Message.order_key > anchor.order_key).order_by(Message.order_key.asc()).first()
+        start_order = anchor.order_key
+
+    end_order = next_anchor.order_key if next_anchor is not None else None
+    range_filter = Message.order_key >= start_order
+    if end_order is not None:
+        range_filter = and_(range_filter, Message.order_key < end_order)
+    messages = base.filter(range_filter).order_by(Message.order_key.asc()).all()
+    start_offset = base.filter(Message.order_key < start_order).count()
+    return _SelectedTurn(
+        messages,
+        start_offset,
+        start_offset + len(messages),
+        total_messages,
+        previous_anchor.id if previous_anchor else None,
+        next_anchor.id if next_anchor else None,
+    )
 
 
 def build_reader_turn(
@@ -42,19 +159,34 @@ def build_reader_turn(
     messages: list[Message],
     anchor_message_id: uuid.UUID | None = None,
     attachment_content_prefix: str = "/api/attachments",
+    turn_metadata: _SelectedTurn | None = None,
 ) -> ReaderTurnResponse:
     ordered = sorted(messages, key=lambda message: message.order_key)
     if not ordered:
         return ReaderTurnResponse(conversation_id=conversation_id, turn_key="empty", start_offset=0, end_offset=0, total_messages=0)
-    turns = _group_turns(ordered)
-    anchor_index = 0
-    if anchor_message_id is not None:
-        anchor_index = next((i for i, message in enumerate(ordered) if message.id == anchor_message_id), -1)
-        if anchor_index < 0:
-            raise ValueError("Anchor message not found.")
-    selected_index = next(i for i, turn in enumerate(turns) if turn.start <= anchor_index < turn.end)
-    selected = turns[selected_index]
-    selected_messages = ordered[selected.start:selected.end]
+    turns = _group_turns(ordered) if turn_metadata is None else [_Turn("turn-range", 0, len(ordered))]
+    if turn_metadata is None:
+        anchor_index = 0
+        if anchor_message_id is not None:
+            anchor_index = next((i for i, message in enumerate(ordered) if message.id == anchor_message_id), -1)
+            if anchor_index < 0:
+                raise ValueError("Anchor message not found.")
+        selected_index = next(i for i, turn in enumerate(turns) if turn.start <= anchor_index < turn.end)
+        selected = turns[selected_index]
+        selected_messages = ordered[selected.start:selected.end]
+        start_offset = selected.start
+        end_offset = selected.end
+        total_messages = len(ordered)
+        previous_anchor_message_id = ordered[turns[selected_index - 1].start].id if selected_index > 0 else None
+        next_anchor_message_id = ordered[turns[selected_index + 1].start].id if selected_index + 1 < len(turns) else None
+    else:
+        selected_messages = ordered
+        selected_key = f"turn-{turn_metadata.start_offset}"
+        start_offset = turn_metadata.start_offset
+        end_offset = turn_metadata.end_offset
+        total_messages = turn_metadata.total_messages
+        previous_anchor_message_id = turn_metadata.previous_anchor_message_id
+        next_anchor_message_id = turn_metadata.next_anchor_message_id
     version_ids = [message.current_version_id for message in selected_messages if message.current_version_id]
     versions = db.query(MessageVersion).filter(MessageVersion.id.in_(version_ids)).all() if version_ids else []
     version_by_id = {version.id: version for version in versions}
@@ -81,16 +213,15 @@ def build_reader_turn(
         .all()
         if version_ids else []
     )
-    occurrence_by_block = {
-        (link.message_version_id, link.block_index): link
-        for link in attachment_links
-        if link.block_index is not None
-    }
+    occurrence_by_block: dict[tuple[uuid.UUID, int], list[MessageVersionAttachment]] = {}
+    for link in attachment_links:
+        if link.block_index is not None:
+            occurrence_by_block.setdefault((link.message_version_id, link.block_index), []).append(link)
     for block in blocks:
         blocks_by_version.setdefault(block.message_version_id, []).append(
             _block_read(
                 block,
-                occurrence_by_block.get((block.message_version_id, block.block_index)),
+                occurrence_by_block.get((block.message_version_id, block.block_index), []),
                 attachment_content_prefix=attachment_content_prefix,
             )
         )
@@ -103,16 +234,16 @@ def build_reader_turn(
                 f"Reader turn hydration is incomplete for message {message.id}: "
                 f"expected {message.block_count} blocks, received {len(message_blocks)}."
             )
-        items.append(_message_item(message, version, message_blocks, selected.start + index + 1))
+        items.append(_message_item(message, version, message_blocks, start_offset + index + 1))
     return ReaderTurnResponse(
         conversation_id=conversation_id,
-        turn_key=selected.key,
-        start_offset=selected.start,
-        end_offset=selected.end,
-        total_messages=len(ordered),
+        turn_key=selected.key if turn_metadata is None else selected_key,
+        start_offset=start_offset,
+        end_offset=end_offset,
+        total_messages=total_messages,
         items=items,
-        previous_anchor_message_id=ordered[turns[selected_index - 1].start].id if selected_index > 0 else None,
-        next_anchor_message_id=ordered[turns[selected_index + 1].start].id if selected_index + 1 < len(turns) else None,
+        previous_anchor_message_id=previous_anchor_message_id,
+        next_anchor_message_id=next_anchor_message_id,
     )
 
 
@@ -174,12 +305,14 @@ def _message_item(message: Message, version: MessageVersion | None, blocks: list
 
 def _block_read(
     block: RenderBlock,
-    occurrence: MessageVersionAttachment | None = None,
+    occurrence: list[MessageVersionAttachment] | None = None,
     *,
     attachment_content_prefix: str = "/api/attachments",
 ) -> RenderBlockRead:
     data = dict(block.data or {})
-    if occurrence is not None:
+    links = occurrence or []
+    if links:
+        occurrence = links[0]
         data.update({
             "messageVersionId": str(occurrence.message_version_id),
             "occurrenceKey": occurrence.occurrence_key,
@@ -188,6 +321,23 @@ def _block_read(
             "alt": occurrence.alt_text,
             "caption": occurrence.caption,
             "relationType": occurrence.relation_type,
+            "attachmentOccurrences": [
+                {
+                    "messageVersionId": str(link.message_version_id),
+                    "occurrenceKey": link.occurrence_key,
+                    "attachmentId": str(link.attachment_id),
+                    "blockIndex": link.block_index,
+                    "renderBlockId": str(block.id),
+                    "startOffset": getattr(link, "start_offset", None),
+                    "endOffset": getattr(link, "end_offset", None),
+                    "displayOrder": link.display_order,
+                    "displayMode": link.display_mode,
+                    "alt": link.alt_text,
+                    "caption": link.caption,
+                    "relationType": link.relation_type,
+                }
+                for link in links
+            ],
         })
         # The Reader has already loaded this relation for the complete-turn
         # response. Supplying the same safe attachment representation prevents

@@ -4,10 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
 import {
   archiveConversation,
   getProjectConversations,
@@ -48,7 +47,13 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const [activeSortId, setActiveSortId] = useState<string | null>(null);
   const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
+  const sortSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const projectsQuery = useQuery({
     queryKey: ["projects", projectSortMode, projectSortDirection],
     queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
@@ -113,6 +118,10 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
     if (oldIndex < 0 || newIndex < 0) return;
     await updateProjectConversationOrder(projectId, arrayMove(conversationsQuery.data, oldIndex, newIndex).map((item) => item.id));
     await queryClient.invalidateQueries({ queryKey: ["project-conversations", projectId] });
+  }
+
+  function handleSortStart(event: DragStartEvent) {
+    setActiveSortId(String(event.active.id));
   }
 
   useEffect(() => {
@@ -309,9 +318,9 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             ) : null}
 
             {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
-              <DndContext onDragEnd={(event) => void handleSortEnd(event)}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">
+              <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => setActiveSortId(null)} onDragEnd={(event) => { setActiveSortId(null); void handleSortEnd(event); }}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">
                 {conversationsQuery.data.map((conversation) => (
-                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article {...linearSelection.itemHandlers(conversation.id)} className={`group border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle ${selectedConversationIds.has(conversation.id) ? "bg-[var(--accent-soft)]" : ""}`}>
+                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article {...linearSelection.itemHandlers(conversation.id)} data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined} aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined} className="reader-interactive-row group border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle">
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
                       <div className="flex min-w-0 gap-3">
                         <label className={`mt-1 h-7 w-7 shrink-0 items-center justify-center rounded-md border border-ui bg-surface transition-opacity ${linearSelection.checkboxClass(conversation.id)}`}>
@@ -356,7 +365,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                     </div>
                   </article></SortableProjectConversationRow>
                 ))}
-              </div></SortableContext></DndContext>
+              </div></SortableContext><DragOverlay>{activeSortId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
             ) : null}
           </div>
         </div>
@@ -373,7 +382,7 @@ function ReadingProgress({ value, zh }: { value: number; zh: boolean }) {
 
 function SortableProjectConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
   const sortable = useSortable({ id, disabled: !enabled });
-  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} className="relative"><button type="button" className={`absolute left-1 top-1/2 z-10 flex h-8 w-7 -translate-y-1/2 touch-none items-center justify-center rounded-md text-secondary hover:bg-surface ${enabled ? "opacity-100" : "pointer-events-none opacity-0"}`} aria-label="Drag to reorder" {...sortable.attributes} {...sortable.listeners}><GripVertical className="h-4 w-4" /></button>{children}</div>;
+  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : enabled ? "hover" : undefined} {...sortable.attributes} {...sortable.listeners} className={`reader-interactive-row relative outline-none ${enabled ? "cursor-grab active:cursor-grabbing" : ""}`}>{children}</div>;
 }
 
 function projectConversationActivity(conversation: ProjectConversationRead, mode: string): string | null {
@@ -419,7 +428,7 @@ function ProjectBulkActions({
   }, [selectedIds.length]);
   return (
     <>
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="selection-toolbar-action-group flex flex-wrap justify-end gap-1.5">
         <select
           defaultValue=""
           disabled={busy !== null || selectedIds.length === 0}

@@ -30,6 +30,7 @@ class SearchResult:
     role: str | None
     order_key: str | None
     block_index: int | None
+    render_block_id: uuid.UUID | None
     character_offset: int | None
     snippet: str
     rank: float
@@ -233,16 +234,16 @@ def search(
         for document in documents.values()
         if document.message_version_id is not None
     }
-    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]] = {}
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str, uuid.UUID]]] = {}
     if message_version_ids:
         block_rows = (
-            db.query(RenderBlock.message_version_id, RenderBlock.block_index, RenderBlock.plain_text)
+            db.query(RenderBlock.message_version_id, RenderBlock.block_index, RenderBlock.plain_text, RenderBlock.id)
             .filter(RenderBlock.message_version_id.in_(message_version_ids))
             .order_by(RenderBlock.message_version_id.asc(), RenderBlock.block_index.asc())
             .all()
         )
-        for version_id, block_index, plain_text in block_rows:
-            block_texts_by_version.setdefault(version_id, []).append((block_index, plain_text or ""))
+        for version_id, block_index, plain_text, block_id in block_rows:
+            block_texts_by_version.setdefault(version_id, []).append((block_index, plain_text or "", block_id))
     items = [
         _build_search_result(
             document,
@@ -285,6 +286,17 @@ def _document_character_offset(document: SearchDocument) -> int | None:
         return None
 
 
+def _document_render_block_id(document: SearchDocument) -> uuid.UUID | None:
+    metadata = document.metadata_ if isinstance(document.metadata_, dict) else {}
+    raw = metadata.get("render_block_id")
+    if not raw:
+        return None
+    try:
+        return uuid.UUID(str(raw))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 def _annotation_fields(document: SearchDocument) -> tuple[uuid.UUID | None, str | None, str | None]:
     metadata = document.metadata_ if isinstance(document.metadata_, dict) else {}
     try:
@@ -322,7 +334,7 @@ def _build_search_result(
     normalized_query: str,
     rank: float,
     occurrence_count: int,
-    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]],
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str, uuid.UUID]]],
     db: Session,
 ) -> SearchResult:
     matches = _document_matches(document, normalized_query, db, block_texts_by_version)
@@ -337,6 +349,7 @@ def _build_search_result(
         role=document.role,
         order_key=document.order_key,
         block_index=_document_block_index(document),
+        render_block_id=_document_render_block_id(document),
         character_offset=_document_character_offset(document),
         snippet=_result_snippet(document, normalized_query, matches, block_texts_by_version),
         rank=rank,
@@ -353,13 +366,13 @@ def _result_snippet(
     document: SearchDocument,
     query: str,
     matches: list[SearchMatch],
-    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]],
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str, uuid.UUID]]],
 ) -> str:
     if matches:
         match = matches[0]
         text = document.plain_text or document.search_text
         if match.block_index is not None:
-            block_texts = dict(block_texts_by_version.get(document.message_version_id, []))
+            block_texts = {index: text for index, text, _block_id in block_texts_by_version.get(document.message_version_id, [])}
             text = block_texts.get(match.block_index, text) or text
         return _snippet(text, match.quote)
     return _snippet(document.plain_text or document.search_text, query)
@@ -369,7 +382,7 @@ def _document_matches(
     document: SearchDocument,
     query: str,
     db: Session,
-    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str]]] | None = None,
+    block_texts_by_version: dict[uuid.UUID, list[tuple[int, str, uuid.UUID]]] | None = None,
 ) -> list[SearchMatch]:
     if document.message_version_id is None:
         return []
@@ -378,18 +391,18 @@ def _document_matches(
         blocks = db.query(RenderBlock).filter(
             RenderBlock.message_version_id == document.message_version_id,
         ).order_by(RenderBlock.block_index.asc()).all()
-        candidates = [(block.block_index, block.plain_text or "") for block in blocks]
+        candidates = [(block.block_index, block.plain_text or "", block.id) for block in blocks]
     if not candidates:
-        candidates = [(None, document.plain_text or document.search_text)]
+        candidates = [(None, document.plain_text or document.search_text, None)]
     matches: list[SearchMatch] = []
-    for block_index, text in candidates:
-        matches.extend(_find_text_matches(text, query, block_index))
+    for block_index, text, block_id in candidates:
+        matches.extend(_find_text_matches(text, query, block_index, block_id))
         if len(matches) >= 100:
             break
     return matches[:100]
 
 
-def _find_text_matches(text: str, query: str, block_index: int | None) -> list[SearchMatch]:
+def _find_text_matches(text: str, query: str, block_index: int | None, render_block_id: uuid.UUID | None = None) -> list[SearchMatch]:
     normalized_text = " ".join(text.split())
     normalized_query = " ".join(query.split())
     if not normalized_text or not normalized_query:
@@ -416,6 +429,7 @@ def _find_text_matches(text: str, query: str, block_index: int | None) -> list[S
         after_end = min(len(normalized_text), end + 80)
         result.append(SearchMatch(
             block_index=block_index,
+            render_block_id=render_block_id,
             match_start=start,
             match_end=end,
             quote=normalized_text[start:end],

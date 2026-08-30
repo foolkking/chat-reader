@@ -148,7 +148,7 @@ export function ArchivedProjectList() {
       {batchNotice ? <p className="mb-2 rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
       <div className="divide-y divide-ui overflow-hidden rounded-lg border border-ui bg-surface">
         {archivedProjects.map((project) => (
-          <div key={project.id} {...linearSelection.itemHandlers(project.id)} className={`group flex min-h-14 items-center gap-3 px-4 py-2.5 ${selectedProjectIds.has(project.id) ? "bg-[var(--accent-soft)]" : ""}`}>
+          <div key={project.id} {...linearSelection.itemHandlers(project.id)} data-state={selectedProjectIds.has(project.id) ? "selected" : undefined} aria-selected={selectionMode ? selectedProjectIds.has(project.id) : undefined} className="reader-interactive-row group flex min-h-14 items-center gap-3 border-b border-ui px-4 py-2.5 last:border-b-0">
             <label className={`h-7 w-7 shrink-0 items-center justify-center rounded-md border border-ui bg-surface transition-opacity ${linearSelection.checkboxClass(project.id)}`}><input type="checkbox" checked={selectedProjectIds.has(project.id)} onClick={(event) => linearSelection.toggle(project.id, { selected: !selectedProjectIds.has(project.id), range: event.shiftKey })} onChange={() => undefined} aria-label={`${zh ? "选择" : "Select"} ${project.name}`} className="h-4 w-4 accent-[var(--accent)]" /></label>
             <FolderArchive className="h-4 w-4 shrink-0 text-secondary" />
             <div className="min-w-0 flex-1">

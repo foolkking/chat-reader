@@ -10,7 +10,7 @@ import {
   saveReadingPosition,
   searchConversations,
 } from "./api";
-import { offlineDb } from "./offline-db";
+import { offlineDb, type OfflineMessageRecord } from "./offline-db";
 import { searchOffline } from "./offline-search";
 import type {
   ConversationDetail,
@@ -57,6 +57,7 @@ export type TocOptions = {
 };
 
 export type ReaderTargetContext = {
+  readerTurn: ReaderTurnResponse;
   messageWindow: MessageWindowResponse;
   targetMessage: MessageWindowResponse["items"][number];
   targetBlocks: RenderBlockRead[];
@@ -64,6 +65,23 @@ export type ReaderTargetContext = {
   toc: TocResponse;
   nearestHeading: TocItem | null;
 };
+
+// Concurrent navigation requests often ask for the same target turn (for
+// example a citation click and the reader's initial restore). Deduplicate the
+// network work without retaining user content beyond the request lifetime.
+const readerTurnInflight = new Map<string, Promise<ReaderTurnResponse>>();
+const targetContextInflight = new Map<string, Promise<ReaderTargetContext>>();
+
+function getRemoteReaderTurn(conversationId: string, anchorMessageId?: string): Promise<ReaderTurnResponse> {
+  const key = `${conversationId}:${anchorMessageId ?? "first"}`;
+  const existing = readerTurnInflight.get(key);
+  if (existing) return existing;
+  const request = getConversationReaderTurn(conversationId, anchorMessageId).finally(() => {
+    if (readerTurnInflight.get(key) === request) readerTurnInflight.delete(key);
+  });
+  readerTurnInflight.set(key, request);
+  return request;
+}
 
 export interface ReaderDataSource {
   readonly mode: "remote" | "offline";
@@ -79,7 +97,7 @@ export interface ReaderDataSource {
   getDialogueIndex(conversationId: string, options?: { offset?: number; limit?: number; anchorMessageId?: string }): Promise<DialogueIndexResponse>;
   getMessageBlocks(messageId: string, options?: { start?: number; limit?: number }): Promise<RenderBlockRead[]>;
   getToc(conversationId: string, options?: TocOptions): Promise<TocResponse>;
-  getTargetContext(conversationId: string, target: NavigateTarget): Promise<ReaderTargetContext>;
+  getTargetContext(conversationId: string, target: NavigateTarget, options?: { includeNavigation?: boolean }): Promise<ReaderTargetContext>;
   searchConversation(conversationId: string, options: ReaderSearchOptions): Promise<SearchResponse>;
   getReadingPosition(conversationId: string): Promise<ReadingPositionResponse>;
   saveReadingPosition(conversationId: string, input: ReadingPositionInput): Promise<void>;
@@ -91,12 +109,28 @@ export const remoteReaderDataSource: ReaderDataSource = {
   capabilities: { canonicalManagement: true, attachments: "manage", share: true, export: true },
   getConversation,
   getMessageWindow: getConversationMessageWindow,
-  getReaderTurn: getConversationReaderTurn,
+  getReaderTurn: getRemoteReaderTurn,
   getDialogueIndex: getConversationDialogueIndex,
   getMessageBlocks,
   getToc: getConversationToc,
-  getTargetContext(conversationId, target) {
-    return loadTargetContext(remoteReaderDataSource, conversationId, target);
+  getTargetContext(conversationId, target, options) {
+    const key = [
+      conversationId,
+      target.messageId,
+      target.messageVersionId ?? "",
+      target.renderBlockId ?? "",
+      target.occurrenceKey ?? "",
+      target.canonicalStart ?? target.characterOffset ?? "",
+      target.canonicalEnd ?? target.endCharacterOffset ?? "",
+      options?.includeNavigation ? "navigation" : "target",
+    ].join(":");
+    const existing = targetContextInflight.get(key);
+    if (existing) return existing;
+    const request = loadTargetContext(remoteReaderDataSource, conversationId, target, options).finally(() => {
+      if (targetContextInflight.get(key) === request) targetContextInflight.delete(key);
+    });
+    targetContextInflight.set(key, request);
+    return request;
   },
   searchConversation(conversationId, options) {
     return searchConversations({
@@ -124,7 +158,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return conversation;
   },
   async getMessageWindow(conversationId, options = {}) {
-    const all = await offlineDb.messages.where("conversation_id").equals(conversationId).sortBy("order_key");
+    const all = await getOfflineConversationMessages(conversationId);
     const limit = options.limit ?? 50;
     let offset = options.offset ?? 0;
     if (options.anchorMessageId) {
@@ -137,13 +171,13 @@ export const offlineReaderDataSource: ReaderDataSource = {
     const page = await Promise.all(all.slice(offset, offset + limit).map(async (message) => ({
       ...message,
       render_blocks: options.includeBlocks
-        ? await offlineDb.blocks.where("message_id").equals(message.id).sortBy("block_index")
+        ? await getOfflineMessageBlocks(message.id)
         : [],
     })));
     return { items: page, limit, offset, total: all.length, has_previous: offset > 0, has_more: offset + page.length < all.length };
   },
   async getReaderTurn(conversationId, anchorMessageId) {
-    const all = await offlineDb.messages.where("conversation_id").equals(conversationId).sortBy("order_key");
+    const all = await getOfflineConversationMessages(conversationId);
     if (all.length === 0) {
       return { conversation_id: conversationId, turn_key: "empty", start_offset: 0, end_offset: 0, total_messages: 0, items: [], previous_anchor_message_id: null, next_anchor_message_id: null };
     }
@@ -155,7 +189,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
     const items = await Promise.all(all.slice(range.start, range.end).map(async (message, index) => ({
       ...message,
       ordinal: range.start + index + 1,
-      render_blocks: await offlineDb.blocks.where("message_id").equals(message.id).sortBy("block_index"),
+      render_blocks: await getOfflineMessageBlocks(message.id),
       content_preview: null,
       content_truncated: false,
     })));
@@ -171,7 +205,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
     };
   },
   async getDialogueIndex(conversationId, options = {}) {
-    const all = await offlineDb.messages.where("conversation_id").equals(conversationId).sortBy("order_key");
+    const all = await getOfflineConversationMessages(conversationId);
     const limit = options.limit ?? 80;
     let offset = options.offset ?? 0;
     if (options.anchorMessageId) {
@@ -197,7 +231,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return { conversation_id: conversationId, items, message_count: all.length, turn_count: conversation?.turn_count ?? 0, limit, offset, total: all.length, has_previous: offset > 0, has_more: offset + items.length < all.length };
   },
   async getMessageBlocks(messageId, options = {}) {
-    const blocks = await offlineDb.blocks.where("message_id").equals(messageId).sortBy("block_index");
+    const blocks = await getOfflineMessageBlocks(messageId);
     const start = options.start ?? 0;
     return blocks.filter((block) => block.block_index >= start).slice(0, options.limit ?? 50);
   },
@@ -212,7 +246,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
     if (options.startOrderKey) items = items.filter((item) => item.message_order_key >= options.startOrderKey!);
     if (options.endOrderKey) items = items.filter((item) => item.message_order_key <= options.endOrderKey!);
     if (options.role) {
-      const messages = await offlineDb.messages.where("conversation_id").equals(conversationId).toArray();
+      const messages = await getOfflineConversationMessages(conversationId);
       const roles = new Map(messages.map((message) => [message.id, message.role]));
       items = items.filter((item) => roles.get(item.message_id) === options.role);
     }
@@ -221,8 +255,8 @@ export const offlineReaderDataSource: ReaderDataSource = {
     const page = items.slice(offset, offset + limit);
     return { conversation_id: conversationId, items: page, limit, offset, total: items.length, has_more: offset + page.length < items.length };
   },
-  getTargetContext(conversationId, target) {
-    return loadTargetContext(offlineReaderDataSource, conversationId, target);
+  getTargetContext(conversationId, target, options) {
+    return loadTargetContext(offlineReaderDataSource, conversationId, target, options);
   },
   async searchConversation(conversationId, options) {
     const limit = options.limit ?? 50;
@@ -298,6 +332,32 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return null;
   },
 };
+
+/**
+ * Read the canonical message set for an offline conversation. The indexed
+ * query is the fast path, but packages created with the pre-v2 Dexie schema
+ * can contain records whose index was not rebuilt after an upgrade. Falling
+ * back to a primary-table scan keeps those already-downloaded conversations
+ * readable and is only used when the indexed result is unexpectedly empty.
+ */
+async function getOfflineConversationMessages(conversationId: string): Promise<OfflineMessageRecord[]> {
+  const id = String(conversationId);
+  const indexed = await offlineDb.messages.where("conversation_id").equals(id).sortBy("order_key");
+  if (indexed.length > 0) return indexed;
+  const fallback = (await offlineDb.messages.toArray())
+    .filter((message) => String(message.conversation_id) === id)
+    .sort((left, right) => left.order_key.localeCompare(right.order_key));
+  return fallback;
+}
+
+async function getOfflineMessageBlocks(messageId: string): Promise<RenderBlockRead[]> {
+  const id = String(messageId);
+  const indexed = await offlineDb.blocks.where("message_id").equals(id).sortBy("block_index");
+  if (indexed.length > 0) return indexed;
+  return (await offlineDb.blocks.toArray())
+    .filter((block) => String(block.message_id) === id)
+    .sort((left, right) => left.block_index - right.block_index);
+}
 
 function findOfflineSearchMatches(text: string, query: string, blockIndex: number | null, renderBlockId: string | null = null): SearchMatch[] {
   const normalizedText = text.replace(/\s+/g, " ").trim();
@@ -383,13 +443,20 @@ async function loadTargetContext(
   dataSource: ReaderDataSource,
   conversationId: string,
   target: NavigateTarget,
+  options: { includeNavigation?: boolean } = {},
 ): Promise<ReaderTargetContext> {
   const turnPromise = dataSource.getReaderTurn(conversationId, target.messageId);
-  const dialogueIndexPromise = dataSource.getDialogueIndex(conversationId, {
-    anchorMessageId: target.messageId,
-    limit: 80,
-  }).catch(() => emptyDialogueIndex(conversationId));
-  const tocPromise = dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200 }).catch(() => emptyToc(conversationId));
+  // A target only needs the auxiliary projection that owns its navigation
+  // surface. Loading both the dialogue rail and the TOC for every annotation
+  // or heading jump doubled request and parsing work on long conversations.
+  const includeDialogueIndex = Boolean(options.includeNavigation && !target.preferTocPipeline);
+  const includeToc = Boolean(options.includeNavigation && target.preferTocPipeline);
+  const dialogueIndexPromise = includeDialogueIndex
+    ? dataSource.getDialogueIndex(conversationId, { anchorMessageId: target.messageId, limit: 80 }).catch(() => emptyDialogueIndex(conversationId))
+    : Promise.resolve(emptyDialogueIndex(conversationId));
+  const tocPromise = includeToc
+    ? dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200 }).catch(() => emptyToc(conversationId))
+    : Promise.resolve(emptyToc(conversationId));
   const [turn, dialogueIndex, toc] = await Promise.all([turnPromise, dialogueIndexPromise, tocPromise]);
   // The dialogue index is an auxiliary projection and can legitimately lag
   // after merge/delete. The canonical turn response remains the authority;
@@ -413,7 +480,7 @@ async function loadTargetContext(
   const nearestHeading = resolvedBlockIndex === undefined
     ? null
     : toc.items.filter((item) => item.block_index <= resolvedBlockIndex).at(-1) ?? null;
-  return { messageWindow, targetMessage, targetBlocks, dialogueIndex, toc, nearestHeading };
+  return { readerTurn: turn, messageWindow, targetMessage, targetBlocks, dialogueIndex, toc, nearestHeading };
 }
 
 function emptyDialogueIndex(conversationId: string): DialogueIndexResponse {

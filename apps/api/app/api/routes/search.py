@@ -71,6 +71,7 @@ def search_documents(
                 role=item.role,
                 order_key=item.order_key,
                 block_index=item.block_index,
+                render_block_id=item.render_block_id,
                 character_offset=item.character_offset,
                 snippet=item.snippet,
                 rank=item.rank,

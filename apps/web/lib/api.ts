@@ -75,6 +75,11 @@ import type {
   UserPreferenceRead,
   UserPreferenceUpdate,
   SortDirection,
+  SkillCategory,
+  SkillLocale,
+  SkillRead,
+  SkillDetail,
+  SkillResolve,
 } from "./types";
 
 // Browser requests stay on the current Next.js origin. next.config.mjs proxies
@@ -302,6 +307,46 @@ export function getOfflinePackageDownloadUrl(packageId: string): string {
 
 export async function deleteConversation(conversationId: string): Promise<void> {
   await fetchJson<void>(`/api/conversations/${conversationId}`, { method: "DELETE" });
+}
+
+export async function getSkills(input: { category?: SkillCategory; locale?: SkillLocale } = {}): Promise<SkillRead[]> {
+  const params = new URLSearchParams();
+  if (input.category) params.set("category", input.category);
+  if (input.locale) params.set("locale", input.locale);
+  const query = params.toString();
+  return fetchJson<SkillRead[]>(`/api/skills${query ? `?${query}` : ""}`);
+}
+
+export async function getSkill(skillId: string): Promise<SkillDetail> {
+  return fetchJson<SkillDetail>(`/api/skills/${skillId}`);
+}
+
+export async function getSkillContent(skillId: string): Promise<string> {
+  const response = await fetch(`/api/skills/${skillId}/content`, { credentials: "include" });
+  if (!response.ok) throw new ApiRequestError(`Skill content request failed (${response.status}).`, response.status, `/api/skills/${skillId}/content`);
+  return response.text();
+}
+
+export async function createSkill(input: { category: SkillCategory; locale: SkillLocale; name: string; file: File }): Promise<SkillRead> {
+  const body = new FormData();
+  body.append("category", input.category); body.append("locale", input.locale); body.append("name", input.name); body.append("file", input.file, input.file.name);
+  return fetchJson<SkillRead>("/api/skills", { method: "POST", body });
+}
+
+export async function updateSkill(skillId: string, input: { name?: string; status?: "ACTIVE" | "DISABLED" }): Promise<SkillRead> {
+  return fetchJson<SkillRead>(`/api/skills/${skillId}`, jsonRequest("PATCH", input));
+}
+
+export async function deleteSkill(skillId: string): Promise<void> {
+  await fetchJson<void>(`/api/skills/${skillId}`, { method: "DELETE" });
+}
+
+export async function setSkillSelection(input: { category: SkillCategory; locale: SkillLocale; skill_id: string | null }): Promise<void> {
+  await fetchJson<void>("/api/skills/selections", jsonRequest("PUT", input));
+}
+
+export async function resolveSkill(category: SkillCategory, locale: SkillLocale): Promise<SkillResolve> {
+  return fetchJson<SkillResolve>(`/api/skills/resolve?category=${encodeURIComponent(category)}&locale=${encodeURIComponent(locale)}`);
 }
 
 export async function queueConversationBatchDelete(conversationIds: string[]): Promise<BackgroundTaskRead> {

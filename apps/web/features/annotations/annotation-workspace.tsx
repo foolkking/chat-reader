@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, BookmarkPlus, Check, CheckSquare2, GripVertical, Highlighter, Maximize2, MessageSquareText, Minimize2, Pin, PinOff, Plus, RotateCcw, Search, Square, Trash2, Underline, Strikethrough, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookmarkPlus, Check, CheckSquare2, Highlighter, Maximize2, MessageSquareText, Minimize2, Pin, PinOff, Plus, RotateCcw, Search, Square, Trash2, Underline, Strikethrough, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { AnnotationRepository } from "../../lib/annotation-repository";
@@ -701,7 +701,6 @@ function NotebookView({ notebook, conflicts, annotations, editable, onSave, onNa
     {blocks.map((block, index) => {
       const annotation = block.annotation_id ? annotations.find((item) => item.id === block.annotation_id) : null;
       return <div key={block.id} draggable={editable} onDragStart={() => { dragIndex.current = index; setDraggingBlockId(block.id); }} onDragEnd={() => { dragIndex.current = null; setDraggingBlockId(null); }} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragIndex.current === null || dragIndex.current === index) return; const next = [...blocks]; const [moved] = next.splice(dragIndex.current, 1); next.splice(index, 0, moved); dragIndex.current = null; setDraggingBlockId(null); void persist(next); }} data-state={draggingBlockId === block.id ? "dragging" : undefined} className={`reader-interactive-row group flex gap-2 border-b border-ui pb-3 last:border-0 ${editable ? "cursor-grab active:cursor-grabbing" : ""}`}>
-        {editable ? <GripVertical className="mt-2 h-4 w-4 shrink-0 cursor-grab text-secondary" /> : null}
         <div className="min-w-0 flex-1">{block.type === "markdown" ? editable ? <textarea defaultValue={block.markdown ?? ""} onBlur={(event) => { const next = blocks.map((item) => item.id === block.id ? { ...item, markdown: event.target.value } : item); void persist(next); }} className="min-h-24 w-full resize-y rounded-md border border-ui bg-page px-3 py-2 text-sm outline-none" /> : <MarkdownRenderer text={block.markdown ?? ""} /> : annotation ? <button type="button" data-annotation-color={annotation.color ?? "yellow"} onClick={() => void onNavigate(annotationNavigateTarget(annotation))} className="annotation-quote w-full border-l-2 px-3 py-2 text-left text-sm leading-6">{annotation.quote || "整条消息书签"}</button> : <p className="text-sm text-[var(--danger)]">引用的批注不可用</p>}</div>{editable && block.type === "annotation_reference" ? <button type="button" onClick={() => void persist(blocks.filter((item) => item.id !== block.id))} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]" aria-label="Remove from notes" title="Remove from notes"><Trash2 className="h-4 w-4" /></button> : null}
       </div>;
     })}

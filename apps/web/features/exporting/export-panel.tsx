@@ -11,6 +11,7 @@ import {
   getConversationExportUrl,
   getTask,
   queueConversationAttachmentBundleExport,
+  resolveSkill,
 } from "../../lib/api";
 
 type ConversationExportFormat = "canjson" | "markdown";
@@ -182,7 +183,7 @@ export function ExportPanel({
   );
 }
 
-export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultSkillLocale }: { downloadUrl: string; downloadFilename?: string; defaultSkillLocale: SkillLocale }) {
+export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultSkillLocale, offline = false }: { downloadUrl: string; downloadFilename?: string; defaultSkillLocale: SkillLocale; offline?: boolean }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [skillLocale, setSkillLocale] = useState<SkillLocale>(defaultSkillLocale);
@@ -191,13 +192,16 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
   const [status, setStatus] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const skill = CONTEXT_SKILLS[skillLocale];
+  const resolvedSkillQuery = useQuery({ queryKey: ["resolved-skill", "EXPORT_CONTEXT", skillLocale], queryFn: () => resolveSkill("EXPORT_CONTEXT", skillLocale), staleTime: 60_000, enabled: !offline });
 
   useEffect(() => {
     const controller = new AbortController();
-    setSkillText(null);
+    setSkillText(resolvedSkillQuery.data?.content ?? null);
     setSkillError(null);
     setStatus(null);
-    void fetch(skill.url, { signal: controller.signal, credentials: "same-origin" })
+    const sourceUrl = resolvedSkillQuery.data?.content ? null : (resolvedSkillQuery.data?.content_url ?? skill.url);
+    if (!sourceUrl) return () => controller.abort();
+    void fetch(sourceUrl, { signal: controller.signal, credentials: "same-origin" })
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.text();
@@ -209,7 +213,7 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
         console.error("context-skill-load-failed", error);
       });
     return () => controller.abort();
-  }, [skill.url, zh]);
+  }, [skill.url, zh, resolvedSkillQuery.data?.content, resolvedSkillQuery.data?.content_url]);
 
   async function copySkill(successMessage?: string) {
     if (!skillText) {
@@ -259,6 +263,7 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
           ))}
         </div>
       </div>
+      <p className="text-xs text-secondary">{zh ? "当前使用：" : "Using: "}{resolvedSkillQuery.data?.name ?? (zh ? "系统默认" : "System default")}</p>
       <button type="button" onClick={downloadPackageAndCopySkill} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
         <Download className="h-4 w-4" />{zh ? "下载 Context Package" : "Download Context Package"}
       </button>
@@ -272,17 +277,18 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
       </div>
       {skillError ? <p className="text-xs text-[var(--danger)]" role="alert">{skillError}</p> : null}
       {status ? <p className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs ${status.kind === "success" ? "bg-[var(--callout-tip-bg)] text-[var(--callout-tip-text)]" : "bg-[var(--danger-soft)] text-[var(--danger)]"}`} role={status.kind === "success" ? "status" : "alert"}>{status.kind === "success" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : null}<span>{status.message}</span></p> : null}
-      <ContextSkillDialog open={viewerOpen} onClose={() => setViewerOpen(false)} skill={skill} text={skillText ?? ""} onCopy={() => void copySkill()} />
+      <ContextSkillDialog open={viewerOpen} onClose={() => setViewerOpen(false)} skill={skill} text={skillText ?? ""} onCopy={() => void copySkill()} downloadText={skillText} />
     </section>
   );
 }
 
-function ContextSkillDialog({ open, onClose, skill, text, onCopy }: {
+function ContextSkillDialog({ open, onClose, skill, text, onCopy, downloadText }: {
   open: boolean;
   onClose: () => void;
   skill: (typeof CONTEXT_SKILLS)[SkillLocale];
   text: string;
   onCopy: () => void;
+  downloadText?: string | null;
 }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -299,7 +305,7 @@ function ContextSkillDialog({ open, onClose, skill, text, onCopy }: {
             <p className="truncate text-[11px] text-secondary">Chat Reader Context Acquisition Skill</p>
           </div>
           <button type="button" onClick={onCopy} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Copy className="h-4 w-4" />{zh ? "复制" : "Copy"}</button>
-          <a href={skill.url} download={skill.filename} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Download className="h-4 w-4" />{zh ? "下载" : "Download"}</a>
+          <button type="button" onClick={() => { if (!downloadText) return; const href = URL.createObjectURL(new Blob([downloadText], { type: "text/markdown;charset=utf-8" })); const link = document.createElement("a"); link.href = href; link.download = skill.filename; link.click(); URL.revokeObjectURL(href); }} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Download className="h-4 w-4" />{zh ? "下载" : "Download"}</button>
           <button type="button" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-5 w-5" /></button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">

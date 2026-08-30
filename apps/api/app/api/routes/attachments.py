@@ -20,6 +20,7 @@ from app.models.attachment import (
 )
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.models.render_block import RenderBlock
 from app.schemas.attachment import (
     AttachmentFinalizeRequest,
     AttachmentBatchDownloadRequest,
@@ -236,9 +237,15 @@ def list_conversation_attachments(
             Message.role,
             MessageVersion.version_number,
             func.substr(MessageVersion.plain_text, 1, 160),
+            RenderBlock.id,
         )
         .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
         .join(Message, Message.id == MessageVersion.message_id)
+        .outerjoin(
+            RenderBlock,
+            (RenderBlock.message_version_id == MessageVersionAttachment.message_version_id)
+            & (RenderBlock.block_index == MessageVersionAttachment.block_index),
+        )
         .filter(MessageVersionAttachment.attachment_id.in_(attachment_ids))
         .all()
         if attachment_ids
@@ -263,6 +270,7 @@ def list_conversation_attachments(
                 occurrence_key=row[0].occurrence_key,
                 placement=row[0].placement,
                 block_index=row[0].block_index,
+                render_block_id=row[7],
             )
             for row in rows
         ]

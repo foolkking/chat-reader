@@ -6,11 +6,13 @@ import { useCallback, useRef, useState } from "react";
 import { AccountSecurityPanel } from "./account-security-panel";
 import { DataBackupPanel } from "./data-backup-panel";
 import { ImportFormatSettings } from "./import-format-settings";
+import { ContentCleanupRuleSettings } from "./content-cleanup-rule-settings";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { useImportDialog } from "./import-dialog-provider";
 import type { SettingsCategory } from "./preferences-panel";
 import { useTranslations } from "./preferences-provider";
+import { SkillSettings } from "./skill-settings";
 
 export function SettingsFocusedDialog({ category, onClose, restoreFocus }: { category: SettingsCategory; onClose: () => void; restoreFocus: () => HTMLElement | null }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -18,7 +20,7 @@ export function SettingsFocusedDialog({ category, onClose, restoreFocus }: { cat
   const { openImportDialog } = useImportDialog();
   const t = useTranslations();
   const [dirty, setDirty] = useState(false);
-  const title = category === "data" ? t("dataImport") : category === "security" ? t("accountSecurity") : t("importFormats");
+  const title = category === "data" ? t("dataArchive") : category === "security" ? t("accountSecurity") : category === "cleanup" ? t("noiseRuleLibrary") : category === "skills" ? t("skillManagement") : t("importFormats");
   const requestClose = useCallback(async (): Promise<boolean> => {
     if (dirty && !(await confirm({ title: "放弃未保存的更改？", description: "当前输入尚未提交，关闭后这些更改会丢失。", confirmLabel: "放弃更改", danger: true }))) return false;
     onClose();
@@ -37,7 +39,9 @@ export function SettingsFocusedDialog({ category, onClose, restoreFocus }: { cat
         <div className="min-h-0 overflow-y-auto px-5 py-5">
           {category === "data" ? <DataBackupPanel focused onDirtyChange={setDirty} /> : null}
           {category === "formats" ? <ImportFormatSettings focused onDirtyChange={setDirty} onOpenImport={(options) => { void requestClose().then((closed) => { if (closed) openImportDialog(options); }); }} /> : null}
+          {category === "cleanup" ? <ContentCleanupRuleSettings embedded /> : null}
           {category === "security" ? <AccountSecurityPanel focused onDirtyChange={setDirty} /> : null}
+          {category === "skills" ? <SkillSettings focused onDirtyChange={setDirty} /> : null}
         </div>
       </div>
     </div>,

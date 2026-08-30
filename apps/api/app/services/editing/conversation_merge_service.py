@@ -203,32 +203,56 @@ def _validate_attachment_copy(
     if not target_attachment_ids.issubset(actual_target_attachment_ids):
         raise ValueError("Merged attachment mapping is incomplete for the target conversation.")
 
-    versions = db.query(MessageVersion).filter(MessageVersion.id.in_(version_id_map.values())).all()
+    target_version_ids = set(version_id_map.values())
+    versions = db.query(MessageVersion).filter(MessageVersion.id.in_(target_version_ids)).all()
     if len(versions) != len(version_id_map):
         raise ValueError("Merged message version mapping is incomplete.")
     target_message_ids = {
         row.id for row in db.query(Message.id).filter(Message.conversation_id == target.id).all()
     }
+    links = db.query(MessageVersionAttachment).filter(
+        MessageVersionAttachment.message_version_id.in_(target_version_ids)
+    ).all()
+    links_by_version: dict[object, list[MessageVersionAttachment]] = {}
+    for link in links:
+        links_by_version.setdefault(link.message_version_id, []).append(link)
+
+    blocks = db.query(RenderBlock).filter(RenderBlock.id.in_(block_id_map.values())).all()
+    if len(blocks) != len(block_id_map):
+        raise ValueError("Merged render block mapping is incomplete.")
+    blocks_by_version: dict[object, list[RenderBlock]] = {}
+    for block in blocks:
+        blocks_by_version.setdefault(block.message_version_id, []).append(block)
+
     for version in versions:
         if version.message_id not in target_message_ids:
             raise ValueError("Merged message version is outside the target conversation.")
         referenced_ids = _attachment_data_ids(version.display_text) | _attachment_data_ids(version.blocks or [])
         if not referenced_ids.issubset(target_attachment_ids):
             raise ValueError("Merged message contains an attachment reference outside the target conversation.")
+        version_links = links_by_version.get(version.id, [])
+        linked_ids = {link.attachment_id for link in version_links}
+        if not referenced_ids.issubset(linked_ids):
+            raise ValueError("Merged message attachment reference has no occurrence link on its current version.")
 
-    blocks = db.query(RenderBlock).filter(RenderBlock.id.in_(block_id_map.values())).all()
-    if len(blocks) != len(block_id_map):
-        raise ValueError("Merged render block mapping is incomplete.")
-    for block in blocks:
-        referenced_ids = _attachment_data_ids(block.data or {}) | _attachment_data_ids(block.sanitized_html or "")
-        if not referenced_ids.issubset(target_attachment_ids):
-            raise ValueError("Merged render block contains an attachment reference outside the target conversation.")
-
-    links = db.query(MessageVersionAttachment).filter(
-        MessageVersionAttachment.message_version_id.in_(version_id_map.values())
-    ).all()
-    if any(link.attachment_id not in target_attachment_ids for link in links):
-        raise ValueError("Merged attachment occurrence points outside the target conversation.")
+        version_blocks = blocks_by_version.get(version.id, [])
+        block_by_index = {block.block_index: block for block in version_blocks}
+        block_references: dict[int, set] = {}
+        for block in version_blocks:
+            block_references[block.block_index] = (
+                _attachment_data_ids(block.data or {})
+                | _attachment_data_ids(block.plain_text or "")
+                | _attachment_data_ids(block.sanitized_html or "")
+            )
+            if not block_references[block.block_index].issubset(target_attachment_ids):
+                raise ValueError("Merged render block contains an attachment reference outside the target conversation.")
+        for link in version_links:
+            if link.attachment_id not in target_attachment_ids:
+                raise ValueError("Merged attachment occurrence points outside the target conversation.")
+            if link.block_index is not None and link.block_index not in block_by_index:
+                raise ValueError("Merged attachment occurrence points to a missing render block.")
+            if link.block_index is not None and link.attachment_id not in block_references.get(link.block_index, set()):
+                raise ValueError("Merged attachment occurrence does not match its render block reference.")
 
 
 def _insert_attachments(

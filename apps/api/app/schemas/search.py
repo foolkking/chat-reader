@@ -7,6 +7,7 @@ from app.schemas.message import MessageListItem
 
 class SearchMatch(BaseModel):
     block_index: int | None = None
+    render_block_id: UUID | None = None
     match_start: int
     match_end: int
     quote: str
@@ -24,6 +25,7 @@ class SearchResultItem(BaseModel):
     role: str | None
     order_key: str | None
     block_index: int | None = None
+    render_block_id: UUID | None = None
     character_offset: int | None = None
     snippet: str
     rank: float

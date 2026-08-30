@@ -1,5 +1,5 @@
 import type { NavigationResult, ScrollAnchorSnapshot } from "../../lib/types";
-import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
+import { firstVisibleRangeRect, invalidateTextAnchorCache, resolveTextAnchorRange } from "./text-anchor";
 
 type NavigateMountedTargetOptions = {
   root: HTMLElement | null;
@@ -63,6 +63,7 @@ export async function navigateMountedTarget({
   timeoutMs = 6000,
   allowFallback = false,
 }: NavigateMountedTargetOptions): Promise<NavigationResult> {
+  markReaderNavigation("start");
   const target = await waitForTarget(targetId, timeoutMs, tokenIsCurrent);
   if (!tokenIsCurrent()) {
     return { ok: false, targetId, reason: "cancelled" };
@@ -85,7 +86,10 @@ export async function navigateMountedTarget({
     }
     return { ok: false, targetId, reason: "target-not-mounted" };
   }
-  await settleTargetMedia(target, Math.min(timeoutMs, 5000), tokenIsCurrent);
+  markReaderNavigation("target-mounted");
+  // Text positioning must not wait for unrelated images in a long message.
+  // The target block is the only media scope that can affect the exact range.
+  await settleTargetMedia(target, Math.min(timeoutMs, 180), tokenIsCurrent);
   if (!tokenIsCurrent()) {
     return { ok: false, targetId, reason: "cancelled" };
   }
@@ -111,6 +115,7 @@ export async function navigateMountedTarget({
       reason: tokenIsCurrent() ? "target-not-aligned" : "cancelled",
     };
   }
+  markReaderNavigation("aligned");
   return {
     ok: true,
     targetId: target.id,
@@ -120,20 +125,37 @@ export async function navigateMountedTarget({
 }
 
 async function settleTargetMedia(target: HTMLElement, timeoutMs: number, tokenIsCurrent: () => boolean): Promise<void> {
-  const scope = target.closest<HTMLElement>("article[data-message-id]") ?? target;
+  // A message-level fallback has no reliable block scope. Do not make a
+  // citation wait for every image in that message; layout observers below
+  // will correct a small shift if the target block changes height later.
+  const scope = target.matches("[data-block-index]")
+    ? target
+    : target.querySelector<HTMLElement>("[data-block-index]");
+  if (!scope) return;
   const images = Array.from(scope.querySelectorAll<HTMLImageElement>("img"));
   if (images.length === 0) return;
-  for (const image of images) image.loading = "eager";
   const deadline = window.performance.now() + timeoutMs;
-  await Promise.all(images.map(async (image) => {
-    if (!tokenIsCurrent()) return;
-    const remaining = Math.max(0, deadline - window.performance.now());
-    if (remaining === 0) return;
-    await Promise.race([
-      image.decode?.().catch(() => undefined) ?? Promise.resolve(),
-      new Promise<void>((resolve) => window.setTimeout(resolve, remaining)),
-    ]);
-  }));
+  await Promise.race([
+    Promise.all(images.map(async (image) => {
+      if (!tokenIsCurrent()) return;
+      const remaining = Math.max(0, deadline - window.performance.now());
+      if (remaining === 0) return;
+      await Promise.race([
+        image.decode?.().catch(() => undefined) ?? Promise.resolve(),
+        new Promise<void>((resolve) => window.setTimeout(resolve, remaining)),
+      ]);
+    })),
+    new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
+function markReaderNavigation(stage: "start" | "target-mounted" | "aligned"): void {
+  if (typeof window === "undefined" || typeof window.performance?.mark !== "function") return;
+  const name = `reader-locate-${stage}`;
+  // Keep diagnostics bounded during a long reading session. These marks are
+  // optional observability signals, never a source of navigation state.
+  window.performance.clearMarks?.(name);
+  window.performance.mark(name);
 }
 
 export function captureScrollAnchor(
@@ -305,7 +327,8 @@ async function waitForTarget(
       }
     };
     const observer = new MutationObserver(check);
-    observer.observe(document.body, { childList: true, subtree: true });
+    const observationRoot = document.querySelector<HTMLElement>('[data-reader-scroll-root="true"]') ?? document.body;
+    observer.observe(observationRoot, { childList: true, subtree: true });
     const timeoutId = window.setTimeout(() => finish(null), timeoutMs);
     const frameId = window.requestAnimationFrame(check);
   });
@@ -365,14 +388,23 @@ async function stabilizeTargetAlignment({
   let alignedSince: number | null = null;
   let alignedFrames = 0;
   let usedTextAnchor = false;
+  let cachedTextRange: Range | null | undefined;
   const wantsTextAnchor = Boolean(characterOffset !== undefined || quote);
   const observedLayout = target.closest<HTMLElement>(".reader-content-inner") ?? target.parentElement;
   const observer = new ResizeObserver(() => {
     lastResizeAt = window.performance.now();
     alignedSince = null;
     alignedFrames = 0;
+    cachedTextRange = undefined;
   });
+  const mutationObserver = observedLayout ? new MutationObserver(() => {
+    cachedTextRange = undefined;
+    invalidateTextAnchorCache(target);
+    alignedSince = null;
+    alignedFrames = 0;
+  }) : null;
   if (observedLayout) observer.observe(observedLayout);
+  if (observedLayout) mutationObserver?.observe(observedLayout, { childList: true, subtree: true, characterData: true });
 
   return new Promise((resolve) => {
     let frame = 0;
@@ -382,6 +414,7 @@ async function stabilizeTargetAlignment({
       finished = true;
       if (frame) window.cancelAnimationFrame(frame);
       observer.disconnect();
+      mutationObserver?.disconnect();
       resolve(result);
     };
     const check = () => {
@@ -396,7 +429,12 @@ async function stabilizeTargetAlignment({
         return;
       }
 
-      const textRect = textAnchorRect(target, { characterOffset, endCharacterOffset, quote, prefix, suffix });
+      if (wantsTextAnchor && cachedTextRange === undefined) {
+        cachedTextRange = resolveTextAnchorRange(target, { startOffset: characterOffset, endOffset: endCharacterOffset, quote, prefix, suffix });
+      } else if (cachedTextRange && !(cachedTextRange.startContainer as Node).isConnected) {
+        cachedTextRange = undefined;
+      }
+      const textRect = cachedTextRange ? firstVisibleRangeRect(cachedTextRange) : null;
       if (textRect) usedTextAnchor = true;
       const alignmentRect = textRect ?? undefined;
       const targetRect = target.getBoundingClientRect();
@@ -406,11 +444,11 @@ async function stabilizeTargetAlignment({
       if (aligned) {
         if (alignedSince === null) alignedSince = now;
         alignedFrames += 1;
-        // A real Range must remain within the 24px tolerance for three
-        // consecutive animation frames and for at least 240ms. The latter
-        // filters out the first frame before virtual rows/images finish
-        // changing their geometry.
-        if (alignedFrames >= 3 && now - alignedSince >= 240 && now - lastResizeAt >= 240) {
+        // ResizeObserver/MutationObserver invalidate this state whenever the
+        // target layout changes. Two stable frames plus a short settling
+        // window is enough for text positioning without waiting on unrelated
+        // media elsewhere in the message.
+        if (alignedFrames >= 2 && now - alignedSince >= 120 && now - lastResizeAt >= 120) {
           finish({ stable: true, usedTextAnchor, textAnchorMissing: wantsTextAnchor && !usedTextAnchor });
           return;
         }
@@ -430,15 +468,4 @@ async function stabilizeTargetAlignment({
     };
     frame = window.requestAnimationFrame(check);
   });
-}
-
-function textAnchorRect(target: HTMLElement, options: { characterOffset?: number; endCharacterOffset?: number; quote?: string | null; prefix?: string | null; suffix?: string | null }): DOMRect | null {
-  const range = resolveTextAnchorRange(target, {
-    quote: options.quote,
-    prefix: options.prefix,
-    suffix: options.suffix,
-    startOffset: options.characterOffset,
-    endOffset: options.endCharacterOffset,
-  });
-  return range ? firstVisibleRangeRect(range) : null;
 }

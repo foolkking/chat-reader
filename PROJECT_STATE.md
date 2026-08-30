@@ -1,5 +1,38 @@
 # Project State
 
+## 2026-08-29 User Skill management (local)
+
+- Added owner-scoped `user_skills` and `user_skill_selections` persistence with
+  immutable system defaults for export and Conversation Rescue Skills.
+- Added authenticated Skill registry API and Settings > Skill 管理 panel. User
+  uploads are UTF-8 Markdown (512 KiB max), deduplicated, saved inactive until
+  explicitly selected, and safely fall back to the system default when disabled
+  or deleted.
+- Online export and Rescue copy flows resolve the selected Skill; offline paths
+  continue using static defaults. No external model request or Skill content
+  indexing is introduced.
+- Verification: Skill API tests (3) and migration-head regression (8 focused
+  tests, 1 PostgreSQL skip), API module compilation, Web typecheck, lint,
+  production build, and Alembic heads pass locally. The full API run reached
+  393 passed/5 skipped; its stale fixed-head assertion was updated for this
+  migration and the focused rerun passes. Browser and production gates remain
+  pending; no commit or deployment performed.
+
+## 2026-08-29 Offline library content-readability fix (local)
+
+- Offline package import now normalizes message/conversation identifiers and
+  verifies that payload message rows were actually persisted before committing.
+- Offline Reader message and render-block reads use the indexed path with a
+  safe primary-table fallback for older Dexie packages whose indexes were not
+  rebuilt after an upgrade.
+- Offline library metadata reconciles stale server message aggregates from
+  the locally stored message rows, preventing valid packages from displaying
+  as `0/0` messages. No schema or route changed.
+- Verification: Web typecheck, lint, `git diff --check`, and the focused API
+  offline package test pass. Full build/browser verification remains pending
+  because the development C: volume is critically low; no commit/deployment
+  was performed.
+
 ## 2026-08-25 Adaptive import handling classes and Conversation Rescue (local, not committed or deployed)
 
 - Import analysis now returns explicit `SUPPORTED`, `MAPPABLE` or
@@ -1459,3 +1492,10 @@ docs/evidence/     2026-07-26 基线截图和只读请求记录
 - Commit `771f4c864df7d7dea619a17eb19339ae971a2f28` closes the remaining native-scrollbar large-jump gap. A visible virtual message now repairs a stale absolute coordinate when none of its mounted rows intersects the Reader. Native pointer-held scrollbar gestures rebase before movement and defer sentinel edge-window changes until pointer release; a viewport-scale non-wheel jump also requests a rebase. These paths do not clear TanStack's measured row cache or add DOM measurement to ordinary wheel frames.
 - GitHub Actions run `31398377216` produced archive SHA-256 `b8c6dc8e7769cfe4e03e9523595b179f50308a045f78ebe8beb71a44291e1000`. King deployed prebuilt images with `--no-build`; backup `/opt/chat-reader/backups/reader-scrollbar-20260810T141005Z-5e50a6e` remains the verified rollback point. API/Web/PostgreSQL are healthy, worker is running, Scanner is disabled and Alembic remains `20260806_0021`.
 - Real production Chrome read-only verification on the reported long conversation dragged the native scrollbar thumb between distant positions in both directions. The first destinations immediately retained 15 and 14 visible blocks; a further five-position sweep recorded `blankCount=0` and 11-15 visible blocks at every destination, rather than a visible article with zero blocks. The production user path is PASS; PWA conditional cases retain their separate `PARTIAL_PASS` status.
+
+## 2026-08-29 Citation Locate Performance (Local)
+
+- Owner and Share Reader-turn loading now resolves only the target turn with permission-scoped order-key queries; legacy mixed/null turn metadata safely falls back to the canonical full grouping path.
+- Target-first navigation renders the fetched turn immediately and prefetches neighboring turns after alignment. Concurrent identical target-turn/context requests are deduplicated for the request lifetime only.
+- Text-anchor resolution caches the mounted block's text-node index and invalidates it on DOM mutation. Exact text/offset targets skip a redundant scroll-anchor stabilization wait; neighbor-window expansion restores the captured anchor.
+- Verification: API full suite `391 passed, 5 skipped`; Reader/Share performance tests `16 passed` (including a middle-turn boundary case); Web lint, typecheck, production build and Alembic single head `20260823_0028` passed. PWA suite was started but stopped after environment-dependent CSP/offline timeouts; no PWA PASS claim is made for this change.

@@ -81,8 +81,9 @@ export async function loadCompleteTurnWindow(
   loadTurn: (anchorMessageId?: string) => Promise<ReaderTurnResponse>,
   anchorMessageId?: string,
   targetTurnCount = MAX_SETTLED_TURNS,
+  seedTurn?: ReaderTurnResponse,
 ): Promise<CompleteTurnWindow> {
-  const center = await loadTurn(anchorMessageId);
+  const center = seedTurn ?? await loadTurn(anchorMessageId);
   const turns = [center];
   const seen = new Set([center.turn_key]);
   const loadAnchor = async (anchor: string | null) => {
@@ -106,6 +107,16 @@ export async function loadCompleteTurnWindow(
     if (turns.length === before) break;
   }
   return completeWindowFromTurns(turns, center.total_messages);
+}
+
+/**
+ * Build the smallest usable reader window from an already fetched target
+ * turn. Navigation can render this immediately and expand it in the
+ * background, instead of delaying an exact citation until neighboring turns
+ * finish loading.
+ */
+export function singleTurnWindow(turn: ReaderTurnResponse): CompleteTurnWindow {
+  return completeWindowFromTurns([turn], turn.total_messages);
 }
 
 function completeWindowFromTurns(turns: ReaderTurnResponse[], total: number): CompleteTurnWindow {

@@ -313,12 +313,11 @@ export function SourceEditorWorkspace({
           </div>
           <div className="flex items-center gap-1">
             <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">{zh ? "\u9884\u89c8" : "Preview"}</span></button>
-            {sourceSelection && selectedCharacterCount > 0 ? <span className="source-editor-selection-status hidden sm:inline-flex" data-testid="source-editor-selection-status">{zh ? `已选择 ${selectedCharacterCount} 个字符` : `${selectedCharacterCount} chars selected`}</span> : null}
             <button type="button" data-testid="source-editor-cleanup-selection" disabled={!sourceSelection || editorDirty} onClick={() => setCleanupOpen(true)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40 sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "清理噪声" : "Clean noise"} title={!sourceSelection ? (zh ? "先在 Markdown 源码中选择需要清理的文本" : "Select text in the Markdown source first") : editorDirty ? (zh ? "请先保存源码修改，再清理已保存版本" : "Save source changes before cleaning the persisted version") : (zh ? "审查并清理选中的噪声" : "Review and clean the selected noise")}><Eraser className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "清理噪声" : "Clean noise"}</span></button>
             <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "在正文中定位" : "Locate in reader"} title={zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}><LocateFixed className="h-4 w-4" /></button>
           </div>
         </div>
-        <div className="min-h-0 flex-1">
+        <div className="relative min-h-0 flex-1">
           <EditMessageForm
             key={`${message.id}:${message.current_version?.id ?? "initial"}`}
             formId={FORM_ID}
@@ -378,6 +377,7 @@ export function SourceEditorWorkspace({
               uploadJobsRef.current.clear();
             }}
           />
+          {sourceSelection && selectedCharacterCount > 0 ? <div className="source-editor-selection-badge" data-testid="source-editor-selection-status" role="status" aria-live="polite">{zh ? `已选择 ${selectedCharacterCount} 个字符` : `${selectedCharacterCount} chars selected`}</div> : null}
         </div>
         {attachmentPickerOpen ? (
           <ConversationAttachmentPicker

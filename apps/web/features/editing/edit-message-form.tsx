@@ -595,8 +595,8 @@ function codeMirrorExtensions(
 function codeMirrorTheme(theme: "light" | "dark") {
   const dark = theme === "dark";
   const colors = dark
-    ? { bg: "#202120", raised: "#282a28", text: "#f2f3ef", muted: "#a9aca6", line: "#343734", active: "#303430", selection: "#397b67", selectionText: "#ffffff", accent: "#6fd0b4", keyword: "#e7a66f", string: "#9fce7c", link: "#77b7e8", comment: "#8b9189", heading: "#f0c96b" }
-    : { bg: "#ffffff", raised: "#f4f5f2", text: "#1f211f", muted: "#6c716b", line: "#dfe2dc", active: "#f2f7f4", selection: "#9adbc6", selectionText: "#14231e", accent: "#087f68", keyword: "#9b4d12", string: "#437b22", link: "#236ea1", comment: "#747a73", heading: "#7a5a00" };
+    ? { bg: "#202120", raised: "#282a28", text: "#f2f3ef", muted: "#a9aca6", line: "#343734", active: "#303430", selection: "#4b9f87", selectionText: "#ffffff", accent: "#6fd0b4", keyword: "#e7a66f", string: "#9fce7c", link: "#77b7e8", comment: "#8b9189", heading: "#f0c96b" }
+    : { bg: "#ffffff", raised: "#f4f5f2", text: "#1f211f", muted: "#6c716b", line: "#dfe2dc", active: "#f2f7f4", selection: "#76cdb1", selectionText: "#10221c", accent: "#087f68", keyword: "#9b4d12", string: "#437b22", link: "#236ea1", comment: "#747a73", heading: "#7a5a00" };
   return [
     EditorView.theme({
       "&": { height: "100%", color: colors.text, backgroundColor: colors.bg },
@@ -609,6 +609,14 @@ function codeMirrorTheme(theme: "light" | "dark") {
       // the exact text the user selected unambiguous without changing the
       // document or selection offsets.
       "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+        backgroundColor: colors.selection,
+        color: colors.selectionText,
+      },
+      ".cm-editor:not(.cm-focused) .cm-selectionBackground": {
+        backgroundColor: colors.selection,
+        opacity: "0.78",
+      },
+      ".cm-editor:not(.cm-focused) .cm-content ::selection": {
         backgroundColor: colors.selection,
         color: colors.selectionText,
       },

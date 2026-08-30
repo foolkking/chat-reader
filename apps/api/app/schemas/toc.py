@@ -11,6 +11,8 @@ class TocItem(BaseModel):
     text: str
     slug: str
     message_id: UUID
+    message_version_id: UUID | None = None
+    render_block_id: UUID | None = None
     message_order_key: str
     block_index: int
 

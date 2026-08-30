@@ -17,7 +17,7 @@ export type OfflineConversationRecord = ConversationDetail & {
   last_read_at: string | null;
 };
 
-type OfflineMessageRecord = Omit<MessageListItem, "render_blocks"> & { conversation_id: string };
+export type OfflineMessageRecord = Omit<MessageListItem, "render_blocks"> & { conversation_id: string };
 type OfflineBlockRecord = RenderBlockRead & { key: string; conversation_id: string; message_id: string };
 type OfflineHeadingRecord = TocItem & { conversation_id: string };
 export type OfflineSearchDocument = {
@@ -28,7 +28,9 @@ export type OfflineSearchDocument = {
   role: string | null;
   title: string | null;
   plain_text: string;
-  search_text: string;
+  /** IndexedDB omits this when it is identical to plain_text to avoid storing
+   * every search document twice. The worker falls back to plain_text. */
+  search_text?: string;
   order_key: string | null;
   turn_index: number | null;
   metadata: Record<string, unknown>;
@@ -67,6 +69,9 @@ export type OfflineAttachmentRecord = {
     relation_type: string;
     display_order: number;
     block_index: number | null;
+    render_block_id?: string | null;
+    start_offset?: number | null;
+    end_offset?: number | null;
     display_mode: string;
     alt_text: string | null;
     caption: string | null;
@@ -154,6 +159,14 @@ type OfflinePackagePayload = {
   conversations: PackageConversation[];
 };
 
+type BulkPutTable<T> = { bulkPut(items: T[]): Promise<unknown> };
+
+async function bulkPutChunked<T>(table: BulkPutTable<T>, items: T[], chunkSize = 100): Promise<void> {
+  for (let offset = 0; offset < items.length; offset += chunkSize) {
+    await table.bulkPut(items.slice(offset, offset + chunkSize));
+  }
+}
+
 export async function importOfflinePackage(packageId: string, response: Response): Promise<OfflinePackageMeta> {
   if (!response.ok) throw new Error(`Offline package download failed (${response.status}).`);
   const declaredBytes = Number(response.headers.get("content-length") ?? 0);
@@ -173,6 +186,14 @@ export async function importOfflinePackage(packageId: string, response: Response
   const conversationIds = payload.conversations.map((conversation) => conversation.id);
   if (!conversationIds.length && payload.version === 1) {
     throw new Error("Offline package does not contain conversations.");
+  }
+  // ZIP size can be much smaller than the IndexedDB footprint. Account for
+  // the expanded JSON/assets before opening a write transaction so a quota
+  // failure is reported immediately instead of aborting halfway through a
+  // thousands-of-documents bulk write.
+  const expandedBytes = Object.values(entries).reduce((sum, value) => sum + value.byteLength, 0);
+  if (estimate?.quota !== undefined && estimate.usage !== undefined && expandedBytes > estimate.quota - estimate.usage) {
+    throw new Error("Browser storage quota is too small for this offline package.");
   }
   const packageMeta: OfflinePackageMeta = {
     id: packageId,
@@ -250,31 +271,74 @@ export async function importOfflinePackage(packageId: string, response: Response
         const blocks: OfflineBlockRecord[] = [];
         for (const message of raw.messages ?? []) {
           const { render_blocks: renderBlocks = [], ...messageWithoutBlocks } = message;
-          messages.push({ ...messageWithoutBlocks, conversation_id: raw.id });
+          // Normalize identifiers at the package boundary. Older packages
+          // were produced before every serializer guaranteed string UUIDs;
+          // keeping the value explicitly string here also makes the
+          // conversation index deterministic across browsers.
+          messages.push({
+            ...messageWithoutBlocks,
+            id: String(message.id),
+            conversation_id: String(raw.id),
+            current_version: message.current_version
+              ? { ...message.current_version, id: String(message.current_version.id) }
+              : null,
+          });
           for (const block of renderBlocks) {
-            blocks.push({ ...block, key: `${message.id}:${block.block_index}`, conversation_id: raw.id, message_id: message.id });
+            blocks.push({
+              ...block,
+              id: block.id ? String(block.id) : block.id,
+              key: `${String(message.id)}:${block.block_index}`,
+              conversation_id: String(raw.id),
+              message_id: String(message.id),
+            });
           }
         }
         const conversation = normalizeOfflineConversation(raw, now);
         conversation.last_read_at = existingConversations.get(raw.id)?.last_read_at ?? conversation.last_read_at;
         await offlineDb.conversations.put(conversation);
-        if (messages.length) await offlineDb.messages.bulkPut(messages);
-        if (blocks.length) await offlineDb.blocks.bulkPut(blocks);
-        if (raw.headings?.length) await offlineDb.headings.bulkPut(raw.headings.map((item) => ({ ...item, conversation_id: raw.id })));
-        if (raw.search_documents?.length) await offlineDb.searchDocuments.bulkPut(raw.search_documents.map((item) => ({ ...item, conversation_id: raw.id })));
-        if (raw.annotations?.length) await offlineDb.annotations.bulkPut(raw.annotations);
+        // Keep IndexedDB request batches bounded. Large exports can contain
+        // tens of thousands of search documents; queuing every request in one
+        // transaction causes Chromium to abort the transaction mid-write
+        // (often reported as "N of M operations failed"). Chunking preserves
+        // the package transaction/rollback semantics while avoiding oversized
+        // request queues.
+        if (messages.length) await bulkPutChunked(offlineDb.messages, messages);
+        // A package that advertises messages but writes none is corrupt. Do
+        // not leave a misleading conversation shell in IndexedDB: fail the
+        // package transaction so the previous offline copy remains intact.
+        if (messages.length) {
+          let storedCount = await offlineDb.messages.where("conversation_id").equals(String(raw.id)).count();
+          if (storedCount === 0) {
+            storedCount = (await offlineDb.messages.toArray()).filter((item) => String(item.conversation_id) === String(raw.id)).length;
+          }
+          if (storedCount < messages.length) throw new Error("Offline package message records could not be verified.");
+        }
+        if (blocks.length) await bulkPutChunked(offlineDb.blocks, blocks);
+        if (raw.headings?.length) await bulkPutChunked(offlineDb.headings, raw.headings.map((item) => ({ ...item, conversation_id: raw.id })));
+        if (raw.search_documents?.length) {
+          const documents = raw.search_documents.map((item) => {
+            const { search_text, ...rest } = item;
+            return {
+              ...rest,
+              ...(search_text && search_text !== item.plain_text ? { search_text } : {}),
+              conversation_id: raw.id,
+            };
+          });
+          await bulkPutChunked(offlineDb.searchDocuments, documents);
+        }
+        if (raw.annotations?.length) await bulkPutChunked(offlineDb.annotations, raw.annotations);
         if (raw.notebook) await offlineDb.notebooks.put(raw.notebook);
         if (raw.reading_position && isNewerReadingPosition(raw.reading_position, existingPositions.get(raw.id))) {
           await offlineDb.readingPositions.put(raw.reading_position);
         }
         if (raw.attachments?.length) {
-          await offlineDb.attachments.bulkPut(raw.attachments.map((attachment) => ({ ...attachment, conversation_id: raw.id })));
+          await bulkPutChunked(offlineDb.attachments, raw.attachments.map((attachment) => ({ ...attachment, conversation_id: raw.id })));
         }
       }
       const localAnnotations = pendingAnnotations.filter((item): item is AnnotationRead => Boolean(item));
       const localNotebooks = pendingNotebooks.filter((item): item is NotebookRead => Boolean(item));
-      if (localAnnotations.length) await offlineDb.annotations.bulkPut(localAnnotations);
-      if (localNotebooks.length) await offlineDb.notebooks.bulkPut(localNotebooks);
+      if (localAnnotations.length) await bulkPutChunked(offlineDb.annotations, localAnnotations);
+      if (localNotebooks.length) await bulkPutChunked(offlineDb.notebooks, localNotebooks);
       await offlineDb.packages.put(packageMeta);
     },
     );
@@ -287,6 +351,11 @@ export async function importOfflinePackage(packageId: string, response: Response
       if (previous) await cache.put(url, previous.clone()).catch(() => undefined);
       else await cache.delete(url).catch(() => false);
     }));
+    const errorName = error instanceof Error ? error.name : "";
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorName === "AbortError" || /transaction was aborted|operations failed/i.test(errorMessage)) {
+      throw new Error("离线资料写入被浏览器中止，通常是可用存储空间不足。请清理旧离线副本后重试。");
+    }
     throw error;
   }
   const retainedCacheUrls = new Set(cachedUrls);
@@ -499,6 +568,7 @@ export async function clearOfflineAnnotationSearch(conversationId: string): Prom
 }
 
 function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: string): OfflineConversationRecord {
+  const messageCount = Array.isArray(raw.messages) ? raw.messages.length : 0;
   return {
     id: String(raw.id),
     title: String(raw.title ?? raw.display_title ?? "Conversation"),
@@ -506,7 +576,10 @@ function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: st
     description_markdown: typeof raw.description_markdown === "string" ? raw.description_markdown : null,
     source_type: String(raw.source_type ?? "offline"),
     source_profile: String(raw.source_profile ?? "offline_package"),
-    message_count: Number(raw.message_count ?? raw.messages?.length ?? 0),
+    // Prefer the payload's actual message array over a potentially stale
+    // server-side aggregate. The Reader uses this value for its header and a
+    // stale zero makes a valid offline package look empty.
+    message_count: messageCount || Number(raw.message_count ?? 0),
     turn_count: Number(raw.turn_count ?? 0),
     created_at: typeof raw.created_at === "string" ? raw.created_at : null,
     updated_at: typeof raw.updated_at === "string" ? raw.updated_at : null,

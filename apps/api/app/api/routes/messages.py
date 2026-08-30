@@ -99,7 +99,7 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
         turn_index=message.turn_index,
         created_at=message.created_at,
         current_version=_version_read(version) if version else None,
-        render_blocks=[_block_read(block, occurrences.get(block.block_index)) for block in blocks],
+        render_blocks=[_block_read(block, occurrences.get(block.block_index, [])) for block in blocks],
         block_count=message.block_count,
         char_count=message.char_count,
         is_heavy=message.is_heavy,
@@ -514,7 +514,7 @@ def get_message_blocks(
         .all()
     )
     occurrences = _occurrences_by_block(db, message.current_version_id)
-    return [_block_read(block, occurrences.get(block.block_index)) for block in blocks]
+    return [_block_read(block, occurrences.get(block.block_index, [])) for block in blocks]
 
 
 def _edit_response(
@@ -534,6 +534,7 @@ def _edit_response(
         .order_by(RenderBlock.block_index.asc())
         .all()
     )
+    block_ids_by_index = {block.block_index: block.id for block in blocks}
     links = (
         db.query(MessageVersionAttachment, Attachment)
         .join(Attachment, Attachment.id == MessageVersionAttachment.attachment_id)
@@ -541,11 +542,10 @@ def _edit_response(
         .order_by(MessageVersionAttachment.display_order.asc())
         .all()
     )
-    occurrences = {
-        link.block_index: link
-        for link, _attachment in links
-        if link.block_index is not None
-    }
+    occurrences: dict[int, list[MessageVersionAttachment]] = {}
+    for link, _attachment in links:
+        if link.block_index is not None:
+            occurrences.setdefault(link.block_index, []).append(link)
     attachment_occurrences = [
         MessageVersionAttachmentRead(
             id=link.id,
@@ -556,6 +556,7 @@ def _edit_response(
             relation_type=link.relation_type,
             display_order=link.display_order,
             block_index=link.block_index,
+            render_block_id=block_ids_by_index.get(link.block_index) if link.block_index is not None else None,
             display_mode=link.display_mode,
             alt_text=link.alt_text,
             caption=link.caption,
@@ -574,7 +575,7 @@ def _edit_response(
         version_number=version_number,
         message=get_message(message.id, db),
         message_version=_version_read(current_version),
-        render_blocks=[_block_read(block, occurrences.get(block.block_index)) for block in blocks],
+        render_blocks=[_block_read(block, occurrences.get(block.block_index, [])) for block in blocks],
         attachment_occurrences=attachment_occurrences,
         conversation_attachment_summary=attachment_summary,
         conversation_revision=conversation.offline_revision,
@@ -657,12 +658,12 @@ def _version_read(version: MessageVersion) -> MessageVersionRead:
 def _occurrences_by_block(
     db: Session,
     message_version_id: uuid.UUID | None,
-) -> dict[int, MessageVersionAttachment]:
+) -> dict[int, list[MessageVersionAttachment]]:
     if message_version_id is None:
         return {}
-    return {
-        link.block_index: link
-        for link in db.query(MessageVersionAttachment)
+    grouped: dict[int, list[MessageVersionAttachment]] = {}
+    for link in (
+        db.query(MessageVersionAttachment)
         .filter(MessageVersionAttachment.message_version_id == message_version_id)
         .order_by(
             MessageVersionAttachment.block_index.asc().nullslast(),
@@ -670,24 +671,45 @@ def _occurrences_by_block(
             MessageVersionAttachment.occurrence_key.asc(),
         )
         .all()
-        if link.block_index is not None
-    }
+    ):
+        if link.block_index is not None:
+            grouped.setdefault(link.block_index, []).append(link)
+    return grouped
 
 
 def _block_read(
     block: RenderBlock,
-    occurrence: MessageVersionAttachment | None = None,
+    occurrence: list[MessageVersionAttachment] | None = None,
 ) -> RenderBlockRead:
     data = dict(block.data or {})
-    if occurrence is not None:
+    links = occurrence or []
+    if links:
+        first = links[0]
         data.update({
-            "messageVersionId": str(occurrence.message_version_id),
-            "occurrenceKey": occurrence.occurrence_key,
-            "displayOrder": occurrence.display_order,
-            "displayMode": occurrence.display_mode,
-            "alt": occurrence.alt_text,
-            "caption": occurrence.caption,
-            "relationType": occurrence.relation_type,
+            "messageVersionId": str(first.message_version_id),
+            "occurrenceKey": first.occurrence_key,
+            "displayOrder": first.display_order,
+            "displayMode": first.display_mode,
+            "alt": first.alt_text,
+            "caption": first.caption,
+            "relationType": first.relation_type,
+            "attachmentOccurrences": [
+                {
+                    "messageVersionId": str(link.message_version_id),
+                    "occurrenceKey": link.occurrence_key,
+                    "attachmentId": str(link.attachment_id),
+                    "blockIndex": link.block_index,
+                    "renderBlockId": str(block.id),
+                    "startOffset": getattr(link, "start_offset", None),
+                    "endOffset": getattr(link, "end_offset", None),
+                    "displayOrder": link.display_order,
+                    "displayMode": link.display_mode,
+                    "alt": link.alt_text,
+                    "caption": link.caption,
+                    "relationType": link.relation_type,
+                }
+                for link in links
+            ],
         })
     return RenderBlockRead(
         id=block.id,

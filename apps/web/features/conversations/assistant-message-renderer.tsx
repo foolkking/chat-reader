@@ -823,6 +823,8 @@ const BlockElement = memo(function BlockElement({ messageId, block, isAssistant,
       data-block-id={block.id}
       data-block-index={block.block_index}
       data-block-type={block.block_type}
+      data-attachment-id={typeof block.data.attachmentId === "string" ? block.data.attachmentId : undefined}
+      data-occurrence-key={typeof block.data.occurrenceKey === "string" ? block.data.occurrenceKey : undefined}
       data-copy-language={typeof block.data.language === "string" ? block.data.language : undefined}
       data-reader-copy-block="true"
       className={`reader-markdown-block max-w-full scroll-mt-3 rounded-xl transition ${

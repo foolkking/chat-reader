@@ -33,15 +33,15 @@ export function SidebarPreferences({ libraryMode = false, onlineHref = "/" }: { 
   return (
     <div ref={rootRef} className="relative">
       {open ? (
-        <div id={panelId} role="dialog" aria-label={`${t("settings")} (${t("appearanceLanguage")})`} className="absolute bottom-[calc(100%+0.5rem)] left-0 right-0 z-50 max-h-[min(72vh,30rem)] overflow-y-auto rounded-lg border border-ui bg-raised p-3 shadow-xl">
+        <div id={panelId} role="dialog" aria-label={t("settings")} className="absolute bottom-[calc(100%+0.5rem)] left-0 right-0 z-50 max-h-[min(72vh,30rem)] overflow-y-auto rounded-lg border border-ui bg-raised p-3 shadow-xl">
           <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-primary">{t("settings")}</p>
+            <span aria-hidden="true" />
             <button type="button" onClick={() => setOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-subtle hover:text-primary" aria-label={t("close")} title={t("close")}><X className="h-4 w-4" /></button>
           </div>
           <PreferencesPanel compact libraryMode={libraryMode} onlineHref={onlineHref} onOpenCategory={(category) => { setOpen(false); setFocusedCategory(category); }} />
         </div>
       ) : null}
-      <button ref={triggerRef} type="button" onClick={() => setOpen((value) => !value)} aria-label={`${t("settings")} (${t("appearanceLanguage")})`} aria-expanded={open} aria-controls={panelId} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-secondary hover:bg-surface hover:text-primary">
+      <button ref={triggerRef} type="button" onClick={() => setOpen((value) => !value)} aria-label={t("settings")} aria-expanded={open} aria-controls={panelId} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-secondary hover:bg-surface hover:text-primary">
         <Settings className="h-4 w-4" />
         <span className="min-w-0 flex-1 text-left">{t("settings")}</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}

@@ -10,7 +10,7 @@ import {
   getSharedToc,
   unlockSharedConversation,
 } from "../../lib/api";
-import type { LoadedMessageWindow, MessageListItem, NavigationResult, PersistedSharePosition, ScrollAnchorSnapshot, ScrollDirection } from "../../lib/types";
+import type { LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, PersistedSharePosition, ScrollAnchorSnapshot, ScrollDirection } from "../../lib/types";
 import { MessageItem } from "../conversations/message-item";
 import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor } from "../conversations/reader-navigation";
 import {
@@ -183,11 +183,16 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   }, []);
 
   const navigateToTarget = useCallback(async (
-    messageId: string,
+    targetOrMessageId: NavigateTarget | string,
     blockIndex?: number,
     alignmentOffset = 80,
     characterOffset?: number,
   ): Promise<NavigationResult> => {
+    const target: NavigateTarget = typeof targetOrMessageId === "string"
+      ? { messageId: targetOrMessageId, blockIndex }
+      : targetOrMessageId;
+    const messageId = target.messageId;
+    const resolvedBlockIndex = target.blockIndex ?? blockIndex;
     const navigationToken = navigationTokenRef.current + 1;
     navigationTokenRef.current = navigationToken;
     const generation = windowGenerationRef.current + 1;
@@ -198,7 +203,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     scrollIntentSequenceRef.current += 1;
     setNavigationTargetMessageId(messageId);
     const messageDomId = `message-${messageId}`;
-    const blockDomId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
+    const blockDomId = resolvedBlockIndex === undefined ? null : `block-${messageId}-${resolvedBlockIndex}`;
     let blockLease: ReaderBlockLease | null = null;
     try {
       if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) {
@@ -211,23 +216,46 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         nextTurnAnchorRef.current = page.nextTurnAnchorMessageId;
         applyLoadedWindow(replaceLoadedWindow(page, generation));
       }
-      if (blockIndex !== undefined) {
+      if (resolvedBlockIndex !== undefined) {
         blockLease = await acquireReaderBlockLease(
           messageId,
-          blockIndex,
+          resolvedBlockIndex,
           () => navigationTokenRef.current === navigationToken,
         );
       }
+      const resolveStableTarget = () => {
+        let resolvedTargetId = blockDomId ?? messageDomId;
+        const messageScope = document.getElementById(messageDomId) ?? document;
+        let blockScope: HTMLElement | Document = messageScope;
+        if (target.renderBlockId) {
+          const stableBlock = messageScope.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(target.renderBlockId)}"]`);
+          if (stableBlock?.id) {
+            resolvedTargetId = stableBlock.id;
+            blockScope = stableBlock;
+          }
+        }
+        if (target.occurrenceKey && target.attachmentId) {
+          const occurrence = blockScope.querySelector<HTMLElement>(`[data-attachment-id="${CSS.escape(target.attachmentId)}"][data-occurrence-key="${CSS.escape(target.occurrenceKey)}"]`)
+            ?? blockScope.querySelector<HTMLElement>(`[data-attachment-id="${CSS.escape(target.attachmentId)}"]`);
+          if (occurrence?.id) resolvedTargetId = occurrence.id;
+        }
+        return resolvedTargetId;
+      };
+      let resolvedTargetId = resolveStableTarget();
+      // The lease can mount a virtualized block after the initial lookup.
+      // Resolve again so a stable block/occurrence id is never replaced by a
+      // coarse message fallback merely because it was not mounted yet.
+      resolvedTargetId = resolveStableTarget();
       const result = await navigateMountedTarget({
         root: null,
-        targetId: blockDomId ?? messageDomId,
+        targetId: resolvedTargetId,
         tokenIsCurrent: () => navigationTokenRef.current === navigationToken,
         offset: alignmentOffset,
         characterOffset,
       });
       if (result.ok) {
         setActiveMessageId(messageId);
-        setActiveBlockId(blockDomId);
+        setActiveBlockId(target.renderBlockId ?? blockDomId);
         setTargetHighlightId(result.targetId);
         await restoreScrollAnchor({
           root: null,
@@ -529,7 +557,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             observerKey={tocObserverKey}
             items={toc}
             onNavigate={async (item) => {
-              await navigateToTarget(item.message_id, item.block_index);
+              await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, messageVersionId: item.message_version_id ?? undefined, renderBlockId: item.render_block_id ?? undefined });
             }}
           />
         </div>} />
@@ -547,7 +575,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           if (result.ok) setNavigationOpen(false);
         }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => {
           setMobileNavigation({ pending: true, error: null });
-          const result = await navigateToTarget(item.message_id, item.block_index);
+          const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, messageVersionId: item.message_version_id ?? undefined, renderBlockId: item.render_block_id ?? undefined });
           setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
           if (result.ok) setNavigationOpen(false);
         }} />}
@@ -558,7 +586,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
             <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} /></header>
             <div className="px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget(item.message_id, item.block_index); if (result.ok) setNavigationOpen(false); }} />}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, messageVersionId: item.message_version_id ?? undefined, renderBlockId: item.render_block_id ?? undefined }); if (result.ok) setNavigationOpen(false); }} />}</div>
           </section>
         </div>
       ) : null}

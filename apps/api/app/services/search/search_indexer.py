@@ -114,6 +114,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 "metadata_": {
                     "heading_index": heading.heading_index,
                     "block_index": heading.block_index,
+                    "render_block_id": str(heading.render_block_id) if heading.render_block_id else None,
                     "slug": heading.slug,
                 },
             }
@@ -132,6 +133,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
             Message.created_at,
             MessageVersion.id.label("message_version_id"),
             RenderBlock.block_index,
+            RenderBlock.id.label("render_block_id"),
             RenderBlock.plain_text,
             RenderBlock.data,
         )
@@ -167,7 +169,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 "order_key": row.order_key,
                 "turn_index": row.turn_index,
                 "created_at": row.created_at,
-                "metadata_": {"block_index": row.block_index, "language": language},
+                "metadata_": {"block_index": row.block_index, "render_block_id": str(row.render_block_id), "language": language},
             }
         )
         indexed_count += 1

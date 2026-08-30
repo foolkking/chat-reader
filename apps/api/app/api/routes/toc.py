@@ -75,6 +75,8 @@ def get_conversation_toc(
                 text=heading.text,
                 slug=heading.slug,
                 message_id=heading.message_id,
+                message_version_id=heading.message_version_id,
+                render_block_id=heading.render_block_id,
                 message_order_key=heading.order_key,
                 block_index=heading.block_index,
             )

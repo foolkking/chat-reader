@@ -28,9 +28,10 @@ async function pointerDrag(page: Page, source: Locator, target: Locator, hoverMs
   await expect(page.getByTestId("sidebar-drag-overlay")).toBeVisible({ timeout: 5_000 });
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("sidebar-drag-overlay")).toHaveCount(0);
-  const handle = source.getByTestId(/^conversation-drag-handle-/);
-  await expect(handle).toBeVisible();
-  const sourceBox = await handle.boundingBox();
+  // The whole conversation row is the drag surface; there is no dedicated
+  // handle. Starting from the title/summary area must still preserve click
+  // navigation when the activation threshold is not crossed.
+  const sourceBox = await source.boundingBox();
   expect(sourceBox).not.toBeNull();
   await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
   await page.mouse.down();

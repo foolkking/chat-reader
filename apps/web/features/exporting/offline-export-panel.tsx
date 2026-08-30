@@ -91,7 +91,7 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
         <p>{zh ? "导出只包含该离线副本中已有的当前版本数据。" : "The export contains the current-version data available in this offline copy."}</p>
       </div>
       {result ? result.contextPackage ? (
-        <ContextPackageDelivery downloadUrl={result.url} downloadFilename={result.filename} defaultSkillLocale={zh ? "zh-CN" : "en"} />
+        <ContextPackageDelivery downloadUrl={result.url} downloadFilename={result.filename} defaultSkillLocale={zh ? "zh-CN" : "en"} offline />
       ) : (
         <a href={result.url} download={result.filename} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85"><Download className="h-4 w-4" />{zh ? "下载导出文件" : "Download export"}</a>
       ) : (

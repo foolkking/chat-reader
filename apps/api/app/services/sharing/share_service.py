@@ -26,7 +26,7 @@ from app.services.auth import hash_password, verify_password
 from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
-from app.services.reader_turns import ReaderTurnHydrationError, build_reader_turn
+from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn_from_query
 
 
 class ShareError(ValueError):
@@ -169,12 +169,11 @@ def get_shared_message_window(
 
 def get_shared_reader_turn(db: Session, token: str, *, anchor_message_id: uuid.UUID | None, unlock_token: str | None = None) -> ReaderTurnResponse:
     share = _get_accessible_share(db, token, unlock_token)
-    messages = _share_message_query(db, share).order_by(Message.order_key.asc()).all()
     try:
-        return build_reader_turn(
+        return load_reader_turn_from_query(
             db,
             share.conversation_id,
-            messages,
+            _share_message_query(db, share),
             anchor_message_id,
             attachment_content_prefix=f"/api/shared/{token}/attachments",
         )
@@ -627,6 +626,8 @@ def _toc_item(heading: Heading) -> TocItem:
         text=heading.text,
         slug=heading.slug,
         message_id=heading.message_id,
+        message_version_id=heading.message_version_id,
+        render_block_id=heading.render_block_id,
         message_order_key=heading.order_key,
         block_index=heading.block_index,
     )

@@ -35,7 +35,9 @@ from app.services.search.search_indexer import (
 from app.services.annotations import relocate_annotations_for_new_version
 from app.services.editing.conversation_merge_service import copy_conversation_history
 from app.services.editing.attachment_reference_rewriter import (
+    ASSET_REFERENCE_RE,
     assert_attachment_references_mapped,
+    attachment_reference_ids,
     rewrite_attachment_text,
 )
 from app.services.assets.scanner import scan_status_allows_use
@@ -433,6 +435,14 @@ def merge_messages(
     versions = [_get_current_version(db, message) for message in ordered_messages]
     reason = edit_reason or "merge messages"
     merged_text = separator.join(version.display_text.strip() for version in versions if version.display_text.strip())
+    attachment_declarations = [
+        link
+        for version in versions
+        for link in db.query(MessageVersionAttachment)
+        .filter(MessageVersionAttachment.message_version_id == version.id)
+        .order_by(MessageVersionAttachment.display_order.asc(), MessageVersionAttachment.occurrence_key.asc())
+        .all()
+    ]
     merged_version = _create_version(
         db=db,
         message=survivor,
@@ -441,6 +451,7 @@ def merge_messages(
         edit_reason=reason,
         created_by="user",
         based_on_version_id=versions[0].id,
+        attachment_occurrences=attachment_declarations or None,
     )
 
     deleted_at = utc_now()
@@ -1083,16 +1094,37 @@ def _sync_version_attachment_links(
         ).delete(synchronize_session=False)
     references: list[tuple[int, uuid.UUID, object]] = []
     for index, block in enumerate(block_drafts):
-        if block.block_type not in {"image", "attachment"} or not isinstance(block.data, dict):
-            continue
-        try:
-            attachment_id = uuid.UUID(str(block.data.get("attachmentId") or ""))
-        except ValueError as exc:
-            line_number = _attachment_reference_line(source_text, str(block.data.get("attachmentId") or ""))
-            raise MessageEditError(f"Line {line_number} contains an invalid attachment reference.", 422) from exc
-        references.append((index, attachment_id, block))
-    if occurrence_declarations and len(occurrence_declarations) != len(references):
-        raise MessageEditError("Attachment occurrence declarations do not match the Markdown references.", 422)
+        # Attachment URLs may be standalone image/file blocks or inline inside
+        # a paragraph. Keep one row per URL occurrence, including repeated URLs
+        # in a single block; code blocks are intentionally treated as code.
+        ids: list[uuid.UUID] = []
+        if block.block_type in {"image", "attachment"} and isinstance(block.data, dict):
+            raw_id = str(block.data.get("attachmentId") or "")
+            try:
+                ids.append(uuid.UUID(raw_id))
+            except ValueError as exc:
+                line_number = _attachment_reference_line(source_text, raw_id)
+                raise MessageEditError(f"Line {line_number} contains an invalid attachment reference.", 422) from exc
+        if block.block_type != "code" and isinstance(block.plain_text, str):
+            ids.extend(uuid.UUID(match.group("id")) for match in ASSET_REFERENCE_RE.finditer(block.plain_text))
+        for attachment_id in ids:
+            references.append((index, attachment_id, block))
+    # Every attachment URL in canonical source must be represented by a
+    # rendered attachment block/occurrence.  Previously inline or malformed
+    # references could be silently dropped during merge, leaving the files in
+    # storage but unusable from Reader/Files. Fail closed instead.
+    text_attachment_ids = _attachment_reference_ids_outside_code(source_text)
+    block_attachment_ids = {attachment_id for _index, attachment_id, _block in references}
+    missing_block_ids = text_attachment_ids - block_attachment_ids
+    if missing_block_ids:
+        missing_id = next(iter(missing_block_ids))
+        line_number = _attachment_reference_line(source_text, str(missing_id))
+        raise MessageEditError(
+            f"Line {line_number} contains an attachment reference that could not be mapped to a rendered block.",
+            422,
+            code="attachment_reference_unmapped",
+            line_number=line_number,
+        )
     if not references:
         if timings is not None:
             timings["attachment_validation_ms"] = 0.0
@@ -1131,11 +1163,12 @@ def _sync_version_attachment_links(
     if timings is not None:
         timings["attachment_validation_ms"] = round((time.perf_counter() - validation_started) * 1000, 3)
     rows: list[dict] = []
+    declaration_queues: dict[uuid.UUID, list] = {}
+    for declaration in occurrence_declarations or []:
+        declaration_queues.setdefault(declaration.attachment_id, []).append(declaration)
     for ordinal, (block_index, attachment_id, block) in enumerate(references):
         data = block.data
-        declaration = occurrence_declarations[ordinal] if occurrence_declarations else None
-        if declaration is not None and declaration.attachment_id != attachment_id:
-            raise MessageEditError("Attachment occurrence declarations are not in Markdown reference order.", 422)
+        declaration = declaration_queues.get(attachment_id, []).pop(0) if declaration_queues.get(attachment_id) else None
         display_order = declaration.display_order if declaration is not None else ordinal
         rows.append({
             "id": uuid.uuid4(),
@@ -1184,6 +1217,27 @@ def _attachment_reference_line(source_text: str, attachment_id: str) -> int:
         (line_number for line_number, line in enumerate(source_text.splitlines(), 1) if needle in line),
         1,
     )
+
+
+def _attachment_reference_ids_outside_code(source_text: str) -> set[uuid.UUID]:
+    """Collect attachment URLs from prose while ignoring fenced code samples."""
+    found: set[uuid.UUID] = set()
+    in_code = False
+    fence_char = ""
+    fence_length = 0
+    for raw_line in source_text.splitlines():
+        line = raw_line.strip()
+        if in_code:
+            if line.startswith(fence_char * fence_length) and not line[fence_length:].strip(fence_char).strip():
+                in_code = False
+            continue
+        if line.startswith("```") or line.startswith("~~~"):
+            fence_char = line[0]
+            fence_length = len(line) - len(line.lstrip(fence_char))
+            in_code = True
+            continue
+        found.update(uuid.UUID(match.group("id")) for match in ASSET_REFERENCE_RE.finditer(raw_line))
+    return found
 
 
 def _create_message_with_version(

@@ -51,6 +51,9 @@ class AttachmentOccurrenceLocationRead(BaseModel):
     occurrence_key: str
     placement: str
     block_index: int | None
+    render_block_id: UUID | None = None
+    start_offset: int | None = None
+    end_offset: int | None = None
 
 
 class MessageVersionAttachmentRead(BaseModel):
@@ -62,6 +65,9 @@ class MessageVersionAttachmentRead(BaseModel):
     relation_type: str
     display_order: int
     block_index: int | None
+    render_block_id: UUID | None = None
+    start_offset: int | None = None
+    end_offset: int | None = None
     display_mode: str
     alt_text: str | None
     caption: str | None

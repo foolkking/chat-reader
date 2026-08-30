@@ -17,6 +17,20 @@ type NormalizedText = {
   sourceIndexes: number[];
 };
 
+type TextIndex = {
+  text: string;
+  segments: TextNodeSegment[];
+};
+
+// Resolving an anchor can run for several animation frames while virtualized
+// content settles. Keep the expensive TreeWalker pass per mounted root, and
+// explicitly invalidate it when the observed DOM changes.
+const textIndexCache = new WeakMap<HTMLElement, TextIndex>();
+
+export function invalidateTextAnchorCache(root: HTMLElement): void {
+  textIndexCache.delete(root);
+}
+
 export function resolveTextAnchorRange(root: HTMLElement, anchor: TextAnchor): Range | null {
   const source = collectText(root);
   if (!source.text) return null;
@@ -60,6 +74,8 @@ export function firstVisibleRangeRect(range: Range): DOMRect | null {
 }
 
 function collectText(root: HTMLElement): { text: string; segments: TextNodeSegment[] } {
+  const cached = textIndexCache.get(root);
+  if (cached) return cached;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
@@ -78,7 +94,9 @@ function collectText(root: HTMLElement): { text: string; segments: TextNodeSegme
     text += value;
     segments.push({ node, start, end: text.length });
   }
-  return { text, segments };
+  const index = { text, segments };
+  textIndexCache.set(root, index);
+  return index;
 }
 
 function rangeForTextOffsets(segments: TextNodeSegment[], start: number, end: number): Range | null {

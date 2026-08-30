@@ -19,6 +19,13 @@ terminal summary. The response's existing conversation IDs are used for
 compact direct links and Library return; no ImportBatch entity or persistent
 results route is introduced.
 
+## Skill registry (2026-08-29, local)
+
+`SkillSettings` is rendered inside `SettingsFocusedDialog` and consumes the
+owner-authenticated `/api/skills` registry. Metadata loads first; content is
+fetched on demand and shown as inert plain text. Export and Rescue resolve the
+selected user Skill, while Offline keeps static defaults.
+
 ## Reader semantic Markdown copy (current)
 
 Owner Reader, public Share and Offline Reader use one copy boundary. Complete

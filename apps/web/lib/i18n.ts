@@ -28,6 +28,12 @@ const zh = {
   loadingLater: "正在加载下文…", retryEarlier: "重新加载上文", retryLater: "重新加载下文", loadingMessages: "正在加载消息", loadFailed: "消息加载失败",
   noConversationMessages: "这个对话还没有可阅读的消息。", conversationUnavailable: "对话暂时不可用", noConversationPayload: "服务器没有返回对话内容。",
   loadingInitialMessages: "正在获取首屏对话内容。", noMessagesTitle: "暂无消息",
+  dataArchive: "数据归档",
+  dataArchiveDescription: "备份、恢复与数据维护",
+  noiseRuleLibrary: "噪声规则库",
+  noiseRuleLibraryDescription: "查看、管理并扫描噪声处理规则",
+  skillManagement: "Skill 管理",
+  skillManagementDescription: "管理导出与格式转换时使用的 Skill",
 } as const;
 
 const en: Record<keyof typeof zh, string> = {
@@ -58,6 +64,12 @@ const en: Record<keyof typeof zh, string> = {
   loadingLater: "Loading later messages…", retryEarlier: "Retry earlier messages", retryLater: "Retry later messages", loadingMessages: "Loading messages", loadFailed: "Failed to load messages",
   noConversationMessages: "This conversation has no readable messages yet.", conversationUnavailable: "Conversation unavailable", noConversationPayload: "The server returned no conversation content.",
   loadingInitialMessages: "Fetching the initial conversation content.", noMessagesTitle: "No messages",
+  dataArchive: "Data archive",
+  dataArchiveDescription: "Backups, restore and data maintenance",
+  noiseRuleLibrary: "Noise rule library",
+  noiseRuleLibraryDescription: "Review, manage and scan cleanup rules",
+  skillManagement: "Skill management",
+  skillManagementDescription: "Manage Skills used for export and format rescue",
 };
 
 const dictionaries = { "zh-CN": zh, "en-US": en } as const;

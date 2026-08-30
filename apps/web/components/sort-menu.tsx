@@ -7,6 +7,14 @@ import type { ConversationSortMode, ProjectSortMode, SortDirection } from "../li
 
 type SortOption<T extends string> = { value: T; zh: string; en: string };
 
+const sharedSortLabels: Record<string, { zh: string; en: string }> = {
+  recent_read: { zh: "最近阅读", en: "Recently read" },
+  updated: { zh: "最近更新", en: "Recently updated" },
+  created: { zh: "创建时间", en: "Created" },
+  title: { zh: "标题", en: "Title" },
+  custom: { zh: "自定义", en: "Custom" },
+};
+
 const conversationOptions: SortOption<ConversationSortMode>[] = [
   { value: "recent_read", zh: "最近阅读", en: "Recently read" },
   { value: "updated", zh: "最近更新", en: "Recently updated" },
@@ -49,11 +57,12 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
     setOpen(false);
   }, []);
   const selected = options.find((option) => option.value === mode) ?? options[0];
+  const sharedLabel = sharedSortLabels[String(mode)];
   const label = mode === "message_count"
     ? (locale === "zh-CN" ? (direction === "desc" ? "最长对话" : "最短对话") : (direction === "desc" ? "Longest" : "Shortest"))
     : mode === "conversation_count"
       ? (locale === "zh-CN" ? (direction === "desc" ? "对话最多" : "对话最少") : (direction === "desc" ? "Most conversations" : "Fewest conversations"))
-      : locale === "zh-CN" ? selected.zh : selected.en;
+      : sharedLabel ? (locale === "zh-CN" ? sharedLabel.zh : sharedLabel.en) : locale === "zh-CN" ? selected.zh : selected.en;
   return (
     <details ref={detailsRef} open={open} className="relative">
       <summary

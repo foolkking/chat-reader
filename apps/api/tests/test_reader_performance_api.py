@@ -89,6 +89,41 @@ def test_reader_turn_returns_a_complete_turn_and_all_blocks(client: TestClient) 
     assert all(len(item["render_blocks"]) == item["block_count"] for item in payload["items"])
 
 
+def test_reader_turn_fast_path_handles_a_middle_turn_with_next_boundary(client: TestClient) -> None:
+    preview = client.post(
+        "/api/imports/preview",
+        files={
+            "files": (
+                "reader-turn-middle.json",
+                json.dumps(
+                    {
+                        "metadata": {"title": "Reader turns", "powered_by": "ChatGPT Exporter"},
+                        "messages": [
+                            {"role": "Prompt", "say": "first"},
+                            {"role": "Response", "say": "first answer"},
+                            {"role": "Prompt", "say": "second"},
+                            {"role": "Response", "say": "second answer"},
+                        ],
+                    }
+                ).encode(),
+                "application/json",
+            )
+        },
+    )
+    conversation_id = client.post(f"/api/imports/{preview.json()['import_id']}/commit").json()["conversation_ids"][0]
+    messages = client.get(f"/api/conversations/{conversation_id}/messages", params={"limit": 20}).json()
+
+    response = client.get(
+        f"/api/conversations/{conversation_id}/reader-turn",
+        params={"anchor_message_id": messages[1]["id"]},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["id"] for item in payload["items"]] == [messages[0]["id"], messages[1]["id"]]
+    assert payload["previous_anchor_message_id"] is None
+    assert payload["next_anchor_message_id"] == messages[2]["id"]
+
+
 def test_reader_turn_embeds_current_attachment_metadata_without_storage_paths(client: TestClient, tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
     monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")

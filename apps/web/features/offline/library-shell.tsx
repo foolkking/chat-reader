@@ -90,13 +90,36 @@ export function LibraryShell() {
   const reloadLocal = useCallback(async () => {
     const fallback = await offlineDb.conversations.toArray();
     fallback.sort((left, right) => libraryActivityTime(right) - libraryActivityTime(left));
-    setConversations(fallback);
+    // Older offline packages could persist conversation metadata before the
+    // message rows (or carry a stale server aggregate). Reconcile the
+    // lightweight header from the canonical local message table so a valid
+    // package never presents as “0/0 messages”. This is read-only metadata
+    // repair and does not rewrite message content.
+    const localMessages = await offlineDb.messages.toArray();
+    const messageStats = new Map<string, { count: number; turns: Set<number> }>();
+    for (const message of localMessages) {
+      const id = String(message.conversation_id);
+      const stats = messageStats.get(id) ?? { count: 0, turns: new Set<number>() };
+      stats.count += 1;
+      if (typeof message.turn_index === "number") stats.turns.add(message.turn_index);
+      messageStats.set(id, stats);
+    }
+    const reconciled = fallback.map((conversation) => {
+      const stats = messageStats.get(String(conversation.id));
+      if (!stats || stats.count === 0) return conversation;
+      return {
+        ...conversation,
+        message_count: stats.count,
+        turn_count: stats.turns.size || conversation.turn_count,
+      };
+    });
+    setConversations(reconciled);
     const [documents, annotations, notebooks] = await Promise.all([
       offlineDb.searchDocuments.toArray(),
       offlineDb.annotations.toArray(),
       offlineDb.notebooks.toArray(),
     ]);
-    const titles = new Map(fallback.map((item) => [item.id, item.display_title]));
+    const titles = new Map(reconciled.map((item) => [item.id, item.display_title]));
     const privateDocuments: OfflineSearchDocument[] = [
       ...fallback.filter((item) => item.description_markdown).map((item) => ({
         id: `description:${item.id}`,
@@ -142,9 +165,9 @@ export function LibraryShell() {
       }),
     ];
     await initializeOfflineSearch([...documents, ...privateDocuments]);
-    if (!selectedId && fallback[0]) {
+    if (!selectedId && reconciled[0]) {
       const rememberedId = window.localStorage.getItem(LAST_LIBRARY_CONVERSATION_KEY);
-      setSelectedId(fallback.find((item) => item.id === rememberedId)?.id ?? fallback[0].id);
+      setSelectedId(reconciled.find((item) => item.id === rememberedId)?.id ?? reconciled[0].id);
     }
     const estimate: StorageEstimate | undefined = await navigator.storage?.estimate?.().catch(() => undefined);
     const persisted = await navigator.storage?.persisted?.().catch(() => false);
@@ -210,7 +233,7 @@ export function LibraryShell() {
     });
     let task = await getTask(queued.job_id);
     for (let attempt = 0; attempt < 300 && !["committed", "failed"].includes(task.status); attempt += 1) {
-      if (!silent) setDownload({ key, progress: task.progress, label: task.phase });
+      if (!silent) setDownload({ key, progress: task.progress, label: offlineTaskLabel(task.phase, task.processed_items, task.total_items, zh) });
       await delay(750);
       task = await getTask(queued.job_id);
     }
@@ -222,7 +245,7 @@ export function LibraryShell() {
     if (!silent) setDownload({ key, progress: 100, label: "已完成" });
     await reloadLocal();
     if (!silent) window.setTimeout(() => setDownload(null), 800);
-  }, [assetMode, catalogQuery.data, conversations, reloadLocal]);
+  }, [assetMode, catalogQuery.data, conversations, reloadLocal, zh]);
 
   useEffect(() => {
     const catalog = catalogQuery.data;
@@ -572,6 +595,14 @@ function formatBytes(value: number): string {
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`;
   if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`;
   return `${(value / 1024 ** 3).toFixed(1)} GB`;
+}
+
+function offlineTaskLabel(phase: string, processed: number, total: number, zh: boolean): string {
+  const progress = total > 0 ? ` · ${processed}/${total}` : "";
+  if (phase === "queued") return zh ? "等待生成离线资料" : "Waiting to build offline library";
+  if (phase === "packaging") return zh ? `正在整理离线资料${progress}` : `Packaging offline library${progress}`;
+  if (phase === "publishing") return zh ? "正在保存离线资料" : "Saving offline library";
+  return zh ? `正在生成离线资料${progress}` : `Building offline library${progress}`;
 }
 
 function libraryActivityTime(conversation: OfflineConversationRecord): number {

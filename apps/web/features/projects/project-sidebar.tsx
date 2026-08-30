@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Clock3, Folder, GripVertical, Import, ListTodo, PanelLeftClose, Plus } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Clock3, Folder, Import, ListTodo, PanelLeftClose, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -50,7 +50,7 @@ import { ProjectSortMenu } from "../../components/sort-menu";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { ProjectActionMenu } from "./project-action-menu";
 
-type DragConversation = { activeType: "conversation"; id: string; title: string; projectId: string | null; projectPinned: boolean; offlineRevision: number };
+type DragConversation = { activeType: "conversation"; id: string; title: string; description?: string; projectName?: string | null; projectId: string | null; projectPinned: boolean; offlineRevision: number };
 type DragProject = { activeType: "project"; id: string };
 type ProjectOrderDrop = { dropType: "project-order-slot"; projectId: string };
 type ConversationContainerDrop = { dropType: "project-conversation-container" | "unclassified-container"; projectId: string | null };
@@ -148,7 +148,7 @@ export function ProjectSidebar({
   const [showTaskCenter, setShowTaskCenter] = useState(false);
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
-  const [activeDrag, setActiveDrag] = useState<DragConversation | null>(null);
+  const [activeDrag, setActiveDrag] = useState<DragConversation | DragProject | null>(null);
   const [dropIntent, setDropIntent] = useState<DropIntent | null>(null);
   const dropIntentRef = useRef<DropIntent | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
@@ -338,7 +338,7 @@ export function ProjectSidebar({
   function handleDragStart(event: DragStartEvent) {
     setDragError(null);
     const raw = event.active.data.current as DragConversation | DragProject | undefined;
-    if (raw?.activeType === "conversation") setActiveDrag(raw);
+    if (raw?.activeType === "conversation" || raw?.activeType === "project") setActiveDrag(raw);
     updateDropIntent(null);
   }
 
@@ -483,7 +483,7 @@ export function ProjectSidebar({
       >
         {content}
       </ReaderSidebarFrame>
-      <DragOverlay>{activeDrag ? <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="max-w-[15rem] truncate rounded-lg border border-[var(--accent)] bg-raised px-3 py-2 text-sm text-primary shadow-xl">{activeDrag.title}</div> : null}</DragOverlay>
+      <DragOverlay>{activeDrag ? <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay flex items-center gap-3 px-4 py-3 text-sm text-primary" aria-hidden="true"><div className="min-w-0"><p className="truncate font-semibold">{activeDrag.activeType === "conversation" ? activeDrag.title : projects.find((item) => item.id === activeDrag.id)?.name ?? "项目"}</p><p className="mt-0.5 line-clamp-2 text-xs text-secondary">{activeDrag.activeType === "conversation" ? activeDrag.description : "调整项目顺序"}</p>{activeDrag.activeType === "conversation" && activeDrag.projectName ? <p className="mt-0.5 truncate text-[11px] text-accent">{activeDrag.projectName}</p> : null}{activeDrag.activeType === "project" ? <p className="mt-0.5 text-[11px] text-secondary">{projects.find((item) => item.id === activeDrag.id)?.conversation_count ?? 0} 个对话</p> : null}</div></div> : null}</DragOverlay>
       {dragError ? <div role="alert" className="fixed bottom-4 left-1/2 z-[240] max-w-sm -translate-x-1/2 rounded-lg border border-[var(--danger)] bg-raised px-4 py-3 text-sm text-[var(--danger)] shadow-xl">{dragError}</div> : null}
       {dragNotice ? <div role="status" className="fixed bottom-4 left-1/2 z-[240] -translate-x-1/2 rounded-lg border border-[var(--callout-tip-border)] bg-[var(--callout-tip-bg)] px-4 py-3 text-sm text-[var(--callout-tip-text)] shadow-xl">{dragNotice}</div> : null}
       {currentProjectDropTargetId ? <CurrentProjectDropPortal projectId={currentProjectDropTargetId} projectName={projects.find((project) => project.id === currentProjectDropTargetId)?.name} zh={resolvedLocale === "zh-CN"} /> : null}
@@ -667,9 +667,9 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
   const conversations = conversationsQuery.data ?? [];
   const projectActivityTime = projectSortMode === "updated" ? project.updated_at : projectSortMode === "created" ? project.created_at : project.last_read_at;
   return (
-    <div ref={sortable.setNodeRef} data-testid={`project-order-slot-${project.id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}><div ref={setNodeRef} data-testid={`project-conversation-container-${project.id}`} className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
-      <div className={`group flex min-h-9 items-center rounded-lg ${active ? "bg-subtle" : "hover:bg-surface"}`}>
-        {projectSortMode === "custom" ? <button type="button" className="hidden h-9 w-7 touch-none items-center justify-center text-secondary md:flex" aria-label="Drag to reorder project" {...sortable.attributes} {...sortable.listeners}><GripVertical className="h-4 w-4" /></button> : null}<button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`} onClick={toggle} className="flex h-9 w-8 shrink-0 items-center justify-center text-secondary">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
+    <div data-testid={`project-order-slot-${project.id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}><div ref={setNodeRef} data-testid={`project-conversation-container-${project.id}`} className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
+      <div ref={sortable.setNodeRef} {...sortable.attributes} {...sortable.listeners} data-state={sortable.isDragging ? "dragging" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} className={`reader-interactive-row group flex min-h-9 items-center rounded-lg outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-grab"}`}>
+        <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`} data-no-dnd onPointerDown={(event) => event.stopPropagation()} onClick={toggle} className="flex h-9 w-8 shrink-0 items-center justify-center text-secondary">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
         <Link href={`/projects/${project.id}`} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm" title={`${fullActivityTime(projectActivityTime, resolvedLocale)} · ${project.conversation_count}`}><Folder className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate">{project.name}</span><span className="shrink-0 text-[11px] text-secondary">{formatActivityTime(projectActivityTime, resolvedLocale)}</span></Link>
         <ProjectActionMenu project={project} onChanged={onProjectChanged} />
       </div>
@@ -713,24 +713,15 @@ function DraggableConversationRow({ conversation, projectId, beforeConversationI
   const { resolvedLocale } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
   const projectPinned = isProjectConversation(conversation) ? conversation.project_relation.is_pinned : false;
-  const draggable = useDraggable({ id: `conversation:${conversation.id}`, data: { activeType: "conversation", id: conversation.id, title, projectId, projectPinned, offlineRevision: conversation.offline_revision } satisfies DragConversation });
+  const draggable = useDraggable({ id: `conversation:${conversation.id}`, data: { activeType: "conversation", id: conversation.id, title, description: conversation.description_markdown || conversation.first_user_message || "无摘要", projectName: conversation.project_name, projectId, projectPinned, offlineRevision: conversation.offline_revision } satisfies DragConversation });
   const droppable = useDroppable({ id: `conversation-row:${conversation.id}`, data: { dropType: "conversation-row", projectId, conversationId: conversation.id, beforeConversationId, afterConversationId } satisfies ConversationRowDrop });
   const setRowRef = (node: HTMLDivElement | null) => {
     draggable.setNodeRef(node);
     droppable.setNodeRef(node);
   };
   return (
-    <div ref={setRowRef} data-testid={`conversation-row-${conversation.id}`} data-project-id={projectId ?? "unclassified"} style={{ transform: CSS.Translate.toString(draggable.transform) }} {...draggable.attributes} {...draggable.listeners} className={`group flex min-h-12 touch-pan-y items-start gap-1 rounded-lg pl-1 pr-1 outline-none ${draggable.isDragging ? "opacity-30" : ""} ${droppable.isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : active || menuOpen ? "bg-subtle" : "hover:bg-surface"}`}>
-      <span
-        data-testid={`conversation-drag-handle-${conversation.id}`}
-        className="flex h-9 w-7 shrink-0 touch-none items-center justify-center text-secondary opacity-45 group-hover:opacity-100"
-        aria-hidden="true"
-        onPointerDown={(event) => {
-          event.stopPropagation();
-          draggable.listeners?.onPointerDown(event);
-        }}
-      ><GripVertical className="h-3.5 w-3.5" /></span>
-      <Link data-no-dnd href={`/conversations/${conversation.id}${projectId ? `?projectId=${projectId}` : ""}`} onPointerDown={(event) => event.stopPropagation()} onClick={closeMobile} className="min-w-0 flex-1 py-2"><span className="block truncate text-sm">{title}</span><span className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{conversation.description_markdown || conversation.first_user_message || "无摘要"}</span>{conversation.project_name ? <span className="mt-0.5 block truncate text-[10px] text-accent">{conversation.project_name}</span> : null}</Link>
+    <div ref={setRowRef} data-testid={`conversation-row-${conversation.id}`} data-project-id={projectId ?? "unclassified"} data-state={draggable.isDragging ? "dragging" : droppable.isOver ? "drop-target" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} style={{ transform: CSS.Translate.toString(draggable.transform) }} {...draggable.attributes} {...draggable.listeners} className={`reader-interactive-row group flex min-h-12 touch-pan-y items-start gap-1 rounded-lg pl-1 pr-1 outline-none ${draggable.isDragging ? "cursor-grabbing" : "cursor-grab"}`}>
+      <Link href={`/conversations/${conversation.id}${projectId ? `?projectId=${projectId}` : ""}`} onClick={closeMobile} className="min-w-0 flex-1 py-2"><span className="block truncate text-sm">{title}</span><span className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{conversation.description_markdown || conversation.first_user_message || "无摘要"}</span>{conversation.project_name ? <span className="mt-0.5 block truncate text-[10px] text-accent">{conversation.project_name}</span> : null}</Link>
       <span className="shrink-0 text-[11px] text-secondary group-hover:hidden group-focus-within:hidden" title={fullActivityTime(conversation.last_read_at, resolvedLocale)}>{formatActivityTime(conversation.last_read_at, resolvedLocale)}</span>
       <div data-no-dnd onPointerDown={(event) => event.stopPropagation()} className={active || menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}><ConversationActionMenu compact conversation={conversation} projectId={projectId ?? undefined} projectPinned={projectPinned} onChanged={onChanged} onOpenChange={setMenuOpen} /></div>
     </div>

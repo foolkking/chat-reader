@@ -1164,3 +1164,20 @@ export type OfflinePackageQueued = {
   estimated_bytes: number;
   catalog_revision: string;
 };
+
+export type SkillCategory = "EXPORT_CONTEXT" | "CONVERSATION_RESCUE";
+export type SkillLocale = "zh-CN" | "en";
+export type SkillRead = {
+  id: string;
+  source: "BUILTIN" | "USER";
+  category: SkillCategory;
+  locale: SkillLocale;
+  name: string;
+  status: "ACTIVE" | "DISABLED";
+  is_selected: boolean;
+  updated_at: string | null;
+  byte_size: number | null;
+  content_url: string | null;
+};
+export type SkillDetail = SkillRead & { content: string };
+export type SkillResolve = SkillDetail & { content_url: string | null };

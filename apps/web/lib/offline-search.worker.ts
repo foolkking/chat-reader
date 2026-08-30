@@ -13,7 +13,7 @@ self.addEventListener("message", (event: MessageEvent<{ type: string; requestId:
     index = createIndex();
     for (const document of event.data.documents ?? []) {
       documents.set(document.id, document);
-      index.add({ id: document.id, title: document.title ?? "", body: document.search_text, type: document.document_type });
+      index.add({ id: document.id, title: document.title ?? "", body: document.search_text ?? document.plain_text, type: document.document_type });
     }
     self.postMessage({ requestId, items: [] });
     return;

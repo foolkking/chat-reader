@@ -828,3 +828,178 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .aui-chat-markdown [data-markdown-task-list="true"] > li {
   list-style: none;
 }
+
+/* Shared interaction states for archive rows and draggable work items. */
+.reader-interactive-row {
+  position: relative;
+  transition: background-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+
+.reader-interactive-row[data-state="current"],
+.reader-interactive-row[data-state="current-selected"] {
+  background: color-mix(in srgb, var(--accent-soft) 78%, var(--surface) 22%);
+  box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.reader-interactive-row[data-state="selected"] {
+  background: color-mix(in srgb, var(--accent-soft) 96%, var(--surface) 4%);
+  box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 58%, transparent);
+}
+
+.reader-interactive-row[data-state="selected"]:hover {
+  background: color-mix(in srgb, var(--accent-soft) 100%, var(--surface) 0%);
+}
+
+.reader-interactive-row[aria-selected="true"] input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.reader-interactive-row[aria-selected="true"] h2,
+.reader-interactive-row[aria-selected="true"] h3 {
+  color: var(--text);
+}
+
+.reader-interactive-row[data-state="current-selected"] {
+  box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--accent);
+}
+
+.reader-interactive-row[data-state="dragging"] {
+  opacity: 0.58;
+  box-shadow: 0 8px 22px rgb(15 23 42 / 0.14);
+}
+
+.reader-interactive-row[data-state="drop-target"] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.reader-interactive-row[data-state="hover"]:hover {
+  background: var(--surface);
+}
+
+.reader-interactive-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.reader-drag-overlay {
+  pointer-events: none;
+  width: min(28rem, calc(100vw - 2rem));
+  border: 1px solid var(--accent);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-medium);
+  transform: translateZ(0);
+}
+
+/* Bulk selection is a short-lived work surface: the selected scope reads as
+   one calm header, while actions stay grouped and scroll safely on mobile. */
+.selection-toolbar {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 38%, var(--surface-raised) 62%);
+}
+
+.selection-toolbar-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.selection-toolbar-actions {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+}
+
+.selection-toolbar-group > :is(button, select) {
+  min-height: 2.25rem;
+}
+
+.selection-toolbar-group > button:disabled,
+.selection-toolbar-group > select:disabled {
+  cursor: not-allowed;
+}
+
+.selection-toolbar-action-group > button,
+.selection-toolbar-action-group > select {
+  box-shadow: var(--shadow-subtle);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.selection-toolbar-action-group > button:hover:not(:disabled),
+.selection-toolbar-action-group > select:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: var(--subtle);
+}
+
+/* Settings keeps maintenance destinations below the everyday reading
+   controls. The grid transition lets expanding "More settings" gently push
+   those destinations down instead of causing a sudden pop. */
+.settings-more-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-0.25rem);
+  transition: grid-template-rows 220ms ease, opacity 180ms ease, transform 220ms ease;
+}
+.settings-more-panel > div { min-height: 0; overflow: hidden; }
+.settings-more-panel-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-more-panel { transition: none; transform: none; }
+}
+
+@media (max-width: 767px) {
+  .selection-toolbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+    padding-bottom: 0.35rem;
+  }
+
+  .selection-toolbar-summary {
+    min-height: 2.5rem;
+  }
+}
+
+.source-editor-selection-badge {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 20;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-raised) 92%, var(--accent-soft));
+  padding: 0.25rem 0.625rem;
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  box-shadow: var(--shadow-subtle);
+}
+
+.reader-frame[data-section-toc="rail"] .reader-toc-column {
+  transition: opacity 180ms ease;
+}
+
+.reader-frame[data-section-toc="rail"][data-toc-activity="hidden"] .reader-toc-column {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.source-editor-selection-status {
+  border-radius: 999px;
+  background: var(--accent-soft);
+  padding: 0.2rem 0.55rem;
+  color: var(--accent);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-interactive-row,
+  .reader-drag-overlay {
+    transition: none !important;
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Braces,
@@ -26,6 +26,7 @@ import {
   replaceAdaptiveImportArtifact,
   resolveAdaptiveImportGroups,
   selectAdaptiveFamilyProfile,
+  resolveSkill,
 } from "../../lib/api";
 import type {
   AdaptiveImportDiagnostic,
@@ -291,6 +292,7 @@ function RescueDialog({ filename, onClose, onReplace }: { filename: string; onCl
     zh: "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md",
     en: "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md",
   } as const;
+  const resolved = useQuery({ queryKey: ["resolved-skill", "CONVERSATION_RESCUE", language], queryFn: () => resolveSkill("CONVERSATION_RESCUE", language === "zh" ? "zh-CN" : "en"), staleTime: 60_000 });
   const request = language === "zh"
     ? "请严格按照附带的 Chat Reader Conversation Rescue Skill，将源文件恢复为一个 Chat Reader Native Markdown Export v2 文件。不要总结、改写、补造或回答原对话内容。输出一个可重新上传的 .md 文件。"
     : "Use the attached Chat Reader Conversation Rescue Skill to recover this source as one Chat Reader Native Markdown Export v2 file. Do not summarize, rewrite, invent, or answer the transcript. Output one .md file that can be uploaded again.";
@@ -300,8 +302,8 @@ function RescueDialog({ filename, onClose, onReplace }: { filename: string; onCl
     window.setTimeout(() => setCopied(null), 1800);
   }
   async function copySkill() {
-    const response = await fetch(resources[language]);
-    await copy("skill", await response.text());
+    const response = resolved.data?.content ? null : await fetch(resolved.data?.content_url ?? resources[language]);
+    await copy("skill", resolved.data?.content ?? await response!.text());
   }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">

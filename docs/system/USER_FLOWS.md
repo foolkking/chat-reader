@@ -21,6 +21,15 @@ view the imported set in Library, open the first conversation, or close and
 return to the opener. A single import keeps a direct `Open conversation`
 action, but no import silently navigates to the first item.
 
+## Owner Skill management (2026-08-29, local)
+
+Settings includes a focused Skill management dialog for Export Context and
+Conversation Rescue Skills. System defaults are immutable; owner-uploaded UTF-8
+Markdown files (512 KiB max) are saved without auto-activation and require an
+explicit per-language preferred selection. Disabled or deleted selections fall
+back to the system default. Offline and public Share surfaces never access this
+owner registry.
+
 ## Offline Reader and Context Package (2026-08-11)
 
 When the user opens `/library`, an existing complete offline shell is immediately readable. Resource reconciliation runs in the background and may show a non-blocking update failure; it must not disable `Update conversations`. A first-time device may show that the shell is still preparing, but online navigation remains usable.

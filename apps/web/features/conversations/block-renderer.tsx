@@ -1,6 +1,6 @@
 import { memo } from "react";
 import type { RenderBlockRead } from "../../lib/types";
-import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
+import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownAttachmentOccurrence, type MarkdownTaskItem } from "./markdown-renderer";
 import { AttachmentBlock, embeddedAttachment } from "../attachments/attachment-block";
 
 const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
@@ -48,7 +48,7 @@ export const BlockRenderer = memo(function BlockRenderer({
   }
 
   if (block.collapsed_by_default && block.block_type !== "heading" && block.block_type !== "code") {
-    return <ThinkingDisclosure label={THINKING_LABEL} text={text} />;
+    return <ThinkingDisclosure label={THINKING_LABEL} text={text} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} />;
   }
 
   if (block.block_type === "heading") {
@@ -75,7 +75,7 @@ export const BlockRenderer = memo(function BlockRenderer({
     return <MarkdownRenderer text={`\`\`\`${language ?? ""}\n${code}\n\`\`\``} isAssistant={false} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
   }
 
-  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
+  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
 }, (previous, next) => previous.block === next.block
   && previous.messageId === next.messageId
   && previous.galleryItems === next.galleryItems
@@ -102,4 +102,14 @@ function readText(block: RenderBlockRead): string {
 
 function readString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
+}
+
+function readAttachmentOccurrences(value: unknown): MarkdownAttachmentOccurrence[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const attachmentId = readString((item as Record<string, unknown>).attachmentId);
+    const occurrenceKey = readString((item as Record<string, unknown>).occurrenceKey);
+    return attachmentId && occurrenceKey ? [{ attachmentId, occurrenceKey }] : [];
+  });
 }

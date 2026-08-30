@@ -138,9 +138,12 @@ function MessageItemComponent({
       ref={articleRef}
       id={messageDomId}
       data-message-id={message.id}
+      data-message-version-id={message.current_version?.id}
       data-order-key={message.order_key}
       data-navigation-target={isNavigationTarget ? "true" : undefined}
-      className={`reader-message group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:justify-start sm:rounded-2xl ${highlightTargetId === messageDomId ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""}`}
+      aria-current={isNavigationTarget ? "location" : undefined}
+      data-state={highlightTargetId === messageDomId ? (selected ? "current-selected" : "current") : selected ? "selected" : undefined}
+      className={`reader-message reader-interactive-row group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:justify-start sm:rounded-2xl ${highlightTargetId === messageDomId ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""}`}
     >
       <div className="min-w-0 w-full max-w-full flex-1">
         <div data-message-meta className="relative mb-2 flex min-h-10 items-center gap-2">

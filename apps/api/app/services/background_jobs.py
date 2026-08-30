@@ -497,7 +497,6 @@ def queue_offline_package(
     conversations = select_conversations(db, scope=scope, conversation_id=conversation_id, project_id=project_id)
     base_revisions = known_revisions or {}
     changed = changed_conversations(conversations, base_revisions)
-    catalog = build_catalog(db)
     if idempotency_key:
         existing = (
             db.query(BackgroundJob)
@@ -526,7 +525,9 @@ def queue_offline_package(
             "project_id": str(project_id) if project_id else None,
             "known_revisions": {str(key): value for key, value in base_revisions.items()},
             "include_assets": include_assets,
-            "catalog_revision": catalog.revision,
+            # Catalog generation is intentionally deferred to the worker. It
+            # performs per-conversation size estimation and must not block the
+            # interactive request that queues an offline download.
         },
         result={},
         idempotency_key=idempotency_key,

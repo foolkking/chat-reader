@@ -28,6 +28,14 @@ export type MarkdownTaskItem = {
   ordinal: number;
 };
 
+/** Stable attachment occurrence identity carried by a rendered block.  The
+ * source text remains the authority; these attributes only let navigation
+ * select the right repeated link after the block is mounted. */
+export type MarkdownAttachmentOccurrence = {
+  attachmentId: string;
+  occurrenceKey: string;
+};
+
 type RichMarkdownPerformanceProbe = {
   markdownRenderTotal?: number;
   mathSourceTotal?: number;
@@ -261,6 +269,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   pendingTaskKeys,
   onTaskToggle,
   scopeId,
+  attachmentOccurrences = [],
 }: {
   text: string;
   className?: string;
@@ -269,6 +278,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId?: string;
+  attachmentOccurrences?: MarkdownAttachmentOccurrence[];
 }) {
   const generatedScopeId = useId();
   const resolvedScopeId = scopeId ?? generatedScopeId;
@@ -283,6 +293,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           taskItems={tasksByPart[index] ?? []}
           pendingTaskKeys={pendingTaskKeys}
           onTaskToggle={onTaskToggle}
+          attachmentOccurrences={attachmentOccurrences}
           scopeId={`${resolvedScopeId}-part-${index}`}
         />
       ))}
@@ -294,7 +305,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   && previous.scopeId === next.scopeId
   && previous.pendingTaskKeys === next.pendingTaskKeys
   && previous.taskItems === next.taskItems
-  && previous.onTaskToggle === next.onTaskToggle);
+  && previous.onTaskToggle === next.onTaskToggle
+  && previous.attachmentOccurrences === next.attachmentOccurrences);
 
 export function InlineHeadingMarkdown({ text }: { text: string }) {
   const inlineText = text.replace(/\s*\r?\n\s*/g, " ").trim();
@@ -333,13 +345,13 @@ export function markdownHeadingLabel(markdown: string): string {
     .trim();
 }
 
-export function ThinkingDisclosure({ label, text }: { label: string; text: string }) {
+export function ThinkingDisclosure({ label, text, attachmentOccurrences = [] }: { label: string; text: string; attachmentOccurrences?: MarkdownAttachmentOccurrence[] }) {
   return (
     <details className="reader-thinking rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]">
       <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-primary">
         {label}
       </summary>
-      {text.trim() ? <AssistantMarkdownPart text={text} className="reader-thinking-content text-[0.875em]" /> : null}
+      {text.trim() ? <AssistantMarkdownPart text={text} className="reader-thinking-content text-[0.875em]" attachmentOccurrences={attachmentOccurrences} /> : null}
     </details>
   );
 }
@@ -351,6 +363,7 @@ export function AssistantMarkdownPart({
   pendingTaskKeys,
   onTaskToggle,
   scopeId,
+  attachmentOccurrences = [],
 }: {
   text: string;
   className?: string;
@@ -358,6 +371,7 @@ export function AssistantMarkdownPart({
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId?: string;
+  attachmentOccurrences?: MarkdownAttachmentOccurrence[];
 }) {
   const generatedScopeId = useId();
   const resolvedScopeId = scopeId ?? generatedScopeId;
@@ -368,12 +382,14 @@ export function AssistantMarkdownPart({
   const renderText = normalizeDisplayMathForRenderer(text);
   const interactiveComponents = createTaskAwareComponents(taskItems, pendingTaskKeys, onTaskToggle);
   const taskPlugin = taskItems.length > 0 ? remarkTaskKeys(taskItems) : null;
+  const attachmentPlugin = attachmentOccurrences.length > 0 ? remarkAttachmentOccurrences(attachmentOccurrences) : null;
+  const plugins = richMarkdownRemarkPlugins([...(taskPlugin ? [taskPlugin] : []), ...(attachmentPlugin ? [attachmentPlugin] : [])]);
   if (onTaskToggle && taskItems.length > 0) {
     return (
       <div className={`reader-prose ${className}`}>
         <ReactMarkdown
           components={interactiveComponents as Components}
-          remarkPlugins={richMarkdownRemarkPlugins(taskPlugin ? [taskPlugin] : [])}
+          remarkPlugins={plugins}
           rehypePlugins={scopedRichMarkdownRehypePlugins(resolvedScopeId)}
           remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
           skipHtml
@@ -387,7 +403,7 @@ export function AssistantMarkdownPart({
     <TextMessagePartProvider text={text}>
       <MarkdownTextPrimitive
         className={`reader-prose ${className}`}
-        remarkPlugins={richMarkdownRemarkPlugins(taskPlugin ? [taskPlugin] : [])}
+        remarkPlugins={plugins}
         rehypePlugins={scopedRichMarkdownRehypePlugins(resolvedScopeId)}
         remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
         components={interactiveComponents}
@@ -436,18 +452,20 @@ function CanonicalPartRenderer({
   pendingTaskKeys,
   onTaskToggle,
   scopeId,
+  attachmentOccurrences,
 }: {
   part: CanonicalMessagePart;
   taskItems: MarkdownTaskItem[];
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId: string;
+  attachmentOccurrences: MarkdownAttachmentOccurrence[];
 }) {
   if (part.type === "reasoning") {
-    return <ThinkingDisclosure label={part.label} text={part.text} />;
+    return <ThinkingDisclosure label={part.label} text={part.text} attachmentOccurrences={attachmentOccurrences} />;
   }
   if (part.type === "text") {
-    return <AssistantMarkdownPart text={part.text} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={scopeId} />;
+    return <AssistantMarkdownPart text={part.text} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={attachmentOccurrences} scopeId={scopeId} />;
   }
   if (part.type === "source") {
     return <CitationPart part={part} />;
@@ -482,6 +500,44 @@ function remarkTaskKeys(taskItems: MarkdownTaskItem[]) {
         if (task) {
           node.data = node.data ?? {};
           node.data.hProperties = { ...(node.data.hProperties ?? {}), "data-task-key": task.taskKey };
+        }
+      }
+      node.children?.forEach(walk);
+    };
+    walk(tree);
+  };
+}
+
+function remarkAttachmentOccurrences(occurrences: MarkdownAttachmentOccurrence[]) {
+  const byAttachment = new Map<string, MarkdownAttachmentOccurrence[]>();
+  for (const occurrence of occurrences) {
+    const key = occurrence.attachmentId.toLowerCase();
+    const list = byAttachment.get(key) ?? [];
+    list.push(occurrence);
+    byAttachment.set(key, list);
+  }
+  const cursors = new Map<string, number>();
+  return () => (tree: MarkdownAstNode) => {
+    const walk = (node: MarkdownAstNode) => {
+      if (node.type === "link") {
+        const url = typeof (node as MarkdownAstNode & { url?: unknown }).url === "string"
+          ? (node as MarkdownAstNode & { url: string }).url
+          : "";
+        const match = /^cr-asset:\/\/([0-9a-f-]{16,})$/i.exec(url.trim());
+        if (match) {
+          const key = match[1].toLowerCase();
+          const candidates = byAttachment.get(key) ?? [];
+          const cursor = cursors.get(key) ?? 0;
+          const occurrence = candidates[cursor];
+          if (occurrence) {
+            cursors.set(key, cursor + 1);
+            node.data = node.data ?? {};
+            node.data.hProperties = {
+              ...(node.data.hProperties ?? {}),
+              "data-attachment-id": occurrence.attachmentId,
+              "data-occurrence-key": occurrence.occurrenceKey,
+            };
+          }
         }
       }
       node.children?.forEach(walk);
@@ -633,13 +689,30 @@ function EmptyCodeHeader(_: CodeHeaderProps) {
 
 function SafeMarkdownLink({ href, children, ...props }: { href?: string; children: ReactNode } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "children">) {
   const safeHref = typeof href === "string" && isSafeHref(href) ? href : undefined;
+  const parsedAttachmentId = typeof href === "string" ? attachmentIdFromHref(href) : null;
   if (!safeHref) {
-    return <span className="text-secondary">{children}</span>;
+    const dataProps = props as AnchorHTMLAttributes<HTMLAnchorElement> & Record<string, unknown>;
+    const occurrenceKey = typeof dataProps["data-occurrence-key"] === "string" ? dataProps["data-occurrence-key"] : null;
+    const attachmentId = typeof dataProps["data-attachment-id"] === "string" ? dataProps["data-attachment-id"] : parsedAttachmentId;
+    return (
+      <span
+        id={occurrenceKey && attachmentId ? `attachment-occurrence-${occurrenceKey}` : undefined}
+        data-attachment-id={attachmentId ?? undefined}
+        data-occurrence-key={occurrenceKey ?? undefined}
+        className="text-secondary"
+      >{children}</span>
+    );
   }
   const local = safeHref.startsWith("#") || safeHref.startsWith("/");
+  const dataProps = props as AnchorHTMLAttributes<HTMLAnchorElement> & Record<string, unknown>;
+  const occurrenceKey = typeof dataProps["data-occurrence-key"] === "string" ? dataProps["data-occurrence-key"] : null;
+  const attachmentId = typeof dataProps["data-attachment-id"] === "string" ? dataProps["data-attachment-id"] : parsedAttachmentId;
   return (
     <a
       href={safeHref}
+      id={occurrenceKey && attachmentId ? `attachment-occurrence-${occurrenceKey}` : undefined}
+      data-attachment-id={attachmentId ?? undefined}
+      data-occurrence-key={occurrenceKey ?? undefined}
       {...props}
       target={local ? undefined : "_blank"}
       rel={local ? undefined : "noopener noreferrer"}
@@ -648,6 +721,11 @@ function SafeMarkdownLink({ href, children, ...props }: { href?: string; childre
       {children}
     </a>
   );
+}
+
+function attachmentIdFromHref(href: string): string | null {
+  const match = /^cr-asset:\/\/([0-9a-f-]{16,})$/i.exec(href.trim());
+  return match?.[1] ?? null;
 }
 
 function MermaidCodeHeader(_: CodeHeaderProps) {
