@@ -2,7 +2,7 @@
 
 ## 2026-08-31 Continuous improvement register
 
-- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 12 completed, 118 remaining, 0 blocked.
+- The durable candidate queue is [Continuous Improvement Backlog](docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md): 130 evidence-labeled candidates, 13 completed, 117 remaining, 0 blocked.
 - All 15 Playwright gates in the release and performance workflows now have explicit 20-30 minute step limits and gate-specific `test-results` directories, so a later invocation does not erase earlier diagnostics before the existing `always()` artifact upload. A bounded custom reporter writes one redacted start/final status file per executed gate, including a durable `running` marker if a step is terminated. YAML contract validation covered 15/15 gates. Build release images run `33331355359` attempt 2 passed quality and image jobs; its quality artifact contains 12/12 release-gate status files marked `passed`, while attempt 1 separately retains 10 status files and the trace from a transient Chromium `SIGSEGV`.
 - `deploy/backup.sh` now checks target free space before writing, then creates a timestamped, verified five-component recovery directory (PostgreSQL plus imports, exports, offline, and assets) with a schema/source-SHA `MANIFEST` and `SHA256SUMS`; it does not delete volumes or prior backups.
 - `deploy/verify_backup.sh` performs a read-only checksum/archive/catalog check using an isolated PostgreSQL container with no network or mounted volume. Both helpers have passed `sh -n` and `git diff --check`; production execution remains a separate operator action.
@@ -11,6 +11,7 @@
 - `deploy/verify_https_entry.sh` rejects plain HTTP HTTPS-port inputs and verifies TLS health plus the HTTP-to-HTTPS redirect boundary.
 - GitHub Actions run `33329145714` passed the complete quality and image jobs for `f182e5872dd4c75058aba16853410b22cf50c2c9`; the deployable artifact is unambiguously named `chat-reader-images-f182e5872dd4c75058aba16853410b22cf50c2c9-1`.
 - Attachment reference parser coverage now includes case-insensitive UUIDs, Markdown/query/fragment delimiters, nested structured IDs, and fail-closed missing mappings (`3 passed`).
+- `deploy/preflight_release_space.sh` validates a staged release archive, measures its expanded image size, and combines backup, Docker root, and transfer headroom requirements per actual filesystem before backup or `docker load`. A production read-only run measured 13,970,832 KiB available versus 3,856,926 KiB required on the shared root filesystem; an oversized-headroom run refused with status 1. The verified temporary archive was removed afterward, and runtime image/health checks remained unchanged and healthy.
 
 ## 2026-08-31 Sidebar state, custom project order, drag feedback and batch merge (deployed)
 

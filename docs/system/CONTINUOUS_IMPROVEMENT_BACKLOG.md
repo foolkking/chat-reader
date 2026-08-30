@@ -43,7 +43,7 @@ are user or operator consequence, not code size.
 | DEP-002 | Deployment | Add a post-deploy check that running container OCI revisions equal the release SHA. | Observed: deployment performs this manually and images are immutable. | H | H | Strong | S | L | Completed 2026-08-31; read-only runtime verifier added |
 | DEP-003 | Deployment | Add a post-deploy check that PostgreSQL was not unintentionally restarted during Web/API rollout. | Strong: current deployment explicitly preserves PostgreSQL. | H | M | Strong | S | M | Candidate |
 | DEP-004 | Deployment | Move server current-image and rollback state into a documented operator-owned state location. | Observed: `current-images.env` and rollback state are untracked server files. | M | M | Observed | M | M | Candidate |
-| DEP-005 | Deployment | Add release disk-space preflight covering image layers, backup, and transfer directory. | Inferred: King build OOM and storage pressure are known operational risks. | H | H | Strong | S | M | Candidate |
+| DEP-005 | Deployment | Add release disk-space preflight covering image layers, backup, and transfer directory. | Inferred: King build OOM and storage pressure are known operational risks. | H | H | Strong | S | M | Completed 2026-08-31; production read-only pass and forced-capacity refusal verified on the shared filesystem |
 | DEP-006 | Deployment | Add a bounded release transfer cleanup procedure that preserves the active and previous rollback artifacts. | Observed: release transfer directory remains retained after deployment. | M | M | Strong | M | M | Candidate |
 | DEP-007 | Deployment | Add a rollback smoke test that checks health, migration head, and anonymous auth boundaries. | Strong: rollback images are retained but checks are manual. | H | M | Strong | M | M | Candidate |
 | DEP-008 | Deployment | Pin and periodically verify the external Chromium path used for browser acceptance. | Observed: authenticated browser verification is environment-dependent. | M | M | Strong | S | L | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 130 |
-| Completed in this backlog | 12 |
+| Completed in this backlog | 13 |
 | Blocked | 0 |
-| Remaining candidates | 118 |
+| Remaining candidates | 117 |
