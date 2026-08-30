@@ -48,7 +48,7 @@ are user or operator consequence, not code size.
 | DEP-007 | Deployment | Add a rollback smoke test that checks health, migration head, and anonymous auth boundaries. | Strong: rollback images are retained but checks are manual. | H | M | Strong | M | M | Candidate |
 | DEP-008 | Deployment | Pin and periodically verify the external Chromium path used for browser acceptance. | Observed: authenticated browser verification is environment-dependent. | M | M | Strong | S | L | Candidate |
 | DEP-009 | Deployment | Add an operator runbook for production-equivalent versus production verification labels. | Strong: current evidence distinguishes these levels and avoids overclaiming. | M | M | Strong | S | L | Candidate |
-| DEP-010 | Deployment | Add a health endpoint check for worker recent heartbeat and queue idle state after rollout. | Observed: worker liveness is a release gate and production diagnostic. | H | H | Observed | S | L | Candidate |
+| DEP-010 | Deployment | Add a health check for core services and a recent worker heartbeat after rollout. | Observed: worker liveness is a release gate and production diagnostic. | H | H | Observed | S | L | Completed 2026-08-31; protected runtime health verifier added |
 | OFF-001 | Offline | Make offline package import commit in bounded chunks with resumable progress after IndexedDB abort. | Observed: prior `searchDocuments.bulkPut` aborted thousands of operations. | H | H | Observed | L | H | Candidate |
 | OFF-002 | Offline | Add an offline package preflight estimating IndexedDB quota before packaging/import. | Strong: browser quota and eviction variance are documented risks. | H | H | Strong | M | M | Candidate |
 | OFF-003 | Offline | Add an import journal that records the last completed store/chunk without storing conversation content. | Inferred: current abort can leave an apparently downloaded package with no usable content. | H | H | Inferred | L | H | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 100 |
-| Completed in this backlog | 5 |
+| Completed in this backlog | 6 |
 | Blocked | 0 |
-| Remaining candidates | 95 |
+| Remaining candidates | 94 |
