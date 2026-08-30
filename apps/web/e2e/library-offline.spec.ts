@@ -227,7 +227,7 @@ test("opens read-only offline files and exports the downloaded snapshot with bot
   await expect(skillDialog.locator("pre")).toContainText("You are receiving a Conversation Context Package exported by Chat Reader.");
   await expect(skillDialog.getByText("Chat Reader Context Acquisition Skill")).toBeVisible();
   const skillDownloadPromise = page.waitForEvent("download");
-  await skillDialog.getByRole("link", { name: /下载|Download/ }).click();
+  await skillDialog.getByRole("button", { name: /下载|Download/ }).click();
   const skillDownload = await skillDownloadPromise;
   expect(skillDownload.suggestedFilename()).toBe("Chat-Reader-Conversation-Context-Acquisition-Skill.v1-en.md");
   await skillDialog.getByRole("button", { name: /关闭|Close/ }).click();
