@@ -39,7 +39,7 @@ are user or operator consequence, not code size.
 | CI-018 | CI | Upgrade GitHub Actions runtime versions after compatibility verification and record the migration. | Observed: workflow currently uses setup actions with changing Node runtime warnings. | M | M | Strong | S | M | Candidate |
 | CI-019 | CI | Add a release artifact download-and-inspect job independent from the image builder. | Strong: deploy uses downloaded artifact and image inspection is a critical boundary. | H | M | Strong | M | M | Candidate |
 | CI-020 | CI | Preserve browser reports per gate with a stable index linking source SHA and environment. | Strong: reports are uploaded, but gate ownership is not centralized. | M | L | Strong | M | L | Candidate |
-| DEP-001 | Deployment | Add a preflight that rejects `http://host:443` and verifies HTTPS redirect/TLS listener behavior. | Observed: screenshot showed plain HTTP sent to HTTPS port; HTTPS root returns 307. | H | H | Observed | S | L | Candidate |
+| DEP-001 | Deployment | Add a preflight that rejects `http://host:443` and verifies HTTPS redirect/TLS listener behavior. | Observed: screenshot showed plain HTTP sent to HTTPS port; HTTPS root returns 307. | H | H | Observed | S | L | Completed 2026-08-31; external HTTPS verifier added |
 | DEP-002 | Deployment | Add a post-deploy check that running container OCI revisions equal the release SHA. | Observed: deployment performs this manually and images are immutable. | H | H | Strong | S | L | Completed 2026-08-31; read-only runtime verifier added |
 | DEP-003 | Deployment | Add a post-deploy check that PostgreSQL was not unintentionally restarted during Web/API rollout. | Strong: current deployment explicitly preserves PostgreSQL. | H | M | Strong | S | M | Candidate |
 | DEP-004 | Deployment | Move server current-image and rollback state into a documented operator-owned state location. | Observed: `current-images.env` and rollback state are untracked server files. | M | M | Observed | M | M | Candidate |
@@ -169,6 +169,6 @@ are user or operator consequence, not code size.
 | Metric | Count |
 |---|---:|
 | Discovered candidates | 100 |
-| Completed in this backlog | 6 |
+| Completed in this backlog | 7 |
 | Blocked | 0 |
-| Remaining candidates | 94 |
+| Remaining candidates | 93 |

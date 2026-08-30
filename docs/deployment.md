@@ -889,6 +889,7 @@ $COMPOSE up -d --no-deps web
 $COMPOSE ps -a
 ./deploy/verify_runtime_images.sh <release-sha>
 ./deploy/verify_runtime_health.sh
+./deploy/verify_https_entry.sh https://chat.example.com
 ```
 
 `verify_runtime_images.sh` is read-only. It fails unless the running API,
@@ -898,6 +899,10 @@ revision, and prints their image IDs for the release evidence record.
 `verify_runtime_health.sh` is also read-only. It requires healthy PostgreSQL,
 API, and Web containers, a running worker container, and an `alive_idle` or
 `alive_busy` heartbeat from the protected in-container diagnostics command.
+
+`verify_https_entry.sh` refuses an `http://` base (including the invalid
+`http://host:443` form), requires public `/api/health` to return 200 over TLS,
+and checks that port 80 redirects only to the expected HTTPS origin.
 
 如果使用 `docker save/load`，先在 King `docker load`，再执行同样的 migrate 和 `up -d --no-deps`。不得以增加 swap 或暂停 PostgreSQL 来换取原机 Web 构建。
 
