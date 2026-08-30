@@ -316,7 +316,7 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
     () => resetFontSize.click(),
     () => readerFrame.evaluate((frame) => getComputedStyle(frame).getPropertyValue("--reader-font-size").trim() === "17px"),
   );
-  await preferences.getByRole("button", { name: /关闭|Close/ }).click();
+  await page.getByRole("button", { name: /收回设置|Collapse settings/ }).click();
 });
 
 test("far annotation jump and refresh restore hydrate heavy content", async ({ page, request }) => {
