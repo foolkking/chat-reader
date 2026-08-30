@@ -912,6 +912,23 @@ then compare `release-manifest.json` with the requested source and attempt:
 gh run download <run-id> --name chat-reader-images-<full-source-sha>-<attempt>
 ```
 
+After the complete archive is staged on the server and before creating the
+backup or running `docker load`, run the combined capacity preflight:
+
+```bash
+sh deploy/preflight_release_space.sh /opt/chat-reader/releases/chat-reader-images.tar.gz
+```
+
+The preflight validates the gzip/tar stream, measures its expanded size, reads
+the current PostgreSQL and four business-volume sizes, and checks the backup,
+Docker root, and transfer filesystems. When paths share a filesystem their
+requirements are added rather than checked independently. The staged archive
+is already reflected in available space; a separate 128 MiB transfer headroom,
+512 MiB image headroom, and the backup helper's 256 MiB headroom are conservative
+defaults. Override only the documented `*_HEADROOM_KB` variables when an
+operator has measured evidence. The script removes nothing and refuses to run
+when the archive or backup directory is missing.
+
 如果使用 `docker save/load`，先在 King `docker load`，再执行同样的 migrate 和 `up -d --no-deps`。不得以增加 swap 或暂停 PostgreSQL 来换取原机 Web 构建。
 
 本轮附件 migration 后还需验证：
