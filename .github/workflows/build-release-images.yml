@@ -343,7 +343,7 @@ jobs:
       - name: Upload deployable release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chat-reader-images
+          name: chat-reader-images-${{ github.sha }}-${{ github.run_attempt }}
           path: |
             chat-reader-images.tar.gz
             release-manifest.json

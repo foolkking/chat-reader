@@ -904,6 +904,14 @@ API, and Web containers, a running worker container, and an `alive_idle` or
 `http://host:443` form), requires public `/api/health` to return 200 over TLS,
 and checks that port 80 redirects only to the expected HTTPS origin.
 
+The deployable Actions artifact is named
+`chat-reader-images-<full-source-sha>-<run-attempt>`. Download that exact name,
+then compare `release-manifest.json` with the requested source and attempt:
+
+```bash
+gh run download <run-id> --name chat-reader-images-<full-source-sha>-<attempt>
+```
+
 如果使用 `docker save/load`，先在 King `docker load`，再执行同样的 migrate 和 `up -d --no-deps`。不得以增加 swap 或暂停 PostgreSQL 来换取原机 Web 构建。
 
 本轮附件 migration 后还需验证：
