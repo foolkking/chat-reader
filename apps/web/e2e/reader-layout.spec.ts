@@ -431,10 +431,10 @@ test("reading preset and focus default are independent", async ({ page }) => {
   await page.evaluate(() => localStorage.setItem("chat-reader:reader-sidebar-expanded", "true"));
   await page.reload();
   await page.waitForLoadState("networkidle");
-  const preferencesButton = page.getByRole("button", { name: /外观与语言|Appearance & language/ });
+  const preferencesButton = page.getByRole("button", { name: /设置|Settings|外观与语言|Appearance & language/ });
   await expect(preferencesButton).toBeVisible();
   await preferencesButton.click();
-  const preferences = page.getByRole("dialog", { name: /外观与语言|Appearance & language/ });
+  const preferences = page.getByRole("dialog", { name: /设置|Settings|外观与语言|Appearance & language/ });
   await expect(preferences.getByText(/Markdown 间距|Markdown spacing/)).toHaveCount(0);
   const languageButton = preferences.getByRole("button", { name: /Simplified Chinese|\u7b80\u4f53\u4e2d\u6587/ });
   await expect(languageButton).toHaveCount(0);

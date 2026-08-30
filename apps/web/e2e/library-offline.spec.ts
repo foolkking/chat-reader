@@ -179,15 +179,15 @@ test("mirrors the unified sidebar and keeps preferences compact in library mode"
 
   const preferencesFooter = page.locator("aside footer").first();
   const heightBefore = await preferencesFooter.evaluate((element) => element.getBoundingClientRect().height);
-  await page.getByRole("button", { name: /外观与语言|Appearance & language/ }).click();
-  await expect(page.getByRole("dialog", { name: /外观与语言|Appearance & language/ })).toBeVisible();
+  await page.getByRole("button", { name: /设置|Settings|外观与语言|Appearance & language/ }).click();
+  await expect(page.getByRole("dialog", { name: /设置|Settings|外观与语言|Appearance & language/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /返回在线版|Back online/ })).toHaveAttribute("href", "/conversations/offline-fixture");
   const heightAfter = await preferencesFooter.evaluate((element) => element.getBoundingClientRect().height);
   expect(Math.abs(heightAfter - heightBefore)).toBeLessThanOrEqual(1);
 
   await page.getByRole("button", { name: /关闭|Close/, exact: true }).click();
   await page.goto("/");
-  await page.getByRole("button", { name: /外观与语言|Appearance & language/ }).click();
+  await page.getByRole("button", { name: /设置|Settings|外观与语言|Appearance & language/ }).click();
   await expect(page.getByRole("link", { name: /离线资料库|Offline library/ })).toHaveAttribute("href", "/library");
 });
 
