@@ -35,7 +35,7 @@ test.describe("single-owner authentication boundary", () => {
       await cache.put("/protected-fixture", new Response("business content"));
     });
     await page.goto(`${baseURL}/`);
-    await page.getByRole("button", { name: /Appearance|外观/ }).click();
+    await page.getByRole("button", { name: /Settings|设置|Appearance|外观/ }).click();
     await page.getByRole("button", { name: /Account & security|账户与安全/ }).click();
     await page.getByRole("button", { name: "Log out", exact: true }).click();
     await expect(page).toHaveURL(/\/login(?:\?|$)/);
@@ -124,7 +124,7 @@ test.describe("single-owner authentication boundary", () => {
       await expect(page).toHaveURL(`${baseURL}/`);
     }
 
-    await pageA.getByRole("button", { name: /Appearance|外观/ }).click();
+    await pageA.getByRole("button", { name: /Settings|设置|Appearance|外观/ }).click();
     await pageA.getByRole("button", { name: /Account & security|账户与安全/ }).click();
     await pageA.getByLabel("Current password").fill(password!);
     await pageA.getByLabel("New password", { exact: true }).fill(newPassword);
