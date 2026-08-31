@@ -229,6 +229,7 @@ export function ConversationReader({
   const previousSentinelVisibleRef = useRef(false);
   const nextSentinelVisibleRef = useRef(false);
   const navigationTokenRef = useRef(0);
+  const resolvedLocatorKeysRef = useRef<Set<string>>(new Set());
   const targetNavigationKeyRef = useRef<string | null>(null);
   const lastNavigationTargetRef = useRef<NavigateTarget | null>(null);
   const previousTurnAnchorRef = useRef<string | null>(null);
@@ -862,11 +863,12 @@ export function ConversationReader({
         let locallyResolved = false;
         let resolvedLocator: ReaderTargetContext["resolvedLocator"];
         if (targetFirst) {
-          // Attachment occurrences still require the server-owned identity
-          // resolver. Other targets can use the mounted current version when
-          // they include a stable block identity; locallyResolvableMessage
-          // rejects stale versions and quote-only anchors.
-          const requiresServerLocator = Boolean(target.occurrenceKey || target.attachmentId);
+          // Attachment occurrences always require the server-owned identity
+          // resolver. An annotation must also be validated once before repeat
+          // clicks can use its mounted current-version block locally.
+          const locatorKey = navigationTargetIdentity(target);
+          const requiresServerLocator = Boolean(target.occurrenceKey || target.attachmentId) ||
+            (target.source === "annotation" && !resolvedLocatorKeysRef.current.has(locatorKey));
           const locallyLoadedMessage = requiresServerLocator
             ? undefined
             : locallyResolvableMessage(loadedWindowRef.current.items, target);
@@ -891,6 +893,9 @@ export function ConversationReader({
                 undefined,
                 targetContext.readerTurn,
               );
+              if (target.source === "annotation" && resolvedLocator?.status === "EXACT") {
+                resolvedLocatorKeysRef.current.add(locatorKey);
+              }
             } catch {
               if (navigationTokenRef.current === token) {
                 setNavigationStatus("failed");
@@ -2937,6 +2942,22 @@ function locallyResolvableMessage(items: MessageListItem[], target: NavigateTarg
   // need server remapping so duplicate text never picks an arbitrary match.
   if (target.renderBlockId || target.blockIndex !== undefined) return message;
   return undefined;
+}
+
+function navigationTargetIdentity(target: NavigateTarget): string {
+  return JSON.stringify([
+    target.source,
+    target.annotationId,
+    target.messageId,
+    target.messageVersionId,
+    target.renderBlockId,
+    target.blockIndex,
+    target.characterOffset,
+    target.endCharacterOffset,
+    target.quote,
+    target.prefix,
+    target.suffix,
+  ]);
 }
 
 function formatConversationTitle(conversation: Pick<ConversationDetail, "title" | "display_title" | "project_name">): string {
