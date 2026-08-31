@@ -1,5 +1,40 @@
 # Project State
 
+## 2026-08-31 Files and annotation menu dismissal deployment
+
+- Production runs application source
+  `a11418539f0332bdf2103f8e968eba6e2a73582c`, built by GitHub Actions run
+  `33345218471` attempt 1. The complete quality job and image build passed,
+  including Web lint, typecheck and production build, the full API and migration
+  gates, security/audit checks, and the release browser matrices.
+- Files and annotation row menus now treat outside pointer and Escape as
+  presentation dismissal only, keep menu-internal interaction open, consume
+  Escape at the active menu boundary, and restore focus to the originating
+  control without scrolling. Files browser coverage passed for both dismissal
+  paths; the annotation focus/Escape behavior was verified during the focused
+  run, but a durable standalone browser assertion remains verification debt.
+- The deployable archive SHA-256 is
+  `e3455303b128b7385414faf9c6503e5b10f427f68bf4eb0fb4fd0aa7bfddf778`.
+  API/worker image ID is
+  `sha256:750d7c3a9eaaf5dfc4e2d023504663abca519393b7cf59b41903920b9b2b5b7a`;
+  Web image ID is
+  `sha256:8d5d0bd10f5bee8f59e408f044ef5b931addadb9af82f669730536df12b88275`.
+- The verified five-component pre-deploy recovery point is
+  `/opt/chat-reader/backups/chat-reader-20260831T010720Z` (540 MiB), recording
+  previous runtime source `c625946e5fc1a8c34dc43efd4dbba46ce7004fee`.
+  PostgreSQL plus imports, exports, offline and assets passed checksums, archive
+  listing and isolated PostgreSQL catalog verification.
+- King loaded the exact CI images, ran migration preflight, and recreated only
+  API, import-worker and Web. PostgreSQL retained start time
+  `2026-08-03T04:15:25.356267358Z`. Runtime OCI revisions match the application
+  source; API/Web/PostgreSQL are healthy, worker diagnostics are `alive_idle`,
+  application restart counts are zero, HTTPS health is 200, HTTP redirects with
+  301, anonymous private access is 401, public diagnostics is 404 and Alembic
+  is `20260829_0029 (head/current)`.
+- Authenticated production UI acceptance is `NOT VERIFIED`; no owner credential
+  was used. CI and local production-equivalent browser evidence are not claimed
+  as authenticated production acceptance.
+
 ## 2026-08-31 Direct attachment location verification deployment
 
 - Production runs application source
