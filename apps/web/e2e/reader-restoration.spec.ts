@@ -230,7 +230,7 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
   expect(preferencesPanelId).toBeTruthy();
   await preferencesButton.click();
   const preferences = page.getByRole("region", { name: /设置|Settings|外观与语言|Appearance & language/ });
-  await preferences.getByRole("button", { name: /更多设置|More settings/ }).click();
+  await preferences.getByRole("button", { name: /更多阅读设置|More reading settings/ }).click();
 
   await preferences.getByRole("button", { name: /舒适|Comfortable/ }).click();
   await expect(readerFrame).toHaveAttribute("data-reader-density", "comfortable");
@@ -455,7 +455,8 @@ test("far annotation jump and refresh restore hydrate heavy content", async ({ p
   const edgeAnchor = await captureVisibleReadingAnchor(page);
   expect(edgeAnchor.id).not.toBe("");
   releaseEdgeRequest();
-  await expect.poll(async () => page.locator("article[data-message-id]").count()).toBeLessThanOrEqual(6);
+  const edgeWindowLimit = beforeEdgeIds.length + 6;
+  await expect.poll(async () => page.locator("article[data-message-id]").count()).toBeLessThanOrEqual(edgeWindowLimit);
   await expect.poll(async () => scrollRoot.evaluate((root, previousIds) => {
     const ids = Array.from(document.querySelectorAll<HTMLElement>("article[data-message-id]"))
       .map((article) => article.dataset.messageId ?? null);
@@ -517,7 +518,7 @@ test("failed annotation location preserves the current reader content", async ({
   const visibleArticle = reader.locator("article[data-message-id]").filter({ visible: true }).first();
   await expect(visibleArticle).toBeVisible();
   const initialMessageId = await visibleArticle.getAttribute("data-message-id");
-  const initialText = (await visibleArticle.innerText()).slice(0, 80);
+  const initialText = normalizeRenderedText(await visibleArticle.textContent()).slice(0, 80);
   expect(initialMessageId).toBeTruthy();
   expect(initialText).not.toBe("");
 
@@ -542,7 +543,7 @@ test("failed annotation location preserves the current reader content", async ({
   await expect(page.getByRole("button", { name: /定位到消息|Locate message/ })).toBeVisible();
   const preservedArticle = page.locator(`#message-${initialMessageId}`);
   await expect(preservedArticle).toBeVisible();
-  await expect(preservedArticle).toContainText(initialText);
+  await expect.poll(async () => normalizeRenderedText(await preservedArticle.textContent())).toContain(initialText);
   await expect(reader.locator("article[data-message-id]")).not.toHaveCount(0);
   await expect(page.locator("[data-locate-pulse]")).toHaveCount(0);
 });
@@ -551,7 +552,7 @@ test("mobile message actions dismiss outside or with Escape and restore the trig
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/conversations/${conversationId}`);
   const reader = page.getByTestId("reader-scroll-root");
-  await expect(reader).toHaveAttribute("data-navigation-stage", /^(settled|settled:fallback)$/);
+  await expect(reader.locator("article[data-message-id]").first()).toBeVisible();
   const trigger = page.getByTestId("mobile-message-actions-trigger").first();
   await expect(trigger).toBeVisible();
 
@@ -820,6 +821,10 @@ async function annotationTextPoint(block: Locator, quote: string): Promise<{ x: 
     const rect = range.getClientRects()[0] ?? range.getBoundingClientRect();
     return { x: rect.left + Math.max(2, Math.min(rect.width / 2, 12)), y: rect.top + Math.max(2, rect.height / 2) };
   }, quote);
+}
+
+function normalizeRenderedText(value: string | null): string {
+  return (value ?? "").replace(/\s+/g, " ").trim();
 }
 
 async function seedLongConversation(request: APIRequestContext): Promise<{

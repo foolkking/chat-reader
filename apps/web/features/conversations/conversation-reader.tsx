@@ -862,9 +862,11 @@ export function ConversationReader({
         let locallyResolved = false;
         let resolvedLocator: ReaderTargetContext["resolvedLocator"];
         if (targetFirst) {
-          const requiresServerLocator = target.occurrenceKey || target.attachmentId || target.quote ||
-            target.canonicalStart !== undefined || target.preferTocPipeline ||
-            target.source === "search" || target.source === "annotation";
+          // Attachment occurrences still require the server-owned identity
+          // resolver. Other targets can use the mounted current version when
+          // they include a stable block identity; locallyResolvableMessage
+          // rejects stale versions and quote-only anchors.
+          const requiresServerLocator = Boolean(target.occurrenceKey || target.attachmentId);
           const locallyLoadedMessage = requiresServerLocator
             ? undefined
             : locallyResolvableMessage(loadedWindowRef.current.items, target);

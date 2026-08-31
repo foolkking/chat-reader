@@ -446,7 +446,7 @@ test("reading preset and focus default are independent", async ({ page }) => {
   await expect(preferences.getByText(/Markdown 间距|Markdown spacing/)).toHaveCount(0);
   const languageButton = preferences.getByRole("button", { name: /Simplified Chinese|\u7b80\u4f53\u4e2d\u6587/ });
   await expect(languageButton).toHaveCount(0);
-  await preferences.getByRole("button", { name: /更多设置|More settings/ }).click();
+  await preferences.getByRole("button", { name: /更多阅读设置|More reading settings/ }).click();
   await expect(languageButton).toBeVisible();
   await expect(preferences.getByText(/Markdown 间距|Markdown spacing/)).toBeVisible();
   await preferences.getByRole("button", { name: /宽松|Spacious/ }).click();
