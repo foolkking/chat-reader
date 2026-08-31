@@ -75,7 +75,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const [batchColor, setBatchColor] = useState<AnnotationColor>("yellow");
   const [focusedAnnotationId, setFocusedAnnotationId] = useState<string | null>(null);
   const [navigationFeedback, setNavigationFeedback] = useState<{ status: "idle" | "loading" | "failed" | "stale"; target: NavigateTarget | null }>({ status: "idle", target: null });
-  const [contextAnnotation, setContextAnnotation] = useState<{ annotation: AnnotationRead; x: number; y: number } | null>(null);
+  const [contextAnnotation, setContextAnnotation] = useState<{ annotation: AnnotationRead; x: number; y: number; returnFocus: HTMLElement | null } | null>(null);
   const [panelPinned, setPanelPinned] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [reviewMode, setReviewMode] = useState<"continuous" | "single">("continuous");
@@ -208,6 +208,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
           annotation,
           x: clamp(event.clientX + 12, 8, window.innerWidth - 300),
           y: clamp(event.clientY + 12, 8, window.innerHeight - 180),
+          returnFocus: event.target instanceof Element ? event.target.closest<HTMLElement>("[data-block-index]") : null,
         });
       }, 0);
     };
@@ -511,6 +512,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       item={contextAnnotation.annotation}
       x={contextAnnotation.x}
       y={contextAnnotation.y}
+      returnFocus={contextAnnotation.returnFocus}
       onClose={() => setContextAnnotation(null)}
       onNavigate={() => { setContextAnnotation(null); void navigateFromAnnotation(annotationNavigateTarget(contextAnnotation.annotation)); }}
       onDelete={() => void deleteAnnotations(new Set([contextAnnotation.annotation.id]))}
@@ -596,10 +598,11 @@ function AnnotationList({ items, editable, messages, focusedAnnotationId, select
   })}</div>;
 }
 
-function AnnotationContextMenu({ item, x, y, onClose, onNavigate, onDelete, onStyle, onAddToNotebook, onSelect }: {
+function AnnotationContextMenu({ item, x, y, returnFocus, onClose, onNavigate, onDelete, onStyle, onAddToNotebook, onSelect }: {
   item: AnnotationRead;
   x: number;
   y: number;
+  returnFocus: HTMLElement | null;
   onClose: () => void;
   onNavigate: () => void;
   onDelete: () => void;
@@ -613,20 +616,32 @@ function AnnotationContextMenu({ item, x, y, onClose, onNavigate, onDelete, onSt
   const [color, setColor] = useState<AnnotationColor>(item.color ?? "yellow");
   const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
+    menuRef.current?.focus({ preventScroll: true });
+    return () => {
+      if (!returnFocus?.isConnected) return;
+      if (!returnFocus.hasAttribute("tabindex")) returnFocus.tabIndex = -1;
+      returnFocus.focus({ preventScroll: true });
+    };
+  }, [returnFocus]);
+  useEffect(() => {
     const closeOnOutside = (event: PointerEvent) => {
       if (!menuRef.current?.contains(event.target as Node)) onClose();
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        onClose();
+      }
     };
     document.addEventListener("pointerdown", closeOnOutside);
-    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", closeOnEscape, true);
     return () => {
       document.removeEventListener("pointerdown", closeOnOutside);
-      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("keydown", closeOnEscape, true);
     };
   }, [onClose]);
-  return <div ref={menuRef} className="fixed z-[130] w-64 rounded-md border border-ui bg-raised p-2 shadow-2xl" style={{ left: x, top: y }} role="dialog" aria-label="Annotation actions">
+  return <div ref={menuRef} tabIndex={-1} className="fixed z-[130] w-64 rounded-md border border-ui bg-raised p-2 shadow-2xl outline-none" style={{ left: x, top: y }} role="dialog" aria-label="Annotation actions">
     <div className="mb-2 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-xs font-semibold">{localizedAnnotationType(item.annotation_type, zh)}</span><button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></div>
     <div className="space-y-2"><select value={type} disabled={item.annotation_type === "bookmark"} onChange={(event) => setType(event.target.value as Exclude<AnnotationType, "bookmark">)} className="min-h-8 w-full rounded-md border border-ui bg-page px-2 text-xs">{TEXT_TYPES.map((option) => <option key={option.value} value={option.value}>{localizedAnnotationType(option.value, zh)}</option>)}</select><AnnotationColorPicker value={color} disabled={item.annotation_type === "bookmark"} onChange={setColor} zh={zh} /></div>
     <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={onNavigate} className="min-h-8 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle">{zh ? "定位" : "Locate"}</button><button type="button" onClick={onSelect} className="min-h-8 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle">{zh ? "选择" : "Select"}</button><button type="button" disabled={item.annotation_type === "bookmark"} onClick={() => onStyle(type, color)} className="min-h-8 rounded-md border border-ui px-2 text-xs text-accent hover:bg-subtle disabled:opacity-40">{zh ? "保存样式" : "Save style"}</button><button type="button" onClick={onAddToNotebook} className="min-h-8 rounded-md border border-ui px-2 text-xs text-accent hover:bg-subtle">{zh ? "加入精选笔记" : "Add to notes"}</button><button type="button" onClick={onDelete} className="col-span-2 inline-flex min-h-8 items-center justify-center gap-1 rounded-md px-2 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)]"><Trash2 className="h-3.5 w-3.5" />{zh ? "删除" : "Delete"}</button></div>

@@ -156,6 +156,26 @@ async function verifyDirectAttachmentLocate(
   await expectExactAttachmentOccurrence(page, multiple.id, currentMultipleOccurrence!.occurrence_key);
 }
 
+async function verifyFileMenuDismissal(page: Page, attachment: LocatorAttachment): Promise<void> {
+  await openConversationFiles(page);
+  const panel = page.getByTestId("conversation-files-panel");
+  const row = panel.getByTestId("conversation-file-row").filter({ hasText: attachment.display_name });
+  const trigger = row.getByRole("button", { name: /More file actions|更多文件操作/ });
+
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(row.getByRole("menu")).toBeVisible();
+  await panel.locator("p").first().click();
+  await expect(row.getByRole("menu")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await page.keyboard.press("Escape");
+  await expect(row.getByRole("menu")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await page.getByTestId("conversation-files-workspace").getByRole("button", { name: /Close|关闭/ }).click();
+}
+
 test("uploads, inserts, versions, and reuses conversation attachments", async ({ page }) => {
   test.setTimeout(180_000);
   const { conversationId, messageId } = await createConversation(page.request);
@@ -215,6 +235,10 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
     await test.step("desktop locates single and repeated references without opening file details", async () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await verifyDirectAttachmentLocate(page, single!, multiple!);
+    });
+
+    await test.step("file More menu dismisses outside and with Escape while restoring its trigger", async () => {
+      await verifyFileMenuDismissal(page, single!);
     });
 
     await test.step("mobile locates single and repeated references through the same contract", async () => {

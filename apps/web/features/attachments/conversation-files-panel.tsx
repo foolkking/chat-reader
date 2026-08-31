@@ -361,16 +361,24 @@ function FileRow({
   useEffect(() => {
     if (!moreOpen) return;
     const closeOnOutside = (event: PointerEvent) => {
-      if (!moreRef.current?.contains(event.target as Node)) { setMoreOpen(false); moreButtonRef.current?.focus(); }
+      if (!moreRef.current?.contains(event.target as Node)) {
+        setMoreOpen(false);
+        window.setTimeout(() => moreButtonRef.current?.focus({ preventScroll: true }), 0);
+      }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setMoreOpen(false); moreButtonRef.current?.focus(); }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setMoreOpen(false);
+        moreButtonRef.current?.focus({ preventScroll: true });
+      }
     };
     document.addEventListener("pointerdown", closeOnOutside);
-    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", closeOnEscape, true);
     return () => {
       document.removeEventListener("pointerdown", closeOnOutside);
-      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("keydown", closeOnEscape, true);
     };
   }, [moreOpen]);
 
