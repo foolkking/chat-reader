@@ -34,6 +34,7 @@ const zh = {
   noiseRuleLibraryDescription: "查看、管理并扫描噪声处理规则",
   skillManagement: "Skill 管理",
   skillManagementDescription: "管理导出与格式转换时使用的 Skill",
+  moreReadingSettings: "\u66f4\u591a\u9605\u8bfb\u8bbe\u7f6e",
 } as const;
 
 const en: Record<keyof typeof zh, string> = {
@@ -70,6 +71,7 @@ const en: Record<keyof typeof zh, string> = {
   noiseRuleLibraryDescription: "Review, manage and scan cleanup rules",
   skillManagement: "Skill management",
   skillManagementDescription: "Manage Skills used for export and format rescue",
+  moreReadingSettings: "More reading settings",
 };
 
 const dictionaries = { "zh-CN": zh, "en-US": en } as const;

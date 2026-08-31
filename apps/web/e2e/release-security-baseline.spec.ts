@@ -40,8 +40,23 @@ test("production responses carry the Release A security baseline", async ({ page
   expect(csp).toContain("frame-ancestors 'none'");
   expect(headers["content-security-policy-report-only"]).toBeUndefined();
 
-  const staticResponse = await request.get("/skills/chat-reader-conversation-context-acquisition-skill.v1.md");
-  expect(staticResponse.headers()["x-content-type-options"]).toBe("nosniff");
+  const builtinSkills = [
+    "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
+    "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
+    "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md",
+    "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md",
+  ];
+  for (const path of builtinSkills) {
+    const staticResponse = await request.get(path);
+    const staticHeaders = staticResponse.headers();
+    expect(staticResponse.status(), path).toBe(200);
+    expect(staticHeaders["content-type"], path).toContain("text/markdown");
+    expect(staticHeaders["x-content-type-options"], path).toBe("nosniff");
+    expect(staticHeaders["content-security-policy"], path).toBe(
+      "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; sandbox",
+    );
+    expect((await staticResponse.text()).length, path).toBeGreaterThan(1_000);
+  }
 });
 
 test("PDF and Mermaid keep their bounded runtime security settings", () => {
@@ -56,6 +71,15 @@ test("PDF and Mermaid keep their bounded runtime security settings", () => {
   expect(pdfRuntime).toContain('pdfjs-dist/build/pdf.worker.min.mjs');
   expect(pdfRuntime).not.toMatch(/unpkg|jsdelivr|cdnjs/);
   expect(markdown).toContain('securityLevel: "strict"');
+});
+
+test("Skill previews remain text-only and never execute uploaded content", () => {
+  const root = process.cwd();
+  const source = fs.readFileSync(path.join(root, "components/skill-settings.tsx"), "utf8");
+
+  expect(source).toContain("<pre");
+  expect(source).not.toContain("dangerouslySetInnerHTML");
+  expect(source).not.toMatch(/(marked|remark|rehype|renderToStaticMarkup)/i);
 });
 
 test("long-running import commit keeps its public proxy contract outside the affected App Route build path", () => {
@@ -115,7 +139,9 @@ test("normal production bundles do not expose the PWA negative fault bridge", as
 
 test("release workflow cannot build a deployable artifact before quality passes", () => {
   const workflow = fs.readFileSync(path.resolve(process.cwd(), "../../.github/workflows/build-release-images.yml"), "utf8").replace(/\r\n/g, "\n");
-  expect(workflow).toMatch(/\n {2}build-images:\n {4}needs: quality\n {4}if: \$\{\{ needs\.quality\.result == 'success' \}\}/);
+  expect(workflow).toMatch(/\n {2}build-images:\n {4}needs: \[api-quality, web-quality\]\n {4}if: \$\{\{ needs\.api-quality\.result == 'success' && needs\.web-quality\.result == 'success' \}\}/);
+  expect(workflow).toMatch(/\n {2}api-quality:\n/);
+  expect(workflow).toMatch(/\n {2}web-quality:\n/);
   expect(workflow).not.toMatch(/continue-on-error:\s*true/);
   expect(workflow.indexOf("name: Upload non-deployable quality evidence")).toBeLessThan(workflow.indexOf("  build-images:"));
   expect(workflow.indexOf("name: Inspect release images")).toBeLessThan(workflow.indexOf("name: Package images and provenance"));

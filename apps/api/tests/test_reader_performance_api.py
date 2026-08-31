@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.core.database import get_db
 from app.core.config import get_settings
 from app.main import app
+from app.models.attachment import MessageVersionAttachment
 from app.models.message import Message
 from test_attachment_upload_api import _conversation_with_message, _create_session, _upload
 from test_import_preview_api import client  # noqa: F401
@@ -149,6 +150,32 @@ def test_reader_turn_embeds_current_attachment_metadata_without_storage_paths(cl
         )
         assert saved.status_code == 200, saved.text
 
+        db = next(app.dependency_overrides[get_db]())
+        try:
+            current_message = db.get(Message, uuid.UUID(message["id"]))
+            assert current_message is not None
+            first_occurrence = (
+                db.query(MessageVersionAttachment)
+                .filter(MessageVersionAttachment.message_version_id == current_message.current_version_id)
+                .one()
+            )
+            first_occurrence_key = first_occurrence.occurrence_key
+            db.add(MessageVersionAttachment(
+                message_version_id=first_occurrence.message_version_id,
+                attachment_id=first_occurrence.attachment_id,
+                occurrence_key="same-block-second-occurrence",
+                placement=first_occurrence.placement,
+                relation_type=first_occurrence.relation_type,
+                display_order=first_occurrence.display_order + 1,
+                block_index=first_occurrence.block_index,
+                display_mode=first_occurrence.display_mode,
+                alt_text=first_occurrence.alt_text,
+                caption=first_occurrence.caption,
+            ))
+            db.commit()
+        finally:
+            db.close()
+
         response = client.get(f"/api/conversations/{conversation_id}/reader-turn")
         assert response.status_code == 200, response.text
         attachment_block = next(
@@ -163,6 +190,8 @@ def test_reader_turn_embeds_current_attachment_metadata_without_storage_paths(cl
         assert embedded["download_url"].endswith("?disposition=attachment")
         assert "storage_key" not in json.dumps(embedded)
         assert "temporary_storage_key" not in json.dumps(embedded)
+        occurrence_keys = [item["occurrenceKey"] for item in attachment_block["data"]["attachmentOccurrences"]]
+        assert occurrence_keys == [first_occurrence_key, "same-block-second-occurrence"]
 
         created_share = client.post(f"/api/conversations/{conversation_id}/shares", json={})
         assert created_share.status_code == 200, created_share.text
@@ -177,6 +206,10 @@ def test_reader_turn_embeds_current_attachment_metadata_without_storage_paths(cl
         shared_attachment = shared_block["data"]["attachment"]
         assert shared_attachment["content_url"].startswith(f"/api/shared/{token}/attachments/{attachment_id}/content")
         assert shared_attachment["download_url"].startswith(f"/api/shared/{token}/attachments/{attachment_id}/content")
+        assert [
+            item["occurrenceKey"]
+            for item in shared_block["data"]["attachmentOccurrences"]
+        ] == occurrence_keys
     finally:
         get_settings.cache_clear()
 

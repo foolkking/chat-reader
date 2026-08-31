@@ -8,9 +8,10 @@ import {
   getSharedDialogueIndex,
   getSharedReaderTurn,
   getSharedToc,
+  resolveSharedLocator,
   unlockSharedConversation,
 } from "../../lib/api";
-import type { LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, PersistedSharePosition, ScrollAnchorSnapshot, ScrollDirection } from "../../lib/types";
+import type { LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, PersistedSharePosition, ResolvedLocatorResponse, ScrollAnchorSnapshot, ScrollDirection } from "../../lib/types";
 import { MessageItem } from "../conversations/message-item";
 import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor } from "../conversations/reader-navigation";
 import {
@@ -193,6 +194,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       : targetOrMessageId;
     const messageId = target.messageId;
     const resolvedBlockIndex = target.blockIndex ?? blockIndex;
+    let resolvedLocator: ResolvedLocatorResponse | undefined;
     const navigationToken = navigationTokenRef.current + 1;
     navigationTokenRef.current = navigationToken;
     const generation = windowGenerationRef.current + 1;
@@ -206,29 +208,50 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const blockDomId = resolvedBlockIndex === undefined ? null : `block-${messageId}-${resolvedBlockIndex}`;
     let blockLease: ReaderBlockLease | null = null;
     try {
+      try {
+        resolvedLocator = await resolveSharedLocator(token, {
+          message_id: target.messageId,
+          message_version_id: target.messageVersionId ?? null,
+          render_block_id: target.renderBlockId ?? null,
+          block_index: resolvedBlockIndex ?? null,
+          occurrence_key: target.occurrenceKey ?? null,
+          attachment_id: target.attachmentId ?? null,
+          canonical_start: target.canonicalStart ?? characterOffset ?? target.characterOffset ?? null,
+          canonical_end: target.canonicalEnd ?? target.endCharacterOffset ?? null,
+          quote: target.quote ?? null,
+          prefix: target.prefix ?? null,
+          suffix: target.suffix ?? null,
+        });
+      } catch {
+        // Older share deployments do not expose the optional resolver yet.
+      }
+      const effectiveBlockIndex = resolvedLocator?.block_index ?? resolvedBlockIndex;
+      const effectiveRenderBlockId = resolvedLocator?.render_block_id ?? target.renderBlockId;
+      const effectiveCharacterOffset = resolvedLocator?.start_offset ?? target.canonicalStart ?? characterOffset ?? target.characterOffset;
+      const effectiveBlockDomId = effectiveBlockIndex === undefined ? null : `block-${messageId}-${effectiveBlockIndex}`;
       if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) {
         const page = await loadSharedCompleteTurnWindow(token, messageId);
         if (navigationTokenRef.current !== navigationToken) {
-          return { ok: false, targetId: blockDomId ?? messageDomId, reason: "cancelled" };
+          return { ok: false, targetId: effectiveBlockDomId ?? messageDomId, reason: "cancelled" };
         }
         initialWindowAppliedRef.current = true;
         previousTurnAnchorRef.current = page.previousTurnAnchorMessageId;
         nextTurnAnchorRef.current = page.nextTurnAnchorMessageId;
         applyLoadedWindow(replaceLoadedWindow(page, generation));
       }
-      if (resolvedBlockIndex !== undefined) {
+      if (effectiveBlockIndex !== undefined) {
         blockLease = await acquireReaderBlockLease(
           messageId,
-          resolvedBlockIndex,
+          effectiveBlockIndex,
           () => navigationTokenRef.current === navigationToken,
         );
       }
       const resolveStableTarget = () => {
-        let resolvedTargetId = blockDomId ?? messageDomId;
+        let resolvedTargetId = effectiveBlockDomId ?? messageDomId;
         const messageScope = document.getElementById(messageDomId) ?? document;
         let blockScope: HTMLElement | Document = messageScope;
-        if (target.renderBlockId) {
-          const stableBlock = messageScope.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(target.renderBlockId)}"]`);
+        if (effectiveRenderBlockId) {
+          const stableBlock = messageScope.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(effectiveRenderBlockId)}"]`);
           if (stableBlock?.id) {
             resolvedTargetId = stableBlock.id;
             blockScope = stableBlock;
@@ -251,11 +274,11 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         targetId: resolvedTargetId,
         tokenIsCurrent: () => navigationTokenRef.current === navigationToken,
         offset: alignmentOffset,
-        characterOffset,
+        characterOffset: effectiveCharacterOffset,
       });
       if (result.ok) {
         setActiveMessageId(messageId);
-        setActiveBlockId(target.renderBlockId ?? blockDomId);
+        setActiveBlockId(effectiveRenderBlockId ?? effectiveBlockDomId);
         setTargetHighlightId(result.targetId);
         await restoreScrollAnchor({
           root: null,

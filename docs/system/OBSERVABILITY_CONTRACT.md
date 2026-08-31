@@ -15,8 +15,9 @@ IDs are not trusted. Raw Uvicorn access logging is disabled so query strings do
 not bypass redaction.
 
 Request logs contain only bounded operational fields: timestamp, event,
-request ID, method, route template, status, duration and, for an unhandled
-error, the exception class. They never contain raw exception messages,
+request ID, method, route template, status, duration and, for the principal
+conversation, TOC, search and Files Panel read routes, a fixed endpoint family
+and duration bucket. They never contain raw exception messages,
 credentials or business content. Logging is best-effort and cannot fail a
 business request or worker transition.
 
@@ -82,6 +83,8 @@ Diagnostics returns only:
 
 - worker state, heartbeat timestamp/age, task family and processing count;
 - job/import status, stale, retry-exhausted, queue-age and bounded timing data;
+- recent queue-wait and execution samples include fixed p50/p95/p99 percentiles
+  alongside their averages and histograms; the sample remains capped at 500;
 - Export/Offline record and cleanup classification aggregates;
 - imports/exports/offline/assets file counts and byte totals;
 - configured Scanner mode (`disabled` remains `disabled`, never `safe`).

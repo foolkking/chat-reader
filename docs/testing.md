@@ -695,8 +695,10 @@ The deterministic fixture uses seed `20260814`. Attachment metadata fixtures
 use real business Attachment rows with distinct identities, one shared
 AssetObject, and current occurrences; they are reconciled through the API after
 import. API/worker RSS is sampled from Linux `/proc`, browser working set is
-measured by DOM/Playwright telemetry, and no source text is recorded. The
-quality job must pass before any characterization job starts. Conditional
+measured by DOM/Playwright telemetry, and no source text is recorded. Both
+`api-quality` and `web-quality` jobs must pass before any characterization
+job starts. API-only schema/backend gates run in `api-quality`; Web lint,
+typecheck, build and browser integration run in `web-quality`. Conditional
 skips remain separate from pass counts.
 
 The final Actions run `31865404393` completed successfully after an unchanged
@@ -748,7 +750,7 @@ aggregate counts; manual apply remains unexecuted.
 
 ## Release A safety baseline (2026-08-13)
 
-The release workflow runs the default commands plus a real PostgreSQL service, `alembic upgrade/current`, the official npm-registry audit policy, a live API/worker, focused production-build browser tests, and the default PWA baseline before any image build. `build-images` requires successful `quality`; diagnostic quality evidence is explicitly non-deployable.
+The release workflow runs the default commands plus a real PostgreSQL service, `alembic upgrade/current`, the official npm-registry audit policy, a live API/worker, focused production-build browser tests, and the default PWA baseline before any image build. API schema/backend gates run in `api-quality`; Web and browser gates run in `web-quality`; `build-images` requires both jobs to succeed. Diagnostic quality evidence is explicitly non-deployable.
 
 Every release browser invocation writes gate-scoped evidence under `apps/web/test-results/<gate-id>/gate-evidence.json`. An `always()` workflow step aggregates all 12 expected release gates into `apps/web/test-results/release-gate-summary.json`, with only `PASS`, `FAIL`, `SKIPPED`, and `NOT_VERIFIED` states. Missing, unreadable, still-running, or zero-test evidence is `NOT_VERIFIED`, never inferred as success; the quality artifact retains both the summary and per-gate traces.
 

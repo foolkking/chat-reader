@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   buildAttachmentRenderPlan,
@@ -119,6 +121,15 @@ test("attachment occurrence navigation preserves the selected same-block identit
     endCharacterOffset: 164,
     occurrenceKey: "same-block-occurrence-2",
     attachmentId: "attachment-2",
-    source: "message-action",
+    source: "attachment",
   });
+});
+
+test("stale attachment locations preserve the stale state and expose truthful recovery actions", () => {
+  const reader = readFileSync(resolve(process.cwd(), "features/conversations/conversation-reader.tsx"), "utf8");
+  expect(reader).toContain('if (!result.fallback) setNavigationStatus("idle")');
+  expect(reader).toContain('附件引用已失效，当前正文保持不变。');
+  expect(reader).toContain('queryKey: ["conversation-attachments", conversationId]');
+  expect(reader).toContain('刷新文件引用');
+  expect(reader).toContain('定位到消息');
 });

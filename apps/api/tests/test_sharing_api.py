@@ -12,6 +12,44 @@ from test_import_preview_api import client  # noqa: F401
 from test_message_editing_api import commit_edit_sample
 
 
+def test_shared_locator_respects_share_scope_and_returns_block_identity(client: TestClient) -> None:
+    sample = commit_edit_sample(client)
+    conversation_id = sample["conversation_id"]
+    message = sample["messages"][0]
+    block = message["render_blocks"][0]
+    created = client.post(
+        f"/api/conversations/{conversation_id}/shares",
+        json={"scope": "conversation", "include_toc": True},
+    )
+    assert created.status_code == 200
+    token = created.json()["token"]
+
+    response = client.post(
+        f"/api/shared/{token}/resolve-locator",
+        json={
+            "message_id": message["id"],
+            "message_version_id": message["current_version"]["id"],
+            "render_block_id": block["id"],
+            "block_index": block["block_index"],
+            "quote": (block["plain_text"] or "")[:8],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "EXACT"
+    assert response.json()["render_block_id"] == block["id"]
+
+    selected = client.post(
+        f"/api/conversations/{conversation_id}/shares",
+        json={"scope": "selected_messages", "selected_message_ids": [message["id"]]},
+    )
+    assert selected.status_code == 200
+    out_of_scope = client.post(
+        f"/api/shared/{selected.json()['token']}/resolve-locator",
+        json={"message_id": sample["messages"][1]["id"]},
+    )
+    assert out_of_scope.status_code == 404
+
+
 def test_create_share_returns_token_once_and_db_stores_hash(
     client: TestClient,
     tmp_path,

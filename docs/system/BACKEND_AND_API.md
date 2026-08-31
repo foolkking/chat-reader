@@ -29,6 +29,8 @@ weakening either per-file bound.
 ## Conversation merge execution (current)
 
 - Merge is an atomic background job that creates an independent target conversation. It copies all active source messages, every `MessageVersion`, every canonical `RenderBlock`, source refs, and non-deleted annotations (including conflict copies) through bounded bulk batches. ID maps preserve `based_on_version_id`, current-version pointers, block indexes, quotes, offsets, and context anchors.
+- Before cloning, Conversation Merge validates each source MessageVersion's attachment graph in bounded version batches. Every referenced or linked Attachment must be active and owned by that source Conversation; every source reference must have an occurrence; and every occurrence must point to a matching RenderBlock in the same version. Missing, inactive, cross-conversation, missing-block, and block/reference mismatch states fail the job transaction before publication. Synchronous adjacent Message Merge uses the same validation and returns `422 attachment_integrity_invalid` without creating a version or deleting an absorbed message.
+- Attachment ID remapping is applied consistently to MessageVersion display/plain/hash and block JSON plus RenderBlock plain text, structured data and sanitized HTML. Because the rewritten UUID changes canonical content, the current rewritten version hash is batch-synchronized to its target Message row; source hashes are never retained as the target authority.
 - The merge path never reparses Markdown or repeatedly loads `MessageVersion.blocks` while discovering headings/code. TOC rows are remapped from source headings; search uses lightweight projections and refreshes PostgreSQL `search_tsv` once after annotation indexing.
 - Statistics, content hash, `offline_revision`, project link, source events, and global heading slugs publish in the same transaction. Cancellation checks run at each batch and before publication, so no partial target conversation remains.
 
@@ -75,6 +77,27 @@ The ten-fixture isolated regression baseline contains 398 effective messages and
 完整端点表见 [API 参考](../api-reference.md)，本页不重复维护每个 Method/Path。
 
 ## 资源边界
+
+### Runtime data-boundary map (2026-09-01)
+
+The following boundaries are product contracts, not interchangeable storage
+views. A surface may call a shared resolver only within its own authorization
+scope and representation contract.
+
+| Surface / pipeline | Owns and may read | Must not read or publish |
+| --- | --- | --- |
+| Owner Reader | Canonical Conversation, current MessageVersion/RenderBlock, Reader position, owner attachment occurrences | Share tokens, Offline-only cache records, user Skill contents, `.cr` archive internals |
+| Public Share | Token-scoped conversation projection, permitted attachments and read-only TOC/search | Owner mutations, account/settings/Skills, unrelated conversations, private task payloads |
+| Offline Reader | Browser-imported package snapshot, local annotations, cached attachment bytes and local reading position | Server-only backup/security/import-profile APIs, owner Skill management, live worker/task state |
+| Skills | Built-in static export/Rescue resources plus owner-authenticated user Skill configuration | Conversation正文, search/Share/Offline catalogs, executable code, external model uploads |
+| `.cr` restore | Archive manifest, archive payload and canonical restore transaction | Adaptive JSON/Markdown mapping, active Archived lifecycle state, permanent conversion history |
+
+Allowed crossings are explicit: Owner Reader may produce an Offline package or
+a Share projection through their existing export boundaries; Offline and Share
+may reuse locator semantics only after applying their own permission and data
+scope. No pipeline may promote a derived projection to canonical data merely
+because it is readable there. Changes to one boundary must preserve the others
+and must be tested at the corresponding API/UI level.
 
 | 资源组 | 责任 |
 | --- | --- |
@@ -190,3 +213,14 @@ When each non-empty JSON message has one unique Markdown heading with the same r
 ## Browser-side complex attachment viewers
 
 The existing attachment provider/shell remains the only viewer path. Registry capabilities now include `document`, `spreadsheet`, `presentation`, and `archive`. The corresponding lazy viewer runs in a browser Worker, uses bounded `fflate` ZIP expansion, extracts read-only text/tables/slides, and retains original download. Legacy Office/TAR/EPUB/CAD/3D types remain download-only. No new database table, migration, ClamAV process, or King-side conversion service is required.
+### Reader locator resolver (2026-09-01 local foundation)
+
+Remote owner navigation may resolve a target through
+`POST /api/conversations/{conversation_id}/resolve-locator`. The response is a
+content-free `ResolvedLocator` with message/version/block identity and
+canonical offsets. Attachment targets must include `attachment_id` and
+`occurrence_key`; missing or ambiguous occurrences fail closed. Historical
+version anchors are remapped to the current Reader version rather than being
+looked up through rendered DOM text. Share uses a token-scoped variant after
+validating the share message scope; Offline resolves the same DTO against its
+local Dexie snapshot and never calls the owner endpoint.

@@ -12,6 +12,6 @@ export function attachmentOccurrenceTarget(attachment: Pick<AttachmentRead, "id"
     endCharacterOffset: occurrence.end_offset ?? undefined,
     occurrenceKey: occurrence.occurrence_key,
     attachmentId: attachment.id,
-    source: "message-action",
+    source: "attachment",
   };
 }

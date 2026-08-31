@@ -358,6 +358,7 @@ def verify_family_mapping(
     profile_name: str,
 ) -> None:
     _require_session_state(record, {"RESOLVING"})
+    _require_mappable_family(family)
     analysis = _analysis_for_family(record, family)
     all_drafts = []
     group_results = []
@@ -408,6 +409,7 @@ def preview_family_mapping(
     sample_group_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     _require_session_state(record, {"RESOLVING"})
+    _require_mappable_family(family)
     drafts = []
     groups = []
     drafts_by_group: dict[str, list] = {}
@@ -441,6 +443,7 @@ def preview_family_mapping(
 
 def select_profile_revision(db: Session, record: ImportRecord, family: ImportStructureFamily, revision_id: uuid.UUID) -> None:
     _require_session_state(record, {"RESOLVING"})
+    _require_mappable_family(family)
     revision = db.get(ImportProfileRevision, revision_id)
     if revision is None or revision.status not in {"VERIFIED", "SUPERSEDED"}:
         raise AdaptiveImportError("PROFILE_NOT_FOUND", "The selected verified profile revision was not found.", layer="profile")
@@ -742,6 +745,21 @@ def _handling_class_for_status(status: str) -> str:
     if status in {"UNKNOWN", "DRIFTED", "AMBIGUOUS"}:
         return "MAPPABLE"
     return "NOT_MAPPABLE"
+
+
+def _require_mappable_family(family: ImportStructureFamily) -> None:
+    handling_class = str(
+        (family.match_evidence or {}).get("handling_class")
+        or _handling_class_for_status(family.resolution_status)
+    )
+    if handling_class != "MAPPABLE":
+        action = "open_rescue" if handling_class == "NOT_MAPPABLE" else None
+        raise AdaptiveImportError(
+            "FAMILY_NOT_MAPPABLE",
+            "This source cannot be resolved with field mapping.",
+            layer="mapping",
+            action=action,
+        )
 
 
 def _handling_reason(status: str, analysis: AnalysisResult) -> dict[str, str]:

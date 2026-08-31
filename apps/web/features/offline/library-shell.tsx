@@ -17,6 +17,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import { MobilePageHeader } from "../../components/mobile-page-header";
 
 type DownloadState = { key: string; progress: number; label: string } | null;
+type DownloadRequest = { scope: "conversation" | "project" | "all"; id?: string };
 type OfflineAssetMode = "none" | "small" | "all";
 type LibrarySidebarConversation = {
   id: string;
@@ -43,6 +44,7 @@ export function LibraryShell() {
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [download, setDownload] = useState<DownloadState>(null);
   const [error, setError] = useState<string | null>(null);
+  const [failedDownload, setFailedDownload] = useState<DownloadRequest | null>(null);
   const [storage, setStorage] = useState<{ persisted: boolean; quota: number | null; usage: number | null } | null>(null);
   const [assetMode, setAssetMode] = useState<OfflineAssetMode>("all");
   const [desktopSidebarExpanded, setDesktopSidebarExpanded] = useState(true);
@@ -247,6 +249,16 @@ export function LibraryShell() {
     if (!silent) window.setTimeout(() => setDownload(null), 800);
   }, [assetMode, catalogQuery.data, conversations, reloadLocal, zh]);
 
+  const startDownload = useCallback((request: DownloadRequest) => {
+    setError(null);
+    setFailedDownload(null);
+    void runDownload(request.scope, request.id).catch((reason: unknown) => {
+      setError(offlineDownloadErrorMessage(reason, zh));
+      setFailedDownload(request);
+      setDownload(null);
+    });
+  }, [runDownload, zh]);
+
   useEffect(() => {
     const catalog = catalogQuery.data;
     if (!catalog || !conversations.length || download || autoRefreshRunningRef.current) return;
@@ -348,10 +360,12 @@ export function LibraryShell() {
       assetMode={assetMode}
       offlineShellStatus={offlineShellStatus}
       error={error ?? (catalogQuery.isError ? catalogQuery.error.message : null)}
+      failedDownload={failedDownload}
       onClose={() => setMobileOpen(false)}
       onCollapse={() => setLibrarySidebarExpanded(false)}
       onOpen={openConversation}
-      onDownload={(scope, id) => { setError(null); void runDownload(scope, id).catch((reason: unknown) => { setError(offlineDownloadErrorMessage(reason, zh)); setDownload(null); }); }}
+      onDownload={(scope, id) => startDownload({ scope, id })}
+      onRetryDownload={() => { if (failedDownload) startDownload(failedDownload); }}
       onAssetModeChange={updateAssetMode}
       onRetryShell={() => { setError(null); void prepareOfflineShell({ force: true }).catch((reason: Error) => setError(reason.message)); }}
       onRemove={(ids) => void removeLocal(ids)}
@@ -360,7 +374,7 @@ export function LibraryShell() {
   const readerContent = selectedId && selectedConversation ? (
     <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams?.get("messageId") ?? ""}:${searchParams?.get("blockIndex") ?? ""}:${searchParams?.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={() => setMobileOpen(true)} onFocusModeChange={setReaderFocusMode} />
   ) : requestedCatalogConversation ? (
-    <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Library className="h-10 w-10 text-accent" /><h1 className="mt-4 max-w-xl text-xl font-semibold">{requestedCatalogConversation.display_title}</h1><p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "该对话尚未下载到离线资料库。联网后可从资料库下载，下载完成后会在这里离线阅读。" : "This conversation has not been downloaded. Connect to download it for offline reading."}</p><button type="button" disabled={!online || Boolean(download)} onClick={() => { setError(null); void runDownload("conversation", requestedCatalogConversation.id).catch((reason: unknown) => { setError(offlineDownloadErrorMessage(reason, zh)); setDownload(null); }); }} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{zh ? "下载离线副本" : "Download offline copy"}</button><button type="button" onClick={() => setMobileOpen(true)} className="mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary">{zh ? "打开资料库" : "Open library"}</button></div>
+    <div className="flex h-full flex-col items-center justify-center px-6 text-center"><Library className="h-10 w-10 text-accent" /><h1 className="mt-4 max-w-xl text-xl font-semibold">{requestedCatalogConversation.display_title}</h1><p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "该对话尚未下载到离线资料库。联网后可从资料库下载，下载完成后会在这里离线阅读。" : "This conversation has not been downloaded. Connect to download it for offline reading."}</p><button type="button" disabled={!online || Boolean(download)} onClick={() => startDownload({ scope: "conversation", id: requestedCatalogConversation.id })} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{zh ? "下载离线副本" : "Download offline copy"}</button><button type="button" onClick={() => setMobileOpen(true)} className="mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary">{zh ? "打开资料库" : "Open library"}</button></div>
   ) : selectedId ? (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center"><AlertTriangle className="h-10 w-10 text-amber-600" /><h1 className="mt-4 text-xl font-semibold">{zh ? "该对话尚未下载" : "Conversation not downloaded"}</h1><p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "当前离线资料库中没有这个对话。联网后打开资料库即可下载。" : "This conversation is not in the offline library. Connect to download it."}</p><button type="button" onClick={() => setMobileOpen(true)} className="mt-5 min-h-11 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)]">{zh ? "打开资料库" : "Open library"}</button></div>
   ) : (
@@ -399,7 +413,7 @@ function formatLibraryConversationTitle(conversation: { display_title: string; p
   return project ? `${project} / ${title}` : title;
 }
 
-function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, download, storage, assetMode, offlineShellStatus, error, onClose, onCollapse, onOpen, onDownload, onAssetModeChange, onRetryShell, onRemove }: {
+function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, download, storage, assetMode, offlineShellStatus, error, failedDownload, onClose, onCollapse, onOpen, onDownload, onRetryDownload, onAssetModeChange, onRetryShell, onRemove }: {
   online: boolean;
   catalog?: OfflineCatalogResponse;
   conversations: OfflineConversationRecord[];
@@ -415,10 +429,12 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
   assetMode: OfflineAssetMode;
   offlineShellStatus: OfflineShellStatus;
   error: string | null;
+  failedDownload: DownloadRequest | null;
   onClose: () => void;
   onCollapse: () => void;
   onOpen: (conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) => void;
   onDownload: (scope: "conversation" | "project" | "all", id?: string) => void;
+  onRetryDownload: () => void;
   onAssetModeChange: (value: OfflineAssetMode) => void;
   onRetryShell: () => void;
   onRemove: (ids: string[]) => void;
@@ -442,7 +458,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
       {online && catalog ? <label className="grid gap-1 text-xs text-secondary"><span>{zh ? "离线附件" : "Offline attachments"}</span><select value={assetMode} onChange={(event) => onAssetModeChange(event.target.value as OfflineAssetMode)} disabled={Boolean(download)} className="min-h-9 rounded-md border border-ui bg-surface px-2 text-sm text-primary disabled:opacity-50"><option value="none">{zh ? "仅附件信息" : "Metadata only"}</option><option value="small">{zh ? "小附件（≤10 MiB）" : "Small files (≤10 MiB)"}</option><option value="all">{zh ? "全部附件" : "All attachments"}</option></select></label> : null}
       {online && catalog ? <button type="button" disabled={Boolean(download) || pendingSummary.count === 0} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{pendingSummary.count > 0 ? (zh ? `更新 ${pendingSummary.count} 个对话 · ${formatBytes(pendingSummary.bytes)}` : `Update ${pendingSummary.count} conversations · ${formatBytes(pendingSummary.bytes)}`) : (zh ? "离线资料已是最新" : "Offline library is up to date")}</button> : null}
       {download ? <div className="space-y-1" role="status"><div className="h-1.5 overflow-hidden rounded bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${download.progress}%` }} /></div><p className="flex items-center gap-1 text-xs text-secondary"><LoaderCircle className="h-3 w-3 animate-spin" />{download.label}</p></div> : null}
-      {error ? <p className="rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)]">{error}</p> : null}
+      {error ? <div className="flex items-center gap-2 rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)]"><p className="min-w-0 flex-1">{error}</p>{failedDownload && online ? <button type="button" onClick={onRetryDownload} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium hover:bg-surface" aria-label={zh ? "重试离线下载" : "Retry offline download"}><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试" : "Retry"}</button> : null}</div> : null}
     </div>
     <div className="min-h-0 flex-1 overflow-y-auto p-2">
       {query ? <SearchResultList items={searchResults} conversations={conversations} onOpen={onOpen} /> : <>
@@ -622,6 +638,15 @@ function offlineDownloadErrorMessage(reason: unknown, zh: boolean): string {
 function offlineTaskLabel(phase: string, processed: number, total: number, zh: boolean): string {
   const progress = total > 0 ? ` · ${processed}/${total}` : "";
   if (phase === "queued") return zh ? "等待生成离线资料" : "Waiting to build offline library";
+  if (phase === "packaging_messages") return zh ? `正在整理对话消息${progress}` : `Packaging conversation messages${progress}`;
+  if (phase === "packaging_headings") return zh ? `正在整理章节目录${progress}` : `Packaging section index${progress}`;
+  if (phase === "packaging_search") return zh ? `正在整理离线搜索索引${progress}` : `Packaging offline search index${progress}`;
+  if (phase === "packaging_annotations") return zh ? `正在整理批注${progress}` : `Packaging annotations${progress}`;
+  if (phase === "packaging_metadata") return zh ? `正在整理阅读状态与笔记${progress}` : `Packaging reading state and notes${progress}`;
+  if (phase === "packaging_attachments") return zh ? `正在整理附件索引${progress}` : `Packaging attachment index${progress}`;
+  if (phase === "packaging_conversations") return zh ? `正在整理离线对话${progress}` : `Packaging offline conversations${progress}`;
+  if (phase === "packaging_assets") return zh ? `正在写入离线附件${progress}` : `Packaging offline attachments${progress}`;
+  if (phase === "validating_package") return zh ? "正在校验离线资料" : "Validating offline package";
   if (phase === "packaging") return zh ? `正在整理离线资料${progress}` : `Packaging offline library${progress}`;
   if (phase === "publishing") return zh ? "正在保存离线资料" : "Saving offline library";
   return zh ? `正在生成离线资料${progress}` : `Building offline library${progress}`;

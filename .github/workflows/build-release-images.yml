@@ -20,7 +20,56 @@ env:
   POSTGRES_EXPORT_INTEGRATION: "1"
 
 jobs:
-  quality:
+  api-quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chat_reader
+          POSTGRES_USER: chat_reader
+          POSTGRES_PASSWORD: chat_reader_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chat_reader -d chat_reader"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+      - name: Install API dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e apps/api
+      - name: Prepare API test services
+        run: |
+          mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
+          cd apps/api
+          python -m alembic upgrade head
+      - name: Release C observability and cleanup safety suite
+        run: >-
+          cd apps/api && pytest -q
+          tests/test_observability.py
+          tests/test_diagnostics.py
+          tests/test_worker_liveness.py
+          tests/test_artifact_lifecycle.py
+          tests/test_cleanup_execution.py
+          tests/test_artifact_transaction_boundary.py
+          tests/test_import_queue.py
+      - name: API full suite
+        run: cd apps/api && pytest
+      - name: Alembic single-head and current validation
+        run: |
+          cd apps/api
+          python scripts/verify_migration_state.py --require-current
+
+  web-quality:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -48,7 +97,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22.13.1"
-          cache: pnpm
+
+      - name: Resolve pnpm store
+        id: pnpm-store
+        shell: bash
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore pnpm store
+        id: pnpm-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Record pnpm cache evidence
+        shell: bash
+        run: |
+          printf 'cache_hit=%s\ncache_key=%s\n' \
+            '${{ steps.pnpm-cache.outputs.cache-hit }}' \
+            '${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}' \
+            > "$RUNNER_TEMP/pnpm-cache.txt"
 
       - uses: actions/setup-python@v5
         with:
@@ -74,28 +144,13 @@ jobs:
       - name: Web typecheck
         run: pnpm --filter web typecheck
 
-      - name: Web production build
-        run: pnpm --filter web build
-
-      - name: Release C observability and cleanup safety suite
+      - name: Web production build (timed)
         run: >-
-          cd apps/api && pytest -q
-          tests/test_observability.py
-          tests/test_diagnostics.py
-          tests/test_worker_liveness.py
-          tests/test_artifact_lifecycle.py
-          tests/test_cleanup_execution.py
-          tests/test_artifact_transaction_boundary.py
-          tests/test_import_queue.py
-
-      - name: API full suite
-        run: pnpm run test:api
-
-      - name: Alembic single-head and current validation
-        run: |
-          cd apps/api
-          test "$(python -m alembic heads)" = "20260829_0029 (head)"
-          python -m alembic current | grep -F "20260829_0029"
+          /usr/bin/time -f 'build=standard
+          elapsed_seconds=%e
+          max_rss_kb=%M'
+          -o "$RUNNER_TEMP/web-build-standard.txt"
+          pnpm --filter web build
 
       - name: Dependency audit from official npm registry
         run: |
@@ -288,7 +343,11 @@ jobs:
           NEXT_DIST_DIR: ".next-pwa-negative"
           RELEASE_E_PROFILE_ROOT: ${{ runner.temp }}/release-e-profiles
         run: |
-          pnpm --filter web build
+          /usr/bin/time -f 'build=pwa-negative
+          elapsed_seconds=%e
+          max_rss_kb=%M' \
+            -o "$RUNNER_TEMP/web-build-pwa-negative.txt" \
+            pnpm --filter web build
           pnpm --filter web exec playwright test --config=playwright.config.ts e2e/pwa-negative.spec.ts
 
       - name: Build machine-readable browser gate summary
@@ -309,6 +368,9 @@ jobs:
             ${{ runner.temp }}/dependency-audit.json
             ${{ runner.temp }}/dependency-audit-report.json
             ${{ runner.temp }}/dependency-audit-source.txt
+            ${{ runner.temp }}/web-build-standard.txt
+            ${{ runner.temp }}/web-build-pwa-negative.txt
+            ${{ runner.temp }}/pnpm-cache.txt
             ${{ runner.temp }}/api.log
             ${{ runner.temp }}/worker.log
             apps/web/playwright-report
@@ -317,8 +379,8 @@ jobs:
           retention-days: 14
 
   build-images:
-    needs: quality
-    if: ${{ needs.quality.result == 'success' }}
+    needs: [api-quality, web-quality]
+    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -384,3 +446,31 @@ jobs:
             deploy/nginx-internal-diagnostics.location.conf
           if-no-files-found: error
           retention-days: 3
+
+  inspect-release-artifact:
+    needs: build-images
+    if: ${{ needs.build-images.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: chat-reader-images-${{ github.sha }}-${{ github.run_attempt }}
+          path: release-artifact
+
+      - name: Inspect downloaded release archive independently
+        working-directory: release-artifact
+        run: |
+          set -euo pipefail
+          test -s chat-reader-images.tar.gz
+          test -s release-manifest.json
+          test -s image-inspection.json
+          manifest_commit="$(jq -r '.commit // empty' release-manifest.json)"
+          test "$manifest_commit" = "$GITHUB_SHA"
+          docker load --input chat-reader-images.tar.gz >/tmp/chat-reader-docker-load.txt
+          for image in api import-worker migrate web; do
+            image_ref="chat-reader-${image}:${GITHUB_SHA}"
+            docker image inspect "$image_ref" >/dev/null
+            revision="$(docker image inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_ref")"
+            test "$revision" = "$GITHUB_SHA"
+          done
+          jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and (.images.api | length > 0) and (.images.web | length > 0)' release-manifest.json >/dev/null

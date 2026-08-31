@@ -195,6 +195,7 @@ Owner Reader 右上角“更多”提供“更新目录”：
 3. Undo 409/500/network failure keeps a localized live error and a retry action. It never silently closes or claims the message was restored.
 4. A genuine second-tab 409 preserves the source draft and does not overwrite the other tab. `加载最新状态` fetches the current Conversation revision and MessageVersion base without replacing the editor draft; the user reviews and saves again against that explicit latest base.
 5. An active Attachment with zero current-version occurrences remains visible in Files Panel `全部/未引用`. Occurrence removal with keep does not detach the Attachment, and multiple Attachment business identities may share one AssetObject.
+6. Files navigation carries Attachment/occurrence/version/block identity. If the exact reference is stale, Reader preserves the current body and exposes exact retry, message-level fallback, and a truthful Files-index refresh that refetches current occurrences; refresh does not claim to repair canonical attachment data.
 # Archived project deletion (2026-08-12)
 
 Project deletion is available only from the Archived page. The user archives a project first, then may restore it or permanently delete the project container. A destructive confirmation explains that the project itself cannot be restored but all conversations and messages are kept and return to Unclassified. Batch deletion uses the same contract and retains failed rows as selected.

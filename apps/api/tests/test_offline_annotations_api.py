@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.services import offline_packages
 from test_cr_archive import _run_job
 from test_import_preview_api import client  # noqa: F401
 from test_message_editing_api import commit_edit_sample
@@ -308,6 +309,10 @@ def test_offline_catalog_and_package_are_downloadable(client: TestClient, monkey
     task = client.get(f"/api/tasks/{queued.json()['job_id']}")
     assert task.status_code == 200
     assert task.json()["status"] == "committed"
+    phase_durations = task.json()["result"]["phase_durations_ms"]
+    assert "packaging_messages" in phase_durations
+    assert "publishing" in phase_durations
+    assert all(isinstance(value, (int, float)) and value >= 0 for value in phase_durations.values())
     package_id = queued.json()["package_id"]
     metadata = client.get(f"/api/offline/packages/{package_id}")
     assert metadata.status_code == 200
@@ -381,3 +386,38 @@ def test_offline_catalog_and_package_are_downloadable(client: TestClient, monkey
         changed_payload = json.loads(bundle.read("package.json"))
     assert len(changed_payload["conversations"]) == 1
     assert changed_payload["conversations"][0]["offline_revision"] > item["revision"]
+
+
+def test_offline_package_reports_store_level_progress(client: TestClient, monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("OFFLINE_STORAGE_DIR", str(tmp_path / "offline"))
+    get_settings.cache_clear()
+    conversation_id, _, _ = _message_context(client)
+    phases: list[str] = []
+    original_report = offline_packages._report
+
+    def capture_report(callback, phase: str, progress: int, processed: int, total: int) -> None:
+        phases.append(phase)
+        original_report(callback, phase, progress, processed, total)
+
+    monkeypatch.setattr(offline_packages, "_report", capture_report)
+    queued = client.post(
+        "/api/offline/packages",
+        json={"scope": "conversation", "conversation_id": conversation_id, "include_assets": "all"},
+    )
+    assert queued.status_code == 202
+    _run_job(queued.json()["job_id"])
+
+    expected = [
+        "packaging_messages",
+        "packaging_headings",
+        "packaging_search",
+        "packaging_annotations",
+        "packaging_metadata",
+        "packaging_attachments",
+        "packaging_conversations",
+        "packaging_assets",
+        "validating_package",
+        "publishing",
+    ]
+    assert all(phase in phases for phase in expected)
+    assert [phases.index(phase) for phase in expected] == sorted(phases.index(phase) for phase in expected)

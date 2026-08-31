@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
@@ -679,6 +680,29 @@ def process_background_job(
                 return
             payload = job.payload or {}
             is_sqlite = db.get_bind().dialect.name == "sqlite"
+            offline_phase_started_at: float | None = None
+            offline_phase_name: str | None = None
+            offline_phase_durations: dict[str, float] = {}
+
+            def track_offline_phase(phase: str) -> None:
+                nonlocal offline_phase_started_at, offline_phase_name
+                if job.job_type != "offline_package":
+                    return
+                now = time.perf_counter()
+                if offline_phase_name is not None and offline_phase_started_at is not None and phase != offline_phase_name:
+                    offline_phase_durations[offline_phase_name] = offline_phase_durations.get(offline_phase_name, 0.0) + max(0.0, now - offline_phase_started_at)
+                if phase != offline_phase_name:
+                    offline_phase_name = phase
+                    offline_phase_started_at = now
+
+            def finish_offline_phase() -> None:
+                nonlocal offline_phase_started_at, offline_phase_name
+                if job.job_type != "offline_package" or offline_phase_name is None or offline_phase_started_at is None:
+                    return
+                elapsed = max(0.0, time.perf_counter() - offline_phase_started_at)
+                offline_phase_durations[offline_phase_name] = offline_phase_durations.get(offline_phase_name, 0.0) + elapsed
+                offline_phase_started_at = None
+                offline_phase_name = None
 
             def report(
                 phase: str,
@@ -687,6 +711,7 @@ def process_background_job(
                 total: int,
                 result: dict[str, object] | None = None,
             ) -> None:
+                track_offline_phase(phase)
                 if not is_sqlite:
                     persist_report(phase, progress, processed, total, result)
                     return
@@ -971,6 +996,7 @@ def process_background_job(
                     include_assets=str(payload.get("include_assets") or "all"),
                     progress_callback=report,
                 )
+                finish_offline_phase()
                 job_result = {
                     "package_id": str(package.id),
                     "filename": package.filename,
@@ -978,6 +1004,10 @@ def process_background_job(
                     "sha256": package.sha256,
                     "conversation_count": package.conversation_count,
                     "download_url": f"/api/offline/packages/{package.id}/download",
+                    "phase_durations_ms": {
+                        phase: round(duration * 1000, 1)
+                        for phase, duration in offline_phase_durations.items()
+                    },
                 }
                 processed_items = package.conversation_count
             elif job.job_type == "attachment_batch_download":

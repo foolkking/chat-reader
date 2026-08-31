@@ -16,9 +16,11 @@ from app.models.offline_package_artifact import OfflinePackageArtifact
 from app.models.worker_runtime_state import WorkerRuntimeState
 from app.services.artifact_lifecycle import scan_cleanup_candidates
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
+from app.services.task_retention import TERMINAL_IMPORT_STATUSES, TERMINAL_JOB_STATUSES, terminal_result_cutoff
 
 ACTIVE_STATUSES = ("queued", "processing", "cancelling")
 TIMING_SAMPLE_LIMIT = 500
+TIMING_BUCKET_UPPER_BOUNDS_SECONDS = (1.0, 5.0, 15.0, 60.0, 300.0)
 STORAGE_ENTRY_LIMIT = 100_000
 
 
@@ -82,6 +84,25 @@ def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None
         .all()
     )
     job_timings = _timing_sample(timing_rows)
+    terminal_cutoff = terminal_result_cutoff(settings.task_terminal_result_retention_seconds, now=now)
+    terminal_job_count, oldest_terminal_job = (
+        db.query(func.count(BackgroundJob.id), func.min(BackgroundJob.completed_at))
+        .filter(
+            BackgroundJob.status.in_(TERMINAL_JOB_STATUSES),
+            BackgroundJob.completed_at.is_not(None),
+            BackgroundJob.completed_at >= terminal_cutoff,
+        )
+        .one()
+    )
+    terminal_import_count, oldest_terminal_import = (
+        db.query(func.count(ImportRecord.id), func.min(ImportRecord.completed_at))
+        .filter(
+            ImportRecord.status.in_(TERMINAL_IMPORT_STATUSES),
+            ImportRecord.completed_at.is_not(None),
+            ImportRecord.completed_at >= terminal_cutoff,
+        )
+        .one()
+    )
 
     roots = {
         "offline": Path(settings.offline_storage_dir),
@@ -130,6 +151,16 @@ def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None
             "cleanup": cleanup.summary,
             "cleanup_scan_complete": cleanup.complete,
             "historical_lifecycle_counts": "structured_logs_only",
+        },
+        "task_results": {
+            "retention_seconds": settings.task_terminal_result_retention_seconds,
+            "visible_job_count": int(terminal_job_count or 0),
+            "visible_import_count": int(terminal_import_count or 0),
+            "visible_total_count": int(terminal_job_count or 0) + int(terminal_import_count or 0),
+            "oldest_visible_age_seconds": _age_seconds(
+                now,
+                min(filter(None, (oldest_terminal_job, oldest_terminal_import)), default=None),
+            ),
         },
         "storage": storage,
         "system": {
@@ -240,7 +271,50 @@ def _timing_sample(rows: Iterable[tuple[datetime, datetime | None, datetime | No
         "sample_size": max(len(queue_wait), len(execution)),
         "queue_wait_average_seconds": round(sum(queue_wait) / len(queue_wait), 3) if queue_wait else None,
         "execution_average_seconds": round(sum(execution) / len(execution), 3) if execution else None,
+        "queue_wait_percentiles_seconds": _timing_percentiles(queue_wait),
+        "execution_percentiles_seconds": _timing_percentiles(execution),
+        "queue_wait_histogram": _duration_histogram(queue_wait),
+        "execution_histogram": _duration_histogram(execution),
     }
+
+
+def _timing_percentiles(values: list[float]) -> dict[str, float | None]:
+    """Return stable nearest-rank percentiles for the bounded timing sample."""
+    if not values:
+        return {"p50": None, "p95": None, "p99": None}
+    ordered = sorted(values)
+    result: dict[str, float | None] = {}
+    for name, fraction in (("p50", 0.50), ("p95", 0.95), ("p99", 0.99)):
+        index = min(len(ordered) - 1, max(0, int(len(ordered) * fraction + 0.999999) - 1))
+        result[name] = round(ordered[index], 3)
+    return result
+
+
+def _duration_histogram(values: list[float]) -> dict[str, Any]:
+    counts = [0] * (len(TIMING_BUCKET_UPPER_BOUNDS_SECONDS) + 1)
+    for value in values:
+        bucket_index = len(TIMING_BUCKET_UPPER_BOUNDS_SECONDS)
+        for index, upper_bound in enumerate(TIMING_BUCKET_UPPER_BOUNDS_SECONDS):
+            if value <= upper_bound:
+                bucket_index = index
+                break
+        counts[bucket_index] += 1
+
+    buckets: list[dict[str, float | int | None]] = []
+    lower_bound: float | None = None
+    for index, upper_bound in enumerate(TIMING_BUCKET_UPPER_BOUNDS_SECONDS):
+        buckets.append({
+            "lower_bound_seconds_exclusive": lower_bound,
+            "upper_bound_seconds_inclusive": upper_bound,
+            "count": counts[index],
+        })
+        lower_bound = upper_bound
+    buckets.append({
+        "lower_bound_seconds_exclusive": lower_bound,
+        "upper_bound_seconds_inclusive": None,
+        "count": counts[-1],
+    })
+    return {"sample_size": len(values), "buckets": buckets}
 
 
 def _age_seconds(now: datetime, value: datetime | None) -> float | None:

@@ -17,6 +17,10 @@ their earlier incomplete verification records.
 The living improvement register is [Continuous Improvement Backlog](system/CONTINUOUS_IMPROVEMENT_BACKLOG.md).
 It is a candidate queue, not a replacement for current implementation facts.
 
+Release command-to-evidence mapping is maintained in
+[Release Evidence Index](system/RELEASE_EVIDENCE_INDEX.md). It distinguishes
+automated tests, browser verification and production verification.
+
 ## 2026-08-11 current implementation notes
 
 - [2026-08-11 Final Release Closure](evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md#final-release-closure-2026-08-11): current production lifecycle evidence, release matrix and remaining verification debt.
@@ -40,7 +44,7 @@ It is a candidate queue, not a replacement for current implementation facts.
 - [Release N single-owner authentication contract](system/AUTHENTICATION_CONTRACT.md)
 - [Conversation/import/viewer test addendum](testing.md)
 
-当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-24。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+当前事实以代码、配置、migration 和测试为准，最近核验日期为 2026-08-31。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
 
 ## 开始这里
 
@@ -83,4 +87,10 @@ Current release contracts: [Release Safety Baseline](system/RELEASE_SAFETY_BASEL
 
 Artifact publication and cleanup contract: [Artifact Lifecycle Contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md), covering Offline/Export staging, validation, transaction boundaries, orphan semantics, bounded Import recovery and dry-run cleanup.
 
+Task/offline retention contract: [Task And Offline Retention Contract](system/RETENTION_CONTRACT.md), distinguishing the bounded Task Center result window, canonical server packages, manual cleanup grace and browser-managed Offline Library lifetime.
+
 Operational evidence and cleanup safety: [Observability Contract](system/OBSERVABILITY_CONTRACT.md) and [Cleanup Contract](system/CLEANUP_CONTRACT.md), covering request IDs, redacted structured logs, diagnostics enablement, aggregate storage/job state, grace windows, explicit manual apply and final race rechecks.
+
+The pre-compression historical project-state snapshot is retained at
+`archive/PROJECT_STATE-history-2026-09-01.md`; it is historical evidence only,
+not a current-state authority.

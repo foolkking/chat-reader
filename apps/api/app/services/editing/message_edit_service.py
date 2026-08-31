@@ -33,7 +33,10 @@ from app.services.search.search_indexer import (
     rebuild_search_and_toc_for_conversation,
 )
 from app.services.annotations import relocate_annotations_for_new_version
-from app.services.editing.conversation_merge_service import copy_conversation_history
+from app.services.editing.conversation_merge_service import (
+    copy_conversation_history,
+    validate_source_attachment_integrity,
+)
 from app.services.editing.attachment_reference_rewriter import (
     ASSET_REFERENCE_RE,
     assert_attachment_references_mapped,
@@ -433,6 +436,18 @@ def merge_messages(
     ordered_messages = [active_messages[index] for index in sorted_positions]
     survivor = ordered_messages[0]
     versions = [_get_current_version(db, message) for message in ordered_messages]
+    try:
+        validate_source_attachment_integrity(
+            db,
+            {message.id: message.conversation_id for message in ordered_messages},
+            [version.id for version in versions],
+        )
+    except ValueError as exc:
+        raise MessageEditError(
+            str(exc),
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            code="attachment_integrity_invalid",
+        ) from exc
     reason = edit_reason or "merge messages"
     merged_text = separator.join(version.display_text.strip() for version in versions if version.display_text.strip())
     attachment_declarations = [

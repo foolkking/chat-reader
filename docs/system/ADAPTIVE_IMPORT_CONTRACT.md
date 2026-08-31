@@ -15,6 +15,10 @@ StructureFamily. The UI uses this field for its primary action:
   mapping plan or learned profile. Keep it in the current Import Session and
   offer diagnosis, replacement, exclusion, or contextual Conversation Rescue.
 
+The Web treats this required server field as the only handling authority. It
+does not derive capability from `resolution_status`; that status remains a
+more detailed lifecycle/profile explanation within the selected class.
+
 `handling_reason` is explanatory metadata with a stable code, detail and
 recovery action. `resolution_status` remains the profile/session state and is
 not a substitute for the user-facing handling class. A mixed session keeps
@@ -98,6 +102,8 @@ Role source 与 role value conversion 分开保存。`human/ai` 等来源值可�
 Markdown Analyzer 只把已识别的角色标签作为消息边界。当前确定性词典包括常见英文标签以及 `用户`、`提问者`、`助手`、`AI助手` 等中文标签；`ChatGPT *(model-name)*` 一类模型装饰不属于角色身份。Normalization 必须复用 Mapping 已确认的标签集合，因此消息正文里的同级标题或以冒号结尾的普通句子不会被切成伪消息。
 
 Preview 展示 canonical title、message sequence、role、content 和 timestamp。验证覆盖当前 Family 的所有 InputGroup；Diagnostic 包含 layer、pointer、阻断状态和 action。Mapping 内的 Diagnostic 可定位到来源结构、locator、role mapping 或 relation；文件级错误在 Import Overview 显示只读位置上下文以及替换、排除和重新组合动作，不提供无效的 Mapping 定位按钮。
+
+`handling_class` 同时是服务端能力边界。`NOT_MAPPABLE` Family 对 Mapping preview、Mapping save 和已保存 Profile selection 均返回结构化 `FAMILY_NOT_MAPPABLE`，不生成 canonical preview、Mapping draft 或 Learned Profile；前端隐藏入口不是唯一保护。
 
 ## UI 与设置
 

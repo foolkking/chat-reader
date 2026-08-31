@@ -7,6 +7,7 @@ import {
   type ViewerPresentation,
 } from "../features/attachments/viewer-presentation";
 import type { AttachmentViewerKind, AttachmentViewerMode } from "../features/attachments/preview-adapter-registry";
+import { releaseOfflineAttachmentUrls } from "../lib/offline-db";
 
 function presentation(viewerKind: AttachmentViewerKind, viewerMode: AttachmentViewerMode, itemCount = 1, pdfPageCount: number | null = null) {
   return resolveViewerPresentation({ viewerKind, viewerMode, itemCount, pdfPageCount });
@@ -94,4 +95,28 @@ test("inline attachments use group-owned semantic lanes without changing the rea
   expect(groups).toContain("<AttachmentInlineGroup items={items} />");
   expect(block).not.toContain("mx-auto max-w-[720px]");
   expect(block).not.toContain("mx-auto max-w-[560px]");
+});
+
+test("offline viewer cleanup revokes only temporary attachment URLs", () => {
+  const revoked: string[] = [];
+  const urlApi = URL as typeof URL & { revokeObjectURL: (url: string) => void };
+  const originalRevoke = urlApi.revokeObjectURL;
+  urlApi.revokeObjectURL = (url: string) => revoked.push(url);
+  try {
+    releaseOfflineAttachmentUrls({
+      content_url: "blob:offline-content",
+      download_url: "blob:offline-content",
+    } as never);
+    releaseOfflineAttachmentUrls({
+      content_url: "https://offline.chat-reader.local/assets/a",
+      download_url: null,
+    } as never);
+  } finally {
+    urlApi.revokeObjectURL = originalRevoke;
+  }
+  expect(revoked).toEqual(["blob:offline-content"]);
+
+  const viewer = readFileSync(resolve(process.cwd(), "features/attachments/attachment-viewer.tsx"), "utf8");
+  expect(viewer).toContain("if (access.kind === \"offline\") releaseOfflineAttachmentUrls(attachment)");
+  expect(viewer).toContain("if (access.kind === \"offline\") releaseOfflineAttachmentUrls(query.data)");
 });

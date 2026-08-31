@@ -2,6 +2,8 @@ import uuid
 
 from fastapi.testclient import TestClient
 
+from app.models.background_job import BackgroundJob
+from app.services.conversations.conversation_deletion import delete_conversation_record
 from test_import_preview_api import client  # noqa: F401
 from test_projects_api import _commit_conversation
 from background_job_test_utils import process_queued_jobs
@@ -94,6 +96,48 @@ def test_batch_delete_can_stop_before_the_next_item(client: TestClient) -> None:
     assert cancelled.json()["status"] == "cancelled"
     assert process_queued_jobs() == []
     assert {item["id"] for item in client.get("/api/conversations").json()} >= set(conversation_ids)
+
+
+def test_batch_delete_cancellation_finishes_current_item_and_stops_future_items(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    conversation_ids = [_commit_conversation(client, f"Batch boundary cancel {index}") for index in range(3)]
+    queued = client.post(
+        "/api/conversations/batch-delete",
+        json={"conversation_ids": conversation_ids},
+    )
+    assert queued.status_code == 202
+    job_id = queued.json()["job_id"]
+    deletion_count = 0
+
+    def cancel_after_current_item(db, conversation_id):
+        nonlocal deletion_count
+        delete_conversation_record(db, conversation_id)
+        deletion_count += 1
+        if deletion_count != 1:
+            return
+        job = db.get(BackgroundJob, uuid.UUID(job_id))
+        assert job is not None
+        job.status = "cancelling"
+        job.phase = "cancelling"
+        db.commit()
+
+    monkeypatch.setattr(
+        "app.services.background_jobs.delete_conversation_record",
+        cancel_after_current_item,
+    )
+
+    processed = process_queued_jobs(max_jobs=10)
+    assert processed == [uuid.UUID(job_id)]
+    task = client.get(f"/api/tasks/{job_id}")
+    assert task.status_code == 200
+    assert task.json()["status"] == "cancelled"
+    assert task.json()["processed_items"] == 1
+    assert task.json()["result"]["deleted_ids"] == conversation_ids[:1]
+    assert client.get(f"/api/conversations/{conversation_ids[0]}").status_code == 404
+    assert client.get(f"/api/conversations/{conversation_ids[1]}").status_code == 200
+    assert client.get(f"/api/conversations/{conversation_ids[2]}").status_code == 200
 
 
 def test_explicit_archive_and_permanent_delete_filter_all_views(client: TestClient) -> None:

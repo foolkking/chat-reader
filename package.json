@@ -19,6 +19,10 @@
     "lint": "corepack pnpm --filter web lint",
     "typecheck": "corepack pnpm --filter web typecheck",
     "test:api": "cd apps/api && pytest",
+    "ci:changed-area": "node scripts/ci/changed-area-selector.mjs",
+    "test:attachment-range": "node --test scripts/performance/measure-attachment-ranges.test.mjs",
+    "test:ci-tools": "node --test scripts/ci/changed-area-selector.test.mjs",
+    "verify:chromium": "node scripts/verify-chromium.mjs",
     "check": "corepack pnpm typecheck && corepack pnpm test:api"
   }
 }

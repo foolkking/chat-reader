@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     import_commit_inline: bool = Field(default=False, alias="IMPORT_COMMIT_INLINE")
     import_worker_poll_seconds: float = Field(default=1.0, alias="IMPORT_WORKER_POLL_SECONDS")
     import_stale_after_seconds: int = Field(default=300, alias="IMPORT_STALE_AFTER_SECONDS")
+    task_terminal_result_retention_seconds: int = Field(
+        default=600,
+        alias="TASK_TERMINAL_RESULT_RETENTION_SECONDS",
+        ge=60,
+        le=24 * 60 * 60,
+    )
     worker_heartbeat_interval_seconds: float = Field(default=30.0, alias="WORKER_HEARTBEAT_INTERVAL_SECONDS", ge=1)
     worker_heartbeat_stale_after_seconds: int = Field(default=120, alias="WORKER_HEARTBEAT_STALE_AFTER_SECONDS", ge=3)
     import_draft_ttl_hours: int = Field(default=24, alias="IMPORT_DRAFT_TTL_HOURS")

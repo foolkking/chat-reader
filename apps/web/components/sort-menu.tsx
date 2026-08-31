@@ -51,12 +51,30 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
   locale: "zh-CN" | "en-US";
   compact?: boolean;
 }) {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    detailsRef.current?.removeAttribute("open");
-    setOpen(false);
-  }, []);
+    if (!open) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      if (rootRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+      window.setTimeout(() => triggerRef.current?.focus({ preventScroll: true }), 0);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    window.addEventListener("keydown", closeOnEscape, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      window.removeEventListener("keydown", closeOnEscape, true);
+    };
+  }, [open]);
   const selected = options.find((option) => option.value === mode) ?? options[0];
   const sharedLabel = sharedSortLabels[String(mode)];
   const label = mode === "message_count"
@@ -65,38 +83,40 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
       ? (locale === "zh-CN" ? (direction === "desc" ? "对话最多" : "对话最少") : (direction === "desc" ? "Most conversations" : "Fewest conversations"))
       : sharedLabel ? (locale === "zh-CN" ? sharedLabel.zh : sharedLabel.en) : locale === "zh-CN" ? selected.zh : selected.en;
   return (
-    <details ref={detailsRef} open={open} className="relative">
-      <summary
+    <div ref={rootRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
         data-testid="sort-menu-trigger"
-        onClick={(event) => {
-          event.preventDefault();
-          setOpen((value) => !value);
-        }}
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         aria-label={locale === "zh-CN" ? "对话排序" : "Sort conversations"}
         title={label}
-        className={`flex cursor-pointer list-none items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle marker:hidden ${compact ? "h-7 w-7 justify-center" : "min-h-9 gap-2 px-3 text-sm"}`}
+        className={`flex cursor-pointer items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle ${compact ? "h-7 w-7 justify-center" : "min-h-9 gap-2 px-3 text-sm"}`}
       >
         <ArrowUpDown className="h-4 w-4" />{compact ? null : <span>{label}</span>}
-      </summary>
-      <div
+      </button>
+      {open ? <div
         data-testid="sort-menu-panel"
+        role="menu"
         className="fixed inset-x-3 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[150] max-h-[min(70dvh,32rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-11 sm:w-52 sm:shadow-xl"
       >
         {options.map((option) => (
-          <button key={option.value} type="button" onClick={() => { setOpen(false); void onChange(option.value, direction); }} className="flex min-h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle">
+          <button key={option.value} role="menuitem" type="button" onClick={() => { setOpen(false); void onChange(option.value, direction); }} className="flex min-h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle">
             <span className="flex-1">{locale === "zh-CN" ? option.zh : option.en}</span>
             {option.value === mode ? <Check className="h-4 w-4 text-accent" /> : null}
           </button>
         ))}
         <div className="mt-1 flex border-t border-ui pt-1">
           {(["desc", "asc"] as const).map((value) => (
-            <button key={value} type="button" onClick={() => { setOpen(false); void onChange(mode, value); }} className={`flex min-h-9 flex-1 items-center justify-center gap-1 rounded-md text-xs ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
+            <button key={value} role="menuitem" type="button" onClick={() => { setOpen(false); void onChange(mode, value); }} className={`flex min-h-9 flex-1 items-center justify-center gap-1 rounded-md text-xs ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
               {value === "desc" ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
               {locale === "zh-CN" ? (value === "desc" ? "降序" : "升序") : value === "desc" ? "Descending" : "Ascending"}
             </button>
           ))}
         </div>
-      </div>
-    </details>
+      </div> : null}
+    </div>
   );
 }

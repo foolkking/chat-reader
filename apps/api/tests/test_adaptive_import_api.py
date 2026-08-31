@@ -433,7 +433,12 @@ def test_context_package_document_with_role_labels_is_not_mappable(client: TestC
     family = session["families"][0]
     assert family["resolution_status"] == "INVALID"
     assert family["handling_class"] == "NOT_MAPPABLE"
-    assert family["handling_reason"]["recovery_action"] == "OPEN_RESCUE"
+    assert family["handling_reason"] == {
+        "code": "DOCUMENT_NOT_TRANSCRIPT",
+        "title": "这不是对话记录",
+        "detail": "当前文件是说明文档或转换指令，不是可直接分段的 Conversation。",
+        "recovery_action": "OPEN_RESCUE",
+    }
 
 
 def test_rescue_instruction_session_exposes_not_mappable_recovery(client: TestClient) -> None:
@@ -446,6 +451,76 @@ def test_rescue_instruction_session_exposes_not_mappable_recovery(client: TestCl
     assert family["resolution_status"] == "INVALID"
     assert family["handling_class"] == "NOT_MAPPABLE"
     assert family["handling_reason"]["recovery_action"] == "OPEN_RESCUE"
+
+
+@pytest.mark.parametrize(
+    ("filename", "content"),
+    [
+        (
+            "ordinary-document.md",
+            b"# Deployment notes\n\nThis document describes a process.\n\n"
+            b"## Preconditions\n\nReview the configuration before continuing.\n",
+        ),
+        (
+            "reference-manual.md",
+            b"# Reference manual\n\n## Input format\n\nUse UTF-8 text.\n\n"
+            b"## Output format\n\nSave the converted file as Markdown.\n",
+        ),
+    ],
+)
+def test_non_conversation_markdown_examples_route_to_rescue_without_mapping(
+    client: TestClient,
+    filename: str,
+    content: bytes,
+) -> None:
+    session = _create(client, [(filename, content, "text/markdown")])
+    family = session["families"][0]
+
+    assert session["state"] == "RESOLVING"
+    assert family["resolution_status"] == "INVALID"
+    assert family["handling_class"] == "NOT_MAPPABLE"
+    assert family["handling_reason"] == {
+        "code": "NO_MESSAGE_BOUNDARY",
+        "title": "没有可靠的消息边界",
+        "detail": "当前内容不足以安全分割为 Conversation 消息。",
+        "recovery_action": "OPEN_RESCUE",
+    }
+    assert family["mapping_draft"] == {}
+
+    preview = client.post(
+        f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping/preview",
+        json={
+            "profile_name": "Must not be created",
+            "mapping_spec": {"message_locator": {"strategy": "markdown_role_headings"}},
+            "sample_group_id": family["group_ids"][0],
+        },
+    )
+    assert preview.status_code == 422
+    assert preview.json()["detail"]["code"] == "FAMILY_NOT_MAPPABLE"
+
+    saved = client.post(
+        f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping",
+        json={
+            "profile_name": "Must not be created",
+            "mapping_spec": {"message_locator": {"strategy": "markdown_role_headings"}},
+        },
+    )
+    assert saved.status_code == 422
+    assert saved.json()["detail"]["code"] == "FAMILY_NOT_MAPPABLE"
+
+    unchanged = client.get(f"/api/adaptive-import/sessions/{session['import_id']}").json()["families"][0]
+    assert unchanged["handling_class"] == "NOT_MAPPABLE"
+    assert unchanged["mapping_draft"] == {}
+
+
+def test_empty_markdown_is_rejected_before_an_import_session_is_created(client: TestClient) -> None:
+    response = client.post(
+        "/api/adaptive-import/sessions",
+        files=[("files", ("empty.md", b"", "text/markdown"))],
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "FILE_EMPTY"
 
 
 def test_markdown_heading_roles_accept_trailing_colons_and_ignore_fenced_boundaries() -> None:

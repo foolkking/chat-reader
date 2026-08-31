@@ -125,6 +125,28 @@ King 的预期状态是 `scanner_provider=disabled`、`scanner_enabled=false`、
 
 S3-compatible 后端需要安装 API 的 `s3` 可选依赖，并配置 bucket、endpoint、region 和 prefix；缺少 `boto3` 时服务会给出明确配置错误，不应静默回退到本地路径。
 
+## 合并后附件引用失效
+
+先运行只读完整性报告，不要按文件名或出现顺序自动替换 UUID：
+
+```bash
+cd apps/api
+python -m scripts.attachment_integrity_report
+python -m scripts.attachment_integrity_report --conversation-id <conversation-uuid>
+```
+
+全局模式只输出问题代码聚合；指定一个 Conversation 后才输出该对话的
+message/version/attachment/occurrence/block identities。该命令会 rollback
+会话且不会修复正文。`TEXT_REFERENCE_WITHOUT_ATTACHMENT`、
+`ATTACHMENT_WITHOUT_CURRENT_OCCURRENCE`、`OCCURRENCE_WITHOUT_BLOCK` 和
+`OCCURRENCE_ON_STALE_VERSION` 需要分别判断，不能把历史 occurrence 当作当前
+定位权威。只有旧 UUID 到同一对话 Attachment 的映射唯一且正文引用明确时才可
+进入单独修复流程；歧义结果保留人工确认。
+
+单对话报告中的 identity 仅用于当次受控排查。不要把真实 Conversation、Message、
+Attachment UUID 或对话正文复制到长期文档、截图、工单和普通应用日志；长期证据只
+记录聚合问题代码、数量、命令结果层级和是否完成复核。
+
 ## Markdown 间距或字号切换无效
 
 检查 `/api/preferences` 是否返回 `reader_density_mode` 和 `reader_font_size_px`，以及页面根节点是否应用对应 CSS data attribute/variable。间距应影响 paragraph、heading、list、blockquote、table、code、KaTeX/Mermaid 容器和相邻 render blocks，而不只是消息外层 margin。字号允许 15-22px，默认 17px。
@@ -183,3 +205,47 @@ route or Reader data failure.
 The script requires HTTPS health 200 and an HTTP 301/302/307/308 redirect to
 the expected HTTPS origin. Do not interpret that transport check as an
 authenticated Reader acceptance pass.
+
+## Repair uniquely mapped attachment references
+
+When the read-only attachment integrity report shows stale UUID text references
+after a merge, first create a repair plan. This dry run does not change the
+Conversation:
+
+```bash
+cd apps/api
+python -m scripts.repair_attachment_references --conversation-id <conversation-uuid>
+```
+
+The plan is applicable only when every stale UUID maps to exactly one current
+Attachment through `source_attachment_id` in the same Conversation. Missing or
+ambiguous provenance is refused; filenames, ordering, and similar content are
+never used as substitutes. After taking a current backup and reviewing the
+reported identities and counts, apply only with the fresh token from that exact
+dry run:
+
+```bash
+python -m scripts.repair_attachment_references \
+  --conversation-id <conversation-uuid> \
+  --apply \
+  --confirm-token <fresh-confirmation-token>
+```
+
+Apply revalidates the token while locking the relevant message and attachment
+rows. A valid repair creates a new current MessageVersion, preserves historical
+versions, rebuilds attachment occurrences plus Search/TOC derivations, and
+commits atomically. Run the read-only integrity report again afterward. Do not
+run this command for an ambiguous plan; repair that data manually with source
+evidence instead.
+
+必须停止自动修复并转为人工核对的情况：
+
+- 旧 UUID 没有同一 Conversation 内的 `source_attachment_id` 来源映射；
+- 一个旧 UUID 对应多个候选 Attachment；
+- 只能根据文件名、附件顺序、相似内容或历史显示位置猜测；
+- 正文引用、RenderBlock 和 occurrence 的证据彼此冲突，无法确定哪个是当前真值。
+
+人工核对不得直接覆盖当前版本。先保留当前数据库与 asset-storage 备份，再用可验证
+的源对话/导出证据确定映射；通过正常编辑或专用、可审计的修复流程生成新
+MessageVersion。完成后再次运行只读报告，并在 Reader、源码、Files、Viewer、Search
+和 TOC 中核验。没有唯一证据时保持 `NOT VERIFIED`，不要为了消除报告项而猜测。

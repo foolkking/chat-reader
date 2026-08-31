@@ -71,6 +71,11 @@ def copy_conversation_history(
     message_id_map = {plan.source_id: plan.target_id for plan in plans}
     version_rows = _version_identity_rows(db, source_message_ids)
     version_id_map = {row.id: uuid.uuid4() for row in version_rows}
+    validate_source_attachment_integrity(
+        db,
+        {plan.source_id: plan.source_conversation_id for plan in plans},
+        list(version_id_map),
+    )
     attachment_id_map = _insert_attachments(db, target, sources)
     block_id_map: dict[uuid.UUID, uuid.UUID] = {}
     for plan in plans:
@@ -79,7 +84,7 @@ def copy_conversation_history(
 
     _insert_messages(db, target, plans, version_id_map, progress_callback)
     _insert_source_refs(db, target, plans, progress_callback)
-    current_plain_text, version_count = _insert_versions(
+    current_plain_text, current_content_hashes, version_count = _insert_versions(
         db,
         plans=plans,
         version_rows=version_rows,
@@ -88,6 +93,7 @@ def copy_conversation_history(
         attachment_id_map=attachment_id_map,
         progress_callback=progress_callback,
     )
+    _update_current_message_hashes(db, current_content_hashes)
     block_count = _insert_render_blocks(
         db,
         source_version_ids=list(version_id_map),
@@ -186,6 +192,112 @@ def _mapped_attachment_id(source_id: uuid.UUID, attachment_id_map: dict[uuid.UUI
     if target_id is None:
         raise ValueError(f"Attachment occurrence {source_id} cannot be mapped during merge.")
     return target_id
+
+
+def validate_source_attachment_integrity(
+    db: Session,
+    source_conversation_by_message: dict[uuid.UUID, uuid.UUID],
+    source_version_ids: list[uuid.UUID],
+) -> None:
+    """Reject broken source references before cloning them into a merge target.
+
+    Target-side validation cannot detect an occurrence from source A that
+    points at an Attachment owned by source B when both sources participate in
+    the merge. Validate ownership and block identity against each source
+    MessageVersion before any target messages, versions, blocks, or links are
+    inserted.
+    """
+    for version_ids in _batches(source_version_ids, VERSION_BATCH_SIZE):
+        versions = (
+            db.query(
+                MessageVersion.id,
+                MessageVersion.message_id,
+                MessageVersion.display_text,
+                MessageVersion.blocks,
+            )
+            .filter(MessageVersion.id.in_(version_ids))
+            .all()
+        )
+        blocks = (
+            db.query(
+                RenderBlock.message_version_id,
+                RenderBlock.block_index,
+                RenderBlock.plain_text,
+                RenderBlock.data,
+                RenderBlock.sanitized_html,
+            )
+            .filter(RenderBlock.message_version_id.in_(version_ids))
+            .all()
+        )
+        links = (
+            db.query(
+                MessageVersionAttachment.message_version_id,
+                MessageVersionAttachment.attachment_id,
+                MessageVersionAttachment.block_index,
+            )
+            .filter(MessageVersionAttachment.message_version_id.in_(version_ids))
+            .all()
+        )
+
+        blocks_by_version: dict[uuid.UUID, list] = {}
+        for block in blocks:
+            blocks_by_version.setdefault(block.message_version_id, []).append(block)
+        links_by_version: dict[uuid.UUID, list] = {}
+        for link in links:
+            links_by_version.setdefault(link.message_version_id, []).append(link)
+
+        referenced_attachment_ids: set[uuid.UUID] = set()
+        references_by_version: dict[uuid.UUID, set[uuid.UUID]] = {}
+        block_references_by_version: dict[uuid.UUID, dict[int, set[uuid.UUID]]] = {}
+        for version in versions:
+            version_references = (
+                _attachment_data_ids(version.display_text or "")
+                | _attachment_data_ids(version.blocks or [])
+            )
+            block_references: dict[int, set[uuid.UUID]] = {}
+            for block in blocks_by_version.get(version.id, []):
+                block_references[block.block_index] = (
+                    _attachment_data_ids(block.data or {})
+                    | _attachment_data_ids(block.plain_text or "")
+                    | _attachment_data_ids(block.sanitized_html or "")
+                )
+                version_references.update(block_references[block.block_index])
+            references_by_version[version.id] = version_references
+            block_references_by_version[version.id] = block_references
+            referenced_attachment_ids.update(version_references)
+        referenced_attachment_ids.update(link.attachment_id for link in links)
+
+        attachment_owner_by_id = {
+            row.id: row.conversation_id
+            for row in db.query(Attachment.id, Attachment.conversation_id).filter(
+                Attachment.id.in_(referenced_attachment_ids),
+                Attachment.deleted_at.is_(None),
+            ).all()
+        } if referenced_attachment_ids else {}
+
+        for version in versions:
+            source_conversation_id = source_conversation_by_message.get(version.message_id)
+            if source_conversation_id is None:
+                raise ValueError("Source message version is outside the selected merge conversations.")
+            version_links = links_by_version.get(version.id, [])
+            version_references = references_by_version.get(version.id, set())
+            linked_ids = {link.attachment_id for link in version_links}
+            for attachment_id in version_references | linked_ids:
+                if attachment_owner_by_id.get(attachment_id) != source_conversation_id:
+                    raise ValueError(
+                        "Source attachment is missing, inactive, or belongs to another conversation."
+                    )
+            if not version_references.issubset(linked_ids):
+                raise ValueError("Source message attachment reference has no occurrence link.")
+
+            block_references = block_references_by_version.get(version.id, {})
+            for link in version_links:
+                if link.block_index is None or link.block_index not in block_references:
+                    raise ValueError("Source attachment occurrence points to a missing render block.")
+                if link.attachment_id not in block_references[link.block_index]:
+                    raise ValueError(
+                        "Source attachment occurrence does not match its render block reference."
+                    )
 
 
 def _validate_attachment_copy(
@@ -497,10 +609,11 @@ def _insert_versions(
     version_id_map: dict[uuid.UUID, uuid.UUID],
     attachment_id_map: dict[uuid.UUID, uuid.UUID],
     progress_callback: MergeProgressCallback | None,
-) -> tuple[dict[uuid.UUID, str], int]:
+) -> tuple[dict[uuid.UUID, str], dict[uuid.UUID, str], int]:
     current_versions = {plan.source_current_version_id: plan.target_id for plan in plans}
     role_by_message = {plan.source_id: plan.role for plan in plans}
     current_plain_text: dict[uuid.UUID, str] = {}
+    current_content_hashes: dict[uuid.UUID, str] = {}
     source_version_ids = [row.id for row in version_rows]
     copied = 0
     for source_ids in _batches(source_version_ids, VERSION_BATCH_SIZE):
@@ -533,8 +646,10 @@ def _insert_versions(
             _assert_attachment_references_mapped(row.blocks or [], attachment_id_map)
             rewritten_display = _rewrite_attachment_text(row.display_text, attachment_id_map)
             rewritten_plain = normalize_text(rewritten_display)
+            rewritten_hash = content_hash(rewritten_display, role_by_message.get(row.message_id))
             if row.id in current_versions:
                 current_plain_text[current_versions[row.id]] = rewritten_plain
+                current_content_hashes[current_versions[row.id]] = rewritten_hash
             output.append(
                 {
                     "id": version_id_map[row.id],
@@ -548,7 +663,7 @@ def _insert_versions(
                     "created_at": row.created_at,
                     "created_by": row.created_by,
                     "based_on_version_id": version_id_map.get(row.based_on_version_id),
-                    "content_hash": content_hash(rewritten_display, role_by_message.get(row.message_id)),
+                    "content_hash": rewritten_hash,
                     "normalizer_version": row.normalizer_version,
                     "markdown_parser_version": row.markdown_parser_version,
                     "block_builder_version": row.block_builder_version,
@@ -559,7 +674,21 @@ def _insert_versions(
         copied += len(output)
         progress = 24 + round(24 * copied / max(len(source_version_ids), 1))
         _report(progress_callback, "versions", progress, len(current_plain_text), len(plans))
-    return current_plain_text, copied
+    return current_plain_text, current_content_hashes, copied
+
+
+def _update_current_message_hashes(
+    db: Session,
+    current_content_hashes: dict[uuid.UUID, str],
+) -> None:
+    for batch in _batches(list(current_content_hashes.items()), MERGE_BATCH_SIZE):
+        db.bulk_update_mappings(
+            Message,
+            [
+                {"id": message_id, "content_hash": current_hash}
+                for message_id, current_hash in batch
+            ],
+        )
 
 
 def _insert_render_blocks(

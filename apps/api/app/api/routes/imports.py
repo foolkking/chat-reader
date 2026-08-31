@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.observability import structured_event
 from app.models.import_record import ImportRecord
 from app.models.conversation import Conversation
 from app.models.source_artifact import SourceArtifact
@@ -425,7 +426,7 @@ def commit_import(
             with db.begin_nested():
                 queue_import_scan(db, result.conversation_ids)
         except Exception as exc:  # pragma: no cover - operational guard
-            logger.warning("post_import_noise_scan_queue_failed", extra={"error": str(exc), "import_id": str(import_id)})
+            structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
         db.commit()
     except CommitImportError as exc:
         message = str(exc)

@@ -96,6 +96,42 @@ def test_owner_session_does_not_unlock_an_independently_protected_share(auth_cli
     ).status_code == 200
 
 
+def test_owner_and_public_share_api_authorities_do_not_cross(auth_client: TestClient) -> None:
+    assert auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"}).status_code == 200
+    created = auth_client.post(
+        "/api/conversations",
+        json={
+            "title": "Authority matrix fixture",
+            "messages": [
+                {"role": "user", "content_markdown": "authority question"},
+                {"role": "assistant", "content_markdown": "authority answer"},
+            ],
+        },
+    )
+    assert created.status_code == 201
+    conversation_id = created.json()["conversation"]["id"]
+    share = auth_client.post(f"/api/conversations/{conversation_id}/shares", json={})
+    assert share.status_code == 200
+    share_token = share.json()["token"]
+
+    owner_routes = [
+        "/api/preferences",
+        "/api/skills",
+        "/api/tasks/active",
+        f"/api/conversations/{conversation_id}/attachments",
+    ]
+    for route in owner_routes:
+        assert auth_client.get(route).status_code == 200
+
+    with TestClient(app) as guest:
+        assert guest.get(f"/api/shared/{share_token}").status_code == 200
+        for route in owner_routes:
+            separator = "&" if "?" in route else "?"
+            response = guest.get(f"{route}{separator}share_token={share_token}")
+            assert response.status_code == 401
+            assert response.headers["Cache-Control"] == "no-store"
+
+
 def test_login_sets_cookie_without_persisting_raw_token(auth_client: TestClient) -> None:
     failed = auth_client.post("/api/auth/login", json={"password": "wrong password"})
     assert failed.status_code == 401

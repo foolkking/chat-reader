@@ -36,8 +36,7 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
     window.dispatchEvent(new CustomEvent("chat-reader:annotation-workspace-mode-change", { detail: value }));
   };
   return (
-    <section className={compact ? "space-y-3" : "space-y-4"} aria-label={`${t("settings")} (${t("appearanceLanguage")})`}>
-      {!(compact && libraryMode) ? <p className="text-xs font-semibold text-secondary">{t("appearanceReading")}</p> : null}
+    <section className={compact ? "space-y-3" : "space-y-4"} aria-label={t("settings")}>
       <SettingGroup label={t("theme")} compact={compact}>
         {(["light", "dark", "system"] as const).map((mode) => (
           <Segment key={mode} active={preferences.themeMode === mode} onClick={() => void preferences.setThemeMode(mode)}>
@@ -45,12 +44,8 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
           </Segment>
         ))}
       </SettingGroup>
-      <Link href={libraryMode ? onlineHref : "/library"} className={`btn-secondary flex items-center justify-center gap-2 px-3 text-sm font-medium ${compact ? "min-h-9" : "min-h-10"}`}>
-        {libraryMode ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <Library className="h-4 w-4" aria-hidden="true" />}
-        {libraryMode ? t("backOnline") : t("offlineLibrary")}
-      </Link>
       <button type="button" onClick={() => setMoreOpen((value) => !value)} className="flex min-h-9 w-full items-center justify-between border-t border-ui pt-2 text-sm font-medium text-secondary hover:text-primary" aria-expanded={moreOpen}>
-        {moreOpen ? t("collapseSettings") : t("moreSettings")}
+        {moreOpen ? t("collapseSettings") : t("moreReadingSettings")}
         {moreOpen ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
       </button>
       <div className={`settings-more-panel ${moreOpen ? "settings-more-panel-open" : ""}`} aria-hidden={!moreOpen}>
@@ -94,12 +89,16 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         </SettingGroup>
         </div>
       </div>
+      <Link href={libraryMode ? onlineHref : "/library"} className={`btn-secondary flex items-center justify-center gap-2 px-3 text-sm font-medium ${compact ? "min-h-9" : "min-h-10"}`}>
+        {libraryMode ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <Library className="h-4 w-4" aria-hidden="true" />}
+        {libraryMode ? t("backOnline") : t("offlineLibrary")}
+      </Link>
       {!libraryMode ? <div className="settings-category-list space-y-2 border-t border-ui pt-3">
+        <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
+        <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
+        <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
         <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
         <SettingsCategoryButton icon={Eraser} label={t("noiseRuleLibrary")} description={t("noiseRuleLibraryDescription")} onClick={() => onOpenCategory?.("cleanup")} />
-        <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
-        <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
-        <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
       </div> : null}
     </section>
   );

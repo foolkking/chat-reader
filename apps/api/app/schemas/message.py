@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -59,6 +60,33 @@ class ReaderTurnResponse(BaseModel):
     items: list[MessageListItem] = Field(default_factory=list)
     previous_anchor_message_id: UUID | None = None
     next_anchor_message_id: UUID | None = None
+
+
+class LocatorTargetRequest(BaseModel):
+    message_id: UUID
+    message_version_id: UUID | None = None
+    render_block_id: UUID | None = None
+    block_index: int | None = Field(default=None, ge=0)
+    occurrence_key: str | None = None
+    attachment_id: UUID | None = None
+    canonical_start: int | None = Field(default=None, ge=0)
+    canonical_end: int | None = Field(default=None, ge=0)
+    quote: str | None = None
+    prefix: str | None = None
+    suffix: str | None = None
+
+
+class ResolvedLocatorResponse(BaseModel):
+    conversation_id: UUID
+    status: Literal["EXACT", "REMAPPED_VERSION", "MESSAGE_ONLY", "STALE", "AMBIGUOUS", "NOT_FOUND"]
+    message_id: UUID | None = None
+    message_version_id: UUID | None = None
+    render_block_id: UUID | None = None
+    block_index: int | None = None
+    start_offset: int | None = None
+    end_offset: int | None = None
+    reason: str | None = None
+    fallback_kind: str | None = None
 
 
 class DialogueIndexItem(BaseModel):

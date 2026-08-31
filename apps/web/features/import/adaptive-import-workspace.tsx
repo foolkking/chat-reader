@@ -47,9 +47,9 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
   const [groupingOpen, setGroupingOpen] = useState(false);
   const activeFamily = session.families.find((family) => family.id === activeFamilyId) ?? null;
-  const supportedFamilies = session.families.filter((family) => handlingClass(family) === "SUPPORTED");
-  const mappableFamilies = session.families.filter((family) => handlingClass(family) === "MAPPABLE");
-  const notMappableFamilies = session.families.filter((family) => handlingClass(family) === "NOT_MAPPABLE");
+  const supportedFamilies = session.families.filter((family) => family.handling_class === "SUPPORTED");
+  const mappableFamilies = session.families.filter((family) => family.handling_class === "MAPPABLE");
+  const notMappableFamilies = session.families.filter((family) => family.handling_class === "NOT_MAPPABLE");
   const supportedCount = supportedFamilies.reduce((sum, family) => sum + family.group_count, 0);
   const mappableCount = mappableFamilies.reduce((sum, family) => sum + family.group_count, 0);
   const notMappableCount = notMappableFamilies.reduce((sum, family) => sum + family.group_count, 0);
@@ -164,16 +164,17 @@ function FamilyRow({ session, family, onConfigure, onSession }: {
     mutationFn: (revisionId: string) => selectAdaptiveFamilyProfile(session.import_id, family.id, revisionId),
     onSuccess: onSession,
   });
-  const handling = handlingClass(family);
+  const handling = family.handling_class;
   const actionable = handling === "MAPPABLE";
   const candidates = asArray(family.match_evidence.candidates).map(asObject);
+  const displayName = handling === "NOT_MAPPABLE" ? invalidFamilyTitle(family) : familyDisplayName(family);
   return (
     <article className="py-4">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <FormatIcon mode={family.source_mode} />
-            <h4 className="truncate text-sm font-semibold text-primary">{handling === "NOT_MAPPABLE" ? "无法安全映射" : familyDisplayName(family)}</h4>
+            <h4 className="truncate text-sm font-semibold text-primary">{displayName}</h4>
             <HandlingBadge handling={handling} />
           </div>
           <p className="mt-1 text-sm text-secondary">{family.group_count} 个对话 · {modeLabel(family.source_mode)}</p>
@@ -225,7 +226,7 @@ function NotMappableRecovery({ session, family, onSession }: {
     <div className="mt-4 border-t border-ui pt-3">
       {family.handling_reason.detail ? (
         <div className="mb-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-xs leading-5 text-secondary">
-          <p className="font-semibold text-primary">无法安全映射</p>
+          <p className="font-semibold text-primary">{family.handling_reason.title || "暂不可映射"}</p>
           <p>{family.handling_reason.detail}</p>
         </div>
       ) : null}
@@ -471,11 +472,6 @@ function HandlingBadge({ handling }: { handling: AdaptiveImportFamily["handling_
   return <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${tone}`}>{labels[handling]}</span>;
 }
 
-function handlingClass(family: AdaptiveImportFamily): AdaptiveImportFamily["handling_class"] {
-  if (family.handling_class) return family.handling_class;
-  return ["EXACT_MATCH", "COMPATIBLE"].includes(family.resolution_status) ? "SUPPORTED" : family.resolution_status === "INVALID" ? "NOT_MAPPABLE" : "MAPPABLE";
-}
-
 export function DiagnosticLine({ diagnostic, locatable = true }: { diagnostic: Pick<AdaptiveImportDiagnostic, "code" | "message" | "pointer" | "action">; locatable?: boolean }) {
   function locate() {
     const targetId = diagnostic.action === "map_roles"
@@ -513,7 +509,7 @@ function diagnosticMessage(diagnostic: Pick<AdaptiveImportDiagnostic, "code" | "
   return messages[diagnostic.code] ?? diagnostic.message;
 }
 
-function _invalidFamilyTitle(family: AdaptiveImportFamily): string {
+function invalidFamilyTitle(family: AdaptiveImportFamily): string {
   return family.source_mode === "JSON_MARKDOWN" ? "无法分析的 JSON + Markdown" : family.source_mode === "MARKDOWN" ? "无法分析的 Markdown" : "无法分析的 JSON";
 }
 

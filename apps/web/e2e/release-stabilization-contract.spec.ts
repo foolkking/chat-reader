@@ -134,3 +134,44 @@ test("source cursor location is a one-shot request and cannot replay after a dir
   expect(editForm).not.toContain("value={text}");
   expect(reader).toContain("[data-testid='floating-source-workspace'], input, textarea, select, [contenteditable='true'], [role='textbox']");
 });
+
+test("Reader performance evidence separates first content, locator resolution, and target mount without object data", () => {
+  const reader = source("features/conversations/conversation-reader.tsx");
+  const performanceContract = source("features/conversations/reader-performance.ts");
+
+  expect(performanceContract).toContain('"first-content"');
+  expect(performanceContract).toContain('"locator-resolution"');
+  expect(performanceContract).toContain('"target-mount"');
+  expect(performanceContract).toContain('"chat-reader:reader-performance"');
+  expect(performanceContract).toContain("durationMs");
+  expect(performanceContract).not.toContain("conversationId");
+  expect(performanceContract).not.toContain("messageId");
+  expect(performanceContract).not.toContain("attachmentId");
+  expect(performanceContract).not.toContain("quote");
+  expect(performanceContract).not.toContain("url");
+
+  expect(reader).toContain('reportReaderPerformance(\n          "first-content"');
+  expect(reader).toContain('reportReaderPerformance("locator-resolution"');
+  expect(reader).toContain('"target-mount",\n          mountStartedAt');
+  expect(reader).toContain('timingPath = "local"');
+  expect(reader).toContain('const unfinishedOutcome: ReaderPerformanceOutcome');
+});
+
+test("Reader locate feedback is a bounded first-line pulse with a reduced-motion fallback", () => {
+  const reader = source("features/conversations/conversation-reader.tsx");
+  const styles = source("app/globals.css");
+
+  expect(reader).toContain("const rangeRect = range ? firstVisibleRangeRect(range) : null");
+  expect(reader).toContain('kind: "text" as const');
+  expect(reader).toContain('kind: "marker" as const');
+  expect(reader).toContain("width: 3");
+  expect(reader).toContain("}, 720)");
+  expect(reader).toContain('window.addEventListener("scroll", clear, true)');
+  expect(reader).toContain('window.addEventListener("pointerdown", clear, true)');
+  expect(styles).toContain(".reader-locate-pulse {\n  position: fixed;");
+  expect(styles).toContain("pointer-events: none;");
+  expect(styles).toContain("animation: reader-locate-pulse 720ms ease-out both;");
+  expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
+  expect(styles).toContain("animation: reader-locate-static 700ms linear both;");
+  expect(styles).not.toContain(".reader-locate-pulse {\n  position: absolute;");
+});

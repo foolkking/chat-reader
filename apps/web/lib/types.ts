@@ -869,7 +869,42 @@ export type NavigateTarget = {
   closePanelAfterResolved?: boolean;
   allowMessageFallback?: boolean;
   alignmentOffset?: number;
-  source?: "dialogue-index" | "section-toc" | "search" | "annotation" | "message-action";
+  source?: "dialogue-index" | "section-toc" | "search" | "annotation" | "attachment" | "message-action";
+};
+
+export type LocatorTargetRequest = {
+  message_id: string;
+  message_version_id?: string | null;
+  render_block_id?: string | null;
+  block_index?: number | null;
+  occurrence_key?: string | null;
+  attachment_id?: string | null;
+  canonical_start?: number | null;
+  canonical_end?: number | null;
+  quote?: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
+};
+
+export type ResolvedLocatorStatus =
+  | "EXACT"
+  | "REMAPPED_VERSION"
+  | "MESSAGE_ONLY"
+  | "STALE"
+  | "AMBIGUOUS"
+  | "NOT_FOUND";
+
+export type ResolvedLocatorResponse = {
+  conversation_id: string;
+  status: ResolvedLocatorStatus;
+  message_id?: string | null;
+  message_version_id?: string | null;
+  render_block_id?: string | null;
+  block_index?: number | null;
+  start_offset?: number | null;
+  end_offset?: number | null;
+  reason?: string | null;
+  fallback_kind?: string | null;
 };
 
 export type NavigationResult = {

@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from sqlalchemy.dialects import postgresql
@@ -30,12 +31,35 @@ def test_alembic_current_matches_repository_head() -> None:
         capture_output=True,
         check=True,
     )
-    expected_head = "20260829_0029"
-    assert heads.stdout.strip() == f"{expected_head} (head)"
+    head_lines = [line.strip() for line in heads.stdout.splitlines() if line.strip()]
+    assert len(head_lines) == 1
+    assert head_lines[0].endswith(" (head)")
+    expected_head = head_lines[0].removesuffix(" (head)")
     if expected_head not in current.stdout:
         import pytest
 
         pytest.skip(f"database is not migrated to repository head {expected_head}")
+
+
+def test_ci_migration_gates_use_dynamic_single_head_verifier() -> None:
+    root = Path(__file__).resolve().parents[3]
+    expected_command = "python scripts/verify_migration_state.py --require-current"
+    for relative_path in (
+        ".github/workflows/build-release-images.yml",
+        ".github/workflows/performance-characterization.yml",
+    ):
+        source = (root / relative_path).read_text(encoding="utf-8")
+        assert expected_command in source
+        assert 'test "$(python -m alembic heads)"' not in source
+
+    verifier = subprocess.run(
+        [sys.executable, "scripts/verify_migration_state.py"],
+        cwd=root / "apps/api",
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert verifier.stdout.strip().endswith(" (head)")
 
 
 def test_latest_migration_has_upgrade_and_downgrade() -> None:

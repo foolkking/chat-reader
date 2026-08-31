@@ -122,9 +122,12 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   }
 
   function handleSortStart(event: DragStartEvent) {
-    setActiveSortId(String(event.active.id));
+    const id = String(event.active.id);
+    setActiveSortId(id);
     window.dispatchEvent(new Event("reader:dnd-start"));
-    const initial = event.active.rect.current.initial;
+    const initial = event.active.rect.current.initial
+      ?? event.active.rect.current.translated
+      ?? document.querySelector<HTMLElement>(`[data-testid="project-conversation-sortable-row-${id}"]`)?.getBoundingClientRect();
     setActiveSortSize(initial ? { width: initial.width, height: initial.height } : null);
   }
 
@@ -324,7 +327,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
               <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">
                 {conversationsQuery.data.map((conversation) => (
-                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article {...linearSelection.itemHandlers(conversation.id)} data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined} aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined} className="reader-interactive-row group border-b border-ui px-5 py-4 last:border-b-0 hover:bg-subtle">
+                  <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article {...linearSelection.itemHandlers(conversation.id)} data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined} aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined} className="reader-interactive-row group border-b border-ui px-5 py-4 last:border-b-0">
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
                       <div className="flex min-w-0 gap-3">
                         <label className={`mt-1 h-7 w-7 shrink-0 items-center justify-center rounded-md border border-ui bg-surface transition-opacity ${linearSelection.checkboxClass(conversation.id)}`}>
@@ -367,7 +370,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                     </div>
                   </article></SortableProjectConversationRow>
                 ))}
-              </div></SortableContext><DragOverlay adjustScale={false}>{activeSortId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSortSize ? { width: activeSortSize.width, height: activeSortSize.height } : undefined} aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
+              </div></SortableContext><DragOverlay adjustScale={false}>{activeSortId ? <div data-testid="project-conversation-drag-overlay" className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSortSize ? { width: activeSortSize.width, height: activeSortSize.height } : undefined} aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
             ) : null}
           </div>
         </div>
@@ -384,7 +387,8 @@ function ReadingProgress({ value, zh }: { value: number; zh: boolean }) {
 
 function SortableProjectConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
   const sortable = useSortable({ id, disabled: !enabled });
-  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : enabled ? "hover" : undefined} {...sortable.attributes} {...sortable.listeners} className={`reader-interactive-row relative outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>{children}</div>;
+  const dragProps = enabled ? { ...sortable.attributes, ...sortable.listeners } : {};
+  return <div ref={sortable.setNodeRef} data-testid={`project-conversation-sortable-row-${id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : undefined} {...dragProps} className={`relative outline-none ${sortable.isDragging ? "reader-interactive-row cursor-grabbing" : "cursor-default"}`}>{children}</div>;
 }
 
 function projectConversationActivity(conversation: ProjectConversationRead, mode: string): string | null {

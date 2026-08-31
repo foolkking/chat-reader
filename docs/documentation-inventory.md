@@ -108,6 +108,8 @@ provisioning and production acceptance are complete.
 | `apps/api/alembic/versions/20260817_0024_public_share_password.py` | Current migration | Independent optional Share-password and scoped unlock-session persistence. |
 | `apps/web/components/auth-boundary.tsx` | Current runtime | Online session verification and conservative offline cache lock. |
 | `apps/web/e2e/auth-gate.spec.ts` | Current test | New device, Share, logout/PWA and global password-change session invalidation. |
+| `docs/system/RELEASE_EVIDENCE_INDEX.md` | Current release documentation | Maps required quality/deployment commands to source-bound evidence and verification levels. |
+| `apps/web/e2e/feature-test-inventory.spec.ts` | Current test | Ensures every Web feature directory has a named test owner or explicit shared-contract reason. |
 
 2026-08-16 Release L synchronization: independent single-worker heartbeat,
 idle/busy/stale/unavailable derivation, loopback-only internal diagnostics,
@@ -147,6 +149,7 @@ disabled/out of scope. `RELEASE_J = PASS`.
 | --- | --- | --- |
 | `docs/system/CLEANUP_CONTRACT.md` | Current contract | Managed roots, categories, grace, opaque identity, explicit apply, final recheck, first-apply evidence and future-approval boundary. |
 | `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md` | Current contract | Publish/commit ordering, orphan semantics, download integrity and production publish-versus-cleanup evidence. |
+| `docs/system/RETENTION_CONTRACT.md` | Current contract | Terminal Task Center visibility, canonical Offline Package replacement, cleanup grace and browser Offline Library lifetime. |
 | `apps/api/scripts/artifact_cleanup.py` | Current operator CLI | Dry-run by default and exact category/token apply; no apply-all or automatic schedule. |
 | `apps/api/tests/test_cleanup_execution.py` | Current test | Cleanup matrix, wrong-category protection, race recheck, partial failure, path escape and idempotency. |
 | `TASKS.md` | Current release ledger | Release J approved candidate set, apply/post-apply aggregates, recovery notes and final status. |
@@ -252,9 +255,10 @@ are current in `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md`,
 | --- | --- | --- |
 | `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md` | Current | Fixture tiers, budgets, measurement privacy, capacity classes and evidence-driven optimization/index gates. |
 | `docs/evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md` | Dated evidence | Release D environment, raw aggregate results, regression status and remaining capacity debt. |
-| `.github/workflows/performance-characterization.yml` | Current workflow | Quality-gated external Linux Reader/API/.cr characterization and A/B/C regression. |
+| `.github/workflows/performance-characterization.yml` | Current workflow | Separate API/Web quality gates followed by external Linux Reader/API/.cr characterization and A/B/C regression. |
 | `apps/web/e2e/reader-capacity.spec.ts` | Current test | Three cold runs, warm revisit, bounded virtual working set, scroll and browser budget assertions. |
 | `scripts/performance/run_backend_benchmark.py` | Current harness | Deterministic import/export, real attachment identity, RSS/temp-disk and `.cr` archive measurements. |
+| `scripts/performance/measure-attachment-ranges.mjs` | Current harness | Aggregate-only attachment Range timing/retry characterization by media type; synthetic/local by default. |
 
 2026-08-14 Release C synchronization: request correlation, production-emitted redacted structured logging, aggregate diagnostics, storage visibility and explicit safe cleanup are current in `PROJECT_STATE.md`, `docs/system/OBSERVABILITY_CONTRACT.md`, `docs/system/CLEANUP_CONTRACT.md`, `docs/system/ARTIFACT_LIFECYCLE_CONTRACT.md`, `docs/api-reference.md`, `docs/testing.md`, `docs/deployment.md` and `results.md`. Final source `8d0ad66` is deployed; no migration or business-data cleanup is introduced.
 
@@ -329,7 +333,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `apps/api/app/services/assets/asset_store.py` | Current | Local and optional S3-compatible storage providers with controlled keys. |
 | `apps/api/app/services/assets/scanner.py` | Current | Disabled, ClamAV and remote scanner providers; deployment-policy status. |
 | `apps/api/app/services/exporting/system_archive.py` | Current | System `.cr v4` export and empty-instance restore. |
-| `.github/workflows/build-release-images.yml` | Current | Manual external Linux image build for low-memory production deployment. |
+| `.github/workflows/build-release-images.yml` | Current | API/Web quality ownership split, then manual external Linux image build for low-memory production deployment. |
 | `apps/web/features/attachments/conversation-files-panel.tsx` | Current | Current conversation file drawer, upload and occurrence actions. |
 | `apps/web/e2e/attachment-upload-flow.spec.ts` | Current | Ordinary upload, insertion, version switching and file reuse acceptance. |
 | `apps/web/e2e/project-sidebar-dnd.spec.ts` | Current | Explicit project/conversation drop-target and placement regression. |
@@ -444,7 +448,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `docs/system/FRONTEND_ARCHITECTURE.md` | 压缩并更新 / 现行 | 前端模块、状态和持久化 |
 | `docs/system/BACKEND_AND_API.md` | 压缩并更新 / 现行 | 后端边界和数据流 |
 | `docs/system/DATA_AND_STORAGE.md` | 更新 / 现行 | PostgreSQL、文件和浏览器存储 |
-| `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` | 压缩并更新 / 现行 | 环境变量与运行拓扑 |
+| `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` | 压缩并更新 / 现行 | 环境变量、运行拓扑、备份验证与只读保留盘点边界 |
 | `docs/system/EXTERNAL_DEPENDENCIES.md` | 更新 / 现行 | 外部运行依赖 |
 | `docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` | 压缩并更新 / 现行 | 当前风险与待验证事项 |
 | `docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md` | 新建 / 现行 | 按证据维护的持续改进候选队列；每项实施前必须复核 |
@@ -541,3 +545,14 @@ verification debt from superseded historical rows, deferred design work, and
 conditional future tracks. No new document category was created. The dated
 `docs/execution/TEST_RESULTS.md` remains historical and the absent root
 `TEST_RESULTS.md` was not recreated as a duplicate authority.
+
+2026-09-01 deployment-state synchronization: operator-owned release pointers
+and bounded transfer cleanup are current in
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`, `deploy/verify_release_state.sh`
+and `deploy/cleanup_release_transfer.py`. The helpers are local/operator
+tools only; no production host state or application data was changed.
+
+2026-09-01 CI synchronization: `scripts/ci/changed-area-selector.mjs` and
+its Node built-in test provide local changed-area feedback while preserving the
+full release gate. The command is documented by the package scripts and the
+backlog; it does not replace release quality jobs.

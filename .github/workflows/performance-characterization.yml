@@ -21,7 +21,7 @@ env:
   NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
-  quality:
+  api-quality:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -39,14 +39,6 @@ jobs:
           --health-retries 20
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-          run_install: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22.13.1"
-          cache: pnpm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -62,23 +54,55 @@ jobs:
           mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
           cd apps/api
           python -m alembic upgrade head
+      - name: API full suite
+        run: cd apps/api && pytest
+      - name: Alembic single head
+        run: |
+          cd apps/api
+          python scripts/verify_migration_state.py --require-current
+
+  web-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.1"
+      - name: Resolve pnpm store
+        id: pnpm-store
+        shell: bash
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Restore pnpm store
+        id: pnpm-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+      - name: Record pnpm cache evidence
+        shell: bash
+        run: |
+          printf 'cache_hit=%s\ncache_key=%s\n' \
+            '${{ steps.pnpm-cache.outputs.cache-hit }}' \
+            '${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}' \
+            > "$RUNNER_TEMP/pnpm-cache.txt"
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Web lint
         run: pnpm --filter web lint
       - name: Web typecheck
         run: pnpm --filter web typecheck
       - name: Web production build
         run: pnpm --filter web build
-      - name: API full suite
-        run: cd apps/api && pytest
-      - name: Alembic single head
-        run: |
-          cd apps/api
-          test "$(python -m alembic heads)" = "20260822_0026 (head)"
-          python -m alembic current | grep -F "20260822_0026"
 
   benchmark:
-    needs: quality
-    if: ${{ needs.quality.result == 'success' }}
+    needs: [api-quality, web-quality]
+    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -180,12 +204,13 @@ jobs:
             apps/web/test-results
             ${{ runner.temp }}/perf-api.log
             ${{ runner.temp }}/perf-worker.log
+            ${{ runner.temp }}/pnpm-cache.txt
           if-no-files-found: warn
           retention-days: 14
 
   regression:
-    needs: quality
-    if: ${{ needs.quality.result == 'success' }}
+    needs: [api-quality, web-quality]
+    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -272,8 +297,8 @@ jobs:
           retention-days: 14
 
   reader-capacity:
-    needs: quality
-    if: ${{ needs.quality.result == 'success' }}
+    needs: [api-quality, web-quality]
+    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -347,8 +372,8 @@ jobs:
           retention-days: 14
 
   cr-capacity:
-    needs: quality
-    if: ${{ needs.quality.result == 'success' }}
+    needs: [api-quality, web-quality]
+    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' }}
     strategy:
       fail-fast: false
       matrix:

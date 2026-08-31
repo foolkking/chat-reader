@@ -14,7 +14,7 @@ from app.main import app
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from app.models.worker_runtime_state import WorkerRuntimeState
-from app.services.diagnostics import storage_usage
+from app.services.diagnostics import _timing_percentiles, storage_usage
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -73,6 +73,34 @@ def test_internal_diagnostics_returns_bounded_aggregates_without_sensitive_conte
             )
         )
         db.add(
+            BackgroundJob(
+                job_type="conversation_merge",
+                status="committed",
+                phase="committed",
+                completed_at=now - timedelta(seconds=30),
+            )
+        )
+        db.add_all(
+            [
+                BackgroundJob(
+                    job_type="conversation_export",
+                    status="committed",
+                    phase="committed",
+                    queued_at=now - timedelta(seconds=10),
+                    started_at=now - timedelta(seconds=9),
+                    completed_at=now - timedelta(seconds=7),
+                ),
+                BackgroundJob(
+                    job_type="conversation_merge",
+                    status="committed",
+                    phase="committed",
+                    queued_at=now - timedelta(seconds=400),
+                    started_at=now - timedelta(seconds=300),
+                    completed_at=now,
+                ),
+            ]
+        )
+        db.add(
             ImportRecord(
                 source_profile="fixture",
                 source_fingerprint="opaque",
@@ -80,6 +108,15 @@ def test_internal_diagnostics_returns_bounded_aggregates_without_sensitive_conte
                 phase="failed",
                 attempt_count=3,
                 json_filename="private-name.json",
+            )
+        )
+        db.add(
+            ImportRecord(
+                source_profile="fixture",
+                source_fingerprint="terminal-aggregate",
+                status="committed",
+                phase="committed",
+                completed_at=now - timedelta(seconds=20),
             )
         )
         db.commit()
@@ -114,6 +151,21 @@ def test_internal_diagnostics_returns_bounded_aggregates_without_sensitive_conte
     assert payload["imports"]["retry_exhausted"] == 1
     assert payload["storage"]["assets"]["file_count"] == 1
     assert payload["artifacts"]["cleanup_scan_complete"] is True
+    task_results = payload["task_results"]
+    assert task_results["retention_seconds"] == 600
+    assert task_results["visible_job_count"] == 3
+    assert task_results["visible_import_count"] == 1
+    assert task_results["visible_total_count"] == 4
+    assert 30 <= task_results["oldest_visible_age_seconds"] < 31
+    timing = payload["jobs"]["recent_timing_sample"]
+    assert timing["sample_size"] == 2
+    assert timing["queue_wait_average_seconds"] == 50.5
+    assert timing["execution_average_seconds"] == 151.0
+    assert timing["queue_wait_percentiles_seconds"] == {"p50": 1.0, "p95": 100.0, "p99": 100.0}
+    assert timing["execution_percentiles_seconds"] == {"p50": 2.0, "p95": 300.0, "p99": 300.0}
+    assert timing["queue_wait_histogram"]["sample_size"] == 2
+    assert [bucket["count"] for bucket in timing["queue_wait_histogram"]["buckets"]] == [1, 0, 0, 0, 1, 0]
+    assert [bucket["count"] for bucket in timing["execution_histogram"]["buckets"]] == [0, 1, 0, 0, 1, 0]
     assert payload["system"]["scanner"] == "disabled"
     serialized = json.dumps(payload)
     assert "sensitive-filename" not in serialized
@@ -125,6 +177,11 @@ def test_internal_diagnostics_returns_bounded_aggregates_without_sensitive_conte
     assert "job_id" not in serialized
     assert len(statements) <= 24
     assert not any("messages" in statement.casefold() for statement in statements)
+
+
+def test_timing_percentiles_are_bounded_and_empty_safe() -> None:
+    assert _timing_percentiles([]) == {"p50": None, "p95": None, "p99": None}
+    assert _timing_percentiles([0.1, 0.2, 0.3, 2.0]) == {"p50": 0.2, "p95": 2.0, "p99": 2.0}
 
 
 def test_diagnostics_reports_recent_idle_worker_without_recent_job_activity(

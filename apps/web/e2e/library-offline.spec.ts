@@ -166,6 +166,34 @@ test("prepares and cold-starts the library at the mobile PWA viewport", async ({
   await context.close();
 });
 
+test("keeps the offline Reader, TOC, and files reachable at 375px", async ({ browser }) => {
+  test.skip(process.env.APP_ENV !== "test", "Requires the local fixture shell with APP_ENV=test");
+  const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const page = await context.newPage();
+  await page.goto("/library");
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await seedOfflineFixture(page);
+  await page.goto("/library?conversationId=offline-fixture");
+
+  await expect(page.locator("#block-offline-message-20-1")).toBeVisible();
+  const navigationButton = page.getByRole("button", { name: /阅读导航|Reader navigation/ }).first();
+  await navigationButton.click();
+  await expect(page.getByRole("button", { name: /章节|Sections/ }).first()).toBeVisible();
+  await page.getByRole("button", { name: /章节|Sections/ }).first().click();
+  const sectionButton = page.getByRole("button", { name: "Section 20", exact: true }).first();
+  await expect(sectionButton).toBeVisible();
+  await sectionButton.click();
+  await expect(page.locator("#block-offline-message-20-1")).toBeVisible();
+  await page.getByRole("button", { name: /关闭|Close/ }).first().click();
+
+  await openReaderHeaderAction(page, /当前对话文件|Conversation files/);
+  await expect(page.getByTestId("offline-conversation-files-panel")).toBeVisible();
+  await expect(page.getByTestId("offline-conversation-files-panel").getByText("cached-note.txt", { exact: true })).toBeVisible();
+  const dimensions = await page.evaluate(() => ({ documentWidth: document.documentElement.scrollWidth, viewportWidth: window.innerWidth }));
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+  await context.close();
+});
+
 test("mirrors the unified sidebar and keeps preferences compact in library mode", async ({ page }) => {
   await page.goto("/library");
   await seedOfflineFixture(page);
@@ -185,6 +213,15 @@ test("mirrors the unified sidebar and keeps preferences compact in library mode"
   await preferencesButton.click();
   await expect(page.locator(`#${preferencesPanelId}`)).toBeVisible();
   await expect(page.getByRole("link", { name: /返回在线版|Back online/ })).toHaveAttribute("href", "/conversations/offline-fixture");
+  for (const ownerOnlySetting of [
+    /导入格式|Import formats/,
+    /噪声规则库|Noise rule library/,
+    /数据归档|Data archive/,
+    /账户与安全|Account & security/,
+    /Skill 管理|Skill management/,
+  ]) {
+    await expect(page.getByRole("button", { name: ownerOnlySetting })).toHaveCount(0);
+  }
   const heightAfter = await preferencesFooter.evaluate((element) => element.getBoundingClientRect().height);
   expect(Math.abs(heightAfter - heightBefore)).toBeLessThanOrEqual(1);
 
@@ -741,7 +778,7 @@ async function arrangeOfflineSidebarFixture(page: import("@playwright/test").Pag
 async function openReaderHeaderAction(page: import("@playwright/test").Page, name: RegExp): Promise<void> {
   const action = page.getByRole("button", { name }).first();
   if (!await action.isVisible().catch(() => false)) {
-    await page.getByRole("button", { name: /^(Message actions|消息操作|More|更多)$/ }).click();
+    await page.getByRole("button", { name: /^(Message actions|消息操作|More|更多)$/ }).first().click();
   }
   await action.click();
 }

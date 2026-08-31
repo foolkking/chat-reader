@@ -20,7 +20,30 @@ type NormalizedText = {
 type TextIndex = {
   text: string;
   segments: TextNodeSegment[];
+  codePointToCodeUnit: number[];
 };
+
+/** Convert canonical Unicode code-point offsets to DOM/UTF-16 offsets. */
+export function codePointOffsetToCodeUnit(text: string, offset: number): number {
+  const target = Math.max(0, Math.min(Math.trunc(offset), Array.from(text).length));
+  let codePoints = 0;
+  let codeUnits = 0;
+  for (const character of text) {
+    if (codePoints >= target) break;
+    codeUnits += character.length;
+    codePoints += 1;
+  }
+  return codeUnits;
+}
+
+export function matchTextAnchor(
+  source: string,
+  quote: string,
+  prefix?: string | null,
+  suffix?: string | null,
+): { start: number; end: number } | null {
+  return bestMatch(source, quote, prefix, suffix);
+}
 
 // Resolving an anchor can run for several animation frames while virtualized
 // content settles. Keep the expensive TreeWalker pass per mounted root, and
@@ -61,8 +84,10 @@ export function resolveTextAnchorRange(root: HTMLElement, anchor: TextAnchor): R
   }
 
   if (anchor.startOffset === undefined) return null;
-  const start = clamp(anchor.startOffset, 0, source.text.length);
-  const end = clamp(anchor.endOffset ?? start + 1, start, source.text.length);
+  const startCodePoint = clamp(anchor.startOffset, 0, source.codePointToCodeUnit.length - 1);
+  const endCodePoint = clamp(anchor.endOffset ?? startCodePoint + 1, startCodePoint, source.codePointToCodeUnit.length - 1);
+  const start = source.codePointToCodeUnit[startCodePoint] ?? source.text.length;
+  const end = source.codePointToCodeUnit[endCodePoint] ?? source.text.length;
   return rangeForTextOffsets(source.segments, start, end);
 }
 
@@ -73,7 +98,7 @@ export function firstVisibleRangeRect(range: Range): DOMRect | null {
   return fallback.width > 0 || fallback.height > 0 ? fallback : null;
 }
 
-function collectText(root: HTMLElement): { text: string; segments: TextNodeSegment[] } {
+function collectText(root: HTMLElement): TextIndex {
   const cached = textIndexCache.get(root);
   if (cached) return cached;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -94,7 +119,13 @@ function collectText(root: HTMLElement): { text: string; segments: TextNodeSegme
     text += value;
     segments.push({ node, start, end: text.length });
   }
-  const index = { text, segments };
+  const codePointToCodeUnit = [0];
+  let codeUnitOffset = 0;
+  for (const character of text) {
+    codeUnitOffset += character.length;
+    codePointToCodeUnit.push(codeUnitOffset);
+  }
+  const index = { text, segments, codePointToCodeUnit };
   textIndexCache.set(root, index);
   return index;
 }

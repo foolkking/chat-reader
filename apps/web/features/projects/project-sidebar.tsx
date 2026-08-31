@@ -342,7 +342,14 @@ export function ProjectSidebar({
     window.dispatchEvent(new Event("reader:dnd-start"));
     const raw = event.active.data.current as DragConversation | DragProject | undefined;
     if (raw?.activeType === "conversation" || raw?.activeType === "project") setActiveDrag(raw);
-    const initial = event.active.rect.current.initial;
+    const fallbackNode = raw?.activeType === "project"
+      ? document.querySelector<HTMLElement>(`[data-testid="project-order-slot-${raw.id}"] .reader-interactive-row`)
+      : raw?.activeType === "conversation"
+        ? document.querySelector<HTMLElement>(`[data-testid="conversation-row-${raw.id}"]`)
+        : null;
+    const initial = event.active.rect.current.initial
+      ?? event.active.rect.current.translated
+      ?? fallbackNode?.getBoundingClientRect();
     setActiveDragSize(initial ? { width: initial.width, height: initial.height } : null);
     updateDropIntent(null);
   }

@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useRef, useState } from "react";
-import { BookmarkPlus, CheckSquare2, MoreHorizontal, Pencil, Plus, Square, Trash2 } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
+import { BookmarkPlus, CheckSquare2, MoreHorizontal, Pencil, Plus, Square, Trash2, X } from "lucide-react";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { normalizedMessageBlocks } from "../editing/message-source-position";
@@ -42,7 +42,10 @@ function MessageItemComponent({
   const { t, resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const articleRef = useRef<HTMLElement | null>(null);
+  const mobileActionsRef = useRef<HTMLDivElement | null>(null);
+  const mobileActionsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const taskToggleInFlightRef = useRef(false);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [pendingTaskKeys, setPendingTaskKeys] = useState<Set<string>>(() => new Set());
   const [taskCheckedOverrides, setTaskCheckedOverrides] = useState<Map<string, boolean>>(() => new Map());
   const [taskError, setTaskError] = useState<string | null>(null);
@@ -53,7 +56,35 @@ function MessageItemComponent({
   const wideUserMessage = isUser && shouldUseWideUserLayout(currentText, blocks);
   const hasActions = !readOnly || Boolean(onSelectedChange) || Boolean(onBookmark);
   const messageDomId = `message-${message.id}`;
+  const mobileActionsId = `message-actions-${message.id}`;
   const isNavigationTarget = highlightTargetId === messageDomId || Boolean(highlightTargetId?.startsWith(`block-${message.id}-`));
+
+  useEffect(() => {
+    if (!mobileActionsOpen) return;
+    mobileActionsRef.current?.focus({ preventScroll: true });
+    const restoreFocus = () => {
+      window.setTimeout(() => mobileActionsTriggerRef.current?.focus({ preventScroll: true }), 0);
+    };
+    const closeOnOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (mobileActionsRef.current?.contains(target) || mobileActionsTriggerRef.current?.contains(target)) return;
+      setMobileActionsOpen(false);
+      restoreFocus();
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setMobileActionsOpen(false);
+      restoreFocus();
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    window.addEventListener("keydown", closeOnEscape, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      window.removeEventListener("keydown", closeOnEscape, true);
+    };
+  }, [mobileActionsOpen]);
 
   function scrollBy(delta: number) {
     if (!Number.isFinite(delta) || Math.abs(delta) < 0.5) return;
@@ -153,10 +184,33 @@ function MessageItemComponent({
           {hasActions ? (
             <>
               <div className="ml-auto hidden min-h-10 items-center opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 sm:flex">{actions(false)}</div>
-              <details className="ml-auto sm:hidden">
-                <summary aria-label={t("messageActions")} className="inline-flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg text-secondary hover:bg-subtle marker:hidden"><MoreHorizontal className="h-5 w-5" /></summary>
-                <div className="fixed inset-x-2 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[160] max-h-[min(70dvh,24rem)] overflow-visible rounded-lg border border-ui bg-raised p-3 shadow-2xl">{actions(true)}</div>
-              </details>
+              <div className="ml-auto sm:hidden">
+                <button
+                  ref={mobileActionsTriggerRef}
+                  type="button"
+                  aria-label={t("messageActions")}
+                  aria-expanded={mobileActionsOpen}
+                  aria-controls={mobileActionsId}
+                  data-testid="mobile-message-actions-trigger"
+                  onClick={() => setMobileActionsOpen((value) => !value)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle"
+                >
+                  {mobileActionsOpen ? <X className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
+                </button>
+                {mobileActionsOpen ? (
+                  <div
+                    ref={mobileActionsRef}
+                    id={mobileActionsId}
+                    role="dialog"
+                    aria-label={t("messageActions")}
+                    tabIndex={-1}
+                    data-testid="mobile-message-actions-sheet"
+                    className="fixed inset-x-2 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[160] max-h-[min(70dvh,24rem)] overflow-visible rounded-lg border border-ui bg-raised p-3 shadow-2xl outline-none"
+                  >
+                    {actions(true)}
+                  </div>
+                ) : null}
+              </div>
             </>
           ) : null}
         </div>

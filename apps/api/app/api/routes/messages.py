@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.observability import structured_event
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.message_version import MessageVersion
@@ -249,7 +250,7 @@ def update_message(
     except MessageEditError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except Exception:
+    except Exception as exc:
         db.rollback()
         raise
     response_started = time.perf_counter()
@@ -274,9 +275,9 @@ def update_message(
             rebuild_versions=False,
         )
         db.commit()
-    except Exception:
+    except Exception as exc:
         db.rollback()
-        logger.exception("Unable to queue post-commit derived rebuild for conversation %s", message.conversation_id)
+        structured_event(logger, logging.WARNING, "derived_rebuild_queue_failed", conversation_id=str(message.conversation_id), error_class=type(exc).__name__)
     timings["derived_queue_ms"] = round((time.perf_counter() - queue_started) * 1000, 3)
     timings["total_ms"] = round((time.perf_counter() - request_started) * 1000, 3)
     for name in (
@@ -382,7 +383,7 @@ def toggle_message_task(
         db.commit()
     except Exception:
         db.rollback()
-        logger.exception("Unable to queue task-toggle derived rebuild for conversation %s", message.conversation_id)
+        structured_event(logger, logging.WARNING, "derived_rebuild_queue_failed", conversation_id=str(message.conversation_id), error_class=type(exc).__name__)
     return response
 
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 type PreviewPosition = { left: number; top: number };
@@ -18,11 +18,11 @@ export function HoverPreviewLink({ href, title, description, children, className
   const anchorRef = useRef<HTMLAnchorElement>(null);
   const [position, setPosition] = useState<PreviewPosition | null>(null);
 
-  function clearPreview() {
+  const clearPreview = useCallback(() => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = null;
     setPosition(null);
-  }
+  }, []);
 
   function isCopyTruncated() {
     const copy = anchorRef.current?.querySelector<HTMLElement>("[data-hover-preview-copy]");
@@ -39,7 +39,6 @@ export function HoverPreviewLink({ href, title, description, children, className
   }
 
   useEffect(() => {
-    if (!position) return;
     const dismiss = () => clearPreview();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") dismiss();
@@ -54,7 +53,7 @@ export function HoverPreviewLink({ href, title, description, children, className
       window.removeEventListener("reader:dnd-start", dismiss);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [position]);
+  }, [clearPreview]);
 
   useEffect(() => () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);

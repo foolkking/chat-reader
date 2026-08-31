@@ -41,9 +41,11 @@ from app.schemas.editing import (
 from app.schemas.message import (
     DialogueIndexItem,
     DialogueIndexResponse,
+    LocatorTargetRequest,
     MessageListItem,
     MessageVersionRead,
     RenderBlockRead,
+    ResolvedLocatorResponse,
     ReaderTurnResponse,
 )
 from app.schemas.project import ConversationPinUpdate
@@ -70,6 +72,7 @@ from app.services.projects.project_service import (
 )
 from app.services.reader_preview import dialogue_preview
 from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn
+from app.services.reader_locator import resolve_reader_locator
 from app.api.routes.tasks import background_job_read
 from app.services.conversations.conversation_deletion import delete_conversation_record
 
@@ -849,6 +852,16 @@ def get_reader_turn(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/{conversation_id}/resolve-locator", response_model=ResolvedLocatorResponse)
+def resolve_locator_endpoint(
+    conversation_id: uuid.UUID,
+    payload: LocatorTargetRequest,
+    db: Session = Depends(get_db),
+) -> ResolvedLocatorResponse:
+    """Resolve a navigation target against canonical message/version/block rows."""
+    return resolve_reader_locator(db, conversation_id, payload)
 
 
 def _reading_progress(context: dict | None) -> float | None:

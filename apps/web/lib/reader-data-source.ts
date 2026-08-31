@@ -2,6 +2,7 @@ import {
   getConversation,
   getConversationDialogueIndex,
   getConversationReaderTurn,
+  resolveConversationLocator,
   getConversationMessageWindow,
   getConversationToc,
   getMessageBlocks,
@@ -16,6 +17,7 @@ import type {
   ConversationDetail,
   ConversationListItem,
   DialogueIndexResponse,
+  LocatorTargetRequest,
   MessageWindowResponse,
   ReaderTurnResponse,
   NavigateTarget,
@@ -26,6 +28,7 @@ import type {
   SearchResponse,
   TocItem,
   TocResponse,
+  ResolvedLocatorResponse,
 } from "./types";
 
 export type MessageWindowOptions = {
@@ -64,6 +67,7 @@ export type ReaderTargetContext = {
   dialogueIndex: DialogueIndexResponse;
   toc: TocResponse;
   nearestHeading: TocItem | null;
+  resolvedLocator?: ResolvedLocatorResponse;
 };
 
 // Concurrent navigation requests often ask for the same target turn (for
@@ -446,6 +450,9 @@ async function loadTargetContext(
   options: { includeNavigation?: boolean } = {},
 ): Promise<ReaderTargetContext> {
   const turnPromise = dataSource.getReaderTurn(conversationId, target.messageId);
+  const locatorPromise = dataSource.mode === "remote"
+    ? resolveConversationLocator(conversationId, toLocatorRequest(target)).catch(() => undefined)
+    : resolveOfflineLocator(conversationId, target).catch(() => undefined);
   // A target only needs the auxiliary projection that owns its navigation
   // surface. Loading both the dialogue rail and the TOC for every annotation
   // or heading jump doubled request and parsing work on long conversations.
@@ -457,7 +464,7 @@ async function loadTargetContext(
   const tocPromise = includeToc
     ? dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200 }).catch(() => emptyToc(conversationId))
     : Promise.resolve(emptyToc(conversationId));
-  const [turn, dialogueIndex, toc] = await Promise.all([turnPromise, dialogueIndexPromise, tocPromise]);
+  const [turn, dialogueIndex, toc, resolvedLocator] = await Promise.all([turnPromise, dialogueIndexPromise, tocPromise, locatorPromise]);
   // The dialogue index is an auxiliary projection and can legitimately lag
   // after merge/delete. The canonical turn response remains the authority;
   // do not fail an otherwise valid target just because the index is stale.
@@ -469,9 +476,10 @@ async function loadTargetContext(
     has_previous: turn.previous_anchor_message_id !== null,
     has_more: turn.next_anchor_message_id !== null,
   };
-  const targetMessage = messageWindow.items.find((item) => item.id === target.messageId);
+  const resolvedMessageId = resolvedLocator?.message_id ?? target.messageId;
+  const targetMessage = messageWindow.items.find((item) => item.id === resolvedMessageId);
   if (!targetMessage) throw new Error("The target message could not be loaded.");
-  const resolvedBlockIndex = target.blockIndex ?? (
+  const resolvedBlockIndex = resolvedLocator?.block_index ?? target.blockIndex ?? (
     target.renderBlockId
       ? targetMessage.render_blocks?.find((block) => block.id === target.renderBlockId)?.block_index
       : undefined
@@ -479,8 +487,70 @@ async function loadTargetContext(
   const targetBlocks = targetMessage.render_blocks ?? [];
   const nearestHeading = resolvedBlockIndex === undefined
     ? null
-    : toc.items.filter((item) => item.block_index <= resolvedBlockIndex).at(-1) ?? null;
-  return { readerTurn: turn, messageWindow, targetMessage, targetBlocks, dialogueIndex, toc, nearestHeading };
+    : toc.items.filter((item: TocItem) => item.block_index <= resolvedBlockIndex).at(-1) ?? null;
+  return { readerTurn: turn, messageWindow, targetMessage, targetBlocks, dialogueIndex, toc, nearestHeading, resolvedLocator };
+}
+
+function toLocatorRequest(target: NavigateTarget): LocatorTargetRequest {
+  return {
+    message_id: target.messageId,
+    message_version_id: target.messageVersionId ?? null,
+    render_block_id: target.renderBlockId ?? null,
+    block_index: target.blockIndex ?? null,
+    occurrence_key: target.occurrenceKey ?? null,
+    attachment_id: target.attachmentId ?? null,
+    canonical_start: target.canonicalStart ?? target.characterOffset ?? null,
+    canonical_end: target.canonicalEnd ?? target.endCharacterOffset ?? null,
+    quote: target.quote ?? null,
+    prefix: target.prefix ?? null,
+    suffix: target.suffix ?? null,
+  };
+}
+
+async function resolveOfflineLocator(
+  conversationId: string,
+  target: NavigateTarget,
+): Promise<ResolvedLocatorResponse | undefined> {
+  const message = await offlineDb.messages.get(target.messageId);
+  if (!message || message.conversation_id !== conversationId) {
+    return { conversation_id: conversationId, status: "NOT_FOUND", reason: "message-not-found", fallback_kind: "none" };
+  }
+  const currentVersionId = message.current_version?.id ?? null;
+  const remapped = Boolean(target.messageVersionId && target.messageVersionId !== currentVersionId);
+  const versionId = currentVersionId ?? target.messageVersionId ?? null;
+  const blocks = await getOfflineMessageBlocks(message.id);
+  let block = target.renderBlockId ? blocks.find((item) => item.id === target.renderBlockId) : undefined;
+  if (!block && target.blockIndex !== undefined) block = blocks.find((item) => item.block_index === target.blockIndex);
+  if (target.occurrenceKey) {
+    const attachments = await offlineDb.attachments.where("conversation_id").equals(conversationId).toArray();
+    const occurrence = attachments.flatMap((attachment) => (attachment.occurrences ?? []).map((item) => ({ attachment, item })))
+      .find(({ attachment, item }) => item.occurrence_key === target.occurrenceKey &&
+        (!target.attachmentId || attachment.id === target.attachmentId) &&
+        (!versionId || item.message_version_id === versionId) && item.message_id === message.id);
+    if (!occurrence) {
+      return { conversation_id: conversationId, status: remapped ? "STALE" : "NOT_FOUND", message_id: message.id, message_version_id: versionId, reason: "attachment-not-found", fallback_kind: "message" };
+    }
+    block = block ?? (occurrence.item.block_index === null ? undefined : blocks.find((item) => item.block_index === occurrence.item.block_index));
+  }
+  if (!block) {
+    return { conversation_id: conversationId, status: remapped ? "REMAPPED_VERSION" : "MESSAGE_ONLY", message_id: message.id, message_version_id: versionId, reason: "block-not-found", fallback_kind: "message" };
+  }
+  const text = block.plain_text ?? "";
+  const quote = target.quote?.trim();
+  const start = quote ? text.indexOf(quote) : target.canonicalStart ?? target.characterOffset;
+  const end = start === undefined || start < 0 ? undefined : quote ? start + quote.length : target.canonicalEnd ?? target.endCharacterOffset;
+  return {
+    conversation_id: conversationId,
+    status: remapped ? "REMAPPED_VERSION" : "EXACT",
+    message_id: message.id,
+    message_version_id: versionId,
+    render_block_id: block.id,
+    block_index: block.block_index,
+    start_offset: start !== undefined && start >= 0 ? start : null,
+    end_offset: end ?? null,
+    reason: remapped ? "version-remapped" : null,
+    fallback_kind: remapped ? "version" : null,
+  };
 }
 
 function emptyDialogueIndex(conversationId: string): DialogueIndexResponse {

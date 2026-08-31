@@ -72,6 +72,7 @@ _INLINE_MIME_TYPES = {
     "text/markdown",
     "text/plain",
 }
+MAX_RANGE_RESPONSE_BYTES = 8 * 1024 * 1024
 
 
 @router.post(
@@ -528,7 +529,10 @@ def _resolve_range(value: str | None, size: int) -> tuple[int, int, int]:
         return 0, -1, 200
     if value is None:
         return 0, size - 1, 200
-    match = re.fullmatch(r"bytes=(\d*)-(\d*)", value.strip())
+    # Keep a single preview/seek request bounded. Full downloads without a
+    # Range header remain unchanged, while clients can request the next range
+    # using the truthful Content-Range response.
+    match = re.fullmatch(r"bytes=(\d{0,20})-(\d{0,20})", value.strip())
     if match is None or "," in value:
         raise HTTPException(status_code=416, detail="Only one byte range is supported.", headers={"Content-Range": f"bytes */{size}"})
     first, last = match.groups()
@@ -536,14 +540,14 @@ def _resolve_range(value: str | None, size: int) -> tuple[int, int, int]:
         raise HTTPException(status_code=416, detail="Invalid byte range.", headers={"Content-Range": f"bytes */{size}"})
     if not first:
         length = int(last)
-        start = max(0, size - length)
+        start = max(0, size - min(length, MAX_RANGE_RESPONSE_BYTES))
         end = size - 1
     else:
         start = int(first)
         end = int(last) if last else size - 1
     if start >= size or start > end:
         raise HTTPException(status_code=416, detail="Byte range is outside the attachment.", headers={"Content-Range": f"bytes */{size}"})
-    return start, min(end, size - 1), 206
+    return start, min(end, size - 1, start + MAX_RANGE_RESPONSE_BYTES - 1), 206
 
 
 def _read_range(path: Path, start: int, end: int) -> Iterator[bytes]:

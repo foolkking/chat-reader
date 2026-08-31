@@ -44,7 +44,22 @@ expose them.
 
 ## Commands
 
-Dry-run is the default and deletes nothing:
+Routine cleanup-debt reporting is bounded, aggregate-only and deletes nothing:
+
+```text
+cd apps/api
+python -m scripts.artifact_cleanup_dry_run
+```
+
+The report scans at most 100,000 files by default, exposes `scan_complete`,
+eligible count/bytes and the three eligible category aggregates, and never
+returns paths or candidate tokens. An incomplete scan exits 2. Existing debt is
+still a truthful report and exits 0; use `--fail-on-debt` only when a CI or
+release gate explicitly treats any eligible debt as a failure. `--max-files`
+and `--grace-hours` are bounded operator overrides.
+
+The identity-bearing dry-run used to prepare an explicitly approved apply is
+also non-destructive:
 
 ```text
 cd apps/api

@@ -81,8 +81,11 @@ export async function loadCompleteTurnWindow(
   loadTurn: (anchorMessageId?: string) => Promise<ReaderTurnResponse>,
   anchorMessageId?: string,
   targetTurnCount = MAX_SETTLED_TURNS,
+  initialTurn?: ReaderTurnResponse,
 ): Promise<CompleteTurnWindow> {
-  const center = await loadTurn(anchorMessageId);
+  // Target-context resolution already fetched the center turn. Reusing it
+  // avoids a duplicate reader-turn request before loading its neighbours.
+  const center = initialTurn ?? await loadTurn(anchorMessageId);
   const turns = [center];
   const seen = new Set([center.turn_key]);
   const loadAnchor = async (anchor: string | null) => {
@@ -183,4 +186,3 @@ export function appendLoadedWindow(
     generation: current.generation,
   };
 }
-

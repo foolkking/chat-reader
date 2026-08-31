@@ -23,6 +23,7 @@ export type ConversationIndexItem = {
 
 export function ConversationIndex({
   conversationId,
+  fallbackMessages,
   messages,
   activeMessageId,
   ready = true,
@@ -32,6 +33,7 @@ export function ConversationIndex({
   onNavigate,
 }: {
   conversationId: string;
+  fallbackMessages?: MessageListItem[];
   messages?: MessageListItem[];
   activeMessageId?: string | null;
   ready?: boolean;
@@ -96,10 +98,14 @@ export function ConversationIndex({
   }, [mode, panelState]);
 
   const resolvedPage = remotePage ?? indexQuery.data ?? null;
-  const items = useMemo(
-    () => messages ? buildItemsFromMessages(messages) : (resolvedPage?.items ?? []).map(toIndexItem),
-    [messages, resolvedPage?.items],
-  );
+  const items = useMemo(() => {
+    if (messages) return buildItemsFromMessages(messages);
+    if (resolvedPage?.items?.length) return resolvedPage.items.map(toIndexItem);
+    // The index is an auxiliary projection and can briefly lag after an
+    // import, merge, or refresh. Use the canonical reader window as a
+    // non-destructive fallback instead of reporting a false empty dialogue.
+    return fallbackMessages?.length ? buildItemsFromMessages(fallbackMessages) : [];
+  }, [fallbackMessages, messages, resolvedPage?.items]);
   const activeOrdinal = items.find((item) => item.messageId === activeMessageId)?.ordinal ?? null;
   const visibleItems = useMemo(
     () => applyFilter(items, rangeMode, hideBefore, hideAfter, activeOrdinal),

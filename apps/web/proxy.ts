@@ -26,6 +26,8 @@ function isPublicPath(pathname: string): boolean {
     || pathname.startsWith("/api/")
     || pathname.startsWith("/_next/")
     || pathname.startsWith("/icons/")
+    || pathname.startsWith("/skills/")
+    || pathname.startsWith("/import-rescue/")
     || pathname === "/favicon.ico"
     || pathname === "/library-sw.js"
     || pathname === "/sw.js"

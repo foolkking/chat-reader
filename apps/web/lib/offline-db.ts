@@ -193,12 +193,83 @@ function validateOfflinePackageMessageCounts(payload: OfflinePackagePayload): vo
   }
 }
 
+function validateOfflinePackageStoreShape(payload: OfflinePackagePayload): void {
+  // v1 packages intentionally remain permissive because early exports did not
+  // include every derived store. v2+ packages must declare each store they
+  // claim to contain so a malformed package cannot look like an empty Reader.
+  if (payload.version === 1) return;
+  const stores = ["messages", "headings", "search_documents", "annotations"] as const;
+  payload.conversations.forEach((conversation, index) => {
+    for (const store of stores) {
+      if (!Array.isArray(conversation[store])) {
+        throw new OfflinePackageImportError("MALFORMED", `Offline package schema mismatch: conversations[${index}].${store} must be an array.`);
+      }
+    }
+    if (conversation.notebook !== null && conversation.notebook !== undefined && typeof conversation.notebook !== "object") {
+      throw new OfflinePackageImportError("MALFORMED", `Offline package schema mismatch: conversations[${index}].notebook must be an object or null.`);
+    }
+    if (conversation.reading_position !== null && conversation.reading_position !== undefined && typeof conversation.reading_position !== "object") {
+      throw new OfflinePackageImportError("MALFORMED", `Offline package schema mismatch: conversations[${index}].reading_position must be an object or null.`);
+    }
+    if (payload.version === 3 && conversation.attachments !== undefined && !Array.isArray(conversation.attachments)) {
+      throw new OfflinePackageImportError("MALFORMED", `Offline package schema mismatch: conversations[${index}].attachments must be an array.`);
+    }
+  });
+}
+
 type BulkPutTable<T> = { bulkPut(items: T[]): Promise<unknown> };
+
+const OFFLINE_STORAGE_FIXED_RESERVE_BYTES = 1024 * 1024;
+const OFFLINE_JSON_INDEXED_DB_MULTIPLIER = 2.25;
+const OFFLINE_ASSET_CACHE_MULTIPLIER = 1.05;
+const OFFLINE_INDEX_BYTES_PER_RECORD = 384;
 
 async function bulkPutChunked<T>(table: BulkPutTable<T>, items: T[], chunkSize = 100): Promise<void> {
   for (let offset = 0; offset < items.length; offset += chunkSize) {
     await table.bulkPut(items.slice(offset, offset + chunkSize));
   }
+}
+
+async function inspectOfflineBulkPutChunking(itemCount: number): Promise<number[]> {
+  if (!Number.isSafeInteger(itemCount) || itemCount < 0 || itemCount > 100_000) {
+    throw new Error("Offline chunk probe item count is out of bounds.");
+  }
+  const batchSizes: number[] = [];
+  await bulkPutChunked(
+    { bulkPut: async (items: number[]) => { batchSizes.push(items.length); } },
+    Array.from({ length: itemCount }, (_, index) => index),
+  );
+  return batchSizes;
+}
+
+function estimateOfflineStorageBytes(
+  payload: OfflinePackagePayload,
+  entries: ReturnType<typeof unzipSync>,
+): number {
+  const packageJsonBytes = entries["package.json"]?.byteLength ?? 0;
+  const assetBytes = Object.entries(entries).reduce(
+    (sum, [name, value]) => sum + (name === "package.json" ? 0 : value.byteLength),
+    0,
+  );
+  let recordCount = 1; // package metadata
+  for (const conversation of payload.conversations) {
+    const messages = conversation.messages ?? [];
+    recordCount += 1
+      + messages.length
+      + messages.reduce((sum, message) => sum + (message.render_blocks?.length ?? 0), 0)
+      + (conversation.headings?.length ?? 0)
+      + (conversation.search_documents?.length ?? 0)
+      + (conversation.annotations?.length ?? 0)
+      + (conversation.notebook ? 1 : 0)
+      + (conversation.reading_position ? 1 : 0)
+      + (conversation.attachments?.length ?? 0);
+  }
+  return Math.ceil(
+    OFFLINE_STORAGE_FIXED_RESERVE_BYTES
+      + packageJsonBytes * OFFLINE_JSON_INDEXED_DB_MULTIPLIER
+      + assetBytes * OFFLINE_ASSET_CACHE_MULTIPLIER
+      + recordCount * OFFLINE_INDEX_BYTES_PER_RECORD,
+  );
 }
 
 export async function importOfflinePackage(packageId: string, response: Response): Promise<OfflinePackageMeta> {
@@ -227,6 +298,7 @@ export async function importOfflinePackage(packageId: string, response: Response
     throw new OfflinePackageImportError("MALFORMED", "Unsupported offline package version.");
   }
   if (!Array.isArray(payload.conversations)) throw new OfflinePackageImportError("MALFORMED", "Offline package does not contain a valid conversation list.");
+  validateOfflinePackageStoreShape(payload);
   validateOfflinePackageMessageCounts(payload);
   const now = new Date().toISOString();
   const conversationIds = payload.conversations.map((conversation) => conversation.id);
@@ -237,8 +309,9 @@ export async function importOfflinePackage(packageId: string, response: Response
   // the expanded JSON/assets before opening a write transaction so a quota
   // failure is reported immediately instead of aborting halfway through a
   // thousands-of-documents bulk write.
-  const expandedBytes = Object.values(entries).reduce((sum, value) => sum + value.byteLength, 0);
-  if (estimate?.quota !== undefined && estimate.usage !== undefined && expandedBytes > estimate.quota - estimate.usage) {
+  const requiredStorageBytes = estimateOfflineStorageBytes(payload, entries);
+  const currentEstimate = await navigator.storage?.estimate?.().catch(() => estimate);
+  if (currentEstimate?.quota !== undefined && currentEstimate.usage !== undefined && requiredStorageBytes > currentEstimate.quota - currentEstimate.usage) {
     throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.");
   }
   const packageMeta: OfflinePackageMeta = {
@@ -503,6 +576,7 @@ declare global {
   interface Window {
     __chatReaderPwaNegativeTest?: {
       importOfflinePackage: typeof importOfflinePackage;
+      inspectOfflineBulkPutChunking: typeof inspectOfflineBulkPutChunking;
     };
   }
 }
@@ -510,7 +584,7 @@ declare global {
 // Compile-time opt-in only: normal production bundles do not expose a fault
 // seam. Release E uses it to exercise the real Cache Storage/IndexedDB path.
 if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS === "1") {
-  window.__chatReaderPwaNegativeTest = { importOfflinePackage };
+  window.__chatReaderPwaNegativeTest = { importOfflinePackage, inspectOfflineBulkPutChunking };
 }
 
 function offlineAttachmentRead(record: OfflineAttachmentRecord, contentUrl: string | null, cached: boolean): AttachmentRead {

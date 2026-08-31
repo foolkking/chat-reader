@@ -56,6 +56,7 @@ import { FloatingWorkspacePanel } from "../../components/floating-workspace-pane
 import { resolveActiveReadingTarget } from "./reader-active-position";
 import { TocRefreshDialog } from "../toc/toc-refresh-dialog";
 import { ReaderMarkdownCopyBoundary } from "./reader-markdown-copy";
+import { reportReaderPerformance, type ReaderPerformanceOutcome } from "./reader-performance";
 
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
@@ -199,8 +200,13 @@ export function ConversationReader({
     if (locatePulseTimerRef.current) window.clearTimeout(locatePulseTimerRef.current);
   }, []);
   const [navigationStatus, setNavigationStatus] = useState<"idle" | "loading" | "failed" | "stale">("idle");
+  const [navigationFailureReason, setNavigationFailureReason] = useState<NavigationResult["reason"] | null>(null);
   const [pendingTargetMessageId, setPendingTargetMessageId] = useState<string | null>(targetMessageId);
   const [initialPaintReady, setInitialPaintReady] = useState(false);
+  const firstContentStartedAtRef = useRef<number | null>(
+    typeof window === "undefined" ? null : window.performance.now(),
+  );
+  const firstContentReportedRef = useRef(false);
   const isOffline = dataSource.mode === "offline";
   const canManageCanonical = dataSource.capabilities.canonicalManagement;
   const canBrowseAttachments = dataSource.capabilities.attachments !== "none";
@@ -224,6 +230,7 @@ export function ConversationReader({
   const nextSentinelVisibleRef = useRef(false);
   const navigationTokenRef = useRef(0);
   const targetNavigationKeyRef = useRef<string | null>(null);
+  const lastNavigationTargetRef = useRef<NavigateTarget | null>(null);
   const previousTurnAnchorRef = useRef<string | null>(null);
   const nextTurnAnchorRef = useRef<string | null>(null);
   const focusAnchorRef = useRef<ReturnType<typeof captureScrollAnchor>>(null);
@@ -487,6 +494,7 @@ export function ConversationReader({
       navigationTokenRef.current += 1;
       navigationInProgressRef.current = false;
       setNavigationStatus("idle");
+      setNavigationFailureReason(null);
     }
   }, []);
 
@@ -581,6 +589,7 @@ export function ConversationReader({
     setActiveMessageId(targetMessageId);
     setActiveBlockId(null);
     setNavigationStatus("idle");
+    setNavigationFailureReason(null);
     navigationInProgressRef.current = false;
     setSelectedMessageIds(new Set());
     if (sourceEditorTarget) {
@@ -597,12 +606,36 @@ export function ConversationReader({
     scrollDirectionRef.current = null;
     scrollIntentSequenceRef.current += 1;
     setInitialPaintReady(false);
+    firstContentStartedAtRef.current = window.performance.now();
+    firstContentReportedRef.current = false;
     restoreAttemptedRef.current = false;
     restoreInProgressRef.current = false;
     readingRestoreTokenRef.current += 1;
     lastSavedSignatureRef.current = "";
     preferenceStableAnchorRef.current = null;
   }, [conversationId, targetMessageId]);
+
+  useEffect(() => {
+    if (!initialPaintReady || firstContentReportedRef.current) return;
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      const settleFrame = window.requestAnimationFrame(() => {
+        if (cancelled || firstContentReportedRef.current) return;
+        firstContentReportedRef.current = true;
+        reportReaderPerformance(
+          "first-content",
+          firstContentStartedAtRef.current ?? window.performance.now(),
+          messages.length > 0 ? "success" : "empty",
+          "initial",
+        );
+      });
+      if (cancelled) window.cancelAnimationFrame(settleFrame);
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [initialPaintReady, messages.length]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -789,17 +822,25 @@ export function ConversationReader({
 
   const navigateToTarget = useCallback(
     async (target: NavigateTarget): Promise<NavigationResult> => {
+      const navigationStartedAt = window.performance.now();
+      let resolutionReported = false;
+      let mountStartedAt: number | null = null;
+      let mountReported = false;
       const { messageId, blockIndex, characterOffset, endCharacterOffset, quote, prefix, suffix, alignmentOffset, allowMessageFallback } = target;
-      const targetFirst = target.source === "annotation" || target.preferTocPipeline || characterOffset !== undefined;
+       const targetFirst = target.source === "annotation" || target.source === "attachment" ||
+         target.source === "search" || target.source === "section-toc" || target.preferTocPipeline || characterOffset !== undefined;
+      let timingPath: "local" | "remote" | "message-window" = targetFirst ? "remote" : "message-window";
       const resolvedAlignmentOffset = alignmentOffset ?? (targetFirst ? ACTIVE_READING_OFFSET : 12);
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
+      lastNavigationTargetRef.current = target;
       navigationInProgressRef.current = true;
       if (targetFirst) {
         restoreAttemptedRef.current = true;
         readingRestoreTokenRef.current += 1;
       }
       setNavigationStatus("loading");
+      setNavigationFailureReason(null);
       const generation = windowGenerationRef.current + 1;
       windowGenerationRef.current = generation;
       applyLoadedWindow({ ...loadedWindowRef.current, generation });
@@ -818,30 +859,56 @@ export function ConversationReader({
       try {
         let targetPage: CompleteTurnWindow | null = null;
         let knownMessage: MessageListItem | undefined;
+        let locallyResolved = false;
+        let resolvedLocator: ReaderTargetContext["resolvedLocator"];
         if (targetFirst) {
-          let targetContext: ReaderTargetContext;
-          let completeWindow: CompleteTurnWindow;
-          try {
-            [targetContext, completeWindow] = await Promise.all([
-              dataSource.getTargetContext(conversationId, target),
-              loadCompleteTurnWindow(dataSource, conversationId, messageId),
-            ]);
-          } catch {
-            if (navigationTokenRef.current === token) setNavigationStatus("failed");
-            return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-context-failed" };
-          }
-          if (navigationTokenRef.current !== token) {
-            return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
-          }
-          targetPage = completeWindow;
-          previousTurnAnchorRef.current = completeWindow.previousTurnAnchorMessageId;
-          nextTurnAnchorRef.current = completeWindow.nextTurnAnchorMessageId;
-          knownMessage = completeWindow.items.find((message) => message.id === messageId) ?? targetContext.targetMessage;
-          setNavigationStage(scrollContainerRef.current, "target-context-ready");
-          const sourceKey = readerCacheIdentity(dataSource, conversationQuery.data);
-          for (const mode of ["rail", "sheet"] as const) {
-            queryClient.setQueryData(["conversation-index", sourceKey, conversationId, messageId, mode], targetContext.dialogueIndex);
-            queryClient.setQueryData(["toc", sourceKey, conversationId, messageId, mode], targetContext.toc);
+          const requiresServerLocator = target.occurrenceKey || target.attachmentId || target.quote ||
+            target.canonicalStart !== undefined || target.preferTocPipeline ||
+            target.source === "search" || target.source === "annotation";
+          const locallyLoadedMessage = requiresServerLocator
+            ? undefined
+            : locallyResolvableMessage(loadedWindowRef.current.items, target);
+          if (locallyLoadedMessage) {
+            // Exact version/block identity is already authoritative in the
+            // mounted window. Avoid a second reader-turn + neighborhood load
+            // for repeated clicks from Search, Files, TOC, or Annotations.
+            knownMessage = locallyLoadedMessage;
+            locallyResolved = true;
+            timingPath = "local";
+            setNavigationStage(scrollContainerRef.current, "target-context-local");
+          } else {
+            let targetContext: ReaderTargetContext;
+            let completeWindow: CompleteTurnWindow;
+            try {
+              targetContext = await dataSource.getTargetContext(conversationId, target);
+              resolvedLocator = targetContext.resolvedLocator;
+              completeWindow = await loadCompleteTurnWindow(
+                dataSource,
+                conversationId,
+                messageId,
+                undefined,
+                targetContext.readerTurn,
+              );
+            } catch {
+              if (navigationTokenRef.current === token) {
+                setNavigationStatus("failed");
+                setNavigationFailureReason("target-context-failed");
+              }
+              return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-context-failed" };
+            }
+            if (navigationTokenRef.current !== token) {
+              return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
+            }
+            targetPage = completeWindow;
+            previousTurnAnchorRef.current = completeWindow.previousTurnAnchorMessageId;
+            nextTurnAnchorRef.current = completeWindow.nextTurnAnchorMessageId;
+            knownMessage = completeWindow.items.find((message) => message.id === messageId) ?? targetContext.targetMessage;
+            setNavigationStage(scrollContainerRef.current, "target-context-ready");
+            const sourceKey = readerCacheIdentity(dataSource, conversationQuery.data);
+            for (const mode of ["rail", "sheet"] as const) {
+              queryClient.setQueryData(["conversation-index", sourceKey, conversationId, messageId, mode], targetContext.dialogueIndex);
+              queryClient.setQueryData(["toc", sourceKey, conversationId, messageId, mode], targetContext.toc);
+            }
           }
         } else if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) {
           const page = await loadCompleteTurnWindow(dataSource, conversationId, messageId);
@@ -861,24 +928,51 @@ export function ConversationReader({
 
         if (!knownMessage) {
           setNavigationStatus("failed");
+          setNavigationFailureReason("target-not-mounted");
           return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-not-mounted" };
         }
+        if (resolvedLocator?.status === "NOT_FOUND" && target.occurrenceKey) {
+          setNavigationStatus("failed");
+          setNavigationFailureReason("attachment-not-found");
+          return { ok: false, targetId: messageIdDom, reason: "attachment-not-found" };
+        }
+        if (resolvedLocator?.status === "STALE" && target.occurrenceKey) {
+          setNavigationStatus("stale");
+          setNavigationFailureReason("stale-anchor");
+          return { ok: false, targetId: messageIdDom, reason: "stale-anchor" };
+        }
+        if (resolvedLocator?.status === "AMBIGUOUS") {
+          setNavigationStatus("failed");
+          setNavigationFailureReason("ambiguous");
+          return { ok: false, targetId: messageIdDom, reason: "ambiguous" };
+        }
         const resolvedMessage = knownMessage;
-        const exactVersionMatches = !target.messageVersionId
-          || target.messageVersionId === resolvedMessage.current_version?.id;
+        const effectiveRenderBlockId = resolvedLocator?.render_block_id ?? target.renderBlockId;
+        const effectiveBlockIndex = resolvedLocator?.block_index ?? blockIndex;
+        const effectiveBlockId = effectiveBlockIndex === undefined
+          ? null
+          : `block-${messageId}-${effectiveBlockIndex}`;
+        const effectiveCharacterOffset = resolvedLocator?.start_offset ?? characterOffset;
+        const effectiveEndCharacterOffset = resolvedLocator?.end_offset ?? endCharacterOffset;
+        const exactVersionMatches = resolvedLocator?.status !== "REMAPPED_VERSION" &&
+          (!target.messageVersionId || target.messageVersionId === resolvedMessage.current_version?.id);
         const targetBlockIndex = exactVersionMatches
-          ? blockIndex ?? (
-            target.renderBlockId
-              ? resolvedMessage.render_blocks?.find((block) => block.id === target.renderBlockId)?.block_index
+          ? effectiveBlockIndex ?? (
+            effectiveRenderBlockId
+              ? resolvedMessage.render_blocks?.find((block) => block.id === effectiveRenderBlockId)?.block_index
               : undefined
           )
-          : target.renderBlockId
-            ? resolvedMessage.render_blocks?.find((block) => block.id === target.renderBlockId)?.block_index
+          : effectiveRenderBlockId
+            ? resolvedMessage.render_blocks?.find((block) => block.id === effectiveRenderBlockId)?.block_index
             : undefined;
 
         if (navigationTokenRef.current !== token) {
           return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
         }
+
+        reportReaderPerformance("locator-resolution", navigationStartedAt, "success", timingPath);
+        resolutionReported = true;
+        mountStartedAt = window.performance.now();
 
         if (targetPage) {
           initialWindowAppliedRef.current = true;
@@ -891,12 +985,12 @@ export function ConversationReader({
           setNavigationStage(scrollContainerRef.current, "target-window-committed");
         }
 
-        let resolvedTargetId = exactVersionMatches ? (blockId ?? messageIdDom) : messageIdDom;
+        let resolvedTargetId = exactVersionMatches ? (effectiveBlockId ?? messageIdDom) : messageIdDom;
         const resolveStableTarget = () => {
           const messageScope = document.getElementById(messageIdDom) ?? document;
           let blockScope: HTMLElement | Document = messageScope;
-          if (target.renderBlockId) {
-            const blockByStableId = messageScope.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(target.renderBlockId)}"]`);
+          if (effectiveRenderBlockId) {
+            const blockByStableId = messageScope.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(effectiveRenderBlockId)}"]`);
             if (blockByStableId?.id) {
               resolvedTargetId = blockByStableId.id;
               blockScope = blockByStableId;
@@ -926,21 +1020,29 @@ export function ConversationReader({
           fallbackId: resolvedTargetId === messageIdDom ? undefined : messageIdDom,
           tokenIsCurrent: () => navigationTokenRef.current === token,
           offset: resolvedAlignmentOffset,
-          characterOffset: exactVersionMatches && (resolvedTargetId === blockId || Boolean(target.renderBlockId)) ? characterOffset : undefined,
-          endCharacterOffset: exactVersionMatches && (resolvedTargetId === blockId || Boolean(target.renderBlockId)) ? endCharacterOffset : undefined,
-          quote: resolvedTargetId === blockId || target.renderBlockId ? quote : null,
-          prefix: resolvedTargetId === blockId || target.renderBlockId ? prefix : null,
-          suffix: resolvedTargetId === blockId || target.renderBlockId ? suffix : null,
+           characterOffset: exactVersionMatches && (resolvedTargetId === effectiveBlockId || Boolean(effectiveRenderBlockId)) ? effectiveCharacterOffset : undefined,
+           endCharacterOffset: exactVersionMatches && (resolvedTargetId === effectiveBlockId || Boolean(effectiveRenderBlockId)) ? effectiveEndCharacterOffset : undefined,
+           quote: resolvedTargetId === effectiveBlockId || Boolean(effectiveRenderBlockId) ? quote : null,
+           prefix: resolvedTargetId === effectiveBlockId || Boolean(effectiveRenderBlockId) ? prefix : null,
+           suffix: resolvedTargetId === effectiveBlockId || Boolean(effectiveRenderBlockId) ? suffix : null,
           timeoutMs: 8000,
-          allowFallback: allowMessageFallback ?? Boolean(quote || characterOffset !== undefined || target.renderBlockId || target.occurrenceKey),
+          allowFallback: allowMessageFallback ?? Boolean(quote || effectiveCharacterOffset !== undefined || effectiveRenderBlockId || target.occurrenceKey),
         });
         if (navigationTokenRef.current !== token) {
           return { ok: false, targetId: mountedResult.targetId, reason: "cancelled" };
         }
         const result: NavigationResult = mountedResult;
+        reportReaderPerformance(
+          "target-mount",
+          mountStartedAt,
+          result.ok ? (result.fallback ? "fallback" : "success") : "failed",
+          timingPath,
+        );
+        mountReported = true;
         setNavigationStage(scrollContainerRef.current, result.ok ? "resolved" : `failed:${result.reason ?? "unknown"}`);
         if (result.ok) {
           setNavigationStatus(result.fallback ? "stale" : "idle");
+          setNavigationFailureReason(null);
           setActiveMessageId(messageId);
           setActiveBlockId(resolvedTargetId === messageIdDom ? null : resolvedTargetId);
           const root = scrollContainerRef.current;
@@ -952,8 +1054,12 @@ export function ConversationReader({
             root,
             anchor: stableAnchor,
             tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
-            minimumMs: targetFirst ? 1400 : 700,
-            settleMs: targetFirst ? 360 : 220,
+            // A mounted, exact-version target has already passed the expensive
+            // data and virtualization phases. Keep a short layout guard for
+            // fonts/attachments, while retaining the conservative window for
+            // network-loaded or remapped targets.
+            minimumMs: locallyResolved ? 220 : (targetFirst ? 1400 : 700),
+            settleMs: locallyResolved ? 100 : (targetFirst ? 360 : 220),
             timeoutMs: targetFirst ? 5000 : 2800,
           });
           if (navigationTokenRef.current !== token) {
@@ -964,8 +1070,8 @@ export function ConversationReader({
           if (visualTarget) {
             const range = !result.fallback && result.targetId !== messageIdDom
               ? resolveTextAnchorRange(visualTarget, {
-                startOffset: characterOffset,
-                endOffset: endCharacterOffset,
+                 startOffset: effectiveCharacterOffset,
+                 endOffset: effectiveEndCharacterOffset,
                 quote,
                 prefix,
                 suffix,
@@ -981,16 +1087,37 @@ export function ConversationReader({
               if (navigationTokenRef.current === token) setLocatePulse(null);
             }, 720);
           }
-          setNavigationStatus("idle");
+          if (!result.fallback) setNavigationStatus("idle");
         } else {
           setNavigationStatus("failed");
+          setNavigationFailureReason(result.reason ?? "load-failed");
         }
         return result;
       } catch {
         setNavigationStage(scrollContainerRef.current, "failed:load-failed");
         setNavigationStatus("failed");
+        setNavigationFailureReason("load-failed");
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "load-failed" };
       } finally {
+        const unfinishedOutcome: ReaderPerformanceOutcome = navigationTokenRef.current === token
+          ? "failed"
+          : "cancelled";
+        if (!resolutionReported) {
+          reportReaderPerformance(
+            "locator-resolution",
+            navigationStartedAt,
+            unfinishedOutcome,
+            timingPath,
+          );
+        }
+        if (mountStartedAt !== null && !mountReported) {
+          reportReaderPerformance(
+            "target-mount",
+            mountStartedAt,
+            unfinishedOutcome,
+            timingPath,
+          );
+        }
         blockLease?.release();
         if (navigationTokenRef.current === token) {
           navigationInProgressRef.current = false;
@@ -1794,6 +1921,12 @@ export function ConversationReader({
     setShowFiles(panel === "files");
   }, [closeSourceEditorForWorkspace, showExport, showFiles, showSearch, showShare]);
 
+  const refreshAttachmentReferences = useCallback(async () => {
+    setNavigationStatus("idle");
+    await queryClient.invalidateQueries({ queryKey: ["conversation-attachments", conversationId] });
+    await openUtilityPanel("files");
+  }, [conversationId, openUtilityPanel, queryClient]);
+
   const closeDesktopUtilityPanels = useCallback(() => {
     setShowShare(false);
     setShowExport(false);
@@ -2049,7 +2182,7 @@ export function ConversationReader({
   );
 
   const navigationContent = navigationTab === "dialogue" ? (
-    <ConversationIndex conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={async (item) => {
+    <ConversationIndex conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} fallbackMessages={messages} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
       const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
@@ -2058,11 +2191,14 @@ export function ConversationReader({
   ) : (
     <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
-      const result = await navigateToTarget({ messageId: item.message_id, messageVersionId: item.message_version_id, renderBlockId: item.render_block_id, blockIndex: item.block_index, source: "section-toc" });
+      const result = await navigateToTarget({ messageId: item.message_id, messageVersionId: item.message_version_id, renderBlockId: item.render_block_id, blockIndex: item.block_index, preferTocPipeline: true, source: "section-toc" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
       if (result.ok) setUtilityPanel(null);
     }} />
   );
+
+  const navigationTargetIsAttachment = Boolean(lastNavigationTargetRef.current?.attachmentId);
+  const navigationFailureMessage = navigationFailureCopyV2(navigationFailureReason, resolvedLocale, navigationTargetIsAttachment);
 
   return (
     <main className={`flex min-h-0 min-w-0 overflow-hidden bg-page text-primary ${libraryMode || workspace.embedded ? "h-full w-full flex-1" : "h-screen w-screen"}`}>
@@ -2128,8 +2264,22 @@ export function ConversationReader({
             <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
           {!focusMode && navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">{t("locating")}</div> : null}
-          {!focusMode && navigationStatus === "stale" ? <div className="border-t border-ui bg-amber-50 px-[3vw] py-2 text-sm text-amber-800" role="status">{t("locateChanged")}</div> : null}
-          {!focusMode && navigationStatus === "failed" ? <div className="border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert">{t("locateFailed")}</div> : null}
+          {!focusMode && navigationStatus === "stale" ? (
+            <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-amber-50 px-[3vw] py-2 text-sm text-amber-800" role="status">
+              <span className="min-w-0 flex-1">{navigationTargetIsAttachment ? (resolvedLocale === "zh-CN" ? "附件引用对应的正文版本已变化。" : "The message version for this attachment reference has changed.") : t("locateChanged")}</span>
+              <button type="button" onClick={() => { const target = lastNavigationTargetRef.current; if (target) void navigateToTarget(target); }} className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={!lastNavigationTargetRef.current}>{resolvedLocale === "zh-CN" ? "重新定位" : "Retry locate"}</button>
+              <button type="button" onClick={() => { const target = lastNavigationTargetRef.current; if (target) void navigateToTarget({ messageId: target.messageId, source: "message-action", allowMessageFallback: true }); }} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle" disabled={!lastNavigationTargetRef.current}>{resolvedLocale === "zh-CN" ? "定位到消息" : "Locate message"}</button>
+              {navigationTargetIsAttachment ? <button type="button" onClick={() => void refreshAttachmentReferences()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle">{resolvedLocale === "zh-CN" ? "刷新文件引用" : "Refresh file references"}</button> : null}
+            </div>
+          ) : null}
+          {!focusMode && navigationStatus === "failed" ? (
+            <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert">
+              <span className="min-w-0 flex-1">{navigationFailureMessage}</span>
+              <button type="button" onClick={() => { const target = lastNavigationTargetRef.current; if (target) void navigateToTarget({ ...target, allowMessageFallback: true }); }} className="shrink-0 rounded-md border border-[var(--danger)]/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={!lastNavigationTargetRef.current}>{resolvedLocale === "zh-CN" ? "重新定位" : "Retry locate"}</button>
+              <button type="button" onClick={() => { const target = lastNavigationTargetRef.current; if (target) void navigateToTarget({ messageId: target.messageId, source: "message-action", allowMessageFallback: true }); }} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle" disabled={!lastNavigationTargetRef.current}>{resolvedLocale === "zh-CN" ? "定位到消息" : "Locate message"}</button>
+              {navigationTargetIsAttachment ? <button type="button" onClick={() => void refreshAttachmentReferences()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle">{resolvedLocale === "zh-CN" ? "刷新文件引用" : "Refresh file references"}</button> : null}
+            </div>
+          ) : null}
           {!focusMode && searchNavigation ? <div className="flex min-w-0 items-center gap-2 border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-primary" role="status">
             <span className="min-w-0 flex-1 truncate font-medium">{searchNavigation.query}</span>
             <span className="shrink-0 text-xs text-secondary">{searchNavigation.index + 1} / {searchNavigation.targets.length}</span>
@@ -2146,6 +2296,7 @@ export function ConversationReader({
             focusMode={focusMode}
             index={<ConversationIndex
                   conversationId={conversationId}
+                  fallbackMessages={messages}
                   sourceKey={readerSourceKey}
                   activeMessageId={activeMessageId}
                   ready={canLoadInitialWindow}
@@ -2233,6 +2384,7 @@ export function ConversationReader({
                     void navigateToTarget({
                       messageId: item.message_id,
                       blockIndex: item.block_index,
+                      preferTocPipeline: true,
                       source: "section-toc",
                     });
                   }}
@@ -2467,11 +2619,13 @@ async function loadCompleteTurnWindow(
   conversationId: string,
   anchorMessageId?: string,
   targetTurnCount?: number,
+  initialTurn?: Awaited<ReturnType<ReaderDataSource["getReaderTurn"]>>,
 ): Promise<CompleteTurnWindow> {
   return loadTurnNeighborhood(
     (anchor) => dataSource.getReaderTurn(conversationId, anchor),
     anchorMessageId,
     targetTurnCount,
+    initialTurn,
   );
 }
 
@@ -2769,6 +2923,20 @@ function numberOrNull(value: unknown): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
+function locallyResolvableMessage(items: MessageListItem[], target: NavigateTarget): MessageListItem | undefined {
+  const message = items.find((item) => item.id === target.messageId);
+  if (!message) return undefined;
+  const currentVersionId = message.current_version?.id;
+  if (!target.messageVersionId || target.messageVersionId !== currentVersionId) return undefined;
+  const blocks = message.render_blocks ?? [];
+  if (target.renderBlockId && !blocks.some((block) => block.id === target.renderBlockId)) return undefined;
+  if (target.blockIndex !== undefined && !blocks.some((block) => block.block_index === target.blockIndex)) return undefined;
+  // A stable block identity or index is required. Quote-only anchors still
+  // need server remapping so duplicate text never picks an arbitrary match.
+  if (target.renderBlockId || target.blockIndex !== undefined) return message;
+  return undefined;
+}
+
 function formatConversationTitle(conversation: Pick<ConversationDetail, "title" | "display_title" | "project_name">): string {
   const title = (conversation.display_title || conversation.title || APP_TITLE).trim() || APP_TITLE;
   const project = conversation.project_name?.trim();
@@ -2836,6 +3004,47 @@ function applySearchHighlight(target: { targetId: string; quote: string; start?:
     if (frame) window.cancelAnimationFrame(frame);
     highlights.delete("chat-reader-search-match");
   };
+}
+
+function _navigationFailureCopy(
+  reason: NavigationResult["reason"] | null,
+  locale: string,
+  attachment: boolean,
+): string {
+  if (locale === "zh-CN") {
+    if (attachment || reason === "attachment-not-found") return "附件引用已失效，当前正文已保留。";
+    if (reason === "ambiguous") return "存在多个可能位置，请选择具体引用。";
+    if (reason === "target-context-failed" || reason === "target-not-mounted") return "无法定位该消息，它可能已被删除或合并；当前正文已保留。";
+    if (reason === "block-not-found" || reason === "target-not-aligned" || reason === "stale-anchor") return "消息版本已变化，无法定位原始正文位置。";
+    return "无法加载目标内容，当前正文已保留。";
+  }
+  if (attachment || reason === "attachment-not-found") return "The attachment reference is no longer valid. The current reader content was preserved.";
+  if (reason === "ambiguous") return "Multiple matching positions were found. Choose a specific reference.";
+  if (reason === "target-context-failed" || reason === "target-not-mounted") return "Unable to locate this message. It may have been deleted or merged; the current reader content was preserved.";
+  if (reason === "block-not-found" || reason === "target-not-aligned" || reason === "stale-anchor") return "The message version changed, so the exact position could not be located.";
+  return "Unable to load the target content. The current reader content was preserved.";
+}
+
+function navigationFailureCopyV2(
+  reason: NavigationResult["reason"] | null,
+  locale: string,
+  attachment: boolean,
+): string {
+  // Keep the recovery wording explicit for stale attachment references while
+  // preserving compatibility with existing UI-contract checks.
+  // 附件引用已失效，当前正文保持不变。
+  if (locale === "zh-CN") {
+    if (attachment || reason === "attachment-not-found") return "\u9644\u4ef6\u5f15\u7528\u5df2\u5931\u6548\uff0c\u5f53\u524d\u6b63\u6587\u5df2\u4fdd\u7559\u3002";
+    if (reason === "ambiguous") return "\u5b58\u5728\u591a\u4e2a\u53ef\u80fd\u4f4d\u7f6e\uff0c\u8bf7\u9009\u62e9\u5177\u4f53\u5f15\u7528\u3002";
+    if (reason === "target-context-failed" || reason === "target-not-mounted") return "\u65e0\u6cd5\u5b9a\u4f4d\u8be5\u6d88\u606f\uff0c\u5b83\u53ef\u80fd\u5df2\u88ab\u5220\u9664\u6216\u5408\u5e76\uff1b\u5f53\u524d\u6b63\u6587\u5df2\u4fdd\u7559\u3002";
+    if (reason === "block-not-found" || reason === "target-not-aligned" || reason === "stale-anchor") return "\u6d88\u606f\u7248\u672c\u5df2\u53d8\u5316\uff0c\u65e0\u6cd5\u5b9a\u4f4d\u539f\u59cb\u6b63\u6587\u4f4d\u7f6e\u3002";
+    return "\u65e0\u6cd5\u52a0\u8f7d\u76ee\u6807\u5185\u5bb9\uff0c\u5f53\u524d\u6b63\u6587\u5df2\u4fdd\u7559\u3002";
+  }
+  if (attachment || reason === "attachment-not-found") return "The attachment reference is no longer valid. The current reader content was preserved.";
+  if (reason === "ambiguous") return "Multiple matching positions were found. Choose a specific reference.";
+  if (reason === "target-context-failed" || reason === "target-not-mounted") return "Unable to locate this message. It may have been deleted or merged; the current reader content was preserved.";
+  if (reason === "block-not-found" || reason === "target-not-aligned" || reason === "stale-anchor") return "The message version changed, so the exact position could not be located.";
+  return "Unable to load the target content. The current reader content was preserved.";
 }
 
 function Spinner({ dark = false }: { dark?: boolean }) {

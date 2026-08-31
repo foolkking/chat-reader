@@ -1,3 +1,4 @@
+import unicodedata
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
@@ -11,6 +12,8 @@ from app.services.skills import create_skill, get_user_skill, list_skills, resol
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 
+ALLOWED_TEXT_CONTROLS = frozenset({"\t", "\n", "\r"})
+
 
 def subject(request: Request) -> str:
     return getattr(getattr(request.state, "auth", None), "principal_id", None) or "local:default"
@@ -18,6 +21,10 @@ def subject(request: Request) -> str:
 
 def read_item(item: UserSkill, selected: bool = False) -> dict:
     return {"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": selected, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content"}
+
+
+def contains_binary_controls(content: str) -> bool:
+    return any(character not in ALLOWED_TEXT_CONTROLS and unicodedata.category(character) == "Cc" for character in content)
 
 
 @router.get("", response_model=list[SkillRead])
@@ -39,7 +46,7 @@ async def upload_skill(request: Request, category: str = Form(...), locale: str 
     if len(raw) > 512 * 1024: raise HTTPException(413, "Skill file exceeds 512 KiB.")
     try: content = raw.decode("utf-8")
     except UnicodeDecodeError as exc: raise HTTPException(422, "Skill file must be UTF-8 text.") from exc
-    if "\x00" in content:
+    if contains_binary_controls(content):
         raise HTTPException(422, "Skill file must be plain UTF-8 text.")
     try: item = create_skill(db, category=category, locale=locale, name=name, content=content, subject_key=subject(request)); db.commit(); db.refresh(item); return read_item(item)
     except KeyError as exc: db.rollback(); raise HTTPException(409, "An identical Skill already exists for this category and language.") from exc

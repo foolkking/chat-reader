@@ -139,9 +139,12 @@ export function ConversationList({
   }
 
   function handleSortStart(event: DragStartEvent) {
-    setActiveSortId(String(event.active.id));
+    const id = String(event.active.id);
+    setActiveSortId(id);
     window.dispatchEvent(new Event("reader:dnd-start"));
-    const initial = event.active.rect.current.initial;
+    const initial = event.active.rect.current.initial
+      ?? event.active.rect.current.translated
+      ?? document.querySelector<HTMLElement>(`[data-testid="conversation-sortable-row-${id}"]`)?.getBoundingClientRect();
     setActiveSortSize(initial ? { width: initial.width, height: initial.height } : null);
   }
 
@@ -388,7 +391,7 @@ export function ConversationList({
             {...linearSelection.itemHandlers(conversation.id)}
             data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined}
             aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined}
-            className="reader-interactive-row group border-b border-ui px-4 py-3 transition last:border-b-0 hover:bg-subtle"
+            className="reader-interactive-row group border-b border-ui px-4 py-3 transition last:border-b-0"
           >
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
               <div className="flex min-w-0 gap-3">
@@ -432,7 +435,7 @@ export function ConversationList({
             </div>
           </article></SortableConversationRow>
         ))}
-      </div></SortableContext><DragOverlay adjustScale={false}>{activeSortId ? <div className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSortSize ? { width: activeSortSize.width, height: activeSortSize.height } : undefined} aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
+      </div></SortableContext><DragOverlay adjustScale={false}>{activeSortId ? <div data-testid="conversation-list-drag-overlay" className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSortSize ? { width: activeSortSize.width, height: activeSortSize.height } : undefined} aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
     </section>
   );
 }
@@ -444,7 +447,8 @@ function ReadingProgress({ value, locale }: { value: number; locale: "zh-CN" | "
 
 function SortableConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
   const sortable = useSortable({ id, disabled: !enabled });
-  return <div ref={sortable.setNodeRef} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : enabled ? "hover" : undefined} {...sortable.attributes} {...sortable.listeners} className={`reader-interactive-row relative outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>{children}</div>;
+  const dragProps = enabled ? { ...sortable.attributes, ...sortable.listeners } : {};
+  return <div ref={sortable.setNodeRef} data-testid={`conversation-sortable-row-${id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : undefined} {...dragProps} className={`relative outline-none ${sortable.isDragging ? "reader-interactive-row cursor-grabbing" : "cursor-default"}`}>{children}</div>;
 }
 
 function previewConversationText(text: string | null | undefined, locale: "zh-CN" | "en-US"): string {

@@ -27,5 +27,7 @@ test("reader TOC refresh exposes selectable targets, scopes, worker polling, and
   expect(toc).toContain("[effectiveMessageId]: matching");
   expect(toc).not.toContain("if (matching.length) setCachedItems");
   expect(index).toContain("indexQuery.dataUpdatedAt");
+  expect(index).toContain("fallbackMessages");
+  expect(index).toContain("non-destructive fallback");
   expect(api).toContain('`/api/conversations/${conversationId}/toc/refresh`');
 });

@@ -11,6 +11,7 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.search_document import SearchDocument
 from app.models.import_record import utc_now
+from app.core.observability import structured_event
 
 ANNOTATION_NAMESPACE = uuid.UUID("7e6f2f90-7e5b-4cb3-bf82-4f7fd2b1a6b8")
 logger = logging.getLogger(__name__)
@@ -139,8 +140,8 @@ def backfill_annotation_documents(db: Session) -> AnnotationIndexResult:
                 with db.begin_nested():
                     action = sync_annotation_document(db, annotation)
                 result = AnnotationIndexResult(**{**result.__dict__, action: getattr(result, action) + 1})
-            except Exception:
-                logger.exception("Annotation search indexing failed", extra={"annotation_id": str(annotation.id)})
+            except Exception as exc:
+                structured_event(logger, logging.WARNING, "annotation_search_index_failed", annotation_id=str(annotation.id), error_class=type(exc).__name__)
                 result = AnnotationIndexResult(**{**result.__dict__, "errors": result.errors + 1})
         stale = db.query(SearchDocument).filter(
             SearchDocument.conversation_id == conversation_id,

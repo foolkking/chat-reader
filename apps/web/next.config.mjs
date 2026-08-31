@@ -41,6 +41,14 @@ const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
 ];
 
+const staticSkillHeaders = [
+  { key: "Content-Type", value: "text/markdown; charset=utf-8" },
+  {
+    key: "Content-Security-Policy",
+    value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; sandbox",
+  },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir,
@@ -70,6 +78,8 @@ const nextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
+      { source: "/skills/:path*", headers: staticSkillHeaders },
+      { source: "/import-rescue/:path*", headers: staticSkillHeaders },
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
       { source: "/library-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
       { source: "/library/manifest.webmanifest", headers: [

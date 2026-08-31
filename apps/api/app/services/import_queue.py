@@ -153,7 +153,7 @@ def process_import(
                 with db.begin_nested():
                     queue_import_scan(db, result.conversation_ids)
             except Exception as exc:  # pragma: no cover - operational guard
-                logger.warning("post_import_noise_scan_queue_failed", extra={"error": str(exc), "import_id": str(import_id)})
+                structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
             db.commit()
             structured_event(logger, logging.INFO, "import_committed", import_id=str(import_id))
             return result

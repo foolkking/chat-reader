@@ -1,5 +1,7 @@
+import io
 import json
 import uuid
+import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
@@ -8,8 +10,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import get_db
+from app.core.config import get_settings
 from app.main import app
 from app.models.annotation import ConversationAnnotation
+from app.models.attachment import Attachment, MessageVersionAttachment
 from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -170,7 +174,13 @@ def test_merge_copies_all_versions_blocks_current_pointer_and_annotations(client
         assert merged_block_count == source_block_count
 
 
-def test_merge_rewrites_attachment_references_and_blocks_without_mutating_source(client: TestClient) -> None:
+def test_merge_rewrites_attachment_references_and_blocks_without_mutating_source(
+    client: TestClient,
+    monkeypatch,
+    tmp_path,
+) -> None:
+    monkeypatch.setenv("OFFLINE_STORAGE_DIR", str(tmp_path / "offline"))
+    get_settings.cache_clear()
     source_id = _commit_messages(client, "Attachment source", [{"role": "Prompt", "say": "Attach this file."}])
     target_id = _commit_messages(client, "Attachment target", [{"role": "Prompt", "say": "Keep target."}])
     source_message = _window(client, source_id)[0]
@@ -194,12 +204,33 @@ def test_merge_rewrites_attachment_references_and_blocks_without_mutating_source
     )
     assert promoted.status_code == 201, promoted.text
     source_attachment_id = promoted.json()["items"][0]["id"]
-    source_text = f"Before\n\n[Evidence](cr-asset://{source_attachment_id.upper()})\n\nAfter"
+    source_text = (
+        f"# Attachment evidence\n\nBefore\n\n"
+        f"[Evidence](cr-asset://{source_attachment_id.upper()})\n\nAfter"
+    )
     saved = client.patch(
         f"/api/messages/{source_message['id']}",
         json={"content_markdown": source_text, "base_version_id": source_message["current_version"]["id"]},
     )
     assert saved.status_code == 200, saved.text
+    source_version_id = uuid.UUID(saved.json()["message"]["current_version"]["id"])
+    with _database_session() as db:
+        source_attachment_block = next(
+            block
+            for block in (
+                db.query(RenderBlock)
+                .filter(RenderBlock.message_version_id == source_version_id)
+                .all()
+            )
+            if source_attachment_id.lower() in " ".join([
+                block.plain_text or "",
+                json.dumps(block.data or {}, sort_keys=True),
+            ]).lower()
+        )
+        source_attachment_block.sanitized_html = (
+            f'<a href="cr-asset://{source_attachment_id}">Evidence</a>'
+        )
+        db.commit()
 
     queued = client.post(
         "/api/conversations/merge",
@@ -218,12 +249,227 @@ def test_merge_rewrites_attachment_references_and_blocks_without_mutating_source
         item["id"] for item in client.get(f"/api/conversations/{merged_id}/attachments").json()["items"]
     }
     assert target_attachment_ids
+    target_attachment_id = next(iter(target_attachment_ids))
     merged_blocks = merged_version["blocks"]
     assert any(str(attachment_id) in str(merged_blocks) for attachment_id in target_attachment_ids)
     occurrences = client.get(f"/api/conversations/{merged_id}/attachments").json()["items"][0]["occurrences"]
     assert occurrences and all(item["message_version_id"] == merged_version["id"] for item in occurrences)
+    with _database_session() as db:
+        merged_message_row = db.get(Message, uuid.UUID(merged_message["id"]))
+        merged_version_row = db.get(MessageVersion, uuid.UUID(merged_version["id"]))
+        assert merged_message_row is not None and merged_version_row is not None
+        assert merged_message_row.content_hash == merged_version_row.content_hash
+        source_message_row = db.get(Message, uuid.UUID(source_message["id"]))
+        assert source_message_row is not None
+        assert merged_message_row.content_hash != source_message_row.content_hash
+
+        merged_projection = " ".join([
+            merged_version_row.display_text,
+            merged_version_row.plain_text,
+            json.dumps(merged_version_row.blocks, sort_keys=True),
+        ]).lower()
+        assert source_attachment_id.lower() not in merged_projection
+        assert any(item.lower() in merged_projection for item in target_attachment_ids)
+        merged_render_blocks = (
+            db.query(RenderBlock)
+            .filter(RenderBlock.message_version_id == merged_version_row.id)
+            .all()
+        )
+        render_projection = " ".join(
+            " ".join([
+                block.plain_text or "",
+                json.dumps(block.data or {}, sort_keys=True),
+                block.sanitized_html or "",
+            ])
+            for block in merged_render_blocks
+        ).lower()
+        assert source_attachment_id.lower() not in render_projection
+        assert any(item.lower() in render_projection for item in target_attachment_ids)
+        assert "<a href=\"cr-asset://" in render_projection
+
+    message_detail = client.get(f"/api/messages/{merged_message['id']}")
+    assert message_detail.status_code == 200
+    assert message_detail.json()["current_version"]["id"] == merged_version["id"]
+    assert message_detail.json()["render_blocks"]
+    viewer_content = client.get(f"/api/attachments/{target_attachment_id}/content")
+    assert viewer_content.status_code == 200
+    assert viewer_content.content == b"attachment body"
+    search = client.get("/api/search", params={"q": "Before", "conversation_id": merged_id})
+    assert search.status_code == 200
+    assert search.json()["total"] >= 1
+    toc = client.get(f"/api/conversations/{merged_id}/toc")
+    assert toc.status_code == 200
+    assert any(item["text"] == "Attachment evidence" for item in toc.json()["items"])
+
+    offline = client.post(
+        "/api/offline/packages",
+        json={"scope": "conversation", "conversation_id": merged_id, "include_assets": "all"},
+        headers={"Idempotency-Key": "merged-attachment-offline"},
+    )
+    assert offline.status_code == 202, offline.text
+    _complete_background_job(offline.json()["job_id"])
+    offline_task = client.get(f"/api/tasks/{offline.json()['job_id']}")
+    assert offline_task.status_code == 200
+    assert offline_task.json()["status"] == "committed"
+    archive = client.get(f"/api/offline/packages/{offline.json()['package_id']}/download")
+    assert archive.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
+        offline_payload = json.loads(bundle.read("package.json"))
+        packaged_conversation = next(
+            item for item in offline_payload["conversations"] if item["id"] == merged_id
+        )
+        packaged_message = next(
+            item
+            for item in packaged_conversation["messages"]
+            if item["id"] == merged_message["id"]
+        )
+        packaged_projection = json.dumps(packaged_message, sort_keys=True).lower()
+        assert source_attachment_id.lower() not in packaged_projection
+        assert target_attachment_id.lower() in packaged_projection
+        packaged_attachment = next(
+            item
+            for item in packaged_conversation["attachments"]
+            if item["id"] == target_attachment_id
+        )
+        assert packaged_attachment["occurrences"][0]["message_version_id"] == merged_version["id"]
+        assert packaged_attachment["content_path"] in bundle.namelist()
+        assert bundle.read(packaged_attachment["content_path"]) == b"attachment body"
+        assert any(item["text"] == "Attachment evidence" for item in packaged_conversation["headings"])
+        assert any("Before" in (item.get("plain_text") or "") for item in packaged_conversation["search_documents"])
     source_after = _window(client, source_id)[0]["current_version"]["display_text"]
     assert source_attachment_id.upper() in source_after
+
+
+@pytest.mark.parametrize(
+    ("corruption", "error_match"),
+    [
+        ("inactive_attachment", "missing, inactive, or belongs to another conversation"),
+        ("missing_occurrence", "has no occurrence link"),
+        ("missing_block", "points to a missing render block"),
+        ("cross_conversation", "missing, inactive, or belongs to another conversation"),
+    ],
+)
+def test_merge_fails_closed_for_broken_source_attachment_graph(
+    client: TestClient,
+    corruption: str,
+    error_match: str,
+) -> None:
+    source_id = _commit_messages(client, "Broken attachment source", [{"role": "Prompt", "say": "Source"}])
+    other_id = _commit_messages(client, "Broken attachment peer", [{"role": "Prompt", "say": "Peer"}])
+    source_message = _window(client, source_id)[0]
+    session = client.post(
+        f"/api/conversations/{source_id}/attachment-upload-sessions",
+        json={
+            "target_message_id": source_message["id"],
+            "base_message_version_id": source_message["current_version"]["id"],
+        },
+    )
+    uploaded = client.post(
+        f"/api/attachment-upload-sessions/{session.json()['id']}/items",
+        files={"file": ("evidence.txt", b"attachment body", "text/plain")},
+    )
+    promoted = client.post(
+        f"/api/conversations/{source_id}/attachments",
+        json={"upload_item_ids": [uploaded.json()["id"]]},
+    )
+    attachment_id = promoted.json()["items"][0]["id"]
+    saved = client.patch(
+        f"/api/messages/{source_message['id']}",
+        json={
+            "content_markdown": f"[Evidence](cr-asset://{attachment_id})",
+            "base_version_id": source_message["current_version"]["id"],
+        },
+    )
+    assert saved.status_code == 200, saved.text
+
+    with _database_session() as db:
+        source_uuid = uuid.UUID(source_id)
+        other_uuid = uuid.UUID(other_id)
+        attachment = db.get(Attachment, uuid.UUID(attachment_id))
+        assert attachment is not None
+        version_id = uuid.UUID(saved.json()["message"]["current_version"]["id"])
+        occurrence = (
+            db.query(MessageVersionAttachment)
+            .filter(MessageVersionAttachment.message_version_id == version_id)
+            .one()
+        )
+        if corruption == "inactive_attachment":
+            attachment.deleted_at = datetime.now(timezone.utc)
+        elif corruption == "missing_occurrence":
+            db.delete(occurrence)
+        elif corruption == "missing_block":
+            occurrence.block_index = 999
+        elif corruption == "cross_conversation":
+            attachment.conversation_id = other_uuid
+        db.commit()
+
+        merged_before = db.query(Conversation).filter(Conversation.source_type == "merged").count()
+        with pytest.raises(ValueError, match=error_match):
+            merge_conversations(db, [source_uuid, other_uuid], title="Must roll back")
+        db.rollback()
+
+        assert db.query(Conversation).filter(Conversation.source_type == "merged").count() == merged_before
+        source_after = db.get(MessageVersion, version_id)
+        assert source_after is not None
+        assert attachment_id in source_after.display_text
+
+
+def test_merge_worker_rolls_back_target_when_source_occurrence_is_missing(client: TestClient) -> None:
+    source_id = _commit_messages(client, "Worker integrity source", [{"role": "Prompt", "say": "Source"}])
+    peer_id = _commit_messages(client, "Worker integrity peer", [{"role": "Prompt", "say": "Peer"}])
+    source_message = _window(client, source_id)[0]
+    upload_session = client.post(
+        f"/api/conversations/{source_id}/attachment-upload-sessions",
+        json={
+            "target_message_id": source_message["id"],
+            "base_message_version_id": source_message["current_version"]["id"],
+        },
+    )
+    uploaded = client.post(
+        f"/api/attachment-upload-sessions/{upload_session.json()['id']}/items",
+        files={"file": ("worker-evidence.txt", b"attachment body", "text/plain")},
+    )
+    promoted = client.post(
+        f"/api/conversations/{source_id}/attachments",
+        json={"upload_item_ids": [uploaded.json()["id"]]},
+    )
+    attachment_id = promoted.json()["items"][0]["id"]
+    saved = client.patch(
+        f"/api/messages/{source_message['id']}",
+        json={
+            "content_markdown": f"[Evidence](cr-asset://{attachment_id})",
+            "base_version_id": source_message["current_version"]["id"],
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    version_id = uuid.UUID(saved.json()["message"]["current_version"]["id"])
+
+    with _database_session() as db:
+        occurrence = (
+            db.query(MessageVersionAttachment)
+            .filter(MessageVersionAttachment.message_version_id == version_id)
+            .one()
+        )
+        db.delete(occurrence)
+        db.commit()
+        merged_before = db.query(Conversation).filter(Conversation.source_type == "merged").count()
+
+    queued = client.post(
+        "/api/conversations/merge",
+        json={"conversation_ids": [source_id, peer_id], "title": "Must not publish"},
+    )
+    assert queued.status_code == 202, queued.text
+    _complete_background_job(queued.json()["job_id"])
+    task = client.get(f"/api/tasks/{queued.json()['job_id']}")
+    assert task.status_code == 200
+    assert task.json()["status"] == "failed"
+    assert task.json()["result"] == {}
+
+    with _database_session() as db:
+        assert db.query(Conversation).filter(Conversation.source_type == "merged").count() == merged_before
+        source_after = db.get(MessageVersion, version_id)
+        assert source_after is not None
+        assert attachment_id in source_after.display_text
 
 
 def test_cancel_endpoint_and_stale_retry_limit(client: TestClient) -> None:

@@ -10,7 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from app.core.observability import RequestObservabilityMiddleware, request_logger
+from app.core.observability import RequestObservabilityMiddleware, _duration_bucket, _query_endpoint_family, request_logger, structured_event
 
 
 def _test_app() -> FastAPI:
@@ -76,6 +76,26 @@ def test_structured_log_uses_route_template_and_redacts_request_material(caplog)
     assert "Authorization" not in record.message
 
 
+def test_query_observability_uses_bounded_families_and_duration_buckets() -> None:
+    assert _query_endpoint_family("/api/conversations/{conversation_id}/reader-turn") == "conversation_reader"
+    assert _query_endpoint_family("/api/conversations/{conversation_id}/resolve-locator") == "conversation_reader"
+    assert _query_endpoint_family("/api/conversations/{conversation_id}/toc") == "toc"
+    assert _query_endpoint_family("/api/search") == "search"
+    assert _query_endpoint_family("/api/conversations/{conversation_id}/attachments") == "attachments"
+    assert _query_endpoint_family("/api/health") is None
+    assert [_duration_bucket(value) for value in (0, 49.999, 50, 249.999, 250, 999.999, 1000, 4999.999, 5000)] == [
+        "lt_50ms",
+        "lt_50ms",
+        "50_249ms",
+        "50_249ms",
+        "250_999ms",
+        "250_999ms",
+        "1_4_999s",
+        "1_4_999s",
+        "gte_5s",
+    ]
+
+
 def test_logging_failure_does_not_block_business_request(monkeypatch) -> None:
     def fail_log(*args, **kwargs) -> None:
         raise RuntimeError("injected logging failure")
@@ -107,6 +127,40 @@ def test_structured_event_is_emitted_without_preconfigured_root_logger() -> None
 
     assert '\"event\":\"production_event\"' in result.stderr
     assert '\"status\":\"ok\"' in result.stderr
+
+
+def test_structured_event_redacts_sensitive_fields_paths_and_nested_payloads(caplog) -> None:
+    logger = logging.getLogger("chat_reader.redaction_test")
+    caplog.set_level(logging.INFO, logger=logger.name)
+    private_path = r"C:\Users\owner\private\attachment.pdf"
+    private_unix_path = "/mnt/chat-reader/imports/source.md"
+    private_body = "private-conversation-body"
+    database_url = "postgresql://owner:password@database/chat_reader"
+
+    structured_event(
+        logger,
+        logging.INFO,
+        "redaction_contract",
+        attachment_id="00000000-0000-0000-0000-000000000001",
+        attachment_path=private_path,
+        artifact_location=private_unix_path,
+        error_message=private_body,
+        diagnostic={"body": private_body},
+        status=f"failed at {database_url}",
+    )
+
+    record = next(record for record in caplog.records if "redaction_contract" in record.message)
+    payload = json.loads(record.message)
+    assert payload["attachment_id"] == "00000000-0000-0000-0000-000000000001"
+    assert payload["attachment_path"] == "[redacted]"
+    assert payload["artifact_location"] == "[redacted]"
+    assert payload["error_message"] == "[redacted]"
+    assert payload["diagnostic"] == "[redacted]"
+    assert "[redacted]" in payload["status"]
+    assert private_path not in record.message
+    assert private_unix_path not in record.message
+    assert private_body not in record.message
+    assert database_url not in record.message
 
 
 def test_api_image_disables_uvicorn_raw_access_log() -> None:

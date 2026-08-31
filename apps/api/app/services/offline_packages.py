@@ -36,11 +36,19 @@ from app.services.assets.scanner import allowed_scan_statuses
 from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 
 ProgressCallback = Callable[[str, int, int, int], None]
-MessageProgressCallback = Callable[[int, int], None]
+ConversationProgressCallback = Callable[[str, int, int], None]
 
 # A larger read batch keeps large offline exports from issuing one query per
 # handful of messages while still bounding ORM memory for very long threads.
 _MESSAGE_BATCH_SIZE = 100
+_CONVERSATION_PHASE_RANGES = {
+    "packaging_messages": (0, 52),
+    "packaging_headings": (52, 59),
+    "packaging_search": (59, 72),
+    "packaging_annotations": (72, 78),
+    "packaging_metadata": (78, 84),
+    "packaging_attachments": (84, 90),
+}
 _JSON_ENCODER = json.JSONEncoder(
     ensure_ascii=False,
     separators=(",", ":"),
@@ -225,9 +233,19 @@ def build_offline_package(
                     conversations,
                     progress_callback=progress_callback,
                 )
-            for asset in _offline_asset_objects(db, conversations, include_assets):
+            assets = _offline_asset_objects(db, conversations, include_assets)
+            _report(progress_callback, "packaging_assets", 92, 0, len(assets))
+            for index, asset in enumerate(assets, start=1):
                 path = get_asset_store().resolve_key(asset.storage_key)
                 archive.write(path, f"assets/objects/{asset.id}")
+                _report(
+                    progress_callback,
+                    "packaging_assets",
+                    92 + round(index * 6 / max(len(assets), 1)),
+                    index,
+                    len(assets),
+                )
+        _report(progress_callback, "validating_package", 98, len(assets), len(assets))
         published = publish_zip_artifact(
             temporary,
             destination,
@@ -296,19 +314,21 @@ def _write_package_payload(
         if index > 1:
             output.write(b",")
 
-        def report_messages(processed: int, message_total: int) -> None:
-            fraction = processed / max(message_total, 1)
-            progress = min(90, round(90 * ((index - 1 + fraction) / total)))
-            _report(progress_callback, "packaging", progress, index - 1, total)
+        def report_conversation_phase(phase: str, processed: int, phase_total: int) -> None:
+            start, end = _CONVERSATION_PHASE_RANGES[phase]
+            fraction = min(1.0, processed / max(phase_total, 1))
+            local_progress = start + ((end - start) * fraction)
+            progress = round(90 * ((index - 1 + (local_progress / 90)) / total))
+            _report(progress_callback, phase, progress, index, total)
 
         _write_conversation_payload(
             output,
             db,
             conversation,
             asset_mode=str(package_metadata.get("asset_mode") or "none"),
-            progress_callback=report_messages,
+            progress_callback=report_conversation_phase,
         )
-        _report(progress_callback, "packaging", min(92, round(index * 90 / total)), index, total)
+        _report(progress_callback, "packaging_conversations", min(92, round(index * 90 / total)), index, total)
     output.write(b"]}")
 
 
@@ -318,7 +338,7 @@ def _write_conversation_payload(
     conversation: Conversation,
     *,
     asset_mode: str = "none",
-    progress_callback: MessageProgressCallback | None = None,
+    progress_callback: ConversationProgressCallback | None = None,
 ) -> None:
     message_rows = (
         db.query(Message)
@@ -370,6 +390,8 @@ def _write_conversation_payload(
     _write_json_key(output, "messages", first=first_field)
     output.write(b"[")
     first_message = True
+    if progress_callback:
+        progress_callback("packaging_messages", 0, len(message_rows))
     for batch_start in range(0, len(message_rows), _MESSAGE_BATCH_SIZE):
         batch = message_rows[batch_start : batch_start + _MESSAGE_BATCH_SIZE]
         version_ids = [message.current_version_id for message in batch if message.current_version_id]
@@ -436,11 +458,13 @@ def _write_conversation_payload(
                 },
             )
         if progress_callback:
-            progress_callback(min(batch_start + len(batch), len(message_rows)), len(message_rows))
+            progress_callback("packaging_messages", min(batch_start + len(batch), len(message_rows)), len(message_rows))
     if not message_rows and progress_callback:
-        progress_callback(0, 0)
+        progress_callback("packaging_messages", 1, 1)
     output.write(b"]")
 
+    if progress_callback:
+        progress_callback("packaging_headings", 0, 1)
     _write_json_key(output, "headings", first=False)
     _write_json_array(
         output,
@@ -452,6 +476,9 @@ def _write_conversation_payload(
             .yield_per(200)
         ),
     )
+    if progress_callback:
+        progress_callback("packaging_headings", 1, 1)
+        progress_callback("packaging_search", 0, 1)
     _write_json_key(output, "search_documents", first=False)
     _write_json_array(
         output,
@@ -462,7 +489,13 @@ def _write_conversation_payload(
             .yield_per(100)
         ),
     )
+    if progress_callback:
+        progress_callback("packaging_search", 1, 1)
+        progress_callback("packaging_annotations", 0, 1)
     _write_json_field(output, "annotations", list_annotations_payload(db, conversation.id), first=False)
+    if progress_callback:
+        progress_callback("packaging_annotations", 1, 1)
+        progress_callback("packaging_metadata", 0, 1)
     _write_json_field(
         output,
         "notebook",
@@ -470,7 +503,12 @@ def _write_conversation_payload(
         first=False,
     )
     _write_json_field(output, "reading_position", _reading_position_payload(position), first=False)
+    if progress_callback:
+        progress_callback("packaging_metadata", 1, 1)
+        progress_callback("packaging_attachments", 0, 1)
     _write_json_field(output, "attachments", _offline_attachment_payloads(db, conversation.id, asset_mode), first=False)
+    if progress_callback:
+        progress_callback("packaging_attachments", 1, 1)
     output.write(b"}")
 
 

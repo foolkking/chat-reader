@@ -877,6 +877,22 @@ curl -fsS http://127.0.0.1:3000/api/health
 
 附件发布还必须备份 `asset-storage`，并确认 `ATTACHMENT_SCANNER` 策略。约 2 GiB 的 King 主机固定使用 `disabled`，不启动 `scanner` profile；`ALLOW_UNSCANNED_ATTACHMENTS=true` 只允许单用户继续使用，所有对象仍显示 `scanner_disabled`。未来本地 ClamAV 需要资源充足节点与 `--profile scanner`，更推荐配置独立 `RemoteScanner`。
 
+在创建附件备份或替换镜像前，先对当前数据库与 local asset volume
+执行只读对账：
+
+```bash
+$COMPOSE exec -T api python -m scripts.verify_attachment_storage
+```
+
+默认输出只包含扫描范围和 issue 聚合；缺失文件、大小不一致、越界
+storage key、活动 Attachment 缺少可用 AssetObject、对象目录无主文件或
+扫描上限截断都会返回非零。怀疑同大小内容被替换时使用
+`--verify-sha256`；只有现场调查需要对象身份时才使用
+`--include-identities`，不要把输出持久化到文档。命令不读取对话正文，
+不删除/移动/修复任何文件，并排除由现有 lifecycle 流程管理的
+`quarantine`、`temp` 和 `s3-cache`。S3 backend 返回 not-applicable，不能
+被记录为 local filesystem PASS。
+
 数据库备份脚本：
 
 ```bash
@@ -901,6 +917,28 @@ backups or application volumes.
 `verify_backup.sh` is a read-only pre-restore check. It validates the manifest,
 all five checksums, four tar archives, and the PostgreSQL custom dump through an
 isolated `postgres:16-alpine` container with no network and no mounted volume.
+
+Before considering removal of historical backup directories, generate a bounded
+retention inventory:
+
+```bash
+python deploy/backup_retention_report.py \
+  --backup-dir /opt/chat-reader/backups \
+  --keep-latest 3 \
+  --minimum-age-days 30 \
+  --protect-name <known-baseline-backup>
+```
+
+The default JSON is aggregate-only and read-only. It separates explicitly
+protected backups, the newest structurally complete backups, backups inside the
+minimum-age window, older structurally complete `REVIEW_OLDER_COMPLETE` items,
+and incomplete/unknown entries that must be held. The script never follows
+top-level symlinks, never modifies a backup, and exits 2 if entry/file bounds
+make the scan incomplete. Use `--include-identities` only for the operator's
+short-lived review and `--fail-on-review-candidates` only as an optional
+reporting gate. A review candidate is not deletion approval: independently run
+`verify_backup.sh`, confirm current/rollback/baseline recovery ownership, and
+obtain explicit operator approval before any separate removal command.
 
 ## 低内存 King 发布
 

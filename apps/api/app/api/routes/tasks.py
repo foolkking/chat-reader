@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
@@ -13,28 +14,64 @@ from app.services.background_jobs import (
     retry_background_job,
 )
 from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_for_import, primary_filename, retry_import_manually
+from app.services.task_retention import TERMINAL_IMPORT_STATUSES, TERMINAL_JOB_STATUSES, terminal_result_cutoff
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
 @router.get("/active", response_model=list[BackgroundTaskRead])
-def list_active_tasks(db: Session = Depends(get_db)) -> list[BackgroundTaskRead]:
-    imports = (
+def list_active_tasks(
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> list[BackgroundTaskRead]:
+    cutoff = terminal_result_cutoff(settings.task_terminal_result_retention_seconds)
+    active_imports = (
         db.query(ImportRecord)
-        .filter(ImportRecord.status.in_((*ACTIVE_IMPORT_STATUSES, "failed")))
+        .filter(ImportRecord.status.in_(ACTIVE_IMPORT_STATUSES))
         .order_by(ImportRecord.queued_at.asc(), ImportRecord.created_at.asc())
         .limit(20)
         .all()
     )
-    jobs = (
+    recent_imports = (
+        db.query(ImportRecord)
+        .filter(
+            ImportRecord.status.in_(TERMINAL_IMPORT_STATUSES),
+            ImportRecord.completed_at.is_not(None),
+            ImportRecord.completed_at >= cutoff,
+        )
+        .order_by(ImportRecord.completed_at.desc())
+        .limit(max(0, 20 - len(active_imports)))
+        .all()
+    )
+    active_jobs = (
         db.query(BackgroundJob)
-        .filter(BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "failed")))
+        .filter(BackgroundJob.status.in_(ACTIVE_JOB_STATUSES))
         .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
         .limit(20)
         .all()
     )
-    tasks = [_import_task(record, db) for record in imports] + [_job_task(job) for job in jobs]
-    return sorted(tasks, key=lambda task: task.queued_at or task.started_at or task.completed_at)
+    recent_jobs = (
+        db.query(BackgroundJob)
+        .filter(
+            BackgroundJob.status.in_(TERMINAL_JOB_STATUSES),
+            BackgroundJob.completed_at.is_not(None),
+            BackgroundJob.completed_at >= cutoff,
+        )
+        .order_by(BackgroundJob.completed_at.desc())
+        .limit(max(0, 20 - len(active_jobs)))
+        .all()
+    )
+    active_tasks = [_import_task(record, db) for record in active_imports] + [_job_task(job) for job in active_jobs]
+    terminal_tasks = [_import_task(record, db) for record in recent_imports] + [_job_task(job) for job in recent_jobs]
+    return sorted(active_tasks, key=_active_task_sort_key) + sorted(terminal_tasks, key=_terminal_task_sort_key, reverse=True)
+
+
+def _active_task_sort_key(task: BackgroundTaskRead):
+    return task.queued_at or task.started_at or task.completed_at
+
+
+def _terminal_task_sort_key(task: BackgroundTaskRead):
+    return task.completed_at or task.started_at or task.queued_at
 
 
 @router.get("/{job_id}", response_model=BackgroundTaskRead)

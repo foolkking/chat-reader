@@ -85,7 +85,12 @@ export async function navigateMountedTarget({
     }
     return { ok: false, targetId, reason: "target-not-mounted" };
   }
-  await settleTargetMedia(target, Math.min(timeoutMs, 5000), tokenIsCurrent);
+  // Exact mounted targets can align before every remote image in the message
+  // has decoded. Waiting up to five seconds here made ordinary attachment and
+  // citation jumps feel stalled; keep a short guard for local targets and a
+  // more forgiving window only for the fallback/network path.
+  const mediaSettleTimeout = target.id === targetId ? 900 : 1800;
+  await settleTargetMedia(target, Math.min(timeoutMs, mediaSettleTimeout), tokenIsCurrent);
   if (!tokenIsCurrent()) {
     return { ok: false, targetId, reason: "cancelled" };
   }
@@ -123,9 +128,11 @@ async function settleTargetMedia(target: HTMLElement, timeoutMs: number, tokenIs
   const scope = target.closest<HTMLElement>("article[data-message-id]") ?? target;
   const images = Array.from(scope.querySelectorAll<HTMLImageElement>("img"));
   if (images.length === 0) return;
-  for (const image of images) image.loading = "eager";
+  const pendingImages = images.filter((image) => !(image.complete && image.naturalWidth > 0));
+  if (pendingImages.length === 0) return;
+  for (const image of pendingImages) image.loading = "eager";
   const deadline = window.performance.now() + timeoutMs;
-  await Promise.all(images.map(async (image) => {
+  await Promise.all(pendingImages.map(async (image) => {
     if (!tokenIsCurrent()) return;
     const remaining = Math.max(0, deadline - window.performance.now());
     if (remaining === 0) return;
@@ -442,4 +449,3 @@ function textAnchorRect(target: HTMLElement, options: { characterOffset?: number
   });
   return range ? firstVisibleRangeRect(range) : null;
 }
-

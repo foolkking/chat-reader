@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.schemas.message import DialogueIndexResponse, ReaderTurnResponse, RenderBlockRead
+from app.schemas.message import DialogueIndexResponse, LocatorTargetRequest, ReaderTurnResponse, RenderBlockRead, ResolvedLocatorResponse
 from app.schemas.search import MessageWindowResponse
 from app.schemas.annotation import AnnotationRead, NotebookRead
 from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUnlockInput, ShareUnlockResponse, ShareUpdate, SharedConversationBootstrap
@@ -26,10 +26,13 @@ from app.services.sharing.share_service import (
     share_create_response,
     share_read,
     SHARE_UNLOCK_COOKIE_NAME,
+    _ensure_shared_message,
+    _get_accessible_share,
     unlock_share,
     update_share,
 )
 from app.services.annotations import annotation_read, notebook_read
+from app.services.reader_locator import resolve_reader_locator
 
 router = APIRouter(tags=["shares"])
 
@@ -172,6 +175,22 @@ def get_shared_reader_turn_route(
 ) -> ReaderTurnResponse:
     try:
         return get_shared_reader_turn(db, token, anchor_message_id=anchor_message_id, unlock_token=request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.post("/api/shared/{token}/resolve-locator", response_model=ResolvedLocatorResponse)
+def resolve_shared_locator_route(
+    token: str,
+    payload: LocatorTargetRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> ResolvedLocatorResponse:
+    """Resolve a locator without widening the share's message scope."""
+    try:
+        share = _get_accessible_share(db, token, request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))
+        _ensure_shared_message(db, share, payload.message_id)
+        return resolve_reader_locator(db, share.conversation_id, payload)
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 

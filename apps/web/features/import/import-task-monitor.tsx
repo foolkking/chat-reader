@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { cancelTask, dismissCleanupScan, getActiveTasks, getPendingCleanupScans, getTask, retryTask } from "../../lib/api";
 import type { BackgroundTaskRead, CleanupScanRead } from "../../lib/types";
 import { ContentCleanupDialog } from "../conversations/content-cleanup-panel";
-import { useTranslations } from "../../components/preferences-provider";
+import { usePreferences, useTranslations } from "../../components/preferences-provider";
 
 export function ImportTaskMonitor({ placement, forceVisible = false }: { placement: "sidebar" | "mobile" | "center"; forceVisible?: boolean }) {
   const t = useTranslations();
@@ -104,11 +104,11 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   if (!visibleTask && !scans.length && !forceVisible) return null;
 
   if (placement === "mobile") {
-    return <><div className="fixed inset-x-3 bottom-3 z-40 space-y-2 rounded-xl border border-[#d8dee9] bg-white p-3 shadow-xl md:hidden">{visibleTask ? <TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} /> : null}<NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></div>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</>;
+    return <><div className="fixed inset-x-3 bottom-3 z-40 space-y-2 rounded-xl border border-[#d8dee9] bg-white p-3 shadow-xl md:hidden">{visibleTask ? <TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={isTerminalTask(visibleTask) ? () => dismissTask(visibleTask.job_id) : undefined} /> : null}<NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></div>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</>;
   }
 
   if (placement === "center") {
-    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-primary">{t("backgroundTasks")}</p><p className="mt-1 text-xs text-secondary">{t("backgroundTasksHint")}</p></div><span className="text-xs text-secondary">{tasks.length + scans.length} 项</span></div>{!visibleTask && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}<div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">{tasks.map((task, index) => <div key={task.job_id} data-task-row={task.job_type} className={`px-4 py-4 ${index ? "border-t border-ui" : ""}`}><TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={task.status === "failed" ? () => dismissTask(task.job_id) : undefined} /></div>)}{completedTask ? <div className={`border-t border-ui px-4 py-4 ${tasks.length ? "bg-subtle" : ""}`}><TaskContent task={completedTask} onRetry={() => retryMutation.mutate(completedTask.job_id)} /></div> : null}{!tasks.length && !completedTask ? <div className="px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}</div><NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
+    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-primary">{t("backgroundTasks")}</p><p className="mt-1 text-xs text-secondary">{t("backgroundTasksHint")}</p></div><span className="text-xs text-secondary">{tasks.length + scans.length} 项</span></div>{!visibleTask && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}<div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">{tasks.map((task, index) => <div key={task.job_id} data-task-row={task.job_type} className={`px-4 py-4 ${index ? "border-t border-ui" : ""}`}><TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={isTerminalTask(task) ? () => dismissTask(task.job_id) : undefined} /></div>)}{completedTask ? <div className={`border-t border-ui px-4 py-4 ${tasks.length ? "bg-subtle" : ""}`}><TaskContent task={completedTask} onRetry={() => retryMutation.mutate(completedTask.job_id)} onDismiss={() => dismissTask(completedTask.job_id)} /></div> : null}{!tasks.length && !completedTask ? <div className="px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}</div><NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
   }
 
   return (
@@ -118,7 +118,7 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
           {/* The compact sidebar is a status indicator only. Retry belongs to
               the expanded global Tasks surface so contextual retry controls
               cannot be mistaken for an editor upload retry. */}
-          <TaskContent task={visibleTask} onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={visibleTask.status === "failed" ? () => dismissTask(visibleTask.job_id) : undefined} />
+          <TaskContent task={visibleTask} onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={isTerminalTask(visibleTask) ? () => dismissTask(visibleTask.job_id) : undefined} />
         </div>
       ) : null}
       {completedTask ? (
@@ -154,17 +154,21 @@ function NoiseReviewDialog({ scanId, onClose }: { scanId: string; onClose: () =>
 }
 
 function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   const failed = task.status === "failed";
   const committed = task.status === "committed";
   const conversationId = taskConversationId(task);
   const itemFailures = Array.isArray(task.result.failed) ? task.result.failed.length : 0;
+  const completedItems = taskCompletedItems(task);
+  const partial = committed && itemFailures > 0;
   return (
     <div className="min-w-0 text-xs text-[#475569]" data-testid={`task-${task.job_type}-${task.status}`}>
       <div className="flex items-center justify-between gap-3">
         <p className="truncate font-medium text-[#111827]">{task.label || taskTypeLabel(task)}</p>
         <div className="flex shrink-0 items-center gap-1">
           <span>{committed ? "100%" : `${task.progress}%`}</span>
-          {onDismiss ? <button type="button" onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#f1f5f9]" aria-label="关闭任务提示" title="关闭任务提示"><X className="h-4 w-4" /></button> : null}
+          {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#f1f5f9]" aria-label="关闭任务提示" title="关闭任务提示"><X className="h-4 w-4" /></button> : null}
         </div>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e5e7eb]">
@@ -174,7 +178,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { 
         />
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span>{phaseLabel(task)}</span>
+        <span>{partial ? (zh ? "\u90e8\u5206\u5b8c\u6210" : "Partially completed") : phaseLabel(task)}</span>
         {task.total_items > 0 ? <span>{task.processed_items} / {task.total_items}</span> : null}
       </div>
       {failed ? (
@@ -187,20 +191,34 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { 
           ) : null}
         </div>
       ) : null}
-      {committed && itemFailures > 0 ? <p className="mt-2 text-amber-700">{itemFailures} 个项目删除失败，已保留并恢复到列表</p> : null}
+      {partial ? <p className="mt-2 text-amber-700" role="status">{zh ? `${completedItems} \u9879\u5b8c\u6210 \u00b7 ${itemFailures} \u9879\u5931\u8d25` : `${completedItems} completed \u00b7 ${itemFailures} failed`}</p> : null}
       {task.status === "cancelling" ? <p className="mt-2 font-medium text-amber-700">{task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在取消并回滚…"}</p> : null}
       {task.cancellable && task.status !== "cancelling" && onCancel ? (
         <button type="button" onClick={onCancel} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
           <Ban className="h-3.5 w-3.5" />{task.job_type === "conversation_batch_delete" ? "停止后续删除" : "取消合并"}
         </button>
       ) : null}
-      {compact && committed && conversationId ? (
-        <Link className="mt-1 inline-block font-medium text-[#0f766e] underline" href={`/conversations/${conversationId}`}>
-          打开会话
-        </Link>
-      ) : null}
+      {committed ? <TaskResultActions task={task} conversationId={conversationId} compact={compact} zh={zh} /> : null}
     </div>
   );
+}
+
+function TaskResultActions({ task, conversationId, compact, zh }: { task: BackgroundTaskRead; conversationId: string | null; compact: boolean; zh: boolean }) {
+  const conversationIds = Array.isArray(task.result.conversation_ids) ? task.result.conversation_ids : [];
+  const importIds = task.job_type === "import" ? conversationIds : [];
+  return (
+    <div className={`mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ${compact ? "text-[11px]" : "text-xs"}`} data-testid={`task-result-${task.job_type}`}>
+      {task.result.download_url ? <a data-testid="task-result-download" className="font-medium text-accent underline underline-offset-2" href={String(task.result.download_url)}>{zh ? "\u4e0b\u8f7d\u7ed3\u679c" : "Download result"}</a> : null}
+      {conversationId && importIds.length <= 1 ? <Link data-testid="task-result-conversation" className="font-medium text-accent underline underline-offset-2" href={`/conversations/${conversationId}`}>{zh ? (task.job_type === "conversation_merge" ? "\u6253\u5f00\u5408\u5e76\u540e\u7684\u5bf9\u8bdd" : "\u6253\u5f00\u5bf9\u8bdd") : (task.job_type === "conversation_merge" ? "Open merged conversation" : "Open conversation")}</Link> : null}
+      {importIds.length > 1 ? <><span className="text-secondary">{zh ? `\u5df2\u5bfc\u5165 ${importIds.length} \u4e2a\u5bf9\u8bdd` : `${importIds.length} conversations imported`}</span>{importIds.slice(0, 3).map((id, index) => <Link key={id} className="font-medium text-accent underline underline-offset-2" href={`/conversations/${id}`}>{zh ? `\u6253\u5f00\u7b2c ${index + 1} \u4e2a` : `Open ${index + 1}`}</Link>)}</> : null}
+    </div>
+  );
+}
+
+function taskCompletedItems(task: BackgroundTaskRead): number {
+  if (Array.isArray(task.result.deleted_ids)) return task.result.deleted_ids.length;
+  if (Array.isArray(task.result.conversation_ids)) return task.result.conversation_ids.length;
+  return Math.max(0, task.processed_items - (Array.isArray(task.result.failed) ? task.result.failed.length : 0));
 }
 
 function phaseLabel(task: BackgroundTaskRead): string {
@@ -227,6 +245,15 @@ function phaseLabel(task: BackgroundTaskRead): string {
     exporting: "生成 .cr 归档",
     cleaning_messages: "清理消息内容",
     rebuilding_index: "重建目录与搜索",
+    packaging_messages: "整理对话消息",
+    packaging_headings: "整理章节目录",
+    packaging_search: "整理离线搜索索引",
+    packaging_annotations: "整理批注",
+    packaging_metadata: "整理阅读状态与笔记",
+    packaging_attachments: "整理附件索引",
+    packaging_conversations: "整理离线对话",
+    packaging_assets: "写入离线附件",
+    validating_package: "校验离线资料",
   };
   return labels[task.phase] ?? "正在处理";
 }
@@ -247,6 +274,10 @@ function completedLabel(jobType: string): string {
 
 function taskConversationId(task: BackgroundTaskRead): string | null {
   return task.result.conversation_id ?? task.result.conversation_ids?.[0] ?? null;
+}
+
+function isTerminalTask(task: BackgroundTaskRead): boolean {
+  return ["committed", "failed", "cancelled"].includes(task.status);
 }
 
 async function invalidateReaderQueries(queryClient: ReturnType<typeof useQueryClient>) {

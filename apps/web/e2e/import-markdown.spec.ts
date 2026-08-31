@@ -169,7 +169,8 @@ test("keeps valid mapping work while invalid groups are excluded or replaced", a
 
     await expect(page.getByRole("heading", { name: "导入概览" })).toBeVisible();
     await expect(page.getByText("暂不可映射 · 需要先转换")).toBeVisible();
-    await expect(page.getByRole("article").filter({ hasText: "broken-a-" }).getByText("无法安全映射").first()).toBeVisible();
+    await expect(page.getByRole("article").filter({ hasText: "broken-a-" }).getByText("JSON 无法解析")).toBeVisible();
+    await expect(page.getByText("语法或编码错误无法通过字段映射解决。")).toHaveCount(2);
     const replaceButton = page.getByRole("button", { name: /替换 broken-/ }).first();
     await replaceButton.focus();
     await expect(replaceButton).toBeFocused();

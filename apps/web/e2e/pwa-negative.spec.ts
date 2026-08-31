@@ -191,6 +191,87 @@ test.describe("Release E PWA negative matrix", () => {
     expect(retried.packageCount).toBe(1);
   });
 
+  test("PWA-NEG-008 quota preflight accounts for IndexedDB and index overhead before writing", async ({ page }) => {
+    await seedMinimalOfflineFixture(page, { waitForShell: false });
+    const before = await readFixtureState(page);
+    const failed = await importWithFault(page, createReplacementPackage(), "package-preflight-quota", "quota-preflight");
+    expect(failed.ok).toBe(false);
+    expect(failed.code).toBe("QUOTA");
+    expect(failed.idbWrites).toBe(0);
+    const preserved = await readFixtureState(page);
+    expect(preserved.revision).toBe(before.revision);
+    expect(preserved.assetText).toBe(before.assetText);
+    expect(preserved.packageCount).toBe(before.packageCount);
+  });
+
+  test("PWA-NEG-023 large IndexedDB writes stay within bounded request batches", async ({ page }) => {
+    await page.goto("/library");
+    const batchSizes = await page.evaluate(async () => {
+      const hook = window.__chatReaderPwaNegativeTest;
+      if (!hook) throw new Error("PWA negative test bridge is not enabled.");
+      return hook.inspectOfflineBulkPutChunking(15_448);
+    });
+    expect(batchSizes.reduce((sum, size) => sum + size, 0)).toBe(15_448);
+    expect(Math.max(...batchSizes)).toBe(100);
+    expect(batchSizes).toHaveLength(155);
+    expect(batchSizes.at(-1)).toBe(48);
+  });
+
+  test("PWA-NEG-024 legacy v1 package imports into a readable Reader", async ({ page, context }) => {
+    await context.addCookies([
+      { name: "chat_reader_session", value: "offline-v1-test-session", domain: "127.0.0.1", path: "/" },
+      { name: "chat_reader_session_present", value: "1", domain: "127.0.0.1", path: "/" },
+    ]);
+    await page.route("**/api/auth/session", async (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: true,
+        principal_id: "owner",
+        inactivity_expires_at: "2099-01-01T00:00:00Z",
+        auth_mode: "single_password",
+      }),
+    }));
+    await page.goto("/library");
+    await expect(page.getByRole("heading", { name: /Offline library|离线资料库/ }).first()).toBeVisible();
+    await waitForActiveRecord(page);
+    if (!await page.evaluate(() => Boolean(navigator.serviceWorker.controller))) {
+      await page.reload({ waitUntil: "domcontentloaded" });
+    }
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    const imported = await importWithFault(page, createLegacyPackage(1), "package-legacy-v1", null);
+    expect(imported.ok).toBe(true);
+    const stored = await readConversationContent(page, "offline-legacy-v1");
+    expect(stored).toEqual({ messageCount: 1, storedMessages: 1, text: "legacy v1 message" });
+
+    await page.goto("/library?conversationId=offline-legacy-v1", { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("reader-scroll-root")).toContainText("legacy v1 message");
+  });
+
+  test("PWA-NEG-025 v2 zero-message mismatch preserves the readable package", async ({ page }) => {
+    await page.goto("/library");
+    expect((await importWithFault(page, createLegacyPackage(2), "package-v2-readable", null)).ok).toBe(true);
+    const before = await readConversationContent(page, "offline-legacy-v1");
+
+    const rejected = await importWithFault(page, createLegacyPackage(2, true), "package-v2-empty", null);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.code).toBe("MALFORMED");
+    expect(rejected.error).toContain("message count does not match");
+    expect(await readConversationContent(page, "offline-legacy-v1")).toEqual(before);
+  });
+
+  test("v2 store shape mismatch is diagnosed before replacing the readable package", async ({ page }) => {
+    await page.goto("/library");
+    expect((await importWithFault(page, createLegacyPackage(2), "package-v2-shape-readable", null)).ok).toBe(true);
+    const before = await readConversationContent(page, "offline-legacy-v1");
+    const rejected = await importWithFault(page, createMalformedV2StorePackage(), "package-v2-shape-invalid", null);
+    expect(rejected.ok).toBe(false);
+    expect(rejected.code).toBe("MALFORMED");
+    expect(rejected.error).toContain("schema mismatch");
+    expect(rejected.error).toContain("search_documents");
+    expect(await readConversationContent(page, "offline-legacy-v1")).toEqual(before);
+  });
+
   test("PWA-NEG-012..021 failed Dexie transaction restores the old cache and package", async ({ page }) => {
     await seedMinimalOfflineFixture(page, { waitForShell: false });
     const before = await readFixtureState(page);
@@ -439,13 +520,90 @@ function createReplacementPackage(messageCount = 1): number[] {
   return Array.from(entries);
 }
 
-async function importWithFault(page: Page, bytes: number[], packageId: string, fault: "cache-put-after-first" | "idb-put" | null): Promise<{ ok: boolean; error?: string; code?: string }> {
+function createLegacyPackage(version: 1 | 2, emptyMessages = false): number[] {
+  const text = version === 1 ? "legacy v1 message" : "compatible v2 message";
+  const messages = emptyMessages ? [] : [{
+    id: "offline-legacy-message",
+    conversation_id: "offline-legacy-v1",
+    role: "user",
+    order_key: "000001",
+    turn_index: 1,
+    created_at: "2026-08-15T00:00:00.000Z",
+    current_version: {
+      id: "offline-legacy-version",
+      version_number: 1,
+      plain_text: text,
+      display_text: text,
+    },
+    render_blocks: [{
+      id: "offline-legacy-block",
+      block_index: 0,
+      block_type: "paragraph",
+      plain_text: text,
+      data: { text },
+    }],
+    block_count: 1,
+    char_count: text.length,
+    is_heavy: false,
+  }];
+  const payload = {
+    format: "chat-reader-offline-package",
+    version,
+    catalog_revision: `legacy-${version}`,
+    scope: "conversation",
+    scope_id: "offline-legacy-v1",
+    conversations: [{
+      id: "offline-legacy-v1",
+      title: `Legacy v${version}`,
+      display_title: `Legacy v${version}`,
+      message_count: 1,
+      turn_count: 1,
+      offline_revision: version,
+      updated_at: "2026-08-15T00:00:00.000Z",
+      messages,
+      headings: [],
+      search_documents: [],
+      annotations: [],
+      notebook: null,
+      reading_position: null,
+    }],
+  };
+  return Array.from(zipSync({ "package.json": strToU8(JSON.stringify(payload)) }));
+}
+
+function createMalformedV2StorePackage(): number[] {
+  const payload = {
+    format: "chat-reader-offline-package",
+    version: 2,
+    catalog_revision: "malformed-v2",
+    scope: "conversation",
+    scope_id: "offline-legacy-v1",
+    conversations: [{
+      id: "offline-legacy-v1",
+      title: "Malformed v2",
+      display_title: "Malformed v2",
+      message_count: 0,
+      turn_count: 0,
+      messages: [],
+      headings: [],
+      search_documents: {},
+      annotations: [],
+      notebook: null,
+      reading_position: null,
+    }],
+  };
+  return Array.from(zipSync({ "package.json": strToU8(JSON.stringify(payload)) }));
+}
+
+async function importWithFault(page: Page, bytes: number[], packageId: string, fault: "cache-put-after-first" | "idb-put" | "quota-preflight" | null): Promise<{ ok: boolean; error?: string; code?: string; idbWrites: number }> {
   return page.evaluate(async ({ bytes, packageId, fault }) => {
     const hook = window.__chatReaderPwaNegativeTest;
     if (!hook) throw new Error("PWA negative test bridge is not enabled.");
     const originalCachePut = Cache.prototype.put;
     const originalStorePut = IDBObjectStore.prototype.put;
+    const originalEstimate = StorageManager.prototype.estimate;
     let attachmentCachePuts = 0;
+    let idbWrites = 0;
     if (fault === "cache-put-after-first") {
       Cache.prototype.put = async function(request, response) {
         const url = request instanceof Request ? request.url : String(request);
@@ -461,15 +619,23 @@ async function importWithFault(page: Page, bytes: number[], packageId: string, f
         return key === undefined ? originalStorePut.call(this, value) : originalStorePut.call(this, value, key);
       };
     }
+    if (fault === "quota-preflight") {
+      StorageManager.prototype.estimate = async () => ({ quota: 64 * 1024, usage: 0 });
+      IDBObjectStore.prototype.put = function(value, key) {
+        idbWrites += 1;
+        return key === undefined ? originalStorePut.call(this, value) : originalStorePut.call(this, value, key);
+      };
+    }
     try {
       await hook.importOfflinePackage(packageId, new Response(new Uint8Array(bytes), { headers: { "Content-Type": "application/zip", "Content-Length": String(bytes.length) } }));
-      return { ok: true };
+      return { ok: true, idbWrites };
     } catch (error) {
       const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
-      return { ok: false, error: error instanceof Error ? error.message : String(error), code };
+      return { ok: false, error: error instanceof Error ? error.message : String(error), code, idbWrites };
     } finally {
       Cache.prototype.put = originalCachePut;
       IDBObjectStore.prototype.put = originalStorePut;
+      StorageManager.prototype.estimate = originalEstimate;
     }
   }, { bytes, packageId, fault });
 }
@@ -499,4 +665,30 @@ async function readFixtureState(page: Page): Promise<{ revision: number; assetTe
       }).catch(reject);
     };
   }), { databaseName: DATABASE, attachmentUrl: ATTACHMENT_URL });
+}
+
+async function readConversationContent(page: Page, conversationId: string): Promise<{ messageCount: number; storedMessages: number; text: string | null }> {
+  return page.evaluate(async (id) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("chat-reader-offline-library");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(["conversations", "messages"], "readonly");
+      const conversationRequest = transaction.objectStore("conversations").get(id);
+      const messageRequest = transaction.objectStore("messages").index("conversation_id").getAll(id);
+      transaction.oncomplete = () => {
+        const messages = messageRequest.result as Array<{ current_version?: { display_text?: string } }>;
+        resolve({
+          messageCount: Number(conversationRequest.result?.message_count ?? 0),
+          storedMessages: messages.length,
+          text: messages[0]?.current_version?.display_text ?? null,
+        });
+        database.close();
+      };
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }, conversationId);
 }

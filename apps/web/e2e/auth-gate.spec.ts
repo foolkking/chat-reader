@@ -26,6 +26,7 @@ test.describe("single-owner authentication boundary", () => {
     const cookie = (await context.cookies()).find((item) => item.name === "chat_reader_session");
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.sameSite).toBe("Lax");
+    expect(cookie?.secure).toBe(new URL(baseURL!).protocol === "https:");
 
     const protectedApi = await context.request.get(`${baseURL}/api/preferences`);
     expect(protectedApi.status()).toBe(200);
@@ -83,6 +84,9 @@ test.describe("single-owner authentication boundary", () => {
     await guestPage.goto(`${baseURL}/share/${publicShare.token}`);
     await expect(guestPage).toHaveURL(new RegExp(`/share/${publicShare.token}$`));
     await expect(guestPage.getByRole("heading", { name: "Public Share QA fixture" })).toBeVisible();
+    await expect(guestPage.getByTestId("sidebar-import-button")).toHaveCount(0);
+    await expect(guestPage.getByTestId("sidebar-tasks-button")).toHaveCount(0);
+    await expect(guestPage.getByRole("button", { name: /Settings|设置/ })).toHaveCount(0);
     expect((await guest.cookies()).find((item) => item.name === "chat_reader_session")).toBeUndefined();
 
     const sharePassword = "independent-share-qa";

@@ -474,6 +474,105 @@ test("far annotation jump and refresh restore hydrate heavy content", async ({ p
   await expect(page.locator("article[data-message-id]").getByRole("button", { name: /立即展开|Expand now/ })).toHaveCount(0);
 });
 
+test("annotation actions dismiss outside or with Escape and restore the source anchor", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/conversations/${conversationId}?annotations=open`);
+  const workspace = page.locator('[data-annotation-mode="floating"]');
+  await workspace.getByRole("button", { name: /^(全部|All)$/ }).click();
+  await page.getByText(annotationQuote, { exact: true }).click();
+
+  const targetBlock = page.locator(`#block-${targetMessageId}-${targetBlockIndex}`);
+  await expect(targetBlock).toBeVisible();
+  const repeatedLocatorRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith(`/api/conversations/${conversationId}/reader-turn`)) repeatedLocatorRequests.push(request.url());
+  });
+  await page.getByText(annotationQuote, { exact: true }).click();
+  await expect(targetBlock).toBeVisible();
+  expect(repeatedLocatorRequests).toHaveLength(0);
+  const point = await annotationTextPoint(targetBlock, annotationQuote);
+
+  await page.mouse.click(point.x, point.y);
+  const menu = page.getByRole("dialog", { name: "Annotation actions" });
+  await expect(menu).toBeVisible();
+  await expect(menu).toBeFocused();
+  await workspace.getByPlaceholder(/搜索批注|Search annotations/).click();
+  await expect(menu).toHaveCount(0);
+  await expect(targetBlock).toBeFocused();
+  await expect(workspace).toBeVisible();
+
+  await page.mouse.click(point.x, point.y);
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(targetBlock).toBeFocused();
+  await expect(workspace).toBeVisible();
+});
+
+test("failed annotation location preserves the current reader content", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/conversations/${conversationId}?annotations=open`);
+  const reader = page.getByTestId("reader-scroll-root");
+  const visibleArticle = reader.locator("article[data-message-id]").filter({ visible: true }).first();
+  await expect(visibleArticle).toBeVisible();
+  const initialMessageId = await visibleArticle.getAttribute("data-message-id");
+  const initialText = (await visibleArticle.innerText()).slice(0, 80);
+  expect(initialMessageId).toBeTruthy();
+  expect(initialText).not.toBe("");
+
+  await page.route(`**/api/conversations/${conversationId}/reader-turn?*`, async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("anchor_message_id") === targetMessageId) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "forced locator failure" }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  const workspace = page.locator('[data-annotation-mode="floating"]');
+  await workspace.getByRole("button", { name: /^(全部|All)$/ }).click();
+  await page.getByText(annotationQuote, { exact: true }).click();
+
+  await expect(workspace.getByText("无法定位批注原文，当前正文保持不变。")).toBeVisible();
+  await expect(page.getByRole("button", { name: /重新定位|Retry locate/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /定位到消息|Locate message/ })).toBeVisible();
+  const preservedArticle = page.locator(`#message-${initialMessageId}`);
+  await expect(preservedArticle).toBeVisible();
+  await expect(preservedArticle).toContainText(initialText);
+  await expect(reader.locator("article[data-message-id]")).not.toHaveCount(0);
+  await expect(page.locator("[data-locate-pulse]")).toHaveCount(0);
+});
+
+test("mobile message actions dismiss outside or with Escape and restore the trigger", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/conversations/${conversationId}`);
+  const reader = page.getByTestId("reader-scroll-root");
+  await expect(reader).toHaveAttribute("data-navigation-stage", /^(settled|settled:fallback)$/);
+  const trigger = page.getByTestId("mobile-message-actions-trigger").first();
+  await expect(trigger).toBeVisible();
+
+  await trigger.click();
+  const sheet = page.getByTestId("mobile-message-actions-sheet");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toBeFocused();
+  await reader.click({ position: { x: 20, y: 20 } });
+  await expect(sheet).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
+});
+
 test("continuous wheel scrolling remains monotonic after virtual estimates warm up", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(
@@ -705,6 +804,22 @@ async function readingLineContentDistance(page: Page): Promise<number> {
       });
     return distances.length > 0 ? Math.min(...distances) : Number.POSITIVE_INFINITY;
   });
+}
+
+async function annotationTextPoint(block: Locator, quote: string): Promise<{ x: number; y: number }> {
+  return block.evaluate((element, expectedQuote) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && !(node.textContent ?? "").includes(expectedQuote)) node = walker.nextNode();
+    if (!node) throw new Error("Annotation quote is not mounted in the target block");
+    const text = node.textContent ?? "";
+    const start = text.indexOf(expectedQuote);
+    const range = document.createRange();
+    range.setStart(node, Math.max(0, start));
+    range.setEnd(node, Math.min(text.length, start + expectedQuote.length));
+    const rect = range.getClientRects()[0] ?? range.getBoundingClientRect();
+    return { x: rect.left + Math.max(2, Math.min(rect.width / 2, 12)), y: rect.top + Math.max(2, rect.height / 2) };
+  }, quote);
 }
 
 async function seedLongConversation(request: APIRequestContext): Promise<{

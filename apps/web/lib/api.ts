@@ -26,6 +26,7 @@ import type {
   ConversationUpdateInput,
   ConversationSortMode,
   DialogueIndexResponse,
+  LocatorTargetRequest,
   ConversationTransformResponse,
   ConversationSplitWorkspaceInput,
   ConversationSplitWorkspacePreview,
@@ -50,6 +51,7 @@ import type {
   MessageVersionDeleteResponse,
   MessageWindowResponse,
   ReaderTurnResponse,
+  ResolvedLocatorResponse,
   ProjectConversationRead,
   ProjectCreate,
   ProjectRead,
@@ -426,6 +428,16 @@ export async function getConversationReaderTurn(
   if (anchorMessageId) params.set("anchor_message_id", anchorMessageId);
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return fetchJson<ReaderTurnResponse>(`/api/conversations/${conversationId}/reader-turn${suffix}`);
+}
+
+export async function resolveConversationLocator(
+  conversationId: string,
+  input: LocatorTargetRequest,
+): Promise<ResolvedLocatorResponse> {
+  return fetchJson<ResolvedLocatorResponse>(
+    `/api/conversations/${conversationId}/resolve-locator`,
+    jsonRequest("POST", input),
+  );
 }
 
 export async function getConversationDialogueIndex(
@@ -1214,6 +1226,16 @@ export async function getSharedReaderTurn(
   if (anchorMessageId) params.set("anchor_message_id", anchorMessageId);
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return fetchJson<ReaderTurnResponse>(`/api/shared/${encodeURIComponent(token)}/reader-turn${suffix}`);
+}
+
+export async function resolveSharedLocator(
+  token: string,
+  input: LocatorTargetRequest,
+): Promise<ResolvedLocatorResponse> {
+  return fetchJson<ResolvedLocatorResponse>(
+    `/api/shared/${encodeURIComponent(token)}/resolve-locator`,
+    jsonRequest("POST", input),
+  );
 }
 
 export async function getSharedDialogueIndex(

@@ -18,6 +18,41 @@ Production Compose sets `import-worker.mem_limit` to `${IMPORT_WORKER_MEMORY_LIM
 
 Before an incremental production update, create and validate both the PostgreSQL custom-format dump and read-only archives of `import-storage`, `export-storage`, `offline-storage`, and `asset-storage`. Source deployment archives must exclude `.env.production`, named-volume data, user import directories, caches, and browser traces.
 
+## Owner-authenticated browser verification checklist
+
+For external browser acceptance, set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an absolute, operator-provided
+Chromium executable and run `corepack pnpm run verify:chromium` before the
+Playwright gate. The check records only the executable basename and version;
+it does not persist the local path. CI continues to use its bundled browser.
+
+Before replacing API/worker/Web, record the PostgreSQL container `StartedAt`
+and optionally its ID. After the rollout, run
+`deploy/verify_postgres_unchanged.sh <container> <started-at> [container-id]`.
+This read-only check fails if PostgreSQL was restarted or replaced.
+
+After a rollback, run
+`deploy/verify_rollback_smoke.sh <base-url> <migration-container> <expected-revision>`.
+It checks health, the anonymous private-route 401 boundary and the database
+migration head through the existing migration container. It performs no
+rollback or mutation.
+
+Health checks, anonymous API checks, and production-equivalent Playwright runs
+do not prove that the deployed owner workspace works end to end. Every release
+that changes owner-facing Web behavior must record this independent status:
+
+| Status | Meaning | Required evidence |
+| --- | --- | --- |
+| `PASS` | The exact deployed source was exercised with an approved owner session. | Login, one changed-area flow, logout, and the relevant desktop/mobile checks; record source SHA and browser environment, never credentials or page content. |
+| `NOT_VERIFIED` | No approved owner session or browser-control surface was available. | Record the missing capability and keep production UI acceptance separate from health/CI results. |
+| `BLOCKED` | An owner session was available but the required flow failed or a release safety gate prevented execution. | Record the failing gate and recovery action; do not report production acceptance as PASS. |
+
+The release report must include the status even when no owner-facing code
+changed. A production-equivalent authenticated run may be listed separately,
+but it cannot upgrade `NOT_VERIFIED` to `PASS`. Do not create production data
+solely for this check; use synthetic/disposable data and remove it through the
+supported application path when the environment permits.
+
 The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for commit `a89bc28`; the archive SHA-256 was verified as `4d48d4d55c461be318c5ccab2b06eaabeefb11e1c32dcb73b2201aa3d833e5be` on both ends. Backup `/opt/chat-reader/backups/adaptive-viewer-20260809T050228Z-a89bc28` contains a validated PostgreSQL custom dump and all four business-volume archives. King only pulled source, loaded images, ran migration and recreated services with `--no-build`; `.env.production`, named volumes and the disabled Scanner policy were unchanged.
 
 最后核验：2026-08-06
@@ -58,7 +93,7 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 ## 持久化与健康
 
 - named volumes：`postgres-data`、`import-storage`、`export-storage`、`offline-storage`、`asset-storage`；只有启用 `scanner` profile 时才使用 `clamav-data`。
-- 附件对象不使用静态公开目录；发布前必须备份 `asset-storage`，迁移/回滚不得删除该 volume。附件 GC 默认 dry-run，只有人工确认后才使用 `apps/api/scripts/gc_assets.py --execute`。
+- 附件对象不使用静态公开目录；发布前必须备份 `asset-storage`，迁移/回滚不得删除该 volume。替换镜像前在 API 容器运行只读 `python -m scripts.verify_attachment_storage`，将数据库对象、活动 Attachment 和 local asset files 对账；非零结果或不完整扫描必须停止发布。`--verify-sha256` 是显式的全内容校验，默认检查存在性和大小。该检查不自动修复或删除，无主对象仍交给独立的人工 cleanup 决策。附件 GC 默认 dry-run，只有人工确认后才使用 `apps/api/scripts/gc_assets.py --execute`。
 - King 的约 2 GiB 单用户部署固定使用 `ATTACHMENT_SCANNER=disabled`、`ALLOW_UNSCANNED_ATTACHMENTS=true`，不启动 `scanner` profile 或 ClamAV。当前部署主动关闭附件恶意软件扫描和内容安全审查。附件以 `scanner_disabled`/`unscanned` 状态正常使用，中文 UI 显示“未扫描”。这是当前单用户部署的已接受策略，不代表文件已经通过安全检测。Scanner Provider 抽象保留，但本轮不部署本地或远程扫描节点。消息保存不重新读取或扫描已提升的附件对象。
 - 复杂附件预览默认关闭。未配置独立 preview origin 时 Office/ZIP 只下载；HTML 可作为转义文本读取，SVG 只通过浏览器图片上下文展示，不作为可执行文档注入。
 - healthcheck：PostgreSQL、API、Web；worker 通过进程、日志和 job heartbeat 观察。
@@ -67,6 +102,10 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
   备份校验、隔离恢复前置检查和完整性审计见
   `docs/system/DISASTER_RECOVERY_RUNBOOK.md`、
   `deploy/recovery_preflight.py` 与 `deploy/recovery_integrity.py`。
+- `deploy/backup_retention_report.py` 只读盘点备份目录。默认保留最新 3 份
+  结构完整备份和 30 天内备份，支持显式保护基线；更旧的完整备份只标记为
+  `REVIEW_OLDER_COMPLETE`，不代表允许删除。不完整、时间未知、符号链接或
+  扫描截断均 fail closed；默认只输出聚合计数和字节数。
 
 ## 运行约束
 
@@ -84,3 +123,41 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 
 2026-07-29 的执行档案记录 production migration `20260728_0016`、Web 离线 TOC 补丁和服务健康。该记录不能替代下一次部署前的只读检查。详见 [执行档案](../execution/README.md)。
 Release A freezes three runtime invariants: production requires a non-default `ATTACHMENT_CURSOR_SECRET`; Alembic preserves percent-encoded database URLs; and deployable images can only be produced after the repository quality gate succeeds. Security-header and provenance details are in [Release Safety Baseline](RELEASE_SAFETY_BASELINE.md).
+
+## Operator-owned release state and bounded transfer cleanup
+
+The server's mutable release pointer is operator-owned state, not repository
+content. Store it under `/etc/chat-reader/release-state/` with mode `0700`:
+`current-images.env` identifies the active immutable source revision and
+`rollback-images.env` identifies the directly recoverable previous revision.
+Each file must contain a non-empty `RELEASE_SHA` value; the two values must be
+different. Verify the pair before a rollout with the read-only helper:
+
+```bash
+sh deploy/verify_release_state.sh /etc/chat-reader/release-state
+```
+
+Do not put credentials, database URLs, or user data in these files. They are
+deployment pointers only and should be backed up by the operator's host-state
+procedure, separately from application volumes.
+
+After health, migration, and browser gates pass, inspect the staged release
+transfer directory with the bounded cleanup helper. It retains only explicitly
+named active and rollback artifacts; symlinks and non-direct children are never
+removed. The default is a report-only dry run:
+
+```bash
+python3 deploy/cleanup_release_transfer.py \
+  --transfer-dir /opt/chat-reader/releases \
+  --keep chat-reader-images-current.tar.gz \
+  --keep chat-reader-images-rollback.tar.gz
+python3 deploy/cleanup_release_transfer.py \
+  --transfer-dir /opt/chat-reader/releases \
+  --keep chat-reader-images-current.tar.gz \
+  --keep chat-reader-images-rollback.tar.gz \
+  --execute
+```
+
+The explicit `--execute` step is an operator action after the recovery chain
+has been verified. Never replace it with `docker image prune`, a wildcard
+delete, or cleanup of named volumes/backups.

@@ -1,11 +1,17 @@
 import json
 import uuid
+from contextlib import contextmanager
+from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
 from app.core.database import get_db
 from app.main import app
+from app.models.attachment import Attachment, MessageVersionAttachment
+from app.models.message import Message
+from app.models.message_version import MessageVersion
 from app.services.background_jobs import claim_next_job, process_background_job
 from test_import_preview_api import client  # noqa: F401
 
@@ -51,6 +57,18 @@ def _complete_background_job(job_id: str) -> None:
         assert claimed_id == uuid.UUID(job_id)
         db.commit()
     process_background_job(uuid.UUID(job_id), testing_session_local)
+
+
+@contextmanager
+def _database_session():
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        yield db
+    finally:
+        db.close()
+        generator.close()
 
 
 def test_split_message_creates_inserted_message_version_event_and_reindex(client: TestClient) -> None:
@@ -127,6 +145,84 @@ def test_merge_adjacent_same_role_messages_soft_deletes_absorbed_message(client:
     deleted_detail = client.get(f"/api/messages/{second_assistant['id']}")
     assert deleted_detail.status_code == 200
     assert deleted_detail.json()["order_key"].startswith("deleted-")
+
+
+@pytest.mark.parametrize("corruption", ["inactive_attachment", "missing_occurrence", "missing_block"])
+def test_message_merge_rejects_broken_attachment_graph_without_mutation(
+    client: TestClient,
+    corruption: str,
+) -> None:
+    conversation_id = _commit_messages(
+        client,
+        "Broken Message Merge",
+        [
+            {"role": "Prompt", "say": "Question"},
+            {"role": "Response", "say": "First assistant part"},
+            {"role": "Response", "say": "Second assistant part"},
+        ],
+    )
+    messages = _window(client, conversation_id, limit=10)["items"]
+    first_assistant = messages[1]
+    second_assistant = messages[2]
+    upload_session = client.post(
+        f"/api/conversations/{conversation_id}/attachment-upload-sessions",
+        json={
+            "target_message_id": first_assistant["id"],
+            "base_message_version_id": first_assistant["current_version"]["id"],
+        },
+    )
+    uploaded = client.post(
+        f"/api/attachment-upload-sessions/{upload_session.json()['id']}/items",
+        files={"file": ("message-merge.txt", b"attachment body", "text/plain")},
+    )
+    promoted = client.post(
+        f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [uploaded.json()["id"]]},
+    )
+    attachment_id = promoted.json()["items"][0]["id"]
+    saved = client.patch(
+        f"/api/messages/{first_assistant['id']}",
+        json={
+            "content_markdown": f"[Evidence](cr-asset://{attachment_id})",
+            "base_version_id": first_assistant["current_version"]["id"],
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    first_version_id = saved.json()["message"]["current_version"]["id"]
+
+    with _database_session() as db:
+        attachment = db.get(Attachment, uuid.UUID(attachment_id))
+        occurrence = (
+            db.query(MessageVersionAttachment)
+            .filter(MessageVersionAttachment.message_version_id == uuid.UUID(first_version_id))
+            .one()
+        )
+        if corruption == "inactive_attachment":
+            attachment.deleted_at = datetime.now(timezone.utc)
+        elif corruption == "missing_occurrence":
+            db.delete(occurrence)
+        elif corruption == "missing_block":
+            occurrence.block_index = 999
+        db.commit()
+
+    rejected = client.post(
+        "/api/messages/merge",
+        json={"message_ids": [first_assistant["id"], second_assistant["id"]]},
+    )
+    assert rejected.status_code == 422
+    assert rejected.json()["detail"]["code"] == "attachment_integrity_invalid"
+
+    with _database_session() as db:
+        first_message = db.get(Message, uuid.UUID(first_assistant["id"]))
+        second_message = db.get(Message, uuid.UUID(second_assistant["id"]))
+        assert first_message is not None and first_message.current_version_id == uuid.UUID(first_version_id)
+        assert second_message is not None and second_message.is_deleted is False
+        assert (
+            db.query(MessageVersion)
+            .filter(MessageVersion.message_id == first_message.id)
+            .count()
+            == 2
+        )
 
 
 def test_conversation_merge_and_split_create_new_conversations_without_modifying_sources(client: TestClient) -> None:
