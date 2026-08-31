@@ -504,7 +504,8 @@ test("annotation actions dismiss outside or with Escape and restore the source a
   await expect(annotationSearch).toBeFocused();
   await expect(workspace).toBeVisible();
 
-  await page.mouse.click(point.x, point.y);
+  const escapePoint = await annotationTextPoint(targetBlock, annotationQuote);
+  await page.mouse.click(escapePoint.x, escapePoint.y);
   await expect(menu).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
