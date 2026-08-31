@@ -555,11 +555,12 @@ test("mobile message actions dismiss outside or with Escape and restore the trig
   await page.goto(`/conversations/${conversationId}`);
   const reader = page.getByTestId("reader-scroll-root");
   await expect(reader.locator("article[data-message-id]").first()).toBeVisible();
-  await reader.evaluate((root) => root.scrollBy({ top: 240, behavior: "auto" }));
   const triggers = page.getByTestId("mobile-message-actions-trigger");
-  await expect.poll(() => firstUnobscuredTriggerIndex(triggers)).toBeGreaterThanOrEqual(0);
-  const trigger = triggers.nth(await firstUnobscuredTriggerIndex(triggers));
+  const trigger = triggers.first();
+  await expect(trigger).toBeAttached();
+  await trigger.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" }));
   await expect(trigger).toBeVisible();
+  await expect.poll(() => firstUnobscuredTriggerIndex(trigger)).toBe(0);
 
   await trigger.click();
   const sheet = page.getByTestId("mobile-message-actions-sheet");
