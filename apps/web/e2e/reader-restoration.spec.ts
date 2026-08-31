@@ -498,9 +498,10 @@ test("annotation actions dismiss outside or with Escape and restore the source a
   const menu = page.getByRole("dialog", { name: "Annotation actions" });
   await expect(menu).toBeVisible();
   await expect(menu).toBeFocused();
-  await workspace.getByPlaceholder(/搜索批注|Search annotations/).click();
+  const annotationSearch = workspace.getByPlaceholder(/搜索批注|Search annotations/);
+  await annotationSearch.click();
   await expect(menu).toHaveCount(0);
-  await expect(targetBlock).toBeFocused();
+  await expect(annotationSearch).toBeFocused();
   await expect(workspace).toBeVisible();
 
   await page.mouse.click(point.x, point.y);
@@ -553,7 +554,10 @@ test("mobile message actions dismiss outside or with Escape and restore the trig
   await page.goto(`/conversations/${conversationId}`);
   const reader = page.getByTestId("reader-scroll-root");
   await expect(reader.locator("article[data-message-id]").first()).toBeVisible();
-  const trigger = page.getByTestId("mobile-message-actions-trigger").first();
+  await reader.evaluate((root) => root.scrollBy({ top: 240, behavior: "auto" }));
+  const triggers = page.getByTestId("mobile-message-actions-trigger");
+  await expect.poll(() => firstUnobscuredTriggerIndex(triggers)).toBeGreaterThanOrEqual(0);
+  const trigger = triggers.nth(await firstUnobscuredTriggerIndex(triggers));
   await expect(trigger).toBeVisible();
 
   await trigger.click();
@@ -561,7 +565,7 @@ test("mobile message actions dismiss outside or with Escape and restore the trig
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(sheet).toBeVisible();
   await expect(sheet).toBeFocused();
-  await reader.click({ position: { x: 20, y: 20 } });
+  await reader.click({ position: { x: 20, y: 240 } });
   await expect(sheet).toHaveCount(0);
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await expect(trigger).toBeFocused();
@@ -825,6 +829,16 @@ async function annotationTextPoint(block: Locator, quote: string): Promise<{ x: 
 
 function normalizeRenderedText(value: string | null): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+async function firstUnobscuredTriggerIndex(triggers: Locator): Promise<number> {
+  return triggers.evaluateAll((nodes) => nodes.findIndex((node) => {
+    const element = node as HTMLElement;
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0 || rect.top < 0 || rect.bottom > window.innerHeight) return false;
+    const point = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return Boolean(point && element.contains(point));
+  }));
 }
 
 async function seedLongConversation(request: APIRequestContext): Promise<{
