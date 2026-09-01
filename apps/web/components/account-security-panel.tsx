@@ -111,7 +111,8 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     <SettingsSection icon={UserRound} title={copy.identity} description={copy.identityDescription}>
       {loading ? <p className="text-sm text-secondary" role="status">{copy.loading}</p> : profile ? <form onSubmit={saveProfile} className="space-y-3">
         <label className="block text-xs font-medium text-secondary">{copy.email}<input value={profile.email ?? ""} readOnly aria-readonly="true" className="input-base mt-1 min-h-10 w-full bg-subtle px-3 text-secondary" /></label>
-        <label className="block text-xs font-medium text-secondary">{copy.displayName}<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={200} className="input-base mt-1 min-h-10 w-full px-3 text-primary" placeholder={copy.displayNamePlaceholder} /></label>
+        {profile.role === "ADMIN" ? <div className="flex min-h-10 items-center justify-between rounded-lg border border-ui bg-subtle px-3"><span className="text-xs text-secondary">{resolvedLocale === "zh-CN" ? "账户状态" : "Account status"}</span><span className="rounded-sm bg-[var(--accent-soft)] px-2 py-1 text-xs font-medium text-accent">{resolvedLocale === "zh-CN" ? "系统管理员" : "System Administrator"}</span></div> : null}
+        <label className="block text-xs font-medium text-secondary">{resolvedLocale === "zh-CN" ? "用户名" : "Username"}<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={200} className="input-base mt-1 min-h-10 w-full px-3 text-primary" placeholder={copy.displayNamePlaceholder} /></label>
         <div className="flex justify-end"><button type="submit" disabled={!profileDirty || profileBusy} className="btn-primary min-h-9 px-4 text-xs font-medium disabled:opacity-45">{profileBusy ? copy.saving : copy.saveProfile}</button></div>
       </form> : null}
     </SettingsSection>

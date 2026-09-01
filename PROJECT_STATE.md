@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-09-01
+Last updated: 2026-09-02
 
 ## 1. Project Snapshot
 
@@ -10,9 +10,9 @@ Last updated: 2026-09-01
 | Primary languages | TypeScript/React/Next.js, Python/FastAPI, SQL/Alembic |
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
-| Database | PostgreSQL with Alembic; working-tree head `20260901_0031` (not applied to the operator database in this session) |
+| Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
 | Branch / baseline | `master`; starting source SHA `93751e52dc7089d0ccd51e6f6cf9cedb1f341fe1`; multi-account release is committed and pending deployment |
-| Deployment | Existing production release remains `93751e5`; this working-tree account upgrade is not deployed |
+| Deployment | Existing production release remains `ba287e1`; administrator upgrade is committed locally and pending second deployment |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## 2. Current Purpose
@@ -59,6 +59,9 @@ have separate permission/data boundaries.
 | `apps/api/app/services/offline_packages.py` | Offline package generation and phase timing |
 | `apps/web/lib/offline-db.ts` | Dexie v1-compatible Offline package import/read path |
 | `apps/web/features/projects/project-sidebar.tsx` | Project/conversation shell, custom order and DnD |
+| `apps/api/app/api/routes/admin_access.py` | Root-only user lifecycle, registration and invitation controls |
+| `apps/api/app/api/routes/admin_content.py` | Root-only cross-user content search, Reader and attachment access with audit |
+| `apps/api/app/api/routes/admin_system.py` | Root-only feature policy, system Skill, backup and audit controls |
 | `apps/web/features/import/adaptive-import-workspace.tsx` | Adaptive Import, Rescue and terminal result scope |
 | `docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md` | Candidate register and evidence-backed status |
 | `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` | Deployment, verification and recovery boundaries |
@@ -70,7 +73,7 @@ have separate permission/data boundaries.
 | `corepack pnpm run lint` | Web lint | PASS 2026-09-01 |
 | `corepack pnpm run typecheck` | Web typecheck | PASS 2026-09-01 |
 | `corepack pnpm --filter web build` | Production Web build | PASS in this implementation cycle |
-| `corepack pnpm run test:api` | API suite | PASS 455 passed, 6 skipped before the deployment-config reconciliation follow-up |
+| `corepack pnpm run test:api` | API suite | PASS 471 passed, 6 skipped on 2026-09-02 |
 | `corepack pnpm --filter web test:pwa` | PWA/browser suite | Full suite NOT VERIFIED locally; Service Worker/online startup timeouts and a CSP resource failure occurred. Targeted OFF-010 375px fixture run passed with Chromium 1234 + `APP_ENV=test` |
 | `cd apps/api; python -m alembic heads` | Migration head | `20260901_0031 (head)` in the working tree |
 | `git diff --check` | Patch whitespace | PASS |
@@ -98,6 +101,22 @@ have separate permission/data boundaries.
   `python -m scripts.owner_auth provision --email <admin-email>` command. The
   password is entered interactively, must satisfy the existing strength policy,
   and is never stored in repository files.
+
+The deployment-managed administrator is the immutable Root Admin identified by
+`ROOT_ADMIN_USER_ID`. Its email and password are provisioned from the server
+`.env.production` pair `ADMIN_EMAIL` / `ADMIN_PASSWORD`; a changed pair is
+applied by the next migration run, while a Web password change remains
+authoritative until that pair is intentionally changed. Root-only administration
+covers users and approvals, registration/invitations, audited cross-user
+conversation and attachment access, feature policies, system Skill overrides,
+application data archives and security audit events. Normal owner APIs remain
+owner-scoped, and Share/Offline do not inherit Root Admin access.
+
+User deletion is an audited background task. Shared `AssetObject` rows are
+retained; exclusive physical files are removed only after the database deletion
+commits. System backup is the existing application `.cr` archive: it excludes
+secrets, environment and logs, restores only into an empty instance, and is not
+a PostgreSQL or host-volume snapshot.
 
 Implementation status is `implemented in working tree / automated-tested /
 deployment pending`; authenticated production browser acceptance and a real

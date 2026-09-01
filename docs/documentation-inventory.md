@@ -1,5 +1,8 @@
 # Markdown 文档台账
 
+2026-09-02：Root Admin 账户边界、`.env.production` 管理员配置、管理入口、
+跨用户审计和系统归档限制已同步到 `PROJECT_STATE.md` 与 `docs/deployment.md`。
+
 ## 当前文档真值（2026-09-01）
 
 本轮收尾同步了多账户认证、owner 隔离和管理员边界。当前源码 migration

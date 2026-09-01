@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Library, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles, UsersRound } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, FileClock, Library, LockKeyhole, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles, UsersRound, Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { readAuthSession } from "../lib/auth-client";
 import { usePreferences, useTranslations } from "./preferences-provider";
 
-export type SettingsCategory = "data" | "security" | "formats" | "cleanup" | "skills" | "access";
+export type SettingsCategory = "data" | "security" | "formats" | "cleanup" | "skills" | "access" | "admin-users" | "admin-access" | "admin-skills" | "admin-features" | "admin-system" | "admin-audit";
 
 export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/", onOpenCategory }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string; onOpenCategory?: (category: SettingsCategory) => void }) {
   const preferences = usePreferences();
@@ -114,8 +114,12 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
         {accessRole === "ADMIN" ? <div className="space-y-2 border-t border-ui pt-3" aria-labelledby="settings-administration-heading">
           <div className="px-1"><h3 id="settings-administration-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406" : "Administration"}</h3><p className="mt-1 text-xs text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u4ec5\u7cfb\u7edf\u7ba1\u7406\u5458\u53ef\u89c1" : "Visible only to the system administrator"}</p></div>
-          <SettingsCategoryButton icon={UsersRound} label={preferences.resolvedLocale === "zh-CN" ? "\u7528\u6237" : "Users"} ariaLabel={preferences.resolvedLocale === "zh-CN" ? "\u7528\u6237\u4e0e\u8bbf\u95ee" : "Users & access"} description={preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406\u7528\u6237\u3001\u6ce8\u518c\u4e0e\u9080\u8bf7" : "Manage users, registration and invitations"} onClick={() => onOpenCategory?.("access")} />
-          <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
+          <SettingsCategoryButton icon={UsersRound} label={preferences.resolvedLocale === "zh-CN" ? "\u7528\u6237" : "Users"} description={preferences.resolvedLocale === "zh-CN" ? "\u67e5\u627e\u3001\u5ba1\u6279\u4e0e\u7ba1\u7406\u7528\u6237" : "Find, review, and manage users"} onClick={() => onOpenCategory?.("admin-users")} />
+          <SettingsCategoryButton icon={LockKeyhole} label={preferences.resolvedLocale === "zh-CN" ? "\u6ce8\u518c\u4e0e\u8bbf\u95ee" : "Registration & access"} description={preferences.resolvedLocale === "zh-CN" ? "\u6ce8\u518c\u7b56\u7565\u3001\u5ba1\u6279\u4e0e\u9080\u8bf7" : "Registration policy, approval, and invitations"} onClick={() => onOpenCategory?.("admin-access")} />
+          <SettingsCategoryButton icon={Sparkles} label={preferences.resolvedLocale === "zh-CN" ? "\u7cfb\u7edf Skill" : "Skills"} description={preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406\u5185\u7f6e Skill \u548c\u7ba1\u7406\u5458\u8986\u76d6" : "Manage bundled skills and admin overrides"} onClick={() => onOpenCategory?.("admin-skills")} />
+          <SettingsCategoryButton icon={SlidersHorizontal} label={preferences.resolvedLocale === "zh-CN" ? "\u529f\u80fd\u4e0e\u9ed8\u8ba4\u503c" : "Features & defaults"} description={preferences.resolvedLocale === "zh-CN" ? "\u5171\u4eab\u3001Skill \u548c\u5bfc\u5165\u7b56\u7565" : "Sharing, skill, and import policies"} onClick={() => onOpenCategory?.("admin-features")} />
+          <SettingsCategoryButton icon={Wrench} label={preferences.resolvedLocale === "zh-CN" ? "\u7cfb\u7edf" : "System"} description={preferences.resolvedLocale === "zh-CN" ? "\u5b9e\u4f8b\u5907\u4efd\u3001\u6062\u590d\u4e0e\u8bb0\u5f55" : "Instance backup, restore, and records"} onClick={() => onOpenCategory?.("admin-system")} />
+          <SettingsCategoryButton icon={FileClock} label={preferences.resolvedLocale === "zh-CN" ? "\u5b89\u5168\u4e0e\u5ba1\u8ba1" : "Security & audit"} description={preferences.resolvedLocale === "zh-CN" ? "\u67e5\u770b\u7ba1\u7406\u64cd\u4f5c\u548c\u8de8\u7528\u6237\u8bbf\u95ee" : "Review admin actions and cross-user access"} onClick={() => onOpenCategory?.("admin-audit")} />
         </div> : null}
         <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
         <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />

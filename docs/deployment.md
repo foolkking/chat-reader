@@ -1164,3 +1164,18 @@ The subsequent preflight found a configured custom value but it failed the then-
 - Deployment used `docker compose -f docker-compose.production.yml --env-file .env.production`, migration preflight and `--no-build` recreation. It did not build Next on King, remove volumes, replace `.env.production`, start Scanner, or change schema.
 - Post-deploy API/Web/PostgreSQL are healthy, worker runs, Scanner is disabled, and Alembic current/head is `20260806_0021`. Public headers are present: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, the documented Permissions Policy and CSP Report-Only; `X-Powered-By` is absent.
 - The release transfer archive was removed after health and browser acceptance. An exact image audit then removed only the third-oldest superseded `9d338a0` Chat Reader tags/layers. Current `1d366fb`, `latest`, direct rollback `0645a84`, and the validated backup remain; post-cleanup services stayed healthy. No business volume, database data, user import, `.env.production`, backup, or unrelated image was removed; root free space is about 16 GiB.
+
+### Root Admin configuration (2026-09-02)
+
+The deployment-managed administrator is the single immutable Root Admin identified
+by `ROOT_ADMIN_USER_ID`. Its email and password are authoritative in the server
+`.env.production` pair `ADMIN_EMAIL` / `ADMIN_PASSWORD`; changing that pair and
+rerunning the existing migration/deploy flow applies the new deployment identity.
+An unchanged pair does not overwrite a password changed in the Web UI.
+
+Root-only administration is exposed under Settings > Administration for users and
+approvals, registration/invitations, system Skills, feature policy, application
+data archives, and security audit. Normal users remain owner-scoped. System backup
+uses the existing `.cr` application archive, excludes secrets/environment/logs,
+and restores only into an empty instance; it is not a PostgreSQL or host-volume
+snapshot.
