@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.routes.conversations import _conversation_item
@@ -19,9 +19,9 @@ from app.services.reading.reading_service import (
     get_reading_position,
     list_recent_items,
     record_recent_item,
-    resolve_reading_subject_key,
     upsert_reading_position,
 )
+from app.services.ownership import ownership_scope_from_request, subject_key_from_request
 
 router = APIRouter(tags=["reading"])
 
@@ -30,12 +30,13 @@ router = APIRouter(tags=["reading"])
     "/api/conversations/{conversation_id}/reading-position",
     response_model=ReadingPositionResponse,
 )
-def get_position(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ReadingPositionResponse:
+def get_position(conversation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> ReadingPositionResponse:
     try:
         position = get_reading_position(
             db,
             conversation_id,
-            subject_key=resolve_reading_subject_key(),
+            subject_key=subject_key_from_request(request),
+            ownership_scope=ownership_scope_from_request(request),
         )
     except ReadingServiceError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -52,17 +53,19 @@ def get_position(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> R
 def put_position(
     conversation_id: uuid.UUID,
     payload: ReadingPositionUpsert,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ReadingPositionRead:
     try:
         position = upsert_reading_position(
             db,
             conversation_id,
-            subject_key=resolve_reading_subject_key(),
+            subject_key=subject_key_from_request(request),
             message_id=payload.message_id,
             block_index=payload.block_index,
             scroll_offset=payload.scroll_offset,
             anchor_data=payload.anchor_data,
+            ownership_scope=ownership_scope_from_request(request),
         )
         db.commit()
     except ReadingServiceError as exc:
@@ -74,6 +77,7 @@ def put_position(
 @router.post("/api/conversations/{conversation_id}/recent", response_model=RecentItemRead)
 def record_recent(
     conversation_id: uuid.UUID,
+    request: Request,
     payload: RecentItemCreate | None = None,
     db: Session = Depends(get_db),
 ) -> RecentItemRead:
@@ -85,6 +89,7 @@ def record_recent(
             project_id=payload.project_id,
             last_message_id=payload.last_message_id,
             context=payload.context,
+            ownership_scope=ownership_scope_from_request(request),
         )
         db.commit()
     except ReadingServiceError as exc:
@@ -95,10 +100,14 @@ def record_recent(
 
 @router.get("/api/recent-items", response_model=list[RecentItemRead])
 def get_recent_items(
+    request: Request,
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
 ) -> list[RecentItemRead]:
-    return [_recent_read(item) for item in list_recent_items(db, limit)]
+    return [
+        _recent_read(item)
+        for item in list_recent_items(db, limit, ownership_scope_from_request(request))
+    ]
 
 
 def _position_read(position: ReadingPosition) -> ReadingPositionRead:

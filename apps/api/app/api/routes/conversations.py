@@ -1,7 +1,7 @@
 import re
 import uuid
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session, selectinload
 
@@ -75,6 +75,7 @@ from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn
 from app.services.reader_locator import resolve_reader_locator
 from app.api.routes.tasks import background_job_read
 from app.services.conversations.conversation_deletion import delete_conversation_record
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -82,8 +83,10 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 @router.post("", response_model=ConversationCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_conversation_endpoint(
     payload: ConversationCreateRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationCreateResponse:
+    ownership_scope = ownership_scope_from_request(request)
     try:
         result = create_manual_conversation(
             db,
@@ -91,6 +94,7 @@ def create_conversation_endpoint(
             user_text=payload.messages[0].content_markdown,
             assistant_text=payload.messages[1].content_markdown,
             project_id=payload.project_id,
+            ownership_scope=ownership_scope,
         )
         db.commit()
         db.refresh(result.conversation)
@@ -108,8 +112,10 @@ def create_conversation_endpoint(
 def insert_message_endpoint(
     conversation_id: uuid.UUID,
     payload: MessageInsertRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageInsertResponse:
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     try:
         messages = [
             (item.role or "", item.content_markdown)
@@ -138,6 +144,7 @@ def insert_message_endpoint(
 
 @router.get("", response_model=list[ConversationListItem])
 def list_conversations(
+    request: Request,
     limit: int = Query(default=50, ge=1, le=5000),
     offset: int = Query(default=0, ge=0),
     source_type: str | None = None,
@@ -152,8 +159,10 @@ def list_conversations(
     direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ) -> list[ConversationListItem]:
+    ownership_scope = ownership_scope_from_request(request)
     query = (
         db.query(Conversation)
+        .filter(ownership_scope.predicate(Conversation))
         .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
         .options(
             selectinload(Conversation.recent_item),
@@ -199,9 +208,13 @@ def list_conversations(
 @router.put("/order", status_code=status.HTTP_204_NO_CONTENT)
 def update_conversation_order(
     payload: ConversationOrderUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> None:
-    rows = db.query(Conversation).filter(Conversation.id.in_(payload.conversation_ids)).all()
+    ownership_scope = ownership_scope_from_request(request)
+    rows = db.query(Conversation).filter(
+        ownership_scope.predicate(Conversation), Conversation.id.in_(payload.conversation_ids)
+    ).all()
     if len(rows) != len(set(payload.conversation_ids)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     by_id = {row.id: row for row in rows}
@@ -213,9 +226,11 @@ def update_conversation_order(
 @router.post("/merge", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
 def merge_conversations_endpoint(
     payload: ConversationMergeRequest,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
+    ownership_scope = ownership_scope_from_request(request)
     try:
         job = queue_conversation_merge(
             db=db,
@@ -223,6 +238,7 @@ def merge_conversations_endpoint(
             title=payload.title,
             project_id=payload.project_id,
             idempotency_key=idempotency_key,
+            ownership_scope=ownership_scope,
         )
         db.commit()
     except MessageEditError as exc:
@@ -232,10 +248,12 @@ def merge_conversations_endpoint(
 
 
 @router.get("/{conversation_id}", response_model=ConversationDetail)
-def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ConversationDetail:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+def get_conversation(
+    conversation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)
+) -> ConversationDetail:
+    conversation = _managed_conversation_or_404(
+        db, conversation_id, ownership_scope_from_request(request)
+    )
     return ConversationDetail(
         **_conversation_item(conversation).model_dump(),
         external_source_id=conversation.external_source_id,
@@ -250,11 +268,12 @@ def get_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) 
 def update_conversation(
     conversation_id: uuid.UUID,
     payload: ConversationUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationDetail:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None or conversation.status == "deleted":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    conversation = _managed_conversation_or_404(
+        db, conversation_id, ownership_scope_from_request(request)
+    )
 
     event_payload: dict[str, object] = {}
     if "description_markdown" in payload.model_fields_set:
@@ -301,26 +320,33 @@ def update_conversation(
 
 
 @router.post("/{conversation_id}/archive", response_model=ConversationDetail)
-def archive_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ConversationDetail:
-    conversation = _managed_conversation_or_404(db, conversation_id)
+def archive_conversation(
+    conversation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)
+) -> ConversationDetail:
+    conversation = _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     _set_conversation_status(db, conversation, "archived")
     db.commit()
     return _conversation_detail(conversation)
 
 
 @router.post("/{conversation_id}/unarchive", response_model=ConversationDetail)
-def unarchive_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> ConversationDetail:
-    conversation = _managed_conversation_or_404(db, conversation_id)
+def unarchive_conversation(
+    conversation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)
+) -> ConversationDetail:
+    ownership_scope = ownership_scope_from_request(request)
+    conversation = _managed_conversation_or_404(db, conversation_id, ownership_scope)
     _set_conversation_status(db, conversation, "active")
-    _ensure_active_project_membership(db, conversation)
+    _ensure_active_project_membership(db, conversation, ownership_scope)
     db.commit()
     return _conversation_detail(conversation)
 
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
+def delete_conversation(
+    conversation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)
+) -> None:
     try:
-        delete_conversation_record(db, conversation_id)
+        delete_conversation_record(db, conversation_id, ownership_scope_from_request(request))
     except LookupError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -329,14 +355,17 @@ def delete_conversation(conversation_id: uuid.UUID, db: Session = Depends(get_db
 @router.post("/batch-delete", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
 def queue_batch_delete(
     payload: ConversationBatchDeleteRequest,
+    request: Request,
     db: Session = Depends(get_db),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> BackgroundTaskRead:
+    ownership_scope = ownership_scope_from_request(request)
     try:
         job = queue_conversation_batch_delete(
             db,
             conversation_ids=payload.conversation_ids,
             idempotency_key=idempotency_key,
+            ownership_scope=ownership_scope,
         )
         db.commit()
     except MessageEditError as exc:
@@ -349,8 +378,10 @@ def queue_batch_delete(
 def place_conversation_route(
     conversation_id: uuid.UUID,
     payload: ConversationPlacementRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationPlacementResponse:
+    ownership_scope = ownership_scope_from_request(request)
     try:
         result = place_conversation(
             db,
@@ -360,11 +391,16 @@ def place_conversation_route(
             before_conversation_id=payload.before_conversation_id,
             after_conversation_id=payload.after_conversation_id,
             expected_offline_revision=payload.expected_offline_revision,
+            ownership_scope=ownership_scope,
         )
-        default_project = ensure_default_project(db)
-        source_count = project_counts(db, result.source_project_id).conversation_count if result.source_project_id else 0
-        target_count = project_counts(db, result.target_project_id).conversation_count
-        unclassified_count = project_counts(db, default_project.id).conversation_count
+        default_project = ensure_default_project(db, ownership_scope)
+        source_count = (
+            project_counts(db, result.source_project_id, ownership_scope).conversation_count
+            if result.source_project_id
+            else 0
+        )
+        target_count = project_counts(db, result.target_project_id, ownership_scope).conversation_count
+        unclassified_count = project_counts(db, default_project.id, ownership_scope).conversation_count
         conversation = result.relation.conversation
         db.commit()
     except ProjectServiceError as exc:
@@ -393,8 +429,10 @@ def place_conversation_route(
 def split_conversation_endpoint(
     conversation_id: uuid.UUID,
     payload: ConversationSplitRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationTransformResponse:
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     try:
         result = split_conversation(
             db=db,
@@ -420,8 +458,10 @@ def split_conversation_endpoint(
 def preview_split_workspace(
     conversation_id: uuid.UUID,
     payload: ConversationSplitWorkspaceRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationSplitWorkspacePreview:
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     try:
         groups = plan_conversation_split(
             db,
@@ -448,8 +488,10 @@ def preview_split_workspace(
 def execute_split_workspace(
     conversation_id: uuid.UUID,
     payload: ConversationSplitWorkspaceRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationSplitWorkspaceResponse:
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     try:
         groups = plan_conversation_split(
             db,
@@ -487,12 +529,15 @@ def execute_split_workspace(
 def add_conversation_project_membership(
     conversation_id: uuid.UUID,
     project_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationDetail:
+    ownership_scope = ownership_scope_from_request(request)
+    conversation = _managed_conversation_or_404(db, conversation_id, ownership_scope)
     try:
-        add_conversation_to_project(db, project_id, conversation_id, added_by="user")
-        conversation = db.get(Conversation, conversation_id)
-        assert conversation is not None
+        add_conversation_to_project(
+            db, project_id, conversation_id, added_by="user", ownership_scope=ownership_scope
+        )
         _add_conversation_event(
             db,
             conversation_id,
@@ -510,11 +555,11 @@ def add_conversation_project_membership(
 def move_conversation_project(
     conversation_id: uuid.UUID,
     payload: ConversationProjectMoveRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationDetail:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    ownership_scope = ownership_scope_from_request(request)
+    conversation = _managed_conversation_or_404(db, conversation_id, ownership_scope)
     if conversation.status != "active":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -526,6 +571,7 @@ def move_conversation_project(
             conversation_id=conversation_id,
             project_id=payload.project_id,
             added_by="user",
+            ownership_scope=ownership_scope,
         )
         _add_conversation_event(
             db,
@@ -544,10 +590,13 @@ def move_conversation_project(
 def remove_conversation_project_membership(
     conversation_id: uuid.UUID,
     project_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> None:
+    ownership_scope = ownership_scope_from_request(request)
+    _managed_conversation_or_404(db, conversation_id, ownership_scope)
     try:
-        remove_conversation_from_project(db, project_id, conversation_id)
+        remove_conversation_from_project(db, project_id, conversation_id, ownership_scope)
         _add_conversation_event(
             db,
             conversation_id,
@@ -563,13 +612,13 @@ def remove_conversation_project_membership(
 @router.get("/{conversation_id}/events", response_model=ConversationEventListResponse)
 def list_conversation_events(
     conversation_id: uuid.UUID,
+    request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     event_type: str | None = None,
     db: Session = Depends(get_db),
 ) -> ConversationEventListResponse:
-    if db.get(Conversation, conversation_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     query = db.query(ConversationEvent).filter(ConversationEvent.conversation_id == conversation_id)
     if event_type:
         query = query.filter(ConversationEvent.event_type == event_type)
@@ -603,11 +652,12 @@ def list_conversation_events(
 def set_conversation_pin(
     conversation_id: uuid.UUID,
     payload: ConversationPinUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationDetail:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    conversation = _managed_conversation_or_404(
+        db, conversation_id, ownership_scope_from_request(request)
+    )
     conversation.is_global_pinned = payload.is_pinned
     conversation.global_pinned_at = utc_now() if payload.is_pinned else None
     _add_conversation_event(
@@ -623,13 +673,13 @@ def set_conversation_pin(
 @router.get("/{conversation_id}/messages", response_model=list[MessageListItem])
 def list_conversation_messages(
     conversation_id: uuid.UUID,
+    request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     include_blocks: bool = False,
     db: Session = Depends(get_db),
 ) -> list[MessageListItem]:
-    if db.get(Conversation, conversation_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     messages = (
         db.query(Message)
         .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
@@ -644,14 +694,15 @@ def list_conversation_messages(
 @router.get("/{conversation_id}/dialogue-index", response_model=DialogueIndexResponse)
 def get_dialogue_index(
     conversation_id: uuid.UUID,
+    request: Request,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=80, ge=1, le=5000),
     anchor_message_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
 ) -> DialogueIndexResponse:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    conversation = _managed_conversation_or_404(
+        db, conversation_id, ownership_scope_from_request(request)
+    )
     base_query = db.query(Message).filter(
         Message.conversation_id == conversation_id,
         Message.is_deleted.is_(False),
@@ -723,6 +774,7 @@ def get_dialogue_index(
 @router.get("/{conversation_id}/message-window", response_model=MessageWindowResponse)
 def get_message_window(
     conversation_id: uuid.UUID,
+    request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     include_blocks: bool = False,
@@ -734,8 +786,7 @@ def get_message_window(
     content_mode: str = Query(default="full", pattern="^(full|preview)$"),
     db: Session = Depends(get_db),
 ) -> MessageWindowResponse:
-    if db.get(Conversation, conversation_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     query = db.query(Message).filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
     if after_order_key:
         query = query.filter(Message.order_key > after_order_key)
@@ -840,12 +891,11 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
 @router.get("/{conversation_id}/reader-turn", response_model=ReaderTurnResponse)
 def get_reader_turn(
     conversation_id: uuid.UUID,
+    request: Request,
     anchor_message_id: uuid.UUID | None = None,
     db: Session = Depends(get_db),
 ) -> ReaderTurnResponse:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     try:
         return load_reader_turn(db, conversation_id, anchor_message_id)
     except ReaderTurnHydrationError as exc:
@@ -858,9 +908,11 @@ def get_reader_turn(
 def resolve_locator_endpoint(
     conversation_id: uuid.UUID,
     payload: LocatorTargetRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ResolvedLocatorResponse:
     """Resolve a navigation target against canonical message/version/block rows."""
+    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     return resolve_reader_locator(db, conversation_id, payload)
 
 
@@ -921,8 +973,12 @@ def _add_conversation_event(
     )
 
 
-def _managed_conversation_or_404(db: Session, conversation_id: uuid.UUID) -> Conversation:
-    conversation = db.get(Conversation, conversation_id)
+def _managed_conversation_or_404(
+    db: Session,
+    conversation_id: uuid.UUID,
+    ownership_scope: OwnershipScope,
+) -> Conversation:
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None or conversation.status == "deleted":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
     return conversation
@@ -953,7 +1009,11 @@ def _set_conversation_status(
     )
 
 
-def _ensure_active_project_membership(db: Session, conversation: Conversation) -> None:
+def _ensure_active_project_membership(
+    db: Session,
+    conversation: Conversation,
+    ownership_scope: OwnershipScope,
+) -> None:
     relation = (
         db.query(ProjectConversation)
         .filter(ProjectConversation.conversation_id == conversation.id)
@@ -966,6 +1026,7 @@ def _ensure_active_project_membership(db: Session, conversation: Conversation) -
         conversation_id=conversation.id,
         project_id=None,
         added_by="system",
+        ownership_scope=ownership_scope,
     )
 
 

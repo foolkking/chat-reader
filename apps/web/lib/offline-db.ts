@@ -92,8 +92,8 @@ class OfflineLibraryDatabase extends Dexie {
   settings!: EntityTable<OfflineSetting, "key">;
   attachments!: EntityTable<OfflineAttachmentRecord, "id">;
 
-  constructor() {
-    super("chat-reader-offline-library");
+  constructor(databaseName: string) {
+    super(databaseName);
     this.version(1).stores({
       conversations: "id, project_id, offline_revision, last_read_at, downloaded_at",
       messages: "id, conversation_id, [conversation_id+order_key]",
@@ -124,17 +124,127 @@ class OfflineLibraryDatabase extends Dexie {
   }
 }
 
-export const offlineDb = new OfflineLibraryDatabase();
+const LEGACY_OFFLINE_DATABASE_NAME = "chat-reader-offline-library";
+const OFFLINE_DATABASE_PREFIX = `${LEGACY_OFFLINE_DATABASE_NAME}--`;
+const LEGACY_OFFLINE_ASSET_CACHE_NAME = "chat-reader-offline-assets-v1";
+const OFFLINE_ASSET_CACHE_PREFIX = `${LEGACY_OFFLINE_ASSET_CACHE_NAME}--`;
+const ACTIVE_OFFLINE_USER_KEY = "chat-reader:offline-active-user-v1";
+const LEGACY_OFFLINE_OWNER_KEY = "chat-reader:offline-legacy-owner-v1";
+const LOCAL_DEFAULT_USER = "local:default";
 
-export async function clearProtectedOfflineData(): Promise<void> {
-  offlineDb.close();
-  await Dexie.delete("chat-reader-offline-library");
-  if (typeof caches !== "undefined") {
-    const names = await caches.keys();
-    await Promise.all(names
-      .filter((name) => name === "chat-reader-offline-assets-v1")
-      .map((name) => caches.delete(name)));
+export type OfflineStorageContext = {
+  userId: string | null;
+  namespace: string;
+  databaseName: string;
+  assetCacheName: string;
+  usesLegacyStorage: boolean;
+};
+
+let activeOfflineContext: OfflineStorageContext = legacyOfflineStorageContext(null);
+export let offlineDb = new OfflineLibraryDatabase(activeOfflineContext.databaseName);
+
+export function getActiveOfflineStorageContext(): OfflineStorageContext {
+  return { ...activeOfflineContext };
+}
+
+export function readPersistedOfflineUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return normalizeOfflineUserId(window.localStorage.getItem(ACTIVE_OFFLINE_USER_KEY));
+}
+
+export async function activateProtectedOfflineData(userId: string | null | undefined): Promise<OfflineStorageContext> {
+  const normalizedUserId = normalizeOfflineUserId(userId) ?? LOCAL_DEFAULT_USER;
+  const context = await resolveOfflineStorageContext(normalizedUserId);
+  if (activeOfflineContext.userId === normalizedUserId && offlineDb.name === context.databaseName) {
+    return getActiveOfflineStorageContext();
   }
+
+  const nextDb = new OfflineLibraryDatabase(context.databaseName);
+  await nextDb.open();
+  offlineDb.close();
+  offlineDb = nextDb;
+  activeOfflineContext = context;
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(ACTIVE_OFFLINE_USER_KEY, normalizedUserId);
+  }
+  return getActiveOfflineStorageContext();
+}
+
+export async function clearProtectedOfflineData(userId?: string | null): Promise<OfflineStorageContext> {
+  const persistedUserId = normalizeOfflineUserId(userId) ?? readPersistedOfflineUserId() ?? activeOfflineContext.userId;
+  const context = persistedUserId
+    ? await resolveOfflineStorageContext(persistedUserId, { claimLegacy: false })
+    : getActiveOfflineStorageContext();
+  if (offlineDb.name === context.databaseName) offlineDb.close();
+  await Dexie.delete(context.databaseName);
+  if (typeof caches !== "undefined") {
+    await caches.delete(context.assetCacheName);
+  }
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(ACTIVE_OFFLINE_USER_KEY);
+    if (context.usesLegacyStorage && window.localStorage.getItem(LEGACY_OFFLINE_OWNER_KEY) === persistedUserId) {
+      window.localStorage.removeItem(LEGACY_OFFLINE_OWNER_KEY);
+    }
+  }
+  activeOfflineContext = legacyOfflineStorageContext(null);
+  offlineDb = new OfflineLibraryDatabase(activeOfflineContext.databaseName);
+  return context;
+}
+
+function normalizeOfflineUserId(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized && normalized.length <= 256 ? normalized : null;
+}
+
+function offlineNamespaceForUser(userId: string): string {
+  const bytes = new TextEncoder().encode(userId);
+  return `user-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function legacyOfflineStorageContext(userId: string | null): OfflineStorageContext {
+  return {
+    userId,
+    namespace: "legacy",
+    databaseName: LEGACY_OFFLINE_DATABASE_NAME,
+    assetCacheName: LEGACY_OFFLINE_ASSET_CACHE_NAME,
+    usesLegacyStorage: true,
+  };
+}
+
+function namespacedOfflineStorageContext(userId: string): OfflineStorageContext {
+  const namespace = offlineNamespaceForUser(userId);
+  return {
+    userId,
+    namespace,
+    databaseName: `${OFFLINE_DATABASE_PREFIX}${namespace}`,
+    assetCacheName: `${OFFLINE_ASSET_CACHE_PREFIX}${namespace}`,
+    usesLegacyStorage: false,
+  };
+}
+
+async function resolveOfflineStorageContext(
+  userId: string,
+  options: { claimLegacy?: boolean } = {},
+): Promise<OfflineStorageContext> {
+  if (typeof window === "undefined") return namespacedOfflineStorageContext(userId);
+  const claimLegacy = options.claimLegacy ?? true;
+  const legacyOwner = normalizeOfflineUserId(window.localStorage.getItem(LEGACY_OFFLINE_OWNER_KEY));
+  const persistedUser = readPersistedOfflineUserId();
+
+  // A previous single-owner offline lease had no user id. Once that same
+  // browser verifies the migrated account online, transfer the logical owner
+  // binding to the real User UUID without copying a potentially large DB.
+  if (legacyOwner === LOCAL_DEFAULT_USER && persistedUser === LOCAL_DEFAULT_USER && userId !== LOCAL_DEFAULT_USER) {
+    window.localStorage.setItem(LEGACY_OFFLINE_OWNER_KEY, userId);
+    return legacyOfflineStorageContext(userId);
+  }
+  if (legacyOwner === userId) return legacyOfflineStorageContext(userId);
+  if (!legacyOwner && claimLegacy && await Dexie.exists(LEGACY_OFFLINE_DATABASE_NAME)) {
+    window.localStorage.setItem(LEGACY_OFFLINE_OWNER_KEY, userId);
+    return legacyOfflineStorageContext(userId);
+  }
+  return namespacedOfflineStorageContext(userId);
 }
 
 type PackageConversation = Record<string, unknown> & {
@@ -324,7 +434,7 @@ export async function importOfflinePackage(packageId: string, response: Response
     downloaded_at: now,
   };
 
-  const cache = await caches.open("chat-reader-offline-assets-v1");
+  const cache = await caches.open(activeOfflineContext.assetCacheName);
   const cachedUrls = new Set<string>();
   const previousCacheEntries = new Map<string, Response | null>();
   const previousAttachments = conversationIds.length
@@ -518,7 +628,7 @@ export async function removeOfflineConversations(conversationIds: string[]): Pro
     },
   );
   if (attachments.length) {
-    const cache = await caches.open("chat-reader-offline-assets-v1");
+    const cache = await caches.open(activeOfflineContext.assetCacheName);
     await Promise.all(attachments.flatMap(offlineAttachmentCacheUrls).map((url) => cache.delete(url)));
   }
 }
@@ -548,7 +658,7 @@ export async function listOfflineConversationAttachments(conversationId: string)
 async function readVerifiedCachedAttachment(record: OfflineAttachmentRecord): Promise<Response | null> {
   if (!record.content_path) return null;
   try {
-    const cache = await caches.open("chat-reader-offline-assets-v1");
+    const cache = await caches.open(activeOfflineContext.assetCacheName);
     for (const url of offlineAttachmentCacheUrls(record)) {
       const response = await cache.match(url);
       if (!response) continue;
@@ -577,6 +687,9 @@ declare global {
     __chatReaderPwaNegativeTest?: {
       importOfflinePackage: typeof importOfflinePackage;
       inspectOfflineBulkPutChunking: typeof inspectOfflineBulkPutChunking;
+      activateProtectedOfflineData: typeof activateProtectedOfflineData;
+      clearProtectedOfflineData: typeof clearProtectedOfflineData;
+      getActiveOfflineStorageContext: typeof getActiveOfflineStorageContext;
     };
   }
 }
@@ -584,7 +697,13 @@ declare global {
 // Compile-time opt-in only: normal production bundles do not expose a fault
 // seam. Release E uses it to exercise the real Cache Storage/IndexedDB path.
 if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS === "1") {
-  window.__chatReaderPwaNegativeTest = { importOfflinePackage, inspectOfflineBulkPutChunking };
+  window.__chatReaderPwaNegativeTest = {
+    importOfflinePackage,
+    inspectOfflineBulkPutChunking,
+    activateProtectedOfflineData,
+    clearProtectedOfflineData,
+    getActiveOfflineStorageContext,
+  };
 }
 
 function offlineAttachmentRead(record: OfflineAttachmentRecord, contentUrl: string | null, cached: boolean): AttachmentRead {

@@ -1,5 +1,20 @@
 # 部署与运行环境
 
+## Current deployed snapshot (2026-09-01)
+
+The active production source is `93751e52dc7089d0ccd51e6f6cf9cedb1f341fe1`
+from GitHub Actions run `33468690421`. The release used prebuilt OCI images,
+the existing migration container, and `docker compose --no-build`; only the
+API, import-worker and Web services were recreated. PostgreSQL was not
+restarted or replaced. Runtime health, HTTPS reachability and anonymous
+private-route boundaries were verified after rollout. Owner-authenticated
+production UI acceptance remains `NOT_VERIFIED`.
+
+The working tree is ahead of this deployed snapshot with the multi-account
+owner boundary and migration `20260901_0030_multi_account_users.py`. Treat it
+as pending until backup, migration, deployment and authenticated browser
+verification are recorded.
+
 ## Import Preview request boundary
 
 The application limit remains 50 MiB per uploaded import file and Preview

@@ -23,7 +23,7 @@ export function AppShell({ mode = "active" }: { mode?: "active" | "archived" }) 
           description={isArchivedMode ? t("restoreDescription") : t("readerDescription")}
           onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
         />
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"><div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-[clamp(1rem,2vw,2rem)] py-8">{mode === "active" ? <div className="md:hidden"><RecentItems compact /></div> : null}{isArchivedMode ? <ArchivedProjectList /> : null}<ConversationList mode={mode} onImportClick={openImportDialog} /></div></div>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"><div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-[clamp(1rem,2vw,2rem)] py-8">{mode === "active" ? <div className="md:hidden"><RecentItems compact /></div> : null}{isArchivedMode ? <ArchivedProjectList /> : null}<ConversationList mode={mode} onImportClick={openImportDialog} onRestoreArchive={() => openImportDialog({ initialMode: "archive" })} /></div></div>
       </section>
   );
   if (workspace.embedded) return content;

@@ -7,13 +7,13 @@ from app.schemas.preferences import UserPreferenceRead, UserPreferenceUpdate
 DEFAULT_SUBJECT_KEY = "local:default"
 
 
-def get_or_create_preferences(db: Session) -> UserPreference:
-    preference = db.get(UserPreference, DEFAULT_SUBJECT_KEY)
+def get_or_create_preferences(db: Session, subject_key: str = DEFAULT_SUBJECT_KEY) -> UserPreference:
+    preference = db.get(UserPreference, subject_key)
     if preference is not None:
         return preference
     now = utc_now()
     preference = UserPreference(
-        subject_key=DEFAULT_SUBJECT_KEY,
+        subject_key=subject_key,
         theme_mode="light",
         locale_mode="auto",
         reader_width_mode="standard",
@@ -32,8 +32,12 @@ def get_or_create_preferences(db: Session) -> UserPreference:
     return preference
 
 
-def update_preferences(db: Session, payload: UserPreferenceUpdate) -> UserPreference:
-    preference = get_or_create_preferences(db)
+def update_preferences(
+    db: Session,
+    payload: UserPreferenceUpdate,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
+) -> UserPreference:
+    preference = get_or_create_preferences(db, subject_key)
     if payload.theme_mode is not None:
         preference.theme_mode = payload.theme_mode
     if payload.locale_mode is not None:

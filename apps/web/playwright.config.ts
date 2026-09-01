@@ -3,6 +3,7 @@ import { defineConfig } from "@playwright/test";
 const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
 const useBundledChromium = process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1";
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3107";
 const runPwaNegativeMatrix = process.env.E2E_PWA_NEGATIVE === "1";
 const pnpmCommand = process.env.PNPM_HOME ? "pnpm" : "corepack pnpm";
 const gateId = (process.env.PLAYWRIGHT_GATE_ID ?? "local")
@@ -26,14 +27,14 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ...gateEvidenceReporter],
   use: {
-    baseURL: "http://127.0.0.1:3107",
+    baseURL,
     ...(useBundledChromium ? {} : chromiumExecutablePath ? { launchOptions: { executablePath: chromiumExecutablePath } } : { channel: "chrome" }),
     serviceWorkers: "allow",
     trace: "retain-on-failure",
   },
   webServer: {
     command: `${pnpmCommand} exec next start -p 3107`,
-    url: "http://127.0.0.1:3107/library",
+    url: `${baseURL}/library`,
     timeout: 180_000,
     reuseExistingServer,
   },

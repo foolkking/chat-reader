@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const password = process.env.E2E_AUTH_PASSWORD;
+const email = process.env.E2E_AUTH_EMAIL;
 
 const MARKDOWN = `## Copy heading
 
@@ -138,13 +139,14 @@ test("Public Share uses the same semantic Markdown copy boundary", async ({ brow
 });
 
 async function login(page: Page, baseURL: string): Promise<void> {
-  if (!password) {
+  if (!password || !email) {
     await page.goto(baseURL);
     return;
   }
   await page.goto(`${baseURL}/login`);
-  await page.locator("#owner-password").fill(password!);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.locator("#login-email").fill(email!);
+  await page.locator("#login-password").fill(password!);
+  await page.getByRole("button", { name: /Sign in|登录/ }).click();
   await expect(page).toHaveURL(`${baseURL}/`);
 }
 

@@ -32,9 +32,11 @@ import { HoverPreviewLink } from "../../components/hover-preview-link";
 
 export function ConversationList({
   onImportClick,
+  onRestoreArchive,
   mode = "active",
 }: {
   onImportClick?: () => void;
+  onRestoreArchive?: () => void;
   mode?: "active" | "archived";
 }) {
   const queryClient = useQueryClient();
@@ -220,24 +222,33 @@ export function ConversationList({
           isArchivedMode
             ? (resolvedLocale === "zh-CN" ? "暂无已归档对话" : "No archived conversations")
             : shouldShowImportCta
-              ? (resolvedLocale === "zh-CN" ? "导入你的 ChatGPT 对话" : "Import your ChatGPT conversations")
+              ? (resolvedLocale === "zh-CN" ? "这里还没有对话" : "There are no conversations here yet")
               : (resolvedLocale === "zh-CN" ? "暂无未分类对话" : "No unfiled conversations")
         }
         detail={
           isArchivedMode
             ? (resolvedLocale === "zh-CN" ? "归档的对话会保留在这里，恢复后回到原项目或对话记录。" : "Archived conversations return to their previous location when restored.")
             : shouldShowImportCta
-              ? (resolvedLocale === "zh-CN" ? "支持 .cr 快速归档、JSON、Markdown 和 CSV。数据保存在当前服务器。" : "Supports .cr archives, JSON, Markdown, and CSV. Data remains on this server.")
+              ? (resolvedLocale === "zh-CN" ? "导入对话，或恢复已有的 .cr 归档。数据只会进入你的私人资料库。" : "Import conversations or restore an existing .cr archive. Data is added only to your private library.")
               : (resolvedLocale === "zh-CN" ? "现有对话已归入项目，可在左侧展开项目查看。" : "Existing conversations are filed in projects. Expand a project in the sidebar to view them.")
         }
         action={shouldShowImportCta ? (
-          <button
-            type="button"
-            onClick={onImportClick}
-            className="rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-[var(--surface)] hover:opacity-90"
-          >
-            {resolvedLocale === "zh-CN" ? "导入 ChatGPT 数据" : "Import ChatGPT data"}
-          </button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={onImportClick}
+              className="rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-[var(--surface)] hover:opacity-90"
+            >
+              {resolvedLocale === "zh-CN" ? "导入对话" : "Import conversations"}
+            </button>
+            <button
+              type="button"
+              onClick={onRestoreArchive ?? onImportClick}
+              className="rounded-lg border border-ui bg-surface px-4 py-2 text-sm font-medium text-primary hover:bg-subtle"
+            >
+              {resolvedLocale === "zh-CN" ? "恢复 .cr 归档" : "Restore .cr archive"}
+            </button>
+          </div>
         ) : undefined}
       />
     );

@@ -1,5 +1,15 @@
 # 页面与路由地图
 
+## Current account routes (working tree, 2026-09-01)
+
+The owner workspace is session-protected. Public auth pages are `/login`,
+`/register` (subject to registration mode), `/account-upgrade`,
+`/password-reset` and `/reset-password`. `/share/[token]` remains a separate
+public capability and `/library` remains the Offline boundary. The account
+route additions are implemented in the working tree but await migration and
+deployment; the route table below is historical where it still says that no
+account system exists.
+
 ## Current route access rule (2026-08-18)
 
 Every application page and business API route requires an authenticated owner

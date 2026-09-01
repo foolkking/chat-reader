@@ -62,13 +62,15 @@ Release images must be `linux/amd64`, carry the exact OCI revision label, expose
 
 King never runs a Next production build. Deployment uses an externally built archive, validates its versioned build metadata, validates PostgreSQL and business-volume backup readability/listings, runs migration preflight, and recreates services with `--no-build`. It never runs `down -v`, deletes business volumes, replaces `.env.production`, or enables Scanner. Manual SHA/checksum confirmation is not a release-report gate.
 
-The application has a single-owner password/session boundary but no multi-user
-account system. Owner authorization, session expiry and private business-route
-protection are application responsibilities defined by
-`AUTHENTICATION_CONTRACT.md`; TLS and external network access remain the
-responsibility of the gateway/VPN. The repository owns application headers;
-the gateway must preserve or deliberately supersede them, forward the expected
-proxy headers, and monitor `/api/health`.
+The deployed snapshot has the historical single-owner password/session
+boundary. The current working tree adds one provisioned `ADMIN`, `USER`
+accounts and UUID-based owner authorization; migration
+`20260901_0030_multi_account_users.py` and its production rollout are pending.
+Owner authorization, session expiry and private business-route protection are
+application responsibilities defined by `AUTHENTICATION_CONTRACT.md`; TLS and
+external network access remain the responsibility of the gateway/VPN. The
+repository owns application headers; the gateway must preserve or deliberately
+supersede them, forward the expected proxy headers, and monitor `/api/health`.
 
 ## Current verification rules
 

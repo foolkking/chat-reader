@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -13,22 +13,28 @@ from app.schemas.offline import OfflineCatalogResponse, OfflinePackageCreate, Of
 from app.services.background_jobs import queue_offline_package
 from app.services.offline_packages import OfflinePackageError, build_catalog
 from app.services.artifact_lifecycle import validate_final_artifact
+from app.services.ownership import OwnershipScope, ownership_scope_from_request, subject_key_from_request
 
 router = APIRouter(prefix="/api/offline", tags=["offline"])
 
 
 @router.get("/catalog", response_model=OfflineCatalogResponse)
-def get_offline_catalog(db: Session = Depends(get_db)) -> OfflineCatalogResponse:
-    return build_catalog(db)
+def get_offline_catalog(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> OfflineCatalogResponse:
+    return build_catalog(db, ownership_scope_from_request(request))
 
 
 @router.post("/packages", response_model=OfflinePackageQueued, status_code=status.HTTP_202_ACCEPTED)
 def create_offline_package(
     payload: OfflinePackageCreate,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> OfflinePackageQueued:
     try:
+        ownership_scope = ownership_scope_from_request(request)
         job = queue_offline_package(
             db,
             scope=payload.scope,
@@ -37,8 +43,10 @@ def create_offline_package(
             known_revisions=payload.known_revisions,
             include_assets=payload.include_assets,
             idempotency_key=idempotency_key,
+            subject_key=subject_key_from_request(request),
+            ownership_scope=ownership_scope,
         )
-        catalog = build_catalog(db)
+        catalog = build_catalog(db, ownership_scope)
         if payload.scope == "conversation":
             selected = next((item for item in catalog.conversations if item.id == payload.conversation_id), None)
             estimate = (
@@ -75,12 +83,19 @@ def create_offline_package(
 
 
 @router.get("/packages/{package_id}", response_model=OfflinePackageRead)
-def get_offline_package(package_id: uuid.UUID, db: Session = Depends(get_db)) -> OfflinePackageRead:
+def get_offline_package(
+    package_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> OfflinePackageRead:
+    ownership_scope = ownership_scope_from_request(request)
     package = db.get(OfflinePackageArtifact, package_id)
     if package is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offline package not found.")
     job = db.get(BackgroundJob, package.job_id)
-    if job is None or job.status != "committed":
+    if job is None or not _owns_job(job, ownership_scope):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offline package not found.")
+    if job.status != "committed":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Offline package is not ready.")
     return OfflinePackageRead(
         id=package.id,
@@ -97,12 +112,19 @@ def get_offline_package(package_id: uuid.UUID, db: Session = Depends(get_db)) ->
 
 
 @router.get("/packages/{package_id}/download")
-def download_offline_package(package_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse:
+def download_offline_package(
+    package_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    ownership_scope = ownership_scope_from_request(request)
     package = db.get(OfflinePackageArtifact, package_id)
     if package is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offline package not found.")
     job = db.get(BackgroundJob, package.job_id)
-    if job is None or job.status != "committed":
+    if job is None or not _owns_job(job, ownership_scope):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offline package not found.")
+    if job.status != "committed":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Offline package is not ready.")
     root = Path(get_settings().offline_storage_dir).resolve()
     path = Path(package.storage_uri).resolve()
@@ -111,3 +133,11 @@ def download_offline_package(package_id: uuid.UUID, db: Session = Depends(get_db
     package.download_count += 1
     db.commit()
     return FileResponse(path, media_type="application/zip", filename=package.filename)
+
+
+def _owns_job(job: BackgroundJob, scope: OwnershipScope) -> bool:
+    if scope.owner_user_id is None:
+        return scope.include_legacy_unowned and job.owner_user_id is None
+    return job.owner_user_id == scope.owner_user_id or (
+        scope.include_legacy_unowned and job.owner_user_id is None
+    )

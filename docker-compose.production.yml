@@ -30,7 +30,7 @@ services:
     build:
       context: ./apps/api
     restart: "no"
-    command: ["alembic", "upgrade", "head"]
+    command: ["sh", "-c", "alembic upgrade head && python -m scripts.owner_auth ensure-initial"]
     environment: &api-environment
       APP_NAME: ${APP_NAME:-chat-reader}
       APP_ENV: production
@@ -42,6 +42,8 @@ services:
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
       AUTH_ACTIVITY_TOUCH_INTERVAL_SECONDS: ${AUTH_ACTIVITY_TOUCH_INTERVAL_SECONDS:-600}
       AUTH_INACTIVITY_TIMEOUT_SECONDS: ${AUTH_INACTIVITY_TIMEOUT_SECONDS:-172800}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
       MAX_IMPORT_FILE_SIZE_MB: ${MAX_IMPORT_FILE_SIZE_MB:-50}
       IMPORT_STALE_AFTER_SECONDS: ${IMPORT_STALE_AFTER_SECONDS:-300}
       WORKER_HEARTBEAT_INTERVAL_SECONDS: ${WORKER_HEARTBEAT_INTERVAL_SECONDS:-30}

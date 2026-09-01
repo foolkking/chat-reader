@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.import_profile import ImportProfile, ImportProfileRevision
@@ -38,7 +39,13 @@ BUILTINS = (
 )
 
 
-def match_profile(db: Session, analysis: AnalysisResult, documents: list[SourceDocument]) -> MatchResult:
+def match_profile(
+    db: Session,
+    analysis: AnalysisResult,
+    documents: list[SourceDocument],
+    *,
+    owner_user_id: uuid.UUID | None = None,
+) -> MatchResult:
     builtin = match_builtin(analysis, documents)
     if builtin is not None:
         return MatchResult(
@@ -46,7 +53,11 @@ def match_profile(db: Session, analysis: AnalysisResult, documents: list[SourceD
             profile_name=builtin.name, evidence={"matcher": MATCHER_VERSION, "kind": "BUILTIN"},
         )
     candidates: list[tuple[int, str, ImportProfile, ImportProfileRevision, dict[str, Any]]] = []
-    profiles = db.query(ImportProfile).filter(ImportProfile.status == "ACTIVE", ImportProfile.source_mode == analysis.mode).all()
+    profiles = db.query(ImportProfile).filter(
+        ImportProfile.status == "ACTIVE",
+        ImportProfile.source_mode == analysis.mode,
+        or_(ImportProfile.kind == "BUILTIN", ImportProfile.owner_user_id == owner_user_id),
+    ).all()
     for profile in profiles:
         for revision in profile.revisions:
             if revision.status not in {"VERIFIED", "SUPERSEDED"}:
@@ -166,16 +177,23 @@ def create_verified_revision(
     verification_summary: dict[str, Any],
     name: str,
     existing_profile_id: uuid.UUID | None = None,
+    owner_user_id: uuid.UUID | None = None,
 ) -> tuple[ImportProfile, ImportProfileRevision]:
     now = datetime.now(timezone.utc)
     if existing_profile_id:
         profile = db.get(ImportProfile, existing_profile_id)
-        if profile is None or profile.kind != "LEARNED":
+        if profile is None or profile.kind != "LEARNED" or profile.owner_user_id != owner_user_id:
             raise ValueError("Learned import profile not found.")
         previous = max(profile.revisions, key=lambda item: item.revision, default=None)
         revision_number = (previous.revision if previous else 0) + 1
     else:
-        profile = ImportProfile(name=name, kind="LEARNED", source_mode=analysis.mode, status="ACTIVE")
+        profile = ImportProfile(
+            name=name,
+            kind="LEARNED",
+            source_mode=analysis.mode,
+            status="ACTIVE",
+            owner_user_id=owner_user_id,
+        )
         db.add(profile)
         db.flush()
         previous = None

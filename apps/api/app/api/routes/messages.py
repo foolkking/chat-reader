@@ -3,7 +3,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -46,6 +46,7 @@ from app.services.editing.message_edit_service import (
 from app.services.assets.attachment_service import attachment_read
 from app.services.background_jobs import queue_conversation_derived_rebuild
 from app.services.canonical.block_builder import extract_markdown_tasks
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 ASSET_REFERENCE_RE = re.compile(r"cr-asset://(?P<id>[0-9a-fA-F-]{36})")
@@ -55,9 +56,13 @@ logger = logging.getLogger(__name__)
 @router.post("/merge", response_model=MessageMergeResponse)
 def merge_messages_endpoint(
     payload: MessageMergeRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageMergeResponse:
     try:
+        scope = ownership_scope_from_request(request)
+        if not payload.message_ids or any(_owned_message(db, item, scope) is None for item in payload.message_ids):
+            raise MessageEditError("Message not found.", 404)
         result = merge_messages(
             db=db,
             message_ids=payload.message_ids,
@@ -78,8 +83,23 @@ def merge_messages_endpoint(
 
 
 @router.get("/{message_id}", response_model=MessageDetail)
-def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> MessageDetail:
+def get_message(
+    message_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> MessageDetail:
+    return _get_message_detail(message_id, db, ownership_scope_from_request(request))
+
+
+def _get_message_detail(
+    message_id: uuid.UUID,
+    db: Session,
+    ownership_scope: OwnershipScope | None = None,
+) -> MessageDetail:
     message = db.get(Message, message_id)
+    if message is not None and ownership_scope is not None:
+        if get_owned(db, Conversation, message.conversation_id, ownership_scope) is None:
+            message = None
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
     version = db.get(MessageVersion, message.current_version_id) if message.current_version_id else None
@@ -124,10 +144,13 @@ def get_message(message_id: uuid.UUID, db: Session = Depends(get_db)) -> Message
 @router.delete("/{message_id}", response_model=MessageDeleteResponse)
 def delete_message_endpoint(
     message_id: uuid.UUID,
+    request: Request,
     expected_offline_revision: int | None = Query(default=None, ge=1),
     db: Session = Depends(get_db),
 ) -> MessageDeleteResponse:
     try:
+        scope = ownership_scope_from_request(request)
+        _require_owned_message(db, message_id, scope)
         result = soft_delete_message(db, message_id, expected_offline_revision=expected_offline_revision)
         conversation_id = result.message.conversation_id
         queue_conversation_derived_rebuild(
@@ -147,23 +170,27 @@ def delete_message_endpoint(
         conversation_id=conversation_id,
         deleted=True,
         conversation_revision=conversation.offline_revision,
-        message=get_message(result.message.id, db),
+        message=_get_message_detail(result.message.id, db),
     )
 
 
 @router.post("/{message_id}/restore", response_model=MessageDeleteResponse)
 def restore_deleted_message_endpoint(
     message_id: uuid.UUID,
+    request: Request,
     expected_offline_revision: int | None = Query(default=None, ge=1),
     db: Session = Depends(get_db),
 ) -> MessageDeleteResponse:
     try:
+        scope = ownership_scope_from_request(request)
+        _require_owned_message(db, message_id, scope)
         result = restore_soft_deleted_message(db, message_id, expected_offline_revision=expected_offline_revision)
         conversation_id = result.message.conversation_id
         queue_conversation_derived_rebuild(
             db,
             conversation_id=conversation_id,
             idempotency_key=f"message-restore:{message_id}:{result.message.order_key}",
+            ownership_scope=scope,
         )
         db.commit()
     except MessageEditError as exc:
@@ -177,15 +204,17 @@ def restore_deleted_message_endpoint(
         conversation_id=conversation_id,
         deleted=False,
         conversation_revision=conversation.offline_revision,
-        message=get_message(result.message.id, db),
+        message=_get_message_detail(result.message.id, db),
     )
 @router.post("/{message_id}/split", response_model=MessageSplitResponse)
 def split_message_endpoint(
     message_id: uuid.UUID,
     payload: MessageSplitRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageSplitResponse:
     try:
+        _require_owned_message(db, message_id, ownership_scope_from_request(request))
         result = split_message(
             db=db,
             message_id=message_id,
@@ -209,11 +238,14 @@ def split_message_endpoint(
 def update_message(
     message_id: uuid.UUID,
     payload: MessageEditRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageEditResponse:
     request_started = time.perf_counter()
     timings: dict[str, float] = {"request_parse_ms": 0.0}
     try:
+        scope = ownership_scope_from_request(request)
+        _require_owned_message(db, message_id, scope)
         if payload.upload_item_ids:
             raise MessageEditError(
                 "Attachment uploads must be finalized before saving the message.",
@@ -273,6 +305,7 @@ def update_message(
             conversation_id=message.conversation_id,
             idempotency_key=f"message-edit-derived:{message.conversation_id}:{result.current_version.id}",
             rebuild_versions=False,
+            ownership_scope=scope,
         )
         db.commit()
     except Exception as exc:
@@ -301,8 +334,11 @@ def toggle_message_task(
     message_id: uuid.UUID,
     task_key: str,
     payload: MessageTaskToggleRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageEditResponse:
+    scope = ownership_scope_from_request(request)
+    _require_owned_message(db, message_id, scope)
     message = db.get(Message, message_id)
     if message is None or message.is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
@@ -378,6 +414,7 @@ def toggle_message_task(
             db,
             conversation_id=message.conversation_id,
             idempotency_key=f"message-task-derived:{message.conversation_id}:{result.current_version.id}",
+            ownership_scope=scope,
             rebuild_versions=False,
         )
         db.commit()
@@ -390,9 +427,11 @@ def toggle_message_task(
 @router.get("/{message_id}/versions", response_model=MessageVersionHistoryResponse)
 def get_message_versions(
     message_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageVersionHistoryResponse:
     try:
+        _require_owned_message(db, message_id, ownership_scope_from_request(request))
         message = db.get(Message, message_id)
         versions = list_message_versions(db, message_id)
     except MessageEditError as exc:
@@ -425,9 +464,11 @@ def get_message_versions(
 def select_message_version_endpoint(
     message_id: uuid.UUID,
     payload: MessageVersionSelectRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageEditResponse:
     try:
+        _require_owned_message(db, message_id, ownership_scope_from_request(request))
         result = select_message_version(db, message_id, payload.version_id)
         db.commit()
     except MessageEditError as exc:
@@ -442,9 +483,11 @@ def select_message_version_endpoint(
 def delete_message_version_endpoint(
     message_id: uuid.UUID,
     version_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> MessageVersionDeleteResponse:
     try:
+        _require_owned_message(db, message_id, ownership_scope_from_request(request))
         result = delete_message_version(db, message_id, version_id)
         db.commit()
     except MessageEditError as exc:
@@ -459,7 +502,7 @@ def delete_message_version_endpoint(
         message_id=message.id,
         deleted_version_id=result.deleted_version_id,
         current_version_id=result.current_version.id,
-        message=get_message(message.id, db),
+        message=_get_message_detail(message.id, db),
         conversation_revision=conversation.offline_revision,
         warnings=result.warnings,
     )
@@ -469,10 +512,12 @@ def delete_message_version_endpoint(
 def restore_message_version_endpoint(
     message_id: uuid.UUID,
     version_id: uuid.UUID,
+    request: Request,
     payload: MessageVersionRestoreRequest | None = None,
     db: Session = Depends(get_db),
 ) -> MessageEditResponse:
     try:
+        _require_owned_message(db, message_id, ownership_scope_from_request(request))
         result = restore_message_version(
             db=db,
             message_id=message_id,
@@ -499,11 +544,12 @@ def restore_message_version_endpoint(
 @router.get("/{message_id}/blocks", response_model=list[RenderBlockRead])
 def get_message_blocks(
     message_id: uuid.UUID,
+    request: Request,
     start: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
 ) -> list[RenderBlockRead]:
-    message = db.get(Message, message_id)
+    message = _require_owned_message(db, message_id, ownership_scope_from_request(request))
     if message is None or message.current_version_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
     blocks = (
@@ -516,6 +562,22 @@ def get_message_blocks(
     )
     occurrences = _occurrences_by_block(db, message.current_version_id)
     return [_block_read(block, occurrences.get(block.block_index, [])) for block in blocks]
+
+
+def _owned_message(db: Session, message_id: uuid.UUID, scope: OwnershipScope) -> Message | None:
+    return (
+        db.query(Message)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .filter(Message.id == message_id, scope.predicate(Conversation))
+        .first()
+    )
+
+
+def _require_owned_message(db: Session, message_id: uuid.UUID, scope: OwnershipScope) -> Message:
+    message = _owned_message(db, message_id, scope)
+    if message is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
+    return message
 
 
 def _edit_response(
@@ -574,7 +636,7 @@ def _edit_response(
         previous_version_id=previous_version_id,
         current_version_id=current_version_id,
         version_number=version_number,
-        message=get_message(message.id, db),
+        message=_get_message_detail(message.id, db),
         message_version=_version_read(current_version),
         render_blocks=[_block_read(block, occurrences.get(block.block_index, [])) for block in blocks],
         attachment_occurrences=attachment_occurrences,

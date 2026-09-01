@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.database import SessionLocal
 from app.core.config import get_settings
 from app.models.background_job import BackgroundJob
+from app.models.attachment import Attachment
 from app.models.content_cleanup import ContentCleanupScan
 from app.models.conversation import Conversation
 from app.models.project import Project
@@ -34,6 +35,7 @@ from app.services.content_cleanup import process_scan_chunk
 from app.services.conversations.conversation_deletion import delete_conversation_record
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.core.observability import structured_event
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,7 @@ def queue_conversation_merge(
     title: str | None,
     project_id: uuid.UUID | None,
     idempotency_key: str | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
     if len(conversation_ids) < 2:
         raise MessageEditError("At least two conversations are required for merge.")
@@ -61,6 +64,7 @@ def queue_conversation_merge(
         db.query(Conversation)
         .filter(
             Conversation.id.in_(conversation_ids),
+            ownership_scope.predicate(Conversation),
             Conversation.deleted_at.is_(None),
             Conversation.status == "active",
         )
@@ -69,7 +73,7 @@ def queue_conversation_merge(
     if len(conversations) != len(conversation_ids):
         raise MessageEditError("One or more conversations were not found.")
     if project_id is not None:
-        project = db.get(Project, project_id)
+        project = get_owned(db, Project, project_id, ownership_scope)
         if project is None or project.is_archived:
             raise MessageEditError("Project not found.")
 
@@ -78,6 +82,7 @@ def queue_conversation_merge(
             db.query(BackgroundJob)
             .filter(
                 BackgroundJob.job_type == "conversation_merge",
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.idempotency_key == idempotency_key,
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
             )
@@ -90,6 +95,7 @@ def queue_conversation_merge(
     total_items = sum(conversation.message_count for conversation in conversations)
     job = BackgroundJob(
         id=uuid.uuid4(),
+        owner_user_id=ownership_scope.owner_user_id,
         job_type="conversation_merge",
         status="queued",
         phase="queued",
@@ -122,14 +128,16 @@ def queue_conversation_export(
     export_format: str = "cr_v2",
     context_scope: str = "full_conversation",
     start_message_id: uuid.UUID | None = None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
-    conversation = db.get(Conversation, conversation_id)
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None:
         raise MessageEditError("Conversation not found.", 404)
     if idempotency_key:
         existing = (
             db.query(BackgroundJob)
             .filter(
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.job_type == "conversation_export",
                 BackgroundJob.idempotency_key == idempotency_key,
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
@@ -141,6 +149,7 @@ def queue_conversation_export(
             return existing
     job = BackgroundJob(
         id=uuid.uuid4(),
+        owner_user_id=ownership_scope.owner_user_id,
         job_type="conversation_export",
         status="queued",
         phase="queued",
@@ -172,11 +181,13 @@ def queue_system_archive_export(
     *,
     include_archived: bool,
     idempotency_key: str | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
     if idempotency_key:
         existing = (
             db.query(BackgroundJob)
             .filter(
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.job_type == "system_archive_export",
                 BackgroundJob.idempotency_key == idempotency_key,
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
@@ -192,6 +203,7 @@ def queue_system_archive_export(
     total = conversation_query.count()
     job = BackgroundJob(
         id=uuid.uuid4(),
+        owner_user_id=ownership_scope.owner_user_id,
         job_type="system_archive_export",
         status="queued",
         phase="queued",
@@ -213,11 +225,16 @@ def queue_attachment_download(
     conversation_id: uuid.UUID,
     attachment_ids: list[uuid.UUID],
     idempotency_key: str,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
+    if conversation is None or conversation.deleted_at is not None:
+        raise MessageEditError("Conversation not found.", 404)
     validate_attachment_download(db, conversation_id=conversation_id, attachment_ids=attachment_ids)
     existing = (
         db.query(BackgroundJob)
         .filter(
+            ownership_scope.predicate(BackgroundJob),
             BackgroundJob.job_type == "attachment_batch_download",
             BackgroundJob.idempotency_key == idempotency_key,
             BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
@@ -229,6 +246,7 @@ def queue_attachment_download(
         return existing
     job = BackgroundJob(
         id=uuid.uuid4(),
+        owner_user_id=ownership_scope.owner_user_id,
         job_type="attachment_batch_download",
         status="queued",
         phase="queued",
@@ -249,14 +267,16 @@ def queue_conversation_auto_clean(
     *,
     conversation_id: uuid.UUID,
     idempotency_key: str | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
-    conversation = db.get(Conversation, conversation_id)
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None or conversation.status != "active":
         raise MessageEditError("Conversation not found.", 404)
     if idempotency_key:
         existing = (
             db.query(BackgroundJob)
             .filter(
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.job_type == "conversation_auto_clean",
                 BackgroundJob.idempotency_key == idempotency_key,
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
@@ -268,6 +288,7 @@ def queue_conversation_auto_clean(
             return existing
     job = BackgroundJob(
         id=uuid.uuid4(),
+        owner_user_id=ownership_scope.owner_user_id,
         job_type="conversation_auto_clean",
         status="queued",
         phase="queued",
@@ -288,12 +309,14 @@ def queue_conversation_batch_delete(
     *,
     conversation_ids: list[uuid.UUID],
     idempotency_key: str | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
     ordered_ids = list(dict.fromkeys(conversation_ids))
     if not ordered_ids:
         raise MessageEditError("At least one conversation is required.", 422)
     existing = db.query(Conversation.id).filter(
         Conversation.id.in_(ordered_ids),
+        ownership_scope.predicate(Conversation),
         Conversation.deleted_at.is_(None),
     ).all()
     if {row[0] for row in existing} != set(ordered_ids):
@@ -303,6 +326,7 @@ def queue_conversation_batch_delete(
             db.query(BackgroundJob)
             .filter(
                 BackgroundJob.job_type == "conversation_batch_delete",
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.idempotency_key == idempotency_key,
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
             )
@@ -313,6 +337,7 @@ def queue_conversation_batch_delete(
             return previous
     job = BackgroundJob(
         id=uuid.uuid4(),
+        owner_user_id=ownership_scope.owner_user_id,
         job_type="conversation_batch_delete",
         status="queued",
         phase="queued",
@@ -334,8 +359,9 @@ def queue_conversation_derived_rebuild(
     conversation_id: uuid.UUID,
     idempotency_key: str | None,
     rebuild_versions: bool = True,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
-    conversation = db.get(Conversation, conversation_id)
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None:
         raise MessageEditError("Conversation not found.", 404)
     if idempotency_key:
@@ -344,6 +370,7 @@ def queue_conversation_derived_rebuild(
             .filter(
                 BackgroundJob.job_type == "conversation_derived_rebuild",
                 BackgroundJob.idempotency_key == idempotency_key,
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
             )
             .order_by(BackgroundJob.created_at.desc())
@@ -357,6 +384,7 @@ def queue_conversation_derived_rebuild(
             .filter(
                 BackgroundJob.job_type == "conversation_derived_rebuild",
                 BackgroundJob.status.in_(ACTIVE_JOB_STATUSES),
+                ownership_scope.predicate(BackgroundJob),
             )
             .order_by(BackgroundJob.created_at.desc())
             .all()
@@ -387,6 +415,7 @@ def queue_conversation_derived_rebuild(
         },
         result={},
         idempotency_key=idempotency_key,
+        owner_user_id=ownership_scope.owner_user_id,
     )
     db.add(job)
     db.flush()
@@ -401,8 +430,9 @@ def queue_toc_refresh(
     refresh_section_toc: bool,
     section_scope: str,
     idempotency_key: str | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
-    conversation = db.get(Conversation, conversation_id)
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None:
         raise MessageEditError("Conversation not found.", 404)
     if not refresh_dialogue_index and not refresh_section_toc:
@@ -415,6 +445,7 @@ def queue_toc_refresh(
             .filter(
                 BackgroundJob.job_type == "toc_refresh",
                 BackgroundJob.idempotency_key == idempotency_key,
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
             )
             .order_by(BackgroundJob.created_at.desc())
@@ -424,7 +455,10 @@ def queue_toc_refresh(
             return existing
     total_items = 1
     if refresh_section_toc and section_scope == "all_conversations":
-        total_items = db.query(Conversation).filter(Conversation.deleted_at.is_(None)).count()
+        total_items = db.query(Conversation).filter(
+            Conversation.deleted_at.is_(None),
+            ownership_scope.predicate(Conversation),
+        ).count()
     job = BackgroundJob(
         id=uuid.uuid4(),
         job_type="toc_refresh",
@@ -442,6 +476,7 @@ def queue_toc_refresh(
         },
         result={},
         idempotency_key=idempotency_key,
+        owner_user_id=ownership_scope.owner_user_id,
     )
     db.add(job)
     db.flush()
@@ -454,13 +489,21 @@ def queue_attachment_derivative(
     attachment_id: uuid.UUID,
     derivative_type: str,
     idempotency_key: str | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
+    attachment = db.get(Attachment, attachment_id)
+    if attachment is None or attachment.deleted_at is not None:
+        raise MessageEditError("Attachment not found.", 404)
+    conversation = get_owned(db, Conversation, attachment.conversation_id, ownership_scope)
+    if conversation is None or conversation.deleted_at is not None:
+        raise MessageEditError("Attachment not found.", 404)
     if idempotency_key:
         existing = (
             db.query(BackgroundJob)
             .filter(
                 BackgroundJob.job_type == "attachment_derivative",
                 BackgroundJob.idempotency_key == idempotency_key,
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
             )
             .order_by(BackgroundJob.created_at.desc())
@@ -479,6 +522,7 @@ def queue_attachment_derivative(
         payload={"attachment_id": str(attachment_id), "derivative_type": derivative_type},
         result={},
         idempotency_key=idempotency_key,
+        owner_user_id=ownership_scope.owner_user_id,
     )
     db.add(job)
     db.flush()
@@ -494,8 +538,16 @@ def queue_offline_package(
     known_revisions: dict[uuid.UUID, int] | None,
     idempotency_key: str | None,
     include_assets: str = "all",
+    subject_key: str = "local:default",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
-    conversations = select_conversations(db, scope=scope, conversation_id=conversation_id, project_id=project_id)
+    conversations = select_conversations(
+        db,
+        scope=scope,
+        conversation_id=conversation_id,
+        project_id=project_id,
+        ownership_scope=ownership_scope,
+    )
     base_revisions = known_revisions or {}
     changed = changed_conversations(conversations, base_revisions)
     if idempotency_key:
@@ -504,6 +556,7 @@ def queue_offline_package(
             .filter(
                 BackgroundJob.job_type == "offline_package",
                 BackgroundJob.idempotency_key == idempotency_key,
+                ownership_scope.predicate(BackgroundJob),
                 BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
             )
             .order_by(BackgroundJob.created_at.desc())
@@ -526,12 +579,14 @@ def queue_offline_package(
             "project_id": str(project_id) if project_id else None,
             "known_revisions": {str(key): value for key, value in base_revisions.items()},
             "include_assets": include_assets,
+            "subject_key": subject_key,
             # Catalog generation is intentionally deferred to the worker. It
             # performs per-conversation size estimation and must not block the
             # interactive request that queues an offline download.
         },
         result={},
         idempotency_key=idempotency_key,
+        owner_user_id=ownership_scope.owner_user_id,
     )
     db.add(job)
     db.flush()
@@ -679,6 +734,10 @@ def process_background_job(
             if job.status != "processing":
                 return
             payload = job.payload or {}
+            job_scope = OwnershipScope(
+                job.owner_user_id,
+                include_legacy_unowned=job.owner_user_id is None,
+            )
             is_sqlite = db.get_bind().dialect.name == "sqlite"
             offline_phase_started_at: float | None = None
             offline_phase_name: str | None = None
@@ -775,6 +834,7 @@ def process_background_job(
                             else None
                         ),
                         progress_callback=report,
+                        subject_key=str(payload.get("subject_key") or (str(job.owner_user_id) if job.owner_user_id else "local:default")),
                     )
                 elif payload.get("export_format") in {"markdown_bundle", "canjson_bundle"}:
                     export_format = str(payload.get("export_format"))
@@ -807,6 +867,7 @@ def process_background_job(
                         include_description=bool(payload.get("include_description")),
                         include_annotations=bool(payload.get("include_annotations")),
                         include_notebook=bool(payload.get("include_notebook")),
+                        subject_key=str(payload.get("subject_key") or (str(job.owner_user_id) if job.owner_user_id else "local:default")),
                     )
                 job_result = {
                     "conversation_id": str(conversation_id),
@@ -856,6 +917,15 @@ def process_background_job(
                     last_error: Exception | None = None
                     for _attempt in range(2):
                         try:
+                            job_scope = OwnershipScope(
+                                job.owner_user_id,
+                                include_legacy_unowned=job.owner_user_id is None,
+                            )
+                            if get_owned(db, Conversation, conversation_id, job_scope) is None:
+                                raise LookupError("Conversation not found.")
+                            # Keep the stable two-argument internal deletion
+                            # seam after the ownership guard; worker tests and
+                            # retry instrumentation wrap this function.
                             delete_conversation_record(db, conversation_id)
                             succeeded_ids.append(str(conversation_id))
                             last_error = None
@@ -995,6 +1065,11 @@ def process_background_job(
                     },
                     include_assets=str(payload.get("include_assets") or "all"),
                     progress_callback=report,
+                    subject_key=str(
+                        payload.get("subject_key")
+                        or (str(job.owner_user_id) if job.owner_user_id else "local:default")
+                    ),
+                    ownership_scope=job_scope,
                 )
                 finish_offline_phase()
                 job_result = {

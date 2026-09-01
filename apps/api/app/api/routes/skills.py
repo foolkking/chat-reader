@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.models.user_skill import UserSkill
 from app.schemas.skills import SkillDetail, SkillRead, SkillResolve, SkillSelectionUpdate, SkillUpdate
 from app.services.skills import create_skill, get_user_skill, list_skills, resolve_skill, selected_id, update_selection
+from app.services.ownership import subject_key_from_request
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 
@@ -16,7 +17,7 @@ ALLOWED_TEXT_CONTROLS = frozenset({"\t", "\n", "\r"})
 
 
 def subject(request: Request) -> str:
-    return getattr(getattr(request.state, "auth", None), "principal_id", None) or "local:default"
+    return subject_key_from_request(request)
 
 
 def read_item(item: UserSkill, selected: bool = False) -> dict:

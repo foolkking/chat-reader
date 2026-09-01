@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,8 +14,14 @@ from app.core import auth_middleware
 from app.core.config import get_settings
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.access import AccountInvitation
 from app.models.auth import AuthPrincipal, AuthSession
+from app.models.user import User
 from app.services.auth import authenticate_session, issue_session, provision_owner, verify_login
+
+
+def owner_login(client: TestClient, password: str = "correct horse battery staple"):
+    return client.post("/api/auth/login", json={"email": "admin@example.test", "password": password})
 
 
 @pytest.fixture()
@@ -43,7 +50,11 @@ def auth_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[Te
     app.dependency_overrides[get_db] = override_get_db
     monkeypatch.setattr(auth_middleware, "SessionLocal", factory)
     with factory() as db:
-        provision_owner(db, "correct horse battery staple", get_settings())
+        principal = provision_owner(db, "correct horse battery staple", get_settings())
+        user = db.get(User, principal.user_id)
+        assert user is not None
+        user.normalized_email = "admin@example.test"
+        db.commit()
 
     with TestClient(app) as test_client:
         test_client.headers.update({"Origin": "http://testserver"})
@@ -62,7 +73,7 @@ def test_business_routes_are_protected_but_health_and_login_are_public(auth_clie
 
 
 def test_owner_session_does_not_unlock_an_independently_protected_share(auth_client: TestClient) -> None:
-    assert auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"}).status_code == 200
+    assert owner_login(auth_client).status_code == 200
     created_conversation = auth_client.post(
         "/api/conversations",
         json={
@@ -97,7 +108,7 @@ def test_owner_session_does_not_unlock_an_independently_protected_share(auth_cli
 
 
 def test_owner_and_public_share_api_authorities_do_not_cross(auth_client: TestClient) -> None:
-    assert auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"}).status_code == 200
+    assert owner_login(auth_client).status_code == 200
     created = auth_client.post(
         "/api/conversations",
         json={
@@ -133,11 +144,11 @@ def test_owner_and_public_share_api_authorities_do_not_cross(auth_client: TestCl
 
 
 def test_login_sets_cookie_without_persisting_raw_token(auth_client: TestClient) -> None:
-    failed = auth_client.post("/api/auth/login", json={"password": "wrong password"})
+    failed = owner_login(auth_client, "wrong password")
     assert failed.status_code == 401
-    assert failed.json() == {"detail": "Incorrect password."}
+    assert failed.json() == {"detail": "Email or password is incorrect."}
 
-    logged_in = auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"})
+    logged_in = owner_login(auth_client)
     assert logged_in.status_code == 200
     cookie = logged_in.cookies.get("chat_reader_session")
     assert cookie
@@ -158,7 +169,7 @@ def test_login_sets_cookie_without_persisting_raw_token(auth_client: TestClient)
 
 
 def test_expiry_boundary_and_sliding_activity_are_deterministic(auth_client: TestClient) -> None:
-    logged_in = auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"})
+    logged_in = owner_login(auth_client)
     assert logged_in.status_code == 200
     token = logged_in.cookies.get("chat_reader_session")
     assert token
@@ -200,7 +211,7 @@ def test_activity_touch_is_rate_limited_and_session_secret_rotation_invalidates_
 def test_session_polling_does_not_extend_inactivity_but_business_activity_does(
     auth_client: TestClient,
 ) -> None:
-    logged_in = auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"})
+    logged_in = owner_login(auth_client)
     assert logged_in.status_code == 200
     old_activity = datetime.now(timezone.utc) - timedelta(minutes=11)
     with auth_middleware.SessionLocal() as db:
@@ -223,11 +234,11 @@ def test_session_polling_does_not_extend_inactivity_but_business_activity_does(
 
 
 def test_sessions_are_independent_and_password_change_revokes_all(auth_client: TestClient) -> None:
-    first = auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"})
+    first = owner_login(auth_client)
     second = TestClient(app)
     second.headers.update({"Origin": "http://testserver"})
     with second:
-        second_login = second.post("/api/auth/login", json={"password": "correct horse battery staple"})
+        second_login = owner_login(second)
         assert second_login.status_code == 200
         assert auth_client.get("/api/preferences").status_code != 401
         assert second.get("/api/preferences").status_code != 401
@@ -242,17 +253,33 @@ def test_sessions_are_independent_and_password_change_revokes_all(auth_client: T
         assert changed.status_code == 204
         assert auth_client.get("/api/preferences").status_code == 401
         assert second.get("/api/preferences").status_code == 401
-        assert second.post("/api/auth/login", json={"password": "correct horse battery staple"}).status_code == 401
-        assert second.post("/api/auth/login", json={"password": "a newer secure owner passphrase"}).status_code == 200
+        assert owner_login(second).status_code == 401
+        assert owner_login(second, "a newer secure owner passphrase").status_code == 200
+
+
+def test_logout_other_devices_keeps_the_current_session(auth_client: TestClient) -> None:
+    assert owner_login(auth_client).status_code == 200
+    second = TestClient(app)
+    second.headers.update({"Origin": "http://testserver"})
+    with second:
+        assert owner_login(second).status_code == 200
+        sessions = auth_client.get("/api/auth/sessions")
+        assert sessions.status_code == 200
+        assert len(sessions.json()) == 2
+        assert sum(1 for row in sessions.json() if row["current"]) == 1
+
+        assert auth_client.post("/api/auth/sessions/logout-others").status_code == 204
+        assert auth_client.get("/api/preferences").status_code == 200
+        assert second.get("/api/preferences").status_code == 401
 
 
 def test_logout_revokes_cookie_and_cross_origin_mutations_are_denied(auth_client: TestClient) -> None:
-    assert auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"}).status_code == 200
+    assert owner_login(auth_client).status_code == 200
     assert auth_client.post("/api/auth/logout").status_code == 204
     assert auth_client.get("/api/preferences").status_code == 401
     assert auth_client.cookies.get("chat_reader_session_present") is None
 
-    logged_in = auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"})
+    logged_in = owner_login(auth_client)
     assert logged_in.status_code == 200
     cross_origin = auth_client.patch(
         "/api/preferences",
@@ -270,7 +297,203 @@ def test_logout_revokes_cookie_and_cross_origin_mutations_are_denied(auth_client
 
 def test_login_backoff_is_bounded_and_generic(auth_client: TestClient) -> None:
     for _ in range(3):
-        assert auth_client.post("/api/auth/login", json={"password": "wrong password"}).status_code == 401
-    throttled = auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"})
+        assert owner_login(auth_client, "wrong password").status_code == 401
+    throttled = owner_login(auth_client)
     assert throttled.status_code == 429
     assert "Retry-After" in throttled.headers
+
+
+def test_registration_mode_closed_is_explicit(auth_client: TestClient) -> None:
+    response = auth_client.post(
+        "/api/auth/register",
+        json={
+            "email": "reader@example.com",
+            "password": "reader secure passphrase",
+            "confirm_password": "reader secure passphrase",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Registration is not open on this instance."}
+
+
+def test_open_registration_creates_an_independent_email_session(
+    auth_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AUTH_REGISTRATION_MODE", "OPEN")
+    get_settings.cache_clear()
+    registered = auth_client.post(
+        "/api/auth/register",
+        json={
+            "email": "Reader@Example.COM",
+            "password": "reader secure passphrase",
+            "confirm_password": "reader secure passphrase",
+            "display_name": "Reader",
+        },
+    )
+    assert registered.status_code == 201
+    assert registered.json()["email"] == "reader@example.com"
+    assert registered.json()["role"] == "USER"
+    assert registered.json()["auth_mode"] == "multi_account"
+    assert auth_client.get("/api/auth/me").json()["display_name"] == "Reader"
+
+    assert auth_client.post("/api/auth/logout").status_code == 204
+    wrong = auth_client.post(
+        "/api/auth/login",
+        json={"email": "reader@example.com", "password": "wrong passphrase"},
+    )
+    assert wrong.status_code == 401
+    assert wrong.json() == {"detail": "Email or password is incorrect."}
+    logged_in = auth_client.post(
+        "/api/auth/login",
+        json={"email": "READER@example.com", "password": "reader secure passphrase"},
+    )
+    assert logged_in.status_code == 200
+    assert logged_in.json()["email"] == "reader@example.com"
+    get_settings.cache_clear()
+
+
+def test_legacy_owner_upgrade_binds_email_and_invalidates_sessions(auth_client: TestClient) -> None:
+    with auth_middleware.SessionLocal() as db:
+        principal = db.get(AuthPrincipal, "owner")
+        assert principal is not None and principal.user_id is not None
+        user = db.get(User, principal.user_id)
+        assert user is not None
+        user.normalized_email = None
+        db.commit()
+
+    status = auth_client.get("/api/auth/setup/status")
+    assert status.json() == {"setup_required": True, "registration_mode": "CLOSED"}
+    blocked_login = auth_client.post("/api/auth/login", json={"password": "correct horse battery staple"})
+    assert blocked_login.status_code == 409
+    wrong = auth_client.post(
+        "/api/auth/setup/upgrade",
+        json={"current_password": "wrong password", "email": "owner@example.test"},
+    )
+    assert wrong.status_code == 401
+    upgraded = auth_client.post(
+        "/api/auth/setup/upgrade",
+        json={
+            "current_password": "correct horse battery staple",
+            "email": "Owner@Example.TEST",
+            "display_name": "Archive owner",
+        },
+    )
+    assert upgraded.status_code == 204
+    assert auth_client.get("/api/auth/setup/status").json()["setup_required"] is False
+    logged_in = auth_client.post(
+        "/api/auth/login",
+        json={"email": "owner@example.test", "password": "correct horse battery staple"},
+    )
+    assert logged_in.status_code == 200
+    assert logged_in.json()["role"] == "ADMIN"
+
+
+def test_admin_invitation_user_disable_and_password_reset_contract(auth_client: TestClient) -> None:
+    assert auth_client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.test", "password": "correct horse battery staple"},
+    ).status_code == 200
+    mode = auth_client.put("/api/admin/access/registration", json={"mode": "INVITE_ONLY"})
+    assert mode.status_code == 200
+    invitation = auth_client.post("/api/admin/access/invitations", json={"expires_in_hours": 24})
+    assert invitation.status_code == 201
+    token = invitation.json()["token"]
+    assert token not in str(auth_client.get("/api/admin/access/invitations").json())
+
+    assert auth_client.post("/api/auth/logout").status_code == 204
+    registered = auth_client.post(
+        "/api/auth/register",
+        json={
+            "email": "invited@example.test",
+            "password": "invited secure passphrase",
+            "confirm_password": "invited secure passphrase",
+            "invitation_token": token,
+        },
+    )
+    assert registered.status_code == 201
+    invited_user_id = registered.json()["user_id"]
+    assert auth_client.post("/api/auth/logout").status_code == 204
+    reused = auth_client.post(
+        "/api/auth/register",
+        json={
+            "email": "second@example.test",
+            "password": "second secure passphrase",
+            "confirm_password": "second secure passphrase",
+            "invitation_token": token,
+        },
+    )
+    assert reused.status_code == 403
+
+    assert auth_client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.test", "password": "correct horse battery staple"},
+    ).status_code == 200
+    reset = auth_client.post(
+        f"/api/admin/access/users/{invited_user_id}/password-reset",
+        json={"expires_in_minutes": 30},
+    )
+    assert reset.status_code == 201
+    reset_token = reset.json()["reset_url"].split("token=", 1)[1]
+    assert auth_client.post("/api/auth/logout").status_code == 204
+    changed = auth_client.post(
+        "/api/auth/password-reset",
+        json={
+            "token": reset_token,
+            "new_password": "replacement secure passphrase",
+            "confirm_password": "replacement secure passphrase",
+        },
+    )
+    assert changed.status_code == 204
+    assert auth_client.post(
+        "/api/auth/login",
+        json={"email": "invited@example.test", "password": "replacement secure passphrase"},
+    ).status_code == 200
+    assert auth_client.post("/api/auth/logout").status_code == 204
+
+    assert auth_client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.test", "password": "correct horse battery staple"},
+    ).status_code == 200
+    disabled = auth_client.patch(
+        f"/api/admin/access/users/{invited_user_id}/status",
+        json={"status": "DISABLED"},
+    )
+    assert disabled.status_code == 200
+    assert auth_client.post("/api/auth/logout").status_code == 204
+    assert auth_client.post(
+        "/api/auth/login",
+        json={"email": "invited@example.test", "password": "replacement secure passphrase"},
+    ).status_code == 401
+
+
+def test_expired_and_revoked_invitations_cannot_register(auth_client: TestClient) -> None:
+    assert owner_login(auth_client).status_code == 200
+    assert auth_client.put("/api/admin/access/registration", json={"mode": "INVITE_ONLY"}).status_code == 200
+
+    expired = auth_client.post("/api/admin/access/invitations", json={"expires_in_hours": 1})
+    assert expired.status_code == 201
+    expired_token = expired.json()["token"]
+    with auth_middleware.SessionLocal() as db:
+        row = db.get(AccountInvitation, uuid.UUID(expired.json()["id"]))
+        assert row is not None
+        row.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        db.commit()
+
+    revoked = auth_client.post("/api/admin/access/invitations", json={"expires_in_hours": 1})
+    assert revoked.status_code == 201
+    revoked_token = revoked.json()["token"]
+    assert auth_client.delete(f"/api/admin/access/invitations/{revoked.json()['id']}").status_code == 204
+    assert auth_client.post("/api/auth/logout").status_code == 204
+
+    for index, token in enumerate((expired_token, revoked_token), start=1):
+        response = auth_client.post(
+            "/api/auth/register",
+            json={
+                "email": f"blocked-{index}@example.test",
+                "password": "blocked secure passphrase",
+                "confirm_password": "blocked secure passphrase",
+                "invitation_token": token,
+            },
+        )
+        assert response.status_code == 403

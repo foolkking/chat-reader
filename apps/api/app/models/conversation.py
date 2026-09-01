@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Index, Integer, String, Text, Uuid
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -12,6 +12,9 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     display_title: Mapped[str] = mapped_column(Text, nullable=False)
     source_type: Mapped[str] = mapped_column(String, nullable=False)
@@ -58,3 +61,5 @@ Index("idx_conversations_manual_sort_order", Conversation.manual_sort_order)
 Index("idx_conversations_message_count", Conversation.message_count)
 Index("idx_conversations_imported_at", Conversation.imported_at)
 Index("idx_conversations_status", Conversation.status)
+Index("idx_conversations_owner_status_sort", Conversation.owner_user_id, Conversation.status, Conversation.sort_time)
+Index("idx_conversations_owner_manual_order", Conversation.owner_user_id, Conversation.manual_sort_order)

@@ -1,5 +1,17 @@
 # Markdown 文档台账
 
+## 当前文档真值（2026-09-01）
+
+本轮收尾同步了多账户认证、owner 隔离和管理员边界。当前源码 migration
+head 是 `20260901_0030_multi_account_users.py`，部署环境仍以已发布版本为准；
+`PROJECT_STATE.md` 是两者差异和验证等级的唯一入口。历史发布段落不删除，继续
+作为带日期证据，但不得覆盖当前工作树状态。
+
+持续维护的当前文档包括 `docs/system/` 合同、`docs/development.md`、
+`docs/deployment.md`、`docs/testing.md`、`docs/api-reference.md` 和
+`docs/architecture.md`。本轮没有新增文档类别，也没有把用户正文、账号密码、
+token、cookie 或环境变量值写入文档。
+
 2026-08-31 deployment synchronization: production source `7d86166`, release
 run/artifact provenance, the retained verified five-component recovery point,
 runtime health and the corrected PostgreSQL stdin verification command are

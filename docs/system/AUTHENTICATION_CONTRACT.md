@@ -1,4 +1,34 @@
-# Single-owner authentication contract
+# Authentication and account contract
+
+## Current implementation (working tree, 2026-09-01)
+
+The next release upgrades the legacy single owner into one `ADMIN` account and
+adds account-scoped `USER` accounts. Migration `20260901_0030` backfills the
+legacy owner and private rows; it is present in the repository but has not been
+applied to the operator database in this session.
+
+- The operator provisions the only administrator with
+  `python -m scripts.owner_auth provision --email <admin-email>` and enters a
+  strong password interactively. The repository never contains the password.
+- An authorized first deployment may instead set `INITIAL_ADMIN_EMAIL` and
+  `INITIAL_ADMIN_PASSWORD` for the migration container. They are consumed once
+  while the legacy administrator has no email; later restarts are idempotent.
+  Remove the password variable immediately after bootstrap. Subsequent account
+  changes still use the normal minimum-length policy.
+- New users authenticate with normalized email plus password. Registration is
+  controlled by `CLOSED`, `INVITE_ONLY` or `OPEN`; invitations are one-time and
+  stored as digests. New registrations are `USER`, not administrators.
+- Every private resource is filtered by the server-authenticated `User.id`.
+  Share remains a separate token-scoped, read-only capability and Offline is a
+  browser-local snapshot boundary.
+- Sessions remain opaque HttpOnly cookies with 48-hour sliding inactivity,
+  device independence, same-origin mutation checks and global revocation after
+  password change. Password reset requires configured SMTP or an administrator
+  generated reset grant.
+
+The remaining sections below describe the original Release-N owner contract;
+where they conflict, the current implementation above and the code are the
+authority. Browser acceptance against the upgraded deployment is `NOT VERIFIED`.
 
 Release N protects Chat Reader business content with one owner password and
 server-side, per-device sessions. It deliberately establishes a `principal_id`

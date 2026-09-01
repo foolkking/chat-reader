@@ -2,11 +2,17 @@
 
 const META_CACHE = "chat-reader-library-meta-v1";
 const ACTIVE_RECORD_KEY = "/__chat_reader_library_active__";
+const ACTIVE_IDENTITY_KEY = "/__chat_reader_library_identity__";
+const ACTIVE_RECORD_PREFIX = "/__chat_reader_library_active__/";
 const SHELL_CACHE_PREFIX = "chat-reader-library-shell-";
+const NAMESPACED_SHELL_CACHE_PREFIX = "chat-reader-user-library-shell-";
+const LEGACY_ASSET_CACHE = "chat-reader-offline-assets-v1";
+const ASSET_CACHE_PREFIX = `${LEGACY_ASSET_CACHE}--`;
+const LEGACY_NAMESPACE = "legacy";
 const LEGACY_CACHE_PATTERN = /^(chat-reader-shell-|chat-reader-static-|chat-reader-library-v\d+$)/;
 const MAX_ASSETS = 1000;
 const FETCH_CONCURRENCY = 6;
-const PROTOCOL_VERSION = 1;
+const PROTOCOL_VERSION = 2;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -18,7 +24,12 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "PURGE_PROTECTED_CONTENT") {
-    event.waitUntil(caches.delete("chat-reader-offline-assets-v1"));
+    event.waitUntil(purgeProtectedContent(event.data));
+    return;
+  }
+  if (event.data?.type === "SET_LIBRARY_IDENTITY") {
+    const port = event.ports[0];
+    event.waitUntil(setLibraryIdentity(event.data, port));
     return;
   }
   const port = event.ports[0];
@@ -59,6 +70,7 @@ async function sendStatus(port) {
 async function prepareLibraryShell(data, port) {
   let targetCacheName = null;
   try {
+    const namespace = await readActiveNamespace();
     const requestedRevision = typeof data.revision === "string" ? data.revision : "";
     if (!/^[a-z0-9_-]{6,80}$/i.test(requestedRevision)) {
       throw new Error("Invalid offline shell revision.");
@@ -85,7 +97,7 @@ async function prepareLibraryShell(data, port) {
       }
     }
 
-    targetCacheName = `${SHELL_CACHE_PREFIX}${requestedRevision}`;
+    targetCacheName = shellCacheName(namespace, requestedRevision);
     if (targetCacheName !== active?.cacheName) await caches.delete(targetCacheName);
     const targetCache = await caches.open(targetCacheName);
     const required = ["/library", ...assets];
@@ -118,10 +130,10 @@ async function prepareLibraryShell(data, port) {
       preparedAt: new Date().toISOString(),
     };
     const meta = await caches.open(META_CACHE);
-    await meta.put(ACTIVE_RECORD_KEY, new Response(JSON.stringify(record), {
+    await meta.put(activeRecordKey(namespace), new Response(JSON.stringify(record), {
       headers: { "Content-Type": "application/json" },
     }));
-    await cleanupSupersededCaches(targetCacheName);
+    await cleanupSupersededCaches(namespace, targetCacheName);
     port.postMessage({ type: "RESULT", ok: true, protocolVersion: PROTOCOL_VERSION, status: await inspectActiveShell() });
   } catch (error) {
     const active = await readActiveRecord().catch(() => null);
@@ -181,8 +193,9 @@ async function inspectActiveShell() {
 }
 
 async function readActiveRecord() {
+  const namespace = await readActiveNamespace();
   const meta = await caches.open(META_CACHE);
-  const response = await meta.match(ACTIVE_RECORD_KEY);
+  const response = await meta.match(activeRecordKey(namespace));
   if (!response) return null;
   const value = await response.json();
   if (!value || typeof value.cacheName !== "string" || !Array.isArray(value.assets)) return null;
@@ -204,7 +217,8 @@ async function libraryNavigation(request) {
 
   const shellStatus = await inspectActiveShell();
   if (!shellStatus.ready) return offlineShellUnavailableResponse();
-  const cached = await matchActive("/library") || await matchLegacyLibrary();
+  const namespace = await readActiveNamespace();
+  const cached = await matchActive("/library") || (namespace === LEGACY_NAMESPACE ? await matchLegacyLibrary() : null);
   if (cached) return cached;
   if (lastResponse) return lastResponse;
   return offlineShellUnavailableResponse();
@@ -270,13 +284,80 @@ async function matchLegacyLibrary() {
   return null;
 }
 
-async function cleanupSupersededCaches(activeCacheName) {
+async function cleanupSupersededCaches(namespace, activeCacheName) {
   const cacheNames = await caches.keys();
   await Promise.all(cacheNames.map((cacheName) => {
-    const supersededShell = cacheName.startsWith(SHELL_CACHE_PREFIX) && cacheName !== activeCacheName;
-    const legacy = LEGACY_CACHE_PATTERN.test(cacheName);
+    const supersededShell = cacheName.startsWith(shellCachePrefix(namespace)) && cacheName !== activeCacheName;
+    const legacy = namespace === LEGACY_NAMESPACE && LEGACY_CACHE_PATTERN.test(cacheName);
     return supersededShell || legacy ? caches.delete(cacheName) : Promise.resolve(false);
   }));
+}
+
+async function setLibraryIdentity(data, port) {
+  try {
+    const namespace = normalizeNamespace(data.namespace);
+    if (!namespace) throw new Error("Invalid offline identity namespace.");
+    const meta = await caches.open(META_CACHE);
+    await meta.put(ACTIVE_IDENTITY_KEY, new Response(JSON.stringify({ namespace }), {
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    }));
+    port?.postMessage({ type: "RESULT", ok: true, protocolVersion: PROTOCOL_VERSION, status: await inspectActiveShell() });
+  } catch (error) {
+    port?.postMessage({ type: "RESULT", ok: false, protocolVersion: PROTOCOL_VERSION, error: errorMessage(error) });
+  }
+}
+
+async function purgeProtectedContent(data) {
+  const namespace = normalizeNamespace(data.namespace) || await readActiveNamespace();
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map((cacheName) => {
+    const protectedAssetCache = cacheName === assetCacheName(namespace);
+    const protectedShellCache = cacheName.startsWith(shellCachePrefix(namespace));
+    const legacyCache = namespace === LEGACY_NAMESPACE && (cacheName === LEGACY_ASSET_CACHE || LEGACY_CACHE_PATTERN.test(cacheName));
+    return protectedAssetCache || protectedShellCache || legacyCache
+      ? caches.delete(cacheName)
+      : Promise.resolve(false);
+  }));
+  const meta = await caches.open(META_CACHE);
+  await meta.delete(activeRecordKey(namespace));
+  const activeNamespace = await readActiveNamespace();
+  if (activeNamespace === namespace) await meta.delete(ACTIVE_IDENTITY_KEY);
+}
+
+async function readActiveNamespace() {
+  try {
+    const meta = await caches.open(META_CACHE);
+    const response = await meta.match(ACTIVE_IDENTITY_KEY);
+    if (!response) return LEGACY_NAMESPACE;
+    const record = await response.json();
+    return normalizeNamespace(record?.namespace) || LEGACY_NAMESPACE;
+  } catch {
+    return LEGACY_NAMESPACE;
+  }
+}
+
+function activeRecordKey(namespace) {
+  return namespace === LEGACY_NAMESPACE ? ACTIVE_RECORD_KEY : `${ACTIVE_RECORD_PREFIX}${namespace}`;
+}
+
+function shellCachePrefix(namespace) {
+  return namespace === LEGACY_NAMESPACE ? SHELL_CACHE_PREFIX : `${NAMESPACED_SHELL_CACHE_PREFIX}${namespace}-`;
+}
+
+function shellCacheName(namespace, revision) {
+  return `${shellCachePrefix(namespace)}${revision}`;
+}
+
+function assetCacheName(namespace) {
+  return namespace === LEGACY_NAMESPACE ? LEGACY_ASSET_CACHE : `${ASSET_CACHE_PREFIX}${namespace}`;
+}
+
+function normalizeNamespace(value) {
+  // The client accepts a 256-character legacy principal and hex-encodes its
+  // UTF-8 bytes. Four-byte code points therefore need up to 2,053 characters
+  // including the `user-` prefix. Current user ids are UUIDs, but retaining
+  // the full range keeps the upgrade fallback lossless.
+  return typeof value === "string" && /^[a-z0-9_-]{1,2053}$/i.test(value) ? value : null;
 }
 
 function normalizeAssets(values) {

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Library, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Library, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
+import { readAuthSession } from "../lib/auth-client";
 import { usePreferences, useTranslations } from "./preferences-provider";
 
-export type SettingsCategory = "data" | "security" | "formats" | "cleanup" | "skills";
+export type SettingsCategory = "data" | "security" | "formats" | "cleanup" | "skills" | "access";
 
 export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/", onOpenCategory }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string; onOpenCategory?: (category: SettingsCategory) => void }) {
   const preferences = usePreferences();
@@ -13,6 +14,10 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
   const [focusDefault, setFocusDefault] = useState(false);
   const [annotationPosition, setAnnotationPosition] = useState<"floating" | "docked">("floating");
   const [moreOpen, setMoreOpen] = useState(false);
+  // Keep privileged categories hidden until the session has been resolved.
+  // This prevents a multi-account user from seeing a maintenance control during
+  // the first render before the server role is known.
+  const [accessRole, setAccessRole] = useState<"ADMIN" | "USER" | null>(null);
 
   useEffect(() => {
     const currentDefault = window.localStorage.getItem("chat-reader:reader-default-focus");
@@ -23,6 +28,18 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
     if (legacyDefault !== null) window.localStorage.removeItem("chat-reader:reader-focus-mode");
     setAnnotationPosition(window.localStorage.getItem("chat-reader:annotation-workspace-mode") === "docked" ? "docked" : "floating");
   }, []);
+
+  useEffect(() => {
+    if (libraryMode) return;
+    let active = true;
+    void readAuthSession().then((session) => {
+      if (!active) return;
+      setAccessRole(session.role === "ADMIN" ? "ADMIN" : "USER");
+    }).catch(() => {
+      if (active) setAccessRole("USER");
+    });
+    return () => { active = false; };
+  }, [libraryMode]);
 
   const updateFocusDefault = (value: boolean) => {
     setFocusDefault(value);
@@ -95,7 +112,8 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
       </Link>
       {!libraryMode ? <div className="settings-category-list space-y-2 border-t border-ui pt-3">
         <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
-        <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
+        {accessRole === "ADMIN" ? <SettingsCategoryButton icon={UsersRound} label={preferences.resolvedLocale === "zh-CN" ? "\u7528\u6237\u4e0e\u8bbf\u95ee" : "Users & access"} description={preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406\u7528\u6237\u3001\u6ce8\u518c\u4e0e\u9080\u8bf7" : "Manage users, registration and invitations"} onClick={() => onOpenCategory?.("access")} /> : null}
+        {accessRole === "ADMIN" ? <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} /> : null}
         <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
         <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
         <SettingsCategoryButton icon={Eraser} label={t("noiseRuleLibrary")} description={t("noiseRuleLibraryDescription")} onClick={() => onOpenCategory?.("cleanup")} />

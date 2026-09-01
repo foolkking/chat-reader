@@ -11,6 +11,7 @@ from app.models.import_record import utc_now
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.recent_item import RecentItem
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned, owned_query
 
 DEFAULT_PROJECT_NAME = "Inbox"
 PLACEMENT_GAP = 1024
@@ -34,12 +35,15 @@ class ConversationPlacementResult:
     changed: bool
 
 
-def ensure_default_project(db: Session) -> Project:
-    project = db.query(Project).filter(Project.is_default.is_(True)).one_or_none()
+def ensure_default_project(
+    db: Session,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> Project:
+    project = owned_query(db, Project, ownership_scope).filter(Project.is_default.is_(True)).one_or_none()
     if project is not None:
         return project
 
-    project = db.query(Project).filter(Project.name == DEFAULT_PROJECT_NAME).one_or_none()
+    project = owned_query(db, Project, ownership_scope).filter(Project.name == DEFAULT_PROJECT_NAME).one_or_none()
     if project is not None:
         project.is_default = True
         project.is_archived = False
@@ -49,6 +53,7 @@ def ensure_default_project(db: Session) -> Project:
 
     project = Project(
         id=uuid.uuid4(),
+        owner_user_id=ownership_scope.owner_user_id,
         name=DEFAULT_PROJECT_NAME,
         description="Default inbox for committed conversations.",
         color="#0f172a",
@@ -67,9 +72,10 @@ def list_projects(
     *,
     sort: str = "recent_read",
     direction: str = "desc",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> list[Project]:
-    ensure_default_project(db)
-    query = db.query(Project)
+    ensure_default_project(db, ownership_scope)
+    query = owned_query(db, Project, ownership_scope)
     if not include_archived:
         query = query.filter(Project.is_archived.is_(False))
     field = {
@@ -85,6 +91,7 @@ def list_projects(
             .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
             .filter(
                 ProjectConversation.project_id == Project.id,
+                ownership_scope.predicate(Conversation),
                 Conversation.deleted_at.is_(None),
                 Conversation.status == "active",
             )
@@ -102,15 +109,31 @@ def list_projects(
     ).all()
 
 
-def create_project(db: Session, *, name: str, description: str | None, color: str | None, icon: str | None) -> Project:
+def create_project(
+    db: Session,
+    *,
+    name: str,
+    description: str | None,
+    color: str | None,
+    icon: str | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> Project:
+    clean_name = name.strip()
+    if owned_query(db, Project, ownership_scope).filter(Project.name == clean_name).first() is not None:
+        raise ProjectServiceError("Project name already exists.")
     last_sort_order = (
         db.query(func.max(Project.sort_order))
-        .filter(Project.is_default.is_(False), Project.is_archived.is_(False))
+        .filter(
+            ownership_scope.predicate(Project),
+            Project.is_default.is_(False),
+            Project.is_archived.is_(False),
+        )
         .scalar()
     )
     project = Project(
         id=uuid.uuid4(),
-        name=name.strip(),
+        owner_user_id=ownership_scope.owner_user_id,
+        name=clean_name,
         description=description,
         color=color,
         icon=icon,
@@ -127,6 +150,15 @@ def create_project(db: Session, *, name: str, description: str | None, color: st
 def update_project(db: Session, project: Project, updates: dict) -> Project:
     if project.is_default and updates.get("is_archived") is True:
         raise ProjectServiceError("Default project cannot be archived.")
+
+    if "name" in updates and updates["name"] is not None:
+        duplicate = db.query(Project).filter(
+            Project.owner_user_id == project.owner_user_id,
+            Project.name == updates["name"],
+            Project.id != project.id,
+        ).first()
+        if duplicate is not None:
+            raise ProjectServiceError("Project name already exists.")
 
     for field in ("name", "description", "color", "icon", "sort_order"):
         if field in updates and updates[field] is not None:
@@ -149,14 +181,18 @@ def archive_project(db: Session, project: Project) -> Project:
     return update_project(db, project, {"is_archived": True})
 
 
-def delete_archived_project(db: Session, project: Project) -> None:
+def delete_archived_project(
+    db: Session,
+    project: Project,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> None:
     """Delete an archived project container without deleting its conversations."""
     if project.is_default:
         raise ProjectServiceError("Default project cannot be deleted.")
     if not project.is_archived:
         raise ProjectServiceError("Project must be archived before deletion.")
 
-    default_project = ensure_default_project(db)
+    default_project = ensure_default_project(db, ownership_scope)
     relations = (
         db.query(ProjectConversation)
         .filter(ProjectConversation.project_id == project.id)
@@ -211,12 +247,14 @@ def add_conversation_to_project(
     conversation_id: uuid.UUID,
     *,
     added_by: str = "system",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ProjectConversation:
     return move_conversation_to_project(
         db,
         conversation_id=conversation_id,
         project_id=project_id,
         added_by=added_by,
+        ownership_scope=ownership_scope,
     )
 
 
@@ -226,13 +264,14 @@ def move_conversation_to_project(
     conversation_id: uuid.UUID,
     project_id: uuid.UUID | None,
     added_by: str = "user",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ProjectConversation:
     if project_id is None:
-        project_id = ensure_default_project(db).id
-    project = db.get(Project, project_id)
+        project_id = ensure_default_project(db, ownership_scope).id
+    project = get_owned(db, Project, project_id, ownership_scope)
     if project is None or project.is_archived:
         raise ProjectServiceError("Project not found.")
-    conversation = db.get(Conversation, conversation_id)
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None:
         raise ProjectServiceError("Conversation not found.")
 
@@ -271,6 +310,7 @@ def move_conversation_to_project(
         after_conversation_id=None,
         expected_offline_revision=None,
         added_by=added_by,
+        ownership_scope=ownership_scope,
     ).relation
 
 
@@ -284,10 +324,11 @@ def place_conversation(
     after_conversation_id: uuid.UUID | None,
     expected_offline_revision: int | None,
     added_by: str = "user",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ConversationPlacementResult:
     conversation = (
         db.query(Conversation)
-        .filter(Conversation.id == conversation_id)
+        .filter(ownership_scope.predicate(Conversation), Conversation.id == conversation_id)
         .with_for_update()
         .one_or_none()
     )
@@ -298,9 +339,9 @@ def place_conversation(
     if target_section not in {"pinned", "normal"}:
         raise ProjectServiceError("Invalid target section.")
 
-    default_project = ensure_default_project(db)
+    default_project = ensure_default_project(db, ownership_scope)
     resolved_project_id = target_project_id or default_project.id
-    project = db.get(Project, resolved_project_id)
+    project = get_owned(db, Project, resolved_project_id, ownership_scope)
     if project is None or project.is_archived:
         raise ProjectServiceError("Project not found.")
 
@@ -338,6 +379,7 @@ def place_conversation(
         moving_conversation_id=conversation_id,
         before_conversation_id=before_conversation_id,
         after_conversation_id=after_conversation_id,
+        ownership_scope=ownership_scope,
     )
     if relation is None:
         relation = ProjectConversation(
@@ -387,11 +429,16 @@ def place_conversation(
     )
 
 
-def remove_conversation_from_project(db: Session, project_id: uuid.UUID, conversation_id: uuid.UUID) -> None:
-    relation = _get_relation(db, project_id, conversation_id)
+def remove_conversation_from_project(
+    db: Session,
+    project_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> None:
+    relation = _get_relation(db, project_id, conversation_id, ownership_scope)
     if relation is None:
         raise ProjectServiceError("Project conversation relation not found.")
-    default_project = ensure_default_project(db)
+    default_project = ensure_default_project(db, ownership_scope)
     if relation.project_id == default_project.id:
         return
     move_conversation_to_project(
@@ -399,6 +446,7 @@ def remove_conversation_from_project(db: Session, project_id: uuid.UUID, convers
         conversation_id=conversation_id,
         project_id=default_project.id,
         added_by="user",
+        ownership_scope=ownership_scope,
     )
 
 
@@ -410,8 +458,9 @@ def list_project_conversations(
     offset: int,
     sort: str = "recent_read",
     direction: str = "desc",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> list[ProjectConversation]:
-    if db.get(Project, project_id) is None:
+    if get_owned(db, Project, project_id, ownership_scope) is None:
         raise ProjectServiceError("Project not found.")
     query = (
         db.query(ProjectConversation)
@@ -425,6 +474,7 @@ def list_project_conversations(
         .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
         .filter(
             ProjectConversation.project_id == project_id,
+            ownership_scope.predicate(Conversation),
             Conversation.deleted_at.is_(None),
             Conversation.status == "active",
         )
@@ -462,8 +512,12 @@ def list_project_conversations(
     )
 
 
-def record_project_recent(db: Session, project_id: uuid.UUID) -> Project:
-    project = db.get(Project, project_id)
+def record_project_recent(
+    db: Session,
+    project_id: uuid.UUID,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> Project:
+    project = get_owned(db, Project, project_id, ownership_scope)
     if project is None or project.is_archived:
         raise ProjectServiceError("Project not found.")
     project.last_read_at = utc_now()
@@ -476,8 +530,9 @@ def set_project_conversation_pin(
     project_id: uuid.UUID,
     conversation_id: uuid.UUID,
     pinned: bool,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ProjectConversation:
-    relation = _get_relation(db, project_id, conversation_id)
+    relation = _get_relation(db, project_id, conversation_id, ownership_scope)
     if relation is None:
         raise ProjectServiceError("Project conversation relation not found.")
     relation.is_pinned = pinned
@@ -486,12 +541,19 @@ def set_project_conversation_pin(
     return relation
 
 
-def project_counts(db: Session, project_id: uuid.UUID) -> ProjectCounts:
+def project_counts(
+    db: Session,
+    project_id: uuid.UUID,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> ProjectCounts:
+    if get_owned(db, Project, project_id, ownership_scope) is None:
+        return ProjectCounts(conversation_count=0, pinned_count=0)
     conversation_count = (
         db.query(func.count(ProjectConversation.id))
         .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
         .filter(
             ProjectConversation.project_id == project_id,
+            ownership_scope.predicate(Conversation),
             Conversation.deleted_at.is_(None),
             Conversation.status == "active",
         )
@@ -503,6 +565,7 @@ def project_counts(db: Session, project_id: uuid.UUID) -> ProjectCounts:
         .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
         .filter(
             ProjectConversation.project_id == project_id,
+            ownership_scope.predicate(Conversation),
             ProjectConversation.is_pinned.is_(True),
             Conversation.deleted_at.is_(None),
             Conversation.status == "active",
@@ -513,7 +576,11 @@ def project_counts(db: Session, project_id: uuid.UUID) -> ProjectCounts:
     return ProjectCounts(conversation_count=conversation_count, pinned_count=pinned_count)
 
 
-def project_counts_many(db: Session, project_ids: list[uuid.UUID]) -> dict[uuid.UUID, ProjectCounts]:
+def project_counts_many(
+    db: Session,
+    project_ids: list[uuid.UUID],
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> dict[uuid.UUID, ProjectCounts]:
     """Load active conversation and pinned counts for several projects in one query."""
     if not project_ids:
         return {}
@@ -526,6 +593,7 @@ def project_counts_many(db: Session, project_ids: list[uuid.UUID]) -> dict[uuid.
         .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
         .filter(
             ProjectConversation.project_id.in_(project_ids),
+            ownership_scope.predicate(Conversation),
             Conversation.deleted_at.is_(None),
             Conversation.status == "active",
         )
@@ -542,12 +610,21 @@ def project_counts_many(db: Session, project_ids: list[uuid.UUID]) -> dict[uuid.
     }
 
 
-def _get_relation(db: Session, project_id: uuid.UUID, conversation_id: uuid.UUID) -> ProjectConversation | None:
+def _get_relation(
+    db: Session,
+    project_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    ownership_scope: OwnershipScope,
+) -> ProjectConversation | None:
     return (
         db.query(ProjectConversation)
+        .join(Project, Project.id == ProjectConversation.project_id)
+        .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
         .filter(
             ProjectConversation.project_id == project_id,
             ProjectConversation.conversation_id == conversation_id,
+            ownership_scope.predicate(Project),
+            ownership_scope.predicate(Conversation),
         )
         .one_or_none()
     )
@@ -567,8 +644,14 @@ def place_project(
     project_id: uuid.UUID,
     before_project_id: uuid.UUID | None,
     after_project_id: uuid.UUID | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> Project:
-    project = db.query(Project).filter(Project.id == project_id).with_for_update().one_or_none()
+    project = (
+        owned_query(db, Project, ownership_scope)
+        .filter(Project.id == project_id)
+        .with_for_update()
+        .one_or_none()
+    )
     if project is None or project.is_default or project.is_archived:
         raise ProjectServiceError("Project not found or cannot be reordered.")
     project.sort_order = _resolve_project_sort_order(
@@ -576,6 +659,7 @@ def place_project(
         moving_project_id=project.id,
         before_project_id=before_project_id,
         after_project_id=after_project_id,
+        ownership_scope=ownership_scope,
     )
     project.updated_at = utc_now()
     db.flush()
@@ -590,6 +674,7 @@ def _resolve_conversation_sort_order(
     moving_conversation_id: uuid.UUID,
     before_conversation_id: uuid.UUID | None,
     after_conversation_id: uuid.UUID | None,
+    ownership_scope: OwnershipScope,
 ) -> int:
     def rows() -> list[ProjectConversation]:
         return (
@@ -599,6 +684,7 @@ def _resolve_conversation_sort_order(
                 ProjectConversation.project_id == project_id,
                 ProjectConversation.is_pinned.is_(is_pinned),
                 ProjectConversation.conversation_id != moving_conversation_id,
+                ownership_scope.predicate(Conversation),
                 Conversation.status == "active",
                 Conversation.deleted_at.is_(None),
             )
@@ -636,11 +722,13 @@ def _resolve_project_sort_order(
     moving_project_id: uuid.UUID,
     before_project_id: uuid.UUID | None,
     after_project_id: uuid.UUID | None,
+    ownership_scope: OwnershipScope,
 ) -> int:
     def rows() -> list[Project]:
         return (
             db.query(Project)
             .filter(
+                ownership_scope.predicate(Project),
                 Project.id != moving_project_id,
                 Project.is_default.is_(False),
                 Project.is_archived.is_(False),

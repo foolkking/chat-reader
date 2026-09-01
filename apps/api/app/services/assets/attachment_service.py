@@ -12,6 +12,7 @@ from app.models.share import Share
 from app.schemas.attachment import AssetObjectRead, AttachmentRead
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import scan_status_allows_use
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope
 
 
 class AttachmentAccessError(ValueError):
@@ -27,7 +28,11 @@ class AttachmentContent:
     path: Path
 
 
-def get_owner_attachment(db: Session, attachment_id: uuid.UUID) -> Attachment:
+def get_owner_attachment(
+    db: Session,
+    attachment_id: uuid.UUID,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> Attachment:
     attachment = (
         db.query(Attachment)
         .join(Conversation, Conversation.id == Attachment.conversation_id)
@@ -35,6 +40,7 @@ def get_owner_attachment(db: Session, attachment_id: uuid.UUID) -> Attachment:
             Attachment.id == attachment_id,
             Attachment.deleted_at.is_(None),
             Conversation.deleted_at.is_(None),
+            ownership_scope.predicate(Conversation),
         )
         .first()
     )

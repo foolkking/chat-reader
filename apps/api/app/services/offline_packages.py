@@ -34,6 +34,7 @@ from app.services.annotations import annotation_read, notebook_read
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import allowed_scan_statuses
 from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
 ProgressCallback = Callable[[str, int, int, int], None]
 ConversationProgressCallback = Callable[[str, int, int], None]
@@ -62,10 +63,17 @@ class OfflinePackageError(ValueError):
         self.status_code = status_code
 
 
-def build_catalog(db: Session) -> OfflineCatalogResponse:
+def build_catalog(
+    db: Session,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> OfflineCatalogResponse:
     conversations = (
         db.query(Conversation)
-        .filter(Conversation.deleted_at.is_(None), Conversation.status == "active")
+        .filter(
+            Conversation.deleted_at.is_(None),
+            Conversation.status == "active",
+            ownership_scope.predicate(Conversation),
+        )
         .order_by(Conversation.sort_time.desc(), Conversation.id.asc())
         .all()
     )
@@ -148,9 +156,18 @@ def estimate_conversation_bytes(db: Session, conversation: Conversation) -> int:
 
 
 def select_conversations(
-    db: Session, *, scope: str, conversation_id: uuid.UUID | None, project_id: uuid.UUID | None
+    db: Session,
+    *,
+    scope: str,
+    conversation_id: uuid.UUID | None,
+    project_id: uuid.UUID | None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> list[Conversation]:
-    query = db.query(Conversation).filter(Conversation.deleted_at.is_(None), Conversation.status == "active")
+    query = db.query(Conversation).filter(
+        Conversation.deleted_at.is_(None),
+        Conversation.status == "active",
+        ownership_scope.predicate(Conversation),
+    )
     if scope == "conversation":
         if conversation_id is None:
             raise OfflinePackageError("conversation_id is required.")
@@ -158,7 +175,7 @@ def select_conversations(
     elif scope == "project":
         if project_id is None:
             raise OfflinePackageError("project_id is required.")
-        project = db.get(Project, project_id)
+        project = get_owned(db, Project, project_id, ownership_scope)
         if project is None or project.is_archived:
             raise OfflinePackageError("Project not found.", 404)
         query = query.join(ProjectConversation, ProjectConversation.conversation_id == Conversation.id).filter(
@@ -193,15 +210,21 @@ def build_offline_package(
     known_revisions: dict[uuid.UUID, int] | None = None,
     include_assets: str = "all",
     progress_callback: ProgressCallback | None = None,
+    subject_key: str = "local:default",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> OfflinePackageArtifact:
     if include_assets not in {"none", "small", "all"}:
         raise OfflinePackageError("Unsupported offline attachment mode.")
     selected_conversations = select_conversations(
-        db, scope=scope, conversation_id=conversation_id, project_id=project_id
+        db,
+        scope=scope,
+        conversation_id=conversation_id,
+        project_id=project_id,
+        ownership_scope=ownership_scope,
     )
     base_revisions = known_revisions or {}
     conversations = changed_conversations(selected_conversations, base_revisions)
-    catalog = build_catalog(db)
+    catalog = build_catalog(db, ownership_scope)
     total = max(len(conversations), 1)
     package_metadata = {
         "format": "chat-reader-offline-package",
@@ -231,6 +254,7 @@ def build_offline_package(
                     db,
                     package_metadata,
                     conversations,
+                    subject_key=subject_key,
                     progress_callback=progress_callback,
                 )
             assets = _offline_asset_objects(db, conversations, include_assets)
@@ -260,7 +284,7 @@ def build_offline_package(
     artifact = OfflinePackageArtifact(
         id=package_id,
         job_id=job_id,
-        subject_key="local:default",
+        subject_key=subject_key,
         scope_type=scope,
         scope_id=conversation_id or project_id,
         catalog_revision=catalog.revision,
@@ -274,7 +298,7 @@ def build_offline_package(
     previous_artifacts = (
         db.query(OfflinePackageArtifact)
         .filter(
-            OfflinePackageArtifact.subject_key == "local:default",
+            OfflinePackageArtifact.subject_key == subject_key,
             OfflinePackageArtifact.scope_type == scope,
             OfflinePackageArtifact.scope_id == (conversation_id or project_id),
         )
@@ -301,6 +325,7 @@ def _write_package_payload(
     package_metadata: dict[str, Any],
     conversations: list[Conversation],
     *,
+    subject_key: str,
     progress_callback: ProgressCallback | None,
 ) -> None:
     output.write(b"{")
@@ -325,6 +350,7 @@ def _write_package_payload(
             output,
             db,
             conversation,
+            subject_key=subject_key,
             asset_mode=str(package_metadata.get("asset_mode") or "none"),
             progress_callback=report_conversation_phase,
         )
@@ -337,6 +363,7 @@ def _write_conversation_payload(
     db: Session,
     conversation: Conversation,
     *,
+    subject_key: str,
     asset_mode: str = "none",
     progress_callback: ConversationProgressCallback | None = None,
 ) -> None:
@@ -350,13 +377,16 @@ def _write_conversation_payload(
         db.query(ConversationNotebook)
         .filter(
             ConversationNotebook.conversation_id == conversation.id,
-            ConversationNotebook.subject_key == "local:default",
+            ConversationNotebook.subject_key == subject_key,
             ConversationNotebook.is_conflict.is_(False),
         )
         .order_by(ConversationNotebook.created_at.asc())
         .first()
     )
-    position = db.query(ReadingPosition).filter(ReadingPosition.conversation_id == conversation.id).first()
+    position = db.query(ReadingPosition).filter(
+        ReadingPosition.conversation_id == conversation.id,
+        ReadingPosition.subject_key == subject_key,
+    ).first()
     project_id, project_name = _conversation_project(conversation)
     metadata = {
         "id": conversation.id,
@@ -492,7 +522,7 @@ def _write_conversation_payload(
     if progress_callback:
         progress_callback("packaging_search", 1, 1)
         progress_callback("packaging_annotations", 0, 1)
-    _write_json_field(output, "annotations", list_annotations_payload(db, conversation.id), first=False)
+    _write_json_field(output, "annotations", list_annotations_payload(db, conversation.id, subject_key), first=False)
     if progress_callback:
         progress_callback("packaging_annotations", 1, 1)
         progress_callback("packaging_metadata", 0, 1)
@@ -627,10 +657,10 @@ def _write_json_value(output: BinaryIO, value: Any) -> None:
         output.write(chunk.encode("utf-8"))
 
 
-def list_annotations_payload(db: Session, conversation_id: uuid.UUID) -> list[dict[str, Any]]:
+def list_annotations_payload(db: Session, conversation_id: uuid.UUID, subject_key: str) -> list[dict[str, Any]]:
     return [annotation_read(item).model_dump(mode="json") for item in db.query(ConversationAnnotation).filter(
         ConversationAnnotation.conversation_id == conversation_id,
-        ConversationAnnotation.subject_key == "local:default",
+        ConversationAnnotation.subject_key == subject_key,
         ConversationAnnotation.is_deleted.is_(False),
     ).order_by(ConversationAnnotation.created_at.asc()).all()]
 

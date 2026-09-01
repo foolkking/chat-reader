@@ -33,6 +33,7 @@ from app.services.sharing.share_service import (
 )
 from app.services.annotations import annotation_read, notebook_read
 from app.services.reader_locator import resolve_reader_locator
+from app.services.ownership import ownership_scope_from_request
 
 router = APIRouter(tags=["shares"])
 
@@ -41,10 +42,11 @@ router = APIRouter(tags=["shares"])
 def create_conversation_share(
     conversation_id: uuid.UUID,
     payload: ShareCreate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ShareCreateResponse:
     try:
-        result = create_share(db, conversation_id, payload)
+        result = create_share(db, conversation_id, payload, ownership_scope_from_request(request))
         db.commit()
         return share_create_response(result)
     except ShareError as exc:
@@ -55,11 +57,12 @@ def create_conversation_share(
 @router.get("/api/conversations/{conversation_id}/shares", response_model=list[ShareRead])
 def list_conversation_shares(
     conversation_id: uuid.UUID,
+    request: Request,
     include_revoked: bool = Query(default=False),
     db: Session = Depends(get_db),
 ) -> list[ShareRead]:
     try:
-        return [share_read(share) for share in list_shares(db, conversation_id, include_revoked)]
+        return [share_read(share) for share in list_shares(db, conversation_id, include_revoked, ownership_scope_from_request(request))]
     except ShareError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
@@ -67,10 +70,11 @@ def list_conversation_shares(
 @router.post("/api/shares/{share_id}/revoke", response_model=ShareRevokeResponse)
 def revoke_conversation_share(
     share_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ShareRevokeResponse:
     try:
-        share = revoke_share(db, share_id)
+        share = revoke_share(db, share_id, ownership_scope_from_request(request))
         db.commit()
         return ShareRevokeResponse(**share_read(share).model_dump())
     except ShareError as exc:
@@ -82,10 +86,11 @@ def revoke_conversation_share(
 def update_conversation_share(
     share_id: uuid.UUID,
     payload: ShareUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ShareRead:
     try:
-        share = update_share(db, share_id, payload)
+        share = update_share(db, share_id, payload, ownership_scope_from_request(request))
         db.commit()
         return share_read(share)
     except ShareError as exc:

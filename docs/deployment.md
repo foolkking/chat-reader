@@ -1,5 +1,45 @@
 # 生产部署
 
+## 工作树账户发布边界（2026-09-01）
+
+仓库当前包含、但尚未部署多账户认证与 owner 隔离 migration
+`20260901_0030_multi_account_users.py`。它引入一个部署管理员、普通用户账号和
+私有记录的 owner 范围。下面的生产记录仍是最后已部署版本，只有在明确授权并完成
+备份、migration、健康检查及认证浏览器验收后才能更新。初始密码不得写入源码、文档
+或 shell history，应通过首次运行的 `INITIAL_ADMIN_EMAIL` /
+`INITIAL_ADMIN_PASSWORD` 环境变量或 `apps/api/scripts/owner_auth.py` 交互式设置。
+迁移容器只在管理员尚未绑定邮箱时消费变量，后续重启幂等返回；首次成功后立即
+移除 `INITIAL_ADMIN_PASSWORD`。
+
+## 2026-09-01 Reader hover-surface deployment
+
+Production runs source `93751e52dc7089d0ccd51e6f6cf9cedb1f341fe1` from GitHub
+Actions run `33468690421` (attempt 2). The first attempt had one unrelated
+Chromium headless `SIGSEGV` in the legacy-library service-worker test; the
+rerun passed the complete Web/API quality jobs, browser matrix, image build and
+independent artifact inspection.
+
+The deployable archive SHA-256 is
+`8fac476e13dc1c0bb94956998abf9f7566933cadf4d8bf91731076c6ce6f1b19`.
+API/worker image ID is
+`sha256:e1e4fbfeb210a022dcfa947afc521e48141114a8a872feacf710d5da0049549e`;
+Web image ID is
+`sha256:381855ef049e520348236b88cecc75ce77d0f6eaf33ad07d8593b6ce74e283a3`.
+
+King retained the verified five-component backup under
+`/opt/chat-reader/backups/chat-reader-20260901T043304Z/`, ran the existing
+migration (`20260829_0029 (head/current)`), and recreated only API,
+import-worker and Web with `--no-build --no-deps --force-recreate`.
+PostgreSQL container ID and `StartedAt` were unchanged; the read-only
+attachment storage audit reported 200 active attachments and zero issues.
+Public HTTPS health returned 200 at `/api/health`, anonymous private access
+returned 401, and all application containers are healthy/running. The change
+removes the shared hover background from Reader message rows only; list-row
+hover, current/selected states and locate feedback remain unchanged.
+
+Authenticated production UI acceptance is `NOT VERIFIED` because no approved
+owner session was used. The direct rollback release remains `0a217776`.
+
 ## 2026-08-31 offline resilience and attachment locator deployment
 
 Production runs source `7d861667e46a6e60092426bf551c975b718c8be7`

@@ -11,6 +11,95 @@ const ATTACHMENT_ID = "11111111-1111-4111-8111-111111111111";
 const ATTACHMENT_URL = `https://offline.chat-reader.local/assets/${ATTACHMENT_ID}`;
 
 test.describe("Release E PWA negative matrix", () => {
+  test("PWA-NEG-014 isolates Dexie, attachment caches, and service-worker purge by account", async ({ page }) => {
+    await page.goto("/library");
+    await expect.poll(() => page.evaluate(() => Boolean(window.__chatReaderPwaNegativeTest))).toBe(true);
+
+    const evidence = await page.evaluate(async () => {
+      const bridge = window.__chatReaderPwaNegativeTest;
+      if (!bridge) throw new Error("The account-isolation test bridge is unavailable.");
+
+      const writeSetting = (databaseName: string, value: string) => new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction("settings", "readwrite");
+          transaction.objectStore("settings").put({ key: "account-isolation-probe", value });
+          transaction.oncomplete = () => { database.close(); resolve(); };
+          transaction.onerror = () => { database.close(); reject(transaction.error); };
+        };
+      });
+      const readSetting = (databaseName: string) => new Promise<string | null>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction("settings", "readonly");
+          const getRequest = transaction.objectStore("settings").get("account-isolation-probe");
+          getRequest.onsuccess = () => resolve(typeof getRequest.result?.value === "string" ? getRequest.result.value : null);
+          getRequest.onerror = () => reject(getRequest.error);
+          transaction.oncomplete = () => database.close();
+        };
+      });
+
+      const accountA = await bridge.activateProtectedOfflineData("00000000-0000-4000-8000-00000000000a");
+      await writeSetting(accountA.databaseName, "account-a");
+      await (await caches.open(accountA.assetCacheName)).put("https://offline.chat-reader.local/assets/account-a", new Response("a"));
+
+      const accountB = await bridge.activateProtectedOfflineData("00000000-0000-4000-8000-00000000000b");
+      const accountAVisibleFromB = await readSetting(accountB.databaseName);
+      await writeSetting(accountB.databaseName, "account-b");
+      await (await caches.open(accountB.assetCacheName)).put("https://offline.chat-reader.local/assets/account-b", new Response("b"));
+
+      const accountAAgain = await bridge.activateProtectedOfflineData("00000000-0000-4000-8000-00000000000a");
+      const restoredA = await readSetting(accountAAgain.databaseName);
+      await bridge.clearProtectedOfflineData(accountAAgain.userId);
+
+      const accountBAgain = await bridge.activateProtectedOfflineData("00000000-0000-4000-8000-00000000000b");
+      const restoredB = await readSetting(accountBAgain.databaseName);
+      const cacheNames = await caches.keys();
+      const databases = await indexedDB.databases();
+      return {
+        accountA,
+        accountB,
+        accountBAgain,
+        accountAVisibleFromB,
+        restoredA,
+        restoredB,
+        accountADatabaseRemoved: !databases.some((database) => database.name === accountA.databaseName),
+        accountACacheRemoved: !cacheNames.includes(accountA.assetCacheName),
+        accountBCachePreserved: cacheNames.includes(accountB.assetCacheName),
+      };
+    });
+
+    expect(evidence.accountA.databaseName).not.toBe(evidence.accountB.databaseName);
+    expect(evidence.accountA.assetCacheName).not.toBe(evidence.accountB.assetCacheName);
+    expect(evidence.accountAVisibleFromB).toBeNull();
+    expect(evidence.restoredA).toBe("account-a");
+    expect(evidence.restoredB).toBe("account-b");
+    expect(evidence.accountADatabaseRemoved).toBe(true);
+    expect(evidence.accountACacheRemoved).toBe(true);
+    expect(evidence.accountBCachePreserved).toBe(true);
+
+    await expect.poll(() => page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration("/library"))?.active))).toBe(true);
+    const identity = await sendShellMessage(page, {
+      type: "SET_LIBRARY_IDENTITY",
+      namespace: evidence.accountBAgain.namespace,
+    });
+    expect(identity.ok).toBe(true);
+    expect(identity.protocolVersion).toBe(2);
+
+    const otherCacheName = "chat-reader-offline-assets-v1--user-6f74686572";
+    await page.evaluate(async ({ accountBCacheName, otherCacheName }) => {
+      await (await caches.open(otherCacheName)).put("https://offline.chat-reader.local/assets/other", new Response("other"));
+      const registration = await navigator.serviceWorker.getRegistration("/library");
+      registration?.active?.postMessage({ type: "PURGE_PROTECTED_CONTENT", namespace: accountBCacheName.slice("chat-reader-offline-assets-v1--".length) });
+    }, { accountBCacheName: evidence.accountBAgain.assetCacheName, otherCacheName });
+    await expect.poll(() => page.evaluate(async (cacheName) => (await caches.keys()).includes(cacheName), evidence.accountBAgain.assetCacheName)).toBe(false);
+    expect(await page.evaluate(async (cacheName) => (await caches.keys()).includes(cacheName), otherCacheName)).toBe(true);
+  });
+
   test("PWA-NEG-001..005 critical and optional shell misses are explicit and recoverable", async ({ page, context }) => {
     await page.goto("/library");
     const active = await waitForActiveRecord(page);
@@ -365,7 +454,7 @@ test.describe("Release E PWA negative matrix", () => {
 });
 
 type ActiveRecord = { revision: string; cacheName: string; assets: string[]; criticalAssets?: string[]; workerUrl: string };
-type ShellResult = { ok: boolean; status?: { ready: boolean; revision: string | null }; error?: string };
+type ShellResult = { ok: boolean; protocolVersion?: number; status?: { ready: boolean; revision: string | null }; error?: string };
 
 async function readActiveRecord(page: Page): Promise<ActiveRecord> {
   return page.evaluate(async (metaCache) => {

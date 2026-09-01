@@ -1,5 +1,15 @@
 # 系统概览
 
+## Current implementation (working tree, 2026-09-01)
+
+Chat Reader is moving from the deployed single-owner release to a private
+multi-account archive. One deployment-provisioned `ADMIN` owns the migrated
+legacy archive; registered accounts are `USER` and are isolated by
+server-derived `owner_user_id`. Authentication, account access, invitations,
+password reset and user-scoped Offline/Skill data are implemented behind
+`20260901_0030`, which remains pending deployment and real PostgreSQL upgrade.
+Public Share and Offline Reader keep their existing separate boundaries.
+
 ## Current deployed access boundary (2026-08-17)
 
 Release N is deployed. A single owner password and server-side, per-device
@@ -14,9 +24,9 @@ description below is retained as a pre-Release-N snapshot and is superseded by
 ## 定位与边界
 
 - Chat Reader 用于导入、长期阅读和管理已经线性化、标准化的 AI 对话资料，不发送消息或调用模型生成回答。
-- 当前是单资料拥有者模型，服务端主体固定为 `local:default`；公开访客通过 Share token 取得只读能力。
-- 主要对象：Conversation、Message、MessageVersion、RenderBlock、Heading、SearchDocument、Project、Annotation、Notebook、Share、ReadingPosition 和 OfflinePackage。
-- 当前没有注册/登录、多用户、计费、在线 AI、标签、HTML/PDF 导出或完整消息/轮次虚拟列表；极长单消息会做 RenderBlock 级虚拟化。
+- 当前 owner 由认证会话中的用户 UUID 决定；迁移前的 legacy 数据使用固定管理员回填，`local:default` 只作为开发/兼容回退。公开访客通过 Share token 取得只读能力。
+- 主要对象：User、Conversation、Message、MessageVersion、RenderBlock、Heading、SearchDocument、Project、Annotation、Notebook、Share、ReadingPosition 和 OfflinePackage。
+- 当前提供注册/登录、单管理员与用户账号、邀请、密码重置和 owner 隔离；不提供计费或在线 AI。极长单消息会做 RenderBlock 级虚拟化。
 
 ## 系统模块
 

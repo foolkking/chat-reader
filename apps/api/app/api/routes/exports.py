@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,8 @@ from app.services.exporting.export_service import (
     export_conversation_markdown,
     export_conversation_markdown_v2,
 )
+from app.models.conversation import Conversation
+from app.services.ownership import get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/conversations", tags=["exports"])
 
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/api/conversations", tags=["exports"])
 @router.get("/{conversation_id}/exports/markdown")
 def export_markdown_v2(
     conversation_id: uuid.UUID,
+    request: Request,
     include_metadata: bool = True,
     include_versions: bool = False,
     include_description: bool = False,
@@ -31,6 +34,7 @@ def export_markdown_v2(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     try:
+        _require_owner(db, conversation_id, request)
         options = ExportOptions(
             format="markdown_v2",
             message_ids=_parse_message_ids(message_ids),
@@ -53,6 +57,7 @@ def export_markdown_v2(
 @router.get("/{conversation_id}/exports/canjson")
 def export_canjson_v2(
     conversation_id: uuid.UUID,
+    request: Request,
     include_metadata: bool = True,
     include_versions: bool = False,
     include_description: bool = False,
@@ -64,6 +69,7 @@ def export_canjson_v2(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     try:
+        _require_owner(db, conversation_id, request)
         options = ExportOptions(
             format="canjson_v2",
             message_ids=_parse_message_ids(message_ids),
@@ -86,6 +92,7 @@ def export_canjson_v2(
 @router.get("/{conversation_id}/export")
 def export_conversation(
     conversation_id: uuid.UUID,
+    request: Request,
     format: str = Query(default="markdown"),
     include_metadata: bool = True,
     include_toc: bool = True,
@@ -97,6 +104,7 @@ def export_conversation(
     db: Session = Depends(get_db),
 ) -> Response:
     try:
+        _require_owner(db, conversation_id, request)
         if format not in {"markdown", "canonical_json"}:
             raise ExportError("Unsupported export format.")
         options = ExportOptions(
@@ -142,6 +150,11 @@ def _parse_message_ids(raw: str | None) -> list[uuid.UUID]:
     if len(parsed) != len(set(parsed)):
         raise ExportError("message_ids cannot contain duplicates.")
     return parsed
+
+
+def _require_owner(db: Session, conversation_id: uuid.UUID, request: Request) -> None:
+    if get_owned(db, Conversation, conversation_id, ownership_scope_from_request(request)) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
 
 
 def _streaming_response(result) -> StreamingResponse:

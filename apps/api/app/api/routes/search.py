@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -13,9 +13,10 @@ from app.schemas.search import (
 )
 from app.services.search.search_indexer import (
     rebuild_search_and_toc_for_conversation,
-    rebuild_search_documents_for_all,
 )
 from app.services.search.search_service import SearchServiceError, search
+from app.models.conversation import Conversation
+from app.services.ownership import get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -25,6 +26,7 @@ ROLES = {"user", "assistant", "system", "tool", "note"}
 
 @router.get("", response_model=SearchResponse)
 def search_documents(
+    request: Request,
     q: str = Query(...),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -54,6 +56,7 @@ def search_documents(
             status_scope=status_scope,
             date_from=date_from,
             date_to=date_to,
+            ownership_scope=ownership_scope_from_request(request),
         )
     except SearchServiceError as exc:
         status_code = status.HTTP_404_NOT_FOUND if "not found" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
@@ -91,13 +94,34 @@ def search_documents(
 
 
 @router.post("/reindex", response_model=SearchReindexResponse)
-def reindex(payload: SearchReindexRequest | None = None, db: Session = Depends(get_db)) -> SearchReindexResponse:
+def reindex(
+    request: Request,
+    payload: SearchReindexRequest | None = None,
+    db: Session = Depends(get_db),
+) -> SearchReindexResponse:
     payload = payload or SearchReindexRequest()
+    ownership_scope = ownership_scope_from_request(request)
     if payload.conversation_id is not None:
+        conversation = get_owned(db, Conversation, payload.conversation_id, ownership_scope)
+        if conversation is None or conversation.deleted_at is not None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
         result = rebuild_search_and_toc_for_conversation(db, payload.conversation_id)
     else:
-        result = rebuild_search_documents_for_all(db)
+        results = [
+            rebuild_search_and_toc_for_conversation(db, conversation_id)
+            for (conversation_id,) in db.query(Conversation.id).filter(
+                ownership_scope.predicate(Conversation),
+                Conversation.deleted_at.is_(None),
+            ).all()
+        ]
+        result = SearchReindexResponse(
+            conversation_count=sum(item.conversation_count for item in results),
+            indexed_count=sum(item.indexed_count for item in results),
+            heading_count=sum(item.heading_count for item in results),
+        )
     db.commit()
+    if isinstance(result, SearchReindexResponse):
+        return result
     return SearchReindexResponse(
         conversation_count=result.conversation_count,
         indexed_count=result.indexed_count,

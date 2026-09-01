@@ -209,7 +209,9 @@ def commit_import_preview(
     conversation_ids: list[uuid.UUID] = []
     total_messages = 0
     all_warnings: list[str] = []
-    default_project = ensure_default_project(db)
+    from app.services.ownership import OwnershipScope
+    import_scope = OwnershipScope(import_record.owner_user_id, include_legacy_unowned=import_record.owner_user_id is None)
+    default_project = ensure_default_project(db, import_scope)
 
     for conversation_draft in persistable:
         try:
@@ -223,7 +225,7 @@ def commit_import_preview(
                     processed_before=total_messages,
                     total_messages=total_expected_messages,
                 )
-                add_conversation_to_project(db, default_project.id, conversation.id, added_by="system")
+                add_conversation_to_project(db, default_project.id, conversation.id, added_by="system", ownership_scope=import_scope)
                 _report(progress_callback, "headings", 78, total_messages, total_expected_messages)
                 rebuild_headings_for_conversation(db, conversation.id)
                 _report(progress_callback, "search", 88, total_messages, total_expected_messages)
@@ -447,6 +449,7 @@ def _persist_conversation(
 ) -> Conversation:
     conversation = Conversation(
         id=uuid.uuid4(),
+        owner_user_id=import_record.owner_user_id,
         title=draft.title,
         display_title=draft.display_title,
         source_type=draft.source_type,
@@ -648,6 +651,7 @@ def _persist_canjson_private_content(
     identity_map: dict[str, tuple[uuid.UUID, dict[str, uuid.UUID]]],
     attachment_map: dict[str, uuid.UUID],
 ) -> None:
+    subject_key = str(conversation.owner_user_id) if conversation.owner_user_id else "local:default"
     _persist_canjson_source_refs(db, draft, identity_map)
     _persist_canjson_attachment_refs(db, draft, identity_map, attachment_map)
     annotation_ids: dict[str, uuid.UUID] = {}
@@ -670,7 +674,7 @@ def _persist_canjson_private_content(
         db.add(
             ConversationAnnotation(
                 id=annotation_id,
-                subject_key="local:default",
+                subject_key=subject_key,
                 conversation_id=conversation.id,
                 message_id=mapped[0],
                 message_version_id=mapped_version_id,
@@ -711,7 +715,7 @@ def _persist_canjson_private_content(
         db.add(
             ConversationNotebook(
                 id=uuid.uuid4(),
-                subject_key="local:default",
+                subject_key=subject_key,
                 conversation_id=conversation.id,
                 title=str(raw.get("title") or "Imported notes"),
                 blocks=mapped_blocks,

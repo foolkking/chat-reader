@@ -2,7 +2,9 @@
 
 Last reviewed: 2026-09-01
 Owner: repository maintainers  
-Scope: single-owner Chat Reader Web/API/worker/deployment lifecycle
+Scope: private multi-account Chat Reader Web/API/worker/deployment lifecycle.
+The deployed snapshot may still be single-owner; current working-tree account
+facts and rollout status are authoritative in `PROJECT_STATE.md`.
 
 This is a living candidate register, not a defect declaration. Every item keeps
 its evidence level and must be revalidated before implementation. `Observed`

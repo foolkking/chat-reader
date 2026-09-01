@@ -1,5 +1,20 @@
 # 当前用户流程
 
+## Current account flows (working tree, 2026-09-01)
+
+```text
+first deployment -> operator provisions one ADMIN interactively
+closed/invite/open registration -> email + strong password -> USER workspace
+login -> opaque HttpOnly session -> owner-scoped Reader/Projects/Import
+account security -> password/session management -> global revocation on change
+ADMIN -> registration mode, invitations, user status and reset grants
+```
+
+The migrated legacy archive belongs to the single deployment administrator.
+Share links remain token-scoped and Offline remains a local snapshot. These
+flows are implemented and API-tested in the working tree; migration,
+deployment and authenticated production browser verification are pending.
+
 ## Settings, Tasks and import completion (2026-08-25, local)
 
 The global shell footer is named `Settings`. Its lightweight surface owns

@@ -13,6 +13,9 @@ class ImportProfile(Base):
     __tablename__ = "import_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     kind: Mapped[str] = mapped_column(String(20), nullable=False, default="LEARNED")
     source_mode: Mapped[str] = mapped_column(String(24), nullable=False)
@@ -118,6 +121,7 @@ class ImportStructureFamily(Base):
 
 
 Index("idx_import_profiles_status_mode", ImportProfile.status, ImportProfile.source_mode)
+Index("idx_import_profiles_owner_status_mode", ImportProfile.owner_user_id, ImportProfile.status, ImportProfile.source_mode)
 Index("idx_import_profile_revisions_digest", ImportProfileRevision.signature_digest)
 Index("idx_import_input_groups_import", ImportInputGroup.import_id)
 Index("idx_import_structure_families_import", ImportStructureFamily.import_id)

@@ -33,6 +33,7 @@ from app.services.adaptive_import.service import (
     update_profile,
     verify_family_mapping,
 )
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(tags=["adaptive-import"])
 
@@ -71,6 +72,7 @@ async def create_adaptive_import_session(
     files: list[UploadFile] = File(...),
     repair_profile_id: uuid.UUID | None = Form(default=None),
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
     if not files:
         raise HTTPException(status_code=400, detail={"code": "FILES_REQUIRED", "message": "Choose at least one JSON or Markdown file."})
@@ -80,7 +82,12 @@ async def create_adaptive_import_session(
     max_bytes = settings.max_import_file_size_mb * 1024 * 1024
     record: ImportRecord | None = None
     try:
-        record = begin_session(db, len(files), repair_profile_id=repair_profile_id)
+        record = begin_session(
+            db,
+            len(files),
+            repair_profile_id=repair_profile_id,
+            owner_user_id=ownership_scope.owner_user_id,
+        )
         for item in files:
             content = await _read_upload_bounded(item, max_bytes)
             add_session_source(db, record, item.filename or "upload", content)
@@ -119,14 +126,22 @@ def _remove_failed_session(import_id: uuid.UUID) -> None:
 
 
 @router.get("/api/adaptive-import/sessions/{import_id}")
-def get_adaptive_import_session(import_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, Any]:
-    record = _record(import_id, db)
+def get_adaptive_import_session(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
     return session_payload(record)
 
 
 @router.delete("/api/adaptive-import/sessions/{import_id}", status_code=status.HTTP_204_NO_CONTENT)
-def cancel_adaptive_import_session(import_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
-    record = _record(import_id, db)
+def cancel_adaptive_import_session(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> None:
+    record = _record(import_id, db, ownership_scope)
     try:
         cancel_session(record)
         db.commit()
@@ -140,8 +155,9 @@ def update_adaptive_import_groups(
     import_id: uuid.UUID,
     payload: GroupingRequest,
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    record = _record(import_id, db)
+    record = _record(import_id, db, ownership_scope)
     try:
         resolve_grouping(db, record, [item.model_dump(mode="json") for item in payload.groups])
         db.commit()
@@ -153,8 +169,12 @@ def update_adaptive_import_groups(
 
 
 @router.post("/api/adaptive-import/sessions/{import_id}/reanalyze")
-def reanalyze_adaptive_import_session(import_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, Any]:
-    record = _record(import_id, db)
+def reanalyze_adaptive_import_session(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
     try:
         reanalyze_session(db, record)
         db.commit()
@@ -171,8 +191,9 @@ async def replace_adaptive_import_artifact(
     artifact_id: uuid.UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    record = _record(import_id, db)
+    record = _record(import_id, db, ownership_scope)
     artifact = _artifact(import_id, artifact_id, db)
     new_path = None
     try:
@@ -209,8 +230,9 @@ def exclude_adaptive_import_group(
     import_id: uuid.UUID,
     group_id: uuid.UUID,
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    record = _record(import_id, db)
+    record = _record(import_id, db, ownership_scope)
     group = _group(import_id, group_id, db)
     try:
         removed_paths = remove_input_group(db, record, group)
@@ -229,8 +251,9 @@ def save_family_mapping(
     family_id: uuid.UUID,
     payload: FamilyMappingRequest,
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    record = _record(import_id, db)
+    record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
         verify_family_mapping(
@@ -253,8 +276,9 @@ def preview_family_mapping_route(
     family_id: uuid.UUID,
     payload: FamilyMappingPreviewRequest,
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    record = _record(import_id, db)
+    record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
         return preview_family_mapping(
@@ -274,8 +298,9 @@ def choose_family_profile(
     family_id: uuid.UUID,
     payload: ProfileSelectionRequest,
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    record = _record(import_id, db)
+    record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
         select_profile_revision(db, record, family, payload.revision_id)
@@ -288,8 +313,11 @@ def choose_family_profile(
 
 
 @router.get("/api/import-formats")
-def get_import_formats(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
-    return list_profiles(db)
+def get_import_formats(
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> list[dict[str, Any]]:
+    return list_profiles(db, ownership_scope.owner_user_id)
 
 
 @router.patch("/api/import-formats/{profile_id}")
@@ -297,8 +325,9 @@ def patch_import_format(
     profile_id: uuid.UUID,
     payload: ProfileUpdateRequest,
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    profile = db.get(ImportProfile, profile_id)
+    profile = get_owned(db, ImportProfile, profile_id, ownership_scope)
     if profile is None:
         raise HTTPException(status_code=404, detail="Import profile not found.")
     values = payload.model_dump(exclude_none=True)
@@ -306,15 +335,23 @@ def patch_import_format(
         update_profile(db, profile, values)
         db.commit()
         db.refresh(profile)
-        return next(item for item in list_profiles(db) if item.get("id") == str(profile.id))
+        return next(
+            item
+            for item in list_profiles(db, ownership_scope.owner_user_id)
+            if item.get("id") == str(profile.id)
+        )
     except AdaptiveImportError as exc:
         db.rollback()
         raise _http_error(exc) from exc
 
 
 @router.delete("/api/import-formats/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_import_format(profile_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
-    profile = db.get(ImportProfile, profile_id)
+def delete_import_format(
+    profile_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> None:
+    profile = get_owned(db, ImportProfile, profile_id, ownership_scope)
     if profile is None:
         raise HTTPException(status_code=404, detail="Import profile not found.")
     if profile.kind != "LEARNED":
@@ -324,8 +361,12 @@ def delete_import_format(profile_id: uuid.UUID, db: Session = Depends(get_db)) -
 
 
 @router.get("/api/import-formats/{profile_id}/revisions")
-def get_import_format_revisions(profile_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict[str, Any]]:
-    profile = db.get(ImportProfile, profile_id)
+def get_import_format_revisions(
+    profile_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> list[dict[str, Any]]:
+    profile = get_owned(db, ImportProfile, profile_id, ownership_scope)
     if profile is None:
         raise HTTPException(status_code=404, detail="Import profile not found.")
     return [
@@ -339,8 +380,12 @@ def get_import_format_revisions(profile_id: uuid.UUID, db: Session = Depends(get
     ]
 
 
-def _record(import_id: uuid.UUID, db: Session) -> ImportRecord:
-    record = db.get(ImportRecord, import_id)
+def _record(
+    import_id: uuid.UUID,
+    db: Session,
+    ownership_scope: OwnershipScope,
+) -> ImportRecord:
+    record = get_owned(db, ImportRecord, import_id, ownership_scope)
     if record is None or record.source_profile != "adaptive_json_markdown":
         raise HTTPException(status_code=404, detail="Adaptive import session not found.")
     return record

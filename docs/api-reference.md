@@ -1,5 +1,12 @@
 # API 参考
 
+## 当前账户接口合同（工作树，2026-09-01）
+
+私有 API 需要 owner session，并按已认证用户 UUID 限定返回记录。首次部署账号是
+唯一 `ADMIN`，普通注册账号为 `USER`；`/api/admin/*` 仅管理员可用。Share 和
+Offline 保持原有 token/local 边界。该合同已在工作树实现，等待
+`20260901_0030_multi_account_users.py` 的生产 migration 与发布。
+
 ## Adaptive Import (2026-08-22)
 
 JSON / Markdown sources use a session-oriented API. Analysis creates

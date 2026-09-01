@@ -29,6 +29,10 @@ class ExportError(ValueError):
         self.status_code = status_code
 
 
+def _subject_key_for_conversation(conversation: Conversation) -> str:
+    return str(conversation.owner_user_id) if conversation.owner_user_id is not None else "local:default"
+
+
 def export_conversation_markdown_v2(db: Session, conversation_id: uuid.UUID, options: ExportOptions) -> StreamingExportResult:
     conversation = _get_conversation(db, conversation_id)
     _validate_message_ids(db, conversation.id, options.message_ids)
@@ -79,6 +83,7 @@ def _markdown_v2_chunks(
 ) -> Iterator[bytes]:
     with Session(bind=bind) as stream_db:
         conversation = _get_conversation(stream_db, conversation_id)
+        subject_key = _subject_key_for_conversation(conversation)
         count = _message_count(stream_db, conversation_id, options.message_ids)
         front_matter = {
             "format": "chat-reader-markdown-export",
@@ -150,7 +155,9 @@ def _markdown_v2_chunks(
         if options.include_annotations:
             yield b"## Annotations\n\n"
             yield b"This section is a readable projection; use a .cr archive for exact anchor restoration.\n\n"
-            for annotation in _iter_annotation_payloads(stream_db, conversation_id, options.message_ids):
+            for annotation in _iter_annotation_payloads(
+                stream_db, conversation_id, options.message_ids, subject_key=subject_key
+            ):
                 yield f"### {str(annotation['annotation_type']).replace('_', ' ').title()} · {annotation['id']}\n\n".encode("utf-8")
                 if annotation.get("message_id"):
                     yield f"- Message: `{annotation['message_id']}`\n".encode("utf-8")
@@ -182,6 +189,7 @@ def _markdown_v2_chunks(
                     for row in stream_db.query(ConversationAnnotation).filter(
                         ConversationAnnotation.conversation_id == conversation_id,
                         ConversationAnnotation.id.in_(annotation_ids),
+                        ConversationAnnotation.subject_key == subject_key,
                         ConversationAnnotation.is_deleted.is_(False),
                     )
                 } if annotation_ids else {}
@@ -211,6 +219,7 @@ def _canjson_v2_chunks(
 ) -> Iterator[bytes]:
     with Session(bind=bind) as stream_db:
         conversation = _get_conversation(stream_db, conversation_id)
+        subject_key = _subject_key_for_conversation(conversation)
         message_count = _message_count(stream_db, conversation_id, options.message_ids)
         manifest = {
             "record_type": "manifest",
@@ -490,6 +499,13 @@ def _history_versions_by_message(db: Session, message_ids: list[uuid.UUID]) -> d
 
 
 def _annotation_versions_by_message(db: Session, message_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[dict]]:
+    subject_keys = {
+        _subject_key_for_conversation(conversation)
+        for conversation in db.query(Conversation)
+        .join(Message, Message.conversation_id == Conversation.id)
+        .filter(Message.id.in_(message_ids))
+        .all()
+    }
     statement = (
         select(
             MessageVersion.id,
@@ -510,7 +526,7 @@ def _annotation_versions_by_message(db: Session, message_ids: list[uuid.UUID]) -
         .where(
             ConversationAnnotation.message_id.in_(message_ids),
             MessageVersion.message_id == ConversationAnnotation.message_id,
-            ConversationAnnotation.subject_key == "local:default",
+            ConversationAnnotation.subject_key.in_(subject_keys or {"local:default"}),
             ConversationAnnotation.is_deleted.is_(False),
         )
         .distinct()
@@ -532,6 +548,7 @@ def _exportable_notebook_blocks(
 ) -> list[dict]:
     if not include_annotation_references:
         return [dict(block) for block in raw_blocks if isinstance(block, dict) and block.get("type") == "markdown"]
+    conversation = _get_conversation(db, conversation_id)
     referenced_ids: set[uuid.UUID] = set()
     for block in raw_blocks:
         if not isinstance(block, dict) or block.get("type") != "annotation_reference" or not block.get("annotation_id"):
@@ -551,7 +568,7 @@ def _exportable_notebook_blocks(
             ConversationAnnotation.message_version_id.is_(None),
             MessageVersion.message_id == ConversationAnnotation.message_id,
         ),
-        ConversationAnnotation.subject_key == "local:default",
+        ConversationAnnotation.subject_key == _subject_key_for_conversation(conversation),
         ConversationAnnotation.is_deleted.is_(False),
     )
     if message_ids:
@@ -752,6 +769,8 @@ def _canonical_json_chunks(
     options: ExportOptions,
 ) -> Iterator[bytes]:
     with Session(bind=bind) as stream_db:
+        conversation = stream_db.get(Conversation, conversation_id)
+        subject_key = _subject_key_for_conversation(conversation) if conversation else "local:default"
         yield b"{"
         yield from _json_field("format", "chat-reader-canonical-export", first=True)
         yield from _json_field("version", 1)
@@ -792,7 +811,9 @@ def _canonical_json_chunks(
         if options.include_annotations:
             yield b',"annotations":['
             first_annotation = True
-            for annotation in _iter_annotation_payloads(stream_db, conversation_id, options.message_ids):
+            for annotation in _iter_annotation_payloads(
+                stream_db, conversation_id, options.message_ids, subject_key=subject_key
+            ):
                 if not first_annotation:
                     yield b","
                 first_annotation = False
@@ -801,7 +822,7 @@ def _canonical_json_chunks(
         if options.include_notebook:
             notebook = stream_db.query(ConversationNotebook).filter(
                 ConversationNotebook.conversation_id == conversation_id,
-                ConversationNotebook.subject_key == "local:default",
+                ConversationNotebook.subject_key == subject_key,
                 ConversationNotebook.is_conflict.is_(False),
             ).order_by(ConversationNotebook.created_at.asc()).first()
             yield from _json_field("notebook", _notebook_payload(notebook) if notebook else None)
@@ -988,10 +1009,13 @@ def _iter_annotation_payloads(
     message_ids: list[uuid.UUID],
     *,
     require_message: bool = False,
+    subject_key: str | None = None,
 ) -> Iterator[dict]:
+    if subject_key is None:
+        subject_key = _subject_key_for_conversation(_get_conversation(db, conversation_id))
     query = db.query(ConversationAnnotation).outerjoin(Message, Message.id == ConversationAnnotation.message_id).filter(
         ConversationAnnotation.conversation_id == conversation_id,
-        ConversationAnnotation.subject_key == "local:default",
+        ConversationAnnotation.subject_key == subject_key,
         ConversationAnnotation.is_deleted.is_(False),
     )
     if message_ids:
@@ -1090,7 +1114,7 @@ def _toc_rows(db: Session, conversation: Conversation, message_ids: list[uuid.UU
 def _annotation_rows(db: Session, conversation: Conversation, message_ids: list[uuid.UUID]) -> list[ConversationAnnotation]:
     query = db.query(ConversationAnnotation).filter(
         ConversationAnnotation.conversation_id == conversation.id,
-        ConversationAnnotation.subject_key == "local:default",
+        ConversationAnnotation.subject_key == _subject_key_for_conversation(conversation),
         ConversationAnnotation.is_deleted.is_(False),
     )
     if message_ids:
@@ -1101,7 +1125,7 @@ def _annotation_rows(db: Session, conversation: Conversation, message_ids: list[
 def _notebook_row(db: Session, conversation: Conversation) -> ConversationNotebook | None:
     return db.query(ConversationNotebook).filter(
         ConversationNotebook.conversation_id == conversation.id,
-        ConversationNotebook.subject_key == "local:default",
+        ConversationNotebook.subject_key == _subject_key_for_conversation(conversation),
         ConversationNotebook.is_conflict.is_(False),
     ).order_by(ConversationNotebook.created_at.asc()).first()
 

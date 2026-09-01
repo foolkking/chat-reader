@@ -11,7 +11,13 @@ from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.services.auth import SESSION_COOKIE_NAME, SESSION_PRESENCE_COOKIE_NAME, authenticate_session
 
-PUBLIC_PATHS = frozenset({"/health", "/api/health", "/api/auth/login", "/api/auth/session", "/api/auth/logout"})
+PUBLIC_PATHS = frozenset({
+    "/health", "/api/health", "/api/auth/login", "/api/auth/register",
+    "/api/auth/session", "/api/auth/logout", "/api/auth/setup/status",
+    "/api/auth/setup/upgrade",
+    "/api/auth/password-reset",
+    "/api/auth/password-reset/request",
+})
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 

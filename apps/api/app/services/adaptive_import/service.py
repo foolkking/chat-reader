@@ -46,13 +46,20 @@ def create_session(db: Session, uploads: list[tuple[str, bytes]]) -> ImportRecor
         raise
 
 
-def begin_session(db: Session, file_count: int, *, repair_profile_id: uuid.UUID | None = None) -> ImportRecord:
+def begin_session(
+    db: Session,
+    file_count: int,
+    *,
+    repair_profile_id: uuid.UUID | None = None,
+    owner_user_id: uuid.UUID | None = None,
+) -> ImportRecord:
     if file_count < 1:
         raise AdaptiveImportError("FILES_REQUIRED", "Choose at least one JSON or Markdown file.", layer="file")
     if file_count > MAX_ADAPTIVE_FILES:
         raise AdaptiveImportError("FILE_COUNT_LIMIT", f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once.", layer="file")
     record = ImportRecord(
         id=uuid.uuid4(),
+        owner_user_id=owner_user_id,
         source_profile="adaptive_json_markdown",
         source_fingerprint="pending",
         status="analyzing",
@@ -152,7 +159,12 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
     repair_profile_id = (record.analysis_summary or {}).get("repair_profile_id")
     if repair_profile_id:
         repair_profile = db.get(ImportProfile, uuid.UUID(str(repair_profile_id)))
-        if repair_profile is None or repair_profile.kind != "LEARNED" or repair_profile.status != "ACTIVE":
+        if (
+            repair_profile is None
+            or repair_profile.kind != "LEARNED"
+            or repair_profile.status != "ACTIVE"
+            or repair_profile.owner_user_id != record.owner_user_id
+        ):
             raise AdaptiveImportError("REPAIR_PROFILE_UNAVAILABLE", "The learned import profile is not available for repair.", layer="profile")
         if invalid or len(buckets) != 1 or next(iter(buckets))[0] != repair_profile.source_mode:
             raise AdaptiveImportError(
@@ -164,7 +176,12 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
     for (mode, digest), entries in buckets.items():
         representative = entries[0][1]
         documents = _group_documents(record, entries[0][0])
-        match = match_profile(db, representative, documents)
+        match = match_profile(
+            db,
+            representative,
+            documents,
+            owner_user_id=record.owner_user_id,
+        )
         if repair_profile is not None:
             current_revision = next((item for item in repair_profile.revisions if item.id == repair_profile.current_revision_id), None)
             if current_revision is None:
@@ -385,6 +402,7 @@ def verify_family_mapping(
         verification_summary={**verification, "group_count": len(family.groups)},
         name=profile_name,
         existing_profile_id=existing_profile_id,
+        owner_user_id=record.owner_user_id,
     )
     family.resolution_status = "EXACT_MATCH"
     family.display_name = profile.name
@@ -448,7 +466,12 @@ def select_profile_revision(db: Session, record: ImportRecord, family: ImportStr
     if revision is None or revision.status not in {"VERIFIED", "SUPERSEDED"}:
         raise AdaptiveImportError("PROFILE_NOT_FOUND", "The selected verified profile revision was not found.", layer="profile")
     profile = db.get(ImportProfile, revision.profile_id)
-    if profile is None or profile.status != "ACTIVE" or profile.source_mode != family.source_mode:
+    if (
+        profile is None
+        or profile.status != "ACTIVE"
+        or profile.source_mode != family.source_mode
+        or profile.owner_user_id != record.owner_user_id
+    ):
         raise AdaptiveImportError("PROFILE_NOT_AVAILABLE", "The selected profile cannot be used for this family.", layer="profile")
     family.matched_profile_id = profile.id
     family.matched_revision_id = revision.id
@@ -522,8 +545,11 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
     }
 
 
-def list_profiles(db: Session) -> list[dict[str, Any]]:
-    learned = db.query(ImportProfile).order_by(ImportProfile.kind, ImportProfile.name).all()
+def list_profiles(db: Session, owner_user_id: uuid.UUID | None = None) -> list[dict[str, Any]]:
+    learned = db.query(ImportProfile).filter(
+        ImportProfile.kind == "LEARNED",
+        ImportProfile.owner_user_id == owner_user_id,
+    ).order_by(ImportProfile.name).all()
     return [*(builtin_payload(item) for item in BUILTINS), *(profile_payload(item) for item in learned)]
 
 

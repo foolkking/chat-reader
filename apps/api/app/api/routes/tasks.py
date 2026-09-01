@@ -15,6 +15,7 @@ from app.services.background_jobs import (
 )
 from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_for_import, primary_filename, retry_import_manually
 from app.services.task_retention import TERMINAL_IMPORT_STATUSES, TERMINAL_JOB_STATUSES, terminal_result_cutoff
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -23,11 +24,15 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 def list_active_tasks(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> list[BackgroundTaskRead]:
     cutoff = terminal_result_cutoff(settings.task_terminal_result_retention_seconds)
     active_imports = (
         db.query(ImportRecord)
-        .filter(ImportRecord.status.in_(ACTIVE_IMPORT_STATUSES))
+        .filter(
+            ownership_scope.predicate(ImportRecord),
+            ImportRecord.status.in_(ACTIVE_IMPORT_STATUSES),
+        )
         .order_by(ImportRecord.queued_at.asc(), ImportRecord.created_at.asc())
         .limit(20)
         .all()
@@ -35,6 +40,7 @@ def list_active_tasks(
     recent_imports = (
         db.query(ImportRecord)
         .filter(
+            ownership_scope.predicate(ImportRecord),
             ImportRecord.status.in_(TERMINAL_IMPORT_STATUSES),
             ImportRecord.completed_at.is_not(None),
             ImportRecord.completed_at >= cutoff,
@@ -45,7 +51,10 @@ def list_active_tasks(
     )
     active_jobs = (
         db.query(BackgroundJob)
-        .filter(BackgroundJob.status.in_(ACTIVE_JOB_STATUSES))
+        .filter(
+            ownership_scope.predicate(BackgroundJob),
+            BackgroundJob.status.in_(ACTIVE_JOB_STATUSES),
+        )
         .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
         .limit(20)
         .all()
@@ -53,6 +62,7 @@ def list_active_tasks(
     recent_jobs = (
         db.query(BackgroundJob)
         .filter(
+            ownership_scope.predicate(BackgroundJob),
             BackgroundJob.status.in_(TERMINAL_JOB_STATUSES),
             BackgroundJob.completed_at.is_not(None),
             BackgroundJob.completed_at >= cutoff,
@@ -75,24 +85,32 @@ def _terminal_task_sort_key(task: BackgroundTaskRead):
 
 
 @router.get("/{job_id}", response_model=BackgroundTaskRead)
-def get_task(job_id: uuid.UUID, db: Session = Depends(get_db)) -> BackgroundTaskRead:
-    job = db.get(BackgroundJob, job_id)
+def get_task(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> BackgroundTaskRead:
+    job = get_owned(db, BackgroundJob, job_id, ownership_scope)
     if job is not None:
         return _job_task(job)
-    record = db.get(ImportRecord, job_id)
+    record = get_owned(db, ImportRecord, job_id, ownership_scope)
     if record is not None:
         return _import_task(record, db)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
 
 
 @router.post("/{job_id}/retry", response_model=BackgroundTaskRead)
-def retry_task(job_id: uuid.UUID, db: Session = Depends(get_db)) -> BackgroundTaskRead:
-    job = db.get(BackgroundJob, job_id)
+def retry_task(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> BackgroundTaskRead:
+    job = get_owned(db, BackgroundJob, job_id, ownership_scope)
     if job is not None:
         retry_background_job(job)
         db.commit()
         return _job_task(job)
-    record = db.get(ImportRecord, job_id)
+    record = get_owned(db, ImportRecord, job_id, ownership_scope)
     if record is not None:
         if record.status != "failed":
             return _import_task(record, db)
@@ -103,10 +121,14 @@ def retry_task(job_id: uuid.UUID, db: Session = Depends(get_db)) -> BackgroundTa
 
 
 @router.post("/{job_id}/cancel", response_model=BackgroundTaskRead)
-def cancel_task(job_id: uuid.UUID, db: Session = Depends(get_db)) -> BackgroundTaskRead:
-    job = db.get(BackgroundJob, job_id)
+def cancel_task(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> BackgroundTaskRead:
+    job = get_owned(db, BackgroundJob, job_id, ownership_scope)
     if job is None:
-        record = db.get(ImportRecord, job_id)
+        record = get_owned(db, ImportRecord, job_id, ownership_scope)
         if record is not None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Import tasks cannot be cancelled here.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")

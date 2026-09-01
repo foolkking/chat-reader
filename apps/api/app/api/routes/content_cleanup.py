@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -37,20 +37,26 @@ from app.services.content_cleanup import (
     update_decisions,
     validate_literal_rule,
 )
+from app.services.ownership import ownership_scope_from_request
 
 router = APIRouter(prefix="/api/content-cleanup", tags=["content-cleanup"])
 
 
 @router.post("/rules/scan-existing", response_model=CleanupScanRead, status_code=status.HTTP_202_ACCEPTED)
-def scan_existing_conversations(db: Session = Depends(get_db)) -> CleanupScanRead:
+def scan_existing_conversations(request: Request, db: Session = Depends(get_db)) -> CleanupScanRead:
     """Queue one explicit review of every active project and unclassified conversation."""
+    scope = ownership_scope_from_request(request)
     active_ids = [
         row[0]
         for row in db.query(Conversation.id)
-        .filter(Conversation.status == "active", Conversation.deleted_at.is_(None))
+        .filter(Conversation.status == "active", Conversation.deleted_at.is_(None), scope.predicate(Conversation))
         .all()
     ]
-    archived_count = db.query(Conversation.id).filter(Conversation.status == "archived", Conversation.deleted_at.is_(None)).count()
+    archived_count = db.query(Conversation.id).filter(
+        Conversation.status == "archived",
+        Conversation.deleted_at.is_(None),
+        scope.predicate(Conversation),
+    ).count()
     try:
         scan, _job = create_scan(
             db,
@@ -58,6 +64,7 @@ def scan_existing_conversations(db: Session = Depends(get_db)) -> CleanupScanRea
             scope_type="ALL_ACTIVE",
             conversation_ids=active_ids,
             excluded_archived_count=archived_count,
+            ownership_scope=scope,
         )
         db.commit()
         db.refresh(scan)
@@ -68,11 +75,14 @@ def scan_existing_conversations(db: Session = Depends(get_db)) -> CleanupScanRea
 
 
 @router.get("/rules", response_model=list[CleanupRuleRead])
-def list_rules(db: Session = Depends(get_db)) -> list[CleanupRuleRead]:
+def list_rules(request: Request, db: Session = Depends(get_db)) -> list[CleanupRuleRead]:
+    scope = ownership_scope_from_request(request)
     ensure_builtin_rules(db)
     db.commit()
     rows: list[tuple[ContentCleanupRule, ContentCleanupRuleRevision]] = []
-    rules = db.query(ContentCleanupRule).order_by(ContentCleanupRule.kind, ContentCleanupRule.name).all()
+    rules = db.query(ContentCleanupRule).filter(
+        (ContentCleanupRule.kind == "BUILTIN") | scope.predicate(ContentCleanupRule)
+    ).order_by(ContentCleanupRule.kind, ContentCleanupRule.name).all()
     for rule in rules:
         if rule.detector_id == MANUAL_SELECTION_DETECTOR:
             continue
@@ -88,9 +98,9 @@ def list_rules(db: Session = Depends(get_db)) -> list[CleanupRuleRead]:
 
 
 @router.post("/rules", response_model=CleanupRuleRead, status_code=status.HTTP_201_CREATED)
-def create_rule(payload: CleanupRuleCreate, db: Session = Depends(get_db)) -> CleanupRuleRead:
+def create_rule(payload: CleanupRuleCreate, request: Request, db: Session = Depends(get_db)) -> CleanupRuleRead:
     try:
-        rule = create_literal_rule(db, **payload.model_dump())
+        rule = create_literal_rule(db, **payload.model_dump(), ownership_scope=ownership_scope_from_request(request))
         db.commit()
         revision = db.query(ContentCleanupRuleRevision).filter(ContentCleanupRuleRevision.rule_id == rule.id).one()
         return _rule_read(rule, revision)
@@ -100,8 +110,12 @@ def create_rule(payload: CleanupRuleCreate, db: Session = Depends(get_db)) -> Cl
 
 
 @router.patch("/rules/{rule_id}", response_model=CleanupRuleRead)
-def update_rule(rule_id: uuid.UUID, payload: CleanupRuleUpdate, db: Session = Depends(get_db)) -> CleanupRuleRead:
-    rule = db.get(ContentCleanupRule, rule_id)
+def update_rule(rule_id: uuid.UUID, payload: CleanupRuleUpdate, request: Request, db: Session = Depends(get_db)) -> CleanupRuleRead:
+    scope = ownership_scope_from_request(request)
+    rule = db.query(ContentCleanupRule).filter(
+        ContentCleanupRule.id == rule_id,
+        (ContentCleanupRule.kind == "BUILTIN") | scope.predicate(ContentCleanupRule),
+    ).first()
     if rule is None:
         raise HTTPException(status_code=404, detail="Noise rule not found.")
     if payload.name is not None:
@@ -142,8 +156,12 @@ def update_rule(rule_id: uuid.UUID, payload: CleanupRuleUpdate, db: Session = De
 
 
 @router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_rule(rule_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
-    rule = db.get(ContentCleanupRule, rule_id)
+def delete_rule(rule_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> Response:
+    scope = ownership_scope_from_request(request)
+    rule = db.query(ContentCleanupRule).filter(
+        ContentCleanupRule.id == rule_id,
+        (ContentCleanupRule.kind == "BUILTIN") | scope.predicate(ContentCleanupRule),
+    ).first()
     if rule is None:
         return Response(status_code=204)
     if rule.kind == "BUILTIN":
@@ -174,10 +192,15 @@ def delete_rule(rule_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
 
 
 @router.post("/scans", response_model=CleanupScanRead, status_code=status.HTTP_202_ACCEPTED)
-def start_scan(payload: CleanupScanCreate, db: Session = Depends(get_db)) -> CleanupScanRead:
+def start_scan(payload: CleanupScanCreate, request: Request, db: Session = Depends(get_db)) -> CleanupScanRead:
+    scope = ownership_scope_from_request(request)
     conversation_ids = payload.conversation_ids
     if payload.scope_type == "ALL_ACTIVE":
-        conversation_ids = [row[0] for row in db.query(Conversation.id).filter(Conversation.status == "active", Conversation.deleted_at.is_(None)).all()]
+        conversation_ids = [row[0] for row in db.query(Conversation.id).filter(Conversation.status == "active", Conversation.deleted_at.is_(None), scope.predicate(Conversation)).all()]
+    else:
+        owned_ids = {row[0] for row in db.query(Conversation.id).filter(Conversation.id.in_(conversation_ids), scope.predicate(Conversation)).all()}
+        if len(owned_ids) != len(set(conversation_ids)):
+            raise HTTPException(status_code=404, detail="Conversation not found.")
     if payload.scope_type == "CURRENT_CONVERSATION" and len(conversation_ids) != 1:
         raise HTTPException(status_code=422, detail="Current-conversation scans require exactly one conversation.")
     try:
@@ -190,6 +213,7 @@ def start_scan(payload: CleanupScanCreate, db: Session = Depends(get_db)) -> Cle
             selection_start_offset=payload.selection_start_offset,
             selection_end_offset=payload.selection_end_offset,
             selection_text=payload.selection_text,
+            ownership_scope=scope,
         )
         db.commit()
         db.refresh(scan)
@@ -200,14 +224,14 @@ def start_scan(payload: CleanupScanCreate, db: Session = Depends(get_db)) -> Cle
 
 
 @router.get("/scans/pending", response_model=list[CleanupScanRead])
-def pending_scans(db: Session = Depends(get_db)) -> list[CleanupScanRead]:
-    rows = db.query(ContentCleanupScan).filter(ContentCleanupScan.status.in_(("QUEUED", "SCANNING", "READY", "FAILED", "STALE"))).order_by(ContentCleanupScan.created_at.desc()).all()
+def pending_scans(request: Request, db: Session = Depends(get_db)) -> list[CleanupScanRead]:
+    rows = _owned_scan_query(db, request).filter(ContentCleanupScan.status.in_(("QUEUED", "SCANNING", "READY", "FAILED", "STALE"))).order_by(ContentCleanupScan.created_at.desc()).all()
     return [_scan_read(db, row) for row in rows]
 
 
 @router.get("/scans/{scan_id}", response_model=CleanupScanRead)
-def get_scan(scan_id: uuid.UUID, db: Session = Depends(get_db)) -> CleanupScanRead:
-    scan = db.get(ContentCleanupScan, scan_id)
+def get_scan(scan_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> CleanupScanRead:
+    scan = _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first()
     if scan is None:
         raise HTTPException(status_code=404, detail="Noise scan not found.")
     return _scan_read(db, scan)
@@ -216,18 +240,19 @@ def get_scan(scan_id: uuid.UUID, db: Session = Depends(get_db)) -> CleanupScanRe
 @router.get("/scans/{scan_id}/occurrences", response_model=list[CleanupOccurrenceRead])
 def get_occurrences(
     scan_id: uuid.UUID,
+    request: Request,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[CleanupOccurrenceRead]:
-    if db.get(ContentCleanupScan, scan_id) is None:
+    if _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first() is None:
         raise HTTPException(status_code=404, detail="Noise scan not found.")
     return [CleanupOccurrenceRead(**item) for item in preview_occurrences(db, scan_id, limit=limit, offset=offset)]
 
 
 @router.patch("/scans/{scan_id}/decisions", response_model=CleanupScanRead)
-def patch_decisions(scan_id: uuid.UUID, payload: CleanupDecisionBatch, db: Session = Depends(get_db)) -> CleanupScanRead:
-    scan = db.get(ContentCleanupScan, scan_id)
+def patch_decisions(scan_id: uuid.UUID, payload: CleanupDecisionBatch, request: Request, db: Session = Depends(get_db)) -> CleanupScanRead:
+    scan = _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first()
     if scan is None:
         raise HTTPException(status_code=404, detail="Noise scan not found.")
     try:
@@ -240,8 +265,10 @@ def patch_decisions(scan_id: uuid.UUID, payload: CleanupDecisionBatch, db: Sessi
 
 
 @router.post("/scans/{scan_id}/apply", response_model=CleanupApplyRead)
-def apply(scan_id: uuid.UUID, db: Session = Depends(get_db)) -> CleanupApplyRead:
+def apply(scan_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> CleanupApplyRead:
     try:
+        if _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first() is None:
+            raise ValueError("Noise scan not found.")
         result = apply_scan(db, scan_id)
         db.commit()
         return CleanupApplyRead(**result)
@@ -251,8 +278,10 @@ def apply(scan_id: uuid.UUID, db: Session = Depends(get_db)) -> CleanupApplyRead
 
 
 @router.delete("/scans/{scan_id}", status_code=status.HTTP_204_NO_CONTENT)
-def dismiss(scan_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
+def dismiss(scan_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> Response:
     try:
+        if _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first() is None:
+            raise ValueError("Noise scan not found.")
         dismiss_scan(db, scan_id)
         db.commit()
         return Response(status_code=204)
@@ -277,6 +306,17 @@ def _rule_read(rule: ContentCleanupRule, revision: ContentCleanupRuleRevision) -
         normalization_profile=revision.normalization_profile,
         boundary_mode=revision.boundary_mode,
         last_used_at=rule.last_used_at,
+    )
+
+
+def _owned_scan_query(db: Session, request: Request):
+    scope = ownership_scope_from_request(request)
+    return (
+        db.query(ContentCleanupScan)
+        .join(ContentCleanupScanTarget, ContentCleanupScanTarget.scan_id == ContentCleanupScan.id)
+        .join(Conversation, Conversation.id == ContentCleanupScanTarget.conversation_id)
+        .filter(scope.predicate(Conversation))
+        .distinct()
     )
 
 

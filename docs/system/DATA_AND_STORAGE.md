@@ -1,5 +1,20 @@
 # 数据与持久化
 
+## Current implementation (working tree, 2026-09-01)
+
+Alembic head in this working tree is `20260901_0030` and is not yet applied
+to the operator database. It adds `users`, account access/invitation/reset
+tables, auth rate limits, and owner columns on private conversation, project,
+import, job, learned-profile and content-cleanup records. Existing account-
+scoped subject keys are backfilled from `local:default` to the migrated admin
+UUID; new authenticated requests use the UUID directly.
+
+The canonical archive remains PostgreSQL-backed. User Skill content is plain
+text configuration, excluded from conversation/search/Share/Offline catalogs.
+Offline Dexie packages are namespaced by stable account identity while v1
+package reads remain compatible. No plaintext password, session token, or
+secret is stored in repository documentation.
+
 最后核验：2026-08-05
 
 ## PostgreSQL

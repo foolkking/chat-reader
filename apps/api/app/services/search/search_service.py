@@ -13,6 +13,7 @@ from app.models.project_conversation import ProjectConversation
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
 from app.schemas.search import SearchMatch
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
 
 class SearchServiceError(ValueError):
@@ -64,13 +65,14 @@ def search(
     status_scope: str = "active",
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> SearchResultPage:
     normalized_query = query.strip()
     if not normalized_query:
         raise SearchServiceError("Search query cannot be empty.")
-    if conversation_id is not None and db.get(Conversation, conversation_id) is None:
+    if conversation_id is not None and get_owned(db, Conversation, conversation_id, ownership_scope) is None:
         raise SearchServiceError("Conversation not found.")
-    if project_id is not None and db.get(Project, project_id) is None:
+    if project_id is not None and get_owned(db, Project, project_id, ownership_scope) is None:
         raise SearchServiceError("Project not found.")
 
     rank_expr = literal(1.0)
@@ -79,7 +81,11 @@ def search(
     base_query = (
         db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
         .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-        .filter(Conversation.deleted_at.is_(None), _status_filter(status_scope))
+        .filter(
+            ownership_scope.predicate(Conversation),
+            Conversation.deleted_at.is_(None),
+            _status_filter(status_scope),
+        )
     )
     if conversation_id is not None:
         base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)
@@ -127,6 +133,7 @@ def search(
             db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
             .filter(
+                ownership_scope.predicate(Conversation),
                 Conversation.deleted_at.is_(None),
                 _status_filter(status_scope),
                 or_(*filters),
@@ -162,7 +169,12 @@ def search(
         base_query = (
             db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
             .join(Conversation, Conversation.id == SearchDocument.conversation_id)
-            .filter(Conversation.deleted_at.is_(None), _status_filter(status_scope), scoped_match)
+            .filter(
+                ownership_scope.predicate(Conversation),
+                Conversation.deleted_at.is_(None),
+                _status_filter(status_scope),
+                scoped_match,
+            )
         )
         if conversation_id is not None:
             base_query = base_query.filter(SearchDocument.conversation_id == conversation_id)

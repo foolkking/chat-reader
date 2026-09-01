@@ -19,16 +19,18 @@ function sessionStorageKey(repairProfileId?: string | null): string {
 
 export function ImportPanel({
   repairProfileId,
+  initialMode = "adaptive",
   onImportCommitted,
   onWorkspaceChange,
 }: {
   repairProfileId?: string | null;
+  initialMode?: ImportMode;
   onImportCommitted?: () => void;
   onWorkspaceChange?: (open: boolean) => void;
 } = {}) {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [mode, setMode] = useState<ImportMode>("adaptive");
+  const [mode, setMode] = useState<ImportMode>(initialMode);
   const [files, setFiles] = useState<File[]>([]);
   const [archivePreview, setArchivePreview] = useState<ImportPreviewResponse | null>(null);
   const [session, setSession] = useState<AdaptiveImportSession | null>(null);

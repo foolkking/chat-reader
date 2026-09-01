@@ -29,6 +29,7 @@ from app.services.editing.message_edit_service import (
 )
 from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
 BUILTIN_RULES = (
     ("openai-private-citation-v1", "ChatGPT 私有引用标记", "citation", "PRIVATE_CITATION"),
@@ -153,10 +154,17 @@ def create_literal_rule(
     role_filter: str | None = None,
     matcher_mode: str = "EXACT",
     boundary_mode: str = "ANYWHERE",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ContentCleanupRule:
     value = match_value.strip()
     validate_literal_rule(value, matcher_mode)
-    rule = ContentCleanupRule(name=name.strip()[:200], kind="USER_LITERAL", status="ACTIVE", scope="MESSAGE")
+    rule = ContentCleanupRule(
+        owner_user_id=ownership_scope.owner_user_id,
+        name=name.strip()[:200],
+        kind="USER_LITERAL",
+        status="ACTIVE",
+        scope="MESSAGE",
+    )
     db.add(rule)
     db.flush()
     db.add(ContentCleanupRuleRevision(
@@ -183,7 +191,10 @@ def validate_literal_rule(value: str, matcher_mode: str) -> None:
         raise ValueError("Approximate noise rules require at least 6 characters.")
 
 
-def active_revisions(db: Session) -> list[ContentCleanupRuleRevision]:
+def active_revisions(
+    db: Session,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> list[ContentCleanupRuleRevision]:
     ensure_builtin_rules(db)
     latest_revision = (
         select(ContentCleanupRuleRevision.rule_id, func.max(ContentCleanupRuleRevision.revision).label("revision"))
@@ -202,6 +213,10 @@ def active_revisions(db: Session) -> list[ContentCleanupRuleRevision]:
         )
         .filter(
             ContentCleanupRule.status == "ACTIVE",
+            or_(
+                ContentCleanupRule.kind == "BUILTIN",
+                ownership_scope.predicate(ContentCleanupRule),
+            ),
             or_(
                 ContentCleanupRule.detector_id.is_(None),
                 ContentCleanupRule.detector_id != MANUAL_SELECTION_DETECTOR,
@@ -225,10 +240,11 @@ def create_scan(
     selection_end_offset: int | None = None,
     selection_text: str | None = None,
     excluded_archived_count: int = 0,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> tuple[ContentCleanupScan, BackgroundJob]:
     if not conversation_ids:
         raise ValueError("At least one active conversation is required.")
-    revisions = active_revisions(db)
+    revisions = active_revisions(db, ownership_scope)
     if not revisions:
         raise ValueError("No active cleanup rules are available.")
     conversations = (
@@ -237,6 +253,7 @@ def create_scan(
             Conversation.id.in_(conversation_ids),
             Conversation.status == "active",
             Conversation.deleted_at.is_(None),
+            ownership_scope.predicate(Conversation),
         )
         .all()
     )
@@ -324,6 +341,7 @@ def create_scan(
             if existing_job is not None:
                 return existing, existing_job
     scan = ContentCleanupScan(
+        owner_user_id=ownership_scope.owner_user_id,
         source=source,
         scope_type=scope_type,
         status="QUEUED",
@@ -349,6 +367,7 @@ def create_scan(
     for revision in revisions:
         db.add(ContentCleanupScanRule(scan_id=scan.id, rule_revision_id=revision.id))
     job = BackgroundJob(
+        owner_user_id=ownership_scope.owner_user_id,
         job_type="content_noise_scan",
         status="queued",
         phase="queued",
@@ -374,6 +393,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
         .filter(ContentCleanupScanRule.scan_id == scan_id)
         .all()
     ]
+    scan_scope = OwnershipScope(scan.owner_user_id, include_legacy_unowned=scan.owner_user_id is None)
     revisions = (
         db.query(ContentCleanupRuleRevision)
         .join(ContentCleanupRule, ContentCleanupRule.id == ContentCleanupRuleRevision.rule_id)
@@ -381,7 +401,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
         .order_by(ContentCleanupRule.detector_id, ContentCleanupRule.name, ContentCleanupRule.id)
         .all()
         if snapshot_revision_ids
-        else active_revisions(db)
+        else active_revisions(db, scan_scope)
     )
     manual_revision = _manual_selection_revision(db) if scan.selection_message_id is not None else None
     target_ids = [row[0] for row in db.query(ContentCleanupScanTarget.conversation_id).filter(ContentCleanupScanTarget.scan_id == scan_id).all()]
@@ -1138,7 +1158,11 @@ def normalize_selection_offsets(
     return converted_start, converted_end
 
 
-def queue_import_scan(db: Session, conversation_ids: list[uuid.UUID]) -> ContentCleanupScan | None:
+def queue_import_scan(
+    db: Session,
+    conversation_ids: list[uuid.UUID],
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> ContentCleanupScan | None:
     """Queue a post-import review without delaying the canonical import commit."""
     if not conversation_ids:
         return None
@@ -1147,5 +1171,6 @@ def queue_import_scan(db: Session, conversation_ids: list[uuid.UUID]) -> Content
         source="IMPORT",
         scope_type="IMPORT_RESULT",
         conversation_ids=conversation_ids,
+        ownership_scope=ownership_scope,
     )
     return scan

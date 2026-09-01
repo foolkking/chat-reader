@@ -1,4 +1,5 @@
 import { getOfflineSearchWorkerUrl } from "./offline-search";
+import { getActiveOfflineStorageContext, type OfflineStorageContext } from "./offline-db";
 
 export type OfflineShellAvailability = "unknown" | "ready" | "unavailable" | "unsupported";
 export type OfflineShellUpdatePhase = "idle" | "checking" | "preparing" | "failed";
@@ -27,11 +28,15 @@ type WorkerStatusResponse = {
   error?: string;
 };
 
-const WORKER_PROTOCOL_VERSION = 1;
+const WORKER_PROTOCOL_VERSION = 2;
 const WORKER_HANDSHAKE_TIMEOUT = 3_000;
 const WORKER_ACTIVATION_TIMEOUT = 15_000;
 const SHELL_META_CACHE = "chat-reader-library-meta-v1";
 const ACTIVE_RECORD_KEY = "/__chat_reader_library_active__";
+const ACTIVE_RECORD_PREFIX = "/__chat_reader_library_active__/";
+const ACTIVE_IDENTITY_KEY = "/__chat_reader_library_identity__";
+const LEGACY_SHELL_CACHE_PREFIX = "chat-reader-library-shell-";
+const NAMESPACED_SHELL_CACHE_PREFIX = "chat-reader-user-library-shell-";
 
 type WorkerProgressResponse = {
   type: "PROGRESS";
@@ -84,9 +89,50 @@ export function markOfflineShellUnsupported(message: string): void {
   });
 }
 
+export async function persistOfflineShellIdentity(context: OfflineStorageContext = getActiveOfflineStorageContext()): Promise<void> {
+  if (typeof window === "undefined" || !("caches" in window)) return;
+  const metadata = await caches.open(SHELL_META_CACHE);
+  await metadata.put(ACTIVE_IDENTITY_KEY, new Response(JSON.stringify({ namespace: context.namespace }), {
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  }));
+}
+
+export async function clearOfflineShellIdentity(context: OfflineStorageContext): Promise<void> {
+  if (typeof window === "undefined" || !("caches" in window)) return;
+  const shellPrefix = context.namespace === "legacy"
+    ? LEGACY_SHELL_CACHE_PREFIX
+    : `${NAMESPACED_SHELL_CACHE_PREFIX}${context.namespace}-`;
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames
+    .filter((cacheName) => cacheName.startsWith(shellPrefix))
+    .map((cacheName) => caches.delete(cacheName)));
+  const metadata = await caches.open(SHELL_META_CACHE);
+  await metadata.delete(context.namespace === "legacy" ? ACTIVE_RECORD_KEY : `${ACTIVE_RECORD_PREFIX}${context.namespace}`);
+  const identityResponse = await metadata.match(ACTIVE_IDENTITY_KEY);
+  const identity = await identityResponse?.json().catch(() => null) as { namespace?: unknown } | null | undefined;
+  if (identity?.namespace === context.namespace) await metadata.delete(ACTIVE_IDENTITY_KEY);
+}
+
+export async function disableOfflineShellAfterIdentityFailure(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if ("caches" in window) {
+    const metadata = await caches.open(SHELL_META_CACHE).catch(() => null);
+    await metadata?.delete(ACTIVE_IDENTITY_KEY).catch(() => false);
+  }
+  if ("serviceWorker" in navigator) {
+    const registration = await navigator.serviceWorker.getRegistration("/library").catch(() => undefined);
+    await registration?.unregister().catch(() => false);
+  }
+}
+
 export function registerLibraryServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (registrationPromise) return registrationPromise;
-  registrationPromise = registerLibraryServiceWorkerInternal().catch((error: unknown) => {
+  registrationPromise = registerLibraryServiceWorkerInternal().then(async (registration) => {
+    const active = registration.active;
+    if (!active) throw new Error("Offline service worker is not active.");
+    await synchronizeLibraryWorkerIdentity(active);
+    return registration;
+  }).catch((error: unknown) => {
     registrationPromise = null;
     const message = error instanceof Error ? error.message : "Service Worker 注册失败。";
     setStatus({
@@ -271,7 +317,7 @@ async function inspectCachedShellFromWindow(): Promise<OfflineShellStatus | null
   if (typeof window === "undefined" || !("caches" in window)) return null;
   try {
     const metadata = await caches.open(SHELL_META_CACHE);
-    const response = await metadata.match(ACTIVE_RECORD_KEY);
+    const response = await metadata.match(activeRecordKey());
     if (!response) return null;
     const record = await response.json() as CachedShellRecord;
     if (!record || typeof record.cacheName !== "string" || !Array.isArray(record.assets)) return null;
@@ -308,6 +354,22 @@ async function inspectCachedShellFromWindow(): Promise<OfflineShellStatus | null
   } catch {
     return null;
   }
+}
+
+async function synchronizeLibraryWorkerIdentity(serviceWorker: ServiceWorker): Promise<void> {
+  const context = getActiveOfflineStorageContext();
+  const result = await postMessage(serviceWorker, {
+    type: "SET_LIBRARY_IDENTITY",
+    namespace: context.namespace,
+  });
+  if (!result.ok || result.protocolVersion !== WORKER_PROTOCOL_VERSION) {
+    throw new Error(result.error ?? "Offline identity could not be synchronized.");
+  }
+}
+
+function activeRecordKey(): string {
+  const { namespace } = getActiveOfflineStorageContext();
+  return namespace === "legacy" ? ACTIVE_RECORD_KEY : `${ACTIVE_RECORD_PREFIX}${namespace}`;
 }
 
 function startOfflineShellReconciliation(

@@ -27,6 +27,7 @@ from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
 from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn_from_query
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
 
 class ShareError(ValueError):
@@ -47,13 +48,23 @@ class ShareCreateResult:
     share_url: str
 
 
-def create_share(db: Session, conversation_id: uuid.UUID, payload: ShareCreate) -> ShareCreateResult:
-    conversation = _get_conversation(db, conversation_id)
+def create_share(
+    db: Session,
+    conversation_id: uuid.UUID,
+    payload: ShareCreate,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> ShareCreateResult:
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
+    if conversation is None:
+        raise ShareError("Conversation not found.", HTTPStatus.NOT_FOUND)
     _validate_share_payload(db, conversation, payload)
     token = secrets.token_urlsafe(32)
     share_url = f"{get_settings().public_web_base_url.rstrip('/')}/share/{token}"
     now = _utc_now()
-    preferences = get_or_create_preferences(db)
+    preferences = get_or_create_preferences(
+        db,
+        subject_key=(str(ownership_scope.owner_user_id) if ownership_scope.owner_user_id else "local:default"),
+    )
     theme = payload.theme or (preferences.theme_mode if preferences.theme_mode in {"light", "dark"} else "light")
     locale = payload.locale or (preferences.locale_mode if preferences.locale_mode in {"zh-CN", "en-US"} else "zh-CN")
     share = Share(
@@ -103,10 +114,14 @@ def list_shares(
     db: Session,
     conversation_id: uuid.UUID | None = None,
     include_revoked: bool = False,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> list[Share]:
-    query = db.query(Share)
+    query = db.query(Share).join(Conversation, Conversation.id == Share.conversation_id).filter(
+        ownership_scope.predicate(Conversation)
+    )
     if conversation_id is not None:
-        _get_conversation(db, conversation_id)
+        if get_owned(db, Conversation, conversation_id, ownership_scope) is None:
+            raise ShareError("Conversation not found.", HTTPStatus.NOT_FOUND)
         query = query.filter(Share.conversation_id == conversation_id)
     if not include_revoked:
         query = query.filter(Share.revoked_at.is_(None))
@@ -319,9 +334,11 @@ def get_shared_annotations(db: Session, token: str, unlock_token: str | None = N
     share = _get_accessible_share(db, token, unlock_token)
     if not share.include_annotations:
         return []
+    conversation = db.get(Conversation, share.conversation_id)
+    subject_key = str(conversation.owner_user_id) if conversation and conversation.owner_user_id else "local:default"
     query = db.query(ConversationAnnotation).filter(
         ConversationAnnotation.conversation_id == share.conversation_id,
-        ConversationAnnotation.subject_key == "local:default",
+        ConversationAnnotation.subject_key == subject_key,
         ConversationAnnotation.is_deleted.is_(False),
     )
     if share.scope == "selected_messages":
@@ -333,15 +350,26 @@ def get_shared_notebook(db: Session, token: str, unlock_token: str | None = None
     share = _get_accessible_share(db, token, unlock_token)
     if not share.include_notebook:
         return None
+    conversation = db.get(Conversation, share.conversation_id)
+    subject_key = str(conversation.owner_user_id) if conversation and conversation.owner_user_id else "local:default"
     return db.query(ConversationNotebook).filter(
         ConversationNotebook.conversation_id == share.conversation_id,
-        ConversationNotebook.subject_key == "local:default",
+        ConversationNotebook.subject_key == subject_key,
         ConversationNotebook.is_conflict.is_(False),
     ).order_by(ConversationNotebook.created_at.asc()).first()
 
 
-def revoke_share(db: Session, share_id: uuid.UUID) -> Share:
-    share = db.get(Share, share_id)
+def revoke_share(
+    db: Session,
+    share_id: uuid.UUID,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> Share:
+    share = (
+        db.query(Share)
+        .join(Conversation, Conversation.id == Share.conversation_id)
+        .filter(Share.id == share_id, ownership_scope.predicate(Conversation))
+        .first()
+    )
     if share is None:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
     if share.revoked_at is None:
@@ -361,8 +389,18 @@ def revoke_share(db: Session, share_id: uuid.UUID) -> Share:
     return share
 
 
-def update_share(db: Session, share_id: uuid.UUID, payload: ShareUpdate) -> Share:
-    share = db.get(Share, share_id)
+def update_share(
+    db: Session,
+    share_id: uuid.UUID,
+    payload: ShareUpdate,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> Share:
+    share = (
+        db.query(Share)
+        .join(Conversation, Conversation.id == Share.conversation_id)
+        .filter(Share.id == share_id, ownership_scope.predicate(Conversation))
+        .first()
+    )
     if share is None:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
     provided_fields = payload.model_fields_set

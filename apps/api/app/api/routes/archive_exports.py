@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.export_artifact import ExportArtifact
 from app.models.background_job import BackgroundJob
+from app.models.conversation import Conversation
 from app.schemas.task import BackgroundTaskRead
 from app.schemas.export import ExportRequest
 from app.services.background_jobs import queue_conversation_auto_clean, queue_conversation_derived_rebuild, queue_conversation_export
@@ -19,6 +20,7 @@ from app.services.exporting.cr_archive import ARCHIVE_MIME
 from app.services.exporting.attachment_bundle import BUNDLE_MIME, CANJSON_BUNDLE_FORMAT, MARKDOWN_BUNDLE_FORMAT
 from app.services.exporting.context_package import CONTEXT_PACKAGE_FORMAT, CONTEXT_PACKAGE_MIME
 from app.services.artifact_lifecycle import validate_final_artifact
+from app.services.ownership import get_owned, ownership_scope_from_request
 from app.services.exporting.export_service import (
     ExportError,
     content_disposition,
@@ -36,6 +38,7 @@ router = APIRouter(tags=["exports"])
 )
 def queue_archive_export(
     conversation_id: uuid.UUID,
+    request: Request,
     payload: ExportRequest | None = Body(default=None),
     include_description: bool = False,
     include_annotations: bool = False,
@@ -43,6 +46,9 @@ def queue_archive_export(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead | StreamingResponse:
+    ownership_scope = ownership_scope_from_request(request)
+    if get_owned(db, Conversation, conversation_id, ownership_scope) is None:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
     if payload is not None and payload.format in {"markdown_v2", "canjson_v2"}:
         try:
             options = payload.to_options()
@@ -78,6 +84,7 @@ def queue_archive_export(
             export_format=payload.format if payload is not None else "cr_v2",
             context_scope=payload.context_scope if payload is not None else "full_conversation",
             start_message_id=payload.start_message_id if payload is not None else None,
+            ownership_scope=ownership_scope,
         )
         db.commit()
     except MessageEditError as exc:
@@ -93,6 +100,7 @@ def queue_archive_export(
 )
 def queue_archive_auto_clean(
     conversation_id: uuid.UUID,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
@@ -101,6 +109,7 @@ def queue_archive_auto_clean(
             db,
             conversation_id=conversation_id,
             idempotency_key=idempotency_key,
+            ownership_scope=ownership_scope_from_request(request),
         )
         db.commit()
     except MessageEditError as exc:
@@ -116,6 +125,7 @@ def queue_archive_auto_clean(
 )
 def queue_derived_rebuild(
     conversation_id: uuid.UUID,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
@@ -124,6 +134,7 @@ def queue_derived_rebuild(
             db,
             conversation_id=conversation_id,
             idempotency_key=idempotency_key,
+            ownership_scope=ownership_scope_from_request(request),
         )
         db.commit()
     except MessageEditError as exc:
@@ -133,12 +144,19 @@ def queue_derived_rebuild(
 
 
 @router.get("/api/exports/{artifact_id}/download")
-def download_archive(artifact_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse:
+def download_archive(
+    artifact_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> FileResponse:
     artifact = db.get(ExportArtifact, artifact_id)
     if artifact is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export not found.")
     job = db.get(BackgroundJob, artifact.job_id)
-    if job is None or job.status != "committed":
+    ownership_scope = ownership_scope_from_request(request)
+    if job is None or get_owned(db, BackgroundJob, job.id, ownership_scope) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export not found.")
+    if job.status != "committed":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Export artifact is not ready.")
     expires_at = artifact.expires_at
     if expires_at.tzinfo is None:

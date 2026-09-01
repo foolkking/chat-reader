@@ -24,6 +24,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.adaptive_imports import router as adaptive_imports_router
 from app.api.routes.content_cleanup import router as content_cleanup_router
 from app.api.routes.skills import router as skills_router
+from app.api.routes.admin_access import router as admin_access_router
 from app.core.auth_middleware import AuthenticationMiddleware
 from app.core.observability import RequestObservabilityMiddleware
 
@@ -67,3 +68,4 @@ app.include_router(auth_router)
 app.include_router(adaptive_imports_router)
 app.include_router(content_cleanup_router)
 app.include_router(skills_router)
+app.include_router(admin_access_router)

@@ -1,10 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.routes.conversations import _conversation_item
 from app.core.database import get_db
+from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
@@ -35,12 +36,14 @@ from app.services.projects.project_service import (
     set_project_conversation_pin,
     update_project,
 )
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
 @router.get("", response_model=list[ProjectRead])
 def get_projects(
+    request: Request,
     include_archived: bool = False,
     sort: str = Query(
         default="recent_read",
@@ -49,14 +52,22 @@ def get_projects(
     direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ) -> list[ProjectRead]:
-    projects = list_projects(db, include_archived=include_archived, sort=sort, direction=direction)
+    ownership_scope = ownership_scope_from_request(request)
+    projects = list_projects(
+        db,
+        include_archived=include_archived,
+        sort=sort,
+        direction=direction,
+        ownership_scope=ownership_scope,
+    )
     db.commit()
-    counts = project_counts_many(db, [project.id for project in projects])
-    return [_project_read(project, db, counts=counts.get(project.id)) for project in projects]
+    counts = project_counts_many(db, [project.id for project in projects], ownership_scope)
+    return [_project_read(project, db, ownership_scope, counts=counts.get(project.id)) for project in projects]
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
-def create_project_route(payload: ProjectCreate, db: Session = Depends(get_db)) -> ProjectRead:
+def create_project_route(payload: ProjectCreate, request: Request, db: Session = Depends(get_db)) -> ProjectRead:
+    ownership_scope = ownership_scope_from_request(request)
     try:
         project = create_project(
             db,
@@ -64,31 +75,36 @@ def create_project_route(payload: ProjectCreate, db: Session = Depends(get_db)) 
             description=payload.description,
             color=payload.color,
             icon=payload.icon,
+            ownership_scope=ownership_scope,
         )
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return _project_read(project, db)
+    return _project_read(project, db, ownership_scope)
 
 
 @router.patch("/{project_id}", response_model=ProjectRead)
-def update_project_route(project_id: uuid.UUID, payload: ProjectUpdate, db: Session = Depends(get_db)) -> ProjectRead:
-    project = _get_project_or_404(project_id, db)
+def update_project_route(
+    project_id: uuid.UUID, payload: ProjectUpdate, request: Request, db: Session = Depends(get_db)
+) -> ProjectRead:
+    ownership_scope = ownership_scope_from_request(request)
+    project = _get_project_or_404(project_id, db, ownership_scope)
     try:
         update_project(db, project, payload.model_dump(exclude_unset=True))
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return _project_read(project, db)
+    return _project_read(project, db, ownership_scope)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project_route(project_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
-    project = _get_project_or_404(project_id, db)
+def delete_project_route(project_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> None:
+    ownership_scope = ownership_scope_from_request(request)
+    project = _get_project_or_404(project_id, db, ownership_scope)
     try:
-        delete_archived_project(db, project)
+        delete_archived_project(db, project, ownership_scope)
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()
@@ -99,25 +115,29 @@ def delete_project_route(project_id: uuid.UUID, db: Session = Depends(get_db)) -
 def place_project_route(
     project_id: uuid.UUID,
     payload: ProjectPlacementRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ProjectRead:
+    ownership_scope = ownership_scope_from_request(request)
     try:
         project = place_project(
             db,
             project_id=project_id,
             before_project_id=payload.before_project_id,
             after_project_id=payload.after_project_id,
+            ownership_scope=ownership_scope,
         )
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-    return _project_read(project, db)
+    return _project_read(project, db, ownership_scope)
 
 
 @router.get("/{project_id}/conversations", response_model=list[ProjectConversationRead])
 def get_project_conversations(
     project_id: uuid.UUID,
+    request: Request,
     limit: int = Query(default=50, ge=1, le=5000),
     offset: int = Query(default=0, ge=0),
     sort: str = Query(
@@ -127,6 +147,7 @@ def get_project_conversations(
     direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
 ) -> list[ProjectConversationRead]:
+    ownership_scope = ownership_scope_from_request(request)
     try:
         relations = list_project_conversations(
             db,
@@ -135,6 +156,7 @@ def get_project_conversations(
             offset=offset,
             sort=sort,
             direction=direction,
+            ownership_scope=ownership_scope,
         )
     except ProjectServiceError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -142,8 +164,11 @@ def get_project_conversations(
 
 
 @router.put("/order", status_code=status.HTTP_204_NO_CONTENT)
-def update_project_order(payload: ProjectOrderUpdate, db: Session = Depends(get_db)) -> None:
-    rows = db.query(Project).filter(Project.id.in_(payload.project_ids)).all()
+def update_project_order(payload: ProjectOrderUpdate, request: Request, db: Session = Depends(get_db)) -> None:
+    ownership_scope = ownership_scope_from_request(request)
+    rows = db.query(Project).filter(
+        ownership_scope.predicate(Project), Project.id.in_(payload.project_ids)
+    ).all()
     if len(rows) != len(set(payload.project_ids)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
     by_id = {row.id: row for row in rows}
@@ -153,25 +178,30 @@ def update_project_order(payload: ProjectOrderUpdate, db: Session = Depends(get_
 
 
 @router.post("/{project_id}/recent", response_model=ProjectRead)
-def record_project_recent_route(project_id: uuid.UUID, db: Session = Depends(get_db)) -> ProjectRead:
+def record_project_recent_route(project_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> ProjectRead:
+    ownership_scope = ownership_scope_from_request(request)
     try:
-        project = record_project_recent(db, project_id)
+        project = record_project_recent(db, project_id, ownership_scope)
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    return _project_read(project, db)
+    return _project_read(project, db, ownership_scope)
 
 
 @router.put("/{project_id}/conversations/order", status_code=status.HTTP_204_NO_CONTENT)
 def update_project_conversation_order(
     project_id: uuid.UUID,
     payload: ProjectConversationOrderUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> None:
-    rows = db.query(ProjectConversation).filter(
+    ownership_scope = ownership_scope_from_request(request)
+    _get_project_or_404(project_id, db, ownership_scope)
+    rows = db.query(ProjectConversation).join(Conversation, Conversation.id == ProjectConversation.conversation_id).filter(
         ProjectConversation.project_id == project_id,
         ProjectConversation.conversation_id.in_(payload.conversation_ids),
+        ownership_scope.predicate(Conversation),
     ).all()
     if len(rows) != len(set(payload.conversation_ids)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project conversation not found.")
@@ -185,10 +215,14 @@ def update_project_conversation_order(
 def add_project_conversation(
     project_id: uuid.UUID,
     conversation_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ProjectConversationRead:
+    ownership_scope = ownership_scope_from_request(request)
     try:
-        relation = add_conversation_to_project(db, project_id, conversation_id, added_by="user")
+        relation = add_conversation_to_project(
+            db, project_id, conversation_id, added_by="user", ownership_scope=ownership_scope
+        )
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()
@@ -200,10 +234,12 @@ def add_project_conversation(
 def remove_project_conversation(
     project_id: uuid.UUID,
     conversation_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> None:
+    ownership_scope = ownership_scope_from_request(request)
     try:
-        remove_conversation_from_project(db, project_id, conversation_id)
+        remove_conversation_from_project(db, project_id, conversation_id, ownership_scope)
         db.commit()
     except ProjectServiceError as exc:
         db.rollback()
@@ -215,10 +251,14 @@ def pin_project_conversation(
     project_id: uuid.UUID,
     conversation_id: uuid.UUID,
     payload: ProjectConversationPinUpdate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> ProjectConversationRead:
+    ownership_scope = ownership_scope_from_request(request)
     try:
-        relation = set_project_conversation_pin(db, project_id, conversation_id, payload.is_pinned)
+        relation = set_project_conversation_pin(
+            db, project_id, conversation_id, payload.is_pinned, ownership_scope
+        )
         db.add(
             ConversationEvent(
                 conversation_id=conversation_id,
@@ -239,15 +279,15 @@ def pin_project_conversation(
     return _project_conversation_read(relation)
 
 
-def _get_project_or_404(project_id: uuid.UUID, db: Session) -> Project:
-    project = db.get(Project, project_id)
+def _get_project_or_404(project_id: uuid.UUID, db: Session, ownership_scope: OwnershipScope) -> Project:
+    project = get_owned(db, Project, project_id, ownership_scope)
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
     return project
 
 
-def _project_read(project: Project, db: Session, *, counts=None) -> ProjectRead:
-    counts = counts or project_counts(db, project.id)
+def _project_read(project: Project, db: Session, ownership_scope: OwnershipScope, *, counts=None) -> ProjectRead:
+    counts = counts or project_counts(db, project.id, ownership_scope)
     return ProjectRead(
         id=project.id,
         name=project.name,

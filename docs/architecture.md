@@ -17,7 +17,15 @@ flowchart LR
   Q --> X
 ```
 
-## Current authentication boundary
+## 当前工作树认证与 owner 边界（2026-09-01）
+
+当前工作树把原有单 owner 会话边界扩展为一个部署管理员和 `USER` 账号。API
+从会话取得 owner UUID，并将 conversations、projects、attachments、annotations、
+exports、offline packages、tasks、skills 与 cleanup rules 限定到该 owner。Share
+仍是 token-scoped，Offline 仍是本地只读边界。`20260901_0030_multi_account_users.py`
+存在于源码但尚未应用到生产；下方旧单用户段落保留为发布历史。
+
+## Historical authentication boundary
 
 The browser and FastAPI now enforce a default-deny single-owner session
 boundary for private business routes. Coarse health, the minimal
@@ -56,7 +64,8 @@ Conversation -> ConversationEvent / Share / ReadingPosition
 Conversation -> ConversationAnnotation / ConversationNotebook
 AssetObject -> Attachment(conversation_id) -> MessageVersionAttachment occurrence
 AttachmentUploadSession -> AttachmentUploadItem -> Attachment (explicit finalize)
-local:default -> UserPreference / RecentItem
+User UUID -> UserPreference / RecentItem / ReadingPosition / Annotation / Notebook / Skill
+local:default -> legacy development/test fallback only
 ```
 
 - `Conversation` 保存标题、来源、状态、统计和全局置顶信息。

@@ -10,11 +10,12 @@ from typing import Protocol
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHash, VerifyMismatchError, VerificationError
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthSession
+from app.models.user import User
 
 OWNER_PRINCIPAL_ID = "owner"
 SESSION_COOKIE_NAME = "chat_reader_session"
@@ -28,12 +29,15 @@ LOGIN_BACKOFF_AFTER = 3
 LOGIN_BACKOFF_MAX_SECONDS = 30
 
 _password_hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)
+_dummy_password_hash = _password_hasher.hash("chat-reader-dummy-credential-check")
 
 
 @dataclass(frozen=True)
 class AuthContext:
     principal_id: str
     session_id: uuid.UUID
+    user_id: uuid.UUID | None = None
+    role: str = "ADMIN"
 
 
 @dataclass(frozen=True)
@@ -103,15 +107,35 @@ def token_digest(token: str, settings: Settings) -> str:
     return hmac.new(secret, token.encode("ascii"), hashlib.sha256).hexdigest()
 
 
-def provision_owner(db: Session, password: str, settings: Settings, *, now: datetime | None = None) -> AuthPrincipal:
+def provision_owner(
+    db: Session,
+    password: str,
+    settings: Settings,
+    *,
+    now: datetime | None = None,
+    allow_weak_initial: bool = False,
+) -> AuthPrincipal:
     now = now or utc_now()
     # Validate the deployment secret before mutating canonical credential state.
     token_digest(secrets.token_urlsafe(32), settings)
-    password_hash = hash_password(password)
     principal = db.get(AuthPrincipal, OWNER_PRINCIPAL_ID)
+    initial_account = principal is None
+    if principal is not None and principal.user_id:
+        current_user = db.get(User, principal.user_id)
+        initial_account = current_user is None or current_user.normalized_email is None
+    if allow_weak_initial and initial_account and 6 <= len(password) <= PASSWORD_MAX_LENGTH:
+        password_hash = _password_hasher.hash(password)
+    else:
+        password_hash = hash_password(password)
+    legacy_user = db.query(User).filter(User.normalized_email.is_(None), User.role == "ADMIN").order_by(User.created_at.asc()).first()
+    if legacy_user is None:
+        legacy_user = User(id=uuid.uuid4(), display_name="Administrator", role="ADMIN", status="ACTIVE", credential_version=1, created_at=now, updated_at=now)
+        db.add(legacy_user)
+        db.flush()
     if principal is None:
         principal = AuthPrincipal(
             id=OWNER_PRINCIPAL_ID,
+            user_id=legacy_user.id,
             password_hash=password_hash,
             credential_version=1,
             created_at=now,
@@ -119,9 +143,12 @@ def provision_owner(db: Session, password: str, settings: Settings, *, now: date
         )
         db.add(principal)
     else:
+        principal.user_id = principal.user_id or legacy_user.id
         principal.password_hash = password_hash
         principal.credential_version += 1
         principal.updated_at = now
+        legacy_user.credential_version = principal.credential_version
+        legacy_user.updated_at = now
         db.execute(
             update(AuthSession)
             .where(AuthSession.principal_id == OWNER_PRINCIPAL_ID, AuthSession.revoked_at.is_(None))
@@ -141,6 +168,7 @@ def issue_session(
     settings: Settings,
     *,
     now: datetime | None = None,
+    device_label: str = "Unknown device",
 ) -> tuple[str, AuthSession]:
     now = now or utc_now()
     token = secrets.token_urlsafe(48)
@@ -148,6 +176,7 @@ def issue_session(
         principal_id=principal.id,
         token_digest=token_digest(token, settings),
         credential_version=principal.credential_version,
+        device_label=device_label[:120] or "Unknown device",
         created_at=now,
         last_activity_at=now,
     )
@@ -155,6 +184,21 @@ def issue_session(
     db.commit()
     db.refresh(session)
     return token, session
+
+
+def describe_user_agent(user_agent: str | None) -> str:
+    value = (user_agent or "").casefold()
+    browser = (
+        "Edge" if "edg/" in value else "Firefox" if "firefox/" in value else
+        "Chrome" if "chrome/" in value or "chromium/" in value else
+        "Safari" if "safari/" in value else "Browser"
+    )
+    os_name = (
+        "Windows" if "windows" in value else "macOS" if "mac os" in value else
+        "Android" if "android" in value else "iOS" if "iphone" in value or "ipad" in value else
+        "Linux" if "linux" in value else "device"
+    )
+    return f"{browser} on {os_name}"
 
 
 def authenticate_session(
@@ -178,6 +222,11 @@ def authenticate_session(
     principal = db.get(AuthPrincipal, session.principal_id)
     if principal is None or session.credential_version != principal.credential_version:
         return None
+    user = db.get(User, principal.user_id) if principal.user_id is not None else None
+    if user is not None and (user.status != "ACTIVE" or session.credential_version != user.credential_version):
+        session.revoked_at = now
+        db.commit()
+        return None
     if now - _utc(session.last_activity_at) >= timedelta(seconds=settings.auth_inactivity_timeout_seconds):
         session.revoked_at = now
         db.commit()
@@ -191,7 +240,12 @@ def authenticate_session(
         db.commit()
         touched = True
     return SessionAuthentication(
-        context=AuthContext(principal_id=principal.id, session_id=session.id),
+        context=AuthContext(
+            principal_id=principal.id,
+            session_id=session.id,
+            user_id=user.id if user is not None else None,
+            role=user.role if user is not None else "ADMIN",
+        ),
         session=session,
         touched=touched,
     )
@@ -238,27 +292,179 @@ def verify_login(db: Session, password: str, *, now: datetime | None = None) -> 
     return None
 
 
+def normalize_email(email: str) -> str:
+    value = email.strip().casefold()
+    if not value or "@" not in value or len(value) > 320 or any(ch.isspace() for ch in value):
+        raise ValueError("Enter a valid email address.")
+    local, _, domain = value.rpartition("@")
+    if not local or not domain or "." not in domain:
+        raise ValueError("Enter a valid email address.")
+    return value
+
+
+def verify_login_for_email(
+    db: Session,
+    email: str,
+    password: str,
+    *,
+    now: datetime | None = None,
+) -> AuthPrincipal | None:
+    """Authenticate an account without revealing whether its email exists."""
+    normalized = normalize_email(email)
+    user = db.query(User).filter(func.lower(User.normalized_email) == normalized).one_or_none()
+    principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == user.id).one_or_none() if user else None
+    throttle_id = principal.id if principal is not None else f"email:{normalized}"
+    # Unknown addresses intentionally use the same password verification path
+    # and generic failure response; no user row is created on failed login.
+    if principal is None or user is None:
+        verify_password(_dummy_password_hash, password)
+        return None
+    if user.status != "ACTIVE":
+        verify_password(principal.password_hash, password)
+        return None
+    return _verify_principal_login(db, principal, password, throttle_id=throttle_id, now=now)
+
+
+def _verify_principal_login(
+    db: Session,
+    principal: AuthPrincipal,
+    password: str,
+    *,
+    throttle_id: str,
+    now: datetime | None = None,
+) -> AuthPrincipal | None:
+    now = now or utc_now()
+    throttle = db.get(AuthLoginThrottle, principal.id)
+    if throttle is not None and throttle.blocked_until is not None and _utc(throttle.blocked_until) > now:
+        retry = int((_utc(throttle.blocked_until) - now).total_seconds()) + 1
+        raise LoginThrottled(retry)
+    if verify_password(principal.password_hash, password):
+        if throttle is not None:
+            db.delete(throttle)
+            db.commit()
+        return principal
+    if throttle is None:
+        throttle = AuthLoginThrottle(principal_id=principal.id, failed_attempts=0, updated_at=now)
+        db.add(throttle)
+    throttle.failed_attempts += 1
+    throttle.updated_at = now
+    if throttle.failed_attempts >= LOGIN_BACKOFF_AFTER:
+        delay = min(LOGIN_BACKOFF_MAX_SECONDS, 2 ** (throttle.failed_attempts - LOGIN_BACKOFF_AFTER))
+        throttle.blocked_until = now + timedelta(seconds=delay)
+    db.commit()
+    return None
+
+
+def register_user(
+    db: Session,
+    email: str,
+    password: str,
+    *,
+    display_name: str | None = None,
+    now: datetime | None = None,
+) -> tuple[User, AuthPrincipal]:
+    normalized = normalize_email(email)
+    validate_new_password(password)
+    if db.query(User).filter(func.lower(User.normalized_email) == normalized).first() is not None:
+        raise ValueError("An account with this email already exists.")
+    now = now or utc_now()
+    user = User(
+        id=uuid.uuid4(),
+        normalized_email=normalized,
+        display_name=display_name.strip()[:200] if display_name and display_name.strip() else None,
+        role="USER",
+        status="ACTIVE",
+        credential_version=1,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(user)
+    db.flush()
+    principal = AuthPrincipal(
+        id=f"user:{user.id}",
+        user_id=user.id,
+        password_hash=hash_password(password),
+        credential_version=1,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(principal)
+    db.flush()
+    return user, principal
+
+
+def legacy_account_setup_required(db: Session) -> bool:
+    principal = db.get(AuthPrincipal, OWNER_PRINCIPAL_ID)
+    if principal is None or principal.user_id is None:
+        return False
+    user = db.get(User, principal.user_id)
+    return user is not None and user.normalized_email is None
+
+
+def upgrade_legacy_owner(
+    db: Session,
+    *,
+    current_password: str,
+    email: str,
+    display_name: str | None = None,
+    now: datetime | None = None,
+) -> User:
+    now = now or utc_now()
+    principal = db.get(AuthPrincipal, OWNER_PRINCIPAL_ID)
+    if principal is None or principal.user_id is None:
+        raise ValueError("Legacy account setup is not available.")
+    user = db.get(User, principal.user_id)
+    if user is None or user.normalized_email is not None:
+        raise ValueError("Legacy account setup is already complete.")
+    if not verify_password(principal.password_hash, current_password):
+        raise PermissionError("Current password is incorrect.")
+    normalized = normalize_email(email)
+    if db.query(User).filter(func.lower(User.normalized_email) == normalized, User.id != user.id).first():
+        raise ValueError("An account with this email already exists.")
+    user.normalized_email = normalized
+    user.display_name = display_name.strip()[:200] if display_name and display_name.strip() else user.display_name
+    user.role = "ADMIN"
+    user.status = "ACTIVE"
+    user.updated_at = now
+    principal.credential_version += 1
+    principal.updated_at = now
+    user.credential_version = principal.credential_version
+    db.execute(
+        update(AuthSession)
+        .where(AuthSession.principal_id == principal.id, AuthSession.revoked_at.is_(None))
+        .values(revoked_at=now)
+    )
+    db.flush()
+    return user
+
+
 def change_password(
     db: Session,
     current_password: str,
     new_password: str,
     *,
+    principal_id: str = OWNER_PRINCIPAL_ID,
     now: datetime | None = None,
 ) -> bool:
     now = now or utc_now()
-    principal = db.get(AuthPrincipal, OWNER_PRINCIPAL_ID)
+    principal = db.get(AuthPrincipal, principal_id)
     if principal is None or not verify_password(principal.password_hash, current_password):
         return False
     validate_new_password(new_password)
     principal.password_hash = hash_password(new_password)
     principal.credential_version += 1
     principal.updated_at = now
+    if principal.user_id is not None:
+        user = db.get(User, principal.user_id)
+        if user is not None:
+            user.credential_version += 1
+            user.updated_at = now
     db.execute(
         update(AuthSession)
-        .where(AuthSession.principal_id == OWNER_PRINCIPAL_ID, AuthSession.revoked_at.is_(None))
+        .where(AuthSession.principal_id == principal_id, AuthSession.revoked_at.is_(None))
         .values(revoked_at=now)
     )
-    throttle = db.get(AuthLoginThrottle, OWNER_PRINCIPAL_ID)
+    throttle = db.get(AuthLoginThrottle, principal_id)
     if throttle is not None:
         db.delete(throttle)
     db.commit()

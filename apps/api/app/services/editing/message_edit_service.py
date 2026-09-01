@@ -29,6 +29,7 @@ from app.services.import_pipeline.canonical_draft import (
 )
 from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 from app.services.search.search_indexer import (
     rebuild_search_and_toc_for_conversation,
 )
@@ -516,6 +517,9 @@ def merge_conversations(
     if len(unique_ids) != len(conversation_ids):
         raise MessageEditError("Duplicate conversation ids are not allowed.")
     conversations = [_get_active_conversation(db, conversation_id) for conversation_id in unique_ids]
+    owner_user_ids = {conversation.owner_user_id for conversation in conversations}
+    if len(owner_user_ids) != 1:
+        raise MessageEditError("Every conversation must belong to the same account.", HTTPStatus.NOT_FOUND)
     merged_title = (title or " / ".join(conversation.display_title for conversation in conversations[:2])).strip()
     if not merged_title:
         merged_title = "Merged conversation"
@@ -526,6 +530,7 @@ def merge_conversations(
         source_type="merged",
         source_profile="merged",
         status="processing",
+        owner_user_id=conversations[0].owner_user_id,
     )
     copy_result = copy_conversation_history(
         db,
@@ -592,6 +597,7 @@ def split_conversation(
         title=split_title,
         source_type="split",
         source_profile="split",
+        owner_user_id=source.owner_user_id,
     )
     copied_count = _copy_messages_to_conversation(
         db=db,
@@ -696,6 +702,7 @@ def execute_conversation_split(
             title=title,
             source_type="split",
             source_profile=mode,
+            owner_user_id=source.owner_user_id,
         )
         copied_count = _copy_messages_to_conversation(
             db=db,
@@ -1386,9 +1393,11 @@ def _create_empty_conversation(
     source_type: str,
     source_profile: str,
     status: str = "active",
+    owner_user_id: uuid.UUID | None = None,
 ) -> Conversation:
     conversation = Conversation(
         id=uuid.uuid4(),
+        owner_user_id=owner_user_id,
         title=title,
         display_title=title,
         source_type=source_type,
@@ -1411,6 +1420,7 @@ def create_manual_conversation(
     user_text: str,
     assistant_text: str,
     project_id: uuid.UUID | None = None,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ConversationCreateResult:
     title = title.strip() or "New conversation"
     now = utc_now()
@@ -1419,13 +1429,20 @@ def create_manual_conversation(
         title=title,
         source_type="manual",
         source_profile="chat_reader_manual",
+        owner_user_id=ownership_scope.owner_user_id,
     )
     conversation.created_at = now
     conversation.updated_at = now
     conversation.sort_time = now
     if project_id is None:
-        project_id = ensure_default_project(db).id
-    add_conversation_to_project(db, project_id, conversation.id, added_by="user")
+        project_id = ensure_default_project(db, ownership_scope).id
+    add_conversation_to_project(
+        db,
+        project_id,
+        conversation.id,
+        added_by="user",
+        ownership_scope=ownership_scope,
+    )
     messages: list[Message] = []
     for index, (role, text) in enumerate((("user", user_text), ("assistant", assistant_text)), start=1):
         message, _version = _create_message_with_version(
@@ -1805,10 +1822,23 @@ def _attach_conversation_to_project(
     conversation_id: uuid.UUID,
     project_id: uuid.UUID | None,
 ) -> None:
-    if project_id is not None and db.get(Project, project_id) is None:
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        raise MessageEditError("Conversation not found.", HTTPStatus.NOT_FOUND)
+    ownership_scope = OwnershipScope(
+        conversation.owner_user_id,
+        include_legacy_unowned=conversation.owner_user_id is None,
+    )
+    if project_id is not None and get_owned(db, Project, project_id, ownership_scope) is None:
         raise MessageEditError("Project not found.", HTTPStatus.NOT_FOUND)
-    target_project_id = project_id if project_id is not None else ensure_default_project(db).id
-    add_conversation_to_project(db, target_project_id, conversation_id, added_by="system")
+    target_project_id = project_id if project_id is not None else ensure_default_project(db, ownership_scope).id
+    add_conversation_to_project(
+        db,
+        target_project_id,
+        conversation_id,
+        added_by="system",
+        ownership_scope=ownership_scope,
+    )
 
 
 def _next_version_number(db: Session, message_id: uuid.UUID) -> int:

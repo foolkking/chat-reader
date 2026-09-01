@@ -14,6 +14,7 @@ from app.models.import_record import ImportRecord
 from app.services.canonical.persistence import CommitImportResult, commit_import_preview
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.services.content_cleanup import queue_import_scan
+from app.services.ownership import OwnershipScope
 from app.core.observability import structured_event
 
 logger = logging.getLogger(__name__)
@@ -151,7 +152,11 @@ def process_import(
             # never turn a successful canonical import into a failed import.
             try:
                 with db.begin_nested():
-                    queue_import_scan(db, result.conversation_ids)
+                    queue_import_scan(
+                        db,
+                        result.conversation_ids,
+                        OwnershipScope(record.owner_user_id, include_legacy_unowned=record.owner_user_id is None),
+                    )
             except Exception as exc:  # pragma: no cover - operational guard
                 structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
             db.commit()

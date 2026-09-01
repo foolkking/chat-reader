@@ -16,6 +16,9 @@ class ImportRecord(Base):
     __tablename__ = "imports"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     source_profile: Mapped[str] = mapped_column(String, nullable=False)
     source_fingerprint: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="previewed")
@@ -75,3 +78,4 @@ class ImportRecord(Base):
 
 
 Index("idx_imports_status_queued_at", ImportRecord.status, ImportRecord.queued_at)
+Index("idx_imports_owner_status_queued", ImportRecord.owner_user_id, ImportRecord.status, ImportRecord.queued_at)

@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 const password = process.env.E2E_AUTH_PASSWORD;
+const email = process.env.E2E_AUTH_EMAIL;
 
-test.describe("single-owner authentication boundary", () => {
+test.describe("multi-account authentication boundary", () => {
   test.describe.configure({ mode: "serial" });
-  test.skip(!password, "Authentication E2E requires an isolated auth-enabled API and E2E_AUTH_PASSWORD.");
+  test.skip(!password || !email, "Authentication E2E requires an isolated auth-enabled API, E2E_AUTH_EMAIL and E2E_AUTH_PASSWORD.");
 
   test("new device, protected routes, logout and PWA cache boundary", async ({ browser, baseURL }) => {
     const context = await browser.newContext();
@@ -12,14 +13,16 @@ test.describe("single-owner authentication boundary", () => {
 
     await page.goto(`${baseURL}/library`);
     await expect(page).toHaveURL(/\/login(?:\?|$)/);
-    expect(await page.locator("#owner-password").count()).toBe(1);
+    expect(await page.locator("#login-password").count()).toBe(1);
 
-    await page.locator("#owner-password").fill("wrong password");
-    await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.locator("p[role='alert']")).toHaveText("Incorrect password.");
+    await page.locator("#login-email").fill(email!);
+    await page.locator("#login-password").fill("wrong password");
+    await page.getByRole("button", { name: /Sign in|登录/ }).click();
+    await expect(page.locator("p[role='alert']")).toHaveText(/Email or password is incorrect\.|邮箱或密码不正确。/);
 
-    await page.locator("#owner-password").fill(password!);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.locator("#login-email").fill(email!);
+    await page.locator("#login-password").fill(password!);
+    await page.getByRole("button", { name: /Sign in|登录/ }).click();
     await expect(page).toHaveURL(/\/library$/);
     await expect.poll(async () => (await page.evaluate(() => fetch("/api/auth/session", { cache: "no-store" }).then((response) => response.json()))).authenticated).toBe(true);
 
@@ -31,16 +34,21 @@ test.describe("single-owner authentication boundary", () => {
     const protectedApi = await context.request.get(`${baseURL}/api/preferences`);
     expect(protectedApi.status()).toBe(200);
 
-    await page.evaluate(async () => {
-      const cache = await caches.open("chat-reader-offline-assets-v1");
+    const protectedCacheName = await page.evaluate(async () => {
+      const userId = localStorage.getItem("chat-reader:offline-active-user-v1");
+      if (!userId) throw new Error("The authenticated offline user namespace is missing.");
+      const identityHex = Array.from(new TextEncoder().encode(userId), (byte) => byte.toString(16).padStart(2, "0")).join("");
+      const cacheName = `chat-reader-offline-assets-v1--user-${identityHex}`;
+      const cache = await caches.open(cacheName);
       await cache.put("/protected-fixture", new Response("business content"));
+      return cacheName;
     });
     await page.goto(`${baseURL}/`);
     await page.getByRole("button", { name: /Settings|设置|Appearance|外观/ }).click();
     await page.getByRole("button", { name: /Account & security|账户与安全/ }).click();
     await page.getByRole("button", { name: "Log out", exact: true }).click();
     await expect(page).toHaveURL(/\/login(?:\?|$)/);
-    expect(await page.evaluate(() => caches.has("chat-reader-offline-assets-v1"))).toBe(false);
+    expect(await page.evaluate((cacheName) => caches.has(cacheName), protectedCacheName)).toBe(false);
     expect((await context.cookies()).find((item) => item.name === "chat_reader_session")).toBeUndefined();
     expect((await context.cookies()).find((item) => item.name === "chat_reader_session_present")).toBeUndefined();
 
@@ -58,8 +66,9 @@ test.describe("single-owner authentication boundary", () => {
 
   test("public and independently protected Shares keep their capability boundaries", async ({ browser, page, baseURL }) => {
     await page.goto(`${baseURL}/login`);
-    await page.locator("#owner-password").fill(password!);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.locator("#login-email").fill(email!);
+    await page.locator("#login-password").fill(password!);
+    await page.getByRole("button", { name: /Sign in|登录/ }).click();
     await expect(page).toHaveURL(`${baseURL}/`);
 
     const mutationHeaders = { Origin: baseURL! };
@@ -123,8 +132,9 @@ test.describe("single-owner authentication boundary", () => {
 
     for (const page of [pageA, pageB]) {
       await page.goto(`${baseURL}/login`);
-      await page.locator("#owner-password").fill(password!);
-      await page.getByRole("button", { name: "Sign in" }).click();
+      await page.locator("#login-email").fill(email!);
+      await page.locator("#login-password").fill(password!);
+      await page.getByRole("button", { name: /Sign in|登录/ }).click();
       await expect(page).toHaveURL(`${baseURL}/`);
     }
 
@@ -137,11 +147,13 @@ test.describe("single-owner authentication boundary", () => {
     await expect(pageA).toHaveURL(/\/login$/);
 
     expect((await deviceB.request.get(`${baseURL}/api/preferences`)).status()).toBe(401);
-    await pageA.locator("#owner-password").fill(password!);
-    await pageA.getByRole("button", { name: "Sign in" }).click();
-    await expect(pageA.locator("p[role='alert']")).toHaveText("Incorrect password.");
-    await pageA.locator("#owner-password").fill(newPassword);
-    await pageA.getByRole("button", { name: "Sign in" }).click();
+    await pageA.locator("#login-email").fill(email!);
+    await pageA.locator("#login-password").fill(password!);
+    await pageA.getByRole("button", { name: /Sign in|登录/ }).click();
+    await expect(pageA.locator("p[role='alert']")).toHaveText(/Email or password is incorrect\.|邮箱或密码不正确。/);
+    await pageA.locator("#login-email").fill(email!);
+    await pageA.locator("#login-password").fill(newPassword);
+    await pageA.getByRole("button", { name: /Sign in|登录/ }).click();
     await expect(pageA).toHaveURL(`${baseURL}/`);
 
     await deviceA.close();

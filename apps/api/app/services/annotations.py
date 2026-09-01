@@ -34,12 +34,16 @@ class AnnotationError(ValueError):
 
 
 def list_annotations(
-    db: Session, conversation_id: uuid.UUID, *, include_deleted: bool = False
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    include_deleted: bool = False,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> list[ConversationAnnotation]:
     _conversation(db, conversation_id)
     query = db.query(ConversationAnnotation).filter(
         ConversationAnnotation.conversation_id == conversation_id,
-        ConversationAnnotation.subject_key == DEFAULT_SUBJECT_KEY,
+        ConversationAnnotation.subject_key == subject_key,
     )
     if not include_deleted:
         query = query.filter(ConversationAnnotation.is_deleted.is_(False))
@@ -52,7 +56,11 @@ def list_annotations(
 
 
 def create_annotation(
-    db: Session, conversation_id: uuid.UUID, payload: AnnotationCreate
+    db: Session,
+    conversation_id: uuid.UUID,
+    payload: AnnotationCreate,
+    *,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationAnnotation:
     conversation = _conversation(db, conversation_id)
     _validate_annotation_anchor(db, conversation_id, payload)
@@ -64,7 +72,7 @@ def create_annotation(
     values["metadata_"] = _annotation_metadata(db, conversation_id, payload)
     annotation = ConversationAnnotation(
         id=annotation_id,
-        subject_key=DEFAULT_SUBJECT_KEY,
+        subject_key=subject_key,
         conversation_id=conversation_id,
         **values,
         revision=1,
@@ -79,9 +87,13 @@ def create_annotation(
 
 
 def update_annotation(
-    db: Session, annotation_id: uuid.UUID, payload: AnnotationUpdate
+    db: Session,
+    annotation_id: uuid.UUID,
+    payload: AnnotationUpdate,
+    *,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationAnnotation:
-    annotation = _annotation(db, annotation_id)
+    annotation = _annotation(db, annotation_id, subject_key)
     if annotation.revision != payload.base_revision:
         raise AnnotationError("Annotation revision conflict.", HTTPStatus.CONFLICT)
     values = payload.model_dump(exclude_unset=True, exclude={"base_revision"})
@@ -99,8 +111,14 @@ def update_annotation(
     return annotation
 
 
-def delete_annotation(db: Session, annotation_id: uuid.UUID, base_revision: int) -> ConversationAnnotation:
-    annotation = _annotation(db, annotation_id)
+def delete_annotation(
+    db: Session,
+    annotation_id: uuid.UUID,
+    base_revision: int,
+    *,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
+) -> ConversationAnnotation:
+    annotation = _annotation(db, annotation_id, subject_key)
     if annotation.revision != base_revision:
         raise AnnotationError("Annotation revision conflict.", HTTPStatus.CONFLICT)
     annotation.is_deleted = True
@@ -112,13 +130,18 @@ def delete_annotation(db: Session, annotation_id: uuid.UUID, base_revision: int)
     return annotation
 
 
-def get_notebook(db: Session, conversation_id: uuid.UUID) -> ConversationNotebook:
+def get_notebook(
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
+) -> ConversationNotebook:
     _conversation(db, conversation_id)
     notebook = (
         db.query(ConversationNotebook)
         .filter(
             ConversationNotebook.conversation_id == conversation_id,
-            ConversationNotebook.subject_key == DEFAULT_SUBJECT_KEY,
+            ConversationNotebook.subject_key == subject_key,
             ConversationNotebook.is_conflict.is_(False),
         )
         .order_by(ConversationNotebook.created_at.asc())
@@ -129,7 +152,7 @@ def get_notebook(db: Session, conversation_id: uuid.UUID) -> ConversationNoteboo
     now = utc_now()
     notebook = ConversationNotebook(
         id=uuid.uuid4(),
-        subject_key=DEFAULT_SUBJECT_KEY,
+        subject_key=subject_key,
         conversation_id=conversation_id,
         title=None,
         blocks=[],
@@ -146,13 +169,18 @@ def get_notebook(db: Session, conversation_id: uuid.UUID) -> ConversationNoteboo
     return notebook
 
 
-def list_notebook_conflicts(db: Session, conversation_id: uuid.UUID) -> list[ConversationNotebook]:
+def list_notebook_conflicts(
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
+) -> list[ConversationNotebook]:
     _conversation(db, conversation_id)
     return (
         db.query(ConversationNotebook)
         .filter(
             ConversationNotebook.conversation_id == conversation_id,
-            ConversationNotebook.subject_key == DEFAULT_SUBJECT_KEY,
+            ConversationNotebook.subject_key == subject_key,
             ConversationNotebook.is_conflict.is_(True),
         )
         .order_by(ConversationNotebook.created_at.asc())
@@ -161,9 +189,13 @@ def list_notebook_conflicts(db: Session, conversation_id: uuid.UUID) -> list[Con
 
 
 def put_notebook(
-    db: Session, conversation_id: uuid.UUID, payload: NotebookPut
+    db: Session,
+    conversation_id: uuid.UUID,
+    payload: NotebookPut,
+    *,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationNotebook:
-    notebook = get_notebook(db, conversation_id)
+    notebook = get_notebook(db, conversation_id, subject_key=subject_key)
     if payload.base_revision not in {0, notebook.revision}:
         raise AnnotationError("Notebook revision conflict.", HTTPStatus.CONFLICT)
     _validate_notebook_references(db, conversation_id, payload.blocks)
@@ -176,24 +208,31 @@ def put_notebook(
     return notebook
 
 
-def sync_annotations(db: Session, payload: AnnotationSyncRequest) -> AnnotationSyncResponse:
+def sync_annotations(
+    db: Session,
+    payload: AnnotationSyncRequest,
+    *,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
+) -> AnnotationSyncResponse:
     results: list[SyncOperationResult] = []
     for operation in payload.operations:
         request_hash = _operation_hash(operation)
         receipt = db.get(AnnotationSyncReceipt, operation.operation_id)
         if receipt is not None:
+            if receipt.subject_key != subject_key:
+                raise AnnotationError("Sync operation not found.", HTTPStatus.NOT_FOUND)
             if receipt.request_hash != request_hash:
                 raise AnnotationError("operation_id was reused with a different payload.", HTTPStatus.CONFLICT)
             saved = dict(receipt.response)
             saved["status"] = "duplicate"
             results.append(SyncOperationResult.model_validate(saved))
             continue
-        result = _apply_sync_operation(db, operation)
+        result = _apply_sync_operation(db, operation, subject_key)
         response_payload = result.model_dump(mode="json")
         db.add(
             AnnotationSyncReceipt(
                 operation_id=operation.operation_id,
-                subject_key=DEFAULT_SUBJECT_KEY,
+                subject_key=subject_key,
                 entity_type=operation.entity_type,
                 entity_id=operation.entity_id,
                 request_hash=request_hash,
@@ -297,15 +336,25 @@ def relocate_annotations_for_new_version(
     db.flush()
 
 
-def _apply_sync_operation(db: Session, operation: SyncOperation) -> SyncOperationResult:
+def _apply_sync_operation(
+    db: Session,
+    operation: SyncOperation,
+    subject_key: str,
+) -> SyncOperationResult:
     _conversation(db, operation.conversation_id)
     if operation.entity_type == "annotation":
-        return _sync_annotation(db, operation)
-    return _sync_notebook(db, operation)
+        return _sync_annotation(db, operation, subject_key)
+    return _sync_notebook(db, operation, subject_key)
 
 
-def _sync_annotation(db: Session, operation: SyncOperation) -> SyncOperationResult:
+def _sync_annotation(
+    db: Session,
+    operation: SyncOperation,
+    subject_key: str,
+) -> SyncOperationResult:
     existing = db.get(ConversationAnnotation, operation.entity_id)
+    if existing is not None and existing.subject_key != subject_key:
+        raise AnnotationError("Annotation not found.", HTTPStatus.NOT_FOUND)
     if existing is not None and existing.conversation_id != operation.conversation_id:
         raise AnnotationError("Annotation does not belong to the conversation.", HTTPStatus.CONFLICT)
     if operation.action == "delete":
@@ -318,14 +367,24 @@ def _sync_annotation(db: Session, operation: SyncOperation) -> SyncOperationResu
                 revision=max(operation.base_revision, 1),
             )
         if existing.revision == operation.base_revision:
-            deleted = delete_annotation(db, existing.id, operation.base_revision)
+            deleted = delete_annotation(
+                db,
+                existing.id,
+                operation.base_revision,
+                subject_key=subject_key,
+            )
             return _sync_result(operation, deleted.id, "applied", deleted.revision)
         conflict = _clone_annotation(db, existing, conflict_of_id=existing.id)
         return _sync_result(operation, existing.id, "conflict", existing.revision, conflict.id)
 
     payload = AnnotationCreate.model_validate({**operation.payload, "id": operation.entity_id})
     if existing is None:
-        created = create_annotation(db, operation.conversation_id, payload)
+        created = create_annotation(
+            db,
+            operation.conversation_id,
+            payload,
+            subject_key=subject_key,
+        )
         return _sync_result(operation, created.id, "applied", created.revision)
     if existing.revision != operation.base_revision:
         conflict = _annotation_from_payload(
@@ -335,19 +394,24 @@ def _sync_annotation(db: Session, operation: SyncOperation) -> SyncOperationResu
             annotation_id=uuid.uuid4(),
             conflict_of_id=existing.id,
             revision=1,
+            subject_key=subject_key,
         )
         return _sync_result(operation, existing.id, "conflict", existing.revision, conflict.id)
     update_payload = AnnotationUpdate.model_validate({**operation.payload, "base_revision": operation.base_revision})
-    updated = update_annotation(db, existing.id, update_payload)
+    updated = update_annotation(db, existing.id, update_payload, subject_key=subject_key)
     return _sync_result(operation, updated.id, "applied", updated.revision)
 
 
-def _sync_notebook(db: Session, operation: SyncOperation) -> SyncOperationResult:
+def _sync_notebook(
+    db: Session,
+    operation: SyncOperation,
+    subject_key: str,
+) -> SyncOperationResult:
     current = (
         db.query(ConversationNotebook)
         .filter(
             ConversationNotebook.conversation_id == operation.conversation_id,
-            ConversationNotebook.subject_key == DEFAULT_SUBJECT_KEY,
+            ConversationNotebook.subject_key == subject_key,
             ConversationNotebook.is_conflict.is_(False),
         )
         .first()
@@ -358,7 +422,7 @@ def _sync_notebook(db: Session, operation: SyncOperation) -> SyncOperationResult
         _validate_notebook_references(db, operation.conversation_id, payload.blocks)
         current = ConversationNotebook(
             id=operation.entity_id,
-            subject_key=DEFAULT_SUBJECT_KEY,
+            subject_key=subject_key,
             conversation_id=operation.conversation_id,
             title=payload.title,
             blocks=[block.model_dump(mode="json") for block in payload.blocks],
@@ -390,6 +454,7 @@ def _annotation_from_payload(
     annotation_id: uuid.UUID,
     conflict_of_id: uuid.UUID | None,
     revision: int,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationAnnotation:
     _validate_annotation_anchor(db, conversation_id, payload)
     now = utc_now()
@@ -397,7 +462,7 @@ def _annotation_from_payload(
     values["metadata_"] = _annotation_metadata(db, conversation_id, payload)
     annotation = ConversationAnnotation(
         id=annotation_id,
-        subject_key=DEFAULT_SUBJECT_KEY,
+        subject_key=subject_key,
         conversation_id=conversation_id,
         **values,
         revision=revision,
@@ -566,9 +631,13 @@ def _conversation(db: Session, conversation_id: uuid.UUID) -> Conversation:
     return conversation
 
 
-def _annotation(db: Session, annotation_id: uuid.UUID) -> ConversationAnnotation:
+def _annotation(
+    db: Session,
+    annotation_id: uuid.UUID,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
+) -> ConversationAnnotation:
     annotation = db.get(ConversationAnnotation, annotation_id)
-    if annotation is None or annotation.subject_key != DEFAULT_SUBJECT_KEY:
+    if annotation is None or annotation.subject_key != subject_key:
         raise AnnotationError("Annotation not found.", HTTPStatus.NOT_FOUND)
     return annotation
 

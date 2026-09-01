@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Index, Integer, String, Text, Uuid
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -13,6 +13,9 @@ class BackgroundJob(Base):
     __tablename__ = "background_jobs"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     job_type: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="queued")
     phase: Mapped[str] = mapped_column(String, nullable=False, default="queued")
@@ -40,3 +43,5 @@ class BackgroundJob(Base):
 Index("idx_background_jobs_status_queued_at", BackgroundJob.status, BackgroundJob.queued_at)
 Index("idx_background_jobs_type_status", BackgroundJob.job_type, BackgroundJob.status)
 Index("idx_background_jobs_idempotency_key", BackgroundJob.idempotency_key)
+Index("idx_background_jobs_owner_status_queued", BackgroundJob.owner_user_id, BackgroundJob.status, BackgroundJob.queued_at)
+Index("idx_background_jobs_owner_idempotency", BackgroundJob.owner_user_id, BackgroundJob.idempotency_key)

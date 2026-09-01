@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -10,6 +10,8 @@ from app.services.background_jobs import queue_toc_refresh
 from app.services.editing.message_edit_service import MessageEditError
 from app.api.routes.tasks import background_job_read
 from app.services.toc.toc_service import TocServiceError, list_headings_page
+from app.models.conversation import Conversation
+from app.services.ownership import get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/conversations", tags=["toc"])
 
@@ -18,10 +20,14 @@ router = APIRouter(prefix="/api/conversations", tags=["toc"])
 def refresh_conversation_toc(
     conversation_id: uuid.UUID,
     payload: TocRefreshRequest,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
     try:
+        scope = ownership_scope_from_request(request)
+        if get_owned(db, Conversation, conversation_id, scope) is None:
+            raise HTTPException(status_code=404, detail="Conversation not found.")
         job = queue_toc_refresh(
             db,
             conversation_id=conversation_id,
@@ -29,6 +35,7 @@ def refresh_conversation_toc(
             refresh_section_toc=payload.refresh_section_toc,
             section_scope=payload.section_scope,
             idempotency_key=idempotency_key,
+            ownership_scope=scope,
         )
         db.commit()
     except MessageEditError as exc:
@@ -40,6 +47,7 @@ def refresh_conversation_toc(
 @router.get("/{conversation_id}/toc", response_model=TocResponse)
 def get_conversation_toc(
     conversation_id: uuid.UUID,
+    request: Request,
     message_id: uuid.UUID | None = None,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=200, ge=1, le=500),
@@ -51,6 +59,8 @@ def get_conversation_toc(
     db: Session = Depends(get_db),
 ) -> TocResponse:
     try:
+        if get_owned(db, Conversation, conversation_id, ownership_scope_from_request(request)) is None:
+            raise TocServiceError("Conversation not found.")
         headings, total = list_headings_page(
             db,
             conversation_id,

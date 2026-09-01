@@ -1,5 +1,13 @@
 # 本地开发
 
+## 当前工作树账户基线（2026-09-01）
+
+当前工作树包含多账户 owner 边界：部署时只设置一个 `ADMIN`，后续账号为
+`USER`。私有记录按已认证用户 UUID 隔离，源码 migration head 为
+`20260901_0030_multi_account_users.py`。这部分尚未提交，也尚未应用到生产。
+首次账号请使用 `apps/api/scripts/owner_auth.py`，以运维输入的真实邮箱和交互式
+强密码创建；凭据不得写入仓库。
+
 最后核验：2026-08-05
 
 ## 依赖
@@ -28,7 +36,9 @@ python -m alembic heads
 Set-Location ../..
 ```
 
-`alembic heads` 应只有一个结果。当前源码 head 是 `20260823_0028`。
+`alembic heads` 应只有一个结果。当前源码 head 是
+`20260901_0030_multi_account_users.py`；生产执行前必须完成备份和 migration
+preflight。
 
 当前 Content Cleanup 支持从规则库主动启动一次低优先级的
 `BATCH / ALL_ACTIVE` 后台审查。目标包括项目内和未分类的活动对话，归档
@@ -56,9 +66,10 @@ Set-Location ../..
 | `WORKER_HEARTBEAT_INTERVAL_SECONDS` | worker-owned liveness publish interval | 30 seconds |
 | `WORKER_HEARTBEAT_STALE_AFTER_SECONDS` | worker stale threshold; at least 3x interval | 120 seconds |
 | `ENABLE_INTERNAL_DIAGNOSTICS` | loopback-only aggregate diagnostics feature flag | false |
-| `AUTH_ENABLED` | enables the production single-owner password boundary | false outside production |
+| `AUTH_ENABLED` | enables the production account/session boundary | false outside production |
 | `AUTH_SESSION_SECRET` | deployment-only HMAC secret for opaque session-token digests | no repository default |
 | `AUTH_INACTIVITY_TIMEOUT_SECONDS` | per-device sliding inactivity timeout | 172800 seconds |
+| `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | first production migration bootstrap only | set together outside Git, then remove the password after the migrate container succeeds |
 
 不要把真实凭据或生产 URL 提交到仓库；示例只维护变量名和无敏感默认值。
 

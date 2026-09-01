@@ -83,6 +83,13 @@ class Settings(BaseSettings):
     auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
     auth_session_secret: SecretStr | None = Field(default=None, alias="AUTH_SESSION_SECRET")
     auth_cookie_secure: bool = Field(default=False, alias="AUTH_COOKIE_SECURE")
+    auth_registration_mode: str = Field(default="CLOSED", alias="AUTH_REGISTRATION_MODE")
+    smtp_host: str | None = Field(default=None, alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT", ge=1, le=65535)
+    smtp_username: str | None = Field(default=None, alias="SMTP_USERNAME")
+    smtp_password: SecretStr | None = Field(default=None, alias="SMTP_PASSWORD")
+    smtp_from_address: str | None = Field(default=None, alias="SMTP_FROM_ADDRESS")
+    smtp_starttls: bool = Field(default=True, alias="SMTP_STARTTLS")
     auth_activity_touch_interval_seconds: int = Field(
         default=600, alias="AUTH_ACTIVITY_TOUCH_INTERVAL_SECONDS", ge=300, le=900
     )
@@ -112,6 +119,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def reject_unsafe_production_security_configuration(self) -> "Settings":
+        if self.auth_registration_mode not in {"CLOSED", "INVITE_ONLY", "OPEN"}:
+            raise ValueError("AUTH_REGISTRATION_MODE must be CLOSED, INVITE_ONLY, or OPEN.")
         if self.worker_heartbeat_stale_after_seconds < self.worker_heartbeat_interval_seconds * 3:
             raise ValueError(
                 "WORKER_HEARTBEAT_STALE_AFTER_SECONDS must allow at least three heartbeat intervals."

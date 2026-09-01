@@ -47,6 +47,7 @@ from app.services.content_cleanup import queue_import_scan
 from app.services.storage.local_storage import save_import_file
 from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 logger = logging.getLogger(__name__)
@@ -73,6 +74,7 @@ UploadedPreviewFile = tuple[str, bytes, SourceDetectionResult]
 async def preview_import(
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> ImportPreviewResponse:
     if not files:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one file is required.")
@@ -227,6 +229,7 @@ async def preview_import(
             existing = (
                 db.query(ImportRecord)
                 .filter(
+                    ownership_scope.predicate(ImportRecord),
                     ImportRecord.source_fingerprint == source_fingerprint,
                     ImportRecord.status == "committed",
                     ImportRecord.conversation_id.is_not(None),
@@ -243,6 +246,7 @@ async def preview_import(
 
         import_record = ImportRecord(
             id=import_id,
+            owner_user_id=ownership_scope.owner_user_id,
             source_profile=_combined_source_profile(source_profiles),
             source_fingerprint=source_fingerprint,
             status="previewed",
@@ -295,8 +299,12 @@ async def preview_import(
 
 
 @router.get("/{import_id}/source-artifacts", response_model=list[SourceArtifactRead])
-def list_source_artifacts(import_id: uuid.UUID, db: Session = Depends(get_db)) -> list[SourceArtifactRead]:
-    _get_import_or_404(import_id, db)
+def list_source_artifacts(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> list[SourceArtifactRead]:
+    _get_import_or_404(import_id, db, ownership_scope)
     artifacts = (
         db.query(SourceArtifact)
         .filter(SourceArtifact.import_id == import_id)
@@ -321,19 +329,31 @@ def list_source_artifacts(import_id: uuid.UUID, db: Session = Depends(get_db)) -
 
 
 @router.get("/{import_id}/warnings", response_model=ImportWarningsResponse)
-def get_import_warnings(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportWarningsResponse:
-    import_record = _get_import_or_404(import_id, db)
+def get_import_warnings(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> ImportWarningsResponse:
+    import_record = _get_import_or_404(import_id, db, ownership_scope)
     return ImportWarningsResponse(import_id=import_record.id, warnings=import_record.warnings)
 
 
 @router.get("/{import_id:uuid}", response_model=ImportStatusResponse)
-def get_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportStatusResponse:
-    return _import_status(_get_import_or_404(import_id, db), db)
+def get_import(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> ImportStatusResponse:
+    return _import_status(_get_import_or_404(import_id, db, ownership_scope), db)
 
 
 @router.delete("/{import_id:uuid}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_expired_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
-    record = _get_import_or_404(import_id, db)
+def delete_expired_import(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> Response:
+    record = _get_import_or_404(import_id, db, ownership_scope)
     now = datetime.now(timezone.utc)
     expires_at = record.draft_expires_at
     if record.status != "previewed" or expires_at is None or (expires_at if expires_at.tzinfo else expires_at.replace(tzinfo=timezone.utc)) > now:
@@ -347,10 +367,16 @@ def delete_expired_import(import_id: uuid.UUID, db: Session = Depends(get_db)) -
 
 
 @router.get("/active", response_model=list[ImportStatusResponse])
-def list_active_imports(db: Session = Depends(get_db)) -> list[ImportStatusResponse]:
+def list_active_imports(
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> list[ImportStatusResponse]:
     records = (
         db.query(ImportRecord)
-        .filter(ImportRecord.status.in_((*ACTIVE_IMPORT_STATUSES, "failed")))
+        .filter(
+            ownership_scope.predicate(ImportRecord),
+            ImportRecord.status.in_((*ACTIVE_IMPORT_STATUSES, "failed")),
+        )
         .order_by(ImportRecord.queued_at.asc(), ImportRecord.created_at.asc())
         .limit(20)
         .all()
@@ -359,8 +385,12 @@ def list_active_imports(db: Session = Depends(get_db)) -> list[ImportStatusRespo
 
 
 @router.get("/{import_id}/status", response_model=ImportStatusResponse)
-def get_import_status(import_id: uuid.UUID, db: Session = Depends(get_db)) -> ImportStatusResponse:
-    return _import_status(_get_import_or_404(import_id, db), db)
+def get_import_status(
+    import_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> ImportStatusResponse:
+    return _import_status(_get_import_or_404(import_id, db, ownership_scope), db)
 
 
 @router.post("/{import_id}/commit", response_model=CommitImportResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -369,8 +399,9 @@ def commit_import(
     response: Response,
     options: ImportCommitOptions = Body(default_factory=ImportCommitOptions),
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> CommitImportResponse:
-    import_record = _get_import_or_404(import_id, db)
+    import_record = _get_import_or_404(import_id, db, ownership_scope)
     if import_record.status == "committed":
         response.status_code = status.HTTP_200_OK
         return _commit_response(import_record, db)
@@ -424,7 +455,7 @@ def commit_import(
         # low-priority follow-up and must not make a successful import fail.
         try:
             with db.begin_nested():
-                queue_import_scan(db, result.conversation_ids)
+                queue_import_scan(db, result.conversation_ids, ownership_scope)
         except Exception as exc:  # pragma: no cover - operational guard
             structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
         db.commit()
@@ -443,8 +474,12 @@ def commit_import(
     return _commit_response(import_record, db, result.message_count)
 
 
-def _get_import_or_404(import_id: uuid.UUID, db: Session) -> ImportRecord:
-    import_record = db.get(ImportRecord, import_id)
+def _get_import_or_404(
+    import_id: uuid.UUID,
+    db: Session,
+    ownership_scope: OwnershipScope,
+) -> ImportRecord:
+    import_record = get_owned(db, ImportRecord, import_id, ownership_scope)
     if import_record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Import record not found.")
     return import_record

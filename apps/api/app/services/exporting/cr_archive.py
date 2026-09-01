@@ -29,6 +29,7 @@ from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.services.database.bulk_insert import insert_rows
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
+from app.services.ownership import OwnershipScope, get_owned
 from app.services.search.search_indexer import _refresh_postgres_tsv
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import AssetScanError, scan_attachment, scan_status_allows_use
@@ -86,6 +87,7 @@ def create_cr_archive(
     include_description: bool = False,
     include_annotations: bool = False,
     include_notebook: bool = False,
+    subject_key: str = "local:default",
 ) -> ExportArtifact:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
@@ -203,7 +205,7 @@ def create_cr_archive(
         if include_annotations:
             annotation_rows = db.query(ConversationAnnotation).filter(
                 ConversationAnnotation.conversation_id == conversation.id,
-                ConversationAnnotation.subject_key == "local:default",
+                ConversationAnnotation.subject_key == subject_key,
                 ConversationAnnotation.is_deleted.is_(False),
             ).order_by(ConversationAnnotation.created_at.asc()).all()
             checksums["annotations.jsonl"], written = _write_jsonl(
@@ -213,7 +215,7 @@ def create_cr_archive(
         if include_notebook:
             notebook = db.query(ConversationNotebook).filter(
                 ConversationNotebook.conversation_id == conversation.id,
-                ConversationNotebook.subject_key == "local:default",
+                ConversationNotebook.subject_key == subject_key,
                 ConversationNotebook.is_conflict.is_(False),
             ).order_by(ConversationNotebook.created_at.asc()).first()
             if notebook is not None:
@@ -285,7 +287,15 @@ def import_cr_archive(
         manifest = _read_json_entry(archive, "manifest.json")
         _validate_manifest(archive, manifest)
         source_conversation = _read_json_entry(archive, "conversation.json")
-        existing = db.get(Conversation, uuid.UUID(str(duplicate_id))) if duplicate_id else None
+        import_scope = OwnershipScope(
+            import_record.owner_user_id,
+            include_legacy_unowned=import_record.owner_user_id is None,
+        )
+        existing = (
+            get_owned(db, Conversation, uuid.UUID(str(duplicate_id)), import_scope)
+            if duplicate_id
+            else None
+        )
         if existing is not None and duplicate_policy == "reject":
             raise CrArchiveError("Archive already exists and duplicate policy is reject.")
         if existing is not None and duplicate_policy == "merge_if_same_hash":
@@ -306,6 +316,7 @@ def import_cr_archive(
 
         conversation = Conversation(
             id=target_id,
+            owner_user_id=import_record.owner_user_id,
             title=title,
             display_title=display_title,
             source_type="chat_reader_archive",
@@ -382,8 +393,19 @@ def import_cr_archive(
         _report(progress_callback, "search", 96, total, total)
         _import_source_refs(db, archive, target_id)
         _import_events(db, archive, target_id)
-        _import_optional_reader_metadata(db, archive, target_id)
-        _restore_placement(db, conversation, source_conversation, options)
+        _import_optional_reader_metadata(
+            db,
+            archive,
+            target_id,
+            subject_key=(str(import_record.owner_user_id) if import_record.owner_user_id else "local:default"),
+        )
+        _restore_placement(
+            db,
+            conversation,
+            source_conversation,
+            options,
+            owner_user_id=import_record.owner_user_id,
+        )
         _restore_reading_position(db, conversation, source_conversation)
 
     conversation.status = "active"
@@ -768,7 +790,13 @@ def _notebook_payload(row: ConversationNotebook) -> dict[str, Any]:
     }
 
 
-def _import_optional_reader_metadata(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) -> None:
+def _import_optional_reader_metadata(
+    db: Session,
+    archive: zipfile.ZipFile,
+    target_id: uuid.UUID,
+    *,
+    subject_key: str,
+) -> None:
     names = set(archive.namelist())
     annotation_map: dict[uuid.UUID, uuid.UUID] = {}
     if "annotations.jsonl" in names:
@@ -779,7 +807,7 @@ def _import_optional_reader_metadata(db: Session, archive: zipfile.ZipFile, targ
             db.add(
                 ConversationAnnotation(
                     id=annotation_id,
-                    subject_key="local:default",
+                    subject_key=subject_key,
                     conversation_id=target_id,
                     message_id=_mapped_id(target_id, "message", uuid.UUID(row["message_id"])) if row.get("message_id") else None,
                     message_version_id=_mapped_id(target_id, "version", uuid.UUID(row["message_version_id"])) if row.get("message_version_id") else None,
@@ -814,7 +842,7 @@ def _import_optional_reader_metadata(db: Session, archive: zipfile.ZipFile, targ
         db.add(
             ConversationNotebook(
                 id=_mapped_id(target_id, "notebook", uuid.UUID(row["id"])),
-                subject_key="local:default",
+                subject_key=subject_key,
                 conversation_id=target_id,
                 title=row.get("title"),
                 blocks=blocks,
@@ -964,21 +992,39 @@ def _yield_blocks(db: Session, version_ids: list[uuid.UUID]):
     return db.query(RenderBlock).filter(RenderBlock.message_version_id.in_(version_ids)).order_by(RenderBlock.message_version_id, RenderBlock.block_index).yield_per(500)
 
 
-def _restore_placement(db: Session, conversation: Conversation, payload: dict[str, Any], options: dict[str, Any]) -> None:
+def _restore_placement(
+    db: Session,
+    conversation: Conversation,
+    payload: dict[str, Any],
+    options: dict[str, Any],
+    *,
+    owner_user_id: uuid.UUID | None,
+) -> None:
+    import_scope = OwnershipScope(owner_user_id, include_legacy_unowned=owner_user_id is None)
     project_id = options.get("project_id")
-    project = db.get(Project, uuid.UUID(project_id)) if project_id else None
+    project = get_owned(db, Project, uuid.UUID(project_id), import_scope) if project_id else None
     archived_project = payload.get("project") if isinstance(payload.get("project"), dict) else None
     if project is None and archived_project and options.get("create_archive_project"):
         name = str(archived_project.get("name") or "").strip()
-        project = db.query(Project).filter(Project.name == name).one_or_none() if name else None
+        project = db.query(Project).filter(import_scope.predicate(Project), Project.name == name).one_or_none() if name else None
         if project is None and name:
-            project = Project(id=uuid.uuid4(), name=name)
+            project = Project(id=uuid.uuid4(), owner_user_id=owner_user_id, name=name)
             db.add(project)
             db.flush()
     if project is None and archived_project:
-        project = db.query(Project).filter(Project.name == archived_project.get("name"), Project.is_archived.is_(False)).one_or_none()
-    project = project or ensure_default_project(db)
-    relation = add_conversation_to_project(db, project.id, conversation.id, added_by="archive")
+        project = db.query(Project).filter(
+            import_scope.predicate(Project),
+            Project.name == archived_project.get("name"),
+            Project.is_archived.is_(False),
+        ).one_or_none()
+    project = project or ensure_default_project(db, import_scope)
+    relation = add_conversation_to_project(
+        db,
+        project.id,
+        conversation.id,
+        added_by="archive",
+        ownership_scope=import_scope,
+    )
     if archived_project and not project.is_default:
         relation.is_pinned = bool(archived_project.get("is_pinned"))
 

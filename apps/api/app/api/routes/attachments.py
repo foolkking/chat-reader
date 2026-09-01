@@ -15,12 +15,14 @@ from app.models.attachment import (
     AssetDerivative,
     AssetObject,
     Attachment,
+    AttachmentUploadSession,
     AttachmentUploadItem,
     MessageVersionAttachment,
 )
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
+from app.models.conversation import Conversation
 from app.schemas.attachment import (
     AttachmentFinalizeRequest,
     AttachmentBatchDownloadRequest,
@@ -57,6 +59,7 @@ from app.services.assets.upload_service import (
     remove_unreferenced_attachment,
 )
 from app.services.sharing.share_service import ShareError, resolve_accessible_share
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(tags=["attachments"])
 _ACTIVE_MIME_TYPES = {"image/svg+xml", "text/html", "application/xhtml+xml", "application/xml", "text/xml"}
@@ -83,9 +86,11 @@ MAX_RANGE_RESPONSE_BYTES = 8 * 1024 * 1024
 def create_attachment_upload_session(
     conversation_id: uuid.UUID,
     payload: AttachmentUploadSessionCreate,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentUploadSessionRead:
     try:
+        _owned_conversation(db, conversation_id, ownership_scope_from_request(request))
         session = create_upload_session(
             db,
             conversation_id=conversation_id,
@@ -106,10 +111,12 @@ def create_attachment_upload_session(
 )
 def upload_attachment_item(
     session_id: uuid.UUID,
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> AttachmentUploadItemRead:
     try:
+        _owned_upload_session(db, session_id, ownership_scope_from_request(request))
         item = add_upload_item(
             db,
             session_id=session_id,
@@ -130,9 +137,11 @@ def upload_attachment_item(
 )
 def read_attachment_upload_session(
     session_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentUploadSessionRead:
     try:
+        _owned_upload_session(db, session_id, ownership_scope_from_request(request))
         session = get_upload_session(db, session_id)
         db.commit()
         return _upload_session_read(session)
@@ -148,9 +157,11 @@ def read_attachment_upload_session(
 def remove_attachment_upload_item(
     session_id: uuid.UUID,
     item_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
     try:
+        _owned_upload_session(db, session_id, ownership_scope_from_request(request))
         delete_upload_item(db, session_id=session_id, item_id=item_id)
         db.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -167,10 +178,18 @@ def remove_attachment_upload_item(
 def create_conversation_attachments(
     conversation_id: uuid.UUID,
     payload: AttachmentFinalizeRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentListRead:
     promoted: list[str] = []
     try:
+        ownership_scope = ownership_scope_from_request(request)
+        _owned_conversation(db, conversation_id, ownership_scope)
+        for item_id in payload.upload_item_ids:
+            item = db.get(AttachmentUploadItem, item_id)
+            if item is None:
+                raise AttachmentUploadError("Upload item not found.", 404)
+            _owned_upload_session(db, item.session_id, ownership_scope)
         result = finalize_upload_items(
             db,
             conversation_id=conversation_id,
@@ -199,6 +218,7 @@ def create_conversation_attachments(
 def create_attachment_download(
     conversation_id: uuid.UUID,
     payload: AttachmentBatchDownloadRequest,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
@@ -210,6 +230,7 @@ def create_attachment_download(
             conversation_id=conversation_id,
             attachment_ids=payload.attachment_ids,
             idempotency_key=idempotency_key or f"attachment-download:{selection_hash}",
+            ownership_scope=ownership_scope_from_request(request),
         )
         db.commit()
         return background_job_read(job)
@@ -221,8 +242,10 @@ def create_attachment_download(
 @router.get("/api/conversations/{conversation_id}/attachments", response_model=AttachmentListRead)
 def list_conversation_attachments(
     conversation_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentListRead:
+    _owned_conversation(db, conversation_id, ownership_scope_from_request(request))
     attachments = db.query(Attachment).filter(
         Attachment.conversation_id == conversation_id,
         Attachment.deleted_at.is_(None),
@@ -294,8 +317,10 @@ def update_conversation_attachment(
     conversation_id: uuid.UUID,
     attachment_id: uuid.UUID,
     payload: AttachmentUpdateRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentRead:
+    _owned_conversation(db, conversation_id, ownership_scope_from_request(request))
     attachment = db.get(Attachment, attachment_id)
     if attachment is None or attachment.conversation_id != conversation_id or attachment.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Attachment not found.")
@@ -314,8 +339,10 @@ def update_conversation_attachment(
 def delete_conversation_attachment(
     conversation_id: uuid.UUID,
     attachment_id: uuid.UUID,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
+    _owned_conversation(db, conversation_id, ownership_scope_from_request(request))
     attachment = db.get(Attachment, attachment_id)
     if attachment is None or attachment.conversation_id != conversation_id or attachment.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Attachment not found.")
@@ -334,18 +361,21 @@ def delete_conversation_attachment(
 def queue_attachment_derivative_route(
     attachment_id: uuid.UUID,
     derivative_type: str,
+    request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
     if derivative_type not in {"text_extract", "image_thumbnail", "image_preview"}:
         raise HTTPException(status_code=422, detail="Unsupported attachment derivative type.")
     try:
-        get_owner_attachment(db, attachment_id)
+        ownership_scope = ownership_scope_from_request(request)
+        get_owner_attachment(db, attachment_id, ownership_scope)
         job = queue_attachment_derivative(
             db,
             attachment_id=attachment_id,
             derivative_type=derivative_type,
             idempotency_key=idempotency_key or f"attachment-derivative:{attachment_id}:{derivative_type}",
+            ownership_scope=ownership_scope,
         )
         db.commit()
         return background_job_read(job)
@@ -371,7 +401,7 @@ def get_attachment_derivative_content(
     db: Session = Depends(get_db),
 ) -> Response:
     try:
-        attachment = get_owner_attachment(db, attachment_id)
+        attachment = get_owner_attachment(db, attachment_id, ownership_scope_from_request(request))
         derivative = db.query(AssetDerivative).join(
             AssetObject,
             AssetObject.id == AssetDerivative.source_asset_object_id,
@@ -396,9 +426,13 @@ def get_attachment_derivative_content(
 
 
 @router.get("/api/attachments/{attachment_id}", response_model=AttachmentRead)
-def get_attachment_metadata(attachment_id: uuid.UUID, db: Session = Depends(get_db)) -> AttachmentRead:
+def get_attachment_metadata(
+    attachment_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> AttachmentRead:
     try:
-        return attachment_read(get_owner_attachment(db, attachment_id))
+        return attachment_read(get_owner_attachment(db, attachment_id, ownership_scope_from_request(request)))
     except AttachmentAccessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
@@ -406,13 +440,14 @@ def get_attachment_metadata(attachment_id: uuid.UUID, db: Session = Depends(get_
 @router.get("/api/attachments/{attachment_id}/text/search", response_model=AttachmentTextSearchRead)
 def search_attachment_text(
     attachment_id: uuid.UUID,
+    request: Request,
     q: str = Query(min_length=1, max_length=256),
     limit: int = Query(default=50, ge=1, le=200),
     cursor: str | None = Query(default=None, max_length=4096),
     db: Session = Depends(get_db),
 ) -> AttachmentTextSearchRead:
     try:
-        content = attachment_content(get_owner_attachment(db, attachment_id))
+        content = attachment_content(get_owner_attachment(db, attachment_id, ownership_scope_from_request(request)))
         page = search_text_file(
             attachment_id=str(attachment_id),
             sha256=content.asset_object.sha256,
@@ -445,7 +480,7 @@ def get_attachment_content(
     db: Session = Depends(get_db),
 ) -> Response:
     try:
-        content = attachment_content(get_owner_attachment(db, attachment_id))
+        content = attachment_content(get_owner_attachment(db, attachment_id, ownership_scope_from_request(request)))
         return _content_response(content.path, content.asset_object.detected_mime_type, content.attachment.display_name, request.method, disposition, range_header)
     except AttachmentAccessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -569,6 +604,26 @@ def _inline_allowed(mime_type: str) -> bool:
 def _safe_download_name(filename: str) -> str:
     value = Path(filename).name.replace("\r", "_").replace("\n", "_").strip()
     return value[:240] or "attachment.bin"
+
+
+def _owned_conversation(db: Session, conversation_id: uuid.UUID, scope: OwnershipScope) -> Conversation:
+    conversation = get_owned(db, Conversation, conversation_id, scope)
+    if conversation is None or conversation.deleted_at is not None:
+        raise AttachmentUploadError("Conversation not found.", 404)
+    return conversation
+
+
+def _owned_upload_session(
+    db: Session,
+    session_id: uuid.UUID,
+    scope: OwnershipScope,
+) -> AttachmentUploadSession:
+    session = db.get(AttachmentUploadSession, session_id)
+    if session is None:
+        raise AttachmentUploadError("Upload session not found.", 404)
+    if get_owned(db, Conversation, session.conversation_id, scope) is None:
+        raise AttachmentUploadError("Upload session not found.", 404)
+    return session
 
 
 def _upload_item_read(item: AttachmentUploadItem) -> AttachmentUploadItemRead:

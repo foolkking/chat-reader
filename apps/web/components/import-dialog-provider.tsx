@@ -7,7 +7,7 @@ import { useTranslations } from "./preferences-provider";
 import { useDialogFocus } from "./use-dialog-focus";
 
 type ImportDialogContextValue = {
-  openImportDialog: (options?: { repairProfileId?: string }) => void;
+  openImportDialog: (options?: { repairProfileId?: string; initialMode?: "adaptive" | "archive" }) => void;
   closeImportDialog: () => void;
 };
 
@@ -18,9 +18,14 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
   const [open, setOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [repairProfileId, setRepairProfileId] = useState<string | null>(null);
+  const [initialMode, setInitialMode] = useState<"adaptive" | "archive">("adaptive");
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const openImportDialog = useCallback((options?: { repairProfileId?: string }) => { setRepairProfileId(options?.repairProfileId ?? null); setOpen(true); }, []);
-  const closeImportDialog = useCallback(() => { setOpen(false); setWorkspaceOpen(false); setRepairProfileId(null); }, []);
+  const openImportDialog = useCallback((options?: { repairProfileId?: string; initialMode?: "adaptive" | "archive" }) => {
+    setRepairProfileId(options?.repairProfileId ?? null);
+    setInitialMode(options?.initialMode ?? "adaptive");
+    setOpen(true);
+  }, []);
+  const closeImportDialog = useCallback(() => { setOpen(false); setWorkspaceOpen(false); setRepairProfileId(null); setInitialMode("adaptive"); }, []);
   useDialogFocus({ open, rootRef, onClose: closeImportDialog });
   const value = useMemo(() => ({ openImportDialog, closeImportDialog }), [closeImportDialog, openImportDialog]);
 
@@ -38,7 +43,7 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
               </div>
               <button type="button" data-testid="import-dialog-close" onClick={closeImportDialog} className="flex h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]" aria-label={t("close")} title={t("close")}><X className="h-4 w-4" /></button>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto p-5"><ImportPanel repairProfileId={repairProfileId} onImportCommitted={closeImportDialog} onWorkspaceChange={setWorkspaceOpen} /></div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-5"><ImportPanel repairProfileId={repairProfileId} initialMode={initialMode} onImportCommitted={closeImportDialog} onWorkspaceChange={setWorkspaceOpen} /></div>
           </section>
         </div>
       ) : null}

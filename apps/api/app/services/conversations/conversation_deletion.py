@@ -12,11 +12,20 @@ from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.lifecycle import asset_object_has_live_references
+from app.services.ownership import OwnershipScope, get_owned
 
 
-def delete_conversation_record(db: Session, conversation_id: uuid.UUID) -> None:
+def delete_conversation_record(
+    db: Session,
+    conversation_id: uuid.UUID,
+    ownership_scope: OwnershipScope | None = None,
+) -> None:
     """Delete one conversation as an independent durable unit."""
-    conversation = db.get(Conversation, conversation_id)
+    conversation = (
+        get_owned(db, Conversation, conversation_id, ownership_scope)
+        if ownership_scope is not None
+        else db.get(Conversation, conversation_id)
+    )
     if conversation is None or conversation.deleted_at is not None:
         raise LookupError("Conversation not found.")
     asset_ids = {
@@ -66,7 +75,11 @@ def delete_conversation_record(db: Session, conversation_id: uuid.UUID) -> None:
     # Start the destructive cascade from a clean transaction so stale ORM
     # state (and locks acquired while cancelling jobs) cannot lengthen the
     # user-facing delete request.
-    conversation = db.get(Conversation, conversation_id)
+    conversation = (
+        get_owned(db, Conversation, conversation_id, ownership_scope)
+        if ownership_scope is not None
+        else db.get(Conversation, conversation_id)
+    )
     if conversation is None:
         return
     db.delete(conversation)

@@ -6,10 +6,12 @@ Release K production verification, Release L worker liveness and protected
 diagnostics, Release M disaster recovery, Release N single-owner
 authentication, the final product audit and the later scoped formula/source
 position fixes are closed. The historical Release K reconciliation below is a
-checkpoint record, not current debt. Current deferred decisions are automatic
-artifact cleanup and strict nonce CSP/reporting by product decision; AssetObject
-GC, capacity optimization and Turbopack remain conditional future work, and
-multi-user product work is not implemented. None is an active defect.
+checkpoint record, not current debt. The current working tree additionally
+contains the multi-account owner boundary and migration `20260901_0030`; its
+production rollout and authenticated browser acceptance remain pending. Current
+deferred decisions are automatic artifact cleanup and strict nonce CSP/reporting
+by product decision; AssetObject GC, capacity optimization and Turbopack remain
+conditional future work. None is an active defect in the deployed snapshot.
 
 最后核验：2026-08-24
 
@@ -35,7 +37,7 @@ round trip. They are not current debt. The current count is
 
 | ID | 风险/不确定性 | 影响 | 当前控制/验证方式 |
 | --- | --- | --- | --- |
-| KI-001 | 当前仍未实现多用户 ACL、注册和租户隔离 | 多用户扩展尚未提供；这不是单用户 owner 的未授权访问缺陷 | 当前单 owner password/session boundary 默认拒绝业务路由；多用户能力明确保留为未实现边界 |
+| KI-001 | 工作树多账户 migration 尚未发布 | 生产仍运行历史单 owner snapshot；工作树账号能力尚未获得生产数据迁移证据 | `20260901_0030`、聚焦 API 测试和源码隔离已完成；生产备份/migration/认证浏览器验收仍为 `NOT_VERIFIED` |
 | KI-002 | 单个阅读轮次可包含极大正文 | 完整正文数据仍占内存，动态 block 测量也有成本 | >160 blocks 或 >50000 chars 时虚拟化 DOM；直达 URL、批注、下滑刷新 fixture 持续回归 |
 | KI-003 | 有效生产 Share 访客页未在文档中保存可复用 token | 生产访客视觉/范围无法由文档直接重放 | 使用隔离测试 token 复验，绝不记录真实 token |
 | KI-004 | 浏览器 quota、持久化许可和 cache eviction 因设备而异 | 离线更新/冷启动可能失败 | Release E adds deterministic Chromium quota/cache/IndexedDB negative coverage, explicit unavailable states and old-package preservation. Real device/browser eviction variance remains an operational compatibility risk. |

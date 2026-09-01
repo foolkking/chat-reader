@@ -70,7 +70,7 @@ export function InteractionDialogProvider({ children }: { children: React.ReactN
     <InteractionDialogContext.Provider value={context}>
       {children}
       {dialog ? (
-        <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-[260] flex items-end justify-center bg-[var(--overlay)] p-0 outline-none sm:items-center sm:p-[2vw]" role="dialog" aria-modal="true" aria-labelledby="interaction-dialog-title">
+        <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-[400] flex items-end justify-center bg-[var(--overlay)] p-0 outline-none sm:items-center sm:p-[2vw]" role="dialog" aria-modal="true" aria-labelledby="interaction-dialog-title">
           <div aria-hidden="true" data-dialog-backdrop className="absolute inset-0" onPointerDown={() => settle(dialog.kind === "confirm" ? false : null)} />
           <form className="relative w-full rounded-t-2xl border border-ui bg-raised p-5 shadow-2xl sm:max-w-md sm:rounded-xl" onSubmit={(event) => {
             event.preventDefault();

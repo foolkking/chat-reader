@@ -1,5 +1,12 @@
 # Testing Addendum 2026-08-24
 
+## 多账户 owner 验证（工作树，2026-09-01）
+
+认证、owner scope、projects、conversation management、cleanup、export、archive
+和 system-archive 的聚焦 API 测试已通过。源码 Alembic head 为
+`20260901_0030_multi_account_users.py`，仍待部署。认证生产浏览器验收和真实
+PostgreSQL migration 为 `NOT VERIFIED`；本地 API fixture 不代表生产数据迁移。
+
 ## Existing-conversation rule-library scan (2026-08-23)
 
 The current local implementation adds the explicit `BATCH / ALL_ACTIVE` rule

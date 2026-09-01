@@ -1,5 +1,19 @@
 # 后端与 API
 
+## Current account and ownership contract (working tree, 2026-09-01)
+
+`AuthenticationMiddleware` protects private API routes and derives an
+`OwnershipScope` from the server session. CRUD, imports, jobs, projects,
+messages, attachments, annotations, search, TOC, exports, Offline packages,
+Skills and cleanup scans reject cross-account IDs as not found. Admin access
+routes manage registration mode, invitations, user status and reset grants;
+system archive routes are `ADMIN`-only when authentication is enabled. Share
+routes keep independent token authorization.
+
+Migration `20260901_0030` is the repository head but is not applied to the
+operator database in this session. Older statements below that say there is no
+auth middleware or application rate limit are superseded historical text.
+
 ## JSON + Markdown pairing v5 (current)
 
 `POST /api/imports/preview` reads the multipart batch before final source classification. A compatible exporter JSON supplies the expected non-empty message identities to Markdown detection, so Prompt-only and Response-only exporter Markdown can be paired without making arbitrary Markdown importable by itself.

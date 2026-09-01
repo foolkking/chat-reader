@@ -43,6 +43,7 @@ def create_context_package(
     scope_kind: str,
     start_message_id: uuid.UUID | None,
     progress_callback: ProgressCallback | None = None,
+    subject_key: str = "local:default",
 ) -> ExportArtifact:
     if scope_kind not in {"full_conversation", "reading_scope"}:
         raise ContextPackageError("Unsupported context package scope.")
@@ -210,7 +211,7 @@ def create_context_package(
         db.query(ConversationAnnotation)
         .filter(
             ConversationAnnotation.conversation_id == conversation.id,
-            ConversationAnnotation.subject_key == "local:default",
+            ConversationAnnotation.subject_key == subject_key,
             ConversationAnnotation.is_deleted.is_(False),
             ConversationAnnotation.message_id.in_(selected_message_ids),
         )
@@ -231,7 +232,7 @@ def create_context_package(
         db.query(ConversationNotebook)
         .filter(
             ConversationNotebook.conversation_id == conversation.id,
-            ConversationNotebook.subject_key == "local:default",
+            ConversationNotebook.subject_key == subject_key,
             ConversationNotebook.is_conflict.is_(False),
         )
         .order_by(ConversationNotebook.created_at.asc())
