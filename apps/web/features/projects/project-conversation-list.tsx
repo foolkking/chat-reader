@@ -388,7 +388,7 @@ function ReadingProgress({ value, zh }: { value: number; zh: boolean }) {
 function SortableProjectConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
   const sortable = useSortable({ id, disabled: !enabled });
   const dragProps = enabled ? { ...sortable.attributes, ...sortable.listeners } : {};
-  return <div ref={sortable.setNodeRef} data-testid={`project-conversation-sortable-row-${id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : undefined} {...dragProps} className={`relative outline-none ${sortable.isDragging ? "reader-interactive-row cursor-grabbing" : "cursor-default"}`}>{children}</div>;
+  return <div ref={sortable.setNodeRef} data-testid={`project-conversation-sortable-row-${id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : undefined} {...dragProps} className={`relative outline-none ${sortable.isDragging ? "reader-interactive-row cursor-grabbing" : "cursor-pointer"}`}>{children}</div>;
 }
 
 function projectConversationActivity(conversation: ProjectConversationRead, mode: string): string | null {

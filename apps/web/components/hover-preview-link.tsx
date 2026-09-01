@@ -26,7 +26,11 @@ export function HoverPreviewLink({ href, title, description, children, className
 
   function isCopyTruncated() {
     const copy = anchorRef.current?.querySelector<HTMLElement>("[data-hover-preview-copy]");
-    return Boolean(copy && (copy.scrollHeight > copy.clientHeight + 1 || copy.scrollWidth > copy.clientWidth + 1));
+    return Boolean(copy && (
+      copy.scrollHeight > copy.clientHeight + 1 ||
+      copy.scrollWidth > copy.clientWidth + 1 ||
+      description.trim().length > 180
+    ));
   }
 
   function placePreview(clientX: number, clientY: number) {
