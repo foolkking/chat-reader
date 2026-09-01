@@ -67,6 +67,16 @@ export function HoverPreviewLink({ href, title, description, children, className
     };
   }, [clearPreview]);
 
+  // Keep the delayed affordance reliable across browsers that do not replay
+  // React's delegated pointer events during an automated or restored hover.
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const onMouseOver = (event: MouseEvent) => schedulePreview(event.clientX, event.clientY);
+    anchor.addEventListener("mouseover", onMouseOver);
+    return () => anchor.removeEventListener("mouseover", onMouseOver);
+  }, [schedulePreview]);
+
   useEffect(() => () => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
   }, []);
