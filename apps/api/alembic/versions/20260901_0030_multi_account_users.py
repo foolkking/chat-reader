@@ -65,10 +65,10 @@ def upgrade() -> None:
             INSERT INTO users (id, normalized_email, display_name, role, status,
                                credential_version, created_at, updated_at)
             SELECT :user_id, NULL, 'Administrator', 'ADMIN', 'ACTIVE',
-                   credential_version, created_at, updated_at
-            FROM auth_principals
-            WHERE id = 'owner'
-              AND NOT EXISTS (SELECT 1 FROM users)
+                   COALESCE((SELECT credential_version FROM auth_principals WHERE id = 'owner'), 1),
+                   COALESCE((SELECT created_at FROM auth_principals WHERE id = 'owner'), CURRENT_TIMESTAMP),
+                   COALESCE((SELECT updated_at FROM auth_principals WHERE id = 'owner'), CURRENT_TIMESTAMP)
+            WHERE NOT EXISTS (SELECT 1 FROM users)
             """
         ).bindparams(_owner_uuid_param())
     )

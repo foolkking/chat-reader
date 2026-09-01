@@ -107,6 +107,19 @@ def test_background_cleanup_scan_migration_snapshots_rules_and_removes_current_s
     assert 'op.drop_column("content_cleanup_occurrences", "similarity_score")' in source
 
 
+def test_multi_account_migration_bootstraps_a_stable_admin_without_a_legacy_principal() -> None:
+    migration = (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "20260901_0030_multi_account_users.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert "LEGACY_OWNER_USER_ID" in source
+    assert "COALESCE((SELECT credential_version FROM auth_principals WHERE id = 'owner'), 1)" in source
+    assert "WHERE NOT EXISTS (SELECT 1 FROM users)" in source
+
+
 def test_search_document_model_uses_postgresql_tsvector_type() -> None:
     search_tsv_type = SearchDocument.__table__.c.search_tsv.type.dialect_impl(postgresql.dialect())
     assert isinstance(search_tsv_type, postgresql.TSVECTOR)
