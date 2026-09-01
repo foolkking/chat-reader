@@ -52,20 +52,33 @@ export function HoverPreviewLink({ href, title, description, children, className
 
   useEffect(() => {
     const dismiss = () => clearPreview();
+    const onScroll = (event: Event) => {
+      // Playwright and browsers can scroll a low row into view as part of the
+      // same trusted hover gesture. Preserve only that pending delay; direct
+      // wheel/touch/pointer input and synthetic scrolls still dismiss below.
+      if (event.isTrusted && timerRef.current !== null && position === null) return;
+      dismiss();
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") dismiss();
     };
-    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", dismiss);
     window.addEventListener("reader:dnd-start", dismiss);
+    window.addEventListener("wheel", dismiss, { capture: true, passive: true });
+    window.addEventListener("touchstart", dismiss, { capture: true, passive: true });
+    window.addEventListener("pointerdown", dismiss, true);
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", dismiss);
       window.removeEventListener("reader:dnd-start", dismiss);
+      window.removeEventListener("wheel", dismiss, true);
+      window.removeEventListener("touchstart", dismiss, true);
+      window.removeEventListener("pointerdown", dismiss, true);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [clearPreview]);
+  }, [clearPreview, position]);
 
   // Keep the delayed affordance reliable across browsers that do not replay
   // React's delegated pointer events during an automated or restored hover.
