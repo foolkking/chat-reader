@@ -228,6 +228,13 @@ test("frame-ancestors blocks a controlled external parent", async ({ page, baseU
   await page.goto(`${attackOrigin}/frame-parent?target=${encodeURIComponent(target)}`);
   await expect.poll(() => frameErrors.length).toBeGreaterThan(0);
   expect(page.frames().some((frame) => frame.url() === target)).toBe(false);
+
+  // Chromium headless-shell 1234 can crash while tearing down a context that
+  // still owns a cross-origin iframe rejected by frame-ancestors. The policy
+  // assertion is complete above; detach the probe explicitly before fixture
+  // cleanup so the following tests receive a healthy browser process.
+  await page.locator('iframe[title="probe"]').evaluate((frame) => frame.remove());
+  await page.goto("about:blank");
 });
 
 async function installViolationCollector(page: Page) {
