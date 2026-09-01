@@ -19,6 +19,16 @@ def registration_mode(db: Session, settings: Settings) -> str:
     return row.registration_mode if row is not None else settings.auth_registration_mode
 
 
+def access_settings(db: Session, settings: Settings) -> dict:
+    row = db.get(InstanceAccessSetting, 1)
+    return {
+        "registration_mode": row.registration_mode if row else settings.auth_registration_mode,
+        "require_admin_approval": row.require_admin_approval if row else False,
+        "email_verification_enabled": row.email_verification_enabled if row else False,
+        "password_reset_enabled": row.password_reset_enabled if row else True,
+    }
+
+
 def set_registration_mode(db: Session, mode: str, actor_user_id: uuid.UUID) -> InstanceAccessSetting:
     if mode not in {"CLOSED", "INVITE_ONLY", "OPEN"}:
         raise ValueError("Invalid registration mode.")
@@ -30,6 +40,25 @@ def set_registration_mode(db: Session, mode: str, actor_user_id: uuid.UUID) -> I
         row.registration_mode = mode
         row.updated_by_user_id = actor_user_id
         row.updated_at = utc_now()
+    db.flush()
+    return row
+
+
+def set_access_settings(
+    db: Session,
+    *,
+    mode: str,
+    require_admin_approval: bool,
+    email_verification_enabled: bool,
+    password_reset_enabled: bool,
+    actor_user_id: uuid.UUID,
+) -> InstanceAccessSetting:
+    row = set_registration_mode(db, mode, actor_user_id)
+    row.require_admin_approval = require_admin_approval
+    row.email_verification_enabled = email_verification_enabled
+    row.password_reset_enabled = password_reset_enabled
+    row.updated_by_user_id = actor_user_id
+    row.updated_at = utc_now()
     db.flush()
     return row
 
@@ -87,6 +116,31 @@ def disable_user(db: Session, user: User, disabled: bool) -> None:
                 .where(AuthSession.principal_id == principal.id, AuthSession.revoked_at.is_(None))
                 .values(revoked_at=utc_now())
             )
+    db.flush()
+
+
+def revoke_user_sessions(db: Session, user: User) -> int:
+    principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == user.id).one_or_none()
+    if principal is None:
+        return 0
+    result = db.execute(
+        update(AuthSession)
+        .where(AuthSession.principal_id == principal.id, AuthSession.revoked_at.is_(None))
+        .values(revoked_at=utc_now())
+    )
+    db.flush()
+    return int(result.rowcount or 0)
+
+
+def review_pending_user(db: Session, user: User, *, approved: bool, actor_user_id: uuid.UUID) -> None:
+    if user.status != "PENDING":
+        raise ValueError("Only pending users can be reviewed.")
+    user.status = "ACTIVE" if approved else "DISABLED"
+    user.approval_reviewed_at = utc_now()
+    user.approval_reviewed_by_user_id = actor_user_id
+    user.updated_at = utc_now()
+    if not approved:
+        revoke_user_sessions(db, user)
     db.flush()
 
 

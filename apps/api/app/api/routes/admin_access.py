@@ -5,17 +5,27 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import func, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.access import AccountInvitation
+from app.models.administration import AdminAuditLog
+from app.models.attachment import Attachment, AssetObject
+from app.models.auth import AuthPrincipal, AuthSession
+from app.models.conversation import Conversation
+from app.models.project import Project
 from app.models.user import User
 from app.services.access import (
     create_invitation,
     create_password_reset_grant,
     disable_user,
+    access_settings,
     registration_mode,
+    review_pending_user,
+    revoke_user_sessions,
+    set_access_settings,
     set_registration_mode,
 )
 from app.services.auth import root_admin_user
@@ -25,6 +35,9 @@ router = APIRouter(prefix="/api/admin/access", tags=["admin-access"])
 
 class RegistrationUpdate(BaseModel):
     mode: str = Field(pattern="^(CLOSED|INVITE_ONLY|OPEN)$")
+    require_admin_approval: bool = False
+    email_verification_enabled: bool = False
+    password_reset_enabled: bool = True
 
 
 class InvitationCreate(BaseModel):
@@ -52,7 +65,7 @@ def get_access_overview(request: Request, db: Session = Depends(get_db)) -> dict
     _admin(request, db)
     settings = get_settings()
     return {
-        "registration_mode": registration_mode(db, settings),
+        **access_settings(db, settings),
         "smtp_configured": bool(settings.smtp_host and settings.smtp_from_address),
     }
 
@@ -60,15 +73,44 @@ def get_access_overview(request: Request, db: Session = Depends(get_db)) -> dict
 @router.put("/registration")
 def update_registration(payload: RegistrationUpdate, request: Request, db: Session = Depends(get_db)) -> dict:
     actor = _admin(request, db)
-    row = set_registration_mode(db, payload.mode, actor.id)
+    row = set_access_settings(
+        db,
+        mode=payload.mode,
+        require_admin_approval=payload.require_admin_approval,
+        email_verification_enabled=payload.email_verification_enabled,
+        password_reset_enabled=payload.password_reset_enabled,
+        actor_user_id=actor.id,
+    )
+    _record(db, request, actor.id, "REGISTRATION_MODE_CHANGED", resource_type="INSTANCE_ACCESS", resource_id="1", metadata={
+        "registration_mode": payload.mode,
+        "require_admin_approval": payload.require_admin_approval,
+        "email_verification_enabled": payload.email_verification_enabled,
+        "password_reset_enabled": payload.password_reset_enabled,
+    })
     db.commit()
-    return {"registration_mode": row.registration_mode, "updated_at": row.updated_at}
+    return {**access_settings(db, get_settings()), "updated_at": row.updated_at}
 
 
 @router.get("/users")
 def list_users(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     _admin(request, db)
     rows = db.query(User).order_by(User.created_at.asc(), User.id.asc()).all()
+    conversation_counts = dict(db.query(Conversation.owner_user_id, func.count(Conversation.id)).filter(
+        Conversation.deleted_at.is_(None), Conversation.owner_user_id.is_not(None)
+    ).group_by(Conversation.owner_user_id).all())
+    project_counts = dict(db.query(Project.owner_user_id, func.count(Project.id)).filter(
+        Project.owner_user_id.is_not(None)
+    ).group_by(Project.owner_user_id).all())
+    attachment_counts = dict(db.query(Conversation.owner_user_id, func.count(Attachment.id)).join(
+        Attachment, Attachment.conversation_id == Conversation.id
+    ).filter(
+        Conversation.deleted_at.is_(None), Attachment.deleted_at.is_(None), Conversation.owner_user_id.is_not(None)
+    ).group_by(Conversation.owner_user_id).all())
+    attachment_bytes = dict(db.query(Conversation.owner_user_id, func.coalesce(func.sum(AssetObject.byte_size), 0)).join(
+        Attachment, Attachment.conversation_id == Conversation.id
+    ).outerjoin(AssetObject, AssetObject.id == Attachment.asset_object_id).filter(
+        Conversation.deleted_at.is_(None), Attachment.deleted_at.is_(None), Conversation.owner_user_id.is_not(None)
+    ).group_by(Conversation.owner_user_id).all())
     return [
         {
             "id": str(row.id),
@@ -77,6 +119,15 @@ def list_users(request: Request, db: Session = Depends(get_db)) -> list[dict]:
             "role": row.role,
             "status": row.status,
             "created_at": row.created_at,
+            "last_login_at": row.last_login_at,
+            "email_verified_at": row.email_verified_at,
+            "approval_reviewed_at": row.approval_reviewed_at,
+            "stats": {
+                "projects": project_counts.get(row.id, 0),
+                "conversations": conversation_counts.get(row.id, 0),
+                "attachments": attachment_counts.get(row.id, 0),
+                "attachment_bytes": int(attachment_bytes.get(row.id, 0) or 0),
+            },
         }
         for row in rows
     ]
@@ -94,6 +145,8 @@ def update_user_status(
     if user is None or user.id == actor.id:
         raise HTTPException(status_code=404, detail="User not found.")
     disable_user(db, user, payload.status == "DISABLED")
+    _record(db, request, actor.id, "USER_DISABLED" if payload.status == "DISABLED" else "USER_ENABLED", target_user_id=user.id,
+            resource_type="USER", resource_id=str(user.id))
     db.commit()
     return {"id": str(user.id), "status": user.status}
 
@@ -104,6 +157,7 @@ def issue_invitation(payload: InvitationCreate, request: Request, db: Session = 
     token, invitation = create_invitation(
         db, get_settings(), actor.id, expires_in_hours=payload.expires_in_hours
     )
+    _record(db, request, actor.id, "INVITATION_CREATED", resource_type="INVITATION", resource_id=str(invitation.id), metadata={"expires_at": invitation.expires_at.isoformat()})
     db.commit()
     base = get_settings().public_web_base_url.rstrip("/")
     return {
@@ -136,11 +190,12 @@ def list_invitations(request: Request, db: Session = Depends(get_db)) -> list[di
 
 @router.delete("/invitations/{invitation_id}", status_code=204)
 def revoke_invitation(invitation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> None:
-    _admin(request, db)
+    actor = _admin(request, db)
     invitation = db.get(AccountInvitation, invitation_id)
     if invitation is None or invitation.used_at is not None:
         raise HTTPException(status_code=404, detail="Invitation not found.")
     invitation.revoked_at = datetime.now(timezone.utc)
+    _record(db, request, actor.id, "INVITATION_REVOKED", resource_type="INVITATION", resource_id=str(invitation.id))
     db.commit()
 
 
@@ -162,6 +217,7 @@ def issue_password_reset(
         actor_user_id=actor.id,
         expires_in_minutes=payload.expires_in_minutes,
     )
+    _record(db, request, actor.id, "PASSWORD_RESET_CREATED", target_user_id=user.id, resource_type="USER", resource_id=str(user.id), metadata={"expires_at": grant.expires_at.isoformat()})
     db.commit()
     base = get_settings().public_web_base_url.rstrip("/")
     return {
@@ -172,3 +228,64 @@ def issue_password_reset(
 
 def _utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
+@router.post("/users/{user_id}/sessions/revoke")
+def revoke_all_user_sessions(user_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> dict:
+    actor = _admin(request, db)
+    user = db.get(User, user_id)
+    if user is None or user.id == actor.id:
+        raise HTTPException(status_code=404, detail="User not found.")
+    revoked = revoke_user_sessions(db, user)
+    _record(db, request, actor.id, "USER_SESSIONS_REVOKED", target_user_id=user.id,
+            resource_type="USER", resource_id=str(user.id), metadata={"revoked_sessions": revoked})
+    db.commit()
+    return {"id": str(user.id), "revoked_sessions": revoked}
+
+
+@router.post("/users/{user_id}/approve")
+def approve_user(user_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> dict:
+    return _review_user(user_id, request, db, approved=True)
+
+
+@router.post("/users/{user_id}/reject")
+def reject_user(user_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> dict:
+    return _review_user(user_id, request, db, approved=False)
+
+
+def _review_user(user_id: uuid.UUID, request: Request, db: Session, *, approved: bool) -> dict:
+    actor = _admin(request, db)
+    user = db.get(User, user_id)
+    if user is None or user.id == actor.id:
+        raise HTTPException(status_code=404, detail="User not found.")
+    try:
+        review_pending_user(db, user, approved=approved, actor_user_id=actor.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _record(db, request, actor.id, "USER_APPROVED" if approved else "USER_REJECTED", target_user_id=user.id,
+            resource_type="USER", resource_id=str(user.id))
+    db.commit()
+    return {"id": str(user.id), "status": user.status}
+
+
+def _record(
+    db: Session,
+    request: Request,
+    actor_user_id: uuid.UUID,
+    action: str,
+    *,
+    target_user_id: uuid.UUID | None = None,
+    resource_type: str | None = None,
+    resource_id: str | None = None,
+    metadata: dict | None = None,
+) -> None:
+    db.add(AdminAuditLog(
+        actor_user_id=actor_user_id,
+        action=action,
+        target_user_id=target_user_id,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        result="SUCCESS",
+        event_metadata=metadata or {},
+        request_id=request.headers.get("x-request-id"),
+    ))

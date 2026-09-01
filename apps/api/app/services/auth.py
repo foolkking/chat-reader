@@ -234,6 +234,10 @@ def issue_session(
     db.add(session)
     db.commit()
     db.refresh(session)
+    if principal.user is not None:
+        principal.user.last_login_at = now
+        principal.user.updated_at = now
+        db.commit()
     return token, session
 
 

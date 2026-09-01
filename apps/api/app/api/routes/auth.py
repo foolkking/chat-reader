@@ -13,7 +13,7 @@ from app.core.database import get_db
 from app.core.observability import structured_event
 from app.models.user import User
 from app.models.auth import AuthSession
-from app.services.access import consume_invitation, consume_password_reset, invitation_for_token, registration_mode
+from app.services.access import access_settings, consume_invitation, consume_password_reset, invitation_for_token, registration_mode
 from app.services.access import create_password_reset_grant
 from app.services.auth_rate_limit import RateLimitExceeded, consume_auth_attempt
 from app.services.password_mail import send_password_reset
@@ -240,6 +240,20 @@ def register(input: RegisterInput, request: Request, response: Response, db: Ses
         user, principal = register_user(db, input.email, input.password, display_name=input.display_name)
         if invitation is not None:
             consume_invitation(invitation, user.id)
+        approval_required = access_settings(db, settings)["require_admin_approval"]
+        if approval_required:
+            user.status = "PENDING"
+            db.commit()
+            return AuthSessionRead(
+                authenticated=False,
+                user_id=str(user.id),
+                auth_mode="pending_approval",
+                email=user.normalized_email,
+                display_name=user.display_name,
+                role=user.role,
+                registration_mode=mode,
+                password_reset_available=False,
+            )
         token, session = issue_session(db, principal, settings, device_label=describe_user_agent(request.headers.get("user-agent")))
     except ValueError as exc:
         db.rollback()
@@ -312,7 +326,7 @@ def update_me(input: ProfileUpdateInput, request: Request, db: Session = Depends
 @router.post("/password-reset/request", status_code=204)
 def request_password_reset(input: PasswordResetRequestInput, request: Request, db: Session = Depends(get_db)) -> None:
     settings = get_settings()
-    if not settings.smtp_host or not settings.smtp_from_address:
+    if not access_settings(db, settings)["password_reset_enabled"] or not settings.smtp_host or not settings.smtp_from_address:
         raise HTTPException(status_code=404, detail="Not found.")
     _consume_or_429(db, request, "password-reset-request", input.email, limit=5, window_seconds=3600)
     normalized = input.email.strip().casefold()

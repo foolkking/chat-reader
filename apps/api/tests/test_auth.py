@@ -15,6 +15,7 @@ from app.core.config import get_settings
 from app.core.database import Base, get_db
 from app.main import app
 from app.models.access import AccountInvitation
+from app.models.administration import AdminAuditLog
 from app.models.auth import AuthPrincipal, AuthSession
 from app.models.user import User
 from app.services.auth import (
@@ -30,6 +31,107 @@ from app.services.auth import (
 
 def owner_login(client: TestClient, password: str = "correct horse battery staple"):
     return client.post("/api/auth/login", json={"email": "admin@example.test", "password": password})
+
+
+def test_admin_approval_blocks_sessions_until_explicit_review(auth_client: TestClient) -> None:
+    assert owner_login(auth_client).status_code == 200
+    configured = auth_client.put(
+        "/api/admin/access/registration",
+        json={
+            "mode": "OPEN",
+            "require_admin_approval": True,
+            "email_verification_enabled": False,
+            "password_reset_enabled": True,
+        },
+    )
+    assert configured.status_code == 200
+    assert configured.json()["require_admin_approval"] is True
+
+    auth_client.cookies.clear()
+    registered = auth_client.post(
+        "/api/auth/register",
+        json={
+            "email": "pending@example.test",
+            "password": "pending account passphrase",
+            "confirm_password": "pending account passphrase",
+            "display_name": "Pending reader",
+        },
+    )
+    assert registered.status_code == 201
+    assert registered.json()["authenticated"] is False
+    pending_user_id = registered.json()["user_id"]
+    assert auth_client.post(
+        "/api/auth/login",
+        json={"email": "pending@example.test", "password": "pending account passphrase"},
+    ).status_code == 401
+
+    assert owner_login(auth_client).status_code == 200
+    users = auth_client.get("/api/admin/access/users")
+    assert users.status_code == 200
+    pending = next(item for item in users.json() if item["id"] == pending_user_id)
+    assert pending["status"] == "PENDING"
+    approved = auth_client.post(f"/api/admin/access/users/{pending_user_id}/approve")
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "ACTIVE"
+
+    auth_client.cookies.clear()
+    assert auth_client.post(
+        "/api/auth/login",
+        json={"email": "pending@example.test", "password": "pending account passphrase"},
+    ).status_code == 200
+
+
+def test_cross_user_content_requires_explicit_admin_path(auth_client: TestClient) -> None:
+    assert owner_login(auth_client).status_code == 200
+    assert auth_client.put(
+        "/api/admin/access/registration",
+        json={"mode": "OPEN", "require_admin_approval": False},
+    ).status_code == 200
+    auth_client.cookies.clear()
+    registered = auth_client.post(
+        "/api/auth/register",
+        json={
+            "email": "content-owner@example.test",
+            "password": "content owner passphrase",
+            "confirm_password": "content owner passphrase",
+            "display_name": "Content owner",
+        },
+    )
+    assert registered.status_code == 201
+    owner_id = registered.json()["user_id"]
+    created = auth_client.post(
+        "/api/conversations",
+        json={
+            "title": "Private moderation fixture",
+            "messages": [
+                {"role": "user", "content_markdown": "private exact phrase"},
+                {"role": "assistant", "content_markdown": "private answer"},
+            ],
+        },
+    )
+    assert created.status_code == 201
+    conversation_id = created.json()["conversation"]["id"]
+
+    auth_client.cookies.clear()
+    assert owner_login(auth_client).status_code == 200
+    assert auth_client.get(f"/api/conversations/{conversation_id}").status_code == 404
+    listed = auth_client.get(f"/api/admin/content/users/{owner_id}/conversations")
+    assert listed.status_code == 200
+    assert [item["id"] for item in listed.json()["items"]] == [conversation_id]
+    viewed = auth_client.get(f"/api/admin/content/users/{owner_id}/conversations/{conversation_id}/reader-turn")
+    assert viewed.status_code == 200
+    assert viewed.json()["total_messages"] == 2
+
+    # The admin path records IDs and action metadata, never the private body.
+    override = app.dependency_overrides[get_db]
+    db = next(override())
+    try:
+        audit = db.query(AdminAuditLog).filter(AdminAuditLog.action == "VIEW_USER_CONVERSATION").one()
+        assert str(audit.target_user_id) == owner_id
+        assert audit.resource_id == conversation_id
+        assert audit.event_metadata == {}
+    finally:
+        db.close()
 
 
 @pytest.fixture()

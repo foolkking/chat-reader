@@ -32,6 +32,7 @@ function RegisterForm() {
   const [invitationToken, setInvitationToken] = useState(searchParams?.get("invite") ?? "");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
   const destination = safeReturnPath(searchParams?.get("return_to") ?? "/");
   const loginHref = destination === "/" ? "/login" : `/login?return_to=${encodeURIComponent(destination)}`;
 
@@ -80,12 +81,16 @@ function RegisterForm() {
     }
     setSubmitting(true);
     try {
-      await registerAccount({
+      const session = await registerAccount({
         email: email.trim(),
         password,
         confirmPassword,
         invitationToken: mode === "INVITE_ONLY" ? invitationToken.trim() : undefined,
       });
+      if (!session.authenticated && session.auth_mode === "pending_approval") {
+        setPendingApproval(true);
+        return;
+      }
       window.location.replace(destination);
     } catch (cause) {
       setError(registrationErrorMessage(cause, mode, copy));
@@ -103,7 +108,7 @@ function RegisterForm() {
       {mode === "LOADING" ? <RegistrationLoading copy={copy} /> : null}
       {mode === "ERROR" ? <RegistrationLoadError copy={copy} onRetry={loadAvailability} /> : null}
       {mode === "CLOSED" ? <ClosedRegistration copy={copy} /> : null}
-      {mode === "OPEN" || mode === "INVITE_ONLY" ? (
+      {pendingApproval ? <div className="rounded-md border border-ui bg-subtle px-4 py-4" role="status"><p className="font-medium text-primary">{copy.pendingTitle}</p><p className="mt-1.5 text-sm leading-5 text-secondary">{copy.pendingDescription}</p><Link href={loginHref} className="btn-secondary mt-4 inline-flex min-h-10 items-center px-4 text-sm font-medium">{copy.backToLogin}</Link></div> : mode === "OPEN" || mode === "INVITE_ONLY" ? (
         <form onSubmit={submit} className="space-y-4">
           {mode === "INVITE_ONLY" ? <p className="rounded-md bg-[var(--color-semantic-warning-soft)] px-3 py-2 text-sm leading-5 text-[var(--color-semantic-warning)]">{copy.inviteOnly}</p> : null}
           <div className="space-y-1.5 text-left">
@@ -179,6 +184,8 @@ const enCopy = {
   loading: "Checking registration availability",
   loadError: "Registration availability could not be checked.",
   retry: "Try again",
+  pendingTitle: "Account awaiting approval",
+  pendingDescription: "Your account was created. A system administrator must approve it before you can sign in.",
 } as const;
 
 type RegisterCopy = { [Key in keyof typeof enCopy]: string };
@@ -209,4 +216,6 @@ const zhCopy: RegisterCopy = {
   loading: "正在检查注册状态",
   loadError: "无法确认当前实例的注册状态。",
   retry: "重试",
+  pendingTitle: "账户正在等待审批",
+  pendingDescription: "账户已创建。系统管理员审批后才能登录。",
 };

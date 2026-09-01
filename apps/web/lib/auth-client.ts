@@ -22,7 +22,7 @@ export type AuthSessionState = {
   principal_id: string | null;
   user_id: string | null;
   inactivity_expires_at: string | null;
-  auth_mode: "single_password" | "multi_account";
+  auth_mode: "single_password" | "multi_account" | "pending_approval";
   email: string | null;
   display_name: string | null;
   role: "ADMIN" | "USER" | null;
@@ -82,7 +82,7 @@ export async function registerAccount(input: {
     confirm_password: input.confirmPassword,
     invitation_token: input.invitationToken || undefined,
   });
-  await bindAuthenticatedOfflineContext(session);
+  if (session.authenticated) await bindAuthenticatedOfflineContext(session);
   return session;
 }
 
