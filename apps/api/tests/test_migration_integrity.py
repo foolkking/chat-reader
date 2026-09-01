@@ -8,6 +8,15 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 from app.models.auth import AuthPrincipal
+from app.models.access import InstanceAccessSetting
+from app.models.administration import (
+    AdminAuditLog,
+    InstanceFeaturePolicy,
+    SystemBackupRecord,
+    SystemSkill,
+    UserDeletionRequest,
+)
+from app.models.user import User
 from app.models.search_document import SearchDocument
 
 
@@ -142,6 +151,67 @@ def test_admin_config_digest_migration_stores_only_a_nullable_derived_value() ->
     assert column.server_default is None
     assert isinstance(column.type, sa.String)
     assert column.type.length == 64
+
+
+def test_root_administration_foundation_has_one_head_and_sensitive_data_boundaries() -> None:
+    migration = (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "20260902_0032_root_administration_foundation.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert 'down_revision: str | None = "20260901_0031"' in source
+    for table_name in (
+        "admin_audit_logs",
+        "system_skills",
+        "instance_feature_policies",
+        "system_backup_records",
+        "user_deletion_requests",
+    ):
+        assert table_name in source
+    assert "PENDING" in source
+    assert "require_admin_approval" in source
+    for forbidden in (
+        "password_hash",
+        "session_token",
+        "invitation_token",
+        "conversation_body",
+        "attachment_content",
+    ):
+        assert forbidden not in source
+
+
+def test_root_administration_models_preserve_singleton_and_audit_contracts() -> None:
+    status_constraint = next(
+        constraint
+        for constraint in User.__table__.constraints
+        if getattr(constraint, "name", None) == "ck_users_status"
+    )
+    assert "PENDING" in str(status_constraint.sqltext)
+    assert User.__table__.c.last_login_at.nullable is True
+    assert User.__table__.c.approval_reviewed_by_user_id.nullable is True
+    assert InstanceAccessSetting.__table__.c.require_admin_approval.default.arg is False
+    assert InstanceAccessSetting.__table__.c.password_reset_enabled.default.arg is True
+
+    assert AdminAuditLog.__table__.c.actor_user_id.nullable is False
+    assert AdminAuditLog.__table__.c.target_user_id.foreign_keys == set()
+    assert AdminAuditLog.__table__.c.metadata.nullable is False
+    assert "password" not in AdminAuditLog.__table__.c
+    assert "content" not in AdminAuditLog.__table__.c
+
+    assert SystemSkill.__table__.c.bundled_key.nullable is True
+    assert SystemSkill.__table__.c.content.nullable is True
+    assert InstanceFeaturePolicy.__table__.c.id.primary_key is True
+    backup_unique_names = {
+        constraint.name for constraint in SystemBackupRecord.__table__.constraints if isinstance(constraint, sa.UniqueConstraint)
+    }
+    assert "uq_system_backup_records_job" in backup_unique_names
+    assert UserDeletionRequest.__table__.c.target_user_id.foreign_keys == set()
+    deletion_unique_names = {
+        constraint.name for constraint in UserDeletionRequest.__table__.constraints if isinstance(constraint, sa.UniqueConstraint)
+    }
+    assert "uq_user_deletion_requests_job" in deletion_unique_names
 
 
 def test_search_document_model_uses_postgresql_tsvector_type() -> None:

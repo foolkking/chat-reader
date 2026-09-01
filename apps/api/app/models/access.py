@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -13,6 +13,9 @@ class InstanceAccessSetting(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     registration_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="CLOSED")
+    require_admin_approval: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    email_verification_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    password_reset_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

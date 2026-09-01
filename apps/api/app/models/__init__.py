@@ -41,6 +41,13 @@ from app.models.worker_runtime_state import WorkerRuntimeState
 from app.models.user_skill import UserSkill, UserSkillSelection
 from app.models.user import User
 from app.models.access import AccountInvitation, InstanceAccessSetting, PasswordResetGrant
+from app.models.administration import (
+    AdminAuditLog,
+    InstanceFeaturePolicy,
+    SystemBackupRecord,
+    SystemSkill,
+    UserDeletionRequest,
+)
 
 __all__ = [
     "BackgroundJob",
@@ -94,4 +101,9 @@ __all__ = [
     "AccountInvitation",
     "InstanceAccessSetting",
     "PasswordResetGrant",
+    "AdminAuditLog",
+    "InstanceFeaturePolicy",
+    "SystemBackupRecord",
+    "SystemSkill",
+    "UserDeletionRequest",
 ]
