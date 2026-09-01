@@ -5,6 +5,7 @@ Revises: 20260829_0029
 """
 
 from collections.abc import Sequence
+from uuid import UUID
 
 import sqlalchemy as sa
 from alembic import op
@@ -17,6 +18,11 @@ depends_on: str | Sequence[str] | None = None
 # A stable migration value makes the owner backfill idempotent. It is not a
 # credential and is replaced by a generated UUID for newly registered users.
 LEGACY_OWNER_USER_ID = "2dfb6c9e-4b25-4f67-9f5e-4b87f1d8ad01"
+LEGACY_OWNER_USER_UUID = UUID(LEGACY_OWNER_USER_ID)
+
+
+def _owner_uuid_param() -> sa.BindParameter[UUID]:
+    return sa.bindparam("user_id", value=LEGACY_OWNER_USER_UUID, type_=sa.Uuid())
 
 
 def upgrade() -> None:
@@ -64,7 +70,7 @@ def upgrade() -> None:
             WHERE id = 'owner'
               AND NOT EXISTS (SELECT 1 FROM users)
             """
-        ).bindparams(user_id=LEGACY_OWNER_USER_ID)
+        ).bindparams(_owner_uuid_param())
     )
     op.execute(
         sa.text(
@@ -73,7 +79,7 @@ def upgrade() -> None:
             SET user_id = :user_id
             WHERE id = 'owner' AND user_id IS NULL
             """
-        ).bindparams(user_id=LEGACY_OWNER_USER_ID)
+        ).bindparams(_owner_uuid_param())
     )
     for table_name in ("projects", "conversations", "imports", "background_jobs", "import_profiles"):
         op.add_column(table_name, sa.Column("owner_user_id", sa.Uuid(), nullable=True))
@@ -89,14 +95,14 @@ def upgrade() -> None:
     for table_name in ("projects", "conversations", "imports", "background_jobs"):
         op.execute(
             sa.text(f"UPDATE {table_name} SET owner_user_id = :user_id WHERE owner_user_id IS NULL")
-            .bindparams(user_id=LEGACY_OWNER_USER_ID)
+            .bindparams(_owner_uuid_param())
         )
         op.alter_column(table_name, "owner_user_id", nullable=False)
     op.execute(
         sa.text(
             "UPDATE import_profiles SET owner_user_id = :user_id "
             "WHERE owner_user_id IS NULL AND kind <> 'BUILTIN'"
-        ).bindparams(user_id=LEGACY_OWNER_USER_ID)
+        ).bindparams(_owner_uuid_param())
     )
     # Account-scoped preference/annotation/reading records historically used
     # the process-wide local subject. Bind that legacy subject to the one
@@ -131,7 +137,7 @@ def upgrade() -> None:
         sa.text(
             "UPDATE content_cleanup_rules SET owner_user_id = :user_id "
             "WHERE owner_user_id IS NULL AND kind <> 'BUILTIN'"
-        ).bindparams(user_id=LEGACY_OWNER_USER_ID)
+        ).bindparams(_owner_uuid_param())
     )
     op.create_index(
         "idx_content_cleanup_rules_owner_status",
