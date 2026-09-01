@@ -84,6 +84,7 @@ export function HoverPreviewLink({ href, title, description, children, className
           schedulePreview(event.clientX, event.clientY);
         }}
         onMouseEnter={(event) => schedulePreview(event.clientX, event.clientY)}
+        onMouseMove={(event) => schedulePreview(event.clientX, event.clientY)}
         onPointerLeave={clearPreview}
         onFocus={() => {
           if (!description || !isCopyTruncated()) return;

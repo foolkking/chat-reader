@@ -882,6 +882,12 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   background-color: var(--subtle);
 }
 
+/* Rows that own their state on a child (for example a list article) still
+   need the same quiet hover affordance as their sortable wrapper. */
+.reader-interactive-row:not([data-state]):hover {
+  background-color: var(--subtle);
+}
+
 .reader-interactive-row:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
