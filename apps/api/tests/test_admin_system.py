@@ -71,6 +71,29 @@ def test_normal_user_cannot_reach_root_system_apis(auth_client: TestClient) -> N
     assert normal_user_id != ROOT_ADMIN_USER_ID
 
 
+def test_root_can_queue_confirmed_user_deletion_from_admin_api(auth_client: TestClient) -> None:
+    assert owner_login(auth_client).status_code == 200
+    target_user_id, _ = _normal_user_session(auth_client)
+
+    impact = auth_client.get(f"/api/admin/access/users/{target_user_id}/deletion-impact")
+    assert impact.status_code == 200, impact.text
+    assert impact.json()["user_id"] == str(target_user_id)
+
+    mismatch = auth_client.post(
+        f"/api/admin/access/users/{target_user_id}/delete",
+        json={"confirm_user_id": str(uuid.uuid4())},
+    )
+    assert mismatch.status_code == 422
+
+    queued = auth_client.post(
+        f"/api/admin/access/users/{target_user_id}/delete",
+        json={"confirm_user_id": str(target_user_id)},
+        headers={"Idempotency-Key": "delete-user-route-fixture"},
+    )
+    assert queued.status_code == 202, queued.text
+    assert queued.json()["job_id"]
+
+
 def test_system_skill_override_default_and_restore(auth_client: TestClient) -> None:
     assert owner_login(auth_client).status_code == 200
     listed = auth_client.get("/api/admin/system-skills")

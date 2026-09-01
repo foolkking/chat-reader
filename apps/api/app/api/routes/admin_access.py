@@ -3,9 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, update
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -13,7 +13,6 @@ from app.core.database import get_db
 from app.models.access import AccountInvitation
 from app.models.administration import AdminAuditLog
 from app.models.attachment import Attachment, AssetObject
-from app.models.auth import AuthPrincipal, AuthSession
 from app.models.conversation import Conversation
 from app.models.project import Project
 from app.models.user import User
@@ -22,13 +21,14 @@ from app.services.access import (
     create_password_reset_grant,
     disable_user,
     access_settings,
-    registration_mode,
     review_pending_user,
     revoke_user_sessions,
     set_access_settings,
-    set_registration_mode,
 )
 from app.services.auth import root_admin_user
+from app.api.routes.tasks import background_job_read
+from app.schemas.task import BackgroundTaskRead
+from app.services.user_deletion import account_deletion_impact, queue_user_account_delete
 
 router = APIRouter(prefix="/api/admin/access", tags=["admin-access"])
 
@@ -50,6 +50,10 @@ class UserStatusUpdate(BaseModel):
 
 class ResetGrantCreate(BaseModel):
     expires_in_minutes: int = Field(default=30, ge=5, le=120)
+
+
+class DeleteUserRequest(BaseModel):
+    confirm_user_id: uuid.UUID
 
 
 def _admin(request: Request, db: Session) -> User:
@@ -266,6 +270,43 @@ def _review_user(user_id: uuid.UUID, request: Request, db: Session, *, approved:
             resource_type="USER", resource_id=str(user.id))
     db.commit()
     return {"id": str(user.id), "status": user.status}
+
+
+@router.get("/users/{user_id}/deletion-impact")
+def user_deletion_impact(user_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> dict:
+    actor = _admin(request, db)
+    user = db.get(User, user_id)
+    if user is None or user.id == actor.id:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {"user_id": str(user.id), **account_deletion_impact(db, user.id)}
+
+
+@router.post("/users/{user_id}/delete", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
+def delete_user_account(
+    user_id: uuid.UUID,
+    payload: DeleteUserRequest,
+    request: Request,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+) -> BackgroundTaskRead:
+    actor = _admin(request, db)
+    if payload.confirm_user_id != user_id:
+        raise HTTPException(status_code=422, detail="User deletion confirmation does not match the target.")
+    try:
+        job, _ = queue_user_account_delete(
+            db,
+            actor_user_id=actor.id,
+            target_user_id=user_id,
+            idempotency_key=idempotency_key,
+        )
+        db.commit()
+        return background_job_read(job)
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 def _record(

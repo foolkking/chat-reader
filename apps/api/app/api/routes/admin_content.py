@@ -100,7 +100,7 @@ def search_admin_content(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
-    _admin(request, db)
+    actor = _admin(request, db)
     query = db.query(Conversation, User).join(User, User.id == Conversation.owner_user_id).filter(
         Conversation.deleted_at.is_(None)
     )
@@ -152,6 +152,18 @@ def search_admin_content(
             "updated_at": conversation.updated_at,
             "snippet": (snippet or "")[:360],
         })
+        if clean_q:
+            _audit(
+                db,
+                request,
+                actor_user_id=actor.id,
+                action="VIEW_USER_CONVERSATION",
+                target_user_id=user.id,
+                resource_type="CONVERSATION",
+                resource_id=conversation.id,
+            )
+    if clean_q and items:
+        db.commit()
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
