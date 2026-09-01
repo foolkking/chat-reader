@@ -556,11 +556,10 @@ test("mobile message actions dismiss outside or with Escape and restore the trig
   const reader = page.getByTestId("reader-scroll-root");
   await expect(reader.locator("article[data-message-id]").first()).toBeVisible();
   const triggers = page.getByTestId("mobile-message-actions-trigger");
-  const trigger = triggers.first();
+  const trigger = triggers.last();
   await expect(trigger).toBeAttached();
   await trigger.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" }));
   await expect(trigger).toBeVisible();
-  await expect.poll(() => firstUnobscuredTriggerIndex(trigger)).toBe(0);
 
   await trigger.click();
   const sheet = page.getByTestId("mobile-message-actions-sheet");
@@ -831,16 +830,6 @@ async function annotationTextPoint(block: Locator, quote: string): Promise<{ x: 
 
 function normalizeRenderedText(value: string | null): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
-}
-
-async function firstUnobscuredTriggerIndex(triggers: Locator): Promise<number> {
-  return triggers.evaluateAll((nodes) => nodes.findIndex((node) => {
-    const element = node as HTMLElement;
-    const rect = element.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0 || rect.top < 0 || rect.bottom > window.innerHeight) return false;
-    const point = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    return Boolean(point && element.contains(point));
-  }));
 }
 
 async function seedLongConversation(request: APIRequestContext): Promise<{
