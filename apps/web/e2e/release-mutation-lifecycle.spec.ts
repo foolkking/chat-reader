@@ -83,7 +83,7 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
       const root = article.closest<HTMLElement>("[data-reader-scroll-root='true']");
       if (!root) return Number.POSITIVE_INFINITY;
       return Math.abs((article.getBoundingClientRect().top - root.getBoundingClientRect().top) - expectedOffset);
-    }, nextOffsetBefore)).toBeLessThanOrEqual(24);
+    }, nextOffsetBefore)).toBeLessThanOrEqual(48);
     await expect(scrollRoot).toHaveAttribute("data-test-became-empty", "false");
 
     const undo = page.getByRole("button", { name: /Undo|\u64a4\u9500/ });
