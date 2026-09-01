@@ -4,8 +4,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from app.models.auth import AuthPrincipal
 from app.models.search_document import SearchDocument
 
 
@@ -118,6 +120,28 @@ def test_multi_account_migration_bootstraps_a_stable_admin_without_a_legacy_prin
     assert "LEGACY_OWNER_USER_ID" in source
     assert "COALESCE((SELECT credential_version FROM auth_principals WHERE id = 'owner'), 1)" in source
     assert "WHERE NOT EXISTS (SELECT 1 FROM users)" in source
+
+
+def test_admin_config_digest_migration_stores_only_a_nullable_derived_value() -> None:
+    migration = (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "20260901_0031_admin_config_digest.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert 'down_revision: str | None = "20260901_0030"' in source
+    assert 'sa.Column("deployment_config_digest", sa.String(length=64), nullable=True)' in source
+    assert 'op.drop_column("auth_principals", "deployment_config_digest")' in source
+    assert "server_default" not in source
+    assert "ADMIN_EMAIL" not in source
+    assert "ADMIN_PASSWORD" not in source
+
+    column = AuthPrincipal.__table__.c.deployment_config_digest
+    assert column.nullable is True
+    assert column.server_default is None
+    assert isinstance(column.type, sa.String)
+    assert column.type.length == 64
 
 
 def test_search_document_model_uses_postgresql_tsvector_type() -> None:

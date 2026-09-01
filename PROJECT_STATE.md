@@ -10,8 +10,8 @@ Last updated: 2026-09-01
 | Primary languages | TypeScript/React/Next.js, Python/FastAPI, SQL/Alembic |
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
-| Database | PostgreSQL with Alembic; working-tree head `20260901_0030` (not applied to the operator database in this session) |
-| Branch / baseline | `master`; starting source SHA `93751e52dc7089d0ccd51e6f6cf9cedb1f341fe1`; multi-account changes remain uncommitted |
+| Database | PostgreSQL with Alembic; working-tree head `20260901_0031` (not applied to the operator database in this session) |
+| Branch / baseline | `master`; starting source SHA `93751e52dc7089d0ccd51e6f6cf9cedb1f341fe1`; multi-account release is committed and pending deployment |
 | Deployment | Existing production release remains `93751e5`; this working-tree account upgrade is not deployed |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
@@ -70,9 +70,9 @@ have separate permission/data boundaries.
 | `corepack pnpm run lint` | Web lint | PASS 2026-09-01 |
 | `corepack pnpm run typecheck` | Web typecheck | PASS 2026-09-01 |
 | `corepack pnpm --filter web build` | Production Web build | PASS in this implementation cycle |
-| `corepack pnpm run test:api` | API suite | PASS 454 passed, 6 skipped in this cycle |
+| `corepack pnpm run test:api` | API suite | PASS 455 passed, 6 skipped before the deployment-config reconciliation follow-up |
 | `corepack pnpm --filter web test:pwa` | PWA/browser suite | Full suite NOT VERIFIED locally; Service Worker/online startup timeouts and a CSP resource failure occurred. Targeted OFF-010 375px fixture run passed with Chromium 1234 + `APP_ENV=test` |
-| `cd apps/api; python -m alembic heads` | Migration head | `20260901_0030 (head)` in the working tree |
+| `cd apps/api; python -m alembic heads` | Migration head | `20260901_0031 (head)` in the working tree |
 | `git diff --check` | Patch whitespace | PASS |
 | `corepack pnpm run ci:changed-area` | Changed-area local check suggestions | PASS; always retains full gate |
 | `python deploy/cleanup_release_transfer.py ...` | Bounded transfer cleanup | Dry-run/execute temporary-directory smoke PASS |
@@ -140,9 +140,9 @@ PostgreSQL migration run remain `NOT VERIFIED`.
 | Release evidence | Implemented and deployed | Explicit cache evidence, artifact inspection, health/rollback/HTTPS checks |
 | CI quality ownership | Implemented and deployed | Release and performance workflows expose separate `api-quality` and `web-quality` jobs; image/characterization jobs require both, while browser integration remains in Web quality with disposable API services |
 | Auth cookie/inactivity contract | Implemented in working tree | API exact-boundary tests and authenticated browser cookie attribute assertion; production-equivalent owner run remains NOT VERIFIED |
-| Initial admin bootstrap | Implemented in working tree | Production `migrate` can consume `INITIAL_ADMIN_EMAIL`/`INITIAL_ADMIN_PASSWORD` once; actual operator values are not present in this workspace and deployment remains pending |
+| Deployment admin reconciliation | Implemented in working tree | Production `migrate` consumes `ADMIN_EMAIL`/`ADMIN_PASSWORD`; only a changed pair is applied, while the database stores a derived digest and Argon2id hash rather than plaintext. Deployment remains pending |
 | Attachment Range characterization | Implemented and deployed | Synthetic image/PDF/video/text Range and retry measurement reports aggregates only; production media/network measurement remains NOT VERIFIED |
-| Production deployment | Existing release only | Production remains on `93751e5` / Alembic `20260829_0029`; the account migration is not deployed |
+| Production deployment | Existing release only | Production remains on `93751e5` / Alembic `20260829_0029`; account migrations `20260901_0030` and `20260901_0031` are not deployed |
 | Authenticated production browser | NOT VERIFIED | No approved owner session/browser evidence in this cycle; public health is reachable but exposes no release SHA, so it cannot bind TEST-001 evidence to this source |
 | Backup failure notification | Closed as unconfirmed | Backup emits bounded stderr/non-zero failure; no authorized delivery channel exists, so no external hook was introduced |
 

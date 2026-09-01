@@ -10,7 +10,7 @@ routes manage registration mode, invitations, user status and reset grants;
 system archive routes are `ADMIN`-only when authentication is enabled. Share
 routes keep independent token authorization.
 
-Migration `20260901_0030` is the repository head but is not applied to the
+Migration `20260901_0031` is the repository head but is not applied to the
 operator database in this session. Older statements below that say there is no
 auth middleware or application rate limit are superseded historical text.
 

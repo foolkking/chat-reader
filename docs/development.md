@@ -4,7 +4,7 @@
 
 当前工作树包含多账户 owner 边界：部署时只设置一个 `ADMIN`，后续账号为
 `USER`。私有记录按已认证用户 UUID 隔离，源码 migration head 为
-`20260901_0030_multi_account_users.py`。这部分尚未提交，也尚未应用到生产。
+`20260901_0031_admin_config_digest.py`。这部分尚未应用到生产。
 首次账号请使用 `apps/api/scripts/owner_auth.py`，以运维输入的真实邮箱和交互式
 强密码创建；凭据不得写入仓库。
 
@@ -37,7 +37,7 @@ Set-Location ../..
 ```
 
 `alembic heads` 应只有一个结果。当前源码 head 是
-`20260901_0030_multi_account_users.py`；生产执行前必须完成备份和 migration
+`20260901_0031_admin_config_digest.py`；生产执行前必须完成备份和 migration
 preflight。
 
 当前 Content Cleanup 支持从规则库主动启动一次低优先级的
@@ -69,7 +69,7 @@ preflight。
 | `AUTH_ENABLED` | enables the production account/session boundary | false outside production |
 | `AUTH_SESSION_SECRET` | deployment-only HMAC secret for opaque session-token digests | no repository default |
 | `AUTH_INACTIVITY_TIMEOUT_SECONDS` | per-device sliding inactivity timeout | 172800 seconds |
-| `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` | first production migration bootstrap only | set together outside Git, then remove the password after the migrate container succeeds |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | deployment-managed administrator identity | set together outside Git; a changed pair is applied by the next migrate run, while an unchanged pair does not overwrite a password changed in the Web UI |
 
 不要把真实凭据或生产 URL 提交到仓库；示例只维护变量名和无敏感默认值。
 

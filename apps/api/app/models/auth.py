@@ -16,6 +16,7 @@ class AuthPrincipal(Base):
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, unique=True
     )
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    deployment_config_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
     credential_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(

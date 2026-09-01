@@ -120,22 +120,26 @@ def provision_owner(
     token_digest(secrets.token_urlsafe(32), settings)
     principal = db.get(AuthPrincipal, OWNER_PRINCIPAL_ID)
     initial_account = principal is None
+    owner_user = None
     if principal is not None and principal.user_id:
-        current_user = db.get(User, principal.user_id)
-        initial_account = current_user is None or current_user.normalized_email is None
-    if allow_weak_initial and initial_account and 6 <= len(password) <= PASSWORD_MAX_LENGTH:
+        owner_user = db.get(User, principal.user_id)
+        initial_account = owner_user is None or owner_user.normalized_email is None
+    unchanged_initial_password = principal is not None and verify_password(principal.password_hash, password)
+    if allow_weak_initial and (initial_account or unchanged_initial_password) and 6 <= len(password) <= PASSWORD_MAX_LENGTH:
         password_hash = _password_hasher.hash(password)
     else:
         password_hash = hash_password(password)
-    legacy_user = db.query(User).filter(User.normalized_email.is_(None), User.role == "ADMIN").order_by(User.created_at.asc()).first()
-    if legacy_user is None:
-        legacy_user = User(id=uuid.uuid4(), display_name="Administrator", role="ADMIN", status="ACTIVE", credential_version=1, created_at=now, updated_at=now)
-        db.add(legacy_user)
+    owner_user = owner_user or db.query(User).filter(
+        User.normalized_email.is_(None), User.role == "ADMIN"
+    ).order_by(User.created_at.asc()).first()
+    if owner_user is None:
+        owner_user = User(id=uuid.uuid4(), display_name="Administrator", role="ADMIN", status="ACTIVE", credential_version=1, created_at=now, updated_at=now)
+        db.add(owner_user)
         db.flush()
     if principal is None:
         principal = AuthPrincipal(
             id=OWNER_PRINCIPAL_ID,
-            user_id=legacy_user.id,
+            user_id=owner_user.id,
             password_hash=password_hash,
             credential_version=1,
             created_at=now,
@@ -143,12 +147,12 @@ def provision_owner(
         )
         db.add(principal)
     else:
-        principal.user_id = principal.user_id or legacy_user.id
+        principal.user_id = principal.user_id or owner_user.id
         principal.password_hash = password_hash
         principal.credential_version += 1
         principal.updated_at = now
-        legacy_user.credential_version = principal.credential_version
-        legacy_user.updated_at = now
+        owner_user.credential_version = principal.credential_version
+        owner_user.updated_at = now
         db.execute(
             update(AuthSession)
             .where(AuthSession.principal_id == OWNER_PRINCIPAL_ID, AuthSession.revoked_at.is_(None))

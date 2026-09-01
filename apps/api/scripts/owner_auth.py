@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import hashlib
+import hmac
 import os
 
 from app.core.config import get_settings
@@ -13,13 +15,13 @@ from app.services.auth import normalize_email, provision_owner
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Provision or reset the single Chat Reader administrator credential.")
-    parser.add_argument("command", choices=["provision", "reset", "ensure-initial"])
+    parser.add_argument("command", choices=["provision", "reset", "ensure-configured"])
     parser.add_argument("--email", help="Administrator sign-in email (required for a new provision).")
     parser.add_argument("--display-name", default=None, help="Optional administrator display name.")
     args = parser.parse_args()
     settings = get_settings()
-    if args.command == "ensure-initial":
-        ensure_initial_admin(settings)
+    if args.command == "ensure-configured":
+        ensure_configured_admin(settings)
         return
     if args.command == "provision" and not args.email:
         parser.error("--email is required when provisioning the administrator.")
@@ -51,32 +53,44 @@ def main() -> None:
     print(f"Administrator credential provisioned at version {principal.credential_version}; all prior sessions are invalid.")
 
 
-def ensure_initial_admin(settings) -> None:
-    email = os.environ.get("INITIAL_ADMIN_EMAIL", "").strip()
-    password = os.environ.get("INITIAL_ADMIN_PASSWORD", "")
+def ensure_configured_admin(settings) -> None:
+    email = os.environ.get("ADMIN_EMAIL", "").strip()
+    password = os.environ.get("ADMIN_PASSWORD", "")
     if not email and not password:
-        print("Initial administrator variables are not configured; leaving existing account unchanged.")
+        print("Administrator deployment variables are not configured; leaving the account unchanged.")
         return
     if not email or not password:
-        raise SystemExit("INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD must be provided together.")
+        raise SystemExit("ADMIN_EMAIL and ADMIN_PASSWORD must be provided together.")
     try:
         normalized_email = normalize_email(email)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
+    digest_payload = f"chat-reader-admin-config-v1\0{normalized_email}\0{password}".encode("utf-8")
+    config_digest = hmac.new(
+        settings.auth_secret_value().encode("utf-8"), digest_payload, hashlib.sha256
+    ).hexdigest()
     with SessionLocal() as db:
         existing = db.get(AuthPrincipal, "owner")
         user = db.get(User, existing.user_id) if existing and existing.user_id else None
-        if user is not None and user.normalized_email:
-            print("Initial administrator already configured; leaving existing credential unchanged.")
+        if existing is not None and existing.deployment_config_digest == config_digest and user is not None:
+            print("Administrator deployment configuration is unchanged.")
             return
+        conflicting_user = db.query(User).filter(User.normalized_email == normalized_email)
+        if user is not None:
+            conflicting_user = conflicting_user.filter(User.id != user.id)
+        if conflicting_user.first() is not None:
+            raise SystemExit("ADMIN_EMAIL is already assigned to another account.")
         principal = provision_owner(db, password, settings, allow_weak_initial=True)
         user = db.get(User, principal.user_id) if principal.user_id else None
         if user is None:
             raise SystemExit("Administrator user record is unavailable.")
         user.normalized_email = normalized_email
         user.display_name = user.display_name or "Administrator"
+        user.role = "ADMIN"
+        user.status = "ACTIVE"
+        principal.deployment_config_digest = config_digest
         db.commit()
-    print("Initial administrator configured; remove INITIAL_ADMIN_PASSWORD after deployment.")
+    print("Administrator deployment configuration applied; prior sessions are invalid.")
 
 
 if __name__ == "__main__":

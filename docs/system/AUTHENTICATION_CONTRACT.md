@@ -10,11 +10,14 @@ applied to the operator database in this session.
 - The operator provisions the only administrator with
   `python -m scripts.owner_auth provision --email <admin-email>` and enters a
   strong password interactively. The repository never contains the password.
-- An authorized first deployment may instead set `INITIAL_ADMIN_EMAIL` and
-  `INITIAL_ADMIN_PASSWORD` for the migration container. They are consumed once
-  while the legacy administrator has no email; later restarts are idempotent.
-  Remove the password variable immediately after bootstrap. Subsequent account
-  changes still use the normal minimum-length policy.
+- An authorized deployment sets `ADMIN_EMAIL` and `ADMIN_PASSWORD` for the
+  migration container. PostgreSQL stores only an HMAC-derived configuration
+  digest alongside the Argon2id password hash. An unchanged pair is idempotent
+  and does not overwrite a password changed in Account & security. Changing
+  either deployment value causes the next migration run to synchronize the
+  administrator and revoke prior sessions. Only the first temporary password
+  may use the bounded six-character bootstrap exception; later changed
+  passwords use the normal minimum-length policy.
 - New users authenticate with normalized email plus password. Registration is
   controlled by `CLOSED`, `INVITE_ONLY` or `OPEN`; invitations are one-time and
   stored as digests. New registrations are `USER`, not administrators.

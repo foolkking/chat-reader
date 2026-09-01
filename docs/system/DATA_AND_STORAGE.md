@@ -2,12 +2,14 @@
 
 ## Current implementation (working tree, 2026-09-01)
 
-Alembic head in this working tree is `20260901_0030` and is not yet applied
-to the operator database. It adds `users`, account access/invitation/reset
+Alembic head in this working tree is `20260901_0031` and is not yet applied
+to the operator database. Migrations `0030` and `0031` add `users`, account access/invitation/reset
 tables, auth rate limits, and owner columns on private conversation, project,
 import, job, learned-profile and content-cleanup records. Existing account-
 scoped subject keys are backfilled from `local:default` to the migrated admin
-UUID; new authenticated requests use the UUID directly.
+UUID; new authenticated requests use the UUID directly. The administrator
+deployment reconciliation stores only a nullable HMAC-derived configuration
+digest; plaintext deployment credentials remain outside PostgreSQL.
 
 The canonical archive remains PostgreSQL-backed. User Skill content is plain
 text configuration, excluded from conversation/search/Share/Offline catalogs.
