@@ -7,6 +7,7 @@ import { test, expect } from "@playwright/test";
 const FEATURE_TEST_OWNERS: Record<string, string> = {
   annotations: "annotation-workspace.spec.ts / shared reader-location contracts",
   attachments: "attachment-preview-policy.spec.ts",
+  auth: "account-access-settings.spec.ts and auth-gate.spec.ts",
   conversations: "reader-location-failure.spec.ts",
   editing: "source-editor-mutation.spec.ts",
   exporting: "context-package.spec.ts / export API coverage",
