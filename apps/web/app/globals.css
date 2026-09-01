@@ -852,7 +852,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 58%, transparent);
 }
 
-.reader-interactive-row[data-state="selected"]:hover {
+.reader-interactive-row[data-state="selected"]:not([data-hover-surface="none"]):hover {
   background-color: color-mix(in srgb, var(--accent-soft) 100%, var(--surface) 0%);
 }
 
@@ -884,7 +884,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 
 /* Rows that own their state on a child (for example a list article) still
    need the same quiet hover affordance as their sortable wrapper. */
-.reader-interactive-row:not([data-state]):hover {
+.reader-interactive-row:not([data-state]):not([data-hover-surface="none"]):hover {
   background-color: var(--subtle);
 }
 

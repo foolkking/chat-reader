@@ -175,3 +175,17 @@ test("Reader locate feedback is a bounded first-line pulse with a reduced-motion
   expect(styles).toContain("animation: reader-locate-static 700ms linear both;");
   expect(styles).not.toContain(".reader-locate-pulse {\n  position: absolute;");
 });
+
+test("Reader messages do not use the shared clickable-row hover surface", () => {
+  const messageItem = source("features/conversations/message-item.tsx");
+  const styles = source("app/globals.css");
+
+  expect(messageItem).toContain('data-hover-surface="none"');
+  expect(styles).toContain(
+    '.reader-interactive-row:not([data-state]):not([data-hover-surface="none"]):hover',
+  );
+  expect(styles).toContain(
+    '.reader-interactive-row[data-state="selected"]:not([data-hover-surface="none"]):hover',
+  );
+  expect(styles).not.toContain('.reader-interactive-row:not([data-state]):hover');
+});

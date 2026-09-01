@@ -172,6 +172,7 @@ function MessageItemComponent({
       data-message-version-id={message.current_version?.id}
       data-order-key={message.order_key}
       data-navigation-target={isNavigationTarget ? "true" : undefined}
+      data-hover-surface="none"
       aria-current={isNavigationTarget ? "location" : undefined}
       data-state={highlightTargetId === messageDomId ? (selected ? "current-selected" : "current") : selected ? "selected" : undefined}
       className={`reader-message reader-interactive-row group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:justify-start sm:rounded-2xl ${highlightTargetId === messageDomId ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""}`}
