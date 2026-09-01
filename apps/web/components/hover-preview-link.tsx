@@ -42,6 +42,14 @@ export function HoverPreviewLink({ href, title, description, children, className
     });
   }
 
+  const schedulePreview = useCallback((clientX: number, clientY: number) => {
+    if (!description || !isCopyTruncated() || timerRef.current !== null) return;
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      placePreview(clientX, clientY);
+    }, 700);
+  }, [description]);
+
   useEffect(() => {
     const dismiss = () => clearPreview();
     const onKeyDown = (event: KeyboardEvent) => {
@@ -72,10 +80,10 @@ export function HoverPreviewLink({ href, title, description, children, className
         onDragStart={(event) => event.preventDefault()}
         onClick={onClick}
         onPointerEnter={(event) => {
-          if (event.pointerType !== "mouse" || !description || !isCopyTruncated()) return;
-          const { clientX, clientY } = event;
-          timerRef.current = window.setTimeout(() => placePreview(clientX, clientY), 700);
+          if (event.pointerType === "touch") return;
+          schedulePreview(event.clientX, event.clientY);
         }}
+        onMouseEnter={(event) => schedulePreview(event.clientX, event.clientY)}
         onPointerLeave={clearPreview}
         onFocus={() => {
           if (!description || !isCopyTruncated()) return;

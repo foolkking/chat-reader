@@ -837,7 +837,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 
 .reader-interactive-row[data-state="current"],
 .reader-interactive-row[data-state="current-selected"] {
-  background: var(--subtle);
+  background-color: var(--subtle);
   color: var(--text);
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--text) 42%, transparent);
 }
@@ -848,12 +848,12 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 
 .reader-interactive-row[data-state="selected"] {
-  background: color-mix(in srgb, var(--accent-soft) 96%, var(--surface) 4%);
+  background-color: color-mix(in srgb, var(--accent-soft) 96%, var(--surface) 4%);
   box-shadow: inset 4px 0 0 var(--accent), inset 0 0 0 1px color-mix(in srgb, var(--accent) 58%, transparent);
 }
 
 .reader-interactive-row[data-state="selected"]:hover {
-  background: color-mix(in srgb, var(--accent-soft) 100%, var(--surface) 0%);
+  background-color: color-mix(in srgb, var(--accent-soft) 100%, var(--surface) 0%);
 }
 
 .reader-interactive-row[aria-selected="true"] input[type="checkbox"] {
@@ -874,12 +874,12 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 
 .reader-interactive-row[data-state="drop-target"] {
-  background: var(--accent-soft);
+  background-color: var(--accent-soft);
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 .reader-interactive-row[data-state="hover"]:hover {
-  background: var(--subtle);
+  background-color: var(--subtle);
 }
 
 .reader-interactive-row:focus-visible {

@@ -387,7 +387,7 @@ export function ConversationList({
       </SelectionToolbar> : null}
       <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation) => (
-          <SortableConversationRow id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode} key={conversation.id}><article
+            <SortableConversationRow id={conversation.id} enabled={!selectionMode} key={conversation.id}><article
             {...linearSelection.itemHandlers(conversation.id)}
             data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined}
             aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined}
