@@ -11,7 +11,7 @@ SkillStatus = Literal["ACTIVE", "DISABLED"]
 
 class SkillRead(BaseModel):
     id: str
-    source: Literal["BUILTIN", "USER"]
+    source: Literal["BUILTIN", "SYSTEM", "USER"]
     category: SkillCategory
     locale: SkillLocale
     name: str
@@ -20,6 +20,8 @@ class SkillRead(BaseModel):
     updated_at: datetime | None = None
     byte_size: int | None = None
     content_url: str | None = None
+    is_customized: bool = False
+    default_enabled: bool = False
 
 
 class SkillDetail(SkillRead):

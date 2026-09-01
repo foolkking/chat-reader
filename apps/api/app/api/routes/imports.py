@@ -48,6 +48,7 @@ from app.services.storage.local_storage import save_import_file
 from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
+from app.services.feature_policies import effective_import_size_mb, get_feature_policy
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 logger = logging.getLogger(__name__)
@@ -88,7 +89,11 @@ async def preview_import(
         )
 
     settings = get_settings()
-    max_bytes = settings.max_import_file_size_mb * 1024 * 1024
+    policy = get_feature_policy(db)
+    if not policy.allow_user_import:
+        raise HTTPException(status_code=403, detail="User import is disabled by the system administrator.")
+    max_size_mb = effective_import_size_mb(db)
+    max_bytes = max_size_mb * 1024 * 1024
     import_id = uuid.uuid4()
     preview_files: list[ImportPreviewFile] = []
     import_warnings: list[str] = []
@@ -123,7 +128,7 @@ async def preview_import(
             if len(content) > max_bytes:
                 raise HTTPException(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail=f"File exceeds {settings.max_import_file_size_mb}MB limit.",
+                    detail=f"File exceeds {max_size_mb}MB limit.",
                 )
 
             pending_files.append((filename, content))

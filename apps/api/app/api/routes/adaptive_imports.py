@@ -34,6 +34,7 @@ from app.services.adaptive_import.service import (
     verify_family_mapping,
 )
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
+from app.services.feature_policies import effective_import_size_mb, get_feature_policy
 
 router = APIRouter(tags=["adaptive-import"])
 
@@ -78,8 +79,9 @@ async def create_adaptive_import_session(
         raise HTTPException(status_code=400, detail={"code": "FILES_REQUIRED", "message": "Choose at least one JSON or Markdown file."})
     if len(files) > MAX_ADAPTIVE_FILES:
         raise HTTPException(status_code=422, detail={"code": "FILE_COUNT_LIMIT", "message": f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once."})
-    settings = get_settings()
-    max_bytes = settings.max_import_file_size_mb * 1024 * 1024
+    if not get_feature_policy(db).allow_user_import:
+        raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
+    max_bytes = effective_import_size_mb(db) * 1024 * 1024
     record: ImportRecord | None = None
     try:
         record = begin_session(
@@ -197,7 +199,7 @@ async def replace_adaptive_import_artifact(
     artifact = _artifact(import_id, artifact_id, db)
     new_path = None
     try:
-        max_bytes = get_settings().max_import_file_size_mb * 1024 * 1024
+        max_bytes = effective_import_size_mb(db) * 1024 * 1024
         content = await _read_upload_bounded(file, max_bytes)
         old_path, new_path = replace_session_artifact(
             db,

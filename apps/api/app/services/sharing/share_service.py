@@ -28,6 +28,7 @@ from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
 from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn_from_query
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
+from app.services.feature_policies import get_feature_policy
 
 
 class ShareError(ValueError):
@@ -54,6 +55,13 @@ def create_share(
     payload: ShareCreate,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ShareCreateResult:
+    policy = get_feature_policy(db)
+    if not policy.allow_share_links:
+        raise ShareError("Share links are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
+    if payload.share_password and not policy.allow_share_password:
+        raise ShareError("Password-protected shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
+    if not payload.share_password and not policy.allow_public_share:
+        raise ShareError("Public shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
     conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None:
         raise ShareError("Conversation not found.", HTTPStatus.NOT_FOUND)
@@ -395,6 +403,9 @@ def update_share(
     payload: ShareUpdate,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> Share:
+    policy = get_feature_policy(db)
+    if not policy.allow_share_links:
+        raise ShareError("Share links are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
     share = (
         db.query(Share)
         .join(Conversation, Conversation.id == Share.conversation_id)
@@ -421,6 +432,10 @@ def update_share(
             raise ShareError("Unsupported share locale.")
         share.locale = payload.locale
     if "share_password" in provided_fields:
+        if payload.share_password and not policy.allow_share_password:
+            raise ShareError("Password-protected shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
+        if not payload.share_password and not policy.allow_public_share:
+            raise ShareError("Public shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
         share.password_hash = hash_password(payload.share_password) if payload.share_password else None
         share.password_version += 1
         share.unlock_failed_attempts = 0
@@ -486,6 +501,13 @@ def _get_accessible_share(db: Session, token: str, unlock_token: str | None = No
     share = db.query(Share).filter(Share.token_hash == hash_token(token)).one_or_none()
     if share is None:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    policy = get_feature_policy(db)
+    if not policy.allow_share_links:
+        raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    if share.password_hash is None and not policy.allow_public_share:
+        raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    if share.password_hash is not None and not policy.allow_share_password:
+        raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
     _assert_share_accessible(share)
     if share.password_hash is not None:
         if not unlock_token:
@@ -510,6 +532,9 @@ def resolve_accessible_share(db: Session, token: str, unlock_token: str | None =
 def unlock_share(db: Session, token: str, password: str) -> tuple[Share, str]:
     share = db.query(Share).filter(Share.token_hash == hash_token(token)).one_or_none()
     if share is None:
+        raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    policy = get_feature_policy(db)
+    if not policy.allow_share_links or not policy.allow_share_password:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
     _assert_share_accessible(share)
     if share.password_hash is None:

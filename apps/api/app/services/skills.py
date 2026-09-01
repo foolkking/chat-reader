@@ -48,23 +48,49 @@ def selected_id(db: Session, category: str, locale: str, subject_key: str | None
 
 
 def list_skills(db: Session, category: str | None = None, locale: str | None = None, subject_key: str | None = None) -> list[dict]:
+    from app.services.feature_policies import get_feature_policy
+    from app.services.system_skills import list_system_skills
+
     subject = _subject(subject_key)
     selected = {(category, locale): selected_id(db, category, locale, subject) for category in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE") for locale in ("zh-CN", "en")}
     selected_active = {(cat, loc): False for cat in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE") for loc in ("zh-CN", "en")}
-    builtins = [item for item in BUILTIN_SKILLS if (category is None or item.category == category) and (locale is None or item.locale == locale)]
     rows: list[dict] = []
-    for item in builtins:
-        rows.append({"id": item.id, "source": "BUILTIN", "category": item.category, "locale": item.locale, "name": item.name, "status": "ACTIVE", "is_selected": selected[(item.category, item.locale)] is None, "updated_at": None, "byte_size": None, "content_url": item.content_url})
+    for item in list_system_skills(db):
+        if (category is not None and item.category != category) or (locale is not None and item.locale != locale):
+            continue
+        builtin = builtin_for(item.category, item.locale) if item.source_kind == "BUNDLED" else None
+        rows.append({
+            "id": item.bundled_key if item.source_kind == "BUNDLED" else f"system:{item.id}",
+            "source": "BUILTIN" if item.source_kind == "BUNDLED" else "SYSTEM",
+            "category": item.category,
+            "locale": item.locale,
+            "name": item.name,
+            "status": item.status,
+            "is_selected": selected[(item.category, item.locale)] is None and item.default_enabled and item.status == "ACTIVE",
+            "updated_at": item.updated_at,
+            "byte_size": item.byte_size,
+            "content_url": (
+                builtin.content_url
+                if builtin and item.content is None
+                else f"/api/skills/system/{item.id}/content"
+                if item.content is not None and item.status == "ACTIVE"
+                else None
+            ),
+            "is_customized": item.source_kind == "BUNDLED" and item.content is not None,
+            "default_enabled": item.default_enabled,
+        })
+    if not get_feature_policy(db).allow_user_skills:
+        return rows
     query = select(UserSkill).where(UserSkill.subject_key == subject)
     if category is not None: query = query.where(UserSkill.category == category)
     if locale is not None: query = query.where(UserSkill.locale == locale)
     for item in db.scalars(query.order_by(UserSkill.updated_at.desc())).all():
         active_selected = selected[(item.category, item.locale)] == item.id and item.status == "ACTIVE"
         selected_active[(item.category, item.locale)] = selected_active[(item.category, item.locale)] or active_selected
-        rows.append({"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": active_selected, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content"})
+        rows.append({"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": active_selected, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "is_customized": False, "default_enabled": False})
     for row in rows:
-        if row["source"] == "BUILTIN":
-            row["is_selected"] = not selected_active[(row["category"], row["locale"])]
+        if row["source"] in {"BUILTIN", "SYSTEM"}:
+            row["is_selected"] = bool(row["default_enabled"]) and not selected_active[(row["category"], row["locale"])]
     return rows
 
 
@@ -105,10 +131,31 @@ def update_selection(db: Session, *, category: str, locale: str, skill_id: uuid.
 
 
 def resolve_skill(db: Session, *, category: str, locale: str, subject_key: str | None = None) -> dict:
-    builtin = builtin_for(category, locale)
+    from app.services.feature_policies import get_feature_policy
+    from app.services.system_skills import system_default_for
+
+    system_item, builtin = system_default_for(db, category, locale)
     chosen = selected_id(db, category, locale, subject_key)
-    item = get_user_skill(db, chosen, subject_key) if chosen else None
+    item = get_user_skill(db, chosen, subject_key) if chosen and get_feature_policy(db).allow_user_skills else None
     if item is None or item.status != "ACTIVE":
-        return {"id": builtin.id, "source": "BUILTIN", "category": category, "locale": locale, "name": builtin.name, "status": "ACTIVE", "is_selected": True, "updated_at": None, "byte_size": None, "content_url": builtin.content_url, "content": None}
+        return {
+            "id": system_item.bundled_key if system_item.source_kind == "BUNDLED" else f"system:{system_item.id}",
+            "source": "BUILTIN" if system_item.source_kind == "BUNDLED" else "SYSTEM",
+            "category": category,
+            "locale": locale,
+            "name": system_item.name,
+            "status": system_item.status,
+            "is_selected": True,
+            "updated_at": system_item.updated_at,
+            "byte_size": system_item.byte_size,
+            "content_url": (
+                builtin.content_url
+                if builtin and system_item.content is None
+                else f"/api/skills/system/{system_item.id}/content"
+            ),
+            "content": system_item.content,
+            "is_customized": system_item.source_kind == "BUNDLED" and system_item.content is not None,
+            "default_enabled": system_item.default_enabled,
+        }
     item.last_used_at = datetime.now(timezone.utc)
-    return {"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": True, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "content": item.content}
+    return {"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": True, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "content": item.content, "is_customized": False, "default_enabled": False}

@@ -31,8 +31,10 @@ from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
 from app.services.assets.derivatives import build_asset_derivative
+from app.services.assets.lifecycle import delete_asset_files
 from app.services.content_cleanup import process_scan_chunk
 from app.services.conversations.conversation_deletion import delete_conversation_record
+from app.services.user_deletion import execute_user_account_delete, mark_user_deletion_failed
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.core.observability import structured_event
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
@@ -742,6 +744,7 @@ def process_background_job(
             offline_phase_started_at: float | None = None
             offline_phase_name: str | None = None
             offline_phase_durations: dict[str, float] = {}
+            account_asset_cleanup_keys: list[str] = []
 
             def track_offline_phase(phase: str) -> None:
                 nonlocal offline_phase_started_at, offline_phase_name
@@ -1115,6 +1118,17 @@ def process_background_job(
                     "derivative_type": derivative.derivative_type,
                 }
                 processed_items = 1
+            elif job.job_type == "user_account_delete":
+                target_user_id = uuid.UUID(str(payload["target_user_id"]))
+                deletion_request_id = uuid.UUID(str(payload["deletion_request_id"]))
+                report("deleting_account", 25, 0, max(job.total_items, 1))
+                job_result, account_asset_cleanup_keys = execute_user_account_delete(
+                    db,
+                    job=job,
+                    target_user_id=target_user_id,
+                    deletion_request_id=deletion_request_id,
+                )
+                processed_items = job.total_items
             else:
                 raise ValueError(f"Unsupported background job type: {job.job_type}")
             now = datetime.now(timezone.utc)
@@ -1159,6 +1173,8 @@ def process_background_job(
             )
             for category, paths, root in post_commit_cleanup:
                 cleanup_committed_artifacts(paths, root=root, category=category)
+            if account_asset_cleanup_keys:
+                delete_asset_files(account_asset_cleanup_keys)
     except BackgroundJobCancelled:
         structured_event(logger, logging.INFO, "background_job_cancelled", job_id=str(job_id))
         with session_factory() as db:
@@ -1182,6 +1198,8 @@ def process_background_job(
         with session_factory() as db:
             job = db.get(BackgroundJob, job_id)
             if job is not None:
+                if job.job_type == "user_account_delete":
+                    mark_user_deletion_failed(db, job.id)
                 now = datetime.now(timezone.utc)
                 cancelled = job.status in {"cancelling", "cancelled"}
                 job.status = "cancelled" if cancelled else "failed"

@@ -7,9 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user_skill import UserSkill
+from app.models.administration import SystemSkill
 from app.schemas.skills import SkillDetail, SkillRead, SkillResolve, SkillSelectionUpdate, SkillUpdate
 from app.services.skills import create_skill, get_user_skill, list_skills, resolve_skill, selected_id, update_selection
 from app.services.ownership import subject_key_from_request
+from app.services.feature_policies import get_feature_policy
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 
@@ -21,7 +23,7 @@ def subject(request: Request) -> str:
 
 
 def read_item(item: UserSkill, selected: bool = False) -> dict:
-    return {"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": selected, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content"}
+    return {"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": selected, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "is_customized": False, "default_enabled": False}
 
 
 def contains_binary_controls(content: str) -> bool:
@@ -41,6 +43,9 @@ def resolve(request: Request, category: str, locale: str, db: Session = Depends(
 
 @router.post("", response_model=SkillRead, status_code=status.HTTP_201_CREATED)
 async def upload_skill(request: Request, category: str = Form(...), locale: str = Form(...), name: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
+    policy = get_feature_policy(db)
+    if not policy.allow_user_skills or not policy.allow_skill_import:
+        raise HTTPException(403, "User Skill import is disabled by the system administrator.")
     if not file.filename or not file.filename.lower().endswith(".md"):
         raise HTTPException(422, "Only Markdown (.md) Skill files are supported.")
     raw = await file.read(512 * 1024 + 1)
@@ -56,10 +61,23 @@ async def upload_skill(request: Request, category: str = Form(...), locale: str 
 
 @router.put("/selections", status_code=status.HTTP_204_NO_CONTENT)
 def select_skill(payload: SkillSelectionUpdate, request: Request, db: Session = Depends(get_db)):
+    if payload.skill_id is not None and not get_feature_policy(db).allow_user_skills:
+        raise HTTPException(403, "User Skills are disabled by the system administrator.")
     try:
         update_selection(db, category=payload.category, locale=payload.locale, skill_id=payload.skill_id, subject_key=subject(request)); db.commit()
     except ValueError as exc:
         db.rollback(); raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/system/{system_skill_id}/content", response_class=PlainTextResponse)
+def get_system_skill_content(system_skill_id: uuid.UUID, db: Session = Depends(get_db)):
+    item = db.get(SystemSkill, system_skill_id)
+    if item is None or item.status != "ACTIVE" or item.content is None:
+        raise HTTPException(404, "System Skill content not found.")
+    return PlainTextResponse(
+        item.content,
+        headers={"Content-Disposition": f'attachment; filename="system-skill-{item.id}.md"'},
+    )
 
 
 @router.get("/{skill_id}", response_model=SkillDetail)
