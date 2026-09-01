@@ -552,6 +552,8 @@ test("failed annotation location preserves the current reader content", async ({
 
 test("mobile message actions dismiss outside or with Escape and restore the trigger", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/tasks/active", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.route("**/api/content-cleanup/scans/pending", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
   await page.goto(`/conversations/${conversationId}`);
   const reader = page.getByTestId("reader-scroll-root");
   await expect(reader.locator("article[data-message-id]").first()).toBeVisible();
