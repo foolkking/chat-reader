@@ -73,8 +73,18 @@ export function HoverPreviewLink({ href, title, description, children, className
     const anchor = anchorRef.current;
     if (!anchor) return;
     const onMouseOver = (event: MouseEvent) => schedulePreview(event.clientX, event.clientY);
+    const onWindowMouseMove = (event: MouseEvent) => {
+      const hit = document.elementFromPoint(event.clientX, event.clientY);
+      if (hit && (hit === anchor || anchor.contains(hit))) {
+        schedulePreview(event.clientX, event.clientY);
+      }
+    };
     anchor.addEventListener("mouseover", onMouseOver);
-    return () => anchor.removeEventListener("mouseover", onMouseOver);
+    window.addEventListener("mousemove", onWindowMouseMove);
+    return () => {
+      anchor.removeEventListener("mouseover", onMouseOver);
+      window.removeEventListener("mousemove", onWindowMouseMove);
+    };
   }, [schedulePreview]);
 
   useEffect(() => () => {
