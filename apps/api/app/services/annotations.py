@@ -297,7 +297,6 @@ def relocate_annotations_for_new_version(
         db.query(ConversationAnnotation)
         .filter(
             ConversationAnnotation.message_id == message.id,
-            ConversationAnnotation.subject_key == DEFAULT_SUBJECT_KEY,
             ConversationAnnotation.is_deleted.is_(False),
         )
         .all()
@@ -518,7 +517,7 @@ def _clone_notebook_from_payload(
     now = utc_now()
     conflict = ConversationNotebook(
         id=uuid.uuid4(),
-        subject_key=DEFAULT_SUBJECT_KEY,
+        subject_key=current.subject_key,
         conversation_id=current.conversation_id,
         title=payload.title,
         blocks=[block.model_dump(mode="json") for block in payload.blocks],
