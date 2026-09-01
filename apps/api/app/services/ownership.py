@@ -17,6 +17,7 @@ from sqlalchemy.orm import Query, Session
 
 
 OwnedModel = TypeVar("OwnedModel")
+LEGACY_OWNER_USER_ID = uuid.UUID("2dfb6c9e-4b25-4f67-9f5e-4b87f1d8ad01")
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,10 @@ class OwnershipScope:
 
     @classmethod
     def legacy(cls) -> "OwnershipScope":
-        return cls(owner_user_id=None, include_legacy_unowned=True)
+        # AUTH_ENABLED=false is a development/test compatibility mode, not an
+        # unowned tenant. New rows use the same stable administrator identity
+        # created by migration 0030 while reads still include pre-account rows.
+        return cls(owner_user_id=LEGACY_OWNER_USER_ID, include_legacy_unowned=True)
 
     def predicate(self, model: Any):
         owner_column = model.owner_user_id
@@ -38,7 +42,7 @@ class OwnershipScope:
 
 
 LEGACY_OWNERSHIP_SCOPE = OwnershipScope.legacy()
-LEGACY_SUBJECT_KEY = "local:default"
+LEGACY_SUBJECT_KEY = str(LEGACY_OWNER_USER_ID)
 
 
 def ownership_scope_from_request(request: Request) -> OwnershipScope:
@@ -60,9 +64,9 @@ def subject_key_from_request(request: Request) -> str:
     """Return the account-local subject used by preferences and Reader state.
 
     Authenticated accounts, including the migrated administrator, are
-    namespaced by their server-issued user UUID. ``local:default`` remains
-    only for unauthenticated development compatibility; client-provided
-    identity is never consulted.
+    namespaced by their server-issued user UUID. Auth-disabled development
+    uses that same migrated administrator namespace; ``local:default`` is
+    retained only as a pre-account migration marker.
     """
     auth = getattr(request.state, "auth", None)
     if auth is None:

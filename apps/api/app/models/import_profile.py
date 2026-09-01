@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -11,6 +11,9 @@ from app.models.import_record import utc_now
 
 class ImportProfile(Base):
     __tablename__ = "import_profiles"
+    __table_args__ = (
+        CheckConstraint("kind = 'BUILTIN' OR owner_user_id IS NOT NULL", name="ck_import_profiles_builtin_or_owned"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(

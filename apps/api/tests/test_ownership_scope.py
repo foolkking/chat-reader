@@ -14,7 +14,13 @@ from app.models.user import User
 from app.services.background_jobs import queue_conversation_merge
 from app.services.conversations.conversation_deletion import delete_conversation_record
 from app.services.editing.message_edit_service import MessageEditError, create_manual_conversation
-from app.services.ownership import OwnershipScope, assign_owner, get_owned
+from app.services.ownership import (
+    LEGACY_OWNER_USER_ID,
+    LEGACY_OWNERSHIP_SCOPE,
+    OwnershipScope,
+    assign_owner,
+    get_owned,
+)
 from app.services.projects.project_service import (
     ProjectServiceError,
     create_project,
@@ -168,3 +174,15 @@ def test_direct_resource_owner_fields_and_legacy_window(tmp_path) -> None:
         assert get_owned(db, Project, legacy_project.id, user_scope) is None
         assert get_owned(db, Project, legacy_project.id, owner_migration_scope) is legacy_project
 
+
+def test_auth_disabled_compatibility_writes_to_the_migrated_administrator(tmp_path) -> None:
+    engine = create_engine(f"sqlite:///{tmp_path / 'legacy-owner.db'}")
+    Base.metadata.create_all(engine)
+
+    with Session(engine) as db:
+        db.add(_user(LEGACY_OWNER_USER_ID, "legacy-owner@example.test"))
+        project = ensure_default_project(db)
+        db.flush()
+
+        assert LEGACY_OWNERSHIP_SCOPE.include_legacy_unowned is True
+        assert project.owner_user_id == LEGACY_OWNER_USER_ID

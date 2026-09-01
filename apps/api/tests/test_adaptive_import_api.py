@@ -311,7 +311,13 @@ def test_equal_profile_matches_stay_ambiguous_until_explicit_selection(client: T
         original = db.get(ImportProfile, uuid.UUID(original_profile_id))
         assert original is not None
         source_revision = original.revisions[0]
-        duplicate = ImportProfile(name="Second candidate", kind="LEARNED", source_mode="JSON", status="ACTIVE")
+        duplicate = ImportProfile(
+            name="Second candidate",
+            kind="LEARNED",
+            source_mode="JSON",
+            status="ACTIVE",
+            owner_user_id=original.owner_user_id,
+        )
         db.add(duplicate)
         db.flush()
         revision = ImportProfileRevision(
