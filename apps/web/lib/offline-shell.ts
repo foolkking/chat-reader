@@ -426,7 +426,6 @@ async function warmAttachmentViewerRuntime(): Promise<string[]> {
   // Offline preparation is explicit. Load dynamic viewer chunks now so the
   // shell asset inventory includes them instead of discovering a missing
   // renderer only after connectivity has been lost.
-  const before = new Set(performance.getEntriesByType("resource").map((entry) => entry.name));
   const pdfRuntime = await import("../features/attachments/pdfjs-runtime");
   const results = await Promise.allSettled([
     pdfRuntime.loadPdfJs(),
@@ -438,7 +437,6 @@ async function warmAttachmentViewerRuntime(): Promise<string[]> {
   }
   const loadedAssets = performance.getEntriesByType("resource")
     .map((entry) => entry.name)
-    .filter((value) => !before.has(value))
     .map(normalizeShellAsset)
     .filter((value): value is string => Boolean(value));
   const workerAsset = normalizeShellAsset(pdfRuntime.getPdfJsWorkerUrl());

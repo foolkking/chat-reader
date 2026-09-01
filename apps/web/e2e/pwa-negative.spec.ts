@@ -138,6 +138,14 @@ test.describe("Release E PWA negative matrix", () => {
 
     // A non-critical Skill asset may be absent without making Library unusable.
     const repaired = await waitForCachedShellAssets(offlinePage, [criticalChunk]);
+    const originalCriticalAssets = active.criticalAssets ?? active.assets.filter((asset) => !asset.startsWith("/skills/"));
+    const repairedCriticalAssets = new Set(repaired.criticalAssets ?? repaired.assets.filter((asset) => !asset.startsWith("/skills/")));
+    expect(originalCriticalAssets.filter((asset) => asset.endsWith(".js") && !repairedCriticalAssets.has(asset))).toEqual([]);
+    await expect.poll(() => offlinePage.evaluate(async ({ cacheName, assets }) => {
+      const cache = await caches.open(cacheName);
+      const matches = await Promise.all(assets.map((asset) => cache.match(asset)));
+      return matches.every(Boolean);
+    }, { cacheName: repaired.cacheName, assets: Array.from(repairedCriticalAssets) })).toBe(true);
     await expect.poll(() => offlinePage.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
     await context.setOffline(true);
     await offlinePage.evaluate(async ({ cacheName, optionalSkill }) => {
