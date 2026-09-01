@@ -43,7 +43,7 @@ done
 
 # Worker and migration images intentionally share the API filesystem image;
 # production Compose owns their explicit command overrides.
-grep -F 'command: ["alembic", "upgrade", "head"]' docker-compose.production.yml >/dev/null
+grep -F 'command: ["sh", "-c", "alembic upgrade head && python -m scripts.owner_auth ensure-initial"]' docker-compose.production.yml >/dev/null
 grep -F 'command: ["python", "-m", "app.workers.import_worker"]' docker-compose.production.yml >/dev/null
 
 printf '\n  ],\n  "forbidden_paths_present": false\n}\n' >> image-inspection.json
