@@ -150,9 +150,13 @@ function getPdfChunkFiles(): string[] {
   const distDir = process.env.NEXT_DIST_DIR?.trim() || ".next";
   const manifestPath = path.join(process.cwd(), distDir, "react-loadable-manifest.json");
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Record<string, { files?: string[] }>;
-  return Object.entries(manifest)
+  const candidates = Object.entries(manifest)
     .filter(([key]) => key.includes("pdfjs-runtime") && key.includes("pdfjs-dist"))
     .flatMap(([, value]) => value.files ?? []);
+  return candidates.filter((file) => {
+    const chunkPath = path.join(process.cwd(), distDir, file);
+    return fs.existsSync(chunkPath) && fs.readFileSync(chunkPath, "utf8").includes("GlobalWorkerOptions");
+  });
 }
 
 async function uploadAttachment(request: APIRequestContext, conversationId: string, name: string, buffer: Buffer): Promise<Attachment> {
