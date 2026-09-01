@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clipboard, KeyRound, Link2, UserRound, UsersRound } from "lucide-react";
+import { Check, Clipboard, KeyRound, Link2, Search, UserRound, UsersRound, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createAccessInvitation,
@@ -38,6 +38,8 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
   const [notice, setNotice] = useState("");
   const [oneTimeLink, setOneTimeLink] = useState<{ label: string; url: string; expiresAt: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [userQuery, setUserQuery] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setBusy("load");
@@ -152,6 +154,14 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
     }
   };
 
+  const filteredUsers = useMemo(() => {
+    const query = userQuery.trim().toLocaleLowerCase();
+    if (!query) return users;
+    return users.filter((user) => [user.email, user.display_name ?? "", user.role, user.status].some((value) => value.toLocaleLowerCase().includes(query)));
+  }, [userQuery, users]);
+  const activeUsers = users.filter((user) => user.status === "ACTIVE").length;
+  const disabledUsers = users.length - activeUsers;
+
   return <section className="space-y-4" aria-label={copy.title}>
     <div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent"><UsersRound className="h-4 w-4" aria-hidden="true" /></span><div><h3 className="text-sm font-semibold text-primary">{copy.instanceAccess}</h3><p className="mt-0.5 text-xs leading-5 text-secondary">{copy.description}</p></div></div>
 
@@ -164,12 +174,21 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       <div className="mt-3 flex gap-2"><input readOnly value={oneTimeLink.url} aria-label={oneTimeLink.label} className="input-base min-h-10 min-w-0 flex-1 px-3 text-xs" /><button type="button" onClick={() => void copyLink()} className="btn-secondary flex min-h-10 shrink-0 items-center gap-2 px-3 text-xs font-medium">{copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}{copied ? copy.copied : copy.copy}</button></div>
     </div> : null}
 
-    {tab === "users" ? <div role="tabpanel" className="divide-y divide-[var(--border)]">
-      {users.map((user) => <div key={user.id} className="py-4">
+    {tab === "users" ? <div role="tabpanel" className="space-y-3">
+      <div className="grid grid-cols-3 gap-2" aria-label={resolvedLocale === "zh-CN" ? "用户概览" : "User summary"}>
+        <SummaryStat label={resolvedLocale === "zh-CN" ? "用户总数" : "Total users"} value={users.length} />
+        <SummaryStat label={resolvedLocale === "zh-CN" ? "可用用户" : "Active"} value={activeUsers} />
+        <SummaryStat label={resolvedLocale === "zh-CN" ? "已禁用" : "Disabled"} value={disabledUsers} />
+      </div>
+      <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" aria-hidden="true" /><span className="sr-only">{resolvedLocale === "zh-CN" ? "搜索用户" : "Search users"}</span><input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} className="input-base min-h-10 w-full pl-9 pr-9 text-sm" placeholder={resolvedLocale === "zh-CN" ? "搜索用户" : "Search users"} aria-label={resolvedLocale === "zh-CN" ? "搜索用户" : "Search users"} />{userQuery ? <button type="button" onClick={() => setUserQuery("")} aria-label={resolvedLocale === "zh-CN" ? "清除搜索" : "Clear search"} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-secondary hover:bg-subtle hover:text-primary"><X className="h-4 w-4" /></button> : null}</label>
+      <div className="divide-y divide-[var(--border)]">
+      {filteredUsers.map((user) => <div key={user.id} className={`py-4 ${selectedUserId === user.id ? "-mx-2 rounded-lg bg-subtle px-2" : ""}`}>
         <div className="flex items-start gap-3"><UserRound className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden="true" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-primary">{user.display_name || user.email}</p><StateLabel tone={user.status === "ACTIVE" ? "accent" : "muted"}>{user.status === "ACTIVE" ? copy.active : copy.disabled}</StateLabel>{user.role === "ADMIN" ? <StateLabel tone="neutral">{copy.admin}</StateLabel> : null}{user.id === currentUserId ? <StateLabel tone="accent">{copy.you}</StateLabel> : null}</div>{user.display_name ? <p className="mt-0.5 truncate text-xs text-secondary">{user.email}</p> : null}<p className="mt-1 text-xs text-secondary">{copy.joined} {formatDate(user.created_at, resolvedLocale)}</p></div></div>
-        {user.id !== currentUserId ? <div className="mt-3 flex flex-wrap justify-end gap-2 pl-7"><button type="button" onClick={() => void createReset(user)} disabled={Boolean(busy)} className="btn-secondary flex min-h-9 items-center gap-2 px-3 text-xs font-medium"><KeyRound className="h-3.5 w-3.5" />{copy.createReset}</button><button type="button" onClick={() => void toggleUser(user)} disabled={Boolean(busy)} className={"min-h-9 px-3 text-xs font-medium " + (user.status === "ACTIVE" ? "text-[var(--danger)]" : "text-accent")}>{user.status === "ACTIVE" ? copy.disable : copy.enable}</button></div> : null}
+        <div className="mt-3 flex flex-wrap justify-end gap-2 pl-7"><button type="button" onClick={() => setSelectedUserId((current) => current === user.id ? null : user.id)} className="btn-secondary min-h-9 px-3 text-xs font-medium">{selectedUserId === user.id ? (resolvedLocale === "zh-CN" ? "收起详情" : "Hide details") : (resolvedLocale === "zh-CN" ? "查看详情" : "View details")}</button>{user.id !== currentUserId ? <><button type="button" onClick={() => void createReset(user)} disabled={Boolean(busy)} className="btn-secondary flex min-h-9 items-center gap-2 px-3 text-xs font-medium"><KeyRound className="h-3.5 w-3.5" />{copy.createReset}</button><button type="button" onClick={() => void toggleUser(user)} disabled={Boolean(busy)} className={"min-h-9 px-3 text-xs font-medium " + (user.status === "ACTIVE" ? "text-[var(--danger)]" : "text-accent")}>{user.status === "ACTIVE" ? copy.disable : copy.enable}</button></> : null}</div>
+        {selectedUserId === user.id ? <UserDetails user={user} locale={resolvedLocale} zh={resolvedLocale === "zh-CN"} /> : null}
       </div>)}
-      {!users.length && busy !== "load" ? <p className="py-5 text-sm text-secondary">{copy.noUsers}</p> : null}
+      {!filteredUsers.length && busy !== "load" ? <p className="py-5 text-sm text-secondary">{userQuery ? (resolvedLocale === "zh-CN" ? "没有匹配的用户。" : "No matching users.") : copy.noUsers}</p> : null}
+      </div>
     </div> : null}
 
     {tab === "registration" ? <div role="tabpanel" className="space-y-4">
@@ -195,6 +214,18 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
 function StateLabel({ tone, children }: { tone: "accent" | "muted" | "neutral"; children: React.ReactNode }) {
   const className = tone === "accent" ? "bg-[var(--accent-soft)] text-accent" : tone === "neutral" ? "bg-subtle text-primary" : "bg-subtle text-secondary";
   return <span className={"rounded-sm px-1.5 py-0.5 text-[11px] font-medium " + className}>{children}</span>;
+}
+
+function SummaryStat({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-lg border border-ui bg-subtle px-3 py-2"><p className="text-[11px] text-secondary">{label}</p><p className="mt-0.5 text-lg font-semibold text-primary" aria-label={`${label}: ${value}`}>{value}</p></div>;
+}
+
+function UserDetails({ user, locale, zh }: { user: AccessUser; locale: "zh-CN" | "en-US"; zh: boolean }) {
+  return <section className="mt-3 rounded-lg border border-ui bg-subtle p-3" aria-label={zh ? "用户详情" : "User details"}>
+    <div className="mb-2 flex items-center justify-between gap-3"><h4 className="text-xs font-semibold text-primary">{zh ? "用户详情" : "User details"}</h4><span className="truncate text-[11px] text-secondary" title={user.id}>{user.id}</span></div>
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs"><dt className="text-secondary">{zh ? "邮箱" : "Email"}</dt><dd className="truncate text-primary">{user.email}</dd><dt className="text-secondary">{zh ? "状态" : "Status"}</dt><dd className="text-primary">{user.status === "ACTIVE" ? (zh ? "可用" : "Active") : (zh ? "已禁用" : "Disabled")}</dd><dt className="text-secondary">{zh ? "创建于" : "Created"}</dt><dd className="text-primary">{formatDate(user.created_at, locale)}</dd></dl>
+    <p className="mt-2 text-[11px] leading-5 text-secondary">{zh ? "详情仅供查看。管理操作会记录并按需要撤销会话。" : "Read-only details. Administrative actions are logged and revoke sessions when required."}</p>
+  </section>;
 }
 
 function formatDate(value: string, locale: "zh-CN" | "en-US") {

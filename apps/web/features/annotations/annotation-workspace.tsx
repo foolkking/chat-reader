@@ -194,12 +194,16 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       }, 0);
     };
     const capturePointerSelection = (event: MouseEvent) => {
+      // Capture the hit block before click handlers can navigate or rerender
+      // the virtualized reader. The mouseup target may otherwise be detached
+      // by the time the deferred selection check runs.
+      const hitElement = document.elementFromPoint(event.clientX, event.clientY);
       window.setTimeout(() => {
         const next = captureSelection(messages);
         setSelection(next);
         if (next) return;
         if (!desktop) return;
-        const annotation = annotationAtPoint(event, annotations);
+        const annotation = annotationAtPoint(event, annotations, hitElement);
         if (!annotation) return;
         setFocusedAnnotationId(annotation.id);
         setView("all");
@@ -208,7 +212,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
           annotation,
           x: clamp(event.clientX + 12, 8, window.innerWidth - 300),
           y: clamp(event.clientY + 12, 8, window.innerHeight - 180),
-          returnFocus: event.target instanceof Element ? event.target.closest<HTMLElement>("[data-block-index]") : null,
+          returnFocus: hitElement?.closest<HTMLElement>("[data-block-index]") ?? null,
         });
       }, 0);
     };
@@ -860,8 +864,8 @@ function elementFromNode(node: Node): HTMLElement | null { return node instanceo
 function colorClass(color: AnnotationColor | null): string { return COLORS.find((item) => item.value === color)?.className ?? "bg-secondary"; }
 function clamp(value: number, min: number, max: number): number { return Math.min(Math.max(value, min), max); }
 
-function annotationAtPoint(event: MouseEvent, annotations: AnnotationRead[]): AnnotationRead | null {
-  const target = event.target instanceof Element ? event.target : null;
+function annotationAtPoint(event: MouseEvent, annotations: AnnotationRead[], hitElement: Element | null = null): AnnotationRead | null {
+  const target = hitElement ?? (event.target instanceof Element ? event.target : null) ?? document.elementFromPoint(event.clientX, event.clientY);
   const block = target?.closest<HTMLElement>("[data-block-index]");
   const article = block?.closest<HTMLElement>("article[data-message-id]");
   const messageId = article?.dataset.messageId;

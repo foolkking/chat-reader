@@ -112,8 +112,11 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
       </Link>
       {!libraryMode ? <div className="settings-category-list space-y-2 border-t border-ui pt-3">
         <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
-        {accessRole === "ADMIN" ? <SettingsCategoryButton icon={UsersRound} label={preferences.resolvedLocale === "zh-CN" ? "\u7528\u6237\u4e0e\u8bbf\u95ee" : "Users & access"} description={preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406\u7528\u6237\u3001\u6ce8\u518c\u4e0e\u9080\u8bf7" : "Manage users, registration and invitations"} onClick={() => onOpenCategory?.("access")} /> : null}
-        {accessRole === "ADMIN" ? <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} /> : null}
+        {accessRole === "ADMIN" ? <div className="space-y-2 border-t border-ui pt-3" aria-labelledby="settings-administration-heading">
+          <div className="px-1"><h3 id="settings-administration-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406" : "Administration"}</h3><p className="mt-1 text-xs text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u4ec5\u7cfb\u7edf\u7ba1\u7406\u5458\u53ef\u89c1" : "Visible only to the system administrator"}</p></div>
+          <SettingsCategoryButton icon={UsersRound} label={preferences.resolvedLocale === "zh-CN" ? "\u7528\u6237" : "Users"} ariaLabel={preferences.resolvedLocale === "zh-CN" ? "\u7528\u6237\u4e0e\u8bbf\u95ee" : "Users & access"} description={preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406\u7528\u6237\u3001\u6ce8\u518c\u4e0e\u9080\u8bf7" : "Manage users, registration and invitations"} onClick={() => onOpenCategory?.("access")} />
+          <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
+        </div> : null}
         <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
         <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
         <SettingsCategoryButton icon={Eraser} label={t("noiseRuleLibrary")} description={t("noiseRuleLibraryDescription")} onClick={() => onOpenCategory?.("cleanup")} />
@@ -122,8 +125,8 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
   );
 }
 
-function SettingsCategoryButton({ icon: Icon, label, description, onClick }: { icon: typeof Database; label: string; description: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-ui bg-surface px-3 py-2 text-left transition-colors hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]">
+function SettingsCategoryButton({ icon: Icon, label, ariaLabel, description, onClick }: { icon: typeof Database; label: string; ariaLabel?: string; description: string; onClick: () => void }) {
+  return <button type="button" aria-label={ariaLabel} onClick={onClick} className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-ui bg-surface px-3 py-2 text-left transition-colors hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]">
     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent"><Icon className="h-4 w-4" aria-hidden="true" /></span>
     <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-primary">{label}</span><span className="mt-0.5 block text-xs text-secondary">{description}</span></span>
     <ChevronDown className="h-4 w-4 -rotate-90 shrink-0 text-secondary" aria-hidden="true" />
