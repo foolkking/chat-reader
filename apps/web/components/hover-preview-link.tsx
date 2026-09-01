@@ -96,7 +96,13 @@ export function HoverPreviewLink({ href, title, description, children, className
         onMouseEnter={(event) => schedulePreview(event.clientX, event.clientY)}
         onMouseOver={(event) => schedulePreview(event.clientX, event.clientY)}
         onMouseMove={(event) => schedulePreview(event.clientX, event.clientY)}
-        onPointerLeave={clearPreview}
+        onPointerLeave={(event) => {
+          // Browsers can report a null relatedTarget while an auto-scroll
+          // brings a hovered row into view. Keep that pending hover alive;
+          // explicit scroll/escape handlers still dismiss it.
+          if (timerRef.current !== null && event.relatedTarget === null) return;
+          clearPreview();
+        }}
         onFocus={() => {
           if (!description || !isCopyTruncated()) return;
           const rect = anchorRef.current?.getBoundingClientRect();
