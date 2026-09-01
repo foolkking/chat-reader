@@ -111,7 +111,7 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         {libraryMode ? t("backOnline") : t("offlineLibrary")}
       </Link>
       {!libraryMode ? <div className="settings-category-list space-y-2 border-t border-ui pt-3">
-        <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
+        {accessRole === "ADMIN" ? <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} /> : null}
         <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
         {accessRole === "ADMIN" ? <div className="space-y-2 border-t border-ui pt-3" aria-labelledby="settings-administration-heading">
           <div className="px-1"><h3 id="settings-administration-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406" : "Administration"}</h3><p className="mt-1 text-xs text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u4ec5\u7cfb\u7edf\u7ba1\u7406\u5458\u53ef\u89c1" : "Visible only to the system administrator"}</p></div>
