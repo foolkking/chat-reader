@@ -17,7 +17,15 @@ from app.main import app
 from app.models.access import AccountInvitation
 from app.models.auth import AuthPrincipal, AuthSession
 from app.models.user import User
-from app.services.auth import authenticate_session, issue_session, provision_owner, verify_login
+from app.services.auth import (
+    ROOT_ADMIN_USER_ID,
+    AuthConfigurationError,
+    authenticate_session,
+    issue_session,
+    provision_owner,
+    register_user,
+    verify_login,
+)
 
 
 def owner_login(client: TestClient, password: str = "correct horse battery staple"):
@@ -162,10 +170,57 @@ def test_login_sets_cookie_without_persisting_raw_token(auth_client: TestClient)
         row = db.query(AuthSession).one()
         principal = db.get(AuthPrincipal, "owner")
         assert principal is not None
+        assert principal.user_id == ROOT_ADMIN_USER_ID
         assert principal.password_hash.startswith("$argon2id$")
         assert "correct horse battery staple" not in principal.password_hash
         assert row.token_digest != cookie
         assert len(row.token_digest) == 64
+
+
+def test_admin_authorization_is_bound_to_stable_owner_identity(auth_client: TestClient) -> None:
+    """A second account cannot gain admin APIs by changing its mutable role."""
+
+    assert owner_login(auth_client).status_code == 200
+    settings = get_settings()
+    with auth_middleware.SessionLocal() as db:
+        user, principal = register_user(
+            db,
+            "not-root@example.test",
+            "not-root secure passphrase",
+            display_name="Not Root",
+        )
+        # Simulate a compromised/direct database role mutation.  The admin
+        # authorization path must still reject this principal because its
+        # immutable identity is not the configured owner UUID.
+        user.role = "ADMIN"
+        db.commit()
+        token, _ = issue_session(db, principal, settings, device_label="test")
+
+    auth_client.cookies.set("chat_reader_session", token)
+    auth_client.cookies.set("chat_reader_session_present", "1")
+    assert auth_client.get("/api/admin/access").status_code == 404
+
+
+def test_owner_provisioning_refuses_principal_rebinding(auth_client: TestClient) -> None:
+    with auth_middleware.SessionLocal() as db:
+        principal = db.get(AuthPrincipal, "owner")
+        assert principal is not None
+        alternate = User(
+            id=uuid.uuid4(),
+            normalized_email="alternate-root@example.test",
+            display_name="Alternate",
+            role="ADMIN",
+            status="ACTIVE",
+            credential_version=1,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        db.add(alternate)
+        db.flush()
+        principal.user_id = alternate.id
+        db.commit()
+        with pytest.raises(AuthConfigurationError, match="invalid administrator identity"):
+            provision_owner(db, "correct horse battery staple", get_settings())
 
 
 def test_expiry_boundary_and_sliding_activity_are_deterministic(auth_client: TestClient) -> None:

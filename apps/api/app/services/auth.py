@@ -18,6 +18,11 @@ from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthSession
 from app.models.user import User
 
 OWNER_PRINCIPAL_ID = "owner"
+# The migration that introduced account identities uses this UUID for the
+# administrator that owns all pre-account data.  Keep the identity stable and
+# independent from mutable email/display-name fields; every root-admin
+# authorization check is anchored to this user and the ``owner`` principal.
+ROOT_ADMIN_USER_ID = uuid.UUID("2dfb6c9e-4b25-4f67-9f5e-4b87f1d8ad01")
 SESSION_COOKIE_NAME = "chat_reader_session"
 # This is deliberately not a credential. It lets the offline UI notice that a
 # user cleared browser cookies while preserving the HttpOnly session token as
@@ -49,6 +54,29 @@ class SessionAuthentication:
 
 class AuthConfigurationError(RuntimeError):
     pass
+
+
+def root_admin_user(db: Session, context: AuthContext | None) -> User | None:
+    """Return the configured root administrator for an authenticated context.
+
+    ``owner`` is the only administrator principal.  We intentionally verify
+    both the principal id and its immutable UUID binding instead of trusting a
+    mutable role, email, username, or client-provided value.  Returning
+    ``None`` lets route layers use a deliberately generic 404/401 response so
+    admin-resource existence is not disclosed to regular users.
+    """
+
+    if context is None or context.principal_id != OWNER_PRINCIPAL_ID:
+        return None
+    principal = db.get(AuthPrincipal, OWNER_PRINCIPAL_ID)
+    if principal is None or principal.user_id != ROOT_ADMIN_USER_ID:
+        return None
+    if context.user_id != ROOT_ADMIN_USER_ID:
+        return None
+    user = db.get(User, ROOT_ADMIN_USER_ID)
+    if user is None or user.status != "ACTIVE" or user.role != "ADMIN":
+        return None
+    return user
 
 
 class LoginThrottled(RuntimeError):
@@ -122,20 +150,37 @@ def provision_owner(
     initial_account = principal is None
     owner_user = None
     if principal is not None and principal.user_id:
+        # Once provisioned, the owner principal must never be rebound to a
+        # different account.  This prevents a deleted/mutated user row from
+        # silently transferring root-admin authority to another identity.
+        if principal.user_id != ROOT_ADMIN_USER_ID:
+            raise AuthConfigurationError("The owner principal is bound to an invalid administrator identity.")
         owner_user = db.get(User, principal.user_id)
-        initial_account = owner_user is None or owner_user.normalized_email is None
+        if owner_user is None:
+            raise AuthConfigurationError("The owner principal's administrator identity is missing.")
+        initial_account = owner_user.normalized_email is None
     unchanged_initial_password = principal is not None and verify_password(principal.password_hash, password)
     if allow_weak_initial and (initial_account or unchanged_initial_password) and 6 <= len(password) <= PASSWORD_MAX_LENGTH:
         password_hash = _password_hasher.hash(password)
     else:
         password_hash = hash_password(password)
-    owner_user = owner_user or db.query(User).filter(
-        User.normalized_email.is_(None), User.role == "ADMIN"
-    ).order_by(User.created_at.asc()).first()
     if owner_user is None:
-        owner_user = User(id=uuid.uuid4(), display_name="Administrator", role="ADMIN", status="ACTIVE", credential_version=1, created_at=now, updated_at=now)
-        db.add(owner_user)
-        db.flush()
+        # Fresh databases and pre-account principals both converge on the
+        # migration's stable UUID.  Never select an arbitrary ADMIN row by
+        # email/role: those fields are mutable and cannot establish identity.
+        owner_user = db.get(User, ROOT_ADMIN_USER_ID)
+        if owner_user is None:
+            owner_user = User(
+                id=ROOT_ADMIN_USER_ID,
+                display_name="Administrator",
+                role="ADMIN",
+                status="ACTIVE",
+                credential_version=1,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(owner_user)
+            db.flush()
     if principal is None:
         principal = AuthPrincipal(
             id=OWNER_PRINCIPAL_ID,
@@ -147,7 +192,9 @@ def provision_owner(
         )
         db.add(principal)
     else:
-        principal.user_id = principal.user_id or owner_user.id
+        # The branch above guarantees this is the stable root identity.  Keep
+        # the assignment only for legacy rows that predate user binding.
+        principal.user_id = principal.user_id or ROOT_ADMIN_USER_ID
         principal.password_hash = password_hash
         principal.credential_version += 1
         principal.updated_at = now

@@ -18,6 +18,7 @@ from app.services.access import (
     registration_mode,
     set_registration_mode,
 )
+from app.services.auth import root_admin_user
 
 router = APIRouter(prefix="/api/admin/access", tags=["admin-access"])
 
@@ -40,9 +41,8 @@ class ResetGrantCreate(BaseModel):
 
 def _admin(request: Request, db: Session) -> User:
     context = getattr(request.state, "auth", None)
-    user_id = getattr(context, "user_id", None)
-    user = db.get(User, user_id) if user_id else None
-    if user is None or user.status != "ACTIVE" or user.role != "ADMIN":
+    user = root_admin_user(db, context)
+    if user is None:
         raise HTTPException(status_code=404, detail="Not found.")
     return user
 
