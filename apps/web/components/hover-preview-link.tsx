@@ -25,11 +25,11 @@ export function HoverPreviewLink({ href, title, description, children, className
   }, []);
 
   function isCopyTruncated() {
+    if (description.trim().length > 180) return true;
     const copy = anchorRef.current?.querySelector<HTMLElement>("[data-hover-preview-copy]");
     return Boolean(copy && (
       copy.scrollHeight > copy.clientHeight + 1 ||
-      copy.scrollWidth > copy.clientWidth + 1 ||
-      description.trim().length > 180
+      copy.scrollWidth > copy.clientWidth + 1
     ));
   }
 
