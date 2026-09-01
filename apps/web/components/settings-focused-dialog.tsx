@@ -14,7 +14,8 @@ import type { SettingsCategory } from "./preferences-panel";
 import { useTranslations } from "./preferences-provider";
 import { SkillSettings } from "./skill-settings";
 import { AdminAccessPanel } from "./admin-access-panel";
-import { AdminAccessSettingsPanel, AdminAuditPanel, AdminFeaturesPanel, AdminSkillsPanel, AdminSystemPanel, AdminUsersPanel } from "./admin-settings-panels";
+import { AdminAccessSettingsPanel, AdminAuditPanel, AdminFeaturesPanel, AdminSystemPanel } from "./admin-settings-panels";
+import { AdminSkillsPanelEnhanced, AdminUsersPanelEnhanced } from "./admin-settings-enhanced";
 
 export function SettingsFocusedDialog({ category, onClose, restoreFocus }: { category: SettingsCategory; onClose: () => void; restoreFocus: () => HTMLElement | null }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -47,9 +48,9 @@ export function SettingsFocusedDialog({ category, onClose, restoreFocus }: { cat
           {category === "security" ? <AccountSecurityPanel focused onDirtyChange={setDirty} /> : null}
           {category === "skills" ? <SkillSettings focused onDirtyChange={setDirty} /> : null}
           {category === "access" ? <AdminAccessPanel onDirtyChange={setDirty} /> : null}
-          {category === "admin-users" ? <AdminUsersPanel /> : null}
+          {category === "admin-users" ? <AdminUsersPanelEnhanced /> : null}
           {category === "admin-access" ? <AdminAccessSettingsPanel /> : null}
-          {category === "admin-skills" ? <AdminSkillsPanel /> : null}
+          {category === "admin-skills" ? <AdminSkillsPanelEnhanced /> : null}
           {category === "admin-features" ? <AdminFeaturesPanel /> : null}
           {category === "admin-system" ? <AdminSystemPanel /> : null}
           {category === "admin-audit" ? <AdminAuditPanel /> : null}

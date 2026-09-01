@@ -15,7 +15,7 @@ function formatDate(value: string | null | undefined, locale: string) { if (!val
 function Pill({ children, tone = "muted" }: { children: React.ReactNode; tone?: "accent" | "muted" | "danger" }) { return <span className={`rounded-sm px-1.5 py-0.5 text-[11px] font-medium ${tone === "accent" ? "bg-[var(--accent-soft)] text-accent" : tone === "danger" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-subtle text-secondary"}`}>{children}</span>; }
 function Action({ children, onClick, disabled = false, danger = false }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }) { return <button type="button" onClick={onClick} disabled={disabled} className={`min-h-9 px-3 text-xs font-medium ${danger ? "text-[var(--danger)]" : "text-primary hover:bg-subtle"} disabled:opacity-45`}>{children}</button>; }
 
-export function AdminUsersPanel() {
+export function AdminUsersPanelLegacy() {
   const { resolvedLocale } = usePreferences(); const zh = resolvedLocale === "zh-CN"; const { confirm } = useInteractionDialog();
   const [users, setUsers] = useState<AdminUser[]>([]); const [query, setQuery] = useState(""); const [selected, setSelected] = useState<string | null>(null); const [busy, setBusy] = useState(""); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [conversations, setConversations] = useState<Record<string, { id: string; title: string; summary: string; message_count: number }[]>>({});
   const load = useCallback(async () => { setBusy("load"); setError(""); try { setUsers(await adminApi.users()); } catch (e) { setError(e instanceof Error ? e.message : "Load failed"); } finally { setBusy(""); } }, []); useEffect(() => { void load(); }, [load]);
