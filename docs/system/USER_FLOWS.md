@@ -1,6 +1,6 @@
 # 当前用户流程
 
-## Current account flows (working tree, 2026-09-01)
+## Current account flows (deployed, 2026-09-02)
 
 ```text
 first deployment -> operator provisions one ADMIN interactively
@@ -12,10 +12,11 @@ ADMIN -> registration mode, invitations, user status and reset grants
 
 The migrated legacy archive belongs to the single deployment administrator.
 Share links remain token-scoped and Offline remains a local snapshot. These
-flows are implemented and API-tested in the working tree; migration,
-deployment and authenticated production browser verification are pending.
+flows are implemented, API-tested and deployed. Authenticated production
+browser verification remains `NOT_VERIFIED` until the operator runs the Web
+acceptance flow.
 
-## Settings, Tasks and import completion (2026-08-25, local)
+## Settings, Tasks and import completion (deployed 2026-09-02)
 
 The global shell footer is named `Settings`. Its lightweight surface owns
 appearance/reading preferences and links to three predictable categories:
@@ -36,7 +37,7 @@ view the imported set in Library, open the first conversation, or close and
 return to the opener. A single import keeps a direct `Open conversation`
 action, but no import silently navigates to the first item.
 
-## Owner Skill management (2026-08-29, local)
+## Owner Skill management (deployed 2026-09-02)
 
 Settings includes a focused Skill management dialog for Export Context and
 Conversation Rescue Skills. System defaults are immutable; owner-uploaded UTF-8

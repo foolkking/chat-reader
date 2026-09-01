@@ -1,19 +1,20 @@
 # 部署与运行环境
 
-## Current deployed snapshot (2026-09-01)
+## Current deployed snapshot (2026-09-02)
 
-The active production source is `93751e52dc7089d0ccd51e6f6cf9cedb1f341fe1`
-from GitHub Actions run `33468690421`. The release used prebuilt OCI images,
-the existing migration container, and `docker compose --no-build`; only the
-API, import-worker and Web services were recreated. PostgreSQL was not
-restarted or replaced. Runtime health, HTTPS reachability and anonymous
-private-route boundaries were verified after rollout. Owner-authenticated
-production UI acceptance remains `NOT_VERIFIED`.
+The active production source is `108ab40a77e16f6e28034cfa50af668b861d15cf`
+from GitHub Actions run `33555589087`. The release used prebuilt OCI images,
+the exact migration image and explicit immutable `API_IMAGE`/`WEB_IMAGE`
+bindings; only the API, import-worker and Web services were recreated.
+PostgreSQL was not restarted or replaced. Alembic `20260902_0032` is current.
+Runtime health, HTTPS reachability, worker heartbeat and anonymous private-route
+boundaries were verified after rollout. Owner-authenticated production UI
+acceptance remains `NOT_VERIFIED` for operator-run Web verification.
 
-The working tree is ahead of this deployed snapshot with the multi-account
-owner boundary and migration `20260901_0030_multi_account_users.py`. Treat it
-as pending until backup, migration, deployment and authenticated browser
-verification are recorded.
+The single immutable Root Admin is deployment-configured only by the server
+`.env.production` pair `ADMIN_EMAIL` / `ADMIN_PASSWORD`. The migration consumes
+the pair when it changes; unchanged values do not overwrite a password changed
+in the Web UI. Share and Offline remain separate permission boundaries.
 
 ## Import Preview request boundary
 
@@ -70,7 +71,7 @@ supported application path when the environment permits.
 
 The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for commit `a89bc28`; the archive SHA-256 was verified as `4d48d4d55c461be318c5ccab2b06eaabeefb11e1c32dcb73b2201aa3d833e5be` on both ends. Backup `/opt/chat-reader/backups/adaptive-viewer-20260809T050228Z-a89bc28` contains a validated PostgreSQL custom dump and all four business-volume archives. King only pulled source, loaded images, ran migration and recreated services with `--no-build`; `.env.production`, named volumes and the disabled Scanner policy were unchanged.
 
-最后核验：2026-08-06
+最后核验：2026-09-02
 
 本页维护运行边界和配置名称。可复制的本地/生产步骤分别见 [本地开发](../development.md) 与 [生产部署](../deployment.md)。
 

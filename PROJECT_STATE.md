@@ -11,8 +11,8 @@ Last updated: 2026-09-02
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
 | Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
-| Branch / baseline | `master`; starting source SHA `93751e52dc7089d0ccd51e6f6cf9cedb1f341fe1`; multi-account release is committed and pending deployment |
-| Deployment | Existing production release remains `ba287e1`; administrator upgrade is committed locally and pending second deployment |
+| Branch / baseline | `master`; deployed source SHA `108ab40a77e16f6e28034cfa50af668b861d15cf` |
+| Deployment | Production runs immutable `108ab40a77e16f6e28034cfa50af668b861d15cf`; `ba287e1` is retained as direct rollback |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## 2. Current Purpose
@@ -75,7 +75,7 @@ have separate permission/data boundaries.
 | `corepack pnpm --filter web build` | Production Web build | PASS in this implementation cycle |
 | `corepack pnpm run test:api` | API suite | PASS 471 passed, 6 skipped on 2026-09-02 |
 | `corepack pnpm --filter web test:pwa` | PWA/browser suite | Full suite NOT VERIFIED locally; Service Worker/online startup timeouts and a CSP resource failure occurred. Targeted OFF-010 375px fixture run passed with Chromium 1234 + `APP_ENV=test` |
-| `cd apps/api; python -m alembic heads` | Migration head | `20260901_0031 (head)` in the working tree |
+| `cd apps/api; python -m alembic heads` | Migration head | `20260902_0032 (head)` in the working tree and production |
 | `git diff --check` | Patch whitespace | PASS |
 | `corepack pnpm run ci:changed-area` | Changed-area local check suggestions | PASS; always retains full gate |
 | `python deploy/cleanup_release_transfer.py ...` | Bounded transfer cleanup | Dry-run/execute temporary-directory smoke PASS |
@@ -118,9 +118,9 @@ commits. System backup is the existing application `.cr` archive: it excludes
 secrets, environment and logs, restores only into an empty instance, and is not
 a PostgreSQL or host-volume snapshot.
 
-Implementation status is `implemented in working tree / automated-tested /
-deployment pending`; authenticated production browser acceptance and a real
-PostgreSQL migration run remain `NOT VERIFIED`.
+Implementation status is `implemented / automated-tested / deployed`; authenticated
+production browser acceptance remains `NOT VERIFIED` for the operator's own Web
+verification.
 
 - Owner shell keeps Sidebar, global Tasks and workspace boundaries mounted
   across supported client-side navigation; Login, Share, Offline and Library
@@ -159,9 +159,9 @@ PostgreSQL migration run remain `NOT VERIFIED`.
 | Release evidence | Implemented and deployed | Explicit cache evidence, artifact inspection, health/rollback/HTTPS checks |
 | CI quality ownership | Implemented and deployed | Release and performance workflows expose separate `api-quality` and `web-quality` jobs; image/characterization jobs require both, while browser integration remains in Web quality with disposable API services |
 | Auth cookie/inactivity contract | Implemented in working tree | API exact-boundary tests and authenticated browser cookie attribute assertion; production-equivalent owner run remains NOT VERIFIED |
-| Deployment admin reconciliation | Implemented in working tree | Production `migrate` consumes `ADMIN_EMAIL`/`ADMIN_PASSWORD`; only a changed pair is applied, while the database stores a derived digest and Argon2id hash rather than plaintext. Deployment remains pending |
+| Deployment admin reconciliation | Implemented and deployed | Production `migrate` consumes the server `.env.production` `ADMIN_EMAIL`/`ADMIN_PASSWORD` pair; only a changed pair is applied, while the database stores a derived digest and Argon2id hash rather than plaintext |
 | Attachment Range characterization | Implemented and deployed | Synthetic image/PDF/video/text Range and retry measurement reports aggregates only; production media/network measurement remains NOT VERIFIED |
-| Production deployment | Existing release only | Production remains on `93751e5` / Alembic `20260829_0029`; account migrations `20260901_0030` and `20260901_0031` are not deployed |
+| Production deployment | Implemented and deployed | CI-gated release `108ab40` is live; Alembic `20260902_0032` is current; previous `ba287e1` remains the rollback image |
 | Authenticated production browser | NOT VERIFIED | No approved owner session/browser evidence in this cycle; public health is reachable but exposes no release SHA, so it cannot bind TEST-001 evidence to this source |
 | Backup failure notification | Closed as unconfirmed | Backup emits bounded stderr/non-zero failure; no authorized delivery channel exists, so no external hook was introduced |
 
@@ -183,6 +183,17 @@ PostgreSQL migration run remain `NOT VERIFIED`.
 - `.cr` restore and attachment round-trip behavior is covered by temporary-root
   API fixtures; full two-environment Docker recovery remains an operator
   rehearsal, not an automated production claim.
+
+### Root administrator deployment identity
+
+The production administrator is the single immutable Root Admin. Its deployment
+identity is configured only on the server in `/opt/chat-reader/.env.production`
+using `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The migration command consumes that
+pair during deployment; unchanged values do not overwrite a password changed in
+the Web UI. To intentionally change the deployment identity, update both values
+together in the server environment and rerun the normal immutable-image
+migration/deployment sequence. Credentials are never written to Git, logs,
+documentation, image labels or release manifests.
 
 ## 9. Current Backlog
 

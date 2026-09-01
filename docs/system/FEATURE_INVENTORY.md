@@ -1,20 +1,20 @@
 # 功能清单
 
-## Current account features (working tree, 2026-09-01)
+## Current account features (deployed, 2026-09-02)
 
 | Capability | Status | Contract |
 | --- | --- | --- |
 | Email/password login and server sessions | Implemented, automated-tested | HttpOnly cookie, 48-hour sliding inactivity, generic failures and rate limits |
 | Registration and invitations | Implemented, automated-tested | `CLOSED`, `INVITE_ONLY`, `OPEN`; public registration creates `USER` only |
-| Single deployment administrator | Implemented in working tree | Legacy owner is promoted by migration `20260901_0030`; provision through interactive CLI |
-| Account ownership isolation | Implemented in working tree | Server-derived `owner_user_id` across private domains; cross-account IDs fail closed |
-| Users & Access / password reset | Implemented in working tree | ADMIN-only management; SMTP reset or admin-generated grant |
+| Single deployment administrator | Implemented and deployed | Legacy owner is promoted by migration `20260901_0030`; deployment identity comes from server `.env.production` `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
+| Account ownership isolation | Implemented and deployed | Server-derived `owner_user_id` across private domains; cross-account IDs fail closed |
+| Users & Access / password reset | Implemented and deployed | ADMIN-only management; SMTP reset or admin-generated grant |
 
-Deployment of this account model and authenticated production browser
-acceptance remain `NOT VERIFIED`; the historical rows below are not the
-current implementation authority.
+Authenticated production browser acceptance remains `NOT VERIFIED` until the
+operator runs the Web flow; the historical rows below are not the current
+implementation authority.
 
-最后核验：2026-08-31
+最后核验：2026-09-02
 
 ## 导入与后台任务
 

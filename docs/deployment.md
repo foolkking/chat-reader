@@ -1179,3 +1179,20 @@ data archives, and security audit. Normal users remain owner-scoped. System back
 uses the existing `.cr` application archive, excludes secrets/environment/logs,
 and restores only into an empty instance; it is not a PostgreSQL or host-volume
 snapshot.
+
+### Root administrator deployment closure (2026-09-02)
+
+CI run `33555589087` produced the immutable release
+`108ab40a77e16f6e28034cfa50af668b861d15cf`. The verified archive SHA-256 is
+`930afdf0720d5ab6e512beefba6af00de1f892b8d35483e223ed057eff290967`.
+The verified pre-deploy recovery point is
+`/opt/chat-reader/backups/chat-reader-20260901T204455Z`.
+
+Production was migrated with the exact API image to Alembic
+`20260902_0032 (head)`, then API, import-worker and Web were recreated with
+explicit immutable image tags and `--no-deps`. PostgreSQL was not restarted or
+replaced. Runtime image identity, API/Web/PostgreSQL health, worker heartbeat,
+HTTPS redirect/health and anonymous admin `401` all passed. The previous
+`ba287e1aebe182fa232992da436a450569121eac` image set remains the direct
+rollback. Authenticated browser acceptance is `NOT_VERIFIED`; the operator will
+perform Web verification separately.
