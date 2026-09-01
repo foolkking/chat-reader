@@ -448,7 +448,7 @@ function ReadingProgress({ value, locale }: { value: number; locale: "zh-CN" | "
 function SortableConversationRow({ id, enabled, children }: { id: string; enabled: boolean; children: ReactNode }) {
   const sortable = useSortable({ id, disabled: !enabled });
   const dragProps = enabled ? { ...sortable.attributes, ...sortable.listeners } : {};
-  return <div ref={sortable.setNodeRef} data-testid={`conversation-sortable-row-${id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : "hover"} {...dragProps} className={`relative outline-none ${sortable.isDragging ? "reader-interactive-row cursor-grabbing" : "cursor-pointer"}`}>{children}</div>;
+  return <div ref={sortable.setNodeRef} data-testid={`conversation-sortable-row-${id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }} data-state={sortable.isDragging ? "dragging" : "hover"} {...dragProps} className={`reader-interactive-row relative outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>{children}</div>;
 }
 
 function previewConversationText(text: string | null | undefined, locale: "zh-CN" | "en-US"): string {
