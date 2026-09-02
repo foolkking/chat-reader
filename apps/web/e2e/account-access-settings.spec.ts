@@ -45,10 +45,9 @@ test("regular users see their account and devices but not instance maintenance",
   await page.goto("/");
   await openSettings(page);
   await expect(page.getByRole("button", { name: /Users & access|\u7528\u6237\u4e0e\u8bbf\u95ee/ })).toHaveCount(0);
-  await expect.poll(async () => page.getByRole("button", { name: /Data archive|\u6570\u636e\u5f52\u6863/ }).evaluateAll((elements) => elements.filter((element) => {
-    const style = window.getComputedStyle(element);
-    return style.display !== "none" && style.visibility !== "hidden" && element.getBoundingClientRect().height > 0;
-  }).length)).toBe(0);
+  await expect(page.getByRole("button", { name: /Data archive|\u6570\u636e\u5f52\u6863/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Import formats|\u5bfc\u5165\u683c\u5f0f/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Noise rule library|\u566a\u58f0\u89c4\u5219\u5e93/ })).toHaveCount(0);
   await page.getByRole("button", { name: /Account & security|\u8d26\u6237\u4e0e\u5b89\u5168/ }).click();
   await expect(page.getByLabel(/Email|\u90ae\u7bb1/)).toHaveValue("reader@example.test");
   await expect(page.getByText("Chrome on Windows")).toBeVisible();

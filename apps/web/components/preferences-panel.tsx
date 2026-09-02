@@ -111,7 +111,7 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         {libraryMode ? t("backOnline") : t("offlineLibrary")}
       </Link>
       {!libraryMode ? <div className="settings-category-list space-y-2 border-t border-ui pt-3">
-        {accessRole === "ADMIN" ? <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} /> : null}
+        <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
         <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
         {accessRole === "ADMIN" ? <div className="space-y-2 border-t border-ui pt-3" aria-labelledby="settings-administration-heading">
           <div className="px-1"><h3 id="settings-administration-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406" : "Administration"}</h3><p className="mt-1 text-xs text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u4ec5\u7cfb\u7edf\u7ba1\u7406\u5458\u53ef\u89c1" : "Visible only to the system administrator"}</p></div>
@@ -124,8 +124,10 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
           <SettingsCategoryButton icon={FileClock} label={preferences.resolvedLocale === "zh-CN" ? "\u5b89\u5168\u4e0e\u5ba1\u8ba1" : "Security & audit"} description={preferences.resolvedLocale === "zh-CN" ? "\u67e5\u770b\u7ba1\u7406\u64cd\u4f5c\u548c\u8de8\u7528\u6237\u8bbf\u95ee" : "Review admin actions and cross-user access"} onClick={() => onOpenCategory?.("admin-audit")} />
         </div> : null}
         <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
-        <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
-        <SettingsCategoryButton icon={Eraser} label={t("noiseRuleLibrary")} description={t("noiseRuleLibraryDescription")} onClick={() => onOpenCategory?.("cleanup")} />
+        {accessRole === "ADMIN" ? <>
+          <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
+          <SettingsCategoryButton icon={Eraser} label={t("noiseRuleLibrary")} description={t("noiseRuleLibraryDescription")} onClick={() => onOpenCategory?.("cleanup")} />
+        </> : null}
       </div> : null}
     </section>
   );

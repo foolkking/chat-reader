@@ -47,7 +47,7 @@ implementation authority.
 
 | 能力 | 状态 | 当前语义 |
 | --- | --- | --- |
-| Settings hub | 已确认 | 全局入口在侧栏底部向上展开为非模态 region；外观/阅读保留轻量偏好，数据归档、导入格式、账户安全和 Skill 管理进入 focused dialog |
+| Settings hub | 已确认 | 全局入口在侧栏底部向上展开为非模态 region；普通用户仅见账户安全、数据归档和自己的 Skill 管理，Root Admin 额外见系统管理、导入格式与噪声规则库 |
 | Consequential settings dismissal | 已确认 | 密码、导入格式名称和备份选项的未提交状态不能被 incidental close 静默丢弃 |
 
 ## Reader、渲染与导航

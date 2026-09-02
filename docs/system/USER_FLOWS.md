@@ -19,9 +19,12 @@ acceptance flow.
 ## Settings, Tasks and import completion (deployed 2026-09-02)
 
 The global shell footer is named `Settings`. Its lightweight surface owns
-appearance/reading preferences and links to three predictable categories:
-`Data & import`, `Import formats` and `Account & security`. Consequential or
-multi-field work opens a focused dialog; dirty password, profile or backup
+appearance/reading preferences and the Offline Library shortcut. A normal user
+sees only the personal management categories `Account & security`, `Data
+archive` and their own `Skill management`. Import formats and the noise rule
+library are system-maintenance controls and are visible only to the Root Admin;
+the administrator additionally sees the Administration section. Consequential
+or multi-field work opens a focused dialog; dirty password, profile or backup
 options cannot be silently discarded, and closing returns through the Settings
 hub to the original opener without reloading Reader content.
 
