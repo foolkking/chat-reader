@@ -1,5 +1,23 @@
 # 生产部署
 
+## 2026-09-02 settings visibility rollout
+
+Release `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb` was built and inspected by
+GitHub Actions run `33579404027` (API/Web quality, image build and independent
+artifact inspection all passed). Archive SHA-256:
+`691b71b7822025610d0d80cfc6ef19f33b316f30312042f70b2b31b627f843ef`.
+
+King backup `backups/chat-reader-20260902T014223Z` passed checksum/archive
+verification. Alembic remained `20260902_0032`; only API, import-worker and Web
+were recreated with immutable image tags. PostgreSQL container identity and
+start time were unchanged. Runtime image, health, HTTPS redirect and anonymous
+401 checks passed. Deployment did not alter `.env.production`.
+
+The Web change makes Data Archive, Account & Security and owner Skill
+management visible to regular users while keeping system maintenance, Import
+Formats and Noise Rule Library Root Admin-only. Authenticated production UI
+acceptance is `NOT_VERIFIED`; the operator will perform the Web check.
+
 ## 工作树账户发布边界（2026-09-01）
 
 仓库当前包含、但尚未部署多账户认证与 owner 隔离 migration

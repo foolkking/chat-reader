@@ -11,8 +11,8 @@ Last updated: 2026-09-02
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
 | Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
-| Branch / baseline | `master`; deployed source SHA `108ab40a77e16f6e28034cfa50af668b861d15cf` |
-| Deployment | Production runs immutable `108ab40a77e16f6e28034cfa50af668b861d15cf`; `ba287e1` is retained as direct rollback |
+| Branch / baseline | `master`; deployed source SHA `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb` |
+| Deployment | Production runs immutable `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb`; `108ab40` is retained as direct rollback |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## 2. Current Purpose
@@ -161,7 +161,7 @@ verification.
 | Auth cookie/inactivity contract | Implemented in working tree | API exact-boundary tests and authenticated browser cookie attribute assertion; production-equivalent owner run remains NOT VERIFIED |
 | Deployment admin reconciliation | Implemented and deployed | Production `migrate` consumes the server `.env.production` `ADMIN_EMAIL`/`ADMIN_PASSWORD` pair; only a changed pair is applied, while the database stores a derived digest and Argon2id hash rather than plaintext |
 | Attachment Range characterization | Implemented and deployed | Synthetic image/PDF/video/text Range and retry measurement reports aggregates only; production media/network measurement remains NOT VERIFIED |
-| Production deployment | Implemented and deployed | CI-gated release `108ab40` is live; Alembic `20260902_0032` is current; previous `ba287e1` remains the rollback image |
+| Production deployment | Implemented and deployed | CI-gated release `7101f6a` is live; Alembic `20260902_0032` is current; previous `108ab40` remains the rollback image |
 | Authenticated production browser | NOT VERIFIED | No approved owner session/browser evidence in this cycle; public health is reachable but exposes no release SHA, so it cannot bind TEST-001 evidence to this source |
 | Backup failure notification | Closed as unconfirmed | Backup emits bounded stderr/non-zero failure; no authorized delivery channel exists, so no external hook was introduced |
 

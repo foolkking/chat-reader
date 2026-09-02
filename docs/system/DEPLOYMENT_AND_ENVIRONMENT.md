@@ -2,14 +2,24 @@
 
 ## Current deployed snapshot (2026-09-02)
 
-The active production source is `108ab40a77e16f6e28034cfa50af668b861d15cf`
-from GitHub Actions run `33555589087`. The release used prebuilt OCI images,
+The active production source is `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb`
+from GitHub Actions run `33579404027`. The release used prebuilt OCI images,
 the exact migration image and explicit immutable `API_IMAGE`/`WEB_IMAGE`
 bindings; only the API, import-worker and Web services were recreated.
 PostgreSQL was not restarted or replaced. Alembic `20260902_0032` is current.
 Runtime health, HTTPS reachability, worker heartbeat and anonymous private-route
 boundaries were verified after rollout. Owner-authenticated production UI
 acceptance remains `NOT_VERIFIED` for operator-run Web verification.
+
+The 2026-09-02 settings-visibility rollout used archive SHA-256
+`691b71b7822025610d0d80cfc6ef19f33b316f30312042f70b2b31b627f843ef`.
+API/worker digest is `sha256:be80e8c9cb5e08bb5a5bbb182e1752b88757e108ef42751cc4f51a4b3eb8f59c`;
+Web digest is `sha256:b093609b0b1001bb9869f794a1b9d0479aa443ade1f8b81b21976a28ffe09c84`.
+Backup `/opt/chat-reader/backups/chat-reader-20260902T014223Z` passed the
+five-component verification. Only API, import-worker and Web were recreated;
+PostgreSQL identity and `StartedAt` were unchanged. Public HTTPS/API health
+returned 200 and anonymous admin access returned 401. Browser-authenticated
+acceptance is intentionally left for the operator and remains `NOT_VERIFIED`.
 
 The single immutable Root Admin is deployment-configured only by the server
 `.env.production` pair `ADMIN_EMAIL` / `ADMIN_PASSWORD`. The migration consumes
