@@ -3,12 +3,12 @@
 2026-09-02：Root Admin 账户边界、`.env.production` 管理员配置、管理入口、
 跨用户审计和系统归档限制已同步到 `PROJECT_STATE.md` 与 `docs/deployment.md`。
 
-## 当前文档真值（2026-09-01）
+## 当前文档真值（2026-09-02）
 
-本轮收尾同步了多账户认证、owner 隔离和管理员边界。当前源码 migration
-head 是 `20260901_0031_admin_config_digest.py`，部署环境仍以已发布版本为准；
-`PROJECT_STATE.md` 是两者差异和验证等级的唯一入口。历史发布段落不删除，继续
-作为带日期证据，但不得覆盖当前工作树状态。
+本轮收尾同步了多账户认证、owner 隔离、管理员边界和设置可见性。当前源码与
+生产 migration head 是 `20260902_0032`；`PROJECT_STATE.md` 是部署版本、差异和
+验证等级的唯一入口。历史发布段落不删除，继续作为带日期证据，但不得覆盖当前
+代码或运行态。
 
 持续维护的当前文档包括 `docs/system/` 合同、`docs/development.md`、
 `docs/deployment.md`、`docs/testing.md`、`docs/api-reference.md` 和
@@ -571,3 +571,8 @@ tools only; no production host state or application data was changed.
 its Node built-in test provide local changed-area feedback while preserving the
 full release gate. The command is documented by the package scripts and the
 backlog; it does not replace release quality jobs.
+
+2026-09-02 knowledge closeout: README, documentation index, user-role contract,
+release-safety contract, deployment record and improvement backlog now point to
+the deployed multi-account source `7101f6a`. Authentication production UI
+acceptance remains `NOT_VERIFIED` pending operator-run browser verification.

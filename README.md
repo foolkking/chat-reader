@@ -2,12 +2,12 @@
 
 ## Current access boundary
 
-Chat Reader is a private conversation archive. The working tree supports one
+Chat Reader is a private conversation archive. Production supports one
 deployment-provisioned administrator plus isolated user accounts, email/password
 login, server-side per-device sessions and a 48-hour sliding inactivity timeout.
 Explicit Share URLs remain public-by-link capabilities with an independent
-Share password. The account migration is implemented but not yet deployed;
-see [`PROJECT_STATE.md`](PROJECT_STATE.md) for the verified boundary.
+Share password. The deployed account boundary and remaining verification debt
+are recorded in [`PROJECT_STATE.md`](PROJECT_STATE.md).
 See [`docs/system/AUTHENTICATION_CONTRACT.md`](docs/system/AUTHENTICATION_CONTRACT.md).
 
 Chat Reader 是面向 AI 对话内容的长期阅读与管理系统。Adaptive Import 能确定性识别内置或用户学习过的 JSON / Markdown 格式；陌生结构只需 Mapping 一次，之后会成为可复用的导入格式。完整恢复继续使用 `.cr`。

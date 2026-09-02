@@ -1,19 +1,19 @@
 # 已知风险与不确定性
 
-## Current status (2026-08-24)
+## Current status (2026-09-02)
 
 Release K production verification, Release L worker liveness and protected
 diagnostics, Release M disaster recovery, Release N single-owner
 authentication, the final product audit and the later scoped formula/source
 position fixes are closed. The historical Release K reconciliation below is a
-checkpoint record, not current debt. The current working tree additionally
-contains the multi-account owner boundary and migration `20260901_0030`; its
-production rollout and authenticated browser acceptance remain pending. Current
-deferred decisions are automatic artifact cleanup and strict nonce CSP/reporting
+checkpoint record, not current debt. The deployed snapshot contains the
+multi-account owner boundary and migration `20260901_0030`; authenticated
+production browser acceptance remains pending. Current deferred decisions are
+automatic artifact cleanup and strict nonce CSP/reporting
 by product decision; AssetObject GC, capacity optimization and Turbopack remain
 conditional future work. None is an active defect in the deployed snapshot.
 
-最后核验：2026-08-24
+最后核验：2026-09-02
 
 已解决问题和实施过程保留在 [execution/](../execution/README.md)，本页只维护当前仍成立的风险。
 

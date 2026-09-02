@@ -62,10 +62,11 @@ Release images must be `linux/amd64`, carry the exact OCI revision label, expose
 
 King never runs a Next production build. Deployment uses an externally built archive, validates its versioned build metadata, validates PostgreSQL and business-volume backup readability/listings, runs migration preflight, and recreates services with `--no-build`. It never runs `down -v`, deletes business volumes, replaces `.env.production`, or enables Scanner. Manual SHA/checksum confirmation is not a release-report gate.
 
-The deployed snapshot has the historical single-owner password/session
-boundary. The current working tree adds one provisioned `ADMIN`, `USER`
-accounts and UUID-based owner authorization; migration
-`20260901_0030_multi_account_users.py` and its production rollout are pending.
+The deployed snapshot has one provisioned `ADMIN`, isolated `USER` accounts
+and UUID-based owner authorization. Migration
+`20260901_0030_multi_account_users.py` and the administrator configuration
+digest are live; exact production source and verification status are recorded
+in `PROJECT_STATE.md`.
 Owner authorization, session expiry and private business-route protection are
 application responsibilities defined by `AUTHENTICATION_CONTRACT.md`; TLS and
 external network access remain the responsibility of the gateway/VPN. The

@@ -18,13 +18,12 @@ management visible to regular users while keeping system maintenance, Import
 Formats and Noise Rule Library Root Admin-only. Authenticated production UI
 acceptance is `NOT_VERIFIED`; the operator will perform the Web check.
 
-## 工作树账户发布边界（2026-09-01）
+## 工作树账户发布边界（历史记录，2026-09-01）
 
-仓库当前包含、但尚未部署多账户认证与 owner 隔离 migration
+该段是部署前历史记录。当时仓库包含、但尚未部署多账户认证与 owner 隔离 migration
 `20260901_0030_multi_account_users.py`，以及部署管理员配置摘要 migration
 `20260901_0031_admin_config_digest.py`。它们引入一个部署管理员、普通用户账号和
-私有记录的 owner 范围。下面的生产记录仍是最后已部署版本，只有在明确授权并完成
-备份、migration、健康检查及认证浏览器验收后才能更新。管理员凭据不得写入源码、
+私有记录的 owner 范围。2026-09-02 部署记录已取代该段的“尚未部署”状态。管理员凭据不得写入源码、
 文档或 shell history，应在服务器 `.env.production` 中同时设置 `ADMIN_EMAIL` /
 `ADMIN_PASSWORD`，或使用 `apps/api/scripts/owner_auth.py` 交互式设置。迁移容器仅在
 部署配置摘要变化时同步凭据并注销旧会话；相同环境值不会覆盖网页内修改的密码。

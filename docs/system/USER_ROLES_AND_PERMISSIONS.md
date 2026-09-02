@@ -1,6 +1,6 @@
 # 用户角色、身份与权限
 
-## Current implementation (working tree, 2026-09-01)
+## Current implementation (deployed, 2026-09-02)
 
 The repository now contains a two-role account model:
 
@@ -13,9 +13,9 @@ The legacy `owner` principal is bound to the single `ADMIN` user by migration
 `20260901_0030`; new users are never promoted through public registration.
 Sessions, preferences, annotations, reading positions, Skills and Offline
 metadata use the authenticated account UUID. Share tokens remain independent
-read-only capabilities. The migration and deployment of this model are still
-pending operator rollout; the historical single-owner statements below are
-retained only as superseded context.
+read-only capabilities. The migration and deployment of this model are live.
+The historical single-owner statements below are retained only as superseded
+context.
 
 ## Current identity model (2026-08-17)
 
