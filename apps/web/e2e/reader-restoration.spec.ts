@@ -690,7 +690,7 @@ test("continuous wheel scrolling remains monotonic after virtual estimates warm 
 test("Share Reader reuses the bounded active-position and wheel path", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/share/${shareToken}`);
-  await page.getByRole("button", { name: /展开对话索引|Open dialogue index/ }).click();
+  await page.locator(".dialogue-index-rail").getByRole("button").first().click();
   await page.getByRole("button", { name: /索引范围|Index range/ }).click();
   await page.getByRole("button", { name: /全部索引|All messages/ }).click();
   const targetIndexItem = page.getByRole("button", { name: /target-35-000-section/ }).first();

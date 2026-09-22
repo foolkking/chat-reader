@@ -144,7 +144,7 @@ export function ConversationReader({
   const navigationOpenerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const update = () => setNavigationViewport(window.innerWidth < 768 ? "mobile" : window.innerWidth < 1536 ? "tablet" : "desktop");
+    const update = () => setNavigationViewport(window.innerWidth < 768 ? "mobile" : window.innerWidth < 1280 ? "tablet" : "desktop");
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -2290,7 +2290,7 @@ export function ConversationReader({
                 </div>
             </div> : <div className="flex-1" />}
             {focusMode ? <button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
-              <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
+              <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
                 {desktopPrimaryActions.map((action) => {
                   const Icon = action.icon;
@@ -3166,7 +3166,7 @@ function TabletReaderNavigationDrawer({
   useDialogFocus({ open, rootRef: panelRef, onClose, restoreFocus });
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
+    <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex xl:hidden">
       <button type="button" data-dialog-backdrop aria-label={closeLabel} className="absolute inset-0" onPointerDown={onClose} />
       <ResizableDockPanel storageKey="chat-reader:reader-navigation-width" defaultSize={448} minSize={320} maxSize={() => Math.min(720, window.innerWidth * 0.6)} side="left" className="relative z-10 border-l border-ui bg-page shadow-2xl">
         <section ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className="flex h-full w-full flex-col outline-none">

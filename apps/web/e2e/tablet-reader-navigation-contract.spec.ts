@@ -17,8 +17,9 @@ test("tablet reader navigation owns one focus-managed dialogue and section surfa
   expect(reader).toContain("restoreNavigationFocus");
   expect(reader).toContain('navigationViewport === "mobile"');
   expect(reader).toContain('navigationViewport === "tablet"');
-  expect(reader).toContain("md:flex 2xl:hidden");
-  expect(styles).toContain("@media (min-width: 1536px)");
+  expect(reader).toContain("md:flex xl:hidden");
+  expect(reader).toContain('window.innerWidth < 1280 ? "tablet" : "desktop"');
+  expect(styles).toContain("@media (min-width: 1280px)");
 });
 
 test("dialogue and section navigation distinguish loading failure and empty states", () => {

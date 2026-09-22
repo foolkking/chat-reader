@@ -39,6 +39,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const t = useTranslations();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [navigationTab, setNavigationTab] = useState<"dialogue" | "sections">("dialogue");
+  const [navigationViewport, setNavigationViewport] = useState<"mobile" | "tablet" | "desktop">("mobile");
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
   const messages = loadedWindow.items;
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
@@ -56,6 +57,17 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     pending: false,
     error: null,
   });
+
+  useEffect(() => {
+    const update = () => setNavigationViewport(window.innerWidth < 768 ? "mobile" : window.innerWidth < 1280 ? "tablet" : "desktop");
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    if (navigationViewport === "desktop") setNavigationOpen(false);
+  }, [navigationViewport]);
   const navigationTokenRef = useRef(0);
   const restoreAttemptedRef = useRef(false);
   const latestStablePositionRef = useRef<PersistedSharePosition | null>(null);
@@ -535,7 +547,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               {payload.share.title || payload.conversation.display_title || payload.conversation.title}
             </h1>
             <div className="flex shrink-0 gap-2">
-              <button type="button" aria-label="展开对话索引 / Open dialogue index" onClick={() => { setNavigationTab("dialogue"); setNavigationOpen(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium 2xl:hidden">{t("readerNavigation")}</button>
+              <button type="button" aria-label="展开对话索引 / Open dialogue index" onClick={() => { setNavigationTab("dialogue"); setNavigationOpen(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium xl:hidden">{t("readerNavigation")}</button>
             </div>
           </div>
         </div>
@@ -585,7 +597,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           />
         </div>} />
       <MobileReaderSheet
-        open={navigationOpen}
+        open={navigationOpen && navigationViewport === "mobile"}
         onOpenChange={setNavigationOpen}
         title={t("navigationTitle")}
         header={<NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} />}
@@ -603,8 +615,8 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           if (result.ok) setNavigationOpen(false);
         }} />}
       </MobileReaderSheet>
-      {navigationOpen ? (
-        <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
+      {navigationOpen && navigationViewport === "tablet" ? (
+        <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex xl:hidden">
           <button type="button" className="absolute inset-0" aria-label={t("close")} onClick={() => setNavigationOpen(false)} />
           <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
             <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} /></header>
