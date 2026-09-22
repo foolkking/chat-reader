@@ -190,12 +190,14 @@ test("section TOC follows virtual headings beyond the initially mounted blocks",
 
   const scrollRoot = page.locator("[data-reader-scroll-root='true']");
   const tocScroller = page.locator("[data-section-toc-scroll='true']");
-  await expect(tocScroller).toBeVisible();
   await expect(scrollRoot).toHaveAttribute("data-navigation-stage", "settled");
+  // The rail is intentionally hidden at rest and reveals on user scrolling.
+  await scrollRoot.hover();
+  await page.mouse.wheel(0, 120);
+  await expect(tocScroller).toBeVisible();
   await expect.poll(() => tocScroller.locator("[data-toc-active='true']").count()).toBe(1);
 
   const initialActive = await tocScroller.locator("[data-toc-active='true']").getAttribute("data-toc-block-id");
-  await scrollRoot.hover();
   await page.mouse.wheel(0, 12_000);
   await expect.poll(async () => tocScroller.locator("[data-toc-active='true']").getAttribute("data-toc-block-id"))
     .not.toBe(initialActive);

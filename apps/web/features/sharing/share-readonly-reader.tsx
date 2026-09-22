@@ -535,7 +535,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               {payload.share.title || payload.conversation.display_title || payload.conversation.title}
             </h1>
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => { setNavigationTab("dialogue"); setNavigationOpen(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium 2xl:hidden">{t("readerNavigation")}</button>
+              <button type="button" aria-label="展开对话索引 / Open dialogue index" onClick={() => { setNavigationTab("dialogue"); setNavigationOpen(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium 2xl:hidden">{t("readerNavigation")}</button>
             </div>
           </div>
         </div>
