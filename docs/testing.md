@@ -614,7 +614,7 @@ G PDF evidence or conceal it as a PASS.
 
 ## Release F Next 16 final closure (2026-08-15)
 
-The current worktree uses locked Next `16.3.1`, React/ReactDOM `19.2.8`,
+The Release F worktree used locked Next `16.3.1`, React/ReactDOM `19.2.8`,
 Node 20.13.1 and the explicit `next build --webpack` path. Final local gates
 passed lint, typecheck, Webpack build, API `280 passed / 6 skipped`, Alembic
 `20260806_0021` current/head and dependency policy (`unapproved=0`).

@@ -1,9 +1,11 @@
 # Next LTS Migration Contract
 
-Last updated: 2026-08-15
+Last updated: 2026-09-22
 
-Current status: `RELEASE_F = PASS`. The final CI artifact, verified backup,
-immutable running-image identity and production acceptance are recorded below.
+Current status: `NEXT_16_MAINTENANCE = PASS`. Release F established the Next 16
+boundary; the current maintenance baseline is Next 16.3.3. The original Release
+F artifact, backup, runtime identity and production acceptance remain historical
+evidence below.
 
 Release F moves the Web app from unsupported Next 14 to stable Next 16. It is a framework migration only; Reader, Share, Viewer, Import, Export, cr v4, Offline package v2, Dexie v1, PDF.js and CSP enforcement contracts remain unchanged.
 
@@ -20,14 +22,14 @@ The F1 checkpoint is retained as migration evidence only. Production must not de
 
 | Package | Version | Source |
 | --- | --- | --- |
-| next | 16.3.1 | official npm registry |
+| next | 16.3.3 | official npm registry |
 | react | 19.2.8 | official npm registry |
 | react-dom | 19.2.8 | official npm registry |
 | @types/react | 19.2.18 | official npm registry |
 | @types/react-dom | 19.2.4 | official npm registry |
 
-Next 16.3.1 requires Node >=20.9.0. Release F local, CI and production
-verification used Node 20.13.1. The current Release G PDF.js candidate raises
+Next 16.3.3 requires Node >=20.9.0. Release F local, CI and production
+verification used Next 16.3.1 with Node 20.13.1. The Release G PDF.js work raised
 CI and the Web build/runtime images together to Node 22.13.1 because
 `pdfjs-dist 6.2.108` requires `>=22.13.0 || >=24`; Next and React versions do
 not change. Release F's closed evidence remains historical, while the Release
@@ -37,7 +39,7 @@ G runtime requires its own final CI and production proof.
 
 | Package | Tarball | Integrity |
 | --- | --- | --- |
-| next 16.3.1 | https://registry.npmjs.org/next/-/next-16.3.1.tgz | sha512-hsAp0i7Rh+/dhe7DGIeN2YlpLM1DP4MNxti9EtDMtqcO612X81MvvEj388/oTce9U1EcEIOWDlGq0zRwrBKvuA== |
+| next 16.3.3 | https://registry.npmjs.org/next/-/next-16.3.3.tgz | sha512-tuRTx1nQ/yVw83cwJBo9F+njGUgMn3UHQycreWHB8XsStvvAh1AthbI8/4IpKnFaF58F+iSiHejYOlMQ/eq83g== |
 | react 19.2.8 | https://registry.npmjs.org/react/-/react-19.2.8.tgz | sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw== |
 | react-dom 19.2.8 | https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz | sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ== |
 

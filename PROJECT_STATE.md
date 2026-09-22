@@ -49,6 +49,9 @@ PWA acceptance is not verified in this environment because the Playwright
 server had no API at
 `127.0.0.1:8000`; deployment remains not performed.
 
+The release candidate uses Next `16.3.3`, Sharp `0.35.4` and js-yaml `4.3.2`.
+The official npm audit policy reports zero advisories and no exceptions.
+
 ## 2. Current Purpose
 
 Chat Reader is a personal conversation archive and reference workspace. The

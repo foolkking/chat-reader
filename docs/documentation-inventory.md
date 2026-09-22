@@ -244,6 +244,11 @@ recorded. `RELEASE_F = PASS`; Release E rollback images remain retained.
 | --- | --- | --- |
 | `docs/system/NEXT_LTS_MIGRATION_CONTRACT.md` | Current | Next 14 -> 15 -> 16 checkpoints, React 19, async request APIs, cache semantics, Webpack preservation, PWA impact, provenance and rollback. |
 | `apps/web/package.json` | Current runtime contract | Pins Next/React candidate versions and makes `next build --webpack` explicit. |
+
+2026-09-22 maintenance synchronization: the current Web baseline is Next
+`16.3.3`; pnpm overrides pin `sharp 0.35.4` and `js-yaml 4.3.2`. The official
+npm audit policy reports zero advisories without exceptions. Release F/G
+references to Next `16.3.1` remain historical evidence.
 | `apps/web/e2e/release-security-baseline.spec.ts` | Current test | Release A header/CSP, production fault-bridge absence and quality-before-artifact checks. |
 | `docker-compose.production.yml` | Current deployment contract | Allows explicit immutable API/Web image binding without changing production env contents. |
 

@@ -15,9 +15,10 @@ pdfjs-dist 3.11.174
 -> pdfjs-dist 6.2.108
 ```
 
-Next `16.3.1`, React/ReactDOM `19.2.8`, Webpack, the unified Attachment
-Viewer, authenticated attachment routes, Share scope, offline package v2 and
-Dexie v1 remain unchanged. Turbopack, CSP enforcement, PDF editing, OCR,
+Release G used Next `16.3.1`; the current security-maintenance baseline is Next
+`16.3.3`. React/ReactDOM `19.2.8`, Webpack, the unified Attachment Viewer,
+authenticated attachment routes, Share scope, offline package v2 and Dexie v1
+remain unchanged. Turbopack, CSP enforcement, PDF editing, OCR,
 annotation-editor features and database work are not part of this migration.
 
 ```text
