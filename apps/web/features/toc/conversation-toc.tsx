@@ -9,9 +9,9 @@ import { getConversationToc } from "../../lib/api";
 import type { TocItem } from "../../lib/types";
 import { markdownHeadingLabel } from "../conversations/markdown-renderer";
 
-export function ConversationToc({ conversationId, sourceKey = "remote", activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
+export function ConversationToc({ conversationId, sourceKey = "remote", activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, ready = true, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; ready?: boolean; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
   const t = useTranslations();
-  const { sectionTocMode, setSectionTocMode } = usePreferences();
+  const { resolvedLocale, sectionTocMode, setSectionTocMode } = usePreferences();
   const [cachedItems, setCachedItems] = useState<Record<string, TocItem[]>>({});
   const [lastActiveMessageId, setLastActiveMessageId] = useState<string | null>(activeMessageId ?? null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
@@ -27,7 +27,7 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
   }, [conversationId, sourceKey]);
   useEffect(() => { if (activeMessageId) setLastActiveMessageId(activeMessageId); }, [activeMessageId]);
   const effectiveMessageId = activeMessageId ?? lastActiveMessageId;
-  const tocQuery = useQuery({ queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: effectiveMessageId ?? undefined, limit: 200 }), enabled: items === undefined && Boolean(effectiveMessageId), staleTime: 30_000, placeholderData: (previous) => previous });
+  const tocQuery = useQuery({ queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: effectiveMessageId ?? undefined, limit: 200 }), enabled: items === undefined && ready && Boolean(effectiveMessageId), staleTime: 30_000, placeholderData: (previous) => previous });
   useEffect(() => {
     if (!effectiveMessageId || !tocQuery.data) return;
     const matching = tocQuery.data.items.filter((item) => item.message_id === effectiveMessageId);
@@ -65,9 +65,9 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
   }, [activeHeadingId, visibleItems]);
 
   if (mode === "panel" && sectionTocMode === "rail") return <TocRail items={visibleItems} activeHeadingId={activeHeadingId} onExpand={expand} onNavigate={stableNavigate} />;
-  if (items === undefined && tocQuery.isFetching && visibleItems.length === 0) return <TocShell mode={mode} label={t("sectionToc")} onCollapse={mode === "panel" ? collapse : undefined} />;
-  if (items === undefined && tocQuery.isError && visibleItems.length === 0) return <TocShell mode={mode} label={t("connectionFailed")} onCollapse={mode === "panel" ? collapse : undefined} />;
-  if (!effectiveMessageId || visibleItems.length === 0) return <TocShell mode={mode} label={t("currentNoSections")} onCollapse={mode === "panel" ? collapse : undefined} />;
+  if (items === undefined && (!ready || (Boolean(effectiveMessageId) && tocQuery.isFetching)) && visibleItems.length === 0) return <TocShell mode={mode} state="loading" label={resolvedLocale === "zh-CN" ? "\u6b63\u5728\u52a0\u8f7d\u7ae0\u8282\u76ee\u5f55" : "Loading section contents"} onCollapse={mode === "panel" ? collapse : undefined} />;
+  if (items === undefined && tocQuery.isError && visibleItems.length === 0) return <TocShell mode={mode} state="error" label={resolvedLocale === "zh-CN" ? "\u7ae0\u8282\u76ee\u5f55\u52a0\u8f7d\u5931\u8d25" : "Failed to load section contents"} onRetry={() => void tocQuery.refetch()} onCollapse={mode === "panel" ? collapse : undefined} />;
+  if (!effectiveMessageId || visibleItems.length === 0) return <TocShell mode={mode} state="empty" label={t("currentNoSections")} onCollapse={mode === "panel" ? collapse : undefined} />;
 
   const body = <TocButtonList items={visibleItems} activeHeadingId={activeHeadingId} activeRowRef={activeRowRef} onNavigate={stableNavigate} />;
   return <TocFrame mode={mode} title={t("sectionToc")} count={visibleItems.length} scrollContainerRef={scrollContainerRef} onCollapse={mode === "panel" ? collapse : undefined}>{body}</TocFrame>;
@@ -82,12 +82,12 @@ const TocButtonList = memo(function TocButtonList({ items, activeHeadingId, acti
 });
 
 function TocFrame({ mode, title, count, children, onCollapse, scrollContainerRef }: { mode: "panel" | "sheet"; title: string; count?: number; children: React.ReactNode; onCollapse?: () => void; scrollContainerRef?: MutableRefObject<HTMLDivElement | null> }) {
-  return <aside aria-label={title} className={`flex min-h-0 w-full flex-col overflow-hidden bg-raised ${mode === "panel" ? "h-full rounded-md border border-ui shadow-lg" : "max-h-[60vh]"}`}><div className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b border-ui bg-raised px-3 py-3"><h2 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-primary">{title}</h2>{count !== undefined ? <span className="text-[13px] text-secondary">{count}</span> : null}{onCollapse ? <button type="button" onClick={onCollapse} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="收起章节目录" title="收起章节目录"><PinOff className="h-4 w-4" /></button> : null}</div><div ref={scrollContainerRef} data-section-toc-scroll="true" className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2 text-[14px] leading-6">{children}</div></aside>;
+  return <aside aria-label={title} className={`flex min-h-0 w-full flex-col overflow-hidden bg-raised ${mode === "panel" ? "h-full rounded-md border border-ui shadow-lg" : "h-full"}`}><div className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b border-ui bg-raised px-3 py-3"><h2 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-primary">{title}</h2>{count !== undefined ? <span className="text-[13px] text-secondary">{count}</span> : null}{onCollapse ? <button type="button" onClick={onCollapse} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="收起章节目录" title="收起章节目录"><PinOff className="h-4 w-4" /></button> : null}</div><div ref={scrollContainerRef} data-section-toc-scroll="true" className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2 text-[14px] leading-6">{children}</div></aside>;
 }
 
-function TocShell({ label, mode, onCollapse }: { label: string; mode: "panel" | "sheet"; onCollapse?: () => void }) {
+function TocShell({ label, mode, state, onRetry, onCollapse }: { label: string; mode: "panel" | "sheet"; state: "loading" | "error" | "empty"; onRetry?: () => void; onCollapse?: () => void }) {
   const t = useTranslations();
-  return <TocFrame mode={mode} title={t("sectionToc")} onCollapse={onCollapse}><p className="px-1 py-2 text-sm leading-6 text-secondary">{label}</p></TocFrame>;
+  return <TocFrame mode={mode} title={t("sectionToc")} onCollapse={onCollapse}><div data-toc-state={state} role={state === "error" ? "alert" : "status"} aria-busy={state === "loading"} className="flex min-h-24 flex-col items-start justify-center gap-2 px-2 py-3 text-sm leading-6 text-secondary"><p>{label}</p>{state === "loading" ? <div className="h-1 w-24 overflow-hidden rounded-full bg-subtle" aria-hidden="true"><div className="h-full w-1/2 animate-pulse rounded-full bg-accent" /></div> : null}{state === "error" && onRetry ? <button type="button" onClick={onRetry} className="min-h-9 rounded-md border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle">{t("retry")}</button> : null}</div></TocFrame>;
 }
 function blockDomId(item: TocItem): string { return `block-${item.message_id}-${item.block_index}`; }
 

@@ -11,8 +11,11 @@ import { usePreferences, useTranslations } from "../../components/preferences-pr
 
 export function ImportTaskMonitor({ placement, forceVisible = false }: { placement: "sidebar" | "mobile" | "center"; forceVisible?: boolean }) {
   const t = useTranslations();
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   const queryClient = useQueryClient();
   const previousTasks = useRef<BackgroundTaskRead[]>([]);
+  const handledTerminalTaskIds = useRef<Set<string>>(new Set());
   const [completedTask, setCompletedTask] = useState<BackgroundTaskRead | null>(null);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<Set<string>>(new Set());
   const [reviewScanId, setReviewScanId] = useState<string | null>(null);
@@ -79,36 +82,66 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   });
 
   useEffect(() => {
-    const current = (tasksQuery.data ?? []).filter((task) => task.job_type !== "content_noise_scan");
+    const current = tasksQuery.data ?? [];
+    const previousById = new Map(previousTasks.current.map((task) => [task.job_id, task]));
     const currentIds = new Set(current.map((task) => task.job_id));
-    const finished = previousTasks.current.filter(
+    const disappeared = previousTasks.current.filter(
       (task) => ["queued", "processing", "cancelling"].includes(task.status) && !currentIds.has(task.job_id),
     );
     previousTasks.current = current;
-    for (const task of finished) {
-      void getTask(task.job_id).then((result) => {
-        if (!["committed", "cancelled"].includes(result.status)) return;
+    const handleTerminal = (result: BackgroundTaskRead) => {
+        if (!isTerminalTask(result) || handledTerminalTaskIds.current.has(result.job_id)) return;
+        handledTerminalTaskIds.current.add(result.job_id);
+        if (result.job_type === "content_noise_scan") {
+          void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] });
+          return;
+        }
+        if (result.job_type === "conversation_merge" && result.result.conversation_id) {
+          window.dispatchEvent(new CustomEvent("chat-reader:conversation-merge-complete", {
+            detail: {
+              conversationId: result.result.conversation_id,
+              sourceConversationIds: result.result.source_conversation_ids ?? [],
+            },
+          }));
+        }
         setCompletedTask(result);
         void invalidateReaderQueries(queryClient);
         window.setTimeout(
           () => setCompletedTask((value) => (value?.job_id === result.job_id ? null : value)),
           result.status === "cancelled" ? 6000 : 10000,
         );
-      });
+    };
+    for (const task of current) {
+      const previous = previousById.get(task.job_id);
+      if (previous && !isTerminalTask(previous) && isTerminalTask(task)) handleTerminal(task);
+    }
+    for (const task of disappeared) {
+      void getTask(task.job_id).then(handleTerminal);
     }
   }, [queryClient, tasksQuery.data]);
 
-  const tasks = (tasksQuery.data ?? []).filter((task) => task.job_type !== "content_noise_scan" && !dismissedTaskIds.has(task.job_id));
-  const visibleTask = tasks.find((task) => task.status === "processing") ?? tasks[0] ?? completedTask;
+  const allTasks = (tasksQuery.data ?? []).filter((task) => !dismissedTaskIds.has(task.job_id));
+  const noiseTasks = allTasks.filter((task) => task.job_type === "content_noise_scan");
+  const tasks = allTasks.filter((task) => task.job_type !== "content_noise_scan");
+  const taskRows = completedTask && !tasks.some((task) => task.job_id === completedTask.job_id)
+    ? [...tasks, completedTask]
+    : tasks;
+  const processingTasks = taskRows.filter((task) => ["queued", "processing", "cancelling"].includes(task.status));
+  const failedTasks = taskRows.filter((task) => task.status === "failed");
+  const completedTasks = taskRows.filter((task) => ["committed", "cancelled"].includes(task.status));
+  const visibleTask = processingTasks.find((task) => task.status === "processing")
+    ?? processingTasks[0]
+    ?? (placement === "mobile" ? completedTask : null);
   const scans = scansQuery.data ?? [];
-  if (!visibleTask && !scans.length && !forceVisible) return null;
+  if (!visibleTask && !noiseTasks.length && !scans.length && !forceVisible) return null;
 
   if (placement === "mobile") {
-    return <><div className="fixed inset-x-3 bottom-3 z-40 space-y-2 rounded-xl border border-[#d8dee9] bg-white p-3 shadow-xl md:hidden">{visibleTask ? <TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={isTerminalTask(visibleTask) ? () => dismissTask(visibleTask.job_id) : undefined} /> : null}<NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></div>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</>;
+    return <><div className="fixed inset-x-3 bottom-3 z-40 divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface shadow-xl md:hidden">{visibleTask ? <div className="p-3"><TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={isTerminalTask(visibleTask) ? () => dismissTask(visibleTask.job_id) : undefined} /></div> : null}<NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></div>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</>;
   }
 
   if (placement === "center") {
-    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-primary">{t("backgroundTasks")}</p><p className="mt-1 text-xs text-secondary">{t("backgroundTasksHint")}</p></div><span className="text-xs text-secondary">{tasks.length + scans.length} 项</span></div>{!visibleTask && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}<div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">{tasks.map((task, index) => <div key={task.job_id} data-task-row={task.job_type} className={`px-4 py-4 ${index ? "border-t border-ui" : ""}`}><TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={isTerminalTask(task) ? () => dismissTask(task.job_id) : undefined} /></div>)}{completedTask ? <div className={`border-t border-ui px-4 py-4 ${tasks.length ? "bg-subtle" : ""}`}><TaskContent task={completedTask} onRetry={() => retryMutation.mutate(completedTask.job_id)} onDismiss={() => dismissTask(completedTask.job_id)} /></div> : null}{!tasks.length && !completedTask ? <div className="px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}</div><NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
+    const taskRow = (task: BackgroundTaskRead) => <div key={task.job_id} data-task-row={task.job_type} className="px-4 py-4"><TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={isTerminalTask(task) ? () => dismissTask(task.job_id) : undefined} /></div>;
+    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-primary">{t("backgroundTasks")}</p><p className="mt-1 text-xs text-secondary">{t("backgroundTasksHint")}</p></div><span className="text-xs text-secondary">{taskRows.length + Math.max(scans.length, noiseTasks.length)} {zh ? "项" : "items"}</span></div>{!taskRows.length && !noiseTasks.length && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}<TaskSection title={zh ? "处理中" : "In progress"} count={processingTasks.length}>{processingTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "需要处理" : "Needs attention"} count={Math.max(scans.length, noiseTasks.length)}><NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></TaskSection><TaskSection title={zh ? "已完成" : "Completed"} count={completedTasks.length}>{completedTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "失败" : "Failed"} count={failedTasks.length}>{failedTasks.map(taskRow)}</TaskSection>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
   }
 
   return (
@@ -137,16 +170,48 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
           {completedTask.result.download_url ? <a className="mt-1 inline-block underline" href={String(completedTask.result.download_url)}>下载归档</a> : null}
         </div>
       ) : null}
-      <NoiseReviewSummary scans={scans} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />
+      <NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />
       {reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}
     </div>
   );
 }
 
-function NoiseReviewSummary({ scans, onReview, onDismiss }: { scans: CleanupScanRead[]; onReview: (id: string) => void; onDismiss: (id: string) => void }) {
+function TaskSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  if (!count) return null;
+  return <section aria-label={title}><div className="mb-2 flex items-center justify-between px-1"><h3 className="text-xs font-semibold text-primary">{title}</h3><span className="text-[11px] tabular-nums text-secondary">{count}</span></div><div className="divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">{children}</div></section>;
+}
+
+function NoiseReviewSummary({ scans, tasks, onReview, onDismiss }: { scans: CleanupScanRead[]; tasks: BackgroundTaskRead[]; onReview: (id: string) => void; onDismiss: (id: string) => void }) {
   const visible = scans.filter((scan) => scan.source === "IMPORT" || scan.source === "BATCH");
-  if (!visible.length) return null;
-  return <div className="space-y-2 border-t border-[#e5e7eb] pt-3" aria-label="Noise reviews">{visible.map((scan) => <div key={scan.id} className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-950"><p className="flex items-center gap-1.5 font-medium"><Eraser className="h-3.5 w-3.5" />{scan.source === "BATCH" ? (scan.status === "READY" ? `${scan.occurrence_count} candidates found in existing conversations` : `Existing conversation scan ${scan.progress}%`) : (scan.status === "READY" ? `${scan.occurrence_count} noise candidates ready for review` : `Noise review ${scan.progress}%`)}</p><p className="mt-1 text-[11px] text-amber-800">{scan.target_count} conversations · {scan.project_target_count} in projects · {scan.unassigned_target_count} unclassified · {scan.excluded_archived_count} archived excluded · {scan.processed_messages}/{scan.total_messages} messages</p><div className="mt-2 h-1 overflow-hidden rounded-full bg-amber-100"><div className="h-full bg-amber-500 transition-[width]" style={{ width: `${Math.max(scan.progress, 2)}%` }} /></div><div className="mt-2 flex items-center gap-3"><button type="button" onClick={() => onReview(scan.id)} disabled={scan.status !== "READY"} className="font-medium underline disabled:opacity-50">Open review</button><button type="button" onClick={() => onDismiss(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="text-amber-800 underline disabled:opacity-50">Ignore this result</button></div></div>)}</div>;
+  const scanIds = new Set(visible.map((scan) => scan.id));
+  const pendingTasks = tasks.filter((task) => !task.result.scan_id || !scanIds.has(task.result.scan_id));
+  if (!visible.length && !pendingTasks.length) return null;
+  return (
+    <div className="divide-y divide-ui" aria-label="Noise reviews">
+      {pendingTasks.map((task) => <div key={task.job_id} className="px-4 py-3"><TaskContent task={task} compact /></div>)}
+      {visible.map((scan) => {
+        const task = tasks.find((item) => item.result.scan_id === scan.id);
+        return (
+          <div key={scan.id} className="px-4 py-3 text-xs text-primary">
+            <p className="flex items-center gap-1.5 font-medium">
+              <Eraser className="h-3.5 w-3.5 text-accent" />
+              {scan.source === "BATCH"
+                ? (scan.status === "READY" ? `${scan.occurrence_count} candidates found in existing conversations` : `Existing conversation scan ${scan.progress}%`)
+                : (scan.status === "READY" ? `${scan.occurrence_count} noise candidates ready for review` : `Noise review ${scan.progress}%`)}
+            </p>
+            <p className="mt-1 text-[11px] text-secondary">
+              {task?.result.parent_task_id ? "Import follow-up · " : ""}{scan.target_count} conversations · {scan.processed_messages}/{scan.total_messages} messages
+            </p>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${Math.max(scan.progress, 2)}%` }} /></div>
+            <div className="mt-2 flex items-center gap-3">
+              <button type="button" onClick={() => onReview(scan.id)} disabled={scan.status !== "READY"} className="font-medium text-accent underline disabled:opacity-50">Open review</button>
+              <button type="button" onClick={() => onDismiss(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="text-secondary underline disabled:opacity-50">Ignore this result</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function NoiseReviewDialog({ scanId, onClose }: { scanId: string; onClose: () => void }) {
@@ -284,7 +349,16 @@ async function invalidateReaderQueries(queryClient: ReturnType<typeof useQueryCl
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ["conversations"] }),
     queryClient.invalidateQueries({ queryKey: ["conversations", "active"] }),
+    queryClient.invalidateQueries({ queryKey: ["conversations", "history"] }),
+    queryClient.invalidateQueries({ queryKey: ["sidebar-conversations"] }),
     queryClient.invalidateQueries({ queryKey: ["projects"] }),
     queryClient.invalidateQueries({ queryKey: ["project-conversations"] }),
+    queryClient.invalidateQueries({ queryKey: ["reader-turn-window"] }),
+    queryClient.invalidateQueries({ queryKey: ["conversation-index"] }),
+    queryClient.invalidateQueries({ queryKey: ["toc"] }),
+    queryClient.invalidateQueries({ queryKey: ["conversation-search"] }),
+    queryClient.invalidateQueries({ queryKey: ["sidebar-search"] }),
+    queryClient.invalidateQueries({ queryKey: ["search"] }),
+    queryClient.invalidateQueries({ queryKey: ["offline-catalog"] }),
   ]);
 }

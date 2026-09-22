@@ -94,7 +94,11 @@ def add_upload_item(
     safe_name = Path(filename).name.replace("\r", "_").replace("\n", "_")[:500] or "attachment.bin"
     store = get_asset_store()
     try:
-        staged = store.stage(source, max_bytes=get_settings().bundle_max_object_bytes, quarantine=True)
+        staged = store.stage(
+            source,
+            max_bytes=get_settings().max_import_file_size_mb * 1024 * 1024,
+            quarantine=True,
+        )
     except ValueError as exc:
         raise AttachmentUploadError(str(exc), 413) from exc
     try:

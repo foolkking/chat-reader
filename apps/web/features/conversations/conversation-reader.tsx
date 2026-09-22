@@ -57,6 +57,7 @@ import { resolveActiveReadingTarget } from "./reader-active-position";
 import { TocRefreshDialog } from "../toc/toc-refresh-dialog";
 import { ReaderMarkdownCopyBoundary } from "./reader-markdown-copy";
 import { reportReaderPerformance, type ReaderPerformanceOutcome } from "./reader-performance";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
@@ -116,6 +117,7 @@ export function ConversationReader({
   const [mobileActionsExpanded, setMobileActionsExpanded] = useState(false);
   const [utilityPanel, setUtilityPanel] = useState<ReaderUtilityPanel>(null);
   const [navigationTab, setNavigationTab] = useState<"dialogue" | "sections">("dialogue");
+  const [navigationViewport, setNavigationViewport] = useState<"mobile" | "tablet" | "desktop">("mobile");
   const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
   const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
     pending: false,
@@ -124,6 +126,7 @@ export function ConversationReader({
   const [showOfflineGuide, setShowOfflineGuide] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [mergedIntoConversationId, setMergedIntoConversationId] = useState<string | null>(null);
   const [sourceEditorTarget, setSourceEditorTarget] = useState<SourceEditorTarget | null>(null);
   const [pendingSourceEditorTarget, setPendingSourceEditorTarget] = useState<SourceEditorTarget | null>(null);
   const [sourceEditorDirty, setSourceEditorDirty] = useState(false);
@@ -138,6 +141,18 @@ export function ConversationReader({
   } | null>(null);
   const desktopUtilityOpenerRef = useRef<HTMLElement | null>(null);
   const desktopUtilityPanelRef = useRef<"search" | "share" | "export" | null>(null);
+  const navigationOpenerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const update = () => setNavigationViewport(window.innerWidth < 768 ? "mobile" : window.innerWidth < 1536 ? "tablet" : "desktop");
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    if (navigationViewport === "desktop" && utilityPanel === "navigation") setUtilityPanel(null);
+  }, [navigationViewport, utilityPanel]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("chat-reader:conversation-files-open");
@@ -149,6 +164,19 @@ export function ConversationReader({
     if (!filesPreferenceReadyRef.current) return;
     window.localStorage.setItem("chat-reader:conversation-files-open", String(showFiles));
   }, [showFiles]);
+
+  useEffect(() => {
+    setMergedIntoConversationId(null);
+    const handleMergeComplete = (event: Event) => {
+      const detail = (event as CustomEvent<{ conversationId?: string; sourceConversationIds?: string[] }>).detail;
+      if (!detail?.conversationId || detail.conversationId === conversationId) return;
+      if (detail.sourceConversationIds?.includes(conversationId)) {
+        setMergedIntoConversationId(detail.conversationId);
+      }
+    };
+    window.addEventListener("chat-reader:conversation-merge-complete", handleMergeComplete);
+    return () => window.removeEventListener("chat-reader:conversation-merge-complete", handleMergeComplete);
+  }, [conversationId]);
 
   useEffect(() => {
     const active = tocRefreshTask?.task;
@@ -1959,6 +1987,13 @@ export function ConversationReader({
     document.querySelector<HTMLElement>("[data-reader-mobile-more-actions='true']")
   ), []);
 
+  const restoreNavigationFocus = useCallback(() => {
+    const opener = navigationOpenerRef.current;
+    if (opener?.isConnected && !opener.closest("[aria-hidden='true']")) return opener;
+    return document.querySelector<HTMLElement>("[data-reader-navigation-trigger='true']")
+      ?? document.querySelector<HTMLElement>("[data-reader-mobile-more-actions='true']");
+  }, []);
+
   const setAnnotationsOpenPreservingAnchor = useCallback((nextOpen: boolean) => {
     if (nextOpen === annotationsOpen) return;
     const token = annotationTransitionRef.current + 1;
@@ -2067,13 +2102,27 @@ export function ConversationReader({
     return () => window.removeEventListener("keydown", closeTopSurface);
   }, [desktopActionsExpanded, mobileActionsExpanded, showExport, showFiles, showSearch, showShare, utilityPanel]);
 
-  async function openNavigation(tab: "dialogue" | "sections") {
+  async function openNavigation(tab: "dialogue" | "sections", opener?: HTMLElement | null) {
     if (!(await closeSourceEditorForWorkspace())) return;
+    if (opener) navigationOpenerRef.current = opener;
     setNavigationTab(tab);
     setMobileNavigation({ pending: false, error: null });
     setDesktopActionsExpanded(false);
     setMobileActionsExpanded(false);
     setUtilityPanel("navigation");
+    const anchorMessageId = activeMessageId ?? undefined;
+    void queryClient.prefetchQuery({
+      queryKey: ["conversation-index", readerSourceKey, conversationId, anchorMessageId ?? "start", "sheet"],
+      queryFn: () => dataSource.getDialogueIndex(conversationId, { anchorMessageId, limit: 80 }),
+      staleTime: 60_000,
+    });
+    if (anchorMessageId) {
+      void queryClient.prefetchQuery({
+        queryKey: ["toc", readerSourceKey, conversationId, anchorMessageId, "sheet"],
+        queryFn: () => dataSource.getToc(conversationId, { messageId: anchorMessageId, limit: 200 }),
+        staleTime: 30_000,
+      });
+    }
   }
 
   function insertConversationAttachment(attachment: AttachmentRead, placement: "inline" | "after_message") {
@@ -2101,6 +2150,14 @@ export function ConversationReader({
   }
 
   if (conversationQuery.isError) {
+    if (mergedIntoConversationId) {
+      const zh = resolvedLocale === "zh-CN";
+      return <ReaderState
+        title={zh ? "此对话已合并" : "This conversation was merged"}
+        detail={zh ? "原对话已合并到另一个对话，正文和阅读位置已保留。" : "This conversation was merged into another conversation. Your reader context was preserved."}
+        action={<button type="button" className="rounded-lg border border-ui bg-surface px-3 py-2 text-sm font-medium text-primary hover:bg-subtle" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{zh ? "打开合并后的对话" : "Open merged conversation"}</button>}
+      />;
+    }
     return <ReaderState title={t("conversationUnavailable")} detail={conversationQuery.error.message} />;
   }
 
@@ -2191,14 +2248,14 @@ export function ConversationReader({
   const navigationContent = navigationTab === "dialogue" ? (
     <ConversationIndex conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} fallbackMessages={messages} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
-      const result = await navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
+      const result = await navigateToTarget({ messageId: item.messageId, messageVersionId: item.messageVersionId, source: "dialogue-index" });
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
       if (result.ok) setUtilityPanel(null);
     }} />
   ) : (
-    <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
+    <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
       setMobileNavigation({ pending: true, error: null });
-      const result = await navigateToTarget({ messageId: item.message_id, messageVersionId: item.message_version_id, renderBlockId: item.render_block_id, blockIndex: item.block_index, preferTocPipeline: true, source: "section-toc" });
+      const result = await navigateToTarget(tocNavigationTarget(item));
       setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
       if (result.ok) setUtilityPanel(null);
     }} />
@@ -2217,6 +2274,7 @@ export function ConversationReader({
       /> : null}
       <section ref={readerMainSectionRef} data-reader-main-section="true" className="relative flex min-w-0 flex-1 flex-col">
         <header data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
+          {mergedIntoConversationId ? <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-[3vw] py-2 text-sm text-amber-900" role="status"><span className="min-w-0 flex-1">{resolvedLocale === "zh-CN" ? "此对话已合并，当前内容可能正在更新。" : "This conversation was merged and may be updating."}</span><button type="button" className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-white" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{resolvedLocale === "zh-CN" ? "打开目标对话" : "Open target"}</button></div> : null}
           {loadingProgress < 100 ? (
             <div className="absolute inset-x-0 bottom-0 h-0.5 bg-subtle">
               <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
@@ -2232,7 +2290,7 @@ export function ConversationReader({
                 </div>
             </div> : <div className="flex-1" />}
             {focusMode ? <button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
-              <button type="button" onClick={() => void openNavigation("dialogue")} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
+              <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex 2xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
                 {desktopPrimaryActions.map((action) => {
                   const Icon = action.icon;
@@ -2259,7 +2317,8 @@ export function ConversationReader({
             {!mobileActionsExpanded ? (
               <button
                 type="button"
-                onClick={() => void openNavigation("dialogue")}
+                data-reader-navigation-trigger="true"
+                onClick={(event) => void openNavigation("dialogue", event.currentTarget)}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary"
                 aria-label={t("readerNavigation")}
                 title={t("readerNavigation")}
@@ -2309,7 +2368,7 @@ export function ConversationReader({
                   ready={canLoadInitialWindow}
                   loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)}
                   onNavigate={(item) => {
-                    void navigateToTarget({ messageId: item.messageId, source: "dialogue-index" });
+                    void navigateToTarget({ messageId: item.messageId, messageVersionId: item.messageVersionId, source: "dialogue-index" });
                   }}
                 />}
             content={<div className="reader-content-inner min-w-0">
@@ -2386,14 +2445,10 @@ export function ConversationReader({
                   activeItems={activeTocItems}
                   activeHeadingId={activeHeadingId}
                   observerKey={tocObserverKey}
+                  ready={canLoadInitialWindow}
                   loadPage={(options) => dataSource.getToc(conversationId, options)}
                   onNavigate={(item) => {
-                    void navigateToTarget({
-                      messageId: item.message_id,
-                      blockIndex: item.block_index,
-                      preferTocPipeline: true,
-                      source: "section-toc",
-                    });
+                    void navigateToTarget(tocNavigationTarget(item));
                   }}
                 />
               </div>}
@@ -2442,10 +2497,10 @@ export function ConversationReader({
         </div>
       </MobileReaderSheet>
       <MobileReaderSheet
-        open={utilityPanel === "navigation" && !sourceEditorTarget}
+        open={utilityPanel === "navigation" && navigationViewport === "mobile" && !sourceEditorTarget}
         onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }}
         title={t("navigationTitle")}
-        restoreFocus={restoreMobileUtilityFocus}
+        restoreFocus={restoreNavigationFocus}
         header={navigationTabs}
         status={<>{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</>}
       >
@@ -2454,18 +2509,17 @@ export function ConversationReader({
       <MobileReaderSheet open={utilityPanel === "search" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("search")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("search")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setUtilityPanel(null)} showHeader={false} />
       </MobileReaderSheet>
-      {utilityPanel === "navigation" && !sourceEditorTarget ? (
-        <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
-          <button type="button" aria-label={t("close")} className="absolute inset-0" onClick={() => setUtilityPanel(null)} />
-          <ResizableDockPanel storageKey="chat-reader:reader-navigation-width" defaultSize={448} minSize={320} maxSize={() => Math.min(720, window.innerWidth * 0.6)} side="left" className="relative z-10 border-l border-ui bg-page shadow-2xl">
-            <section className="flex h-full w-full flex-col" aria-label={t("readerNavigation")}>
-              <header className="shrink-0 border-b border-ui bg-surface p-4">{navigationTabs}</header>
-              <div className="shrink-0 px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationContent}</div>
-            </section>
-          </ResizableDockPanel>
-        </div>
-      ) : null}
+      <TabletReaderNavigationDrawer
+        open={utilityPanel === "navigation" && navigationViewport === "tablet" && !sourceEditorTarget}
+        label={t("readerNavigation")}
+        closeLabel={t("close")}
+        onClose={() => setUtilityPanel(null)}
+        restoreFocus={restoreNavigationFocus}
+        header={navigationTabs}
+        status={<>{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</>}
+      >
+        {navigationContent}
+      </TabletReaderNavigationDrawer>
       <MobileReaderSheet open={utilityPanel === "share" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("shareConversation")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("shareConversation")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact /></div>
       </MobileReaderSheet>
@@ -2960,6 +3014,17 @@ function navigationTargetIdentity(target: NavigateTarget): string {
   ]);
 }
 
+function tocNavigationTarget(item: TocItem): NavigateTarget {
+  return {
+    messageId: item.message_id,
+    messageVersionId: item.message_version_id,
+    renderBlockId: item.render_block_id,
+    blockIndex: item.block_index,
+    preferTocPipeline: true,
+    source: "section-toc",
+  };
+}
+
 function formatConversationTitle(conversation: Pick<ConversationDetail, "title" | "display_title" | "project_name">): string {
   const title = (conversation.display_title || conversation.title || APP_TITLE).trim() || APP_TITLE;
   const project = conversation.project_name?.trim();
@@ -3075,6 +3140,42 @@ function Spinner({ dark = false }: { dark?: boolean }) {
     <span
       className={`h-4 w-4 animate-spin rounded-full border-2 border-current/25 ${dark ? "border-t-current" : "border-t-[var(--accent)]"}`}
     />
+  );
+}
+
+function TabletReaderNavigationDrawer({
+  open,
+  label,
+  closeLabel,
+  onClose,
+  restoreFocus,
+  header,
+  status,
+  children,
+}: {
+  open: boolean;
+  label: string;
+  closeLabel: string;
+  onClose: () => void;
+  restoreFocus: () => HTMLElement | null;
+  header: React.ReactNode;
+  status?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus({ open, rootRef: panelRef, onClose, restoreFocus });
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex 2xl:hidden">
+      <button type="button" data-dialog-backdrop aria-label={closeLabel} className="absolute inset-0" onPointerDown={onClose} />
+      <ResizableDockPanel storageKey="chat-reader:reader-navigation-width" defaultSize={448} minSize={320} maxSize={() => Math.min(720, window.innerWidth * 0.6)} side="left" className="relative z-10 border-l border-ui bg-page shadow-2xl">
+        <section ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className="flex h-full w-full flex-col outline-none">
+          <header className="shrink-0 border-b border-ui bg-surface p-4">{header}</header>
+          {status ? <div className="shrink-0 px-4 py-2" aria-live="polite">{status}</div> : null}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{children}</div>
+        </section>
+      </ResizableDockPanel>
+    </div>
   );
 }
 

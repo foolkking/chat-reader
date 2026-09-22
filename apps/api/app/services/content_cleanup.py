@@ -1162,15 +1162,20 @@ def queue_import_scan(
     db: Session,
     conversation_ids: list[uuid.UUID],
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+    *,
+    source_import_id: uuid.UUID | None = None,
 ) -> ContentCleanupScan | None:
     """Queue a post-import review without delaying the canonical import commit."""
     if not conversation_ids:
         return None
-    scan, _job = create_scan(
+    scan, job = create_scan(
         db,
         source="IMPORT",
         scope_type="IMPORT_RESULT",
         conversation_ids=conversation_ids,
         ownership_scope=ownership_scope,
     )
+    if source_import_id is not None:
+        job.payload = {**(job.payload or {}), "parent_task_id": str(source_import_id)}
+        job.result = {**(job.result or {}), "parent_task_id": str(source_import_id)}
     return scan

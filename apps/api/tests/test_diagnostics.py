@@ -251,5 +251,5 @@ def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
     preview_location = nginx.split("location = /api/imports/preview", 1)[1].split("location /", 1)[0]
 
     assert "client_max_body_size 110m;" in preview_location
-    assert nginx.count("client_max_body_size 110m;") == 1
-    assert "client_max_body_size 60m;" in nginx
+    assert nginx.count("client_max_body_size 110m;") == 2
+    assert "client_max_body_size 110m;" in nginx

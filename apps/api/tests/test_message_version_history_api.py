@@ -1,5 +1,12 @@
+import uuid
+
+import pytest
 from fastapi.testclient import TestClient
 
+from app.core.database import get_db
+from app.main import app
+from app.models.background_job import BackgroundJob
+from app.services.editing import message_edit_service
 from test_import_preview_api import client  # noqa: F401
 from test_message_editing_api import assistant_message, commit_edit_sample
 
@@ -82,7 +89,10 @@ def test_restore_rejects_version_from_another_message(client: TestClient) -> Non
     assert response.status_code == 404
 
 
-def test_select_replace_and_delete_versions_keep_initial_version_protected(client: TestClient) -> None:
+def test_select_replace_and_delete_versions_keep_initial_version_protected(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     sample = commit_edit_sample(client)
     message = assistant_message(sample)
     initial = message["current_version"]
@@ -103,17 +113,43 @@ def test_select_replace_and_delete_versions_keep_initial_version_protected(clien
     history = client.get(f"/api/messages/{message['id']}/versions").json()
     assert [item["version_number"] for item in history["items"]] == [2, 1]
 
+    def fail_sync_rebuild(*_args, **_kwargs):
+        raise AssertionError("version mutations must not rebuild search/TOC synchronously")
+
+    monkeypatch.setattr(message_edit_service, "rebuild_search_and_toc_for_conversation", fail_sync_rebuild)
+
     selected = client.put(f"/api/messages/{message['id']}/current-version", json={"version_id": initial["id"]})
     assert selected.status_code == 200
     assert selected.json()["message"]["current_version"]["display_text"] == initial["display_text"]
     assert selected.json()["message"]["render_blocks"]
+    assert selected.json()["derived_status"] == "queued"
+    selected_job_id = uuid.UUID(selected.json()["derived_job_id"])
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        selected_job = db.get(BackgroundJob, selected_job_id)
+        assert selected_job is not None
+        assert selected_job.job_type == "conversation_derived_rebuild"
+        assert selected_job.payload["rebuild_versions"] is False
+        selected_job.status = "processing"
+        db.commit()
+    finally:
+        db.close()
+
+    selected_noop = client.put(f"/api/messages/{message['id']}/current-version", json={"version_id": initial["id"]})
+    assert selected_noop.status_code == 200
+    assert selected_noop.json()["derived_status"] == "ready"
+    assert selected_noop.json()["derived_job_id"] is None
 
     selected_again = client.put(f"/api/messages/{message['id']}/current-version", json={"version_id": second["id"]})
     assert selected_again.status_code == 200
     assert selected_again.json()["message"]["render_blocks"]
+    assert selected_again.json()["derived_status"] == "queued"
+    assert selected_again.json()["derived_job_id"] != str(selected_job_id)
     deleted = client.delete(f"/api/messages/{message['id']}/versions/{second['id']}")
     assert deleted.status_code == 200
     assert deleted.json()["message"]["current_version"]["version_number"] == 1
+    assert deleted.json()["derived_status"] == "queued"
+    assert deleted.json()["derived_job_id"]
     assert client.get(f"/api/messages/{message['id']}/versions").json()["items"][0]["version_number"] == 1
 
     protected = client.delete(f"/api/messages/{message['id']}/versions/{initial['id']}")

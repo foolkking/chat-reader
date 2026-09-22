@@ -74,6 +74,32 @@ def test_active_tasks_include_only_terminal_results_inside_the_retention_window(
     assert payload[0]["status"] == "processing"
 
 
+def test_noise_task_exposes_import_parent_relation(client: TestClient) -> None:
+    override = app.dependency_overrides[get_db]
+    generator = override()
+    db = next(generator)
+    try:
+        parent_id = "8f3e2c78-8ea0-4cca-8297-026109eb9a4e"
+        job = BackgroundJob(
+            job_type="content_noise_scan",
+            status="queued",
+            phase="queued",
+            payload={"scan_id": "scan-1", "parent_task_id": parent_id},
+            result={"scan_id": "scan-1"},
+        )
+        db.add(job)
+        db.commit()
+        job_id = str(job.id)
+    finally:
+        db.close()
+        generator.close()
+
+    response = client.get(f"/api/tasks/{job_id}")
+
+    assert response.status_code == 200
+    assert response.json()["result"]["parent_task_id"] == parent_id
+
+
 @pytest.mark.parametrize("job_type", [
     "conversation_auto_clean",
     "conversation_merge",

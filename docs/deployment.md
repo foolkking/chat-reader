@@ -308,14 +308,15 @@ The pre-deploy backup is retained at
 dump and four business-volume archives were readable before the replacement.
 
 The production Nginx TLS server includes the versioned exact
-`/api/imports/preview` location with a 110 MiB request limit; the global 60 MiB
-limit is unchanged for other routes. The current and immediately previous Chat
+`/api/imports/preview` location with a 110 MiB request limit; the default upload
+boundary is also 110 MiB for other user-upload routes. The current and immediately previous Chat
 Reader image generations remain available for rollback; older unreferenced
 Chat Reader images were removed without touching unrelated images or volumes.
 
 Adaptive multi-file import adds an exact `/api/adaptive-import/sessions`
-location with a 520 MiB multipart limit. The API independently enforces 50 MiB
-per file, 512 MiB per session and 500 files; unrelated routes retain 60 MiB.
+location with a 520 MiB multipart limit. The API independently enforces 100 MiB
+per file, 512 MiB per session and 500 files; the default upload boundary is
+110 MiB for multipart overhead.
 
 The supplied Desktop JSON/Markdown pair was verified locally as a 66-message
 `exact_match` preview in about 1.2 seconds. Production authenticated preview

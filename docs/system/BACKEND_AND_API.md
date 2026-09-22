@@ -10,9 +10,9 @@ routes manage registration mode, invitations, user status and reset grants;
 system archive routes are `ADMIN`-only when authentication is enabled. Share
 routes keep independent token authorization.
 
-Migration `20260901_0031` is the repository head but is not applied to the
-operator database in this session. Older statements below that say there is no
-auth middleware or application rate limit are superseded historical text.
+Migration `20260902_0032` is the repository and deployed database head. Older
+statements below that say there is no auth middleware or application rate
+limit are superseded historical text.
 
 ## JSON + Markdown pairing v5 (current)
 
@@ -36,9 +36,21 @@ The pairing contract is:
 Parser identities are `chat-reader-import-v5` and `markdown-parser-v5`. Alignment diagnostics include `source`, zero-based `source_index`, `role`, optional `timestamp` and `reason`. Bounded pairing errors remain structured HTTP 422 responses (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, `pairing_ambiguous`, `alignment_failed`).
 
 Preview accepts no more than two multipart files: one JSON and one Markdown.
-`MAX_IMPORT_FILE_SIZE_MB` remains 50 MiB per file and is checked before the
+`MAX_IMPORT_FILE_SIZE_MB` defaults to 100 MiB per user file and is checked before the
 pair is parsed. This permits a roughly 100 MiB two-file request without
 weakening either per-file bound.
+
+Requests containing a file over `UPLOAD_HEAVY_THRESHOLD_MB` enter the bounded
+analysis admission queue. The queue has one active analysis slot by default,
+checks the configured memory reserve, and returns a structured retryable 429
+when capacity or memory is unavailable. Attachment staging uses the same
+per-file limit and admission guard. Adaptive sessions keep their 512 MiB
+aggregate limit.
+
+Selecting or deleting a message version commits the canonical message and
+returns `derived_status` (`ready` or `queued`) plus an optional
+`derived_job_id`. Search and TOC rebuilds run through the existing idempotent
+BackgroundJob path after the canonical transaction commits.
 
 ## Conversation merge execution (current)
 

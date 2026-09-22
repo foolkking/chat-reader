@@ -385,7 +385,10 @@ def queue_conversation_derived_rebuild(
             db.query(BackgroundJob)
             .filter(
                 BackgroundJob.job_type == "conversation_derived_rebuild",
-                BackgroundJob.status.in_(ACTIVE_JOB_STATUSES),
+                # A processing rebuild may already have read the previous
+                # current-version state. Only merge into work that has not
+                # started; later mutations share one queued follow-up job.
+                BackgroundJob.status == "queued",
                 ownership_scope.predicate(BackgroundJob),
             )
             .order_by(BackgroundJob.created_at.desc())
@@ -804,6 +807,7 @@ def process_background_job(
                 job_result = {
                     "conversation_ids": [str(result.conversation.id)],
                     "conversation_id": str(result.conversation.id),
+                    "source_conversation_ids": [str(value) for value in conversation_ids],
                     "title": result.conversation.display_title,
                     "message_count": result.message_count,
                 }

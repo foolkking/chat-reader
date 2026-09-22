@@ -10,6 +10,7 @@ from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.services import uploads
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -116,6 +117,27 @@ def _assert_transient_reference_error(response, *, line_number: int) -> None:
         "message": f"Line {line_number} contains an unresolved attachment upload.",
         "line_number": line_number,
     }
+
+
+def test_large_attachment_returns_retryable_queue_capacity_response(client, monkeypatch) -> None:
+    monkeypatch.setenv("UPLOAD_HEAVY_THRESHOLD_MB", "1")
+    monkeypatch.setenv("UPLOAD_QUEUE_MAX_SIZE", "1")
+    get_settings.cache_clear()
+    conversation_id, message = _conversation_with_message(client)
+    session = _create_session(client, conversation_id, message)
+    uploads._queued_heavy_requests = 1
+    try:
+        response = client.post(
+            f"/api/attachment-upload-sessions/{session['id']}/items",
+            files={"file": ("large.md", b"x" * (1024 * 1024 + 1), "text/markdown")},
+        )
+    finally:
+        uploads._queued_heavy_requests = 0
+        get_settings.cache_clear()
+
+    assert response.status_code == 429
+    assert response.headers["retry-after"] == "15"
+    assert response.json()["detail"]["code"] == "UPLOAD_QUEUE_FULL"
 
 
 def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_file(client, tmp_path: Path, monkeypatch) -> None:

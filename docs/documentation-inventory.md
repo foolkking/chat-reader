@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+2026-09-22 tablet navigation, asynchronous version-derived rebuilds, 100 MiB
+user-upload admission protection, post-import noise review visibility and
+merge cache recovery are synchronized in `PROJECT_STATE.md`,
+`docs/system/BACKEND_AND_API.md`, `docs/system/ADAPTIVE_IMPORT_CONTRACT.md`,
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`, `docs/api-reference.md`,
+`docs/development.md` and `docs/deployment.md`. No migration, dependency or
+new persistent task/history entity was introduced; deployment is not
+performed in this implementation cycle.
+
 2026-09-02：Root Admin 账户边界、`.env.production` 管理员配置、管理入口、
 跨用户审计和系统归档限制已同步到 `PROJECT_STATE.md` 与 `docs/deployment.md`。
 
@@ -90,7 +99,7 @@ success behavior and multi-cache failure rollback are recorded in
 dependency or new documentation category was introduced.
 
 2026-08-21 large paired-import and Reader-copy synchronization: the current
-linear unique-identity pairing rule, 50 MiB per-file/two-file Preview boundary,
+linear unique-identity pairing rule, 100 MiB per-file/two-file Preview boundary,
 route-specific proxy allowance and shared Owner/Share/Offline semantic Markdown
 copy contract are recorded in `PROJECT_STATE.md`,
 `docs/system/BACKEND_AND_API.md`,

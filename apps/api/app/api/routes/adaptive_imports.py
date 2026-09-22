@@ -35,6 +35,7 @@ from app.services.adaptive_import.service import (
 )
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 from app.services.feature_policies import effective_import_size_mb, get_feature_policy
+from app.services.uploads import UploadLimitError, bounded_upload_analysis, read_upload_bounded
 
 router = APIRouter(tags=["adaptive-import"])
 
@@ -84,17 +85,27 @@ async def create_adaptive_import_session(
     max_bytes = effective_import_size_mb(db) * 1024 * 1024
     record: ImportRecord | None = None
     try:
-        record = begin_session(
-            db,
-            len(files),
-            repair_profile_id=repair_profile_id,
-            owner_user_id=ownership_scope.owner_user_id,
-        )
-        for item in files:
-            content = await _read_upload_bounded(item, max_bytes)
-            add_session_source(db, record, item.filename or "upload", content)
-        record = finalize_session(db, record)
+        async with bounded_upload_analysis(files):
+            record = begin_session(
+                db,
+                len(files),
+                repair_profile_id=repair_profile_id,
+                owner_user_id=ownership_scope.owner_user_id,
+            )
+            for item in files:
+                content = await read_upload_bounded(item, max_bytes)
+                add_session_source(db, record, item.filename or "upload", content)
+            record = finalize_session(db, record)
         return session_payload(record)
+    except UploadLimitError as exc:
+        db.rollback()
+        if record is not None:
+            _remove_failed_session(record.id)
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={"code": exc.code, "message": str(exc)},
+            headers={"Retry-After": "15"} if exc.status_code == 429 else None,
+        ) from exc
     except AdaptiveImportError as exc:
         db.rollback()
         if record is not None:
@@ -110,17 +121,6 @@ async def create_adaptive_import_session(
         if record is not None:
             _remove_failed_session(record.id)
         raise HTTPException(status_code=500, detail={"code": "SESSION_ANALYSIS_FAILED", "message": "Import analysis failed safely."}) from exc
-
-
-async def _read_upload_bounded(upload: UploadFile, max_bytes: int) -> bytes:
-    content = bytearray()
-    while True:
-        chunk = await upload.read(min(1024 * 1024, max_bytes + 1 - len(content)))
-        if not chunk:
-            return bytes(content)
-        content.extend(chunk)
-        if len(content) > max_bytes:
-            raise AdaptiveImportError("FILE_TOO_LARGE", f"{upload.filename or 'upload'} exceeds the configured per-file limit.", layer="file")
 
 
 def _remove_failed_session(import_id: uuid.UUID) -> None:
@@ -200,14 +200,15 @@ async def replace_adaptive_import_artifact(
     new_path = None
     try:
         max_bytes = effective_import_size_mb(db) * 1024 * 1024
-        content = await _read_upload_bounded(file, max_bytes)
-        old_path, new_path = replace_session_artifact(
-            db,
-            record,
-            artifact,
-            filename=file.filename or "replacement",
-            content=content,
-        )
+        async with bounded_upload_analysis([file]):
+            content = await read_upload_bounded(file, max_bytes)
+            old_path, new_path = replace_session_artifact(
+                db,
+                record,
+                artifact,
+                filename=file.filename or "replacement",
+                content=content,
+            )
         db.commit()
         db.refresh(record)
         remove_source_paths([old_path])
@@ -217,6 +218,15 @@ async def replace_adaptive_import_artifact(
         if new_path is not None:
             remove_source_paths([new_path])
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        if new_path is not None:
+            remove_source_paths([new_path])
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={"code": exc.code, "message": str(exc)},
+            headers={"Retry-After": "15"} if exc.status_code == 429 else None,
+        ) from exc
     except SQLAlchemyError as exc:
         db.rollback()
         if new_path is not None:

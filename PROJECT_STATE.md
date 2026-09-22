@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-09-02
+Last updated: 2026-09-22
 
 ## 1. Project Snapshot
 
@@ -14,6 +14,40 @@ Last updated: 2026-09-02
 | Branch / baseline | `master`; deployed source SHA `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb` |
 | Deployment | Production runs immutable `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb`; `108ab40` is retained as direct rollback |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
+
+## Current working-tree implementation (2026-09-22)
+
+This change set starts from source SHA `6edc25e4b75479b12d28ba1a7c17e16fd1f6e4f7`
+on `master`. Existing dirty files were preserved; the pre-existing
+`apps/web/tsconfig.tsbuildinfo` change remains untouched. Deployment status is
+established by the immutable runtime image revision and release evidence, not
+by this source snapshot alone.
+
+Implemented in the working tree:
+
+- Tablet Reader navigation now uses one focus-managed dialogue/section drawer,
+  with explicit loading/error/empty states and stable message/version/block
+  locator data.
+- Version selection/deletion returns the canonical mutation immediately and
+  queues idempotent derived search/TOC refresh work; the Web panel updates its
+  local history without waiting for a full refetch.
+- User uploads default to 100 MiB per file. Imports and attachment staging use
+  bounded reads; uploads above 10 MiB are admitted through a single-slot,
+  memory-aware in-process admission gate with explicit retryable 429 states.
+  This is not a durable upload queue and does not provide re-entry or a queue
+  position. Adaptive batches keep their 512 MiB aggregate limit.
+- Import completion queues a linked noise-review task. Task Center shows the
+  noise task/scan relationship and invalidates sidebar, project, Reader, TOC,
+  search and Offline caches after merge completion. A Reader opened on an
+  absorbed conversation receives a target-conversation recovery action.
+
+Verification for this working tree: Web lint, typecheck, production build,
+Alembic single-head check and whitespace check pass. Tablet/task refresh
+contracts pass 5/5, focused upload/version/task tests pass 28/28, and the exact
+full API suite passes 477 with 6 environment/fixture skips. Full authenticated
+PWA acceptance is not verified in this environment because the Playwright
+server had no API at
+`127.0.0.1:8000`; deployment remains not performed.
 
 ## 2. Current Purpose
 
@@ -70,11 +104,11 @@ have separate permission/data boundaries.
 
 | Command | Purpose | Current evidence |
 |---|---|---|
-| `corepack pnpm run lint` | Web lint | PASS 2026-09-01 |
-| `corepack pnpm run typecheck` | Web typecheck | PASS 2026-09-01 |
+| `corepack pnpm run lint` | Web lint | PASS in this implementation cycle |
+| `corepack pnpm run typecheck` | Web typecheck | PASS in this implementation cycle |
 | `corepack pnpm --filter web build` | Production Web build | PASS in this implementation cycle |
-| `corepack pnpm run test:api` | API suite | PASS 471 passed, 6 skipped on 2026-09-02 |
-| `corepack pnpm --filter web test:pwa` | PWA/browser suite | Full suite NOT VERIFIED locally; Service Worker/online startup timeouts and a CSP resource failure occurred. Targeted OFF-010 375px fixture run passed with Chromium 1234 + `APP_ENV=test` |
+| `corepack pnpm run test:api` | API suite | PASS 477 passed, 6 skipped in this implementation cycle |
+| `corepack pnpm --filter web test:pwa` | PWA/browser suite | Full authenticated suite NOT VERIFIED locally because no API was listening at `127.0.0.1:8000`; tablet/task source-contract tests PASS 5/5 |
 | `cd apps/api; python -m alembic heads` | Migration head | `20260902_0032 (head)` in the working tree and production |
 | `git diff --check` | Patch whitespace | PASS |
 | `corepack pnpm run ci:changed-area` | Changed-area local check suggestions | PASS; always retains full gate |

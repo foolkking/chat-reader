@@ -766,4 +766,4 @@ def test_adaptive_nginx_capacity_is_scoped_to_exact_route() -> None:
 
     assert "client_max_body_size 520m;" in adaptive_location
     assert nginx.count("client_max_body_size 520m;") == 1
-    assert "client_max_body_size 60m;" in nginx
+    assert "client_max_body_size 110m;" in nginx

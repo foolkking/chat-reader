@@ -58,6 +58,7 @@ from app.services.assets.upload_service import (
     get_upload_session,
     remove_unreferenced_attachment,
 )
+from app.services.uploads import UploadLimitError, bounded_upload_analysis_sync
 from app.services.sharing.share_service import ShareError, resolve_accessible_share
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
@@ -117,15 +118,23 @@ def upload_attachment_item(
 ) -> AttachmentUploadItemRead:
     try:
         _owned_upload_session(db, session_id, ownership_scope_from_request(request))
-        item = add_upload_item(
-            db,
-            session_id=session_id,
-            filename=file.filename or "attachment.bin",
-            declared_mime_type=file.content_type,
-            source=file.file,
-        )
+        with bounded_upload_analysis_sync([file]):
+            item = add_upload_item(
+                db,
+                session_id=session_id,
+                filename=file.filename or "attachment.bin",
+                declared_mime_type=file.content_type,
+                source=file.file,
+            )
         db.commit()
         return _upload_item_read(item)
+    except UploadLimitError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={"code": exc.code, "message": str(exc)},
+            headers={"Retry-After": "15"} if exc.status_code == 429 else None,
+        ) from exc
     except AttachmentUploadError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

@@ -635,7 +635,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .reader-index-column,
 .reader-toc-column { display: none; }
 
-@media (min-width: 1280px) {
+@media (min-width: 1536px) {
   .reader-index-column {
     display: block;
     --reader-index-height: min(68rem, calc(100dvh - clamp(7rem, 9vh, 9rem)));
@@ -649,6 +649,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   }
 }
 
+@media (min-width: 1536px) {
 @container (min-width: 62rem) {
   .reader-layout-grid {
     padding-left: clamp(3.5rem, 5cqi, 4.5rem);
@@ -692,6 +693,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
     max-height: 100%;
     overflow: hidden;
   }
+}
 }
 
 .dialogue-index {

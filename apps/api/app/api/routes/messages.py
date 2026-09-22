@@ -468,15 +468,36 @@ def select_message_version_endpoint(
     db: Session = Depends(get_db),
 ) -> MessageEditResponse:
     try:
-        _require_owned_message(db, message_id, ownership_scope_from_request(request))
+        scope = ownership_scope_from_request(request)
+        _require_owned_message(db, message_id, scope)
         result = select_message_version(db, message_id, payload.version_id)
+        derived_job = None
+        if result.previous_version_id != result.current_version.id:
+            derived_job = queue_conversation_derived_rebuild(
+                db,
+                conversation_id=result.message.conversation_id,
+                idempotency_key=(
+                    f"message-version-select:{message_id}:{result.current_version.id}"
+                ),
+                rebuild_versions=False,
+                ownership_scope=scope,
+            )
         db.commit()
     except MessageEditError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     message = db.get(Message, result.message.id)
     assert message is not None
-    return _edit_response(message, result.previous_version_id, result.current_version.id, result.current_version.version_number, result.warnings, db)
+    return _edit_response(
+        message,
+        result.previous_version_id,
+        result.current_version.id,
+        result.current_version.version_number,
+        result.warnings,
+        db,
+        derived_status="queued" if derived_job is not None else "ready",
+        derived_job_id=derived_job.id if derived_job is not None else None,
+    )
 
 
 @router.delete("/{message_id}/versions/{version_id}", response_model=MessageVersionDeleteResponse)
@@ -487,8 +508,16 @@ def delete_message_version_endpoint(
     db: Session = Depends(get_db),
 ) -> MessageVersionDeleteResponse:
     try:
-        _require_owned_message(db, message_id, ownership_scope_from_request(request))
+        scope = ownership_scope_from_request(request)
+        _require_owned_message(db, message_id, scope)
         result = delete_message_version(db, message_id, version_id)
+        derived_job = queue_conversation_derived_rebuild(
+            db,
+            conversation_id=result.message.conversation_id,
+            idempotency_key=f"message-version-delete:{message_id}:{version_id}",
+            rebuild_versions=False,
+            ownership_scope=scope,
+        )
         db.commit()
     except MessageEditError as exc:
         db.rollback()
@@ -505,6 +534,8 @@ def delete_message_version_endpoint(
         message=_get_message_detail(message.id, db),
         conversation_revision=conversation.offline_revision,
         warnings=result.warnings,
+        derived_status="queued",
+        derived_job_id=derived_job.id,
     )
 
 
@@ -587,6 +618,8 @@ def _edit_response(
     version_number: int,
     warnings: list[str],
     db: Session,
+    derived_status: str = "ready",
+    derived_job_id: uuid.UUID | None = None,
 ) -> MessageEditResponse:
     current_version = db.get(MessageVersion, current_version_id)
     if current_version is None:
@@ -643,6 +676,8 @@ def _edit_response(
         conversation_attachment_summary=attachment_summary,
         conversation_revision=conversation.offline_revision,
         warnings=warnings,
+        derived_status=derived_status,
+        derived_job_id=derived_job_id,
     )
 
 

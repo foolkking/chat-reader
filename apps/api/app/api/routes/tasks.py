@@ -148,6 +148,9 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
 
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
     payload = job.payload or {}
+    result = dict(job.result or {})
+    if payload.get("parent_task_id") and not result.get("parent_task_id"):
+        result["parent_task_id"] = payload["parent_task_id"]
     return BackgroundTaskRead(
         job_id=job.id,
         job_type=job.job_type,
@@ -157,7 +160,7 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         processed_items=job.processed_items,
         total_items=job.total_items,
         label=payload.get("title") or _job_label(job.job_type),
-        result=job.result or {},
+        result=result,
         error_message=job.error_message,
         queued_at=job.queued_at,
         started_at=job.started_at,

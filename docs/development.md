@@ -3,8 +3,8 @@
 ## 当前工作树账户基线（2026-09-01）
 
 当前工作树包含多账户 owner 边界：部署时只设置一个 `ADMIN`，后续账号为
-`USER`。私有记录按已认证用户 UUID 隔离，源码 migration head 为
-`20260901_0031_admin_config_digest.py`。这部分尚未应用到生产。
+`USER`。私有记录按已认证用户 UUID 隔离，源码与生产 migration head 为
+`20260902_0032`。
 首次账号请使用 `apps/api/scripts/owner_auth.py`，以运维输入的真实邮箱和交互式
 强密码创建；凭据不得写入仓库。
 
@@ -37,7 +37,7 @@ Set-Location ../..
 ```
 
 `alembic heads` 应只有一个结果。当前源码 head 是
-`20260901_0031_admin_config_digest.py`；生产执行前必须完成备份和 migration
+`20260902_0032`；生产执行前必须完成备份和 migration
 preflight。
 
 当前 Content Cleanup 支持从规则库主动启动一次低优先级的
@@ -53,7 +53,13 @@ preflight。
 | `API_INTERNAL_URL` | Next.js 服务端 API upstream | `http://127.0.0.1:8000` |
 | `CORS_ORIGINS` | 直接跨域请求 API 时允许的 origin | 同源 Web 通常不依赖它 |
 | `PUBLIC_WEB_BASE_URL` | Share 等公开 URL 的 base | 本地 `http://localhost:3000` |
-| `MAX_IMPORT_FILE_SIZE_MB` | 导入大小上限 | 50 |
+| `MAX_IMPORT_FILE_SIZE_MB` | 导入大小上限 | 100 |
+| `MAX_ADAPTIVE_IMPORT_TOTAL_MB` | Adaptive Import 批次总量上限 | 512 |
+| `UPLOAD_HEAVY_THRESHOLD_MB` | 进入重型上传分析队列的阈值 | 10 |
+| `UPLOAD_MAX_ACTIVE_ANALYSIS` | 重型上传分析并发数 | 1 |
+| `UPLOAD_QUEUE_MAX_SIZE` | 重型上传等待队列容量 | 8 |
+| `UPLOAD_MEMORY_RESERVE_MB` | 允许重型分析前保留的可用内存 | 512 |
+| `UPLOAD_QUEUE_WAIT_SECONDS` | 重型上传等待超时 | 120 秒 |
 | `IMPORT_STORAGE_DIR` | source artifact 目录 | `storage/imports` |
 | `EXPORT_STORAGE_DIR` | export artifact 目录 | `storage/exports` |
 | `OFFLINE_STORAGE_DIR` | offline package 目录 | `storage/offline` |

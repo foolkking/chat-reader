@@ -68,7 +68,7 @@ Adaptive JSON / Markdown：
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| POST | `/api/adaptive-import/sessions` | 有界上传 JSON/Markdown，分析 grouping、Family 与 Profile match；最多 500 文件、每文件 50 MiB、session 总计 512 MiB |
+| POST | `/api/adaptive-import/sessions` | 有界上传 JSON/Markdown，分析 grouping、Family 与 Profile match；最多 500 文件、每文件 100 MiB、session 总计 512 MiB；大文件分析受单并发及内存水位保护 |
 | GET/DELETE | `/api/adaptive-import/sessions/{id}` | 恢复 session，或明确取消并清理其临时来源 |
 | PUT | `/api/adaptive-import/sessions/{id}/groups` | 在任意未提交可恢复状态确认或调整 InputGroup；每个来源必须且只能出现一次 |
 | POST | `/api/adaptive-import/sessions/{id}/reanalyze` | 使用当前 Analyzer 恢复并重建未提交 session 的 Family/Profile resolution |
@@ -120,6 +120,10 @@ Adaptive JSON / Markdown：
 | POST | `/api/messages/{id}/split` | 兼容接口：按字符 offset 拆分消息；当前 Reader 不提供该入口 |
 | POST | `/api/messages/merge` | 合并相邻、同 role 消息 |
 
+当前版本选择和版本删除响应包含 `derived_status` 与可选
+`derived_job_id`。正文提交后立即返回；搜索和章节目录通过现有
+`conversation_derived_rebuild` 后台任务更新。
+
 ## Projects
 
 | Method | Path | 说明 |
@@ -145,7 +149,7 @@ Project 列表支持 `sort=recent_read|updated|created|title|conversation_count|
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| GET | `/api/tasks/active` | 返回 queued、processing 和 failed 的 import/merge/export/auto-clean 任务 |
+| GET | `/api/tasks/active` | 返回 active 与保留期内 terminal 的 import/merge/export/cleanup/noise-review 等任务；噪声审查通过 `parent_task_id` 关联导入 |
 | GET | `/api/tasks/{job_id}` | 查询统一任务阶段、进度、结果或错误 |
 | POST | `/api/tasks/{job_id}/retry` | 重试 failed 任务 |
 | POST | `/api/tasks/{job_id}/cancel` | 取消 queued/processing conversation merge；完成或不支持的任务返回 409 |
@@ -266,7 +270,7 @@ expiry and revocation, and cannot call private owner APIs.
 | --- | --- | --- |
 | GET | `/api/capabilities` | 上传、scanner provider、未扫描策略、基础/复杂预览和最大文件大小 |
 | POST | `/api/conversations/{id}/attachment-upload-sessions` | 创建有期限的普通上传 session，可绑定目标消息/base version |
-| POST | `/api/attachment-upload-sessions/{id}/items` | 流式上传一个暂存项；返回 MIME/hash/大小/scan 状态 |
+| POST | `/api/attachment-upload-sessions/{id}/items` | 流式上传一个最长 100 MiB 的暂存项；大文件与 Import 共享准入队列，容量/内存不足返回可重试 429；成功返回 MIME/hash/大小/scan 状态 |
 | GET | `/api/attachment-upload-sessions/{id}` | 查询 session 与多文件项状态 |
 | DELETE | `/api/attachment-upload-sessions/{id}/items/{item_id}` | 取消并清理暂存项 |
 | GET/POST | `/api/conversations/{id}/attachments` | 列出当前对话文件；或显式将已上传暂存项提升为未放置 Attachment |

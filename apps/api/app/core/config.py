@@ -25,8 +25,15 @@ class Settings(BaseSettings):
         default=["http://localhost:3000", "http://localhost:3001"],
         alias="CORS_ORIGINS",
     )
-    max_import_file_size_mb: int = Field(default=50, alias="MAX_IMPORT_FILE_SIZE_MB")
+    # All user-provided import/attachment payloads share this per-file cap.  The
+    # archive/bundle limits below remain separate internal safety limits.
+    max_import_file_size_mb: int = Field(default=100, alias="MAX_IMPORT_FILE_SIZE_MB", ge=1, le=10240)
     max_adaptive_import_total_mb: int = Field(default=512, alias="MAX_ADAPTIVE_IMPORT_TOTAL_MB")
+    upload_heavy_threshold_mb: int = Field(default=10, alias="UPLOAD_HEAVY_THRESHOLD_MB", ge=1, le=100)
+    upload_max_active_analysis: int = Field(default=1, alias="UPLOAD_MAX_ACTIVE_ANALYSIS", ge=1, le=16)
+    upload_queue_max_size: int = Field(default=8, alias="UPLOAD_QUEUE_MAX_SIZE", ge=1, le=100)
+    upload_memory_reserve_mb: int = Field(default=512, alias="UPLOAD_MEMORY_RESERVE_MB", ge=64)
+    upload_queue_wait_seconds: int = Field(default=120, alias="UPLOAD_QUEUE_WAIT_SECONDS", ge=1, le=600)
     import_storage_dir: str = Field(
         default="storage/imports",
         alias="IMPORT_STORAGE_DIR",

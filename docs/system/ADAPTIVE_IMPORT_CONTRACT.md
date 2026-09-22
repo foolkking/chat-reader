@@ -78,7 +78,7 @@ SourceFile[]
 
 `StructureFamily` 只属于当前 session。系统按无正文的结构签名聚类，让同一 Family 只 Mapping 一次，再对 Family 的全部 InputGroup 执行 normalization 和 validation。
 
-一次 session 最多 500 个来源文件、总计 512 MiB；每个文件继续受 50 MiB 上限约束。API 在读取正文前检查文件数量，按 1 MiB chunk 有界读取并逐文件写入受控 session storage，内存中不会同时保留整个批量来源。反向代理只对精确的 Adaptive session 创建路径开放 520 MiB multipart 容量，其他业务路由不扩大。
+一次 session 最多 500 个来源文件、总计 512 MiB；每个用户文件受 100 MiB 上限约束。API 在读取正文前检查文件数量和 spooled 文件大小，按 1 MiB chunk 有界读取并逐文件写入受控 session storage；超过 10 MiB 的分析进入单并发 admission gate，并在系统可用内存低于保留水位时等待或返回可重试的 429。反向代理只对精确的 Adaptive session 创建路径开放 520 MiB multipart 容量，其他单文件业务路由使用 110 MiB 协议上限。
 
 ## Profile 与 Revision
 

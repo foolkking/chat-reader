@@ -147,6 +147,9 @@ def process_import(
 
     try:
         with session_factory() as db:
+            record = db.get(ImportRecord, import_id)
+            if record is None:
+                raise ValueError(f"Import record {import_id} not found.")
             result = commit_import_preview(import_id, db, progress_callback=report)
             # Noise review is deliberately best-effort: a scanner outage must
             # never turn a successful canonical import into a failed import.
@@ -156,6 +159,7 @@ def process_import(
                         db,
                         result.conversation_ids,
                         OwnershipScope(record.owner_user_id, include_legacy_unowned=record.owner_user_id is None),
+                        source_import_id=record.id,
                     )
             except Exception as exc:  # pragma: no cover - operational guard
                 structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)

@@ -584,7 +584,8 @@ export type BackgroundTaskRead = {
   label: string | null;
   result: {
     conversation_ids?: string[];
-    conversation_id?: string;
+      conversation_id?: string;
+      source_conversation_ids?: string[];
     deleted_ids?: string[];
     failed?: Array<{ id: string; error: string }>;
     title?: string;
@@ -593,7 +594,9 @@ export type BackgroundTaskRead = {
     filename?: string;
     byte_size?: number;
     download_url?: string;
-    cleaned_messages?: number;
+      cleaned_messages?: number;
+      scan_id?: string;
+      parent_task_id?: string;
   } & Record<string, unknown>;
   error_message: string | null;
   queued_at: string | null;
@@ -949,6 +952,8 @@ export type MessageEditResponse = {
   conversation_attachment_summary: { total?: number; used?: number; missing?: number };
   conversation_revision: number;
   warnings?: string[];
+  derived_status?: "ready" | "queued";
+  derived_job_id?: string | null;
 };
 
 export type MessageVersionHistoryItem = {
@@ -980,6 +985,8 @@ export type MessageVersionDeleteResponse = {
   message: MessageListItem;
   conversation_revision: number;
   warnings: string[];
+  derived_status?: "ready" | "queued";
+  derived_job_id?: string | null;
 };
 
 export type ConversationSplitMode = "range_copy" | "boundary_copy" | "discrete_copy";

@@ -49,6 +49,7 @@ from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 from app.services.feature_policies import effective_import_size_mb, get_feature_policy
+from app.services.uploads import UploadLimitError, bounded_upload_analysis, read_upload_bounded
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 logger = logging.getLogger(__name__)
@@ -109,9 +110,25 @@ async def preview_import(
     duplicate_conversation_id: uuid.UUID | None = None
     preview_saved = False
 
+    analysis_guard = bounded_upload_analysis(files)
+    try:
+        await analysis_guard.__aenter__()
+    except UploadLimitError as exc:
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={"code": exc.code, "message": str(exc)},
+            headers={"Retry-After": "15"} if exc.status_code == 429 else None,
+        ) from exc
+
     try:
         for upload in files:
-            content = await upload.read()
+            try:
+                content = await read_upload_bounded(upload, max_bytes)
+            except UploadLimitError as exc:
+                raise HTTPException(
+                    status_code=exc.status_code,
+                    detail={"code": exc.code, "message": str(exc)},
+                ) from exc
             filename = upload.filename or "upload"
             extension = _extension(filename)
 
@@ -286,6 +303,7 @@ async def preview_import(
     finally:
         if not preview_saved:
             _cleanup_import_directory(import_id)
+        await analysis_guard.__aexit__(None, None, None)
 
     can_commit = conversation_preview is not None and conversation_preview.alignment_status not in {"conflict_detected", "failed"}
     return ImportPreviewResponse(
@@ -460,7 +478,7 @@ def commit_import(
         # low-priority follow-up and must not make a successful import fail.
         try:
             with db.begin_nested():
-                queue_import_scan(db, result.conversation_ids, ownership_scope)
+                queue_import_scan(db, result.conversation_ids, ownership_scope, source_import_id=import_record.id)
         except Exception as exc:  # pragma: no cover - operational guard
             structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
         db.commit()

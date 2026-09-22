@@ -772,8 +772,7 @@ def select_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.
         created_by="user",
         payload={"previous_version_id": str(current.id), "selected_version_id": str(selected.id)},
     )
-    _refresh_conversation_stats(db, message.conversation_id)
-    rebuild_search_and_toc_for_conversation(db, message.conversation_id)
+    _touch_conversation_after_version_mutation(db, message.conversation_id, bump_revision=False)
     db.flush()
     return MessageEditResult(message, current.id, selected)
 
@@ -787,6 +786,7 @@ def delete_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.
         raise MessageEditError("The initial version cannot be deleted.")
     warnings: list[str] = []
     current = _get_current_version(db, message)
+    deleting_current = current.id == target.id
     if current.id == target.id:
         fallback = (
             db.query(MessageVersion)
@@ -824,8 +824,11 @@ def delete_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.
     )
     deleted_id = target.id
     db.delete(target)
-    _refresh_conversation_stats(db, message.conversation_id)
-    rebuild_search_and_toc_for_conversation(db, message.conversation_id)
+    _touch_conversation_after_version_mutation(
+        db,
+        message.conversation_id,
+        bump_revision=not deleting_current,
+    )
     db.flush()
     return MessageVersionDeleteResult(message, deleted_id, current, warnings)
 
@@ -1369,6 +1372,22 @@ def _refresh_conversation_stats(
     if bump_revision:
         conversation.offline_revision += 1
     db.flush()
+
+
+def _touch_conversation_after_version_mutation(
+    db: Session,
+    conversation_id: uuid.UUID,
+    *,
+    bump_revision: bool,
+) -> None:
+    """Update mutation metadata without synchronously scanning the conversation."""
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        return
+    conversation.updated_at = utc_now()
+    conversation.sort_time = conversation.updated_at
+    if bump_revision:
+        conversation.offline_revision += 1
 
 
 def refresh_conversation_stats(

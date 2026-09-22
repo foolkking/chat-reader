@@ -52,6 +52,8 @@ class MessageEditResponse(BaseModel):
     # Post-commit conversation revision is the canonical client mutation handoff.
     conversation_revision: int
     warnings: list[str] = Field(default_factory=list)
+    derived_status: Literal["ready", "queued"] = "ready"
+    derived_job_id: UUID | None = None
 
 
 class MessageDeleteResponse(BaseModel):
@@ -95,6 +97,8 @@ class MessageVersionDeleteResponse(BaseModel):
     message: MessageDetail
     conversation_revision: int
     warnings: list[str] = Field(default_factory=list)
+    derived_status: Literal["ready", "queued"] = "ready"
+    derived_job_id: UUID | None = None
 
 
 class MessageVersionHistoryResponse(BaseModel):

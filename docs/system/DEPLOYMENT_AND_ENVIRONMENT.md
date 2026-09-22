@@ -28,14 +28,15 @@ in the Web UI. Share and Offline remain separate permission boundaries.
 
 ## Import Preview request boundary
 
-The application limit remains 50 MiB per uploaded import file and Preview
+The application limit defaults to 100 MiB per user-uploaded file and Preview
 accepts at most one JSON plus one Markdown file. The versioned Nginx config
-sets `client_max_body_size 110m` only for the exact
+keeps a 110 MiB default upload boundary and repeats it for the exact
 `/api/imports/preview` location, allowing multipart overhead for a maximum-size
-pair. The server-wide 60 MiB boundary remains in force for every other route.
+file. The API still enforces the per-file limit before parsing; non-upload
+endpoints remain governed by their application contracts.
 
 Adaptive batches use the separate exact `/api/adaptive-import/sessions`
-location with `client_max_body_size 520m`; application limits remain 50 MiB
+location with `client_max_body_size 520m`; application limits remain 100 MiB
 per file, 512 MiB total and 500 files. No other route inherits this allowance.
 
 ## Worker memory boundary

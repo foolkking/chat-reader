@@ -13,6 +13,7 @@ const PREVIEW_CLOSE_DELAY = 220;
 
 export type ConversationIndexItem = {
   messageId: string;
+  messageVersionId?: string | null;
   role: string;
   roleNumber: string;
   orderKey: string;
@@ -97,10 +98,14 @@ export function ConversationIndex({
     };
   }, [mode, panelState]);
 
-  const resolvedPage = remotePage ?? indexQuery.data ?? null;
+  const pageCandidate = remotePage ?? indexQuery.data ?? null;
+  const resolvedPage = pageCandidate?.conversation_id === conversationId ? pageCandidate : null;
   const items = useMemo(() => {
     if (messages) return buildItemsFromMessages(messages);
-    if (resolvedPage?.items?.length) return resolvedPage.items.map(toIndexItem);
+    if (resolvedPage?.items?.length) {
+      const loadedVersions = new Map((fallbackMessages ?? []).map((message) => [message.id, message.current_version?.id ?? null]));
+      return resolvedPage.items.map((item) => ({ ...toIndexItem(item), messageVersionId: loadedVersions.get(item.message_id) }));
+    }
     // The index is an auxiliary projection and can briefly lag after an
     // import, merge, or refresh. Use the canonical reader window as a
     // non-destructive fallback instead of reporting a false empty dialogue.
@@ -126,9 +131,9 @@ export function ConversationIndex({
     return () => window.cancelAnimationFrame(frame);
   }, [activeMessageId, activeOrdinal, mode, panelState, rangeMode, remotePage?.offset, visibleItems.length]);
 
-  if (messages === undefined && (!ready || indexQuery.isLoading) && !resolvedPage) return <IndexShell mode={mode} label={t("loadingIndex")} />;
-  if (messages === undefined && indexQuery.isError && !resolvedPage) return <IndexShell mode={mode} label={t("indexFailed")} />;
-  if (!items.length) return <IndexShell mode={mode} label={t("noMessages")} />;
+  if (messages === undefined && (!ready || indexQuery.isLoading) && !resolvedPage) return <IndexShell mode={mode} state="loading" label={t("loadingIndex")} />;
+  if (messages === undefined && indexQuery.isError && !resolvedPage) return <IndexShell mode={mode} state="error" label={t("indexFailed")} onRetry={() => void indexQuery.refetch()} />;
+  if (!items.length) return <IndexShell mode={mode} state="empty" label={t("noMessages")} />;
 
   const showDetails = mode === "sheet" || panelState !== "rail";
   const rows = (
@@ -257,12 +262,12 @@ export function ConversationIndex({
 
 function PageButton({ disabled, onClick, children }: { disabled: boolean; onClick: () => void; children: React.ReactNode }) { return <button type="button" disabled={disabled} onClick={onClick} className="min-h-9 rounded-md border border-ui px-2 text-xs text-secondary disabled:opacity-40">{children}</button>; }
 function toIndexItem(item: DialogueIndexItem): ConversationIndexItem { return { messageId: item.message_id, role: item.role, roleNumber: roleLabel(item.role, item.role_number), orderKey: item.order_key, preview: item.preview, turnIndex: item.turn_index, ordinal: item.ordinal }; }
-function buildItemsFromMessages(messages: MessageListItem[]): ConversationIndexItem[] { const counts: Record<string, number> = {}; return messages.map((message, index) => { counts[message.role] = (counts[message.role] ?? 0) + 1; return { messageId: message.id, role: message.role, roleNumber: roleLabel(message.role, counts[message.role]), orderKey: message.order_key, preview: message.content_preview ?? message.current_version?.display_text?.replace(/\s+/g, " ").slice(0, 160) ?? "", turnIndex: message.turn_index ?? null, ordinal: message.ordinal ?? index + 1 }; }); }
+function buildItemsFromMessages(messages: MessageListItem[]): ConversationIndexItem[] { const counts: Record<string, number> = {}; return messages.map((message, index) => { counts[message.role] = (counts[message.role] ?? 0) + 1; return { messageId: message.id, messageVersionId: message.current_version?.id ?? null, role: message.role, roleNumber: roleLabel(message.role, counts[message.role]), orderKey: message.order_key, preview: message.content_preview ?? message.current_version?.display_text?.replace(/\s+/g, " ").slice(0, 160) ?? "", turnIndex: message.turn_index ?? null, ordinal: message.ordinal ?? index + 1 }; }); }
 function roleLabel(role: string, number: number): string { return role === "user" ? `U${number}` : role === "assistant" ? `A${number}` : `${role.slice(0, 1).toUpperCase() || "?"}${number}`; }
 function applyFilter(items: ConversationIndexItem[], mode: "all" | "around" | "custom", beforeValue: string, afterValue: string, activeOrdinal: number | null) { if (mode === "around") { const center = activeOrdinal ?? items[0]?.ordinal ?? 1; return items.filter((item) => Math.abs(item.ordinal - center) <= AROUND_WINDOW); } if (mode === "all") return items; const before = positiveNumber(beforeValue); const after = positiveNumber(afterValue); return items.filter((item) => (before === null || item.ordinal > before) && (after === null || item.ordinal < after)); }
 function positiveNumber(value: string): number | null { const number = Number.parseInt(value, 10); return Number.isFinite(number) && number > 0 ? number : null; }
 function roleLineClass(role: string): string { return role === "user" ? "bg-emerald-600" : role === "assistant" ? "bg-indigo-600" : "bg-gray-400"; }
-function IndexShell({ mode, label }: { mode: "rail" | "sheet"; label: string }) { return <section className={mode === "sheet" ? "text-sm text-secondary" : "w-11 rounded-xl bg-surface p-2 text-xs text-secondary shadow-sm ring-1 ring-[var(--border)]"}>{label}</section>; }
+function IndexShell({ mode, label, state, onRetry }: { mode: "rail" | "sheet"; label: string; state: "loading" | "error" | "empty"; onRetry?: () => void }) { const t = useTranslations(); return <section data-dialogue-index-state={state} role={state === "error" ? "alert" : "status"} aria-busy={state === "loading"} className={mode === "sheet" ? "flex min-h-24 flex-1 flex-col items-start justify-center gap-2 text-sm text-secondary" : "w-11 rounded-xl bg-surface p-2 text-xs text-secondary shadow-sm ring-1 ring-[var(--border)]"}><span>{label}</span>{mode === "sheet" && state === "loading" ? <div className="h-1 w-24 overflow-hidden rounded-full bg-subtle" aria-hidden="true"><div className="h-full w-1/2 animate-pulse rounded-full bg-accent" /></div> : null}{mode === "sheet" && state === "error" && onRetry ? <button type="button" onClick={onRetry} className="min-h-9 rounded-md border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle">{t("retry")}</button> : null}</section>; }
 
 function FilterPopover({ rangeMode, hideBefore, hideAfter, onRangeModeChange, onHideBeforeChange, onHideAfterChange, onClose }: { rangeMode: "all" | "around" | "custom"; hideBefore: string; hideAfter: string; onRangeModeChange: (mode: "all" | "around" | "custom") => void; onHideBeforeChange: (value: string) => void; onHideAfterChange: (value: string) => void; onClose: () => void; }) {
   const t = useTranslations();
