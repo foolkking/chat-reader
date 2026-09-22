@@ -11,11 +11,33 @@ Last updated: 2026-09-22
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
 | Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
-| Branch / baseline | `master`; deployed source SHA `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb` |
-| Deployment | Production runs immutable `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb`; `108ab40` is retained as direct rollback |
+| Branch / baseline | `master`; deployed source SHA `1b81b49609f1b955c8d85ec426e898938dcfc90a` |
+| Deployment | Production runs immutable `1b81b49609f1b955c8d85ec426e898938dcfc90a`; prior `7101f6a` remains the direct rollback generation |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## Current working-tree implementation (2026-09-22)
+
+### Latest production deployment
+
+The release workflow `35703956105` passed API/Web quality, dependency audit,
+focused browser/security, PWA, authentication, image build and independent
+artifact inspection. Production loaded the exact artifact for source
+`1b81b49609f1b955c8d85ec426e898938dcfc90a`; API/worker image digest is
+`sha256:10bb6145e2a884a8a63680d4e8d639f540c3d0b75841a273d5e91b284a611997`
+and Web is
+`sha256:9a0b67ef0d05ae42353f55d18739c7ad0b54ec2a8a39453d6f106ab68d40258c`.
+The five-component backup `chat-reader-20260922T084555Z` passed checksum and
+archive verification. Attachment storage audit was read-only and clean
+(279 active attachments, 223 asset objects, zero issues). PostgreSQL was not
+restarted; its container identity and start time were unchanged. Alembic is
+`20260902_0032 (head)`, application health and worker heartbeat are healthy,
+HTTPS health is 200, port 80 redirects to HTTPS, and anonymous private access
+is 401. Authenticated production UI acceptance remains `NOT VERIFIED`; the
+operator will perform that browser check.
+
+Deployment did not change `.env.production`, production volumes, imported
+conversation data or scanner policy. The release transfer archive remains in
+the versioned release directory until the operator-approved retention cleanup.
 
 This change set starts from source SHA `6edc25e4b75479b12d28ba1a7c17e16fd1f6e4f7`
 on `master`. Existing dirty files were preserved; the pre-existing
@@ -47,7 +69,9 @@ contracts pass 5/5, focused upload/version/task tests pass 28/28, and the exact
 full API suite passes 477 with 6 environment/fixture skips. Full authenticated
 PWA acceptance is not verified in this environment because the Playwright
 server had no API at
-`127.0.0.1:8000`; deployment remains not performed.
+`127.0.0.1:8000`; local authenticated acceptance remains not verified. The
+release has since been deployed through the CI artifact workflow documented
+above.
 
 The release candidate uses Next `16.3.3`, Sharp `0.35.4` and js-yaml `4.3.2`.
 The official npm audit policy reports zero advisories and no exceptions.
@@ -198,7 +222,7 @@ verification.
 | Auth cookie/inactivity contract | Implemented in working tree | API exact-boundary tests and authenticated browser cookie attribute assertion; production-equivalent owner run remains NOT VERIFIED |
 | Deployment admin reconciliation | Implemented and deployed | Production `migrate` consumes the server `.env.production` `ADMIN_EMAIL`/`ADMIN_PASSWORD` pair; only a changed pair is applied, while the database stores a derived digest and Argon2id hash rather than plaintext |
 | Attachment Range characterization | Implemented and deployed | Synthetic image/PDF/video/text Range and retry measurement reports aggregates only; production media/network measurement remains NOT VERIFIED |
-| Production deployment | Implemented and deployed | CI-gated release `7101f6a` is live; Alembic `20260902_0032` is current; previous `108ab40` remains the rollback image |
+| Production deployment | Implemented and deployed | CI-gated release `1b81b496` is live; Alembic `20260902_0032` is current; previous `7101f6a` remains the rollback image |
 | Authenticated production browser | NOT VERIFIED | No approved owner session/browser evidence in this cycle; public health is reachable but exposes no release SHA, so it cannot bind TEST-001 evidence to this source |
 | Backup failure notification | Closed as unconfirmed | Backup emits bounded stderr/non-zero failure; no authorized delivery channel exists, so no external hook was introduced |
 

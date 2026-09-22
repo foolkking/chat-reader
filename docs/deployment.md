@@ -1,5 +1,29 @@
 # 生产部署
 
+## 2026-09-22 reader navigation release
+
+Release workflow `35703956105` passed the complete API/Web quality, official
+dependency audit, browser/security, PWA, authentication, image-build and
+independent artifact inspection gates for source
+`1b81b49609f1b955c8d85ec426e898938dcfc90a`. King loaded that exact immutable
+artifact and ran the existing migration; Alembic is `20260902_0032 (head)`.
+The API and import-worker image digest is
+`sha256:10bb6145e2a884a8a63680d4e8d639f540c3d0b75841a273d5e91b284a611997`,
+and the Web image digest is
+`sha256:9a0b67ef0d05ae42353f55d18739c7ad0b54ec2a8a39453d6f106ab68d40258c`.
+
+Before replacement, the read-only attachment audit found 279 active
+attachments, 223 asset objects and zero issues. The verified five-component
+recovery point is
+`/opt/chat-reader/backups/chat-reader-20260922T084555Z`. PostgreSQL was not
+restarted; its container identity and start time were unchanged. Runtime image
+revisions match the release SHA, API/Web/PostgreSQL are healthy, the worker
+heartbeat is `alive_idle`, public HTTPS health is 200, port 80 redirects to
+HTTPS, and anonymous private access is 401. The production Nginx import-preview
+location has a 110 MiB request limit. `.env.production`, production volumes,
+import data and scanner policy were not overwritten. Authenticated production
+UI acceptance is `NOT VERIFIED`; the operator will perform it.
+
 ## 2026-09-02 settings visibility rollout
 
 Release `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb` was built and inspected by
