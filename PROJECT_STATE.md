@@ -1,6 +1,28 @@
 # Project State
 
-Last updated: 2026-09-22
+Last updated: 2026-09-24
+
+## 0. Upload failure diagnosis and working-tree fix (2026-09-24)
+
+Production evidence for a roughly 33 MiB attachment showed that the multipart
+request reached 100%, then spent about 30 seconds in the attachment item route
+before the reverse proxy returned 500. Nginx reported only normal request-body
+buffering; there was no 413, disk-full error, or kernel OOM event. The host was
+under memory pressure (about 142 MiB available before cleanup), but the direct
+failure was the attachment route entering the import parser's 512 MiB memory
+reserve gate even though attachment staging only copies the already-spooled
+file to disk in bounded chunks. The working tree now gives attachment staging
+its own serialized heavy-upload slot without the parser memory gate, preserves
+retryable queue responses, and teaches the Web client to show nested API error
+messages.
+
+The server was cleaned without touching PostgreSQL, named volumes, import
+storage, the active image, or the direct rollback image. Stale Chat Reader
+images and build cache were removed after an explicit inventory: Docker image
+usage fell from 6.238 GiB to 4.008 GiB, build cache from 155 MiB to 0, and root
+free space rose from 2.4 GiB to 4.9 GiB. Current production health is OK, but
+this working-tree fix is **not deployed** and the server's current runtime still
+uses the prior immutable release until an explicitly authorized deployment.
 
 ## 1. Project Snapshot
 

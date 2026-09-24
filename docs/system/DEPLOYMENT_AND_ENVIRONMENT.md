@@ -39,6 +39,12 @@ Adaptive batches use the separate exact `/api/adaptive-import/sessions`
 location with `client_max_body_size 520m`; application limits remain 100 MiB
 per file, 512 MiB total and 500 files. No other route inherits this allowance.
 
+Ordinary attachment upload items use the same 100 MiB per-file limit. Files
+over `UPLOAD_HEAVY_THRESHOLD_MB` are admitted through the single-slot heavy
+upload gate. Attachment staging is a bounded disk copy and does not wait for
+the import parser memory reserve; parser-backed import analysis still checks
+`UPLOAD_MEMORY_RESERVE_MB` and returns a retryable 429 when memory is low.
+
 ## Worker memory boundary
 
 Production Compose sets `import-worker.mem_limit` to `${IMPORT_WORKER_MEMORY_LIMIT:-640m}`. Override it only through the production environment; do not replace `.env.production` and do not remove named volumes. Conversation merge must remain below this limit through bounded canonical copy batches.

@@ -1458,6 +1458,10 @@ function readApiError(payload: unknown, statusCode: number): string {
   if (payload && typeof payload === "object") {
     const detail = (payload as { detail?: unknown }).detail;
     if (typeof detail === "string") return detail;
+    if (detail && typeof detail === "object") {
+      const message = (detail as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim()) return message;
+    }
   }
   return `Attachment upload returned ${statusCode}`;
 }

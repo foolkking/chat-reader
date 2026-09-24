@@ -89,16 +89,16 @@ def test_heavy_upload_waits_for_memory_and_returns_retryable_pressure_error(
     assert uploads._queued_heavy_requests == 0
 
 
-def test_synchronous_attachment_guard_uses_the_shared_heavy_slot(
+def test_synchronous_attachment_staging_uses_the_shared_heavy_slot_without_memory_gate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(uploads, "get_settings", lambda: _settings())
-    monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 1024 * 1024 * 1024)
+    monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 1)
     uploads._analysis_slots = None
     uploads._analysis_slot_count = None
     uploads._queued_heavy_requests = 0
 
-    with uploads.bounded_upload_analysis_sync([_upload(2 * 1024 * 1024)]):
+    with uploads.bounded_upload_staging_sync([_upload(2 * 1024 * 1024)]):
         assert uploads._queued_heavy_requests == 1
 
     assert uploads._queued_heavy_requests == 0

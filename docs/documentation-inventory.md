@@ -1,5 +1,12 @@
 # Markdown 文档台账
 
+2026-09-24 attachment upload diagnosis and staging fix are synchronized in
+`PROJECT_STATE.md`, `docs/system/BACKEND_AND_API.md`,
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`, `.env.production.example` and
+`docker-compose.production.yml`. The working-tree fix is not deployed; the
+server cleanup retained the current and direct rollback images and did not
+touch database, named volumes or import storage.
+
 2026-09-22 tablet navigation, asynchronous version-derived rebuilds, 100 MiB
 user-upload admission protection, post-import noise review visibility and
 merge cache recovery are synchronized in `PROJECT_STATE.md`,

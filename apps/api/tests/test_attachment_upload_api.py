@@ -140,6 +140,39 @@ def test_large_attachment_returns_retryable_queue_capacity_response(client, monk
     assert response.json()["detail"]["code"] == "UPLOAD_QUEUE_FULL"
 
 
+def test_large_attachment_disk_staging_does_not_require_parser_memory_reserve(
+    client,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    conversation_id, message = _conversation_with_message(client)
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    monkeypatch.setenv("UPLOAD_HEAVY_THRESHOLD_MB", "1")
+    monkeypatch.setenv("UPLOAD_MEMORY_RESERVE_MB", "512")
+    get_settings.cache_clear()
+    monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 1)
+    uploads._analysis_slots = None
+    uploads._analysis_slot_count = None
+    uploads._queued_heavy_requests = 0
+
+    try:
+        session = _create_session(client, conversation_id, message)
+        upload_size = 33 * 1024 * 1024
+        response = client.post(
+            f"/api/attachment-upload-sessions/{session['id']}/items",
+            files={"file": ("large.zip", b"x" * upload_size, "application/zip")},
+        )
+    finally:
+        uploads._queued_heavy_requests = 0
+        get_settings.cache_clear()
+
+    assert response.status_code == 201, response.text
+    assert response.json()["byte_size"] == upload_size
+
+
 def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_file(client, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
     monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")

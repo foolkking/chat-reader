@@ -163,6 +163,49 @@ def bounded_upload_analysis_sync(files: Iterable[UploadFile]) -> Iterator[None]:
             _queued_heavy_requests = max(0, _queued_heavy_requests - 1)
 
 
+@contextmanager
+def bounded_upload_staging_sync(files: Iterable[UploadFile]) -> Iterator[None]:
+    """Serialize large disk staging without requiring analysis memory headroom.
+
+    Starlette has already spooled multipart uploads before the route runs, and
+    attachment staging copies that file to controlled storage in bounded
+    chunks. Requiring the import parser's memory reserve here made a completed
+    upload wait until the proxy timed out on small-memory deployments even
+    though this path never materialises the attachment in memory.
+    """
+    settings = get_settings()
+    threshold = settings.upload_heavy_threshold_mb * 1024 * 1024
+    is_heavy = any(upload_size(upload) > threshold for upload in files)
+    if not is_heavy:
+        yield
+        return
+
+    global _queued_heavy_requests
+    with _queue_lock:
+        if _queued_heavy_requests >= settings.upload_queue_max_size:
+            raise UploadLimitError(
+                "UPLOAD_QUEUE_FULL",
+                "The server is processing other large uploads. Try again shortly.",
+                status_code=429,
+            )
+        _queued_heavy_requests += 1
+    semaphore = _semaphore()
+    try:
+        if not semaphore.acquire(timeout=settings.upload_queue_wait_seconds):
+            raise UploadLimitError(
+                "UPLOAD_QUEUE_TIMEOUT",
+                "The server is still processing another large upload. Try again shortly.",
+                status_code=429,
+            )
+        try:
+            yield
+        finally:
+            semaphore.release()
+    finally:
+        with _queue_lock:
+            _queued_heavy_requests = max(0, _queued_heavy_requests - 1)
+
+
 def _memory_is_available(reserve_mb: int) -> bool:
     available = available_memory_bytes()
     return available is None or available >= reserve_mb * 1024 * 1024

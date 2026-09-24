@@ -58,7 +58,7 @@ from app.services.assets.upload_service import (
     get_upload_session,
     remove_unreferenced_attachment,
 )
-from app.services.uploads import UploadLimitError, bounded_upload_analysis_sync
+from app.services.uploads import UploadLimitError, bounded_upload_staging_sync
 from app.services.sharing.share_service import ShareError, resolve_accessible_share
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
@@ -118,7 +118,7 @@ def upload_attachment_item(
 ) -> AttachmentUploadItemRead:
     try:
         _owned_upload_session(db, session_id, ownership_scope_from_request(request))
-        with bounded_upload_analysis_sync([file]):
+        with bounded_upload_staging_sync([file]):
             item = add_upload_item(
                 db,
                 session_id=session_id,
