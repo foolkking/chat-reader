@@ -21,8 +21,10 @@ storage, the active image, or the direct rollback image. Stale Chat Reader
 images and build cache were removed after an explicit inventory: Docker image
 usage fell from 6.238 GiB to 4.008 GiB, build cache from 155 MiB to 0, and root
 free space rose from 2.4 GiB to 4.9 GiB. Current production health is OK, but
-this working-tree fix is **not deployed** and the server's current runtime still
-uses the prior immutable release until an explicitly authorized deployment.
+The fix was deployed as immutable source `c3926f497c0d146c484fb2e0ce46d0a353f0e376`
+from Actions run `36000296922`. API/Web image digests are recorded in the
+release evidence below; the direct rollback generation remains
+`1b81b49609f1b955c8d85ec426e898938dcfc90a`.
 
 ## 1. Project Snapshot
 

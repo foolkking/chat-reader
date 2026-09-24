@@ -1,5 +1,29 @@
 # 生产部署
 
+## 2026-09-24 large attachment upload admission release
+
+Source `c3926f497c0d146c484fb2e0ce46d0a353f0e376` was deployed from GitHub
+Actions run `36000296922` after the API/Web quality jobs, independent image
+inspection and the full release artifact gate passed. The release keeps the
+existing attachment upload session contract but stages large attachment bytes
+through a serialized bounded disk path without the import parser memory gate.
+Production configuration now uses a 100 MiB per-file limit, a 10 MiB heavy
+upload threshold, one active heavy slot, queue capacity 8 and a 512 MiB parser
+reserve. The API and Web image digests are `sha256:92cf50500aa5ae1063694461cdf464ff194f41362d7f08e6690b88f9400b1849` and
+`sha256:44ed2f3780500a31aeee6fb2b5c046bacf32c4784a3966023cde521e055543ed`.
+
+Before replacement, the verified five-component backup was written to
+`/opt/chat-reader/backups/chat-reader-20260924T130558Z`. PostgreSQL container
+identity remained unchanged. Migration completed successfully; API, worker and
+Web were recreated with `--no-build`, and the retained direct rollback is
+`1b81b49609f1b955c8d85ec426e898938dcfc90a`. Runtime image revision, health,
+worker heartbeat and HTTPS entry checks passed. Authenticated production UI
+acceptance remains `NOT_VERIFIED` for operator-run browser verification.
+
+The release transfer archive and the accidental preflight-only `latest` API
+image were removed after verification. No PostgreSQL volume, business volume,
+user import data or rollback image was removed.
+
 ## 2026-09-22 reader navigation release
 
 Release workflow `35703956105` passed the complete API/Web quality, official
