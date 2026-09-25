@@ -1,6 +1,25 @@
 # 部署与运行环境
 
-## Current deployed snapshot (2026-09-25)
+## Current deployed snapshot (2026-09-26)
+
+The active production source is `094abf43aca1195377053a717603a5d3099ba30e`
+from GitHub Actions run `36167970048`. The verified release archive SHA-256 is
+`a430b889d45592a52a630c30884b9a5a86e82c032c4987cf5daa991b2c8a66b0`.
+API/worker image digest is
+`sha256:b200ac80339200e9ada373e899b21450540af8c72d8891c367748d8946b95446`;
+Web is `sha256:7d14c7364cc808a389a2fb3f647ec154cfe47a441881e95d96dfd66cc7495104`.
+Runtime health, worker heartbeat, HTTPS reachability and migration head
+`20260902_0032` passed after rollout. PostgreSQL was not restarted. The
+verified five-component backup is
+`/opt/chat-reader/backups/chat-reader-20260925T180542Z`.
+
+The explicit attachment upload limit is 1 GiB with a 1040 MiB exact Nginx
+allowance on `/api/attachment-upload-sessions/`. Import and Adaptive Import
+remain 500 MiB with 520 MiB exact routes. Browser preview remains capped at
+50 MiB; authenticated 1 GiB acceptance is left for operator verification.
+
+The preceding `b303930` snapshot below is retained as historical deployment
+evidence and rollback context.
 
 The active production source is `b3039300c3df1001b5afe92d0849fe9fc9addeae`
 from GitHub Actions run `36087943707`. The release used prebuilt OCI images,
@@ -32,14 +51,13 @@ The single immutable Root Admin is deployment-configured only by the server
 the pair when it changes; unchanged values do not overwrite a password changed
 in the Web UI. Share and Offline remain separate permission boundaries.
 
-## Working-tree editor and attachment preview changes (not deployed)
+## Working-tree editor and attachment preview changes
 
 The current working tree raises only the attachment upload limit to 1 GiB and
 uses an approximately 1040 MiB exact Nginx allowance for that route. Import
 and Adaptive Import remain 500 MiB with 520 MiB exact routes. Browser preview
 is capped at 50 MiB for previewable attachment types; larger files remain
-downloadable. These values are not production facts until a release is
-deployed and verified.
+downloadable. These values are active in the deployed release above.
 
 ## Import Preview request boundary
 

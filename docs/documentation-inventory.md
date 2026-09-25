@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-09-26 deployment closure: source `094abf43aca1195377053a717603a5d3099ba30e`
+from CI run `36167970048` is active. Attachment uploads use the explicit 1 GiB
+application limit and 1040 MiB exact attachment gateway; imports remain 500 MiB,
+and preview remains capped at 50 MiB. The verified backup is
+`/opt/chat-reader/backups/chat-reader-20260925T180542Z`.
+
 2026-09-25 large-upload gateway correction: production source `b303930` from
 CI run `36087943707` is active. Production's exact Import Preview,
 Adaptive Import and attachment upload paths stream from Nginx to the

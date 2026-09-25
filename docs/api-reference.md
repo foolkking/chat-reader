@@ -270,7 +270,7 @@ expiry and revocation, and cannot call private owner APIs.
 | --- | --- | --- |
 | GET | `/api/capabilities` | 上传、scanner provider、未扫描策略、基础/复杂预览和最大文件大小 |
 | POST | `/api/conversations/{id}/attachment-upload-sessions` | 创建有期限的普通上传 session，可绑定目标消息/base version |
-| POST | `/api/attachment-upload-sessions/{id}/items` | 分块落盘上传一个最长 500 MiB 的暂存项；大附件使用独立 staging 槽位，繁忙时快速返回可重试 429；成功返回 MIME/hash/大小/scan 状态 |
+| POST | `/api/attachment-upload-sessions/{id}/items` | 分块落盘上传一个最长 1 GiB 的暂存项；大附件使用独立 staging 槽位，繁忙时快速返回可重试 429；成功返回 MIME/hash/大小/scan 状态 |
 | GET | `/api/attachment-upload-sessions/{id}` | 查询 session 与多文件项状态 |
 | DELETE | `/api/attachment-upload-sessions/{id}/items/{item_id}` | 取消并清理暂存项 |
 | GET/POST | `/api/conversations/{id}/attachments` | 列出当前对话文件；或显式将已上传暂存项提升为未放置 Attachment |

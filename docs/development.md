@@ -54,7 +54,7 @@ preflight。
 | `CORS_ORIGINS` | 直接跨域请求 API 时允许的 origin | 同源 Web 通常不依赖它 |
 | `PUBLIC_WEB_BASE_URL` | Share 等公开 URL 的 base | 本地 `http://localhost:3000` |
 | `MAX_IMPORT_FILE_SIZE_MB` | 导入及用户上传单文件大小上限（MiB） | 500 |
-| `MAX_ATTACHMENT_FILE_SIZE_MB` | 附件单文件上传上限（MiB） | 500 |
+| `MAX_ATTACHMENT_FILE_SIZE_MB` | 附件单文件上传上限（MiB） | 1024 |
 | `MAX_ADAPTIVE_IMPORT_TOTAL_MB` | Adaptive Import 批次总量上限 | 512 |
 | `UPLOAD_HEAVY_THRESHOLD_MB` | 进入重型上传分析队列的阈值 | 10 |
 | `UPLOAD_MAX_ACTIVE_ANALYSIS` | 重型上传分析并发数 | 1 |

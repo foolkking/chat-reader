@@ -1,5 +1,26 @@
 # 生产部署
 
+## 2026-09-26 editor, preview and 1 GiB attachment release
+
+Source `094abf43aca1195377053a717603a5d3099ba30e` was deployed from GitHub
+Actions run `36167970048` using the immutable release artifact. API/Web quality,
+browser/PWA gates, image inspection and artifact inspection passed. The release
+archive SHA-256 is
+`a430b889d45592a52a630c30884b9a5a86e82c032c4987cf5daa991b2c8a66b0`.
+
+Production now runs the bounded Markdown source editor, attachment tray,
+revisioned preview/save handoff and Reader high-speed virtualization recovery.
+Attachment uploads use 1 GiB with a 1040 MiB exact Nginx route; Import and
+Adaptive Import remain 500 MiB with 520 MiB exact routes, and browser preview
+remains capped at 50 MiB. Runtime health, HTTPS, worker heartbeat and
+`20260902_0032` migration head passed. PostgreSQL was not restarted. The
+verified backup is `/opt/chat-reader/backups/chat-reader-20260925T180542Z`.
+
+Deployment cleanup removed four superseded release transfer directories after
+exact path validation. They were re-downloadable release archives, not database
+backups, named volumes or user import data. Authenticated 1 GiB browser
+acceptance remains an operator verification step.
+
 ## 2026-09-25 direct large-upload gateway release
 
 Source `b3039300c3df1001b5afe92d0849fe9fc9addeae` was deployed from GitHub

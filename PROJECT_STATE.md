@@ -1,6 +1,6 @@
 # Project State
 
-## 0A. Working-tree editor and attachment preview changes (not deployed)
+## 0A. Deployed editor, attachment preview and reader performance release (2026-09-26)
 
 The current working tree adds a bounded source-editor attachment tray so a
 large set of pending files scrolls inside the tray instead of expanding the
@@ -15,7 +15,23 @@ preview is capped at 50 MiB for previewable attachment types; larger files
 remain downloadable. These changes are in the working tree and are not yet
 deployed or production-verified.
 
-Last updated: 2026-09-25
+The immutable release is deployed and production-verified from source
+`094abf43aca1195377053a717603a5d3099ba30e` (GitHub Actions run
+`36167970048`). The verified archive SHA-256 is
+`a430b889d45592a52a630c30884b9a5a86e82c032c4987cf5daa991b2c8a66b0`.
+API/worker image digest is
+`sha256:b200ac80339200e9ada373e899b21450540af8c72d8891c367748d8946b95446`;
+Web is `sha256:7d14c7364cc808a389a2fb3f647ec154cfe47a441881e95d96dfd66cc7495104`.
+Production health, worker heartbeat, HTTPS entry and Alembic head
+`20260902_0032` passed after rollout. PostgreSQL was not restarted. The
+verified backup is `/opt/chat-reader/backups/chat-reader-20260925T180542Z`.
+
+Attachment uploads use the explicit production 1 GiB limit and attachment-only
+1040 MiB Nginx route; Import and Adaptive Import remain 500 MiB with 520 MiB
+routes. Browser preview remains capped at 50 MiB. Authenticated 1 GiB browser
+acceptance remains an operator verification step.
+
+Last updated: 2026-09-26
 
 ## 0. Upload failure diagnosis and attachment limit update (2026-09-24)
 
@@ -62,8 +78,8 @@ generation is `050f257ceb702490885bae8aabcbf5a1ce60ba84`.
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
 | Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
-| Branch / baseline | `master`; deployed source SHA `b3039300c3df1001b5afe92d0849fe9fc9addeae` |
-| Deployment | Production runs immutable `b3039300c3df1001b5afe92d0849fe9fc9addeae`; `050f257` is the direct rollback generation |
+| Branch / baseline | `master`; deployed source SHA `094abf43aca1195377053a717603a5d3099ba30e` |
+| Deployment | Production runs immutable `094abf43aca1195377053a717603a5d3099ba30e`; `b303930` remains the direct rollback generation |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## Current working-tree implementation (2026-09-22)
