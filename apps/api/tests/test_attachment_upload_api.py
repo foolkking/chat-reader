@@ -173,6 +173,33 @@ def test_large_attachment_disk_staging_does_not_require_parser_memory_reserve(
     assert response.json()["byte_size"] == upload_size
 
 
+def test_attachment_upload_enforces_its_own_configured_limit_and_cleans_rejected_stage(
+    client,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    conversation_id, message = _conversation_with_message(client)
+    storage_dir = tmp_path / "assets"
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(storage_dir))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    monkeypatch.setenv("MAX_ATTACHMENT_FILE_SIZE_MB", "1")
+    get_settings.cache_clear()
+    session = _create_session(client, conversation_id, message)
+
+    try:
+        response = client.post(
+            f"/api/attachment-upload-sessions/{session['id']}/items",
+            files={"file": ("too-large.bin", b"x" * (1024 * 1024 + 1), "application/octet-stream")},
+        )
+    finally:
+        get_settings.cache_clear()
+
+    assert response.status_code == 413
+    assert list((storage_dir / "quarantine").glob("*.part")) == []
+
+
 def test_disabled_scanner_upload_finalize_then_fast_message_save_and_unplaced_file(client, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
     monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")

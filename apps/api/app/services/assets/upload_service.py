@@ -96,7 +96,7 @@ def add_upload_item(
     try:
         staged = store.stage(
             source,
-            max_bytes=get_settings().max_import_file_size_mb * 1024 * 1024,
+            max_bytes=get_settings().max_attachment_file_size_mb * 1024 * 1024,
             quarantine=True,
         )
     except ValueError as exc:

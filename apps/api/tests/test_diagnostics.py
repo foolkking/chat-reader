@@ -250,6 +250,7 @@ def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
     nginx = (root / "deploy" / "nginx-chat-reader.conf").read_text(encoding="utf-8")
     preview_location = nginx.split("location = /api/imports/preview", 1)[1].split("location /", 1)[0]
 
-    assert "client_max_body_size 110m;" in preview_location
-    assert nginx.count("client_max_body_size 110m;") == 2
-    assert "client_max_body_size 110m;" in nginx
+    assert "client_max_body_size 520m;" in preview_location
+    assert "location ^~ /api/attachment-upload-sessions/" in nginx
+    assert nginx.count("client_max_body_size 520m;") == 3
+    assert "client_max_body_size 520m;" in nginx

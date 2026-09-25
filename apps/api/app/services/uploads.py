@@ -22,6 +22,8 @@ class UploadLimitError(ValueError):
 
 _analysis_slots: threading.BoundedSemaphore | None = None
 _analysis_slot_count: int | None = None
+_staging_slots: threading.BoundedSemaphore | None = None
+_staging_slot_count: int | None = None
 _queue_lock = threading.Lock()
 _queued_heavy_requests = 0
 
@@ -66,6 +68,21 @@ def _semaphore() -> threading.BoundedSemaphore:
         _analysis_slots = threading.BoundedSemaphore(configured)
         _analysis_slot_count = configured
     return _analysis_slots
+
+
+def _staging_semaphore() -> threading.BoundedSemaphore:
+    """Return the independent slot used by attachment disk staging.
+
+    Staging only copies an already-spooled upload to controlled storage. It
+    must not wait behind the parser's memory-heavy analysis slot, otherwise a
+    completed browser upload can sit until the reverse proxy times out.
+    """
+    global _staging_slots, _staging_slot_count
+    configured = get_settings().upload_max_active_analysis
+    if _staging_slots is None or _staging_slot_count != configured:
+        _staging_slots = threading.BoundedSemaphore(configured)
+        _staging_slot_count = configured
+    return _staging_slots
 
 
 def upload_size(upload: UploadFile) -> int:
@@ -189,12 +206,15 @@ def bounded_upload_staging_sync(files: Iterable[UploadFile]) -> Iterator[None]:
                 status_code=429,
             )
         _queued_heavy_requests += 1
-    semaphore = _semaphore()
+    semaphore = _staging_semaphore()
     try:
-        if not semaphore.acquire(timeout=settings.upload_queue_wait_seconds):
+        # Do not block the request thread while an import is being parsed.
+        # A retryable response is safer than holding a worker until nginx's
+        # request timeout, and the parser's slot is intentionally unrelated.
+        if not semaphore.acquire(blocking=False):
             raise UploadLimitError(
-                "UPLOAD_QUEUE_TIMEOUT",
-                "The server is still processing another large upload. Try again shortly.",
+                "UPLOAD_STAGING_BUSY",
+                "The server is staging another large attachment. Try again shortly.",
                 status_code=429,
             )
         try:

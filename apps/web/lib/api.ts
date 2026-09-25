@@ -1448,6 +1448,7 @@ function localizedImportError(code: string): string | null {
     SOURCE_UNSUPPORTED: "只支持 JSON、JSONL、GZip JSON 与 Markdown 文件。",
     FILE_EMPTY: "所选文件为空，请选择包含对话内容的文件。",
     FILE_TOO_LARGE: "所选文件超过当前单文件大小限制。",
+    UPLOAD_STAGING_BUSY: "服务器正在处理另一个大文件，请稍后重试。",
     SESSION_TOO_LARGE: "替换后的文件会超过本次导入总容量限制。",
     SESSION_STATE_INVALID: "当前导入状态已经变化，请返回概览后重试。",
   };

@@ -96,9 +96,51 @@ def test_synchronous_attachment_staging_uses_the_shared_heavy_slot_without_memor
     monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 1)
     uploads._analysis_slots = None
     uploads._analysis_slot_count = None
+    uploads._staging_slots = None
+    uploads._staging_slot_count = None
     uploads._queued_heavy_requests = 0
 
     with uploads.bounded_upload_staging_sync([_upload(2 * 1024 * 1024)]):
         assert uploads._queued_heavy_requests == 1
 
     assert uploads._queued_heavy_requests == 0
+
+
+def test_attachment_staging_does_not_wait_for_parser_slot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(uploads, "get_settings", lambda: _settings())
+    uploads._analysis_slots = None
+    uploads._analysis_slot_count = None
+    uploads._staging_slots = None
+    uploads._staging_slot_count = None
+    uploads._queued_heavy_requests = 0
+
+    # Simulate the parser already holding its only memory-heavy slot.
+    assert uploads._semaphore().acquire(blocking=False)
+    try:
+        with uploads.bounded_upload_staging_sync([_upload(2 * 1024 * 1024)]):
+            pass
+    finally:
+        uploads._semaphore().release()
+
+
+def test_attachment_staging_busy_is_immediately_retryable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(uploads, "get_settings", lambda: _settings())
+    uploads._analysis_slots = None
+    uploads._analysis_slot_count = None
+    uploads._staging_slots = None
+    uploads._staging_slot_count = None
+    uploads._queued_heavy_requests = 0
+
+    assert uploads._staging_semaphore().acquire(blocking=False)
+    try:
+        with pytest.raises(uploads.UploadLimitError) as caught:
+            with uploads.bounded_upload_staging_sync([_upload(2 * 1024 * 1024)]):
+                pass
+        assert caught.value.code == "UPLOAD_STAGING_BUSY"
+        assert caught.value.status_code == 429
+    finally:
+        uploads._staging_semaphore().release()

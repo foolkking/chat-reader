@@ -68,7 +68,7 @@ def capabilities() -> CapabilitiesResponse:
             complex_preview_enabled=bool(
                 settings.complex_attachment_preview_enabled and settings.attachment_preview_origin
             ),
-            max_file_size_bytes=settings.bundle_max_object_bytes,
+            max_file_size_bytes=settings.max_attachment_file_size_mb * 1024 * 1024,
             viewer=True,
             range=True,
             imageDerivatives=True,

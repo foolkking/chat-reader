@@ -1,28 +1,33 @@
 # Project State
 
-Last updated: 2026-09-24
+Last updated: 2026-09-25
 
-## 0. Upload failure diagnosis and working-tree fix (2026-09-24)
+## 0. Upload failure diagnosis and attachment limit update (2026-09-24)
 
 Production evidence for a roughly 33 MiB attachment showed that the multipart
 request reached 100%, then spent about 30 seconds in the attachment item route
-before the reverse proxy returned 500. Nginx reported only normal request-body
-buffering; there was no 413, disk-full error, or kernel OOM event. The host was
-under memory pressure (about 142 MiB available before cleanup), but the direct
-failure was the attachment route entering the import parser's 512 MiB memory
-reserve gate even though attachment staging only copies the already-spooled
-file to disk in bounded chunks. The working tree now gives attachment staging
-its own serialized heavy-upload slot without the parser memory gate, preserves
-retryable queue responses, and teaches the Web client to show nested API error
-messages.
+before the reverse proxy returned 500. Nginx reported normal request-body
+buffering and its Chat Reader server block still had a 60 MiB default body cap;
+there was no 413, disk-full error, or kernel OOM event for the 33 MiB request.
+Host memory was pressured (270 MiB available at the latest check), but the
+direct failure was attachment staging sharing the import parser semaphore and
+blocking for about 30 seconds. Working-tree changes now give disk staging an
+independent nonblocking slot and expose a retryable 429 if that slot is busy.
+All user upload entry points now use a 500 MiB cap with 520 MiB exact Nginx
+allowances. Heavy import parsing still passes the memory-aware admission gate
+and returns a retryable 429 when the small production host cannot safely
+materialize the request. This update is implemented and focused-tested locally
+but has not been committed or deployed.
 
 The server was cleaned without touching PostgreSQL, named volumes, import
 storage, the active image, or the direct rollback image. Stale Chat Reader
 images and build cache were removed after an explicit inventory: Docker image
-usage fell from 6.238 GiB to 4.008 GiB, build cache from 155 MiB to 0, and root
-free space rose from 2.4 GiB to 4.9 GiB. Current production health is OK, but
-The fix was deployed as immutable source `c3926f497c0d146c484fb2e0ce46d0a353f0e376`
-from Actions run `36000296922`. API/Web image digests are recorded in the
+usage fell from 6.238 GiB to 3.955 GiB, the remaining 160.7 MiB build cache was
+then pruned to 0, and root free space is now 4.3 GiB (89%). Current production health is OK and it
+still runs immutable source
+`c3926f497c0d146c484fb2e0ce46d0a353f0e376` from Actions run `36000296922`.
+The new independent staging-slot and 500 MiB follow-up is local only; it has
+not been committed or deployed. API/Web image digests are recorded in the
 release evidence below; the direct rollback generation remains
 `1b81b49609f1b955c8d85ec426e898938dcfc90a`.
 
@@ -77,7 +82,7 @@ Implemented in the working tree:
 - Version selection/deletion returns the canonical mutation immediately and
   queues idempotent derived search/TOC refresh work; the Web panel updates its
   local history without waiting for a full refetch.
-- User uploads default to 100 MiB per file. Imports and attachment staging use
+- User uploads default to 500 MiB per file. Imports and attachment staging use
   bounded reads; uploads above 10 MiB are admitted through a single-slot,
   memory-aware in-process admission gate with explicit retryable 429 states.
   This is not a durable upload queue and does not provide re-entry or a queue

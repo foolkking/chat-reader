@@ -7,10 +7,14 @@ Actions run `36000296922` after the API/Web quality jobs, independent image
 inspection and the full release artifact gate passed. The release keeps the
 existing attachment upload session contract but stages large attachment bytes
 through a serialized bounded disk path without the import parser memory gate.
-Production configuration now uses a 100 MiB per-file limit, a 10 MiB heavy
+The deployed production configuration uses a 100 MiB per-file upload limit, with a 10 MiB heavy
 upload threshold, one active heavy slot, queue capacity 8 and a 512 MiB parser
 reserve. The API and Web image digests are `sha256:92cf50500aa5ae1063694461cdf464ff194f41362d7f08e6690b88f9400b1849` and
 `sha256:44ed2f3780500a31aeee6fb2b5c046bacf32c4784a3966023cde521e055543ed`.
+
+The working tree contains a follow-up that raises all user-upload entry points
+to 500 MiB and adds a separate attachment staging slot. It is not committed or
+deployed yet.
 
 Before replacement, the verified five-component backup was written to
 `/opt/chat-reader/backups/chat-reader-20260924T130558Z`. PostgreSQL container
@@ -362,9 +366,10 @@ Reader image generations remain available for rollback; older unreferenced
 Chat Reader images were removed without touching unrelated images or volumes.
 
 Adaptive multi-file import adds an exact `/api/adaptive-import/sessions`
-location with a 520 MiB multipart limit. The API independently enforces 100 MiB
-per file, 512 MiB per session and 500 files; the default upload boundary is
-110 MiB for multipart overhead.
+location with a 520 MiB multipart limit. At the time of this deployed release,
+the API enforced 100 MiB per file, 512 MiB per session and 500 files; the
+default upload boundary was 110 MiB for multipart overhead. A later 500 MiB
+follow-up is currently present only in the working tree and is not deployed.
 
 The supplied Desktop JSON/Markdown pair was verified locally as a 66-message
 `exact_match` preview in about 1.2 seconds. Production authenticated preview
@@ -971,7 +976,7 @@ docker compose --env-file .env.production -f docker-compose.production.yml ps -a
 curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-将反向代理 upstream 指向 `127.0.0.1:<WEB_PORT>`，由代理处理 TLS、HTTP 到 HTTPS、请求体上限和访问控制。仓库中的 `deploy/nginx-chat-reader.conf` 只是 HTTP 示例，不是生产证书配置。生产配置必须把 `110m` 请求体上限限定在精确的 `/api/imports/preview` location；其他 route 保持全局 `60m` 上限。
+将反向代理 upstream 指向 `127.0.0.1:<WEB_PORT>`，由代理处理 TLS、HTTP 到 HTTPS、请求体上限和访问控制。仓库中的 `deploy/nginx-chat-reader.conf` 只是 HTTP 示例，不是生产证书配置。当前 500 MiB 上传 follow-up 的生产配置应把 `520m` 请求体上限限定在精确的导入预览、Adaptive Import 和附件上传 location；其他 route 保持全局 `60m` 上限。该 follow-up 尚未部署。
 
 ## 发布前检查
 

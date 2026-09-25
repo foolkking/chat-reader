@@ -28,7 +28,11 @@ in the Web UI. Share and Offline remain separate permission boundaries.
 
 ## Import Preview request boundary
 
-The application limit defaults to 100 MiB per user-uploaded file and Preview
+The 500 MiB values in this section describe the current working-tree follow-up.
+The active production container has not received this change yet and still
+uses its deployed 100 MiB environment value until the next approved rollout.
+
+The application limit defaults to 500 MiB per user-uploaded file and Preview
 accepts at most one JSON plus one Markdown file. The versioned Nginx config
 keeps a 110 MiB default upload boundary and repeats it for the exact
 `/api/imports/preview` location, allowing multipart overhead for a maximum-size
@@ -36,14 +40,15 @@ file. The API still enforces the per-file limit before parsing; non-upload
 endpoints remain governed by their application contracts.
 
 Adaptive batches use the separate exact `/api/adaptive-import/sessions`
-location with `client_max_body_size 520m`; application limits remain 100 MiB
+location with `client_max_body_size 520m`; application limits remain 500 MiB
 per file, 512 MiB total and 500 files. No other route inherits this allowance.
 
-Ordinary attachment upload items use the same 100 MiB per-file limit. Files
-over `UPLOAD_HEAVY_THRESHOLD_MB` are admitted through the single-slot heavy
-upload gate. Attachment staging is a bounded disk copy and does not wait for
-the import parser memory reserve; parser-backed import analysis still checks
-`UPLOAD_MEMORY_RESERVE_MB` and returns a retryable 429 when memory is low.
+Ordinary attachment upload items use `MAX_ATTACHMENT_FILE_SIZE_MB` (500 MiB by
+default), independently of the import parser limit. The exact
+`/api/attachment-upload-sessions/` Nginx location allows 520 MiB for multipart
+overhead. Large attachment staging is a bounded disk copy using its own
+admission slot; parser-backed imports retain the memory reserve check and return
+a retryable 429 when memory is low.
 
 ## Worker memory boundary
 

@@ -25,9 +25,10 @@ class Settings(BaseSettings):
         default=["http://localhost:3000", "http://localhost:3001"],
         alias="CORS_ORIGINS",
     )
-    # All user-provided import/attachment payloads share this per-file cap.  The
-    # archive/bundle limits below remain separate internal safety limits.
-    max_import_file_size_mb: int = Field(default=100, alias="MAX_IMPORT_FILE_SIZE_MB", ge=1, le=10240)
+    # All user upload entry points share this cap. Heavy parsing still passes
+    # through the memory-aware admission gate before bytes are materialized.
+    max_import_file_size_mb: int = Field(default=500, alias="MAX_IMPORT_FILE_SIZE_MB", ge=1, le=10240)
+    max_attachment_file_size_mb: int = Field(default=500, alias="MAX_ATTACHMENT_FILE_SIZE_MB", ge=1, le=10240)
     max_adaptive_import_total_mb: int = Field(default=512, alias="MAX_ADAPTIVE_IMPORT_TOTAL_MB")
     upload_heavy_threshold_mb: int = Field(default=10, alias="UPLOAD_HEAVY_THRESHOLD_MB", ge=1, le=100)
     upload_max_active_analysis: int = Field(default=1, alias="UPLOAD_MAX_ACTIVE_ANALYSIS", ge=1, le=16)

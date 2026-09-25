@@ -36,9 +36,9 @@ The pairing contract is:
 Parser identities are `chat-reader-import-v5` and `markdown-parser-v5`. Alignment diagnostics include `source`, zero-based `source_index`, `role`, optional `timestamp` and `reason`. Bounded pairing errors remain structured HTTP 422 responses (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, `pairing_ambiguous`, `alignment_failed`).
 
 Preview accepts no more than two multipart files: one JSON and one Markdown.
-`MAX_IMPORT_FILE_SIZE_MB` defaults to 100 MiB per user file and is checked before the
-pair is parsed. This permits a roughly 100 MiB two-file request without
-weakening either per-file bound.
+`MAX_IMPORT_FILE_SIZE_MB` defaults to 500 MiB per import file and is checked before the
+pair is parsed. The Adaptive Import session retains its separate 512 MiB
+aggregate bound, so a batch is still bounded even when one file is large.
 
 Requests containing a file over `UPLOAD_HEAVY_THRESHOLD_MB` enter the bounded
 analysis admission queue. The queue has one active analysis slot by default,
