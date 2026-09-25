@@ -10,6 +10,15 @@ const gateId = (process.env.PLAYWRIGHT_GATE_ID ?? "local")
   .trim()
   .replace(/[^a-zA-Z0-9_-]+/g, "-")
   .replace(/^-+|-+$/g, "") || "local";
+const testIgnore = runPwaNegativeMatrix
+  ? []
+  : [
+      "**/pwa-negative.spec.ts",
+      // The release workflow runs this destructive browser probe in its own
+      // required gate. Repeating it inside the long baseline can crash the
+      // bundled Chromium process after the assertions have already passed.
+      ...(gateId === "default-pwa" ? ["**/csp-enforcement.spec.ts"] : []),
+    ];
 const gateEvidenceReporter = process.env.PLAYWRIGHT_GATE_ID
   ? [["./e2e/gate-evidence-reporter.ts", {
       gateId,
@@ -19,7 +28,7 @@ const gateEvidenceReporter = process.env.PLAYWRIGHT_GATE_ID
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: runPwaNegativeMatrix ? [] : ["**/pwa-negative.spec.ts"],
+  testIgnore,
   outputDir: `test-results/${gateId}`,
   timeout: 90_000,
   expect: { timeout: 60_000 },
