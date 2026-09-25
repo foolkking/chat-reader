@@ -1,6 +1,7 @@
 # Markdown 文档台账
 
-2026-09-25 large-upload gateway correction: production's exact Import Preview,
+2026-09-25 large-upload gateway correction: production source `b303930` from
+CI run `36087943707` is active. Production's exact Import Preview,
 Adaptive Import and attachment upload paths stream from Nginx to the
 loopback-only FastAPI port, bypassing Next.js's 10 MiB proxy request clone.
 The current contract is synchronized in `PROJECT_STATE.md`,

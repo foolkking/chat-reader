@@ -20,20 +20,23 @@ All user upload entry points now use a 500 MiB cap with 520 MiB exact Nginx
 allowances. Heavy import parsing still passes the memory-aware admission gate
 and returns a retryable 429 when the small production host cannot safely
 materialize the request. This update is deployed from immutable source
-`050f257ceb702490885bae8aabcbf5a1ce60ba84`; the direct-upload gateway
-follow-up is pending its immutable release at the time of this source update.
+`b3039300c3df1001b5afe92d0849fe9fc9addeae`. The direct-upload gateway is part
+of that immutable release rather than a server-only hotfix.
 
 The server was cleaned without touching PostgreSQL, named volumes, import
 storage, the active image, or the direct rollback image. Stale Chat Reader
 images and build cache were removed after an explicit inventory. After the new
 verified five-component backup and post-release cleanup, root free space is
 3.6 GiB (91%). Current production health is OK and it runs immutable source
-`050f257ceb702490885bae8aabcbf5a1ce60ba84`. The independent staging slot and
-500 MiB limits are active in production. CI
-run `36082916518` passed API/Web quality, browser/PWA gates, image inspection
-and artifact inspection. The verified pre-deploy backup is
+`b3039300c3df1001b5afe92d0849fe9fc9addeae`. The independent staging slot,
+500 MiB limits and Nginx-to-loopback-API streaming routes are active in
+production. CI run `36087943707` passed API/Web quality, browser/PWA gates,
+image inspection and independent artifact inspection. A 65 MiB anonymous
+gateway probe reached FastAPI without any Next.js body-limit, proxy-reset or
+socket error; authenticated upload acceptance remains `NOT VERIFIED`. The
+verified pre-deploy backup is
 `/opt/chat-reader/backups/chat-reader-20260925T020553Z`; the direct rollback
-generation is `c3926f497c0d146c484fb2e0ce46d0a353f0e376`.
+generation is `050f257ceb702490885bae8aabcbf5a1ce60ba84`.
 
 ## 1. Project Snapshot
 
@@ -44,8 +47,8 @@ generation is `c3926f497c0d146c484fb2e0ce46d0a353f0e376`.
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
 | Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
-| Branch / baseline | `master`; deployed source SHA `050f257ceb702490885bae8aabcbf5a1ce60ba84` |
-| Deployment | Production runs immutable `050f257ceb702490885bae8aabcbf5a1ce60ba84`; `c3926f4` is the direct rollback generation |
+| Branch / baseline | `master`; deployed source SHA `b3039300c3df1001b5afe92d0849fe9fc9addeae` |
+| Deployment | Production runs immutable `b3039300c3df1001b5afe92d0849fe9fc9addeae`; `050f257` is the direct rollback generation |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## Current working-tree implementation (2026-09-22)

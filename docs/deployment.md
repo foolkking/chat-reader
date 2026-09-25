@@ -1,5 +1,38 @@
 # 生产部署
 
+## 2026-09-25 direct large-upload gateway release
+
+Source `b3039300c3df1001b5afe92d0849fe9fc9addeae` was deployed from GitHub
+Actions run `36087943707`. API/Web quality, the browser/PWA matrix, immutable
+image inspection and independent artifact inspection passed. The release
+archive SHA-256 was
+`fe49253204d2ea34f3f5bae9e93e5753f0f678111fadeb42b72df235d2d5cc3b`.
+
+The three exact large-upload locations now stream from Nginx directly to the
+API's loopback-only `127.0.0.1:8000` listener with
+`proxy_request_buffering off`. Browser URLs remain same-origin, while large
+request bodies no longer pass through Next.js's 10 MiB request clone. The
+500 MiB application limits and 520 MiB exact proxy limits remain active.
+
+API/worker image digest is
+`sha256:49f97670c4205d091e4b9139e80c9ba82c2945f1809de32b8affaabc4bccc3c8`;
+Web is
+`sha256:31809288fea379183bb56fd98b3c0321f359a4e4029e76ddfc02dba1fe0d81b4`.
+Migration is `20260902_0032 (head)`, PostgreSQL was not restarted, runtime
+health and worker heartbeat pass, HTTPS health is 200 and HTTP redirects to
+HTTPS. A 65 MiB anonymous request reached FastAPI and returned the expected
+permission response without a Next.js body-limit or proxy-reset error. This is
+gateway evidence, not authenticated attachment acceptance; the latter remains
+`NOT VERIFIED` for operator-run Web verification.
+
+The already verified five-component pre-release recovery point
+`/opt/chat-reader/backups/chat-reader-20260925T020553Z` was retained. The
+current and direct rollback (`050f257`) image generations are retained. The
+superseded `c3926f4` images, an accidental preflight-only `latest` image,
+release transfer archive and all Docker build cache were removed without
+touching PostgreSQL, named volumes, imports or the verified backup. Root free
+space is 3.6 GiB after cleanup.
+
 ## 2026-09-25 500 MiB upload and staging isolation release
 
 Source `050f257ceb702490885bae8aabcbf5a1ce60ba84` was deployed from GitHub
@@ -1004,7 +1037,7 @@ docker compose --env-file .env.production -f docker-compose.production.yml ps -a
 curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-将反向代理 upstream 指向 `127.0.0.1:<WEB_PORT>`，由代理处理 TLS、HTTP 到 HTTPS、请求体上限和访问控制。仓库中的 `deploy/nginx-chat-reader.conf` 只是 HTTP 示例，不是生产证书配置。当前 500 MiB 上传 follow-up 的生产配置应把 `520m` 请求体上限限定在精确的导入预览、Adaptive Import 和附件上传 location；其他 route 保持全局 `60m` 上限。该 follow-up 尚未部署。
+将反向代理 upstream 指向 `127.0.0.1:<WEB_PORT>`，由代理处理 TLS、HTTP 到 HTTPS、请求体上限和访问控制。仓库中的 `deploy/nginx-chat-reader.conf` 只是 HTTP 示例，不是生产证书配置。当前生产配置已把 `520m` 请求体上限限定在精确的导入预览、Adaptive Import 和附件上传 location，并将这些请求直接流向回环 API；其他 route 保持全局 `60m` 上限。
 
 ## 发布前检查
 

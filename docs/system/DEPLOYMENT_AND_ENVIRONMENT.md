@@ -1,15 +1,21 @@
 # 部署与运行环境
 
-## Current deployed snapshot (2026-09-02)
+## Current deployed snapshot (2026-09-25)
 
-The active production source is `7101f6abd6b6d1e84fe50e08a1208da5b9eea3cb`
-from GitHub Actions run `33579404027`. The release used prebuilt OCI images,
+The active production source is `b3039300c3df1001b5afe92d0849fe9fc9addeae`
+from GitHub Actions run `36087943707`. The release used prebuilt OCI images,
 the exact migration image and explicit immutable `API_IMAGE`/`WEB_IMAGE`
 bindings; only the API, import-worker and Web services were recreated.
 PostgreSQL was not restarted or replaced. Alembic `20260902_0032` is current.
 Runtime health, HTTPS reachability, worker heartbeat and anonymous private-route
 boundaries were verified after rollout. Owner-authenticated production UI
 acceptance remains `NOT_VERIFIED` for operator-run Web verification.
+
+The three exact large-upload routes bypass Next.js and stream from Nginx to a
+loopback-only FastAPI listener. A 65 MiB anonymous gateway probe reached the
+API without Next.js body-limit or proxy-reset errors. Application limits are
+500 MiB and exact Nginx limits are 520 MiB; authenticated upload acceptance is
+still separate and `NOT_VERIFIED`.
 
 The 2026-09-02 settings-visibility rollout used archive SHA-256
 `691b71b7822025610d0d80cfc6ef19f33b316f30312042f70b2b31b627f843ef`.
