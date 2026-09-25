@@ -6,7 +6,7 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { Compartment } from "@codemirror/state";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { Bold, ChevronDown, Code2, Heading2, Italic, Link2, List, ListOrdered, ListTodo, Minus, Paperclip, Quote, Redo2, Save, SaveAll, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignLeft, AlertCircle, Bold, CheckCircle2, ChevronDown, Code2, Heading2, Italic, Link2, List, ListOrdered, ListTodo, LoaderCircle, Minus, MoreHorizontal, Paperclip, Quote, Redo2, Save, SaveAll, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { AttachmentRead } from "../../lib/types";
@@ -104,9 +104,10 @@ export function EditMessageForm({
   const [isSaving, setIsSaving] = useState(false);
   const [attachmentDrafts, setAttachmentDrafts] = useState<Record<string, AttachmentDraftState>>({});
   const [attachmentTrayOpen, setAttachmentTrayOpen] = useState(true);
-  const attachmentTrayManualRef = useRef(false);
   const attachmentTrayListRef = useRef<HTMLDivElement | null>(null);
   const attachmentTokensRef = useRef<Set<string>>(new Set());
+  const attachmentFailureTokensRef = useRef<Set<string>>(new Set());
+  const [attachmentActionToken, setAttachmentActionToken] = useState<string | null>(null);
   const toolsPanelRef = useRef<HTMLDivElement | null>(null);
   const previewPanelRef = useRef<HTMLElement | null>(null);
   const previewRevisionRef = useRef(0);
@@ -205,7 +206,10 @@ export function EditMessageForm({
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
       onError: (token, message) => {
-        if (!attachmentTrayManualRef.current) setAttachmentTrayOpen(true);
+        if (!attachmentFailureTokensRef.current.has(token)) {
+          attachmentFailureTokensRef.current.add(token);
+          setAttachmentTrayOpen(true);
+        }
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current);
       },
     };
@@ -320,6 +324,22 @@ export function EditMessageForm({
     document.addEventListener("keydown", closeOnEscape);
     return () => { document.removeEventListener("pointerdown", closeOnOutside); document.removeEventListener("keydown", closeOnEscape); };
   }, [editorToolsOpen, onEditorToolsOpenChange, onPreviewChange, showPreview]);
+
+  useEffect(() => {
+    if (!attachmentActionToken) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      if (!(event.target as HTMLElement).closest("[data-attachment-action-menu='true']")) setAttachmentActionToken(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAttachmentActionToken(null);
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [attachmentActionToken]);
   const handleEditorUpdate = useCallback((update: ViewUpdate) => {
     if (!update.docChanged && !update.selectionSet) return;
     if (update.docChanged) editorRevisionRef.current += 1;
@@ -540,7 +560,7 @@ export function EditMessageForm({
           <CommandGroup label={zh ? "结构" : "Structure"} commands={[{ label: zh ? "标题" : "Heading", icon: <Heading2 className="h-4 w-4" />, command: "heading" }, { label: zh ? "引用" : "Quote", icon: <Quote className="h-4 w-4" />, command: "quote" }, { label: zh ? "分隔线" : "Rule", icon: <Minus className="h-4 w-4" />, command: "rule" }, { label: zh ? "代码块" : "Code block", icon: <Code2 className="h-4 w-4" />, command: "code-block" }]} onCommand={dispatchCommand} />
           <CommandGroup label={zh ? "列表" : "Lists"} commands={[{ label: zh ? "无序列表" : "Bullets", icon: <List className="h-4 w-4" />, command: "bullets" }, { label: zh ? "有序列表" : "Numbered", icon: <ListOrdered className="h-4 w-4" />, command: "numbered" }, { label: zh ? "任务清单" : "Tasks", icon: <ListTodo className="h-4 w-4" />, command: "tasks" }]} onCommand={dispatchCommand} />
           <CommandGroup label={zh ? "插入" : "Insert"} commands={[{ label: zh ? "链接" : "Link", icon: <Link2 className="h-4 w-4" />, command: "link" }, { label: zh ? "表格" : "Table", icon: <Table2 className="h-4 w-4" />, command: "table" }, { label: zh ? "附件引用" : "Attachment reference", icon: <Paperclip className="h-4 w-4" />, command: "attachment" }]} onCommand={dispatchCommand} />
-          <CommandGroup label={zh ? "编辑" : "Edit"} commands={[{ label: zh ? "撤销" : "Undo", icon: <Undo2 className="h-4 w-4" />, command: "undo" }, { label: zh ? "重做" : "Redo", icon: <Redo2 className="h-4 w-4" />, command: "redo" }]} onCommand={dispatchCommand} />
+          <CommandGroup label={zh ? "编辑" : "Edit"} commands={[{ label: zh ? "撤销" : "Undo", icon: <Undo2 className="h-4 w-4" />, command: "undo" }, { label: zh ? "重做" : "Redo", icon: <Redo2 className="h-4 w-4" />, command: "redo" }, { label: zh ? "格式化当前段落" : "Format paragraph", icon: <AlignLeft className="h-4 w-4" />, command: "format" }]} onCommand={dispatchCommand} />
         </div>
       </div> : null}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -588,14 +608,43 @@ export function EditMessageForm({
           </div>
         </div> : null}
         {visibleAttachmentDrafts.length ? <div className="rounded-lg border border-ui bg-subtle p-2 text-xs" data-testid="source-editor-attachment-drafts">
-          <div className="mb-1 flex items-center justify-between gap-2" role="status" aria-live="polite"><span className="min-w-0 truncate text-secondary">{zh ? `附件 · ${visibleAttachmentDrafts.length} 个` : `Attachments · ${visibleAttachmentDrafts.length}`}{uploadingAttachmentCount > 0 ? (zh ? ` · ${uploadingAttachmentCount} 个上传中 · ${attachmentProgress}%` : ` · ${uploadingAttachmentCount} uploading · ${attachmentProgress}%`) : failedAttachmentCount > 0 ? (zh ? ` · ${failedAttachmentCount} 个失败` : ` · ${failedAttachmentCount} failed`) : (zh ? " · 已准备保存" : " · Ready to save")}</span><button type="button" onClick={() => { attachmentTrayManualRef.current = true; setAttachmentTrayOpen((value) => !value); }} className="min-h-8 shrink-0 rounded-md px-2 text-secondary hover:bg-surface" aria-expanded={attachmentTrayOpen}>{attachmentTrayOpen ? (zh ? "收起" : "Collapse") : (zh ? "展开" : "Expand")}</button></div>
+          <div className="mb-1 flex items-center justify-between gap-2" role="status" aria-live="polite"><span className="min-w-0 truncate text-secondary">{zh ? `附件 · ${visibleAttachmentDrafts.length} 个` : `Attachments · ${visibleAttachmentDrafts.length}`}{uploadingAttachmentCount > 0 ? (zh ? ` · ${uploadingAttachmentCount} 个上传中 · ${attachmentProgress}%` : ` · ${uploadingAttachmentCount} uploading · ${attachmentProgress}%`) : failedAttachmentCount > 0 ? (zh ? ` · ${failedAttachmentCount} 个失败` : ` · ${failedAttachmentCount} failed`) : (zh ? " · 已准备保存" : " · Ready to save")}</span><button type="button" onClick={() => setAttachmentTrayOpen((value) => !value)} className="min-h-8 shrink-0 rounded-md px-2 text-secondary hover:bg-surface" aria-expanded={attachmentTrayOpen}>{attachmentTrayOpen ? (zh ? "收起" : "Collapse") : (zh ? "展开" : "Expand")}</button></div>
           {attachmentTrayOpen ? <div className="mt-1 max-h-[min(22vh,176px)] overflow-y-auto overscroll-contain pr-1 max-sm:max-h-[min(30dvh,220px)]" ref={attachmentTrayListRef}>
-          {visibleAttachmentDrafts.map((draft) => <div key={draft.token} className="flex h-9 items-center gap-2 border-t border-ui/60" data-testid={`source-editor-upload-${draft.token}`}>
-            <span className="min-w-0 flex-1 truncate text-secondary">{draft.status === "uploading" ? (zh ? `\u6b63\u5728\u4e0a\u4f20\uff1a${draft.displayName}` : `Uploading: ${draft.displayName}`) : draft.status === "error" ? (zh ? `\u4e0a\u4f20\u5931\u8d25\uff1a${draft.displayName}` : `Upload failed: ${draft.displayName}`) : draft.displayName}</span>
-            {draft.status === "uploading" ? <span className="shrink-0 text-secondary">{draft.progress}%</span> : null}
-            {draft.status === "error" ? <button type="button" className="shrink-0 text-[var(--accent)] hover:underline" onClick={() => { setAttachmentDrafts((current) => ({ ...current, [draft.token]: { ...current[draft.token], status: "uploading", error: undefined, progress: 0 } })); onAttachmentRetry?.(draft.token); }}>{zh ? "\u91cd\u8bd5" : "Retry"}</button> : null}
-            <button type="button" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface" aria-label={zh ? `\u79fb\u9664 ${draft.displayName}` : `Remove ${draft.displayName}`} onClick={() => removeAttachmentDraft(draft)}><X className="h-3.5 w-3.5" /></button>
-          </div>)}
+          {visibleAttachmentDrafts.map((draft) => {
+            const retry = () => {
+              setAttachmentActionToken(null);
+              setAttachmentDrafts((current) => ({ ...current, [draft.token]: { ...current[draft.token], status: "uploading", error: undefined, progress: 0 } }));
+              onAttachmentRetry?.(draft.token);
+            };
+            const remove = () => {
+              setAttachmentActionToken(null);
+              removeAttachmentDraft(draft);
+            };
+            const status = draft.status === "uploading"
+              ? (zh ? `上传中 ${draft.progress}%` : `Uploading ${draft.progress}%`)
+              : draft.status === "canonicalizing"
+                ? (zh ? "正在准备" : "Preparing")
+                : draft.status === "ready"
+                  ? (zh ? "已完成" : "Complete")
+                  : (zh ? "上传失败" : "Upload failed");
+            return <div key={draft.token} className="relative flex h-10 items-center gap-2 border-t border-ui/60 max-sm:h-11" data-testid={`source-editor-upload-${draft.token}`} onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest" })}>
+              <span className="min-w-0 flex-1 truncate text-primary" title={draft.displayName}>{draft.displayName}</span>
+              <span className={`inline-flex shrink-0 items-center gap-1 ${draft.status === "error" ? "text-[var(--danger)]" : "text-secondary"}`}>
+                {draft.status === "uploading" || draft.status === "canonicalizing" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" /> : draft.status === "ready" ? <CheckCircle2 className="h-3.5 w-3.5 text-[var(--accent)]" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                <span>{status}</span>
+              </span>
+              {draft.status === "error" ? <button type="button" className="hidden min-h-8 shrink-0 rounded-md px-2 text-[var(--accent)] hover:bg-surface sm:inline-flex sm:items-center" onClick={retry}>{zh ? "重试" : "Retry"}</button> : null}
+              <button type="button" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface sm:inline-flex" aria-label={zh ? `移除 ${draft.displayName}` : `Remove ${draft.displayName}`} onClick={remove}><X className="h-3.5 w-3.5" /></button>
+              <div className="relative sm:hidden" data-attachment-action-menu="true">
+                <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-surface" aria-label={zh ? `${draft.displayName} 的操作` : `Actions for ${draft.displayName}`} aria-expanded={attachmentActionToken === draft.token} onClick={() => setAttachmentActionToken((current) => current === draft.token ? null : draft.token)}><MoreHorizontal className="h-4 w-4" /></button>
+                {attachmentActionToken === draft.token ? <div className="absolute bottom-full right-0 z-20 mb-1 min-w-28 rounded-md border border-ui bg-raised p-1 shadow-lg">
+                  {draft.status === "error" ? <button type="button" className="min-h-10 w-full rounded px-3 text-left text-primary hover:bg-subtle" onClick={retry}>{zh ? "重试" : "Retry"}</button> : null}
+                  <button type="button" className="min-h-10 w-full rounded px-3 text-left text-[var(--danger)] hover:bg-[var(--danger-soft)]" onClick={remove}>{zh ? "移除" : "Remove"}</button>
+                </div> : null}
+              </div>
+              {draft.status === "uploading" ? <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden rounded-full bg-ui"><span className="block h-full bg-[var(--accent)] transition-[width] motion-reduce:transition-none" style={{ width: `${draft.progress}%` }} /></span> : null}
+            </div>;
+          })}
           </div> : null}
         </div> : null}
         <button type="button" onClick={() => setShowReason((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle"><ChevronDown className={`h-4 w-4 transition ${showReason ? "rotate-180" : ""}`} />{zh ? "\u7f16\u8f91\u8bf4\u660e\uff08\u53ef\u9009\uff09" : "Edit note (optional)"}</button>
@@ -661,7 +710,7 @@ function codePointToUtf16Offset(source: string, codePointOffset: number): number
   return Array.from(source).slice(0, Math.max(0, codePointOffset)).join("").length;
 }
 
-type EditorCommand = "bold" | "italic" | "strike" | "underline" | "code" | "heading" | "quote" | "rule" | "code-block" | "bullets" | "numbered" | "tasks" | "link" | "table" | "attachment" | "undo" | "redo";
+type EditorCommand = "bold" | "italic" | "strike" | "underline" | "code" | "heading" | "quote" | "rule" | "code-block" | "bullets" | "numbered" | "tasks" | "link" | "table" | "attachment" | "undo" | "redo" | "format";
 type CommandResult = { changes: { from: number; to: number; insert: string } | { from: number; insert: string }; selection: { anchor: number; head?: number } };
 
 function commandChange(command: EditorCommand, source: string, from: number, to: number): CommandResult | null {
@@ -678,6 +727,19 @@ function commandChange(command: EditorCommand, source: string, from: number, to:
   if (command === "table") return { changes: { from, insert: "| Column | Column |\n| --- | --- |\n| Value | Value |" }, selection: { anchor: from + 2 } };
   if (command === "rule") return { changes: { from, insert: "\n\n---\n\n" }, selection: { anchor: from + 7 } };
   if (command === "code-block") return { changes: { from, to, insert: `\`\`\`\n${selected || "code"}\n\`\`\`` }, selection: { anchor: from + 4, head: from + 4 + (selected || "code").length } };
+  if (command === "format") {
+    const paragraphStart = selected ? from : Math.max(0, source.lastIndexOf("\n\n", Math.max(0, from - 1)) + 2);
+    const nextBreak = source.indexOf("\n\n", to);
+    const paragraphEnd = selected ? to : (nextBreak === -1 ? source.length : nextBreak);
+    const paragraph = source.slice(paragraphStart, paragraphEnd);
+    const formatted = paragraph.split("\n").map((line) => line.trimEnd()).join("\n");
+    return {
+      changes: { from: paragraphStart, to: paragraphEnd, insert: formatted },
+      selection: selected
+        ? { anchor: paragraphStart, head: paragraphStart + formatted.length }
+        : { anchor: Math.min(paragraphStart + formatted.length, from) },
+    };
+  }
   const lineStart = source.lastIndexOf("\n", Math.max(0, from - 1)) + 1;
   const lineEnd = source.indexOf("\n", from) === -1 ? source.length : source.indexOf("\n", from);
   const line = source.slice(lineStart, lineEnd);
