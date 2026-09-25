@@ -16,20 +16,20 @@ independent nonblocking slot and expose a retryable 429 if that slot is busy.
 All user upload entry points now use a 500 MiB cap with 520 MiB exact Nginx
 allowances. Heavy import parsing still passes the memory-aware admission gate
 and returns a retryable 429 when the small production host cannot safely
-materialize the request. This update is implemented and focused-tested locally
-but has not been committed or deployed.
+materialize the request. This update is deployed from immutable source
+`050f257ceb702490885bae8aabcbf5a1ce60ba84`.
 
 The server was cleaned without touching PostgreSQL, named volumes, import
 storage, the active image, or the direct rollback image. Stale Chat Reader
-images and build cache were removed after an explicit inventory: Docker image
-usage fell from 6.238 GiB to 3.955 GiB, the remaining 160.7 MiB build cache was
-then pruned to 0, and root free space is now 4.3 GiB (89%). Current production health is OK and it
-still runs immutable source
-`c3926f497c0d146c484fb2e0ce46d0a353f0e376` from Actions run `36000296922`.
-The new independent staging-slot and 500 MiB follow-up is local only; it has
-not been committed or deployed. API/Web image digests are recorded in the
-release evidence below; the direct rollback generation remains
-`1b81b49609f1b955c8d85ec426e898938dcfc90a`.
+images and build cache were removed after an explicit inventory. After the new
+verified five-component backup and post-release cleanup, root free space is
+3.6 GiB (91%). Current production health is OK and it runs immutable source
+`050f257ceb702490885bae8aabcbf5a1ce60ba84`. The independent staging slot and
+500 MiB limits are active in production. CI
+run `36082916518` passed API/Web quality, browser/PWA gates, image inspection
+and artifact inspection. The verified pre-deploy backup is
+`/opt/chat-reader/backups/chat-reader-20260925T020553Z`; the direct rollback
+generation is `c3926f497c0d146c484fb2e0ce46d0a353f0e376`.
 
 ## 1. Project Snapshot
 
@@ -40,8 +40,8 @@ release evidence below; the direct rollback generation remains
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
 | Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
-| Branch / baseline | `master`; deployed source SHA `1b81b49609f1b955c8d85ec426e898938dcfc90a` |
-| Deployment | Production runs immutable `1b81b49609f1b955c8d85ec426e898938dcfc90a`; prior `7101f6a` remains the direct rollback generation |
+| Branch / baseline | `master`; deployed source SHA `050f257ceb702490885bae8aabcbf5a1ce60ba84` |
+| Deployment | Production runs immutable `050f257ceb702490885bae8aabcbf5a1ce60ba84`; `c3926f4` is the direct rollback generation |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## Current working-tree implementation (2026-09-22)

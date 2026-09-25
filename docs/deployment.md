@@ -1,5 +1,33 @@
 # 生产部署
 
+## 2026-09-25 500 MiB upload and staging isolation release
+
+Source `050f257ceb702490885bae8aabcbf5a1ce60ba84` was deployed from GitHub
+Actions run `36082916518`. API/Web quality, browser and PWA gates, dependency
+audit, immutable image construction, image inspection and independent artifact
+inspection all passed. Production now uses 500 MiB application limits for
+imports and attachments, with exact 520 MiB Nginx locations for Import Preview,
+Adaptive Import sessions and attachment upload sessions. Unrelated routes keep
+the 60 MiB global proxy boundary.
+
+Attachment disk staging uses an independent nonblocking slot and returns a
+retryable 429 when another large attachment is being staged. Parser-backed
+imports retain the 512 MiB memory reserve and the Adaptive Import 512 MiB
+aggregate bound. The verified five-component recovery point is
+`/opt/chat-reader/backups/chat-reader-20260925T020553Z`.
+
+API/worker image digest is
+`sha256:fe3c35e36a1024491b546fd55d521969109a5b04be158c9b4713630da2be3eef`;
+Web is
+`sha256:493545ce7e50e20f29a06fa32e40218be9d82baa490dfae97bd11be50dbad85e`.
+PostgreSQL/API/Web are healthy, the worker heartbeat is `alive_idle`, Alembic is
+`20260902_0032 (head)`, public HTTPS health is 200 and HTTP redirects to HTTPS.
+The current and direct rollback (`c3926f4`) image generations are retained.
+Older `1b81b49`, an orphan `latest` image, build cache and the release transfer
+archive were removed without touching PostgreSQL, business volumes, imports or
+the verified backup. Authenticated production upload acceptance remains for
+the operator and is `NOT VERIFIED`.
+
 ## 2026-09-24 large attachment upload admission release
 
 Source `c3926f497c0d146c484fb2e0ce46d0a353f0e376` was deployed from GitHub
@@ -12,9 +40,8 @@ upload threshold, one active heavy slot, queue capacity 8 and a 512 MiB parser
 reserve. The API and Web image digests are `sha256:92cf50500aa5ae1063694461cdf464ff194f41362d7f08e6690b88f9400b1849` and
 `sha256:44ed2f3780500a31aeee6fb2b5c046bacf32c4784a3966023cde521e055543ed`.
 
-The working tree contains a follow-up that raises all user-upload entry points
-to 500 MiB and adds a separate attachment staging slot. It is not committed or
-deployed yet.
+The 2026-09-25 follow-up above supersedes this release's 100 MiB limit and
+shared staging admission behavior.
 
 Before replacement, the verified five-component backup was written to
 `/opt/chat-reader/backups/chat-reader-20260924T130558Z`. PostgreSQL container
@@ -368,8 +395,8 @@ Chat Reader images were removed without touching unrelated images or volumes.
 Adaptive multi-file import adds an exact `/api/adaptive-import/sessions`
 location with a 520 MiB multipart limit. At the time of this deployed release,
 the API enforced 100 MiB per file, 512 MiB per session and 500 files; the
-default upload boundary was 110 MiB for multipart overhead. A later 500 MiB
-follow-up is currently present only in the working tree and is not deployed.
+default upload boundary was 110 MiB for multipart overhead. The deployed
+2026-09-25 release above supersedes these historical limits.
 
 The supplied Desktop JSON/Markdown pair was verified locally as a 66-message
 `exact_match` preview in about 1.2 seconds. Production authenticated preview

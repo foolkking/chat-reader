@@ -28,9 +28,8 @@ in the Web UI. Share and Offline remain separate permission boundaries.
 
 ## Import Preview request boundary
 
-The 500 MiB values in this section describe the current working-tree follow-up.
-The active production container has not received this change yet and still
-uses its deployed 100 MiB environment value until the next approved rollout.
+The 500 MiB values in this section are active in production from source
+`050f257ceb702490885bae8aabcbf5a1ce60ba84`.
 
 The application limit defaults to 500 MiB per user-uploaded file and Preview
 accepts at most one JSON plus one Markdown file. The versioned Nginx config
