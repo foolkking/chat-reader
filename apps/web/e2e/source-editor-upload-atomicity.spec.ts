@@ -397,8 +397,7 @@ test.describe("Release I source editor upload-token atomicity", () => {
       await barrier.seen;
       await expect(
         page.getByTestId("source-editor-attachment-drafts")
-          .locator("[data-testid^='source-editor-upload-']")
-          .filter({ hasText: /Uploading:|\u6b63\u5728\u4e0a\u4f20/ }),
+          .locator("[data-testid^='source-editor-upload-'][data-upload-status='uploading']"),
       ).toHaveCount(1);
       await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
       await submitEditorProgrammatically(page);
@@ -438,13 +437,11 @@ test.describe("Release I source editor upload-token atomicity", () => {
       ]);
       await expect(
         page.getByTestId("source-editor-attachment-drafts")
-          .locator("[data-testid^='source-editor-upload-']")
-          .filter({ hasText: /Upload failed:|\u4e0a\u4f20\u5931\u8d25/ }),
+          .locator("[data-testid^='source-editor-upload-'][data-upload-status='error']"),
       ).toHaveCount(1);
       await expect(
         page.getByTestId("source-editor-attachment-drafts")
-          .locator("[data-testid^='source-editor-upload-']")
-          .filter({ hasText: /Uploading:|\u6b63\u5728\u4e0a\u4f20/ }),
+          .locator("[data-testid^='source-editor-upload-'][data-upload-status='uploading']"),
       ).toHaveCount(0);
       const source = await readEditorDocument(page);
       expect(source.match(/cr-asset:\/\//g) ?? []).toHaveLength(1);

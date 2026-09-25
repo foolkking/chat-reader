@@ -627,7 +627,7 @@ export function EditMessageForm({
                 : draft.status === "ready"
                   ? (zh ? "已完成" : "Complete")
                   : (zh ? "上传失败" : "Upload failed");
-            return <div key={draft.token} className="relative flex h-10 items-center gap-2 border-t border-ui/60 max-sm:h-11" data-testid={`source-editor-upload-${draft.token}`} onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest" })}>
+            return <div key={draft.token} className="relative flex h-10 items-center gap-2 border-t border-ui/60 max-sm:h-11" data-testid={`source-editor-upload-${draft.token}`} data-upload-status={draft.status} onFocus={(event) => event.currentTarget.scrollIntoView({ block: "nearest" })}>
               <span className="min-w-0 flex-1 truncate text-primary" title={draft.displayName}>{draft.displayName}</span>
               <span className={`inline-flex shrink-0 items-center gap-1 ${draft.status === "error" ? "text-[var(--danger)]" : "text-secondary"}`}>
                 {draft.status === "uploading" || draft.status === "canonicalizing" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" /> : draft.status === "ready" ? <CheckCircle2 className="h-3.5 w-3.5 text-[var(--accent)]" /> : <AlertCircle className="h-3.5 w-3.5" />}
