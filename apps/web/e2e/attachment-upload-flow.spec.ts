@@ -189,7 +189,7 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
       mimeType: "image/png",
       buffer: tinyPng,
     });
-    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 1 个|1 attachment\(s\) pending save/)).toBeVisible();
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/附件 · 1 个.*已准备保存|Attachments · 1.*Ready to save/)).toBeVisible();
     await saveNewVersion(page, messageId);
     await expect(page.getByTestId("source-editor-create-version")).toContainText(/v3/);
     await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
@@ -272,7 +272,7 @@ test("drops and pastes files at the source cursor with independent upload drafts
       content.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: 48, clientY: 20 }));
     });
     await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/正在上传：dropped\.txt|Uploading: dropped\.txt/).first()).toBeVisible();
-    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 1 个|1 attachment\(s\) pending save/)).toBeVisible();
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/附件 · 1 个.*已准备保存|Attachments · 1.*Ready to save/)).toBeVisible();
 
     await page.evaluate(() => {
       const transfer = new DataTransfer();
@@ -281,7 +281,7 @@ test("drops and pastes files at the source cursor with independent upload drafts
       if (!content) throw new Error("CodeMirror content not found");
       content.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: transfer }));
     });
-    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/待保存附件 2 个|2 attachment\(s\) pending save/)).toBeVisible();
+    await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/附件 · 2 个.*已准备保存|Attachments · 2.*Ready to save/)).toBeVisible();
     await saveNewVersion(page, messageId);
     await expect(page.getByTestId("source-editor-create-version")).toContainText(/v3/);
     const attachments = await page.request.get(`/api/conversations/${conversationId}/attachments`);
