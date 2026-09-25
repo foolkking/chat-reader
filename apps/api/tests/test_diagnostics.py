@@ -255,7 +255,7 @@ def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
     assert "proxy_request_buffering off;" in preview_location
     assert "proxy_pass http://127.0.0.1:8000;" in preview_location
     assert "location ^~ /api/attachment-upload-sessions/" in nginx
-    assert nginx.count("client_max_body_size 520m;") == 3
+    assert nginx.count("client_max_body_size 520m;") == 2
     assert nginx.count("proxy_request_buffering off;") == 3
     assert nginx.count("proxy_pass http://127.0.0.1:8000;") == 3
     assert "client_max_body_size 520m;" in nginx

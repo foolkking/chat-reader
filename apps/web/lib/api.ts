@@ -556,6 +556,7 @@ export async function editMessage(
     editReason?: string;
     baseVersionId?: string;
     saveMode?: "create_version" | "replace_current";
+    editorRevision?: number;
     attachmentOccurrences?: Array<Record<string, unknown>>;
     removedAttachmentActions?: Array<Record<string, unknown>>;
   },
@@ -567,6 +568,7 @@ export async function editMessage(
       edit_reason: input.editReason,
       base_version_id: input.baseVersionId,
       save_mode: input.saveMode ?? "create_version",
+      editor_revision: input.editorRevision,
       attachment_occurrences: input.attachmentOccurrences ?? [],
       removed_attachment_actions: input.removedAttachmentActions ?? [],
     }),

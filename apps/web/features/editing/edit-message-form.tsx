@@ -6,8 +6,8 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { Compartment } from "@codemirror/state";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { ChevronDown, Save, SaveAll, X } from "lucide-react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Bold, ChevronDown, Code2, Heading2, Italic, Link2, List, ListOrdered, ListTodo, Minus, Paperclip, Quote, Redo2, Save, SaveAll, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
@@ -45,8 +45,12 @@ export function EditMessageForm({
   onAttachmentRemove,
   onAttachmentCancel,
   onExistingAttachment,
+  onOpenAttachmentPicker,
   conversationAttachments = [],
   showPreview = true,
+  onPreviewChange,
+  editorToolsOpen = false,
+  onEditorToolsOpenChange,
 }: {
   formId?: string;
   initialText: string;
@@ -59,7 +63,7 @@ export function EditMessageForm({
   onSelectionChange?: (selection: SourceTextSelection | null) => void;
   onDirtyChange?: (dirty: boolean) => void;
   onCancel: (dirty: boolean) => void | Promise<void>;
-  onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>) => Promise<void>;
+  onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>, editorRevision: number) => Promise<{ canonicalText?: string } | void>;
   onReloadLatest?: () => Promise<void>;
   onAttachmentInsertionApplied?: () => void;
   onAttachmentFiles?: (files: File[], position: number, callbacks: AttachmentDraftCallbacks) => AttachmentDraft[];
@@ -67,8 +71,12 @@ export function EditMessageForm({
   onAttachmentRemove?: (token: string) => void;
   onAttachmentCancel?: (preserve: boolean, itemIds: string[]) => Promise<void> | void;
   onExistingAttachment?: (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void;
+  onOpenAttachmentPicker?: () => void;
   conversationAttachments?: AttachmentRead[];
   showPreview?: boolean;
+  onPreviewChange?: (open: boolean) => void;
+  editorToolsOpen?: boolean;
+  onEditorToolsOpenChange?: (open: boolean) => void;
 }) {
   const { t, resolvedLocale, resolvedTheme } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -95,6 +103,15 @@ export function EditMessageForm({
   const [reloadStatus, setReloadStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [isSaving, setIsSaving] = useState(false);
   const [attachmentDrafts, setAttachmentDrafts] = useState<Record<string, AttachmentDraftState>>({});
+  const [attachmentTrayOpen, setAttachmentTrayOpen] = useState(true);
+  const attachmentTrayManualRef = useRef(false);
+  const attachmentTrayListRef = useRef<HTMLDivElement | null>(null);
+  const attachmentTokensRef = useRef<Set<string>>(new Set());
+  const toolsPanelRef = useRef<HTMLDivElement | null>(null);
+  const previewPanelRef = useRef<HTMLElement | null>(null);
+  const previewRevisionRef = useRef(0);
+  const saveRequestRef = useRef(0);
+  const editorRevisionRef = useRef(0);
   const [pendingCodeDrop, setPendingCodeDrop] = useState<{
     files: File[];
     attachment?: { attachmentId: string; displayName: string; mimeType: string };
@@ -103,10 +120,31 @@ export function EditMessageForm({
   } | null>(null);
   const [removedConfirmMode, setRemovedConfirmMode] = useState<"create_version" | "replace_current" | null>(null);
   const [removedActions, setRemovedActions] = useState<Record<string, "keep_in_conversation" | "detach_from_conversation">>({});
-  const previewText = useDeferredValue(text);
+  const [previewSnapshot, setPreviewSnapshot] = useState(() => ({ revision: 0, text: initialText }));
+  useEffect(() => {
+    const revision = ++previewRevisionRef.current;
+    const timer = window.setTimeout(() => {
+      if (revision === previewRevisionRef.current) setPreviewSnapshot({ revision, text });
+    }, 90);
+    return () => window.clearTimeout(timer);
+  }, [text]);
+  const previewText = previewSnapshot.text;
   const trimmedText = text.trim();
   const isUnchanged = trimmedText === baselineText.trim();
   const hasAttachmentWork = Object.values(attachmentDrafts).some((draft) => draft.status !== "removed");
+  const visibleAttachmentDrafts = Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed");
+  useLayoutEffect(() => {
+    const list = attachmentTrayListRef.current;
+    const tokens = new Set(visibleAttachmentDrafts.map((draft) => draft.token));
+    const added = visibleAttachmentDrafts.some((draft) => !attachmentTokensRef.current.has(draft.token));
+    attachmentTokensRef.current = tokens;
+    if (added && list) list.scrollTop = list.scrollHeight;
+  }, [visibleAttachmentDrafts]);
+  const uploadingAttachmentCount = visibleAttachmentDrafts.filter((draft) => draft.status === "uploading" || draft.status === "canonicalizing").length;
+  const failedAttachmentCount = visibleAttachmentDrafts.filter((draft) => draft.status === "error").length;
+  const attachmentProgress = uploadingAttachmentCount > 0
+    ? Math.round(visibleAttachmentDrafts.filter((draft) => draft.status === "uploading" || draft.status === "canonicalizing").reduce((sum, draft) => sum + draft.progress, 0) / uploadingAttachmentCount)
+    : 100;
   const transientUploadReferences = findTransientUploadReferences(text);
   const hasUnresolvedAttachment = transientUploadReferences.length > 0
     || Object.values(attachmentDrafts).some((draft) => draft.status !== "ready" && draft.status !== "removed");
@@ -166,7 +204,10 @@ export function EditMessageForm({
         setText(canonicalDocument);
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
-      onError: (token, message) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current),
+      onError: (token, message) => {
+        if (!attachmentTrayManualRef.current) setAttachmentTrayOpen(true);
+        setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current);
+      },
     };
     const drafts = onAttachmentFiles?.(files, position, callbacks) ?? [];
     setAttachmentDrafts((current) => ({
@@ -242,8 +283,47 @@ export function EditMessageForm({
     foldGutter: true,
     searchKeymap: true,
   }), []);
+  const dispatchCommand = useCallback((command: EditorCommand) => {
+    const view = editorViewRef.current;
+    if (!view) return;
+    if (command === "undo" || command === "redo") {
+      view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: command === "undo" ? "z" : "y", ctrlKey: true, bubbles: true }));
+      onEditorToolsOpenChange?.(false);
+      view.focus();
+      return;
+    }
+    if (command === "attachment") {
+      onEditorToolsOpenChange?.(false);
+      onOpenAttachmentPicker?.();
+      return;
+    }
+    const selection = view.state.selection.main;
+    const change = commandChange(command, view.state.doc.toString(), selection.from, selection.to);
+    if (!change) return;
+    view.dispatch({ changes: change.changes, selection: change.selection, scrollIntoView: true });
+    onEditorToolsOpenChange?.(false);
+    view.focus();
+  }, [onEditorToolsOpenChange, onOpenAttachmentPicker]);
+
+  useEffect(() => {
+    if (!editorToolsOpen && !showPreview) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      const target = event.target as HTMLElement;
+      if (editorToolsOpen && !toolsPanelRef.current?.contains(target) && !target.closest("[data-testid='source-editor-tools-toggle']")) onEditorToolsOpenChange?.(false);
+      if (showPreview && previewPanelRef.current && !previewPanelRef.current.contains(target) && !target.closest("[data-testid='source-editor-preview-toggle']")) onPreviewChange?.(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (editorToolsOpen) { event.preventDefault(); onEditorToolsOpenChange?.(false); }
+      else if (showPreview) { event.preventDefault(); onPreviewChange?.(false); }
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => { document.removeEventListener("pointerdown", closeOnOutside); document.removeEventListener("keydown", closeOnEscape); };
+  }, [editorToolsOpen, onEditorToolsOpenChange, onPreviewChange, showPreview]);
   const handleEditorUpdate = useCallback((update: ViewUpdate) => {
     if (!update.docChanged && !update.selectionSet) return;
+    if (update.docChanged) editorRevisionRef.current += 1;
     const offset = update.state.selection.main.head;
     const source = update.state.doc.toString();
     const codePointOffset = unicodeCodePointOffset(source, offset);
@@ -370,16 +450,20 @@ export function EditMessageForm({
       return;
     }
     setIsSaving(true);
+    const requestToken = ++saveRequestRef.current;
     try {
-      await onSave(
+      const saved = await onSave(
         nextTrimmedText,
         reason.trim() || undefined,
         mode,
         removedIds.map((attachmentId) => ({ attachment_id: attachmentId, action: removedActions[attachmentId] ?? "keep_in_conversation" })),
+        editorRevisionRef.current,
       );
-      setBaselineText(nextTrimmedText);
-      setEditorDocument(nextTrimmedText);
-      setText(nextTrimmedText);
+      if (requestToken !== saveRequestRef.current) return;
+      const canonicalText = saved?.canonicalText ?? nextTrimmedText;
+      setBaselineText(canonicalText);
+      setEditorDocument(canonicalText);
+      setText(canonicalText);
       setReason("");
       setShowClosePrompt(false);
       setAttachmentDrafts({});
@@ -387,11 +471,12 @@ export function EditMessageForm({
       setRemovedActions({});
       onDirtyChange?.(false);
     } catch (err) {
+      if (requestToken !== saveRequestRef.current) return;
       const message = err instanceof Error ? err.message : t("unableSaveEdit");
       setError(message);
       setRevisionConflict(isRevisionConflictMessage(message));
     } finally {
-      setIsSaving(false);
+      if (requestToken === saveRequestRef.current) setIsSaving(false);
     }
   }
 
@@ -431,7 +516,7 @@ export function EditMessageForm({
   }
 
   return (
-    <form id={formId} className="flex h-full min-h-0 flex-col bg-surface" onSubmit={(event) => { event.preventDefault(); void submit("create_version"); }}>
+    <form id={formId} className="relative flex h-full min-h-0 flex-col bg-surface" onSubmit={(event) => { event.preventDefault(); void submit("create_version"); }}>
       <input
         id={`${formId}-attachment-input`}
         type="file"
@@ -450,8 +535,17 @@ export function EditMessageForm({
           insertFilesAtCurrentPosition(view, files);
         }}
       />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div ref={editorHostRef} className={`min-h-0 min-w-0 flex-1 overflow-hidden ${showPreview ? "border-r border-ui" : ""}`} data-testid="source-editor-codemirror">
+      {editorToolsOpen ? <div ref={toolsPanelRef} id="source-editor-tools" data-testid="source-editor-tools" className="absolute left-2 top-12 z-40 w-[min(34rem,calc(100%-1rem))] rounded-lg border border-ui bg-raised p-3 shadow-xl">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <CommandGroup label={zh ? "文字" : "Text"} commands={[{ label: zh ? "粗体" : "Bold", icon: <Bold className="h-4 w-4" />, command: "bold" }, { label: zh ? "斜体" : "Italic", icon: <Italic className="h-4 w-4" />, command: "italic" }, { label: zh ? "删除线" : "Strike", icon: <Strikethrough className="h-4 w-4" />, command: "strike" }, { label: zh ? "下划线" : "Underline", icon: <Underline className="h-4 w-4" />, command: "underline" }, { label: zh ? "行内代码" : "Inline code", icon: <Code2 className="h-4 w-4" />, command: "code" }]} onCommand={dispatchCommand} />
+          <CommandGroup label={zh ? "结构" : "Structure"} commands={[{ label: zh ? "标题" : "Heading", icon: <Heading2 className="h-4 w-4" />, command: "heading" }, { label: zh ? "引用" : "Quote", icon: <Quote className="h-4 w-4" />, command: "quote" }, { label: zh ? "分隔线" : "Rule", icon: <Minus className="h-4 w-4" />, command: "rule" }, { label: zh ? "代码块" : "Code block", icon: <Code2 className="h-4 w-4" />, command: "code-block" }]} onCommand={dispatchCommand} />
+          <CommandGroup label={zh ? "列表" : "Lists"} commands={[{ label: zh ? "无序列表" : "Bullets", icon: <List className="h-4 w-4" />, command: "bullets" }, { label: zh ? "有序列表" : "Numbered", icon: <ListOrdered className="h-4 w-4" />, command: "numbered" }, { label: zh ? "任务清单" : "Tasks", icon: <ListTodo className="h-4 w-4" />, command: "tasks" }]} onCommand={dispatchCommand} />
+          <CommandGroup label={zh ? "插入" : "Insert"} commands={[{ label: zh ? "链接" : "Link", icon: <Link2 className="h-4 w-4" />, command: "link" }, { label: zh ? "表格" : "Table", icon: <Table2 className="h-4 w-4" />, command: "table" }, { label: zh ? "附件引用" : "Attachment reference", icon: <Paperclip className="h-4 w-4" />, command: "attachment" }]} onCommand={dispatchCommand} />
+          <CommandGroup label={zh ? "编辑" : "Edit"} commands={[{ label: zh ? "撤销" : "Undo", icon: <Undo2 className="h-4 w-4" />, command: "undo" }, { label: zh ? "重做" : "Redo", icon: <Redo2 className="h-4 w-4" />, command: "redo" }]} onCommand={dispatchCommand} />
+        </div>
+      </div> : null}
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <div ref={editorHostRef} className="min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror">
           <CodeMirror
           value={editorDocument}
           height="100%"
@@ -474,13 +568,17 @@ export function EditMessageForm({
             }
           }}
           onUpdate={handleEditorUpdate}
-          onChange={setText}
+          onChange={(next) => { setEditorDocument(next); setText(next); }}
           className="h-full text-sm [&_.cm-editor]:h-full"
           />
         </div>
-        {showPreview ? <aside className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-page p-4" data-testid="source-editor-rich-preview" aria-label={zh ? "Markdown 实时预览" : "Live Markdown preview"}>
-          <MarkdownRenderer text={previewText} isAssistant={false} scopeId={`editor-${messageId ?? formId}`} />
-        </aside> : null}
+        {showPreview ? <>
+          <button type="button" className="absolute inset-0 z-20 bg-transparent" aria-label={zh ? "关闭预览" : "Close preview"} onClick={() => onPreviewChange?.(false)} />
+          <aside ref={previewPanelRef} className="absolute inset-y-0 right-0 z-30 w-[min(46%,42rem)] min-w-[20rem] overflow-y-auto overscroll-contain border-l border-ui bg-page p-4 shadow-2xl max-sm:inset-x-0 max-sm:w-full max-sm:min-w-0" data-testid="source-editor-rich-preview" data-preview-revision={previewSnapshot.revision} aria-label={zh ? "Markdown 实时预览" : "Live Markdown preview"}>
+            <div className="mb-3 flex items-center justify-between border-b border-ui pb-2"><span className="text-xs font-semibold text-secondary">{text === previewText ? (zh ? "实时预览" : "Live preview") : (zh ? "正在更新…" : "Updating…")}</span><button type="button" className="rounded-md p-2 text-secondary hover:bg-subtle" onClick={() => onPreviewChange?.(false)} aria-label={zh ? "关闭预览" : "Close preview"}><X className="h-4 w-4" /></button></div>
+            <MarkdownRenderer text={previewText} isAssistant={false} scopeId={`editor-${messageId ?? formId}`} />
+          </aside>
+        </> : null}
       </div>
       <footer className="shrink-0 space-y-2 border-t border-ui bg-raised p-3">
         {pendingCodeDrop ? <div className="rounded-lg border border-[var(--mark-border)] bg-[var(--mark-bg)] p-3 text-xs text-primary" role="status" data-testid="source-editor-code-drop-choice">
@@ -491,14 +589,16 @@ export function EditMessageForm({
             <button type="button" className="min-h-8 rounded-md px-3 font-medium text-secondary hover:bg-subtle" onClick={() => setPendingCodeDrop(null)}>{zh ? "取消" : "Cancel"}</button>
           </div>
         </div> : null}
-        {Object.values(attachmentDrafts).some((draft) => draft.status !== "removed") ? <div className="space-y-1 rounded-lg border border-ui bg-subtle p-2 text-xs" data-testid="source-editor-attachment-drafts">
-          <p className="text-secondary" role="status" aria-live="polite">{zh ? `待保存附件 ${Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").length} 个` : `${Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").length} attachment(s) pending save`}</p>
-          {Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed").map((draft) => <div key={draft.token} className="flex min-h-7 items-center gap-2" data-testid={`source-editor-upload-${draft.token}`}>
+        {visibleAttachmentDrafts.length ? <div className="rounded-lg border border-ui bg-subtle p-2 text-xs" data-testid="source-editor-attachment-drafts">
+          <div className="mb-1 flex items-center justify-between gap-2" role="status" aria-live="polite"><span className="min-w-0 truncate text-secondary">{zh ? `附件 · ${visibleAttachmentDrafts.length} 个` : `Attachments · ${visibleAttachmentDrafts.length}`}{uploadingAttachmentCount > 0 ? (zh ? ` · ${uploadingAttachmentCount} 个上传中 · ${attachmentProgress}%` : ` · ${uploadingAttachmentCount} uploading · ${attachmentProgress}%`) : failedAttachmentCount > 0 ? (zh ? ` · ${failedAttachmentCount} 个失败` : ` · ${failedAttachmentCount} failed`) : (zh ? " · 已准备保存" : " · Ready to save")}</span><button type="button" onClick={() => { attachmentTrayManualRef.current = true; setAttachmentTrayOpen((value) => !value); }} className="min-h-8 shrink-0 rounded-md px-2 text-secondary hover:bg-surface" aria-expanded={attachmentTrayOpen}>{attachmentTrayOpen ? (zh ? "收起" : "Collapse") : (zh ? "展开" : "Expand")}</button></div>
+          {attachmentTrayOpen ? <div className="mt-1 max-h-[min(22vh,176px)] overflow-y-auto overscroll-contain pr-1 max-sm:max-h-[min(30dvh,220px)]" ref={attachmentTrayListRef}>
+          {visibleAttachmentDrafts.map((draft) => <div key={draft.token} className="flex h-9 items-center gap-2 border-t border-ui/60" data-testid={`source-editor-upload-${draft.token}`}>
             <span className="min-w-0 flex-1 truncate text-secondary">{draft.status === "uploading" ? (zh ? `\u6b63\u5728\u4e0a\u4f20\uff1a${draft.displayName}` : `Uploading: ${draft.displayName}`) : draft.status === "error" ? (zh ? `\u4e0a\u4f20\u5931\u8d25\uff1a${draft.displayName}` : `Upload failed: ${draft.displayName}`) : draft.displayName}</span>
             {draft.status === "uploading" ? <span className="shrink-0 text-secondary">{draft.progress}%</span> : null}
             {draft.status === "error" ? <button type="button" className="shrink-0 text-[var(--accent)] hover:underline" onClick={() => { setAttachmentDrafts((current) => ({ ...current, [draft.token]: { ...current[draft.token], status: "uploading", error: undefined, progress: 0 } })); onAttachmentRetry?.(draft.token); }}>{zh ? "\u91cd\u8bd5" : "Retry"}</button> : null}
             <button type="button" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface" aria-label={zh ? `\u79fb\u9664 ${draft.displayName}` : `Remove ${draft.displayName}`} onClick={() => removeAttachmentDraft(draft)}><X className="h-3.5 w-3.5" /></button>
           </div>)}
+          </div> : null}
         </div> : null}
         <button type="button" onClick={() => setShowReason((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle"><ChevronDown className={`h-4 w-4 transition ${showReason ? "rotate-180" : ""}`} />{zh ? "\u7f16\u8f91\u8bf4\u660e\uff08\u53ef\u9009\uff09" : "Edit note (optional)"}</button>
         {showReason ? <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={t("editReason")} className="min-h-10 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" /> : null}
@@ -561,6 +661,44 @@ function unicodeCodePointOffset(source: string, utf16Offset: number): number {
 
 function codePointToUtf16Offset(source: string, codePointOffset: number): number {
   return Array.from(source).slice(0, Math.max(0, codePointOffset)).join("").length;
+}
+
+type EditorCommand = "bold" | "italic" | "strike" | "underline" | "code" | "heading" | "quote" | "rule" | "code-block" | "bullets" | "numbered" | "tasks" | "link" | "table" | "attachment" | "undo" | "redo";
+type CommandResult = { changes: { from: number; to: number; insert: string } | { from: number; insert: string }; selection: { anchor: number; head?: number } };
+
+function commandChange(command: EditorCommand, source: string, from: number, to: number): CommandResult | null {
+  const selected = source.slice(from, to);
+  if (command === "undo" || command === "redo") return null;
+  if (command === "bold" || command === "italic" || command === "strike" || command === "underline" || command === "code") {
+    const pair = command === "bold" ? ["**", "**"] : command === "italic" ? ["*", "*"] : command === "strike" ? ["~~", "~~"] : command === "underline" ? ["<u>", "</u>"] : ["`", "`"];
+    return { changes: { from, to, insert: `${pair[0]}${selected || (command === "code" ? "code" : "text")}${pair[1]}` }, selection: { anchor: from + pair[0].length, head: from + pair[0].length + (selected || (command === "code" ? "code" : "text")).length } };
+  }
+  if (command === "link") {
+    const value = `[${selected || "link text"}](url)`;
+    return { changes: { from, to, insert: value }, selection: { anchor: from + 1, head: from + 1 + (selected || "link text").length } };
+  }
+  if (command === "table") return { changes: { from, insert: "| Column | Column |\n| --- | --- |\n| Value | Value |" }, selection: { anchor: from + 2 } };
+  if (command === "rule") return { changes: { from, insert: "\n\n---\n\n" }, selection: { anchor: from + 7 } };
+  if (command === "code-block") return { changes: { from, to, insert: `\`\`\`\n${selected || "code"}\n\`\`\`` }, selection: { anchor: from + 4, head: from + 4 + (selected || "code").length } };
+  const lineStart = source.lastIndexOf("\n", Math.max(0, from - 1)) + 1;
+  const lineEnd = source.indexOf("\n", from) === -1 ? source.length : source.indexOf("\n", from);
+  const line = source.slice(lineStart, lineEnd);
+  if (command === "heading") {
+    const match = line.match(/^(#{1,6})\s+/);
+    const replacement = match ? (match[1].length === 6 ? "" : `${"#".repeat(match[1].length + 1)} `) : "# ";
+    const removedLength = match?.[0].length ?? 0;
+    return { changes: { from: lineStart, to: lineStart + removedLength, insert: replacement }, selection: { anchor: Math.max(lineStart, from - removedLength + replacement.length) } };
+  }
+  const prefix = command === "quote" ? "> " : command === "bullets" ? "- " : command === "numbered" ? "1. " : "- [ ] ";
+  const alreadyPrefixed = line.startsWith(prefix);
+  return {
+    changes: { from: lineStart, to: lineStart + (alreadyPrefixed ? prefix.length : 0), insert: alreadyPrefixed ? "" : prefix },
+    selection: { anchor: Math.max(lineStart, from + (alreadyPrefixed ? -prefix.length : prefix.length)) },
+  };
+}
+
+function CommandGroup({ label, commands, onCommand }: { label: string; commands: Array<{ label: string; icon: ReactNode; command: EditorCommand }>; onCommand: (command: EditorCommand) => void }) {
+  return <div><p className="mb-1 text-[11px] font-semibold text-secondary">{label}</p><div className="grid grid-cols-2 gap-1">{commands.map((item) => <button key={item.command} type="button" onClick={() => onCommand(item.command)} className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-xs text-primary hover:bg-subtle" title={item.label}>{item.icon}<span className="truncate">{item.label}</span></button>)}</div></div>;
 }
 
 function isRevisionConflictMessage(message: string): boolean {

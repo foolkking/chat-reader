@@ -246,6 +246,9 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
 }
 
 function ViewerBody({ attachment, kind, mode, onModeChange, session, activeIndex, onSelect, onPrevious, onNext, onMediaDimensions, onPdfPageCount, onComplexPresentationMetrics, toolbarHost }: { attachment: AttachmentRead; kind: AttachmentViewerKind | null; mode: AttachmentViewerMode | null; onModeChange: (mode: AttachmentViewerMode) => void; session: AttachmentViewerSession; activeIndex: number; onSelect: (index: number) => void; onPrevious: () => void; onNext: () => void; onMediaDimensions: (dimensions: ViewerMediaDimensions) => void; onPdfPageCount: (count: number | null) => void; onComplexPresentationMetrics: (metrics: ViewerContentMetrics | null) => void; toolbarHost: HTMLDivElement | null }) {
+  if ((attachment.asset_object?.byte_size ?? 0) > 50 * 1024 * 1024) {
+    return <ViewerError message="文件超过 50 MiB 浏览器预览上限，请下载原文件。" downloadUrl={attachment.download_url ?? undefined} />;
+  }
   if (kind === "image") return <ImageViewer attachment={attachment} session={session} activeIndex={activeIndex} mode={mode === "image-overview" ? "overview" : "focus"} onSelect={onSelect} onPrevious={onPrevious} onNext={onNext} onMediaDimensions={onMediaDimensions} />;
   if (kind === "markdown") return <TextualViewer attachment={attachment} mode={mode === "markdown-source" ? "source" : "rendered"} onModeChange={onModeChange} markdown />;
   if (kind === "code") return <TextualViewer attachment={attachment} mode="source" onModeChange={onModeChange} code />;
@@ -327,7 +330,7 @@ function TextualViewer({ attachment, mode, onModeChange: _onModeChange, markdown
     if (!attachment.content_url) return () => controller.abort();
     setText(null);
     setError(false);
-    void fetch(retryableUrl(attachment.content_url, attempt)!, { headers: { Range: "bytes=0-8388607" }, signal: controller.signal, cache: "no-store" }).then((response) => { if (!response.ok) throw new Error("preview"); return response.text(); }).then(setText).catch((reason) => { if (reason?.name !== "AbortError") setError(true); });
+    void readPreviewText(retryableUrl(attachment.content_url, attempt)!, controller.signal).then(setText).catch((reason) => { if (reason?.name !== "AbortError") setError(true); });
     return () => controller.abort();
   }, [attachment.content_url, attempt]);
   if (error) return <ViewerError message="预览加载失败，原文件仍可下载。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
@@ -356,7 +359,7 @@ function DelimitedTableViewer({ text, delimiter }: { text: string; delimiter: st
 function JsonViewer({ attachment }: { attachment: AttachmentRead }) {
   const [text, setText] = useState<string | null>(null);
   const [raw, setRaw] = useState(false);
-  useEffect(() => { if (!attachment.content_url) return; const controller = new AbortController(); void fetch(attachment.content_url, { headers: { Range: "bytes=0-8388607" }, signal: controller.signal }).then((response) => response.text()).then(setText).catch(() => setText("无法加载 JSON。")); return () => controller.abort(); }, [attachment.content_url]);
+  useEffect(() => { if (!attachment.content_url) return; const controller = new AbortController(); void readPreviewText(attachment.content_url, controller.signal).then(setText).catch(() => setText("无法加载 JSON。")); return () => controller.abort(); }, [attachment.content_url]);
   if (text === null) return <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div>;
   if (raw || (attachment.asset_object?.byte_size ?? 0) > 8 * 1024 * 1024) return <pre className="h-full overflow-auto whitespace-pre-wrap break-words bg-page p-5 font-mono text-sm text-primary">{text}</pre>;
   try {
@@ -369,6 +372,39 @@ function JsonViewer({ attachment }: { attachment: AttachmentRead }) {
   } catch {
     return <div className="flex h-full flex-col items-center justify-center gap-3 text-secondary"><p>JSON 结构过于复杂，已降级为 Raw。</p><button type="button" onClick={() => setRaw(true)} className="min-h-11 rounded-md border border-ui px-4">打开 Raw</button></div>;
   }
+}
+
+const TEXT_PREVIEW_LIMIT = 50 * 1024 * 1024;
+const TEXT_RANGE_CHUNK = 8 * 1024 * 1024;
+
+async function readPreviewText(url: string, signal: AbortSignal): Promise<string> {
+  const chunks: Uint8Array[] = [];
+  let offset = 0;
+  let total: number | null = null;
+  while (offset < TEXT_PREVIEW_LIMIT && (total === null || offset < total)) {
+    const end = Math.min(TEXT_PREVIEW_LIMIT, offset + TEXT_RANGE_CHUNK) - 1;
+    const response = await fetch(url, { headers: { Range: `bytes=${offset}-${end}` }, signal, cache: "no-store" });
+    if (!response.ok && response.status !== 206) throw new Error("preview");
+    const range = response.headers.get("content-range")?.match(/\/(\d+)$/);
+    if (range) {
+      total = Number(range[1]);
+      if (total > TEXT_PREVIEW_LIMIT) throw new Error("preview-limit");
+    }
+    const chunk = new Uint8Array(await response.arrayBuffer());
+    if (response.status === 200) {
+      if (chunk.byteLength > TEXT_PREVIEW_LIMIT) throw new Error("preview-limit");
+      chunks.push(chunk);
+      break;
+    }
+    if (!chunk.byteLength) break;
+    chunks.push(chunk);
+    offset += chunk.byteLength;
+    if (!range && chunk.byteLength < end - Math.max(0, offset - chunk.byteLength) + 1) break;
+  }
+  const bytes = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0));
+  let cursor = 0;
+  for (const chunk of chunks) { bytes.set(chunk, cursor); cursor += chunk.byteLength; }
+  return new TextDecoder().decode(bytes);
 }
 
 function inspectJsonComplexity(root: unknown): { valid: true } | { valid: false; reason: string } {
@@ -564,8 +600,8 @@ function MediaViewer({ attachment, audio = false, onMediaDimensions }: { attachm
   return <div className={`flex h-full items-center justify-center p-4 ${audio ? "bg-page" : "bg-black"}`}>{audio ? <audio src={retryableUrl(attachment.content_url, attempt)} controls preload="metadata" className="w-full max-w-[680px]" onError={(event) => handleError(event.currentTarget)} /> : <video src={retryableUrl(attachment.content_url, attempt)} controls preload="metadata" playsInline className="max-h-full max-w-full object-contain" onLoadedMetadata={(event) => onMediaDimensions({ width: event.currentTarget.videoWidth, height: event.currentTarget.videoHeight })} onError={(event) => handleError(event.currentTarget)} />}</div>;
 }
 
-function ViewerError({ message, onRetry, downloadUrl }: { message: string; onRetry: () => void; downloadUrl?: string }) {
-  return <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-secondary"><p>{message}</p><div className="flex gap-2"><button type="button" onClick={onRetry} className="min-h-11 rounded-md border border-ui px-4">重试</button>{downloadUrl ? <a href={downloadUrl} download className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-[var(--surface)]"><Download className="h-4 w-4" />下载</a> : null}</div></div>;
+function ViewerError({ message, onRetry, downloadUrl }: { message: string; onRetry?: () => void; downloadUrl?: string }) {
+  return <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-secondary"><p>{message}</p><div className="flex gap-2">{onRetry ? <button type="button" onClick={onRetry} className="min-h-11 rounded-md border border-ui px-4">重试</button> : null}{downloadUrl ? <a href={downloadUrl} download className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-[var(--surface)]"><Download className="h-4 w-4" />下载</a> : null}</div></div>;
 }
 
 function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {

@@ -19,7 +19,8 @@ type ParseResult =
   | { kind: "presentation"; slides: Array<{ title: string; lines: string[] }> }
   | { kind: "archive"; entries: ArchiveEntry[] };
 
-const MAX_SOURCE_BYTES = 32 * 1024 * 1024;
+const MAX_SOURCE_BYTES = 50 * 1024 * 1024;
+const RANGE_CHUNK_BYTES = 8 * 1024 * 1024;
 
 export function ComplexAttachmentViewer({ attachment, kind, onPresentationMetrics }: { attachment: AttachmentRead; kind: SupportedKind; onPresentationMetrics: (metrics: ViewerContentMetrics | null) => void }) {
   const [attempt, setAttempt] = useState(0);
@@ -32,7 +33,7 @@ export function ComplexAttachmentViewer({ attachment, kind, onPresentationMetric
       return;
     }
     if ((attachment.asset_object?.byte_size ?? 0) > MAX_SOURCE_BYTES) {
-      setError("文件超过 32 MiB 浏览器预览上限，请下载原文件。");
+      setError("文件超过 50 MiB 浏览器预览上限，请下载原文件。");
       return;
     }
     const controller = new AbortController();
@@ -50,14 +51,7 @@ export function ComplexAttachmentViewer({ attachment, kind, onPresentationMetric
       setError("预览组件加载失败，请下载原文件。");
       worker.terminate();
     };
-    void fetch(withAttempt(attachment.content_url, attempt), {
-      signal: controller.signal,
-      cache: "no-store",
-      headers: { Range: `bytes=0-${MAX_SOURCE_BYTES}` },
-    }).then(async (response) => {
-      if (!response.ok && response.status !== 206) throw new Error(`HTTP ${response.status}`);
-      const bytes = await response.arrayBuffer();
-      if (bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("文件超过 32 MiB 浏览器预览上限，请下载原文件。");
+    void readPreviewBytes(withAttempt(attachment.content_url, attempt), MAX_SOURCE_BYTES, controller.signal).then((bytes) => {
       worker.postMessage({ requestId, kind, filename: attachment.display_name, bytes }, [bytes]);
     }).catch((reason) => {
       if (reason instanceof DOMException && reason.name === "AbortError") return;
@@ -75,12 +69,45 @@ export function ComplexAttachmentViewer({ attachment, kind, onPresentationMetric
     return () => onPresentationMetrics(null);
   }, [onPresentationMetrics, result]);
 
-  if (error) return <ComplexError message={error} downloadUrl={attachment.download_url} onRetry={() => setAttempt((value) => value + 1)} />;
+  if (error) return <ComplexError message={error} downloadUrl={attachment.download_url} onRetry={error.includes("50 MiB") ? undefined : () => setAttempt((value) => value + 1)} />;
   if (!result) return <div className="flex h-full items-center justify-center gap-2 text-secondary"><Loader2 className="h-5 w-5 animate-spin" />正在浏览器中解析只读预览…</div>;
   if (result.kind === "document") return <DocumentView result={result} />;
   if (result.kind === "spreadsheet") return <SpreadsheetView result={result} />;
   if (result.kind === "presentation") return <PresentationView result={result} />;
   return <ArchiveView result={result} />;
+}
+
+async function readPreviewBytes(url: string, limit: number, signal: AbortSignal): Promise<ArrayBuffer> {
+  const chunks: Uint8Array[] = [];
+  let offset = 0;
+  let total: number | null = null;
+  while (offset < limit && (total === null || offset < total)) {
+    const end = Math.min(limit, offset + RANGE_CHUNK_BYTES) - 1;
+    const response = await fetch(url, { signal, cache: "no-store", headers: { Range: `bytes=${offset}-${end}` } });
+    if (!response.ok && response.status !== 206) throw new Error(`HTTP ${response.status}`);
+    const contentRange = response.headers.get("content-range");
+    const match = contentRange?.match(/\/(\d+)$/);
+    if (match) {
+      total = Number(match[1]);
+      if (total > limit) throw new Error("文件超过 50 MiB 浏览器预览上限，请下载原文件。");
+    }
+    const chunk = new Uint8Array(await response.arrayBuffer());
+    if (response.status === 200) {
+      if (chunk.byteLength > limit) throw new Error("文件超过 50 MiB 浏览器预览上限，请下载原文件。");
+      chunks.push(chunk);
+      break;
+    }
+    if (!chunk.byteLength) break;
+    chunks.push(chunk);
+    offset += chunk.byteLength;
+    if (!contentRange && chunk.byteLength < end - Math.max(0, offset - chunk.byteLength) + 1) break;
+  }
+  const size = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+  if (size > limit) throw new Error("文件超过 50 MiB 浏览器预览上限，请下载原文件。");
+  const output = new Uint8Array(size);
+  let cursor = 0;
+  for (const chunk of chunks) { output.set(chunk, cursor); cursor += chunk.byteLength; }
+  return output.buffer;
 }
 
 function presentationMetrics(result: ParseResult): ViewerContentMetrics {
@@ -150,8 +177,8 @@ function GridTable({ rows }: { rows: string[][] }) {
   return <table className="min-w-max border-separate border-spacing-0 text-xs"><thead className="sticky top-0 z-10 bg-subtle"><tr><th className="sticky left-0 z-20 min-w-12 border-b border-r border-ui px-2 py-2">#</th>{Array.from({ length: columns }, (_, index) => <th key={index} className="min-w-28 border-b border-r border-ui px-2 py-2 text-left">{columnName(index)}</th>)}</tr></thead><tbody>{rows.slice(0, 2_000).map((row, rowIndex) => <tr key={rowIndex}><th className="sticky left-0 bg-subtle px-2 py-1.5 text-right font-normal text-secondary">{rowIndex + 1}</th>{Array.from({ length: columns }, (_, column) => <td key={column} className="max-w-80 border-b border-r border-ui px-2 py-1.5 align-top"><span className="line-clamp-3">{row[column] ?? ""}</span></td>)}</tr>)}</tbody></table>;
 }
 
-function ComplexError({ message, downloadUrl, onRetry }: { message: string; downloadUrl?: string | null; onRetry: () => void }) {
-  return <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center"><FileText className="h-10 w-10 text-secondary" /><p className="max-w-xl text-sm text-secondary">{message}</p><div className="flex gap-2"><button type="button" onClick={onRetry} className="min-h-11 rounded-md border border-ui px-4">重试</button>{downloadUrl ? <a href={downloadUrl} download className="inline-flex min-h-11 items-center rounded-md bg-[var(--text)] px-4 text-[var(--surface)]">下载原文件</a> : null}</div></div>;
+function ComplexError({ message, downloadUrl, onRetry }: { message: string; downloadUrl?: string | null; onRetry?: () => void }) {
+  return <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center"><FileText className="h-10 w-10 text-secondary" /><p className="max-w-xl text-sm text-secondary">{message}</p><div className="flex gap-2">{onRetry ? <button type="button" onClick={onRetry} className="min-h-11 rounded-md border border-ui px-4">重试</button> : null}{downloadUrl ? <a href={downloadUrl} download className="inline-flex min-h-11 items-center rounded-md bg-[var(--text)] px-4 text-[var(--surface)]">下载原文件</a> : null}</div></div>;
 }
 
 function EmptyComplex({ label }: { label: string }) {

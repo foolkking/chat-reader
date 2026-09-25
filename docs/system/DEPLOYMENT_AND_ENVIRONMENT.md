@@ -32,6 +32,15 @@ The single immutable Root Admin is deployment-configured only by the server
 the pair when it changes; unchanged values do not overwrite a password changed
 in the Web UI. Share and Offline remain separate permission boundaries.
 
+## Working-tree editor and attachment preview changes (not deployed)
+
+The current working tree raises only the attachment upload limit to 1 GiB and
+uses an approximately 1040 MiB exact Nginx allowance for that route. Import
+and Adaptive Import remain 500 MiB with 520 MiB exact routes. Browser preview
+is capped at 50 MiB for previewable attachment types; larger files remain
+downloadable. These values are not production facts until a release is
+deployed and verified.
+
 ## Import Preview request boundary
 
 The application and proxy limits in this section are 500/520 MiB respectively.
@@ -48,9 +57,9 @@ Adaptive batches use the separate exact `/api/adaptive-import/sessions`
 location with `client_max_body_size 520m`; application limits remain 500 MiB
 per file, 512 MiB total and 500 files. No other route inherits this allowance.
 
-Ordinary attachment upload items use `MAX_ATTACHMENT_FILE_SIZE_MB` (500 MiB by
+Ordinary attachment upload items use `MAX_ATTACHMENT_FILE_SIZE_MB` (1,024 MiB by
 default), independently of the import parser limit. The exact
-`/api/attachment-upload-sessions/` Nginx location allows 520 MiB for multipart
+`/api/attachment-upload-sessions/` Nginx location allows 1,040 MiB for multipart
 overhead. Large attachment staging is a bounded disk copy using its own
 admission slot; parser-backed imports retain the memory reserve check and return
 a retryable 429 when memory is low.

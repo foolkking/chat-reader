@@ -37,7 +37,7 @@ def test_capabilities_are_abstract_and_include_renderer_contract(client) -> None
     assert capabilities["imageDerivatives"] is True
     assert capabilities["textSearch"] is True
     assert capabilities["batchDownload"] is True
-    assert capabilities["max_file_size_bytes"] == 500 * 1024 * 1024
+    assert capabilities["max_file_size_bytes"] == 1024 * 1024 * 1024
     serialized = json.dumps(response.json())
     assert "message_version_attachments" not in serialized
     assert "idx_" not in serialized

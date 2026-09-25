@@ -253,6 +253,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
+  const overscan = useAdaptiveReaderOverscan(containerRef, "element");
   const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
     const indexes = defaultRangeExtractor(range);
@@ -269,7 +270,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
     ),
     getItemKey: (index) => blocks[index]?.id ?? `${messageId}-${blocks[index]?.block_index ?? index}`,
     measureElement: (element) => element?.getBoundingClientRect().height ?? 0,
-    overscan: 8,
+    overscan,
     scrollMargin,
     rangeExtractor,
     useAnimationFrameWithResizeObserver: true,
@@ -299,6 +300,11 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   const virtualItems = virtualizer.getVirtualItems();
   const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
   useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
+  useLayoutEffect(() => {
+    if (virtualItems.length > 0 || blocks.length === 0) return;
+    const frame = window.requestAnimationFrame(() => virtualizer.measure());
+    return () => window.cancelAnimationFrame(frame);
+  }, [blocks.length, virtualItems.length, virtualizer]);
 
   return (
     <div
@@ -320,6 +326,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
         );
       })}
       {virtualFlow.gapAfter > 0 ? <div aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
+      {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
   );
 }
@@ -330,6 +337,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
   const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
+  const overscan = useAdaptiveReaderOverscan(containerRef, "window");
   const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
     const indexes = defaultRangeExtractor(range);
@@ -345,7 +353,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     ),
     getItemKey: (index) => blocks[index]?.id ?? `${messageId}-${blocks[index]?.block_index ?? index}`,
     measureElement: (element) => element?.getBoundingClientRect().height ?? 0,
-    overscan: 8,
+    overscan,
     scrollMargin,
     rangeExtractor,
     useAnimationFrameWithResizeObserver: true,
@@ -374,6 +382,11 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
   const virtualItems = virtualizer.getVirtualItems();
   const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
   useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
+  useLayoutEffect(() => {
+    if (virtualItems.length > 0 || blocks.length === 0) return;
+    const frame = window.requestAnimationFrame(() => virtualizer.measure());
+    return () => window.cancelAnimationFrame(frame);
+  }, [blocks.length, virtualItems.length, virtualizer]);
 
   return (
     <div
@@ -395,6 +408,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
         );
       })}
       {virtualFlow.gapAfter > 0 ? <div aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
+      {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
   );
 }
@@ -450,6 +464,41 @@ function useVisibleVirtualGapRecovery(
     if (!Number.isFinite(actualScrollMargin)) return;
     setScrollMargin((current) => Math.abs(current - actualScrollMargin) > 0.5 ? actualScrollMargin : current);
   }, [containerRef, firstIndex, lastIndex, setScrollMargin, virtualItems.length]);
+}
+
+function useAdaptiveReaderOverscan(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  mode: "element" | "window",
+): number {
+  const [overscan, setOverscan] = useState(8);
+  useEffect(() => {
+    const container = containerRef.current;
+    const root = mode === "window"
+      ? window
+      : container?.closest<HTMLElement>('[data-reader-scroll-root="true"]');
+    if (!root) return;
+    let previous = mode === "window" ? window.scrollY : (root as HTMLElement).scrollTop;
+    let previousAt = window.performance.now();
+    let settleTimer: number | null = null;
+    const onScroll = () => {
+      const now = window.performance.now();
+      const position = mode === "window" ? window.scrollY : (root as HTMLElement).scrollTop;
+      const velocity = Math.abs(position - previous) / Math.max(1, now - previousAt);
+      previous = position;
+      previousAt = now;
+      if (velocity > 1.2) {
+        setOverscan(24);
+        if (settleTimer !== null) window.clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(() => setOverscan(8), 180);
+      }
+    };
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      root.removeEventListener("scroll", onScroll);
+      if (settleTimer !== null) window.clearTimeout(settleTimer);
+    };
+  }, [containerRef, mode]);
+  return overscan;
 }
 
 function useVirtualMessageRegistration(

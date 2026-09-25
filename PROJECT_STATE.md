@@ -1,5 +1,20 @@
 # Project State
 
+## 0A. Working-tree editor and attachment preview changes (not deployed)
+
+The current working tree adds a bounded source-editor attachment tray so a
+large set of pending files scrolls inside the tray instead of expanding the
+footer indefinitely. The editor also has a default-closed grouped Markdown
+command palette (`Ctrl+Alt+C`), an overlay live preview that does not shrink
+the source editor, and canonical-text handoff after save. Reader virtualized
+blocks temporarily increase overscan during high-speed scrolling.
+
+Attachment uploads are now configured for a 1 GiB per-file limit while Import
+and Adaptive Import remain at their existing 500 MiB contracts. Browser
+preview is capped at 50 MiB for previewable attachment types; larger files
+remain downloadable. These changes are in the working tree and are not yet
+deployed or production-verified.
+
 Last updated: 2026-09-25
 
 ## 0. Upload failure diagnosis and attachment limit update (2026-09-24)

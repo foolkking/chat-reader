@@ -20,7 +20,7 @@ class AssetDerivativeError(ValueError):
 TEXT_TYPES = {"text/plain", "text/markdown", "text/csv", "application/json", "application/xml"}
 IMAGE_TYPES = {"image/bmp", "image/gif", "image/jpeg", "image/png", "image/tiff", "image/webp"}
 GENERATOR_VERSION = "attachment-derivative-v2"
-MAX_SOURCE_BYTES = 64 * 1024 * 1024
+MAX_SOURCE_BYTES = 50 * 1024 * 1024
 MAX_DECODED_PIXELS = 32_000_000
 MAX_DECODED_MEMORY = 128 * 1024 * 1024
 CPU_DEADLINE_SECONDS = 10.0
@@ -106,7 +106,7 @@ def _text_payload(source: AssetObject, source_path) -> tuple[bytes, str, str, di
 
 def _image_payload(source: AssetObject, source_path, derivative_type: str) -> tuple[bytes, str, str, dict]:
     if source.byte_size > MAX_SOURCE_BYTES:
-        raise AssetDerivativeError("Image source exceeds the 64 MiB derivative limit.")
+        raise AssetDerivativeError("Image source exceeds the 50 MiB derivative limit.")
     if source.detected_mime_type not in IMAGE_TYPES:
         raise AssetDerivativeError("Image derivatives are not supported for this MIME type.")
     started = time.monotonic()

@@ -152,7 +152,7 @@ Image, text, PDF and media load errors produce explicit retry/download UI. Runti
 - CSV/TSV table: parse <= 8 MiB, rows <= 10,000, columns <= 256, cells <= 250,000, field <= 64 KiB. Inline reads at most 128 KiB and 8 x 8 cells. Full table enforcement beyond the baseline remains partial.
 - Text search: query <= 256 code points; regex is unsupported; each page scans <= 8 MiB in 256 KiB chunks, returns <= 200 matches and <= 256 KiB within a 750ms deadline.
 - Search cursor is HMAC-signed and binds Attachment ID, asset SHA-256, size/version, normalized query hash, encoding, byte offset and expiration. Mismatch returns `cursor_stale`.
-- Image derivatives cap source at 64 MiB, decoded pixels at 32 MP, estimated memory at 128 MiB, CPU at 10 seconds and output to one frame. Thumbnail/preview maximum edges are 320/1600px with no enlargement.
+- Image derivatives cap source at 50 MiB, decoded pixels at 32 MP, estimated memory at 128 MiB, CPU at 10 seconds and output to one frame. Thumbnail/preview maximum edges are 320/1600px with no enlargement.
 - TIFF derivatives represent only page/frame one and must be labeled accordingly. Animated GIF/WebP static-preview thresholds remain a contract requirement; metadata/frame enforcement is not production verified.
 
 Overview prefers bounded previews and Focus loads the active item. Original bytes are always the download authority.

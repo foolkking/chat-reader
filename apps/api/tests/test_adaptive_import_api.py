@@ -767,4 +767,4 @@ def test_adaptive_nginx_capacity_is_scoped_to_exact_route() -> None:
     assert "client_max_body_size 520m;" in adaptive_location
     assert "proxy_request_buffering off;" in adaptive_location
     assert "proxy_pass http://127.0.0.1:8000;" in adaptive_location
-    assert nginx.count("client_max_body_size 520m;") == 3
+    assert nginx.count("client_max_body_size 520m;") == 2

@@ -30,6 +30,7 @@ class MessageEditRequest(BaseModel):
     upload_item_ids: list[UUID] = Field(default_factory=list)
     attachment_occurrences: list[MessageAttachmentOccurrenceInput] = Field(default_factory=list)
     removed_attachment_actions: list[RemovedAttachmentActionInput] = Field(default_factory=list)
+    editor_revision: int | None = Field(default=None, ge=0)
 
     def text_value(self) -> str:
         value = self.content_markdown if self.content_markdown is not None else self.display_text

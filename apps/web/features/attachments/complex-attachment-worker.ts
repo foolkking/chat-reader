@@ -22,7 +22,7 @@ type Result =
   | { kind: "presentation"; slides: Array<{ title: string; lines: string[] }> }
   | { kind: "archive"; entries: ArchiveEntry[] };
 
-const MAX_SOURCE_BYTES = 32 * 1024 * 1024;
+const MAX_SOURCE_BYTES = 50 * 1024 * 1024;
 const MAX_ENTRIES = 5_000;
 const MAX_EXPANDED_BYTES = 96 * 1024 * 1024;
 const MAX_ENTRY_BYTES = 16 * 1024 * 1024;
@@ -36,7 +36,7 @@ self.onmessage = (event: MessageEvent<RequestMessage>) => {
 
 async function handleRequest({ requestId, kind, filename, bytes }: RequestMessage) {
   try {
-    if (bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("文件超过 32 MiB 浏览器预览上限，请下载原文件。 ");
+    if (bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("文件超过 50 MiB 浏览器预览上限，请下载原文件。 ");
     const source = new Uint8Array(bytes);
     if (kind === "document" && filename.toLowerCase().endsWith(".doc")) {
       const result = await parseLegacyWordDocument(source);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eraser, Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll, Search, Undo2, Upload, X } from "lucide-react";
+import { Eraser, Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll, Search, Undo2, Upload, Wand2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
@@ -69,6 +69,8 @@ export function SourceEditorWorkspace({
   // workspace never halves the editor or starts a potentially heavy render
   // until the user asks for it.
   const [showPreview, setShowPreview] = useState(false);
+  const [editorToolsOpen, setEditorToolsOpen] = useState(false);
+  const editorToolsButtonRef = useRef<HTMLButtonElement | null>(null);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
   const [saveBaseVersionId, setSaveBaseVersionId] = useState(message.current_version?.id);
   const [editorDirty, setEditorDirty] = useState(false);
@@ -224,6 +226,17 @@ export function SourceEditorWorkspace({
     setCleanupOpen(false);
   }, [message.id, message.current_version?.id]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey || !event.ctrlKey || event.key.toLowerCase() !== "c") return;
+      if (!(event.target as HTMLElement | null)?.closest("[data-source-editor-shell='true']")) return;
+      event.preventDefault();
+      setEditorToolsOpen((current) => !current);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   function requestClose() {
     const button = document.querySelector<HTMLButtonElement>(`#${FORM_ID} [data-source-editor-close='true']`);
     button?.click();
@@ -305,11 +318,12 @@ export function SourceEditorWorkspace({
       onClose={requestClose}
       banner={pendingBanner}
     >
-      <div className="flex h-full min-h-0 flex-col" data-source-selection-state={selectionState}>
+      <div className="flex h-full min-h-0 flex-col" data-source-editor-shell="true" data-source-selection-state={selectionState}>
         <div className="flex min-h-10 shrink-0 items-center justify-between border-b border-ui bg-surface px-2">
           <div className="flex min-w-0 items-center gap-1">
             <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "添加附件" : "Add attachment"} title={zh ? "添加附件" : "Add attachment"}><Upload className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "添加附件" : "Add attachment"}</span></label>
             <button type="button" onClick={() => setAttachmentPickerOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "选择当前对话文件" : "Choose conversation file"} title={zh ? "选择当前对话文件" : "Choose conversation file"}><Paperclip className="h-4 w-4" /></button>
+            <button ref={editorToolsButtonRef} type="button" data-testid="source-editor-tools-toggle" aria-expanded={editorToolsOpen} aria-controls="source-editor-tools" onClick={() => setEditorToolsOpen((value) => !value)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle ${editorToolsOpen ? "bg-subtle text-primary" : ""}`} aria-label={zh ? "编辑工具" : "Editing tools"} title={zh ? "编辑工具（Ctrl + Alt + C）" : "Editing tools (Ctrl + Alt + C)"}><Wand2 className="h-4 w-4" /></button>
           </div>
           <div className="flex items-center gap-1">
             <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">{zh ? "\u9884\u89c8" : "Preview"}</span></button>
@@ -326,6 +340,7 @@ export function SourceEditorWorkspace({
             requestedCursorOffset={requestedCursorOffset}
             pendingAttachmentInsertion={effectiveAttachmentInsertion}
             onAttachmentInsertionApplied={() => { setLocalAttachmentInsertion(null); onAttachmentInsertionApplied?.(); }}
+            onOpenAttachmentPicker={() => setAttachmentPickerOpen(true)}
             messageId={message.id}
             versionNumber={versionNumber}
             onCursorOffsetChange={(offset) => { cursorOffsetRef.current = offset; }}
@@ -338,8 +353,14 @@ export function SourceEditorWorkspace({
             onAttachmentCancel={handleAttachmentCancel}
             conversationAttachments={conversationAttachmentsQuery.data ?? []}
             showPreview={showPreview}
+            onPreviewChange={setShowPreview}
+            editorToolsOpen={editorToolsOpen}
+            onEditorToolsOpenChange={(open) => {
+              setEditorToolsOpen(open);
+              if (!open) window.setTimeout(() => editorToolsButtonRef.current?.focus(), 0);
+            }}
             onReloadLatest={async () => { await loadLatestMessage(); }}
-            onSave={async (nextText, reason, saveMode, removedActions) => {
+            onSave={async (nextText, reason, saveMode, removedActions, editorRevision) => {
               const clickedAt = window.performance.now();
               const requestStartedAt = window.performance.now();
               const response = await editMessage(message.id, {
@@ -347,6 +368,7 @@ export function SourceEditorWorkspace({
                 editReason: reason,
                 baseVersionId: saveBaseVersionId,
                 saveMode,
+                editorRevision,
                 removedAttachmentActions: removedActions,
               });
               const networkCompletedAt = window.performance.now();
@@ -375,6 +397,7 @@ export function SourceEditorWorkspace({
               onTargetUpdated({ message: response.message, cursorOffset: cursorOffsetRef.current });
               setSaveBaseVersionId(response.message.current_version?.id);
               uploadJobsRef.current.clear();
+              return { canonicalText: response.message.current_version?.display_text ?? response.message.current_version?.plain_text ?? nextText };
             }}
           />
           {sourceSelection && selectedCharacterCount > 0 ? <div className="source-editor-selection-badge" data-testid="source-editor-selection-status" role="status" aria-live="polite">{zh ? `已选择 ${selectedCharacterCount} 个字符` : `${selectedCharacterCount} chars selected`}</div> : null}
