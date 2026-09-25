@@ -105,8 +105,10 @@ services:
       - export-storage:/data/exports
       - offline-storage:/data/offline
       - asset-storage:/data/assets
-    expose:
-      - "8000"
+    # Large upload routes bypass the Next proxy and enter FastAPI through this
+    # loopback-only binding. It must never be exposed on a public interface.
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     healthcheck:
       test:
         [

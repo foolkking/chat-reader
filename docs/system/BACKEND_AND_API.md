@@ -44,8 +44,10 @@ Requests containing a file over `UPLOAD_HEAVY_THRESHOLD_MB` enter the bounded
 analysis admission queue. The queue has one active analysis slot by default,
 checks the configured memory reserve, and returns a structured retryable 429
 when capacity or memory is unavailable. Attachment staging uses the same
-per-file limit and serialized heavy-upload slot, but its bounded disk copy does
-not require the import parser's memory reserve. Adaptive sessions keep their 512 MiB
+per-file limit and an independent nonblocking heavy-upload slot; its bounded
+disk copy does not require the import parser's memory reserve. Production Nginx
+streams the three exact large-upload paths directly to the loopback-bound API,
+avoiding Next.js's 10 MiB request clone. Adaptive sessions keep their 512 MiB
 aggregate limit.
 
 Selecting or deleting a message version commits the canonical message and

@@ -9,15 +9,19 @@ request reached 100%, then spent about 30 seconds in the attachment item route
 before the reverse proxy returned 500. Nginx reported normal request-body
 buffering and its Chat Reader server block still had a 60 MiB default body cap;
 there was no 413, disk-full error, or kernel OOM event for the 33 MiB request.
-Host memory was pressured (270 MiB available at the latest check), but the
-direct failure was attachment staging sharing the import parser semaphore and
-blocking for about 30 seconds. Working-tree changes now give disk staging an
-independent nonblocking slot and expose a retryable 429 if that slot is busy.
+Host memory was pressured (270 MiB available at the latest check). Attachment
+staging incorrectly shared the import parser semaphore, but production probing
+after that fix exposed the remaining decisive boundary: Next.js buffered only
+the first 10 MiB of the same-origin rewrite request and then reset the API
+connection. The final contract gives disk staging an independent nonblocking
+slot and routes only the three large-upload endpoints from Nginx directly to a
+loopback-only FastAPI port, bypassing Next's in-memory request clone.
 All user upload entry points now use a 500 MiB cap with 520 MiB exact Nginx
 allowances. Heavy import parsing still passes the memory-aware admission gate
 and returns a retryable 429 when the small production host cannot safely
 materialize the request. This update is deployed from immutable source
-`050f257ceb702490885bae8aabcbf5a1ce60ba84`.
+`050f257ceb702490885bae8aabcbf5a1ce60ba84`; the direct-upload gateway
+follow-up is pending its immutable release at the time of this source update.
 
 The server was cleaned without touching PostgreSQL, named volumes, import
 storage, the active image, or the direct rollback image. Stale Chat Reader

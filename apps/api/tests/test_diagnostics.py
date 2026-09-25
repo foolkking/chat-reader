@@ -241,8 +241,9 @@ def test_public_gateway_configuration_conceals_internal_diagnostics() -> None:
     assert "no-store" in fragment
     assert "proxy_pass" not in fragment
     assert "include /etc/nginx/snippets/chat-reader-internal-diagnostics.conf;" in nginx
-    assert 'expose:\n      - "8000"' in compose.replace("\r\n", "\n")
-    assert 'ports:\n      - "8000' not in compose.replace("\r\n", "\n")
+    normalized_compose = compose.replace("\r\n", "\n")
+    assert '127.0.0.1:${API_PORT:-8000}:8000' in normalized_compose
+    assert '0.0.0.0:${API_PORT' not in normalized_compose
 
 
 def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
@@ -251,6 +252,10 @@ def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
     preview_location = nginx.split("location = /api/imports/preview", 1)[1].split("location /", 1)[0]
 
     assert "client_max_body_size 520m;" in preview_location
+    assert "proxy_request_buffering off;" in preview_location
+    assert "proxy_pass http://127.0.0.1:8000;" in preview_location
     assert "location ^~ /api/attachment-upload-sessions/" in nginx
     assert nginx.count("client_max_body_size 520m;") == 3
+    assert nginx.count("proxy_request_buffering off;") == 3
+    assert nginx.count("proxy_pass http://127.0.0.1:8000;") == 3
     assert "client_max_body_size 520m;" in nginx

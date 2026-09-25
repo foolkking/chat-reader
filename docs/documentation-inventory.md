@@ -1,11 +1,20 @@
 # Markdown 文档台账
 
+2026-09-25 large-upload gateway correction: production's exact Import Preview,
+Adaptive Import and attachment upload paths stream from Nginx to the
+loopback-only FastAPI port, bypassing Next.js's 10 MiB proxy request clone.
+The current contract is synchronized in `PROJECT_STATE.md`,
+`docker-compose.production.yml`, `deploy/nginx-chat-reader.conf`,
+`.env.production.example`, `docs/system/BACKEND_AND_API.md`,
+`docs/system/FRONTEND_ARCHITECTURE.md`,
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` and `docs/deployment.md`.
+
 2026-09-24 upload follow-up: all user upload entry points use a 500 MiB limit,
 with independent nonblocking attachment staging admission and exact 520 MiB proxy routes,
 documented in `PROJECT_STATE.md`, `.env.production.example`,
 `docker-compose.production.yml`, `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`,
 `docs/system/ADAPTIVE_IMPORT_CONTRACT.md`, `docs/api-reference.md`,
-`docs/development.md` and `docs/deployment.md`. Not deployed in this cycle.
+`docs/development.md` and `docs/deployment.md`.
 
 2026-09-24 attachment upload diagnosis, staging fix and production deployment
 are synchronized in

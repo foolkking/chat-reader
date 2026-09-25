@@ -765,4 +765,6 @@ def test_adaptive_nginx_capacity_is_scoped_to_exact_route() -> None:
     adaptive_location = nginx.split("location = /api/adaptive-import/sessions", 1)[1].split("location", 1)[0]
 
     assert "client_max_body_size 520m;" in adaptive_location
+    assert "proxy_request_buffering off;" in adaptive_location
+    assert "proxy_pass http://127.0.0.1:8000;" in adaptive_location
     assert nginx.count("client_max_body_size 520m;") == 3

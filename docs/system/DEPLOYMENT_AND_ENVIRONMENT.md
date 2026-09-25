@@ -28,15 +28,15 @@ in the Web UI. Share and Offline remain separate permission boundaries.
 
 ## Import Preview request boundary
 
-The 500 MiB values in this section are active in production from source
-`050f257ceb702490885bae8aabcbf5a1ce60ba84`.
+The application and proxy limits in this section are 500/520 MiB respectively.
 
 The application limit defaults to 500 MiB per user-uploaded file and Preview
-accepts at most one JSON plus one Markdown file. The versioned Nginx config
-keeps a 110 MiB default upload boundary and repeats it for the exact
-`/api/imports/preview` location, allowing multipart overhead for a maximum-size
-file. The API still enforces the per-file limit before parsing; non-upload
-endpoints remain governed by their application contracts.
+accepts at most one JSON plus one Markdown file. Nginx keeps a 60 MiB global
+boundary and uses 520 MiB only for the three exact large-upload locations.
+Those locations stream directly to the API's loopback-only port with
+`proxy_request_buffering off`; they do not traverse the Next.js rewrite, whose
+proxy request clone is intentionally unsuitable for hundreds of MiB. The API
+still enforces the per-file limit before parsing.
 
 Adaptive batches use the separate exact `/api/adaptive-import/sessions`
 location with `client_max_body_size 520m`; application limits remain 500 MiB
@@ -123,7 +123,7 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 | `IMPORT_WORKER_POLL_SECONDS`, `IMPORT_STALE_AFTER_SECONDS` | worker/API | queue 轮询与 stale 判断 |
 | `IMPORT_COMMIT_INLINE` | 测试/调试 | 绕过 worker 的显式开关 |
 | `API_INTERNAL_URL` | Next server | FastAPI upstream |
-| `WEB_BIND_ADDRESS`, `WEB_PORT`, `API_WORKERS` | Compose | 进程绑定/并发 |
+| `WEB_BIND_ADDRESS`, `WEB_PORT`, `API_PORT`, `API_WORKERS` | Compose | Web 绑定、API loopback 上传端口与进程并发；`API_PORT` 不得绑定公网地址 |
 
 真实值只存在 `.env`/`.env.production` 或 secret manager，不写入文档。
 

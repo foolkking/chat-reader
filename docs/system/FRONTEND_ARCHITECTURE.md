@@ -139,7 +139,10 @@ apps/web/
 
 ## 数据与状态边界
 
-- API client 始终使用相对 `/api/*`；`next.config.mjs` 通过 `API_INTERNAL_URL` rewrite。
+- API client 始终使用相对 `/api/*`；普通请求由 `next.config.mjs` 通过
+  `API_INTERNAL_URL` rewrite。生产 Nginx 仅将三个精确的大文件上传路径直接流式
+  转发到 loopback FastAPI，以绕开 Next 的请求正文内存克隆；浏览器 URL 和权限
+  合同保持同源不变。
 - TanStack Query 管理在线列表、详情、TOC、位置和 mutation invalidation。
 - `ReaderDataSource` 统一 remote/offline 合同；`capabilities` 控制编辑、Share、Export 等入口。
 - PreferencesProvider 先从 localStorage cache 启动，再与 `/api/preferences` 同步跨浏览器偏好。

@@ -972,12 +972,13 @@ Follow-up commit `6d025e7fdcca47334e8020ed8b615f9c4d40d928` removes redundant le
 Internet HTTPS
   -> reverse proxy
   -> Next.js Web :3000
-       -> /api/* -> FastAPI :8000
+       -> ordinary /api/* -> FastAPI :8000
+  -> exact large-upload /api paths -> loopback FastAPI :8000
   -> PostgreSQL 16
   -> single import/background worker
 ```
 
-生产 Compose 文件为 `docker-compose.production.yml`，服务包括 `postgres`、`migrate`、`api`、`import-worker` 和 `web`。只对宿主机暴露 Web；API 和 PostgreSQL 位于内部 network。
+生产 Compose 文件为 `docker-compose.production.yml`，服务包括 `postgres`、`migrate`、`api`、`import-worker` 和 `web`。Web 与 API 只绑定宿主机 loopback；API 的 loopback 端口仅供 Nginx 三个精确大文件上传 location 使用。PostgreSQL 仅位于内部 network。
 
 服务器需要 Docker Compose、足够磁盘、可用 swap/内存、`.env.production` 和外部 HTTPS 反向代理。至少配置强 `POSTGRES_PASSWORD`、正确的 `PUBLIC_WEB_BASE_URL`、`WEB_BIND_ADDRESS` 与 `WEB_PORT`。
 
