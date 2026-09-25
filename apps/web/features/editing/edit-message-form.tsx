@@ -580,7 +580,7 @@ export function EditMessageForm({
           </aside>
         </> : null}
       </div>
-      <footer className="shrink-0 space-y-2 border-t border-ui bg-raised p-3">
+      <footer className="relative z-40 shrink-0 space-y-2 border-t border-ui bg-raised p-3">
         {pendingCodeDrop ? <div className="rounded-lg border border-[var(--mark-border)] bg-[var(--mark-bg)] p-3 text-xs text-primary" role="status" data-testid="source-editor-code-drop-choice">
           <p>{zh ? "当前位置在代码块内。附件放在这里不会在 Reader 中显示。" : "This position is inside a code block, so an attachment placed here will not render in Reader."}</p>
           <div className="mt-2 flex flex-wrap gap-2">
