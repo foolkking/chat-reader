@@ -486,6 +486,8 @@ test("annotation actions dismiss outside or with Escape and restore the source a
 
   const targetBlock = page.locator(`#block-${targetMessageId}-${targetBlockIndex}`);
   await expect(targetBlock).toBeVisible();
+  await expect.poll(() => page.getByTestId("reader-scroll-root").getAttribute("data-navigation-stage"))
+    .toMatch(/^settled/);
   const repeatedLocatorRequests: string[] = [];
   page.on("request", (request) => {
     const url = new URL(request.url());
