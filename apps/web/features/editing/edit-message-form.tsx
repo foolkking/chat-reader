@@ -310,7 +310,6 @@ export function EditMessageForm({
     const closeOnOutside = (event: PointerEvent) => {
       const target = event.target as HTMLElement;
       if (editorToolsOpen && !toolsPanelRef.current?.contains(target) && !target.closest("[data-testid='source-editor-tools-toggle']")) onEditorToolsOpenChange?.(false);
-      if (showPreview && previewPanelRef.current && !previewPanelRef.current.contains(target) && !target.closest("[data-testid='source-editor-preview-toggle']")) onPreviewChange?.(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -573,8 +572,7 @@ export function EditMessageForm({
           />
         </div>
         {showPreview ? <>
-          <button type="button" className="absolute inset-0 z-20 bg-transparent" aria-label={zh ? "关闭预览" : "Close preview"} onClick={() => onPreviewChange?.(false)} />
-          <aside ref={previewPanelRef} className="absolute inset-y-0 right-0 z-30 w-[min(46%,42rem)] min-w-[20rem] overflow-y-auto overscroll-contain border-l border-ui bg-page p-4 shadow-2xl max-sm:inset-x-0 max-sm:w-full max-sm:min-w-0" data-testid="source-editor-rich-preview" data-preview-revision={previewSnapshot.revision} aria-label={zh ? "Markdown 实时预览" : "Live Markdown preview"}>
+          <aside ref={previewPanelRef} className="absolute inset-y-0 right-0 z-30 w-[min(36%,38rem)] min-w-[15rem] overflow-y-auto overscroll-contain border-l border-ui bg-page p-4 shadow-2xl max-sm:inset-x-0 max-sm:w-full max-sm:min-w-0" data-testid="source-editor-rich-preview" data-preview-revision={previewSnapshot.revision} aria-label={zh ? "Markdown 实时预览" : "Live Markdown preview"}>
             <div className="mb-3 flex items-center justify-between border-b border-ui pb-2"><span className="text-xs font-semibold text-secondary">{text === previewText ? (zh ? "实时预览" : "Live preview") : (zh ? "正在更新…" : "Updating…")}</span><button type="button" className="rounded-md p-2 text-secondary hover:bg-subtle" onClick={() => onPreviewChange?.(false)} aria-label={zh ? "关闭预览" : "Close preview"}><X className="h-4 w-4" /></button></div>
             <MarkdownRenderer text={previewText} isAssistant={false} scopeId={`editor-${messageId ?? formId}`} />
           </aside>
