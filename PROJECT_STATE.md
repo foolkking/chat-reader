@@ -2,6 +2,16 @@
 
 ## 0A. Deployed split Markdown command surfaces (2026-09-26)
 
+The current production deployment is source
+`2e7e7577b9b6b44e392fed6c00800470ee0a90b4` from Actions run `36242345790`.
+API/worker digest is `sha256:a2dd5439a8ce10c08dc85b95be6da165924d3e5087eaf477c23d709bb715aa5a`
+and Web digest is `sha256:f5ad3416b4fbb6d868e84d57f1a637824aa8e09c3eac890da5df4e7fb72c70d0`.
+The verified backup is `/opt/chat-reader/backups/chat-reader-20260926T130202Z`;
+current/rollback release pointers are `2e7e7577` and `027a148b`. Runtime
+health, HTTPS entry, worker heartbeat and Alembic `20260902_0032` passed.
+The archive and failed-preflight temporary API image were removed; volumes,
+PostgreSQL and `.env.production` were preserved.
+
 The production release includes a bounded source-editor attachment tray so a
 large set of pending files scrolls inside the tray instead of expanding the
 footer indefinitely. Selection-only Markdown formatting remains in the compact

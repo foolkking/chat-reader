@@ -2,7 +2,18 @@
 
 ## Current deployed snapshot (2026-09-26)
 
-The active production source is `027a148b509a4503a45e3d21036ad2edf72c5389`
+The current release is source `2e7e7577b9b6b44e392fed6c00800470ee0a90b4`
+from GitHub Actions run `36242345790`. API/worker digest is
+`sha256:a2dd5439a8ce10c08dc85b95be6da165924d3e5087eaf477c23d709bb715aa5a`;
+Web is `sha256:f5ad3416b4fbb6d868e84d57f1a637824aa8e09c3eac890da5df4e7fb72c70d0`.
+The verified backup is `/opt/chat-reader/backups/chat-reader-20260926T130202Z`;
+release state records `2e7e7577` as current and `027a148b` as direct rollback.
+Runtime health, worker heartbeat, HTTPS entry and migration head passed. The
+transferred archive and failed-preflight `chat-reader-api:latest` image were
+removed; no named volume, PostgreSQL data, user storage or production
+environment file was changed.
+
+The preceding deployed snapshot was `027a148b509a4503a45e3d21036ad2edf72c5389`
 from GitHub Actions run `36226227092`.
 API/worker image digest is
 `sha256:56c7a2d6172ac5a21ca28a04e76cfecc04fd72b597535f0135ec20984326133c`;

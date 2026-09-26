@@ -1,5 +1,30 @@
 # 生产部署
 
+## 2026-09-26 contextual locator and source toolbar release
+
+Source `2e7e7577b9b6b44e392fed6c00800470ee0a90b4` was deployed from GitHub
+Actions run `36242345790`. API and Web quality gates, the default PWA matrix,
+independent artifact inspection and the API full suite passed. The release
+archive SHA-256 is
+`5e77f5f41c9e36024d940a7720cfcaeedf0cbd3d4a2469c839a521a91a8a02f1`.
+
+Production now uses the compact source-editor command surfaces, corrected
+CodeMirror first-row selection rendering, and the shared
+TOC/attachment/annotation/source locator target registry. API/worker image
+digest is
+`sha256:a2dd5439a8ce10c08dc85b95be6da165924d3e5087eaf477c23d709bb715aa5a`;
+Web is
+`sha256:f5ad3416b4fbb6d868e84d57f1a637824aa8e09c3eac890da5df4e7fb72c70d0`.
+Runtime health, worker heartbeat, HTTPS health/redirect and Alembic
+`20260902_0032` passed. PostgreSQL was not restarted.
+
+The verified five-component backup is
+`/opt/chat-reader/backups/chat-reader-20260926T130202Z`. Release state now
+records current `2e7e7577` and direct rollback `027a148b`; named volumes,
+PostgreSQL data, user storage and `.env.production` were not touched. The
+transferred release archive and accidental `chat-reader-api:latest` build
+image were removed; only reclaimable Docker build cache was pruned.
+
 ## 2026-09-26 editor, preview and 1 GiB attachment release
 
 Source `094abf43aca1195377053a717603a5d3099ba30e` was deployed from GitHub
