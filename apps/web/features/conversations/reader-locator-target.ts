@@ -22,7 +22,6 @@ export function attachmentNavigationTarget(
     endCharacterOffset: occurrence.end_offset ?? undefined,
     occurrenceKey: occurrence.occurrence_key,
     attachmentId: attachment.id,
-    allowMessageFallback: true,
     source: "attachment",
   };
 }
