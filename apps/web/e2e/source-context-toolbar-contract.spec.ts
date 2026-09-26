@@ -18,13 +18,19 @@ test.describe("source editor contextual formatting toolbar contract", () => {
     expect(form).not.toContain("absolute left-2 top-12");
   });
 
-  test("renders an icon-only portal toolbar with accessible labels and overflow", () => {
+  test("separates selection formatting from the explicit command panel", () => {
     const toolbar = source("features/editing/source-context-toolbar.tsx");
     expect(toolbar).toContain("createPortal(");
+    expect(toolbar).toContain('data-testid="source-editor-selection-tools"');
+    expect(toolbar).toContain('data-testid="source-editor-command-panel"');
     expect(toolbar).toContain('role="toolbar"');
     expect(toolbar).toContain("data-source-toolbar-command");
-    expect(toolbar).toContain("aria-label={item.shortcut");
+    expect(toolbar).toContain("aria-label={label}");
     expect(toolbar).toContain("group-hover:delay-[350ms]");
+    expect(toolbar).toContain('item("image"');
+    expect(toolbar).toContain('item("footnote"');
+    expect(toolbar).not.toContain("MoreHorizontal");
+    expect(toolbar).not.toContain("source-editor-tools-overflow");
     expect(toolbar).not.toContain("<span>{item.label}</span>");
   });
 
@@ -34,9 +40,20 @@ test.describe("source editor contextual formatting toolbar contract", () => {
     const workspace = source("features/editing/source-editor-workspace.tsx");
     expect(form).toContain("savedToolbarSelectionRef.current ?? view.state.selection.main");
     expect(toolbar).toContain("event.preventDefault()");
-    expect(toolbar).toContain('["ArrowLeft", "ArrowRight", "Home", "End"]');
-    expect(workspace).toContain("chat-reader:source-toolbar-focus");
+    expect(toolbar).toContain('["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]');
+    expect(workspace).toContain("chat-reader:source-command-panel-focus");
     expect(workspace).toContain("event.altKey || !event.ctrlKey");
+  });
+
+  test("uses paired caret insertions and exposes common block commands without overflow", () => {
+    const form = source("features/editing/edit-message-form.tsx");
+    const toolbar = source("features/editing/source-context-toolbar.tsx");
+    expect(form).toContain("const contentStart = from + pair[0].length");
+    expect(form).toContain("selection: selected");
+    expect(form).toContain('if (command === "image")');
+    expect(form).toContain('if (command === "footnote")');
+    expect(toolbar).toContain("flex-wrap");
+    expect(toolbar).not.toContain("MoreHorizontal");
   });
 
   test("tracks scroll, resize, preview and IME without a positioning dependency", () => {

@@ -233,9 +233,12 @@ export function SourceEditorWorkspace({
       if (!(event.target as HTMLElement | null)?.closest("[data-source-editor-shell='true']")) return;
       event.preventDefault();
       if (editorToolsOpen) {
-        window.dispatchEvent(new CustomEvent("chat-reader:source-toolbar-focus"));
+        window.dispatchEvent(new CustomEvent("chat-reader:source-command-panel-focus"));
       } else {
         setEditorToolsOpen(true);
+        window.requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent("chat-reader:source-command-panel-focus"));
+        });
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -328,7 +331,7 @@ export function SourceEditorWorkspace({
           <div className="flex min-w-0 items-center gap-1">
             <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "添加附件" : "Add attachment"} title={zh ? "添加附件" : "Add attachment"}><Upload className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "添加附件" : "Add attachment"}</span></label>
             <button type="button" onClick={() => { setEditorToolsOpen(false); setAttachmentPickerOpen(true); }} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "选择当前对话文件" : "Choose conversation file"} title={zh ? "选择当前对话文件" : "Choose conversation file"}><Paperclip className="h-4 w-4" /></button>
-            <button ref={editorToolsButtonRef} type="button" data-testid="source-editor-tools-toggle" aria-expanded={editorToolsOpen} aria-controls="source-editor-tools" onClick={() => setEditorToolsOpen((value) => !value)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle ${editorToolsOpen ? "bg-subtle text-primary" : ""}`} aria-label={zh ? "编辑工具" : "Editing tools"} title={zh ? "编辑工具（Ctrl + Alt + C）" : "Editing tools (Ctrl + Alt + C)"}><Wand2 className="h-4 w-4" /></button>
+            <button ref={editorToolsButtonRef} type="button" data-testid="source-editor-tools-toggle" aria-expanded={editorToolsOpen} aria-controls="source-editor-command-panel" onClick={() => setEditorToolsOpen((value) => !value)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle ${editorToolsOpen ? "bg-subtle text-primary" : ""}`} aria-label={zh ? "编辑工具" : "Editing tools"} title={zh ? "编辑工具（Ctrl + Alt + C）" : "Editing tools (Ctrl + Alt + C)"}><Wand2 className="h-4 w-4" /></button>
           </div>
           <div className="flex items-center gap-1">
             <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">{zh ? "\u9884\u89c8" : "Preview"}</span></button>
