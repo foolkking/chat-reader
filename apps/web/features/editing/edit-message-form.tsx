@@ -64,6 +64,7 @@ export function EditMessageForm({
   onPreviewChange,
   editorToolsOpen = false,
   onEditorToolsOpenChange,
+  historyCommandRequest,
 }: {
   formId?: string;
   initialText: string;
@@ -90,6 +91,7 @@ export function EditMessageForm({
   onPreviewChange?: (open: boolean) => void;
   editorToolsOpen?: boolean;
   onEditorToolsOpenChange?: (open: boolean) => void;
+  historyCommandRequest?: { id: number; command: "undo" | "redo" } | null;
 }) {
   const { t, resolvedLocale, resolvedTheme } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -457,7 +459,7 @@ export function EditMessageForm({
     if (selectionToolbarOpenRef.current) requestToolbarPosition();
   }, [closeCommandPanel, hideContextToolbar, openContextToolbar, requestToolbarPosition, saveToolbarSelection]);
 
-  const dispatchCommand = useCallback((command: EditorCommand, source: "selection" | "panel") => {
+  const dispatchCommand = useCallback((command: EditorCommand, source: "selection" | "panel" | "header") => {
     const view = editorViewRef.current;
     if (!view) return;
     if (command === "undo" || command === "redo") {
@@ -486,6 +488,11 @@ export function EditMessageForm({
       hideContextToolbar(false);
     }
   }, [closeCommandPanel, hideContextToolbar, onOpenAttachmentPicker, openContextToolbar, saveToolbarSelection, syncContextToolbarFromView]);
+
+  useEffect(() => {
+    if (!historyCommandRequest) return;
+    dispatchCommand(historyCommandRequest.command, "header");
+  }, [dispatchCommand, historyCommandRequest]);
 
   useEffect(() => {
     if (!editorToolsOpen && !selectionToolbarOpen && !showPreview) return;
@@ -585,6 +592,7 @@ export function EditMessageForm({
     if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(codePointOffset);
     cursorOffsetChangeRef.current?.(codePointOffset);
     const selection = update.state.selection.main;
+    update.view.dom.classList.toggle("cm-has-selection", !selection.empty);
     saveToolbarSelection(selection);
     if (selection.empty) {
       selectionChangeRef.current?.(null);
@@ -834,6 +842,7 @@ export function EditMessageForm({
             if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(initialCursorOffset);
             cursorOffsetChangeRef.current?.(unicodeCodePointOffset(view.state.doc.toString(), anchor));
             selectionChangeRef.current?.(null);
+            view.dom.classList.toggle("cm-has-selection", !view.state.selection.main.empty);
             saveToolbarSelection(view.state.selection.main);
             view.focus();
             const handlePointerDown = () => {
@@ -1066,6 +1075,15 @@ function commandChange(command: EditorCommand, source: string, from: number, to:
         : { anchor: from + 4 },
     };
   }
+  if (command === "math-block") {
+    const value = `$$\n${selected}\n$$`;
+    return {
+      changes: { from, to, insert: value },
+      selection: selected
+        ? { anchor: from + 3, head: from + 3 + selected.length }
+        : { anchor: from + 3 },
+    };
+  }
   if (command === "format") {
     const paragraphStart = selected ? from : Math.max(0, source.lastIndexOf("\n\n", Math.max(0, from - 1)) + 2);
     const nextBreak = source.indexOf("\n\n", to);
@@ -1184,16 +1202,17 @@ function codeMirrorTheme(theme: "light" | "dark") {
         backgroundColor: colors.selection,
         color: colors.selectionText,
       },
-      ".cm-editor:not(.cm-focused) .cm-selectionBackground": {
+      "&:not(.cm-focused) .cm-selectionBackground": {
         backgroundColor: colors.selection,
         opacity: "0.78",
       },
-      ".cm-editor:not(.cm-focused) .cm-content ::selection": {
+      "&:not(.cm-focused) .cm-content ::selection": {
         backgroundColor: colors.selection,
         color: colors.selectionText,
       },
       ".cm-gutters": { backgroundColor: colors.raised, color: colors.muted, borderRight: `1px solid ${colors.line}` },
       ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: colors.active },
+      "&.cm-has-selection .cm-activeLine": { backgroundColor: "transparent" },
       ".cm-foldPlaceholder": { backgroundColor: colors.raised, borderColor: colors.line, color: colors.muted },
       ".cm-panels": { backgroundColor: colors.raised, color: colors.text },
       ".cm-panels input, .cm-panels button": { backgroundColor: colors.bg, color: colors.text, borderColor: colors.line },

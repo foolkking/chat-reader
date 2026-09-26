@@ -131,6 +131,16 @@ by this source snapshot alone.
 
 Implemented in the working tree:
 
+- Markdown source formatting is split into a compact selection toolbar and an
+  explicit one-row command surface. Duplicate attachment/image/footnote/format
+  actions were removed from the command surface, undo/redo live in the source
+  header, and a math-block command covers technical authoring. CodeMirror's
+  active-line layer no longer hides the first row of a multi-line selection.
+- TOC, Attachment, Annotation and Markdown-source navigation now construct
+  `NavigateTarget` through one front-end registry. Source positions are mapped
+  from raw Markdown code-point offsets to stable render-block identity and
+  block-local canonical offsets before Reader resolution; Reader-to-source
+  mapping uses the same adapter in reverse.
 - Tablet Reader navigation now uses one focus-managed dialogue/section drawer,
   with explicit loading/error/empty states and stable message/version/block
   locator data.

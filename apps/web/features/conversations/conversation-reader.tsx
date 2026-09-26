@@ -50,6 +50,7 @@ import { useWorkspaceShell } from "../../components/workspace-shell";
 import { acquireReaderBlockLease, notifyReaderMessageLayoutChanged, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "./block-virtualization";
 import { SourceEditorWorkspace, type SourceEditorTarget } from "../editing/source-editor-workspace";
 import { normalizedMessageBlocks, sourceOffsetForBlock } from "../editing/message-source-position";
+import { tocNavigationTarget } from "./reader-locator-target";
 import { ConversationFilesPanel } from "../attachments/conversation-files-panel";
 import { OfflineConversationFilesPanel } from "../attachments/offline-conversation-files-panel";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
@@ -857,7 +858,7 @@ export function ConversationReader({
       let mountReported = false;
       const { messageId, blockIndex, characterOffset, endCharacterOffset, quote, prefix, suffix, alignmentOffset, allowMessageFallback } = target;
        const targetFirst = target.source === "annotation" || target.source === "attachment" ||
-         target.source === "search" || target.source === "section-toc" || target.preferTocPipeline || characterOffset !== undefined;
+         target.source === "search" || target.source === "section-toc" || target.source === "source-editor" || target.preferTocPipeline || characterOffset !== undefined;
       let timingPath: "local" | "remote" | "message-window" = targetFirst ? "remote" : "message-window";
       const resolvedAlignmentOffset = alignmentOffset ?? (targetFirst ? ACTIVE_READING_OFFSET : 12);
       const token = navigationTokenRef.current + 1;
@@ -1578,8 +1579,8 @@ export function ConversationReader({
 
   function sourceTargetForMessage(message: MessageListItem, blockId?: string | null, characterOffset?: number): SourceEditorTarget {
     const text = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
-    const baseOffset = sourceOffsetForBlock(text, normalizedMessageBlocks(message), blockId);
-    return { message, cursorOffset: Math.min(text.length, Math.max(0, baseOffset + (characterOffset ?? 0))) };
+    const cursorOffset = sourceOffsetForBlock(text, normalizedMessageBlocks(message), blockId, characterOffset);
+    return { message, cursorOffset: Math.min(Array.from(text).length, Math.max(0, cursorOffset)) };
   }
 
   function openSourceEditor(message?: MessageListItem, requestedBlockId?: string | null) {
@@ -3012,17 +3013,6 @@ function navigationTargetIdentity(target: NavigateTarget): string {
     target.prefix,
     target.suffix,
   ]);
-}
-
-function tocNavigationTarget(item: TocItem): NavigateTarget {
-  return {
-    messageId: item.message_id,
-    messageVersionId: item.message_version_id,
-    renderBlockId: item.render_block_id,
-    blockIndex: item.block_index,
-    preferTocPipeline: true,
-    source: "section-toc",
-  };
 }
 
 function formatConversationTitle(conversation: Pick<ConversationDetail, "title" | "display_title" | "project_name">): string {

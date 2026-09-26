@@ -37,11 +37,12 @@ test("dialogue and section navigation distinguish loading failure and empty stat
 
 test("all reader section TOC entry points use version and stable render block identity", () => {
   const reader = source("features/conversations/conversation-reader.tsx");
+  const targets = source("features/conversations/reader-locator-target.ts");
 
-  expect(reader).toContain("function tocNavigationTarget(item: TocItem): NavigateTarget");
-  expect(reader).toContain("messageVersionId: item.message_version_id");
-  expect(reader).toContain("renderBlockId: item.render_block_id");
-  expect(reader).toContain("blockIndex: item.block_index");
+  expect(reader).toContain('import { tocNavigationTarget } from "./reader-locator-target"');
+  expect(targets).toContain("messageVersionId: item.message_version_id");
+  expect(targets).toContain("renderBlockId: item.render_block_id");
+  expect(targets).toContain("blockIndex: item.block_index");
   expect(reader.match(/navigateToTarget\(tocNavigationTarget\(item\)\)/g)?.length).toBe(2);
   expect(reader).toContain("messageVersionId: item.messageVersionId");
 });

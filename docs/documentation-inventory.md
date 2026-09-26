@@ -1,5 +1,12 @@
 # Markdown 文档台账
 
+2026-09-26 local source-editor and locator update: the contextual command
+surfaces, first-line selection rendering and shared front-end locator-target
+registry are synchronized in `PROJECT_STATE.md` and
+`docs/system/FRONTEND_ARCHITECTURE.md`. This working-tree update does not add a
+route, dependency, migration or deployment and does not change Share/Offline
+permission boundaries.
+
 2026-09-26 Markdown command-surface deployment closure: source
 `027a148b509a4503a45e3d21036ad2edf72c5389` from CI run `36226227092` is
 active. Selection formatting and caret-oriented insertion use separate

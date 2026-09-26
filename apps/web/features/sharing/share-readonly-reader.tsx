@@ -32,6 +32,7 @@ import { X } from "lucide-react";
 import { acquireReaderBlockLease, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "../conversations/block-virtualization";
 import { resolveActiveReadingTarget } from "../conversations/reader-active-position";
 import { ReaderMarkdownCopyBoundary } from "../conversations/reader-markdown-copy";
+import { tocNavigationTarget } from "../conversations/reader-locator-target";
 
 const ACTIVE_READING_OFFSET = 96;
 
@@ -592,7 +593,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             observerKey={tocObserverKey}
             items={toc}
             onNavigate={async (item) => {
-              await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, messageVersionId: item.message_version_id ?? undefined, renderBlockId: item.render_block_id ?? undefined });
+              await navigateToTarget(tocNavigationTarget(item));
             }}
           />
         </div>} />
@@ -610,7 +611,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           if (result.ok) setNavigationOpen(false);
         }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => {
           setMobileNavigation({ pending: true, error: null });
-          const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, messageVersionId: item.message_version_id ?? undefined, renderBlockId: item.render_block_id ?? undefined });
+          const result = await navigateToTarget(tocNavigationTarget(item));
           setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
           if (result.ok) setNavigationOpen(false);
         }} />}
@@ -621,7 +622,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
             <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} /></header>
             <div className="px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget({ messageId: item.message_id, blockIndex: item.block_index, messageVersionId: item.message_version_id ?? undefined, renderBlockId: item.render_block_id ?? undefined }); if (result.ok) setNavigationOpen(false); }} />}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget(tocNavigationTarget(item)); if (result.ok) setNavigationOpen(false); }} />}</div>
           </section>
         </div>
       ) : null}

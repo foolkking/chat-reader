@@ -25,6 +25,16 @@ pulse after alignment; message fallback produces a left marker. Message and
 block components no longer receive a persistent full-surface navigation ring
 from the owner Reader; search match highlighting remains its own layer.
 
+All feature entry points construct targets through
+`features/conversations/reader-locator-target.ts`. TOC, Attachment, Annotation
+and Markdown source navigation therefore carry the same stable
+message/version/block identity and fallback policy before entering the Reader
+executor. The Markdown adapter translates CodeMirror code-point positions and
+Markdown syntax into block-local canonical offsets; it must not send a global
+raw-source offset to the API resolver. Target construction, server resolution,
+virtualized mounting/alignment and short-lived locate feedback remain separate
+layers so a feature cannot silently invent its own positioning contract.
+
 `ProjectSidebar` exposes a stable `Tasks` launcher. `TaskCenterDialog` renders
 the existing `ImportTaskMonitor` in a global surface; sidebar and mobile
 representations are shortcuts to that same monitor, not separate task stores.

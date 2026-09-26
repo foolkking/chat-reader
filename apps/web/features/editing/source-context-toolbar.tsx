@@ -1,25 +1,20 @@
 "use client";
 
 import {
-  AlignLeft,
   Bold,
   Code2,
   Heading2,
-  Image as ImageIcon,
   Italic,
   Link2,
   List,
   ListOrdered,
   ListTodo,
   Minus,
-  Paperclip,
   Quote,
-  Redo2,
+  Sigma,
   Strikethrough,
-  Superscript,
   Table2,
   Underline,
-  Undo2,
 } from "lucide-react";
 import {
   useEffect,
@@ -46,6 +41,7 @@ export type SourceEditorCommand =
   | "tasks"
   | "link"
   | "image"
+  | "math-block"
   | "footnote"
   | "table"
   | "attachment"
@@ -165,12 +161,12 @@ export function SourceCommandPanel({
       item("strike", zh ? "删除线" : "Strikethrough", <Strikethrough />),
       item("code", zh ? "行内代码" : "Inline code", <Code2 />),
       item("link", zh ? "插入链接" : "Insert link", <Link2 />),
-      item("image", zh ? "插入图片" : "Insert image", <ImageIcon />),
     ],
     [
       item("heading", zh ? "切换标题级别" : "Cycle heading level", <Heading2 />),
       item("quote", zh ? "引用" : "Quote", <Quote />),
       item("code-block", zh ? "代码块" : "Code block", <Code2 />),
+      item("math-block", zh ? "公式块" : "Math block", <Sigma />),
       item("rule", zh ? "分隔线" : "Horizontal rule", <Minus />),
       item("table", zh ? "插入表格" : "Insert table", <Table2 />),
     ],
@@ -178,15 +174,6 @@ export function SourceCommandPanel({
       item("bullets", zh ? "无序列表" : "Bulleted list", <List />),
       item("numbered", zh ? "有序列表" : "Numbered list", <ListOrdered />),
       item("tasks", zh ? "任务清单" : "Task list", <ListTodo />),
-    ],
-    [
-      item("attachment", zh ? "插入附件引用" : "Insert attachment reference", <Paperclip />),
-      item("footnote", zh ? "插入脚注" : "Insert footnote", <Superscript />),
-      item("format", zh ? "格式化当前段落" : "Format paragraph", <AlignLeft />),
-    ],
-    [
-      item("undo", zh ? "撤销" : "Undo", <Undo2 />, "Ctrl+Z"),
-      item("redo", zh ? "重做" : "Redo", <Redo2 />, "Ctrl+Y"),
     ],
   ], [zh]);
 
@@ -200,7 +187,7 @@ export function SourceCommandPanel({
       role="toolbar"
       aria-label={zh ? "Markdown 编辑命令" : "Markdown editing commands"}
       onKeyDown={(event) => handleToolbarKeyboard(event, panelRef, onClose)}
-      className="absolute inset-x-2 top-2 z-[45] flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-ui bg-raised p-1.5 text-secondary shadow-[var(--shadow-medium)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-0.5 motion-safe:duration-100"
+      className="absolute inset-x-2 top-2 z-[45] flex flex-nowrap items-center gap-1.5 rounded-lg border border-ui bg-raised p-1.5 text-secondary shadow-[var(--shadow-medium)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-0.5 motion-safe:duration-100 max-sm:flex-wrap"
     >
       {groups.map((group, groupIndex) => (
         <div
@@ -226,8 +213,8 @@ export function SourceCommandPanel({
 
 function groupLabel(index: number, zh: boolean) {
   const labels = zh
-    ? ["文字格式", "结构", "列表", "插入与整理", "编辑历史"]
-    : ["Text formatting", "Structure", "Lists", "Insert and organize", "Edit history"];
+    ? ["文字格式", "结构", "列表"]
+    : ["Text formatting", "Structure", "Lists"];
   return labels[index] ?? labels[0];
 }
 

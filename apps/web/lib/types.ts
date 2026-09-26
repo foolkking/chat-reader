@@ -872,7 +872,7 @@ export type NavigateTarget = {
   closePanelAfterResolved?: boolean;
   allowMessageFallback?: boolean;
   alignmentOffset?: number;
-  source?: "dialogue-index" | "section-toc" | "search" | "annotation" | "attachment" | "message-action";
+  source?: "dialogue-index" | "section-toc" | "search" | "annotation" | "attachment" | "source-editor" | "message-action";
 };
 
 export type LocatorTargetRequest = {

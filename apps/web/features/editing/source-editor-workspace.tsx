@@ -1,15 +1,15 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eraser, Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, SaveAll, Search, Undo2, Upload, Wand2, X } from "lucide-react";
+import { Eraser, Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Paperclip, Plus, Redo2, SaveAll, Search, Undo2, Upload, Wand2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
 import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
 import type { AttachmentRead, MessageEditResponse, MessageListItem, NavigateTarget } from "../../lib/types";
 import { ContentCleanupDialog, type CleanupSourceSelection } from "../conversations/content-cleanup-panel";
+import { sourceEditorNavigationTarget } from "../conversations/reader-locator-target";
 import { EditMessageForm, type SourceTextSelection } from "./edit-message-form";
-import { blockIndexForSourceOffset, normalizedMessageBlocks, sourceOffsetForBlock } from "./message-source-position";
 import type { AttachmentDraft, AttachmentDraftCallbacks } from "./source-attachment-drop";
 
 export type SourceEditorTarget = {
@@ -70,6 +70,7 @@ export function SourceEditorWorkspace({
   // until the user asks for it.
   const [showPreview, setShowPreview] = useState(false);
   const [editorToolsOpen, setEditorToolsOpen] = useState(false);
+  const [historyCommandRequest, setHistoryCommandRequest] = useState<{ id: number; command: "undo" | "redo" } | null>(null);
   const editorToolsButtonRef = useRef<HTMLButtonElement | null>(null);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
   const [saveBaseVersionId, setSaveBaseVersionId] = useState(message.current_version?.id);
@@ -251,26 +252,8 @@ export function SourceEditorWorkspace({
   }
 
   async function locateCurrentSource() {
-    const blocks = normalizedMessageBlocks(message);
-    const sourceOffset = Math.max(0, Math.min(cursorOffsetRef.current, text.length));
-    const blockIndex = blockIndexForSourceOffset(text, blocks, sourceOffset);
-    const blockStart = sourceOffsetForBlock(text, blocks, `block-${message.id}-${blockIndex}`);
-    const localOffset = Math.max(0, sourceOffset - blockStart);
-    const quoteStart = Math.max(0, sourceOffset - 80);
-    const quoteEnd = Math.min(text.length, sourceOffset + 80);
-    await onLocate({
-      messageId: message.id,
-      messageVersionId: message.current_version?.id,
-      blockIndex,
-      characterOffset: localOffset,
-      endCharacterOffset: localOffset,
-      canonicalStart: sourceOffset,
-      canonicalEnd: sourceOffset,
-      quote: text.slice(quoteStart, quoteEnd).trim() || undefined,
-      prefix: text.slice(Math.max(0, quoteStart - 40), quoteStart),
-      suffix: text.slice(quoteEnd, Math.min(text.length, quoteEnd + 40)),
-      source: "message-action",
-    });
+    if (editorDirty) return;
+    await onLocate(sourceEditorNavigationTarget(message, text, cursorOffsetRef.current));
   }
 
   async function loadLatestMessage(): Promise<MessageListItem> {
@@ -332,11 +315,14 @@ export function SourceEditorWorkspace({
             <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "添加附件" : "Add attachment"} title={zh ? "添加附件" : "Add attachment"}><Upload className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "添加附件" : "Add attachment"}</span></label>
             <button type="button" onClick={() => { setEditorToolsOpen(false); setAttachmentPickerOpen(true); }} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "选择当前对话文件" : "Choose conversation file"} title={zh ? "选择当前对话文件" : "Choose conversation file"}><Paperclip className="h-4 w-4" /></button>
             <button ref={editorToolsButtonRef} type="button" data-testid="source-editor-tools-toggle" aria-expanded={editorToolsOpen} aria-controls="source-editor-command-panel" onClick={() => setEditorToolsOpen((value) => !value)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle ${editorToolsOpen ? "bg-subtle text-primary" : ""}`} aria-label={zh ? "编辑工具" : "Editing tools"} title={zh ? "编辑工具（Ctrl + Alt + C）" : "Editing tools (Ctrl + Alt + C)"}><Wand2 className="h-4 w-4" /></button>
+            <span className="mx-0.5 h-5 w-px bg-[var(--border)]" aria-hidden="true" />
+            <button type="button" data-testid="source-editor-undo" onClick={() => setHistoryCommandRequest((current) => ({ id: (current?.id ?? 0) + 1, command: "undo" }))} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "撤销" : "Undo"} title={zh ? "撤销（Ctrl+Z）" : "Undo (Ctrl+Z)"}><Undo2 className="h-4 w-4" /></button>
+            <button type="button" data-testid="source-editor-redo" onClick={() => setHistoryCommandRequest((current) => ({ id: (current?.id ?? 0) + 1, command: "redo" }))} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "重做" : "Redo"} title={zh ? "重做（Ctrl+Y）" : "Redo (Ctrl+Y)"}><Redo2 className="h-4 w-4" /></button>
           </div>
           <div className="flex items-center gap-1">
             <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">{zh ? "\u9884\u89c8" : "Preview"}</span></button>
             <button type="button" data-testid="source-editor-cleanup-selection" disabled={!sourceSelection || editorDirty} onClick={() => { setEditorToolsOpen(false); setCleanupOpen(true); }} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40 sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "清理噪声" : "Clean noise"} title={!sourceSelection ? (zh ? "先在 Markdown 源码中选择需要清理的文本" : "Select text in the Markdown source first") : editorDirty ? (zh ? "请先保存源码修改，再清理已保存版本" : "Save source changes before cleaning the persisted version") : (zh ? "审查并清理选中的噪声" : "Review and clean the selected noise")}><Eraser className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "清理噪声" : "Clean noise"}</span></button>
-            <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "在正文中定位" : "Locate in reader"} title={zh ? "\u5728\u6b63\u6587\u4e2d\u5b9a\u4f4d" : "Locate in reader"}><LocateFixed className="h-4 w-4" /></button>
+            <button type="button" onClick={() => void locateCurrentSource()} disabled={editorDirty} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40" aria-label={zh ? "在正文中定位" : "Locate in reader"} title={editorDirty ? (zh ? "请先保存源码修改，再定位已保存正文" : "Save source changes before locating the persisted text") : (zh ? "在正文中定位" : "Locate in reader")}><LocateFixed className="h-4 w-4" /></button>
           </div>
         </div>
         <div className="relative min-h-0 flex-1">
@@ -364,6 +350,7 @@ export function SourceEditorWorkspace({
             onPreviewChange={setShowPreview}
             editorToolsOpen={editorToolsOpen}
             onEditorToolsOpenChange={setEditorToolsOpen}
+            historyCommandRequest={historyCommandRequest}
             onReloadLatest={async () => { await loadLatestMessage(); }}
             onSave={async (nextText, reason, saveMode, removedActions, editorRevision) => {
               const clickedAt = window.performance.now();

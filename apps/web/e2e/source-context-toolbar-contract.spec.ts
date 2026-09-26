@@ -27,8 +27,14 @@ test.describe("source editor contextual formatting toolbar contract", () => {
     expect(toolbar).toContain("data-source-toolbar-command");
     expect(toolbar).toContain("aria-label={label}");
     expect(toolbar).toContain("group-hover:delay-[350ms]");
-    expect(toolbar).toContain('item("image"');
-    expect(toolbar).toContain('item("footnote"');
+    expect(toolbar).toContain('item("math-block"');
+    expect(toolbar).toContain('item("tasks"');
+    expect(toolbar).not.toContain('item("image"');
+    expect(toolbar).not.toContain('item("attachment"');
+    expect(toolbar).not.toContain('item("footnote"');
+    expect(toolbar).not.toContain('item("format"');
+    expect(toolbar).not.toContain('item("undo"');
+    expect(toolbar).not.toContain('item("redo"');
     expect(toolbar).not.toContain("MoreHorizontal");
     expect(toolbar).not.toContain("source-editor-tools-overflow");
     expect(toolbar).not.toContain("<span>{item.label}</span>");
@@ -45,15 +51,25 @@ test.describe("source editor contextual formatting toolbar contract", () => {
     expect(workspace).toContain("event.altKey || !event.ctrlKey");
   });
 
-  test("uses paired caret insertions and exposes common block commands without overflow", () => {
+  test("uses paired caret insertions and keeps the explicit command surface on one row", () => {
     const form = source("features/editing/edit-message-form.tsx");
     const toolbar = source("features/editing/source-context-toolbar.tsx");
+    const workspace = source("features/editing/source-editor-workspace.tsx");
     expect(form).toContain("const contentStart = from + pair[0].length");
     expect(form).toContain("selection: selected");
-    expect(form).toContain('if (command === "image")');
-    expect(form).toContain('if (command === "footnote")');
-    expect(toolbar).toContain("flex-wrap");
+    expect(form).toContain('if (command === "math-block")');
+    expect(toolbar).toContain("flex-nowrap");
+    expect(toolbar).toContain("max-sm:flex-wrap");
+    expect(workspace).toContain('data-testid="source-editor-undo"');
+    expect(workspace).toContain('data-testid="source-editor-redo"');
     expect(toolbar).not.toContain("MoreHorizontal");
+  });
+
+  test("keeps the active line from covering the first selected row", () => {
+    const form = source("features/editing/edit-message-form.tsx");
+    expect(form).toContain('classList.toggle("cm-has-selection", !selection.empty)');
+    expect(form).toContain('"&.cm-has-selection .cm-activeLine": { backgroundColor: "transparent" }');
+    expect(form).toContain('"&:not(.cm-focused) .cm-selectionBackground"');
   });
 
   test("tracks scroll, resize, preview and IME without a positioning dependency", () => {
