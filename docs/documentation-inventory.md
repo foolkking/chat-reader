@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+2026-09-26 Markdown command-surface deployment closure: source
+`027a148b509a4503a45e3d21036ad2edf72c5389` from CI run `36226227092` is
+active. Selection formatting and caret-oriented insertion use separate
+CodeMirror-owned surfaces. Runtime image identity, API/Web/PostgreSQL health,
+worker heartbeat, HTTPS entry, Alembic `20260902_0032` and unchanged PostgreSQL
+identity passed. Recovery retains the verified `20260926T102225Z`,
+`20260926T055815Z` and `20260902T014223Z` five-component backups; superseded
+images and redundant host artifacts were removed without touching production
+volumes, user storage or `.env.production`.
+
 2026-09-26 deployment closure: source `094abf43aca1195377053a717603a5d3099ba30e`
 from CI run `36167970048` is active. Attachment uploads use the explicit 1 GiB
 application limit and 1040 MiB exact attachment gateway; imports remain 500 MiB,

@@ -1,14 +1,16 @@
 # Project State
 
-## 0A. Deployed contextual editor and attachment release (2026-09-26)
+## 0A. Deployed split Markdown command surfaces (2026-09-26)
 
 The production release includes a bounded source-editor attachment tray so a
 large set of pending files scrolls inside the tray instead of expanding the
-footer indefinitely. The editor now uses an icon-only contextual Markdown
-toolbar anchored to the active CodeMirror selection or explicitly requested
-caret through Ctrl+Alt+C, plus an overlay live preview that does not shrink the
-source editor and canonical-text handoff after save. Reader virtualized
-blocks temporarily increase overscan during high-speed scrolling.
+footer indefinitely. Selection-only Markdown formatting remains in the compact
+contextual toolbar anchored to the active CodeMirror selection. The header
+magic-wand action and Ctrl+Alt+C now open a separate caret-oriented command
+surface for commands that can insert useful Markdown without a selection. The
+two surfaces share commands only where both selection wrapping and paired-caret
+insertion are meaningful, avoid a nested overflow menu, and keep Chinese labels
+in tooltips rather than inside the icon grid.
 
 Attachment uploads are now configured for a 1 GiB per-file limit while Import
 and Adaptive Import remain at their existing 500 MiB contracts. Browser
@@ -17,23 +19,29 @@ remain downloadable. These changes are deployed. Authenticated interactive
 Web acceptance remains an operator verification step.
 
 The immutable release is deployed and production-verified from source
-`3312f11bc3a500a9fb8d5c9b56136c98bf89b4ba` (GitHub Actions run
-`36221792197`). The verified archive SHA-256 is
-`15d0cbde6f6ad9760a13dff50bb3287cae58e4b2a62b49b7947bb0c3470c58f9`.
-API/worker image digest is
-`sha256:a5b186eb10c31435eb8267f42df19a041e95cb59caa92cf3ac7d63f041076536`;
-Web is `sha256:e35d78ddf1db82d1274f27a73507756c4e72e9d7948a7a3a7f980a7829a89a4c`.
+`027a148b509a4503a45e3d21036ad2edf72c5389` (GitHub Actions run
+`36226227092`). API/worker image digest is
+`sha256:56c7a2d6172ac5a21ca28a04e76cfecc04fd72b597535f0135ec20984326133c`;
+Web is `sha256:de261f62dcfd64c5c4be7b92146f816cbb15dd0d9eb9c086f614ff0adb3afcf4`.
 Production health, worker heartbeat, HTTPS entry and Alembic head
 `20260902_0032` passed after rollout. PostgreSQL was not restarted. The
-verified backup is `/opt/chat-reader/backups/chat-reader-20260926T055815Z`.
+verified backup is `/opt/chat-reader/backups/chat-reader-20260926T102225Z`.
 
-At the operator's request, all older Chat Reader image tags and layers were
-removed after verification; only the four immutable `3312f11` runtime tags
-remain. The stale image rollback pointer and transferred release archive were
-also removed, so rollback now uses the verified five-component backup rather
-than a retained Docker image. Filesystem free space finished at about 2.9 GiB.
-The host page cache was released after rollout; reported free physical memory
-rose from about 157 MiB to 288 MiB without restarting PostgreSQL.
+The release state records `027a148b` as current. At the operator's request the
+superseded `3312f11` image set and stale rollback pointer were removed after
+verification; recovery now uses the verified five-component backups. The
+retained recovery set is the current `20260926T102225Z` backup, the immediately
+preceding `20260926T055815Z` backup and the Root Admin baseline
+`20260902T014223Z`, all independently verified before cleanup.
+
+Cleanup removed 16 redundant historical backups, obsolete transfer archives,
+unused BuildKit/base images, four inactive VS Code Server versions and archived
+systemd journal beyond a 256 MiB bound. It did not remove named volumes,
+PostgreSQL data, user files, `.env.production` or the three retained backups.
+The loaded release archive was removed after verification while its manifest
+and inspection report were retained. Root filesystem free space increased from
+about 3.3 GiB to 18 GiB. Releasing page cache raised free physical memory from
+about 79 MiB to 210 MiB; active services and swap were not forcibly restarted.
 
 Attachment uploads use the explicit production 1 GiB limit and attachment-only
 1040 MiB Nginx route; Import and Adaptive Import remain 500 MiB with 520 MiB

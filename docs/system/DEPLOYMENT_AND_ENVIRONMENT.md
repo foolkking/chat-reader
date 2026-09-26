@@ -2,23 +2,30 @@
 
 ## Current deployed snapshot (2026-09-26)
 
-The active production source is `094abf43aca1195377053a717603a5d3099ba30e`
-from GitHub Actions run `36167970048`. The verified release archive SHA-256 is
-`a430b889d45592a52a630c30884b9a5a86e82c032c4987cf5daa991b2c8a66b0`.
+The active production source is `027a148b509a4503a45e3d21036ad2edf72c5389`
+from GitHub Actions run `36226227092`.
 API/worker image digest is
-`sha256:b200ac80339200e9ada373e899b21450540af8c72d8891c367748d8946b95446`;
-Web is `sha256:7d14c7364cc808a389a2fb3f647ec154cfe47a441881e95d96dfd66cc7495104`.
+`sha256:56c7a2d6172ac5a21ca28a04e76cfecc04fd72b597535f0135ec20984326133c`;
+Web is `sha256:de261f62dcfd64c5c4be7b92146f816cbb15dd0d9eb9c086f614ff0adb3afcf4`.
 Runtime health, worker heartbeat, HTTPS reachability and migration head
 `20260902_0032` passed after rollout. PostgreSQL was not restarted. The
 verified five-component backup is
-`/opt/chat-reader/backups/chat-reader-20260925T180542Z`.
+`/opt/chat-reader/backups/chat-reader-20260926T102225Z`.
+
+Only the current `027a148b` Chat Reader image set remains after operator-requested
+cleanup. The stale image rollback pointer was removed; recovery uses the three
+independently verified backups `20260926T102225Z`, `20260926T055815Z` and
+`20260902T014223Z`. Cleanup removed redundant backups, obsolete release
+transfers, unused build images/cache, inactive VS Code Server versions and old
+journal files. Named volumes, PostgreSQL data, user storage and
+`.env.production` were not touched. Root free space is about 18 GiB.
 
 The explicit attachment upload limit is 1 GiB with a 1040 MiB exact Nginx
 allowance on `/api/attachment-upload-sessions/`. Import and Adaptive Import
 remain 500 MiB with 520 MiB exact routes. Browser preview remains capped at
 50 MiB; authenticated 1 GiB acceptance is left for operator verification.
 
-The preceding `b303930` snapshot below is retained as historical deployment
+The preceding `094abf4` and `b303930` snapshots below are retained as historical deployment
 evidence and rollback context.
 
 The active production source is `b3039300c3df1001b5afe92d0849fe9fc9addeae`
