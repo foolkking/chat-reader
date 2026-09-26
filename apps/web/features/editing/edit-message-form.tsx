@@ -6,11 +6,16 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { Compartment } from "@codemirror/state";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { AlignLeft, AlertCircle, Bold, CheckCircle2, ChevronDown, Code2, Heading2, Italic, Link2, List, ListOrdered, ListTodo, LoaderCircle, Minus, MoreHorizontal, Paperclip, Quote, Redo2, Save, SaveAll, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertCircle, CheckCircle2, ChevronDown, LoaderCircle, MoreHorizontal, Save, SaveAll, X } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
+import {
+  SourceContextToolbar,
+  type SourceContextToolbarPosition,
+  type SourceEditorCommand,
+} from "./source-context-toolbar";
 import {
   findTransientUploadReferences,
   insertPendingMarkers,
@@ -24,6 +29,15 @@ import {
 } from "./source-attachment-drop";
 
 const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), { ssr: false });
+
+type ContextToolbarReason = "selection" | "caret-explicit" | "block-explicit";
+
+type SavedToolbarSelection = {
+  anchor: number;
+  head: number;
+  from: number;
+  to: number;
+};
 
 export function EditMessageForm({
   formId = "source-editor-form",
@@ -108,7 +122,18 @@ export function EditMessageForm({
   const attachmentTokensRef = useRef<Set<string>>(new Set());
   const attachmentFailureTokensRef = useRef<Set<string>>(new Set());
   const [attachmentActionToken, setAttachmentActionToken] = useState<string | null>(null);
-  const toolsPanelRef = useRef<HTMLDivElement | null>(null);
+  const savedToolbarSelectionRef = useRef<SavedToolbarSelection | null>(null);
+  const toolbarReasonRef = useRef<ContextToolbarReason | null>(null);
+  const toolbarSizeRef = useRef({ width: 420, height: 40 });
+  const toolbarFrameRef = useRef<number | null>(null);
+  const pointerSelectingRef = useRef(false);
+  const compositionActiveRef = useRef(false);
+  const editorEventCleanupRef = useRef<(() => void) | null>(null);
+  const editorToolsOpenRef = useRef(editorToolsOpen);
+  editorToolsOpenRef.current = editorToolsOpen;
+  const [toolbarPosition, setToolbarPosition] = useState<SourceContextToolbarPosition | null>(null);
+  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
+  const [toolbarSelectionSnapshot, setToolbarSelectionSnapshot] = useState<SavedToolbarSelection | null>(null);
   const previewPanelRef = useRef<HTMLElement | null>(null);
   const previewRevisionRef = useRef(0);
   const saveRequestRef = useRef(0);
@@ -287,43 +312,256 @@ export function EditMessageForm({
     foldGutter: true,
     searchKeymap: true,
   }), []);
+  const hideContextToolbar = useCallback((restoreEditorFocus = false) => {
+    if (toolbarFrameRef.current !== null) {
+      window.cancelAnimationFrame(toolbarFrameRef.current);
+      toolbarFrameRef.current = null;
+    }
+    editorToolsOpenRef.current = false;
+    toolbarReasonRef.current = null;
+    setToolbarOverflowOpen(false);
+    setToolbarPosition(null);
+    onEditorToolsOpenChange?.(false);
+    if (restoreEditorFocus) {
+      window.requestAnimationFrame(() => editorViewRef.current?.focus());
+    }
+  }, [onEditorToolsOpenChange]);
+
+  const repositionContextToolbar = useCallback(() => {
+    toolbarFrameRef.current = null;
+    if (!editorToolsOpenRef.current || compositionActiveRef.current) return;
+    const view = editorViewRef.current;
+    const host = editorHostRef.current;
+    const saved = savedToolbarSelectionRef.current;
+    if (!view || !host || !saved) {
+      hideContextToolbar(false);
+      return;
+    }
+
+    const side = saved.head >= saved.anchor ? 1 : -1;
+    const anchorRect = view.coordsAtPos(saved.head, side);
+    if (!anchorRect) {
+      hideContextToolbar(false);
+      return;
+    }
+
+    const editorRect = view.scrollDOM.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const visualViewport = window.visualViewport;
+    const viewportLeft = visualViewport?.offsetLeft ?? 0;
+    const viewportTop = visualViewport?.offsetTop ?? 0;
+    const viewportRight = viewportLeft + (visualViewport?.width ?? window.innerWidth);
+    const viewportBottom = viewportTop + (visualViewport?.height ?? window.innerHeight);
+    const safety = 8;
+    const leftBound = Math.max(editorRect.left, hostRect.left, viewportLeft) + safety;
+    let rightBound = Math.min(editorRect.right, hostRect.right, viewportRight) - safety;
+    const topBound = Math.max(editorRect.top, hostRect.top, viewportTop) + safety;
+    const bottomBound = Math.min(editorRect.bottom, hostRect.bottom, viewportBottom) - safety;
+
+    const previewRect = previewPanelRef.current?.getBoundingClientRect();
+    if (
+      previewRect
+      && previewRect.bottom > topBound
+      && previewRect.top < bottomBound
+      && previewRect.left > leftBound
+      && previewRect.left < rightBound
+    ) {
+      rightBound = Math.min(rightBound, previewRect.left - safety);
+    }
+
+    if (
+      rightBound - leftBound < 48
+      || anchorRect.bottom < topBound
+      || anchorRect.top > bottomBound
+      || anchorRect.right < leftBound
+      || anchorRect.left > rightBound
+    ) {
+      hideContextToolbar(false);
+      return;
+    }
+
+    const availableWidth = rightBound - leftBound;
+    const width = Math.min(toolbarSizeRef.current.width, availableWidth);
+    const height = toolbarSizeRef.current.height;
+    const aboveTop = anchorRect.top - 8 - height;
+    const belowTop = anchorRect.bottom + 8;
+    let placement: SourceContextToolbarPosition["placement"];
+    let top: number;
+    if (aboveTop >= topBound) {
+      placement = "above";
+      top = aboveTop;
+    } else if (belowTop + height <= bottomBound) {
+      placement = "below";
+      top = belowTop;
+    } else {
+      hideContextToolbar(false);
+      return;
+    }
+
+    const desiredLeft = anchorRect.left - width / 2;
+    const left = Math.min(Math.max(desiredLeft, leftBound), rightBound - width);
+    setToolbarPosition({
+      left: Math.round(left),
+      top: Math.round(top),
+      placement,
+    });
+  }, [hideContextToolbar]);
+
+  const requestToolbarPosition = useCallback(() => {
+    if (toolbarFrameRef.current !== null) {
+      window.cancelAnimationFrame(toolbarFrameRef.current);
+    }
+    toolbarFrameRef.current = window.requestAnimationFrame(repositionContextToolbar);
+  }, [repositionContextToolbar]);
+
+  const saveToolbarSelection = useCallback((selection: { anchor: number; head: number; from: number; to: number }) => {
+    const saved = {
+      anchor: selection.anchor,
+      head: selection.head,
+      from: selection.from,
+      to: selection.to,
+    };
+    savedToolbarSelectionRef.current = saved;
+    setToolbarSelectionSnapshot(saved);
+    return saved;
+  }, []);
+
+  const openContextToolbar = useCallback((
+    selection: { anchor: number; head: number; from: number; to: number },
+    reason: ContextToolbarReason,
+  ) => {
+    saveToolbarSelection(selection);
+    toolbarReasonRef.current = reason;
+    editorToolsOpenRef.current = true;
+    onEditorToolsOpenChange?.(true);
+    requestToolbarPosition();
+  }, [onEditorToolsOpenChange, requestToolbarPosition, saveToolbarSelection]);
+
+  const syncContextToolbarFromView = useCallback((allowAutomaticSelection = true) => {
+    const view = editorViewRef.current;
+    if (!view || compositionActiveRef.current) return;
+    const selection = view.state.selection.main;
+    saveToolbarSelection(selection);
+    if (!selection.empty && allowAutomaticSelection && !pointerSelectingRef.current) {
+      openContextToolbar(selection, "selection");
+      return;
+    }
+    if (selection.empty && toolbarReasonRef.current === "selection") {
+      hideContextToolbar(false);
+      return;
+    }
+    if (editorToolsOpenRef.current) requestToolbarPosition();
+  }, [hideContextToolbar, openContextToolbar, requestToolbarPosition, saveToolbarSelection]);
+
   const dispatchCommand = useCallback((command: EditorCommand) => {
     const view = editorViewRef.current;
     if (!view) return;
     if (command === "undo" || command === "redo") {
       view.dom.dispatchEvent(new KeyboardEvent("keydown", { key: command === "undo" ? "z" : "y", ctrlKey: true, bubbles: true }));
-      onEditorToolsOpenChange?.(false);
+      setToolbarOverflowOpen(false);
       view.focus();
+      window.requestAnimationFrame(() => syncContextToolbarFromView(false));
       return;
     }
     if (command === "attachment") {
-      onEditorToolsOpenChange?.(false);
+      hideContextToolbar(false);
       onOpenAttachmentPicker?.();
       return;
     }
-    const selection = view.state.selection.main;
+    const selection = savedToolbarSelectionRef.current ?? view.state.selection.main;
     const change = commandChange(command, view.state.doc.toString(), selection.from, selection.to);
     if (!change) return;
     view.dispatch({ changes: change.changes, selection: change.selection, scrollIntoView: true });
-    onEditorToolsOpenChange?.(false);
+    const nextSelection = view.state.selection.main;
+    saveToolbarSelection(nextSelection);
+    toolbarReasonRef.current = nextSelection.empty ? "caret-explicit" : "selection";
+    setToolbarOverflowOpen(false);
     view.focus();
-  }, [onEditorToolsOpenChange, onOpenAttachmentPicker]);
+    if (command === "link" || command === "table") {
+      hideContextToolbar(true);
+      return;
+    }
+    requestToolbarPosition();
+  }, [hideContextToolbar, onOpenAttachmentPicker, requestToolbarPosition, saveToolbarSelection, syncContextToolbarFromView]);
 
   useEffect(() => {
     if (!editorToolsOpen && !showPreview) return;
     const closeOnOutside = (event: PointerEvent) => {
       const target = event.target as HTMLElement;
-      if (editorToolsOpen && !toolsPanelRef.current?.contains(target) && !target.closest("[data-testid='source-editor-tools-toggle']")) onEditorToolsOpenChange?.(false);
+      if (!editorToolsOpen) return;
+      if (target.closest("[data-testid='source-editor-tools']")) return;
+      if (target.closest("[data-testid='source-editor-tools-toggle']")) return;
+      if (editorHostRef.current?.contains(target)) return;
+      hideContextToolbar(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (editorToolsOpen) { event.preventDefault(); onEditorToolsOpenChange?.(false); }
+      if (editorToolsOpen) { event.preventDefault(); hideContextToolbar(true); }
       else if (showPreview) { event.preventDefault(); onPreviewChange?.(false); }
     };
     document.addEventListener("pointerdown", closeOnOutside);
     document.addEventListener("keydown", closeOnEscape);
     return () => { document.removeEventListener("pointerdown", closeOnOutside); document.removeEventListener("keydown", closeOnEscape); };
-  }, [editorToolsOpen, onEditorToolsOpenChange, onPreviewChange, showPreview]);
+  }, [editorToolsOpen, hideContextToolbar, onPreviewChange, showPreview]);
+
+  useEffect(() => {
+    if (!editorToolsOpen) {
+      setToolbarPosition(null);
+      setToolbarOverflowOpen(false);
+      return;
+    }
+    const view = editorViewRef.current;
+    if (!view) return;
+    if (!toolbarReasonRef.current) {
+      openContextToolbar(view.state.selection.main, view.state.selection.main.empty ? "caret-explicit" : "selection");
+    } else {
+      requestToolbarPosition();
+    }
+  }, [editorToolsOpen, openContextToolbar, requestToolbarPosition]);
+
+  useEffect(() => {
+    if (!editorToolsOpen) return;
+    const observer = new ResizeObserver(requestToolbarPosition);
+    if (editorHostRef.current) observer.observe(editorHostRef.current);
+    if (previewPanelRef.current) observer.observe(previewPanelRef.current);
+    window.addEventListener("resize", requestToolbarPosition);
+    window.addEventListener("scroll", requestToolbarPosition, true);
+    window.visualViewport?.addEventListener("resize", requestToolbarPosition);
+    window.visualViewport?.addEventListener("scroll", requestToolbarPosition);
+    requestToolbarPosition();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", requestToolbarPosition);
+      window.removeEventListener("scroll", requestToolbarPosition, true);
+      window.visualViewport?.removeEventListener("resize", requestToolbarPosition);
+      window.visualViewport?.removeEventListener("scroll", requestToolbarPosition);
+    };
+  }, [editorToolsOpen, requestToolbarPosition, showPreview]);
+
+  useEffect(() => {
+    const focusToolbar = () => {
+      const button = document.querySelector<HTMLButtonElement>(
+        "[data-testid='source-editor-tools'] [data-source-toolbar-command]:not(:disabled)",
+      );
+      button?.focus();
+    };
+    const restoreEditorFocus = () => editorViewRef.current?.focus();
+    window.addEventListener("chat-reader:source-toolbar-focus", focusToolbar);
+    window.addEventListener("chat-reader:source-toolbar-restore-editor-focus", restoreEditorFocus);
+    return () => {
+      window.removeEventListener("chat-reader:source-toolbar-focus", focusToolbar);
+      window.removeEventListener("chat-reader:source-toolbar-restore-editor-focus", restoreEditorFocus);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    editorEventCleanupRef.current?.();
+    editorEventCleanupRef.current = null;
+    if (toolbarFrameRef.current !== null) {
+      window.cancelAnimationFrame(toolbarFrameRef.current);
+      toolbarFrameRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!attachmentActionToken) return;
@@ -349,8 +587,11 @@ export function EditMessageForm({
     if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(codePointOffset);
     cursorOffsetChangeRef.current?.(codePointOffset);
     const selection = update.state.selection.main;
+    saveToolbarSelection(selection);
     if (selection.empty) {
       selectionChangeRef.current?.(null);
+      if (toolbarReasonRef.current === "selection") hideContextToolbar(false);
+      else if (editorToolsOpenRef.current) requestToolbarPosition();
       return;
     }
     const from = Math.min(selection.from, selection.to);
@@ -360,7 +601,10 @@ export function EditMessageForm({
       endOffset: unicodeCodePointOffset(source, to),
       text: update.state.doc.sliceString(from, to),
     });
-  }, []);
+    if (!compositionActiveRef.current && !pointerSelectingRef.current) {
+      openContextToolbar(selection, "selection");
+    }
+  }, [hideContextToolbar, openContextToolbar, requestToolbarPosition, saveToolbarSelection]);
 
   useEffect(() => {
     const onSourceLocate = (event: Event) => {
@@ -554,15 +798,22 @@ export function EditMessageForm({
           insertFilesAtCurrentPosition(view, files);
         }}
       />
-      {editorToolsOpen ? <div ref={toolsPanelRef} id="source-editor-tools" data-testid="source-editor-tools" className="absolute left-2 top-12 z-40 w-[min(34rem,calc(100%-1rem))] rounded-lg border border-ui bg-raised p-3 shadow-xl">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <CommandGroup label={zh ? "文字" : "Text"} commands={[{ label: zh ? "粗体" : "Bold", icon: <Bold className="h-4 w-4" />, command: "bold" }, { label: zh ? "斜体" : "Italic", icon: <Italic className="h-4 w-4" />, command: "italic" }, { label: zh ? "删除线" : "Strike", icon: <Strikethrough className="h-4 w-4" />, command: "strike" }, { label: zh ? "下划线" : "Underline", icon: <Underline className="h-4 w-4" />, command: "underline" }, { label: zh ? "行内代码" : "Inline code", icon: <Code2 className="h-4 w-4" />, command: "code" }]} onCommand={dispatchCommand} />
-          <CommandGroup label={zh ? "结构" : "Structure"} commands={[{ label: zh ? "标题" : "Heading", icon: <Heading2 className="h-4 w-4" />, command: "heading" }, { label: zh ? "引用" : "Quote", icon: <Quote className="h-4 w-4" />, command: "quote" }, { label: zh ? "分隔线" : "Rule", icon: <Minus className="h-4 w-4" />, command: "rule" }, { label: zh ? "代码块" : "Code block", icon: <Code2 className="h-4 w-4" />, command: "code-block" }]} onCommand={dispatchCommand} />
-          <CommandGroup label={zh ? "列表" : "Lists"} commands={[{ label: zh ? "无序列表" : "Bullets", icon: <List className="h-4 w-4" />, command: "bullets" }, { label: zh ? "有序列表" : "Numbered", icon: <ListOrdered className="h-4 w-4" />, command: "numbered" }, { label: zh ? "任务清单" : "Tasks", icon: <ListTodo className="h-4 w-4" />, command: "tasks" }]} onCommand={dispatchCommand} />
-          <CommandGroup label={zh ? "插入" : "Insert"} commands={[{ label: zh ? "链接" : "Link", icon: <Link2 className="h-4 w-4" />, command: "link" }, { label: zh ? "表格" : "Table", icon: <Table2 className="h-4 w-4" />, command: "table" }, { label: zh ? "附件引用" : "Attachment reference", icon: <Paperclip className="h-4 w-4" />, command: "attachment" }]} onCommand={dispatchCommand} />
-          <CommandGroup label={zh ? "编辑" : "Edit"} commands={[{ label: zh ? "撤销" : "Undo", icon: <Undo2 className="h-4 w-4" />, command: "undo" }, { label: zh ? "重做" : "Redo", icon: <Redo2 className="h-4 w-4" />, command: "redo" }, { label: zh ? "格式化当前段落" : "Format paragraph", icon: <AlignLeft className="h-4 w-4" />, command: "format" }]} onCommand={dispatchCommand} />
-        </div>
-      </div> : null}
+      <SourceContextToolbar
+        open={editorToolsOpen}
+        position={toolbarPosition}
+        zh={zh}
+        overflowOpen={toolbarOverflowOpen}
+        activeCommands={activeToolbarCommands(text, toolbarSelectionSnapshot)}
+        onOverflowChange={setToolbarOverflowOpen}
+        onCommand={dispatchCommand}
+        onClose={hideContextToolbar}
+        onMeasure={(width, height) => {
+          const previous = toolbarSizeRef.current;
+          if (previous.width === width && previous.height === height) return;
+          toolbarSizeRef.current = { width, height };
+          requestToolbarPosition();
+        }}
+      />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <div ref={editorHostRef} className="min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror">
           <CodeMirror
@@ -572,6 +823,7 @@ export function EditMessageForm({
           theme="none"
           basicSetup={sourceEditorBasicSetup}
           onCreateEditor={(view) => {
+            editorEventCleanupRef.current?.();
             editorViewRef.current = view;
             view.dispatch({ effects: themeCompartmentRef.current.reconfigure(codeMirrorTheme(resolvedTheme)) });
             const anchor = codePointToUtf16Offset(view.state.doc.toString(), initialCursorOffset);
@@ -579,7 +831,40 @@ export function EditMessageForm({
             if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(initialCursorOffset);
             cursorOffsetChangeRef.current?.(unicodeCodePointOffset(view.state.doc.toString(), anchor));
             selectionChangeRef.current?.(null);
+            saveToolbarSelection(view.state.selection.main);
             view.focus();
+            const handlePointerDown = () => {
+              pointerSelectingRef.current = true;
+            };
+            const handlePointerUp = (event: globalThis.PointerEvent) => {
+              if (!pointerSelectingRef.current) return;
+              pointerSelectingRef.current = false;
+              window.setTimeout(
+                () => syncContextToolbarFromView(true),
+                event.pointerType === "touch" ? 150 : 0,
+              );
+            };
+            const handleCompositionStart = () => {
+              compositionActiveRef.current = true;
+              hideContextToolbar(false);
+            };
+            const handleCompositionEnd = () => {
+              compositionActiveRef.current = false;
+              window.requestAnimationFrame(() => syncContextToolbarFromView(true));
+            };
+            const handleEditorScroll = () => requestToolbarPosition();
+            view.contentDOM.addEventListener("pointerdown", handlePointerDown);
+            window.addEventListener("pointerup", handlePointerUp);
+            view.contentDOM.addEventListener("compositionstart", handleCompositionStart);
+            view.contentDOM.addEventListener("compositionend", handleCompositionEnd);
+            view.scrollDOM.addEventListener("scroll", handleEditorScroll, { passive: true });
+            editorEventCleanupRef.current = () => {
+              view.contentDOM.removeEventListener("pointerdown", handlePointerDown);
+              window.removeEventListener("pointerup", handlePointerUp);
+              view.contentDOM.removeEventListener("compositionstart", handleCompositionStart);
+              view.contentDOM.removeEventListener("compositionend", handleCompositionEnd);
+              view.scrollDOM.removeEventListener("scroll", handleEditorScroll);
+            };
             if (pendingAttachmentInsertion) applyAttachmentInsertion(view, pendingAttachmentInsertion);
             if (queuedFilesRef.current.length) {
               const files = queuedFilesRef.current.splice(0);
@@ -710,7 +995,7 @@ function codePointToUtf16Offset(source: string, codePointOffset: number): number
   return Array.from(source).slice(0, Math.max(0, codePointOffset)).join("").length;
 }
 
-type EditorCommand = "bold" | "italic" | "strike" | "underline" | "code" | "heading" | "quote" | "rule" | "code-block" | "bullets" | "numbered" | "tasks" | "link" | "table" | "attachment" | "undo" | "redo" | "format";
+type EditorCommand = SourceEditorCommand;
 type CommandResult = { changes: { from: number; to: number; insert: string } | { from: number; insert: string }; selection: { anchor: number; head?: number } };
 
 function commandChange(command: EditorCommand, source: string, from: number, to: number): CommandResult | null {
@@ -757,8 +1042,37 @@ function commandChange(command: EditorCommand, source: string, from: number, to:
   };
 }
 
-function CommandGroup({ label, commands, onCommand }: { label: string; commands: Array<{ label: string; icon: ReactNode; command: EditorCommand }>; onCommand: (command: EditorCommand) => void }) {
-  return <div><p className="mb-1 text-[11px] font-semibold text-secondary">{label}</p><div className="grid grid-cols-2 gap-1">{commands.map((item) => <button key={item.command} type="button" onClick={() => onCommand(item.command)} className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-xs text-primary hover:bg-subtle" title={item.label}>{item.icon}<span className="truncate">{item.label}</span></button>)}</div></div>;
+function activeToolbarCommands(
+  source: string,
+  selection: SavedToolbarSelection | null,
+): ReadonlySet<SourceEditorCommand> {
+  const active = new Set<SourceEditorCommand>();
+  if (!selection) return active;
+
+  const from = Math.max(0, Math.min(selection.from, source.length));
+  const to = Math.max(from, Math.min(selection.to, source.length));
+  const selected = source.slice(from, to);
+  const before = source.slice(Math.max(0, from - 8), from);
+  const after = source.slice(to, Math.min(source.length, to + 8));
+  const lineStart = source.lastIndexOf("\n", Math.max(0, selection.head - 1)) + 1;
+  const nextBreak = source.indexOf("\n", selection.head);
+  const lineEnd = nextBreak === -1 ? source.length : nextBreak;
+  const line = source.slice(lineStart, lineEnd);
+
+  if ((before.endsWith("**") && after.startsWith("**")) || /^\*\*[^\n]+\*\*$/.test(selected)) active.add("bold");
+  if ((before.endsWith("~~") && after.startsWith("~~")) || /^~~[^\n]+~~$/.test(selected)) active.add("strike");
+  if ((before.endsWith("\u0060") && after.startsWith("\u0060")) || /^\u0060[^\n]+\u0060$/.test(selected)) active.add("code");
+  if ((before.endsWith("<u>") && after.startsWith("</u>")) || /^<u>[^\n]+<\/u>$/.test(selected)) active.add("underline");
+  if (
+    (before.endsWith("*") && !before.endsWith("**") && after.startsWith("*") && !after.startsWith("**"))
+    || /^\*[^\n]+\*$/.test(selected)
+  ) active.add("italic");
+  if (/^#{1,6}\s+/.test(line)) active.add("heading");
+  if (/^>\s+/.test(line)) active.add("quote");
+  if (/^[-*+]\s+(?!\[[ xX]\])/.test(line)) active.add("bullets");
+  if (/^\d+\.\s+/.test(line)) active.add("numbered");
+  if (/^-\s+\[[ xX]\]\s+/.test(line)) active.add("tasks");
+  return active;
 }
 
 function isRevisionConflictMessage(message: string): boolean {

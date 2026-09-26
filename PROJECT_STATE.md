@@ -4,9 +4,10 @@
 
 The current working tree adds a bounded source-editor attachment tray so a
 large set of pending files scrolls inside the tray instead of expanding the
-footer indefinitely. The editor also has a default-closed grouped Markdown
-command palette (`Ctrl+Alt+C`), an overlay live preview that does not shrink
-the source editor, and canonical-text handoff after save. Reader virtualized
+footer indefinitely. The editor now uses an icon-only contextual Markdown
+toolbar anchored to the active CodeMirror selection or explicitly requested
+caret through Ctrl+Alt+C, plus an overlay live preview that does not shrink the
+source editor and canonical-text handoff after save. Reader virtualized
 blocks temporarily increase overscan during high-speed scrolling.
 
 Attachment uploads are now configured for a 1 GiB per-file limit while Import
