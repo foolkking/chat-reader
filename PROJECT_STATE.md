@@ -1,8 +1,8 @@
 # Project State
 
-## 0A. Deployed editor, attachment preview and reader performance release (2026-09-26)
+## 0A. Deployed contextual editor and attachment release (2026-09-26)
 
-The current working tree adds a bounded source-editor attachment tray so a
+The production release includes a bounded source-editor attachment tray so a
 large set of pending files scrolls inside the tray instead of expanding the
 footer indefinitely. The editor now uses an icon-only contextual Markdown
 toolbar anchored to the active CodeMirror selection or explicitly requested
@@ -13,19 +13,27 @@ blocks temporarily increase overscan during high-speed scrolling.
 Attachment uploads are now configured for a 1 GiB per-file limit while Import
 and Adaptive Import remain at their existing 500 MiB contracts. Browser
 preview is capped at 50 MiB for previewable attachment types; larger files
-remain downloadable. These changes are in the working tree and are not yet
-deployed or production-verified.
+remain downloadable. These changes are deployed. Authenticated interactive
+Web acceptance remains an operator verification step.
 
 The immutable release is deployed and production-verified from source
-`094abf43aca1195377053a717603a5d3099ba30e` (GitHub Actions run
-`36167970048`). The verified archive SHA-256 is
-`a430b889d45592a52a630c30884b9a5a86e82c032c4987cf5daa991b2c8a66b0`.
+`3312f11bc3a500a9fb8d5c9b56136c98bf89b4ba` (GitHub Actions run
+`36221792197`). The verified archive SHA-256 is
+`15d0cbde6f6ad9760a13dff50bb3287cae58e4b2a62b49b7947bb0c3470c58f9`.
 API/worker image digest is
-`sha256:b200ac80339200e9ada373e899b21450540af8c72d8891c367748d8946b95446`;
-Web is `sha256:7d14c7364cc808a389a2fb3f647ec154cfe47a441881e95d96dfd66cc7495104`.
+`sha256:a5b186eb10c31435eb8267f42df19a041e95cb59caa92cf3ac7d63f041076536`;
+Web is `sha256:e35d78ddf1db82d1274f27a73507756c4e72e9d7948a7a3a7f980a7829a89a4c`.
 Production health, worker heartbeat, HTTPS entry and Alembic head
 `20260902_0032` passed after rollout. PostgreSQL was not restarted. The
-verified backup is `/opt/chat-reader/backups/chat-reader-20260925T180542Z`.
+verified backup is `/opt/chat-reader/backups/chat-reader-20260926T055815Z`.
+
+At the operator's request, all older Chat Reader image tags and layers were
+removed after verification; only the four immutable `3312f11` runtime tags
+remain. The stale image rollback pointer and transferred release archive were
+also removed, so rollback now uses the verified five-component backup rather
+than a retained Docker image. Filesystem free space finished at about 2.9 GiB.
+The host page cache was released after rollout; reported free physical memory
+rose from about 157 MiB to 288 MiB without restarting PostgreSQL.
 
 Attachment uploads use the explicit production 1 GiB limit and attachment-only
 1040 MiB Nginx route; Import and Adaptive Import remain 500 MiB with 520 MiB
