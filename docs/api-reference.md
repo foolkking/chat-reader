@@ -370,3 +370,11 @@ contain positions and identities, not copied message bodies. Occurrences also
 return detector-versioned `match_mode` and evidence codes. All candidates
 default to `KEEP` and require explicit review; confidence and similarity are
 not part of the cleanup API.
+## 2026-09-27 instance merge capacity policy
+
+Root-only `GET /api/admin/features` and `PUT /api/admin/features` include
+`maximum_merge_message_count` (`2..100000`, default `1000`).
+`POST /api/conversations/merge` counts active canonical Message rows across
+the selected conversations before queueing and returns HTTP 422 when that
+instance limit would be exceeded. The existing background-task response and
+idempotency contract are unchanged for admitted merges.

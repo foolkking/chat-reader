@@ -28,6 +28,7 @@ import {
   type AttachmentDraftCallbacks,
   type AttachmentDraftState,
 } from "./source-attachment-drop";
+import { selectSourcePreviewAnchor, sourceAlignedPreviewScrollTop } from "./source-preview-scroll";
 
 const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), { ssr: false });
 
@@ -138,6 +139,9 @@ export function EditMessageForm({
   const [toolbarSelectionSnapshot, setToolbarSelectionSnapshot] = useState<SavedToolbarSelection | null>(null);
   const previewPanelRef = useRef<HTMLElement | null>(null);
   const previewRevisionRef = useRef(0);
+  const previewSyncFrameRef = useRef<number | null>(null);
+  const showPreviewRef = useRef(showPreview);
+  showPreviewRef.current = showPreview;
   const saveRequestRef = useRef(0);
   const editorRevisionRef = useRef(0);
   const [pendingCodeDrop, setPendingCodeDrop] = useState<{
@@ -157,6 +161,8 @@ export function EditMessageForm({
     return () => window.clearTimeout(timer);
   }, [text]);
   const previewText = previewSnapshot.text;
+  const previewTextRef = useRef(previewText);
+  previewTextRef.current = previewText;
   const trimmedText = text.trim();
   const isUnchanged = trimmedText === baselineText.trim();
   const hasAttachmentWork = Object.values(attachmentDrafts).some((draft) => draft.status !== "removed");
@@ -421,6 +427,73 @@ export function EditMessageForm({
     }
     toolbarFrameRef.current = window.requestAnimationFrame(repositionContextToolbar);
   }, [repositionContextToolbar]);
+
+  const synchronizePreviewScroll = useCallback(() => {
+    previewSyncFrameRef.current = null;
+    if (!showPreviewRef.current) return;
+    const view = editorViewRef.current;
+    const preview = previewPanelRef.current;
+    if (!view || !preview || preview.scrollHeight <= preview.clientHeight) return;
+
+    const editorRect = view.scrollDOM.getBoundingClientRect();
+    const contentRect = view.contentDOM.getBoundingClientRect();
+    const x = Math.min(contentRect.right - 2, Math.max(contentRect.left + 2, editorRect.left + 2));
+    const y = Math.min(editorRect.bottom - 2, editorRect.top + 12);
+    const coordinateOffset = view.posAtCoords({ x, y });
+    const sourceOffset = Math.max(
+      0,
+      Math.min(previewTextRef.current.length, coordinateOffset ?? view.state.selection.main.head),
+    );
+    if (sourceOffset === 0) {
+      preview.scrollTop = 0;
+      return;
+    }
+
+    const anchors = Array.from(
+      preview.querySelectorAll<HTMLElement>("[data-markdown-source-start][data-markdown-source-end]"),
+    ).map((element) => ({
+      element,
+      start: Number(element.dataset.markdownSourceStart),
+      end: Number(element.dataset.markdownSourceEnd),
+    })).filter((anchor) => Number.isFinite(anchor.start) && Number.isFinite(anchor.end))
+      .sort((left, right) => left.start - right.start || left.end - right.end);
+    const anchor = selectSourcePreviewAnchor(anchors, sourceOffset);
+    if (!anchor) return;
+
+    const previewRect = preview.getBoundingClientRect();
+    const elementRect = anchor.element.getBoundingClientRect();
+    const elementTop = elementRect.top - previewRect.top + preview.scrollTop;
+    preview.scrollTop = sourceAlignedPreviewScrollTop({
+      sourceOffset,
+      anchor,
+      elementTop,
+      elementHeight: elementRect.height,
+      viewportInset: 12,
+      maxScrollTop: Math.max(0, preview.scrollHeight - preview.clientHeight),
+    });
+  }, []);
+
+  const requestPreviewScrollSynchronization = useCallback(() => {
+    if (previewSyncFrameRef.current !== null) window.cancelAnimationFrame(previewSyncFrameRef.current);
+    previewSyncFrameRef.current = window.requestAnimationFrame(synchronizePreviewScroll);
+  }, [synchronizePreviewScroll]);
+
+  useLayoutEffect(() => {
+    if (!showPreview) return;
+    requestPreviewScrollSynchronization();
+    const observer = new ResizeObserver(requestPreviewScrollSynchronization);
+    if (editorHostRef.current) observer.observe(editorHostRef.current);
+    if (previewPanelRef.current) observer.observe(previewPanelRef.current);
+    window.addEventListener("resize", requestPreviewScrollSynchronization);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", requestPreviewScrollSynchronization);
+      if (previewSyncFrameRef.current !== null) {
+        window.cancelAnimationFrame(previewSyncFrameRef.current);
+        previewSyncFrameRef.current = null;
+      }
+    };
+  }, [previewSnapshot.revision, requestPreviewScrollSynchronization, showPreview]);
 
   const saveToolbarSelection = useCallback((selection: { anchor: number; head: number; from: number; to: number }) => {
     const saved = {
@@ -864,7 +937,10 @@ export function EditMessageForm({
               compositionActiveRef.current = false;
               window.requestAnimationFrame(() => syncContextToolbarFromView(true));
             };
-            const handleEditorScroll = () => requestToolbarPosition();
+            const handleEditorScroll = () => {
+              requestToolbarPosition();
+              requestPreviewScrollSynchronization();
+            };
             view.contentDOM.addEventListener("pointerdown", handlePointerDown);
             window.addEventListener("pointerup", handlePointerUp);
             view.contentDOM.addEventListener("compositionstart", handleCompositionStart);
@@ -891,7 +967,7 @@ export function EditMessageForm({
         {showPreview ? <>
           <aside ref={previewPanelRef} className="absolute inset-y-0 right-0 z-30 w-[min(36%,38rem)] min-w-[15rem] overflow-y-auto overscroll-contain border-l border-ui bg-page p-4 shadow-2xl max-sm:inset-x-0 max-sm:w-full max-sm:min-w-0" data-testid="source-editor-rich-preview" data-preview-revision={previewSnapshot.revision} aria-label={zh ? "Markdown 实时预览" : "Live Markdown preview"}>
             <div className="mb-3 flex items-center justify-between border-b border-ui pb-2"><span className="text-xs font-semibold text-secondary">{text === previewText ? (zh ? "实时预览" : "Live preview") : (zh ? "正在更新…" : "Updating…")}</span><button type="button" className="rounded-md p-2 text-secondary hover:bg-subtle" onClick={() => onPreviewChange?.(false)} aria-label={zh ? "关闭预览" : "Close preview"}><X className="h-4 w-4" /></button></div>
-            <MarkdownRenderer text={previewText} isAssistant={false} scopeId={`editor-${messageId ?? formId}`} />
+            <MarkdownRenderer text={previewText} isAssistant={false} preserveSourceOffsets scopeId={`editor-${messageId ?? formId}`} />
           </aside>
         </> : null}
       </div>

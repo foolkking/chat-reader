@@ -10,7 +10,8 @@ routes manage registration mode, invitations, user status and reset grants;
 system archive routes are `ADMIN`-only when authentication is enabled. Share
 routes keep independent token authorization.
 
-Migration `20260902_0032` is the repository and deployed database head. Older
+Migration `20260927_0033` is the working-tree repository head; production
+remains at `20260902_0032` until the next deployment. Older
 statements below that say there is no auth middleware or application rate
 limit are superseded historical text.
 
@@ -62,6 +63,8 @@ BackgroundJob path after the canonical transaction commits.
 - Attachment ID remapping is applied consistently to MessageVersion display/plain/hash and block JSON plus RenderBlock plain text, structured data and sanitized HTML. Because the rewritten UUID changes canonical content, the current rewritten version hash is batch-synchronized to its target Message row; source hashes are never retained as the target authority.
 - The merge path never reparses Markdown or repeatedly loads `MessageVersion.blocks` while discovering headings/code. TOC rows are remapped from source headings; search uses lightweight projections and refreshes PostgreSQL `search_tsv` once after annotation indexing.
 - Statistics, content hash, `offline_revision`, project link, source events, and global heading slugs publish in the same transaction. Cancellation checks run at each batch and before publication, so no partial target conversation remains.
+- Final target attachment validation loads versions, occurrences and RenderBlocks in bounded version batches. It never expands the complete RenderBlock ID map into one PostgreSQL `IN` query; this preserves the fail-closed graph check without approaching the 65,535 bind-parameter protocol ceiling.
+- Merge admission counts canonical non-deleted Message rows before queueing. `InstanceFeaturePolicy.maximum_merge_message_count` defaults to 1,000 and is root-admin configurable from 2 to 100,000; oversized requests return HTTP 422 before consuming worker time. The policy is a capacity boundary and does not weaken the batched correctness checks.
 
 ### Background task cancellation
 

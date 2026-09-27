@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+2026-09-27 merge-capacity and Source Preview synchronization: bounded final
+RenderBlock validation, the root-admin `maximum_merge_message_count` policy,
+migration `20260927_0033`, and mdast-offset CodeMirror-to-preview scroll
+alignment are current in `PROJECT_STATE.md`, `docs/system/BACKEND_AND_API.md`,
+`docs/system/FRONTEND_ARCHITECTURE.md` and `docs/api-reference.md`. Production
+remains on migration `20260902_0032` until this working tree is explicitly
+committed and deployed. No user content, IDs or production error payloads are
+persisted in documentation.
+
 2026-09-26 local source-editor and locator update: the contextual command
 surfaces, first-line selection rendering and shared front-end locator-target
 registry are synchronized in `PROJECT_STATE.md` and

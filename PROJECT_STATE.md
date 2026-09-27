@@ -1,5 +1,35 @@
 # Project State
 
+## 0B. Working-tree merge capacity and source-preview synchronization (2026-09-27)
+
+This working tree fixes the production-observed Conversation Merge failure
+where final attachment-integrity validation expanded every copied RenderBlock
+ID into one PostgreSQL `IN` query and exceeded the protocol's 65,535 bind
+parameter ceiling after all messages had been processed. Target validation is
+now version-batched and checks the same version, occurrence, block and
+Attachment invariants without an unbounded parameter list.
+
+Migration `20260927_0033` adds the root-admin controlled
+`maximum_merge_message_count` instance policy. The default is 1,000 active
+messages across the selected conversations; merge admission counts canonical
+non-deleted Message rows and rejects an oversized request with HTTP 422 before
+queuing work. This is an application capacity guard, not an attempt to change
+PostgreSQL's protocol limit. The control is shown only in the existing Admin
+"Features & defaults" settings surface.
+
+Markdown Source Preview now preserves mdast source offsets on rendered
+semantic blocks. CodeMirror remains the scroll authority: its top visible
+source position selects the smallest containing preview block and interpolates
+within that block, so headings, lists, tables and code no longer drift as the
+source editor scrolls. Preview scrolling is one-way and does not move the
+source editor or add another visible control.
+
+Focused verification passes: merge/history 11/11, admin/migration 16 passed
+with 1 fixture skip, preview/Markdown/toolbar contracts 11/11, Web lint and
+typecheck, Alembic single head and `git diff --check`. This change is not yet
+committed or deployed; production remains on source `2e7e7577` and migration
+`20260902_0032`.
+
 ## 0A. Deployed split Markdown command surfaces (2026-09-26)
 
 The current production deployment is source
@@ -104,7 +134,7 @@ generation is `050f257ceb702490885bae8aabcbf5a1ce60ba84`.
 | Primary languages | TypeScript/React/Next.js, Python/FastAPI, SQL/Alembic |
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
-| Database | PostgreSQL with Alembic; working-tree head `20260902_0032` |
+| Database | PostgreSQL with Alembic; working-tree head `20260927_0033`, deployed head `20260902_0032` |
 | Branch / baseline | `master`; deployed source SHA `094abf43aca1195377053a717603a5d3099ba30e` |
 | Deployment | Production runs immutable `094abf43aca1195377053a717603a5d3099ba30e`; `b303930` remains the direct rollback generation |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |

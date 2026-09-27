@@ -135,6 +135,25 @@ const TRACE_PREFIXES = [
   "总结",
 ];
 
+type PositionedMarkdownNode = {
+  position?: {
+    start?: { offset?: number };
+    end?: { offset?: number };
+  };
+};
+
+function markdownSourcePositionAttributes(node: PositionedMarkdownNode | null | undefined): {
+  "data-markdown-source-start"?: number;
+  "data-markdown-source-end"?: number;
+} {
+  const start = node?.position?.start?.offset;
+  const end = node?.position?.end?.offset;
+  return {
+    "data-markdown-source-start": typeof start === "number" ? start : undefined,
+    "data-markdown-source-end": typeof end === "number" ? end : undefined,
+  };
+}
+
 const markdownComponents: Components & {
   CodeHeader?: React.ComponentType<CodeHeaderProps>;
   SyntaxHighlighter?: React.ComponentType<SyntaxHighlighterProps>;
@@ -143,18 +162,19 @@ const markdownComponents: Components & {
     return <SafeMarkdownLink href={href} {...props}>{children}</SafeMarkdownLink>;
   },
   blockquote({ node, children }) {
+    const sourcePosition = markdownSourcePositionAttributes(node);
     const rawText = collectNodeText(node);
     const callout = parseCallout(rawText);
     if (callout) {
       return (
-        <div className={`markdown-callout border-l-4 px-4 py-3 ${calloutClassName(callout.type)}`}>
+        <div {...sourcePosition} className={`markdown-callout border-l-4 px-4 py-3 ${calloutClassName(callout.type)}`}>
           <div className="mb-2 text-xs font-semibold uppercase tracking-normal">{callout.label}</div>
           <AssistantMarkdownPart text={callout.body} className="text-[0.9em]" />
         </div>
       );
     }
     return (
-      <blockquote className="border-l-2 border-[var(--quote-border)] py-0.5 pl-4 text-[var(--quote-text)]">
+      <blockquote {...sourcePosition} className="border-l-2 border-[var(--quote-border)] py-0.5 pl-4 text-[var(--quote-text)]">
         {children}
       </blockquote>
     );
@@ -164,21 +184,27 @@ const markdownComponents: Components & {
   code({ children }) {
     return <code className="rounded-md border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1.5 py-0.5 font-mono text-[0.9em] text-[var(--inline-code-text)]">{children}</code>;
   },
-  h1({ children, id, className }) {
-    return <h1 id={id} className={`reader-heading reader-heading-1 border-b border-ui pb-2 font-semibold text-primary ${className ?? ""}`}>{children}</h1>;
+  h1({ children, id, className, node }) {
+    return <h1 {...markdownSourcePositionAttributes(node)} id={id} className={`reader-heading reader-heading-1 border-b border-ui pb-2 font-semibold text-primary ${className ?? ""}`}>{children}</h1>;
   },
-  h2({ children, id, className }) {
+  h2({ children, id, className, node }) {
     if (className?.includes("sr-only")) return <h2 id={id} className={className}>{children}</h2>;
-    return <h2 id={id} className={`reader-heading reader-heading-2 font-semibold text-primary ${className ?? ""}`}>{children}</h2>;
+    return <h2 {...markdownSourcePositionAttributes(node)} id={id} className={`reader-heading reader-heading-2 font-semibold text-primary ${className ?? ""}`}>{children}</h2>;
   },
-  h3({ children, id, className }) {
-    return <h3 id={id} className={`reader-heading reader-heading-3 font-semibold text-primary ${className ?? ""}`}>{children}</h3>;
+  h3({ children, id, className, node }) {
+    return <h3 {...markdownSourcePositionAttributes(node)} id={id} className={`reader-heading reader-heading-3 font-semibold text-primary ${className ?? ""}`}>{children}</h3>;
   },
-  h4({ children, id, className }) {
-    return <h4 id={id} className={`reader-heading reader-heading-4 font-semibold text-primary ${className ?? ""}`}>{children}</h4>;
+  h4({ children, id, className, node }) {
+    return <h4 {...markdownSourcePositionAttributes(node)} id={id} className={`reader-heading reader-heading-4 font-semibold text-primary ${className ?? ""}`}>{children}</h4>;
   },
-  hr() {
-    return <hr className="border-ui" />;
+  h5({ children, id, className, node }) {
+    return <h5 {...markdownSourcePositionAttributes(node)} id={id} className={`reader-heading font-semibold text-primary ${className ?? ""}`}>{children}</h5>;
+  },
+  h6({ children, id, className, node }) {
+    return <h6 {...markdownSourcePositionAttributes(node)} id={id} className={`reader-heading font-semibold text-primary ${className ?? ""}`}>{children}</h6>;
+  },
+  hr({ node }) {
+    return <hr {...markdownSourcePositionAttributes(node)} className="border-ui" />;
   },
   img({ alt, src }) {
     const safeSrc = typeof src === "string" && isSafeHref(src) ? src : undefined;
@@ -209,20 +235,20 @@ const markdownComponents: Components & {
   },
   li({ children, className, node }) {
     const task = className?.includes("task-list-item") || hastContainsCheckbox(node);
-    return <li className={`pl-[0.375em] marker:text-secondary ${task ? "list-none" : ""} ${className ?? ""}`}>{children}</li>;
+    return <li {...markdownSourcePositionAttributes(node)} className={`pl-[0.375em] marker:text-secondary ${task ? "list-none" : ""} ${className ?? ""}`}>{children}</li>;
   },
-  ol({ children, start }) {
-    return <ol start={start} className="list-decimal pl-[1.625em]">{children}</ol>;
+  ol({ children, start, node }) {
+    return <ol {...markdownSourcePositionAttributes(node)} start={start} className="list-decimal pl-[1.625em]">{children}</ol>;
   },
-  p({ children }) {
-    return <p className="break-words">{children}</p>;
+  p({ children, node }) {
+    return <p {...markdownSourcePositionAttributes(node)} className="break-words">{children}</p>;
   },
-  pre({ children }) {
-    return <pre className="max-w-full overflow-x-auto rounded-lg border border-ui bg-[var(--code-bg)] p-4 text-[0.875em] leading-[1.65] text-primary">{children}</pre>;
+  pre({ children, node }) {
+    return <pre {...markdownSourcePositionAttributes(node)} className="max-w-full overflow-x-auto rounded-lg border border-ui bg-[var(--code-bg)] p-4 text-[0.875em] leading-[1.65] text-primary">{children}</pre>;
   },
-  table({ children }) {
+  table({ children, node }) {
     return (
-      <div className="markdown-table max-w-full overflow-x-auto rounded-lg border border-ui bg-surface">
+      <div {...markdownSourcePositionAttributes(node)} className="markdown-table max-w-full overflow-x-auto rounded-lg border border-ui bg-surface">
         <table className="w-max min-w-full border-collapse text-[0.875em]">{children}</table>
       </div>
     );
@@ -241,7 +267,7 @@ const markdownComponents: Components & {
   },
   ul({ children, className, node }) {
     const task = className?.includes("contains-task-list") || hastContainsCheckbox(node);
-    return <ul className={`${task ? "list-none pl-0" : "list-disc pl-[1.625em]"} ${className ?? ""}`} data-markdown-task-list={task || undefined}>{children}</ul>;
+    return <ul {...markdownSourcePositionAttributes(node)} className={`${task ? "list-none pl-0" : "list-disc pl-[1.625em]"} ${className ?? ""}`} data-markdown-task-list={task || undefined}>{children}</ul>;
   },
 };
 
@@ -270,6 +296,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   onTaskToggle,
   scopeId,
   attachmentOccurrences = [],
+  preserveSourceOffsets = false,
 }: {
   text: string;
   className?: string;
@@ -279,11 +306,26 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId?: string;
   attachmentOccurrences?: MarkdownAttachmentOccurrence[];
+  preserveSourceOffsets?: boolean;
 }) {
   const generatedScopeId = useId();
   const resolvedScopeId = scopeId ?? generatedScopeId;
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
   const tasksByPart = useMemo(() => assignTasksToParts(parts, taskItems), [parts, taskItems]);
+  if (preserveSourceOffsets) {
+    return (
+      <div className={`aui-chat-markdown max-w-full break-words text-primary ${className}`} data-rich-markdown-version={RICH_MARKDOWN_RENDERER_VERSION}>
+        <AssistantMarkdownPart
+          text={text}
+          taskItems={taskItems}
+          pendingTaskKeys={pendingTaskKeys}
+          onTaskToggle={onTaskToggle}
+          attachmentOccurrences={attachmentOccurrences}
+          scopeId={`${resolvedScopeId}-source`}
+        />
+      </div>
+    );
+  }
   return (
     <div className={`aui-chat-markdown max-w-full break-words text-primary ${className}`} data-rich-markdown-version={RICH_MARKDOWN_RENDERER_VERSION}>
       {parts.map((part, index) => (
@@ -306,7 +348,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   && previous.pendingTaskKeys === next.pendingTaskKeys
   && previous.taskItems === next.taskItems
   && previous.onTaskToggle === next.onTaskToggle
-  && previous.attachmentOccurrences === next.attachmentOccurrences);
+  && previous.attachmentOccurrences === next.attachmentOccurrences
+  && previous.preserveSourceOffsets === next.preserveSourceOffsets);
 
 export function InlineHeadingMarkdown({ text }: { text: string }) {
   const inlineText = text.replace(/\s*\r?\n\s*/g, " ").trim();

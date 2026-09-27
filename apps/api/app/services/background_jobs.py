@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import SessionLocal
@@ -14,6 +14,7 @@ from app.models.background_job import BackgroundJob
 from app.models.attachment import Attachment
 from app.models.content_cleanup import ContentCleanupScan
 from app.models.conversation import Conversation
+from app.models.message import Message
 from app.models.project import Project
 from app.services.editing.message_edit_service import (
     MessageEditError,
@@ -36,6 +37,7 @@ from app.services.content_cleanup import process_scan_chunk
 from app.services.conversations.conversation_deletion import delete_conversation_record
 from app.services.user_deletion import execute_user_account_delete, mark_user_deletion_failed
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
+from app.services.feature_policies import get_feature_policy
 from app.core.observability import structured_event
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
@@ -94,7 +96,21 @@ def queue_conversation_merge(
         if existing is not None:
             return existing
 
-    total_items = sum(conversation.message_count for conversation in conversations)
+    total_items = int(
+        db.query(func.count(Message.id))
+        .filter(
+            Message.conversation_id.in_(conversation_ids),
+            Message.is_deleted.is_(False),
+        )
+        .scalar()
+        or 0
+    )
+    maximum_message_count = get_feature_policy(db).maximum_merge_message_count
+    if total_items > maximum_message_count:
+        raise MessageEditError(
+            f"Merge contains {total_items} messages; the administrator limit is {maximum_message_count}.",
+            422,
+        )
     job = BackgroundJob(
         id=uuid.uuid4(),
         owner_user_id=ownership_scope.owner_user_id,

@@ -18,6 +18,7 @@ POLICY_FIELDS = (
     "allow_skill_import",
     "allow_user_import",
     "maximum_import_size_mb",
+    "maximum_merge_message_count",
 )
 
 

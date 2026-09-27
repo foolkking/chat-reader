@@ -7,12 +7,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import get_db
 from app.core.config import get_settings
 from app.main import app
 from app.models.annotation import ConversationAnnotation
+from app.models.administration import InstanceFeaturePolicy
 from app.models.attachment import Attachment, MessageVersionAttachment
 from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
@@ -61,6 +63,78 @@ def _window(client: TestClient, conversation_id: str) -> list[dict]:
 
 def _complete_background_job(job_id: str) -> None:
     process_queued_jobs(until_job_id=job_id)
+
+
+def test_merge_rejects_message_count_above_administrator_limit(client: TestClient) -> None:
+    first_id = _commit_messages(client, "Limited merge first", [
+        {"role": "Prompt", "say": "First prompt"},
+        {"role": "Response", "say": "First response"},
+    ])
+    second_id = _commit_messages(client, "Limited merge second", [
+        {"role": "Prompt", "say": "Second prompt"},
+        {"role": "Response", "say": "Second response"},
+    ])
+    with _database_session() as db:
+        policy = db.get(InstanceFeaturePolicy, 1)
+        if policy is None:
+            policy = InstanceFeaturePolicy(id=1)
+            db.add(policy)
+        policy.maximum_merge_message_count = 3
+        db.commit()
+
+    response = client.post(
+        "/api/conversations/merge",
+        json={"conversation_ids": [first_id, second_id], "title": "Too large"},
+    )
+    assert response.status_code == 422
+    assert "administrator limit is 3" in response.text
+
+
+def test_merge_validation_batches_large_render_block_graph(client: TestClient) -> None:
+    long_markdown = "\n\n".join(f"Paragraph {index}" for index in range(140))
+    first_id = _commit_messages(
+        client,
+        "Large render graph",
+        [{"role": "Prompt", "say": long_markdown}],
+    )
+    second_id = _commit_messages(
+        client,
+        "Large render graph peer",
+        [{"role": "Response", "say": "Peer"}],
+    )
+    with _database_session() as db:
+        policy = db.get(InstanceFeaturePolicy, 1)
+        if policy is None:
+            policy = InstanceFeaturePolicy(id=1)
+            db.add(policy)
+        policy.maximum_merge_message_count = 1000
+        db.commit()
+        engine = db.get_bind()
+
+    def reject_large_render_block_select(
+        _connection, _cursor, statement, parameters, _context, _executemany,
+    ) -> None:
+        if (
+            statement.lstrip().upper().startswith("SELECT")
+            and "render_blocks" in statement
+            and len(parameters) > 50
+        ):
+            raise RuntimeError("render block validation exceeded the bounded query contract")
+
+    event.listen(engine, "before_cursor_execute", reject_large_render_block_select)
+    try:
+        queued = client.post(
+            "/api/conversations/merge",
+            json={"conversation_ids": [first_id, second_id], "title": "Bounded validation"},
+        )
+        assert queued.status_code == 202, queued.text
+        _complete_background_job(queued.json()["job_id"])
+        task = client.get(f"/api/tasks/{queued.json()['job_id']}")
+        assert task.status_code == 200
+        assert task.json()["status"] == "committed", task.json()
+        assert task.json()["result"]["message_count"] == 2
+    finally:
+        event.remove(engine, "before_cursor_execute", reject_large_render_block_select)
 
 
 @contextmanager

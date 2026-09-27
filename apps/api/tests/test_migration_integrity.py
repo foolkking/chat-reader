@@ -203,6 +203,7 @@ def test_root_administration_models_preserve_singleton_and_audit_contracts() -> 
     assert SystemSkill.__table__.c.bundled_key.nullable is True
     assert SystemSkill.__table__.c.content.nullable is True
     assert InstanceFeaturePolicy.__table__.c.id.primary_key is True
+    assert InstanceFeaturePolicy.__table__.c.maximum_merge_message_count.default.arg == 1000
     backup_unique_names = {
         constraint.name for constraint in SystemBackupRecord.__table__.constraints if isinstance(constraint, sa.UniqueConstraint)
     }

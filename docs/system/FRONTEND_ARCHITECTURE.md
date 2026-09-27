@@ -196,7 +196,7 @@ AI Rich Markdown 使用一个共享 semantic core：Reader、Source Editor live 
 - 桌面侧栏、章节 TOC 和 utility drawer 可调宽并 clamp；批注浮窗可拖动/缩放/重置。源码工作区固定覆盖桌面左侧且占满视口高度，只允许拖动右边缘调整宽度；正文以打开前的稳定左边界向右让位，关闭后恢复原布局。移动端固定为顶栏下方全宽面板。
 - 搜索、Share、Export 共用 `ReaderUtilityDrawer` 的宽度、Esc、焦点恢复和视口纠偏。Share trigger 在 More 菜单因 React 重渲染而失联时，Drawer 通过稳定 action identity 回退到当前 More trigger，绝不把焦点落到 `body`。
 - 桌面“当前对话文件”复用批注式右侧 `reader-floating` 工作区：默认位于 Reader 右上安全区域，整个 header 可拖动，边缘可缩放，位置/尺寸可复位并持久化。header 使用 `grab`/`grabbing` 光标和强调色 `Paperclip`，不再默认占据左侧整高区域。移动端仍退化为顶栏下方全宽 sheet。
-- 源码、搜索、批注等工作区互斥显示但保留已挂载状态。源码编辑不替换 `MessageItem` 正文；Reader 只在最近真实滚动输入且没有导航/恢复/边缘事务时，将活动 block 单向映射到源码。Reader 的全局键盘滚动意图明确忽略 CodeMirror、表单和可编辑目标。CodeMirror 使用稳定 memoized setup/update callback，并将外部基线文档与逐键 draft state 分离，避免输入或删除一个字符时重配置、回放旧 value 或切换活动消息。脏状态跨消息锁定，保存通过局部消息替换和 DOM 锚点补偿完成。
+- 源码、搜索、批注等工作区互斥显示但保留已挂载状态。源码编辑不替换 `MessageItem` 正文；Reader 只在最近真实滚动输入且没有导航/恢复/边缘事务时，将活动 block 单向映射到源码。Reader 的全局键盘滚动意图明确忽略 CodeMirror、表单和可编辑目标。CodeMirror 使用稳定 memoized setup/update callback，并将外部基线文档与逐键 draft state 分离，避免输入或删除一个字符时重配置、回放旧 value 或切换活动消息。脏状态跨消息锁定，保存通过局部消息替换和 DOM 锚点补偿完成。实时预览保留 mdast 源码起止偏移；CodeMirror 顶部可见偏移选择最小包含语义块，并在块内插值驱动预览滚动。同步为源码到预览的单向关系，不把预览滚动解释为编辑意图。
 - 专注模式隐藏主侧栏、对话索引、章节 TOC、离线提示和普通工具；退出恢复原锚点/面板状态。
 - 移动端使用 Vaul/自定义 Sheet；无 desktop separator/rail。首页保留继续阅读，桌面隐藏。
 

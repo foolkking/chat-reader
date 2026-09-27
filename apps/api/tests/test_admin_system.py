@@ -40,10 +40,12 @@ def test_root_feature_policies_are_audited_and_enforced(auth_client: TestClient)
             "allow_skill_import": False,
             "allow_user_import": False,
             "maximum_import_size_mb": 4,
+            "maximum_merge_message_count": 1200,
         },
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["maximum_import_size_mb"] == 4
+    assert updated.json()["maximum_merge_message_count"] == 1200
 
     skill = auth_client.post(
         "/api/skills",

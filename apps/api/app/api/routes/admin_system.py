@@ -41,6 +41,7 @@ class FeaturePolicyUpdate(BaseModel):
     allow_skill_import: bool | None = None
     allow_user_import: bool | None = None
     maximum_import_size_mb: int | None = Field(default=None, ge=1, le=10_240)
+    maximum_merge_message_count: int | None = Field(default=None, ge=2, le=100_000)
 
 
 class SystemSkillCreate(BaseModel):
