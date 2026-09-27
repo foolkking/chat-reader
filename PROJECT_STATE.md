@@ -1,8 +1,8 @@
 # Project State
 
-## 0B. Working-tree merge capacity and source-preview synchronization (2026-09-27)
+## 0B. Deployed merge capacity and source-preview synchronization (2026-09-27)
 
-This working tree fixes the production-observed Conversation Merge failure
+This release fixes the production-observed Conversation Merge failure
 where final attachment-integrity validation expanded every copied RenderBlock
 ID into one PostgreSQL `IN` query and exceeded the protocol's 65,535 bind
 parameter ceiling after all messages had been processed. Target validation is
@@ -24,11 +24,23 @@ within that block, so headings, lists, tables and code no longer drift as the
 source editor scrolls. Preview scrolling is one-way and does not move the
 source editor or add another visible control.
 
-Focused verification passes: merge/history 11/11, admin/migration 16 passed
-with 1 fixture skip, preview/Markdown/toolbar contracts 11/11, Web lint and
-typecheck, Alembic single head and `git diff --check`. This change is not yet
-committed or deployed; production remains on source `2e7e7577` and migration
-`20260902_0032`.
+Production runs source `97146a69233b22da1caf250adac380e3802d764f`
+from Actions run `36299691874`. API/worker digest is
+`sha256:f53face550496986b2fdf6660298096c3bd3adda94f1775af20cd946bfa3a4d9`;
+Web is `sha256:6f5afdd734ac3eb90c8ff32cd488024eff06c75b31b47db89fe5df0160580883`.
+The full CI API/Web/PWA/browser matrix and independent artifact inspection
+passed. Production health, worker heartbeat, HTTPS entry, anonymous admin
+boundary and Alembic `20260927_0033` passed; PostgreSQL was not restarted.
+The verified five-component backup is
+`/opt/chat-reader/backups/chat-reader-20260927T064519Z`.
+
+At the operator's direction no previous application image generation is
+retained. Release state reports `rollback_revision=none`; the `2e7e7577` and
+`027a148b` image sets, stale unversioned API image and superseded transfer were
+removed after final verification. Only the current four Chat Reader tags
+remain. Database backups, named volumes, user storage and `.env.production`
+were not removed or replaced. Authenticated interactive Web acceptance remains
+an operator verification step.
 
 ## 0A. Deployed split Markdown command surfaces (2026-09-26)
 
@@ -88,7 +100,7 @@ Attachment uploads use the explicit production 1 GiB limit and attachment-only
 routes. Browser preview remains capped at 50 MiB. Authenticated 1 GiB browser
 acceptance remains an operator verification step.
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 ## 0. Upload failure diagnosis and attachment limit update (2026-09-24)
 
@@ -134,9 +146,9 @@ generation is `050f257ceb702490885bae8aabcbf5a1ce60ba84`.
 | Primary languages | TypeScript/React/Next.js, Python/FastAPI, SQL/Alembic |
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
-| Database | PostgreSQL with Alembic; working-tree head `20260927_0033`, deployed head `20260902_0032` |
-| Branch / baseline | `master`; deployed source SHA `094abf43aca1195377053a717603a5d3099ba30e` |
-| Deployment | Production runs immutable `094abf43aca1195377053a717603a5d3099ba30e`; `b303930` remains the direct rollback generation |
+| Database | PostgreSQL with Alembic; repository and deployed head `20260927_0033` |
+| Branch / baseline | `master`; deployed source SHA `97146a69233b22da1caf250adac380e3802d764f` |
+| Deployment | Production runs immutable `97146a69233b22da1caf250adac380e3802d764f`; no previous application image generation is retained |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |
 
 ## Current working-tree implementation (2026-09-22)
@@ -268,9 +280,9 @@ have separate permission/data boundaries.
 | `corepack pnpm run lint` | Web lint | PASS in this implementation cycle |
 | `corepack pnpm run typecheck` | Web typecheck | PASS in this implementation cycle |
 | `corepack pnpm --filter web build` | Production Web build | PASS in this implementation cycle |
-| `corepack pnpm run test:api` | API suite | PASS 477 passed, 6 skipped in this implementation cycle |
-| `corepack pnpm --filter web test:pwa` | PWA/browser suite | Full authenticated suite NOT VERIFIED locally because no API was listening at `127.0.0.1:8000`; tablet/task source-contract tests PASS 5/5 |
-| `cd apps/api; python -m alembic heads` | Migration head | `20260902_0032 (head)` in the working tree and production |
+| `corepack pnpm run test:api` | API suite | PASS locally: 483 passed, 6 skipped; release workflow also PASS |
+| `corepack pnpm --filter web test:pwa` | PWA/browser suite | PASS in release workflow `36299691874`; local isolated source-preview/Markdown contracts also PASS |
+| `cd apps/api; python -m alembic heads` | Migration head | `20260927_0033 (head)` in the repository and production |
 | `git diff --check` | Patch whitespace | PASS |
 | `corepack pnpm run ci:changed-area` | Changed-area local check suggestions | PASS; always retains full gate |
 | `python deploy/cleanup_release_transfer.py ...` | Bounded transfer cleanup | Dry-run/execute temporary-directory smoke PASS |
@@ -356,7 +368,7 @@ verification.
 | Auth cookie/inactivity contract | Implemented in working tree | API exact-boundary tests and authenticated browser cookie attribute assertion; production-equivalent owner run remains NOT VERIFIED |
 | Deployment admin reconciliation | Implemented and deployed | Production `migrate` consumes the server `.env.production` `ADMIN_EMAIL`/`ADMIN_PASSWORD` pair; only a changed pair is applied, while the database stores a derived digest and Argon2id hash rather than plaintext |
 | Attachment Range characterization | Implemented and deployed | Synthetic image/PDF/video/text Range and retry measurement reports aggregates only; production media/network measurement remains NOT VERIFIED |
-| Production deployment | Implemented and deployed | CI-gated release `1b81b496` is live; Alembic `20260902_0032` is current; previous `7101f6a` remains the rollback image |
+| Production deployment | Implemented and deployed | CI-gated release `97146a6` is live; Alembic `20260927_0033` is current; no previous application image generation is retained by operator policy |
 | Authenticated production browser | NOT VERIFIED | No approved owner session/browser evidence in this cycle; public health is reachable but exposes no release SHA, so it cannot bind TEST-001 evidence to this source |
 | Backup failure notification | Closed as unconfirmed | Backup emits bounded stderr/non-zero failure; no authorized delivery channel exists, so no external hook was introduced |
 
@@ -368,11 +380,11 @@ verification.
   asset storage archives. Never use `down -v`, broad image pruning or volume
   deletion.
 - Operator release pointers belong in `/etc/chat-reader/release-state/`;
-  verify current and direct rollback revisions with
-  `deploy/verify_release_state.sh`.
+  verify the required current revision and optional direct rollback revision
+  with `deploy/verify_release_state.sh`.
 - Transfer cleanup is report-only by default. The operator must explicitly
-  name current and rollback artifacts and pass `--execute` after health,
-  migration and browser gates.
+  name retained artifacts and pass `--execute` after health, migration and
+  browser gates.
 - Production health, production-equivalent acceptance and owner-authenticated
   acceptance must be reported separately as PASS/NOT_VERIFIED/BLOCKED.
 - `.cr` restore and attachment round-trip behavior is covered by temporary-root
@@ -419,8 +431,9 @@ or unavailable browser evidence to PASS without the required measurement.
 
 1. Obtain owner-authenticated browser access against the deployed SHA for
    `TEST-001`; keep unavailable production UI evidence `NOT_VERIFIED`.
-2. Keep the deployed release and direct rollback pointers under the operator
-   release-state directory; run the documented gates before the next rollout.
+2. Keep the deployed release pointer and any intentionally retained rollback
+   pointer under the operator release-state directory; run the documented
+   gates before the next rollout.
 
 ## 12. Do Not Assume
 

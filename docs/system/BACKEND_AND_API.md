@@ -10,8 +10,7 @@ routes manage registration mode, invitations, user status and reset grants;
 system archive routes are `ADMIN`-only when authentication is enabled. Share
 routes keep independent token authorization.
 
-Migration `20260927_0033` is the working-tree repository head; production
-remains at `20260902_0032` until the next deployment. Older
+Migration `20260927_0033` is the repository and production head. Older
 statements below that say there is no auth middleware or application rate
 limit are superseded historical text.
 

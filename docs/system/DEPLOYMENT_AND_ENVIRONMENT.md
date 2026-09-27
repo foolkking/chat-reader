@@ -1,9 +1,28 @@
 # 部署与运行环境
 
-## Current deployed snapshot (2026-09-26)
+## Current deployed snapshot (2026-09-27)
 
-The current release is source `2e7e7577b9b6b44e392fed6c00800470ee0a90b4`
-from GitHub Actions run `36242345790`. API/worker digest is
+The current release is source `97146a69233b22da1caf250adac380e3802d764f`
+from GitHub Actions run `36299691874`. API/worker digest is
+`sha256:f53face550496986b2fdf6660298096c3bd3adda94f1775af20cd946bfa3a4d9`;
+Web is `sha256:6f5afdd734ac3eb90c8ff32cd488024eff06c75b31b47db89fe5df0160580883`.
+Runtime health, worker heartbeat, HTTPS entry and migration head
+`20260927_0033` passed, and PostgreSQL retained its prior container identity
+and start time. The verified five-component backup is
+`/opt/chat-reader/backups/chat-reader-20260927T064519Z`.
+
+The operator elected not to retain a previous application image generation.
+Release state therefore has a required current pointer and no rollback file;
+`verify_release_state.sh` reports `rollback_revision=none`. Exact obsolete Chat
+Reader image tags, the stale unversioned API image and superseded release
+transfer were removed after verification. Named volumes, database data, user
+storage, backups and `.env.production` were preserved. Root usage is about 62%
+with roughly 15 GiB available. Authenticated owner Web acceptance remains an
+operator step.
+
+The preceding deployed snapshot was source
+`2e7e7577b9b6b44e392fed6c00800470ee0a90b4`, built by GitHub Actions run
+`36242345790`. API/worker digest is
 `sha256:a2dd5439a8ce10c08dc85b95be6da165924d3e5087eaf477c23d709bb715aa5a`;
 Web is `sha256:f5ad3416b4fbb6d868e84d57f1a637824aa8e09c3eac890da5df4e7fb72c70d0`.
 The verified backup is `/opt/chat-reader/backups/chat-reader-20260926T130202Z`;
@@ -216,10 +235,13 @@ Release A freezes three runtime invariants: production requires a non-default `A
 
 The server's mutable release pointer is operator-owned state, not repository
 content. Store it under `/etc/chat-reader/release-state/` with mode `0700`:
-`current-images.env` identifies the active immutable source revision and
-`rollback-images.env` identifies the directly recoverable previous revision.
-Each file must contain a non-empty `RELEASE_SHA` value; the two values must be
-different. Verify the pair before a rollout with the read-only helper:
+`current-images.env` identifies the active immutable source revision. An
+optional `rollback-images.env` identifies a directly recoverable previous
+revision when the operator chooses to retain one. Every present file must
+contain a non-empty `RELEASE_SHA` value, and current/rollback values must be
+different. When no previous image generation is retained, remove the rollback
+file instead of leaving a stale pointer. Verify the state before a rollout with
+the read-only helper:
 
 ```bash
 sh deploy/verify_release_state.sh /etc/chat-reader/release-state
@@ -231,20 +253,21 @@ procedure, separately from application volumes.
 
 After health, migration, and browser gates pass, inspect the staged release
 transfer directory with the bounded cleanup helper. It retains only explicitly
-named active and rollback artifacts; symlinks and non-direct children are never
-removed. The default is a report-only dry run:
+named active artifacts and any optional rollback artifacts; symlinks and
+non-direct children are never removed. The default is a report-only dry run:
 
 ```bash
 python3 deploy/cleanup_release_transfer.py \
   --transfer-dir /opt/chat-reader/releases \
-  --keep chat-reader-images-current.tar.gz \
-  --keep chat-reader-images-rollback.tar.gz
+  --keep chat-reader-images-current.tar.gz
 python3 deploy/cleanup_release_transfer.py \
   --transfer-dir /opt/chat-reader/releases \
   --keep chat-reader-images-current.tar.gz \
-  --keep chat-reader-images-rollback.tar.gz \
   --execute
 ```
+
+Add a second `--keep` only when a direct rollback artifact is intentionally
+retained.
 
 The explicit `--execute` step is an operator action after the recovery chain
 has been verified. Never replace it with `docker image prune`, a wildcard

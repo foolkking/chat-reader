@@ -17,12 +17,14 @@ if [ -L "$STATE_DIR" ]; then
   exit 2
 fi
 
-for file in "$CURRENT_FILE" "$ROLLBACK_FILE"; do
-  if [ ! -f "$file" ] || [ -L "$file" ]; then
-    echo "Release state verification failed: missing or symlinked state file: $file" >&2
-    exit 1
-  fi
-done
+if [ ! -f "$CURRENT_FILE" ] || [ -L "$CURRENT_FILE" ]; then
+  echo "Release state verification failed: missing or symlinked state file: $CURRENT_FILE" >&2
+  exit 1
+fi
+if [ -e "$ROLLBACK_FILE" ] && { [ ! -f "$ROLLBACK_FILE" ] || [ -L "$ROLLBACK_FILE" ]; }; then
+  echo "Release state verification failed: invalid or symlinked state file: $ROLLBACK_FILE" >&2
+  exit 1
+fi
 
 read_value() {
   key="$1"
@@ -38,12 +40,19 @@ read_value() {
 }
 
 current_revision="$(read_value RELEASE_SHA "$CURRENT_FILE")"
-rollback_revision="$(read_value RELEASE_SHA "$ROLLBACK_FILE")"
-if [ "$current_revision" = "$rollback_revision" ]; then
-  echo "Release state verification failed: current and rollback revisions are identical" >&2
-  exit 1
+rollback_revision="none"
+if [ -f "$ROLLBACK_FILE" ]; then
+  rollback_revision="$(read_value RELEASE_SHA "$ROLLBACK_FILE")"
+  if [ "$current_revision" = "$rollback_revision" ]; then
+    echo "Release state verification failed: current and rollback revisions are identical" >&2
+    exit 1
+  fi
 fi
 
 printf 'state_dir=%s\ncurrent_revision=%s\nrollback_revision=%s\n' \
   "$STATE_DIR" "$current_revision" "$rollback_revision"
-echo "Release state ownership and recovery pair verified"
+if [ "$rollback_revision" = "none" ]; then
+  echo "Release state ownership verified; no direct image rollback is retained"
+else
+  echo "Release state ownership and recovery pair verified"
+fi

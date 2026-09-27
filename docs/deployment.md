@@ -1,5 +1,37 @@
 # 生产部署
 
+## 2026-09-27 bounded merge and synchronized Source Preview release
+
+Source `97146a69233b22da1caf250adac380e3802d764f` was deployed from GitHub
+Actions run `36299691874`. Full API and Web quality, PWA/browser matrices,
+immutable image inspection and independent artifact inspection passed. The
+release archive SHA-256 is
+`6875a791165d66a71b7858dc8fd666aaebe80bce20eeb23c592bc2bbedd25f1c`.
+
+Conversation Merge now validates copied message versions, RenderBlocks and
+attachment occurrences in bounded batches instead of emitting one unbounded
+PostgreSQL `IN` list. Root Admin can control the admission limit in Features &
+defaults; migration `20260927_0033` initializes it to 1,000 active messages.
+Markdown Source Preview follows the CodeMirror top-visible source position via
+source-offset-bearing semantic blocks without making preview scroll control
+the editor.
+
+API/worker digest is
+`sha256:f53face550496986b2fdf6660298096c3bd3adda94f1775af20cd946bfa3a4d9`;
+Web is `sha256:6f5afdd734ac3eb90c8ff32cd488024eff06c75b31b47db89fe5df0160580883`.
+The verified five-component backup is
+`/opt/chat-reader/backups/chat-reader-20260927T064519Z`. PostgreSQL was not
+restarted. Runtime health, worker heartbeat, HTTPS/redirect, anonymous admin
+401 and Alembic head passed.
+
+At the operator's direction, no previous application image generation is
+retained. Release state explicitly reports `rollback_revision=none`; obsolete
+versioned images, the unused unversioned API image and superseded transfer were
+removed. The current manifest and image inspection remain on the server, while
+the re-downloadable image archive was removed. Backups, named volumes, user
+storage and `.env.production` were untouched. Authenticated interactive Web
+acceptance is left for the operator.
+
 ## 2026-09-26 contextual locator and source toolbar release
 
 Source `2e7e7577b9b6b44e392fed6c00800470ee0a90b4` was deployed from GitHub
