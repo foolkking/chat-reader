@@ -1,6 +1,6 @@
 # Authentication and account contract
 
-## Session recovery and browser persistence (2026-09-30, working tree)
+## Session recovery and browser persistence (deployed 2026-09-30)
 
 The private Web boundary distinguishes session verification, an unavailable
 authority, unavailable browser storage, and an expired offline lease. Auth
@@ -38,15 +38,19 @@ Regression ownership: `apps/api/tests/test_auth.py`,
 `apps/web/e2e/auth-recovery.spec.ts`, `auth-gate.spec.ts`, and
 `multi-account-auth-contract.spec.ts`. The CI auth gate provisions both a
 synthetic email and password; missing email previously skipped its real browser
-tests. Production rollout and authenticated production acceptance are separate
-from these local checks.
+tests. Source `5877558070311d1728974198f37a4500d25233b1` is deployed to King.
+The operator confirmed successful login and library entry after a forced
+refresh; CI's 16 authentication browser tests and production health/anonymous
+boundary checks passed. This confirms the reported stuck-login recovery;
+it does not claim completion of the separate full authenticated desktop/mobile
+and logout production checklist.
 
-## Current implementation (working tree, 2026-09-01)
+## Account model (implemented; introduced 2026-09-01)
 
-The next release upgrades the legacy single owner into one `ADMIN` account and
+The deployed account model upgrades the legacy single owner into one `ADMIN` account and
 adds account-scoped `USER` accounts. Migration `20260901_0030` backfills the
-legacy owner and private rows; it is present in the repository but has not been
-applied to the operator database in this session.
+legacy owner and private rows; it is already included in the production
+migration chain, whose current head is `20260927_0033`.
 
 - The operator provisions the only administrator with
   `python -m scripts.owner_auth provision --email <admin-email>` and enters a

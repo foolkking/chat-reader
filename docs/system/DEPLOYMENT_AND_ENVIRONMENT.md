@@ -1,8 +1,38 @@
 # 部署与运行环境
 
-## Current deployed snapshot (2026-09-27)
+## Current deployed snapshot (2026-09-30)
 
-The current release is source `97146a69233b22da1caf250adac380e3802d764f`
+Production runs source `5877558070311d1728974198f37a4500d25233b1` from Actions
+run `36669226287`. API/worker image ID is
+`sha256:6b93c70651a2f2cc59172b5d24bc8d928688efe5b115e8a3121398ed43e0a7ce`;
+Web is `sha256:f7f57a76660e7e2d08e5e4c6e711eaa7618a8044057626bb742d6eff36accdc0`.
+All CI quality, authentication/PWA and independent artifact gates passed.
+
+Verified backup: `/opt/chat-reader/backups/chat-reader-20260930T053642Z`.
+Application writes were briefly stopped to copy consistent storage; PostgreSQL
+was not stopped, restarted or replaced. The existing Compose and helper
+contents match the release source after newline normalization, so the dirty
+server checkout and `.env.production` were preserved. Deployment support and
+provenance are retained in `/opt/chat-reader/releases/5877558070311d1728974198f37a4500d25233b1`;
+runtime image revision is authoritative, not the server checkout's old HEAD.
+
+Runtime health, worker heartbeat, HTTPS, anonymous private-route 401, attachment
+integrity and Alembic `20260927_0033` passed. The operator confirmed that login
+now reaches the library after Ctrl+F5. Full agent-driven authenticated
+desktop/mobile/logout acceptance remains `NOT_VERIFIED`; it is distinct from
+the operator-confirmed resolution of the reported login failure.
+
+Only the current four Chat Reader image tags remain. Exact old-image removal
+reclaimed about 263 MiB; removal of the consumed transfer archive brings the
+measured free-space increase to about 446 MiB. Root has about 12.3 GiB free with
+all backups retained. `/etc/chat-reader/release-state/current-images.env` is
+authoritative; the root `current-images.env` now links to it. No direct rollback
+image set is retained (`rollback_revision=none`). Business volumes and other
+applications were untouched.
+
+## Previous deployed snapshot (2026-09-27)
+
+That release was source `97146a69233b22da1caf250adac380e3802d764f`
 from GitHub Actions run `36299691874`. API/worker digest is
 `sha256:f53face550496986b2fdf6660298096c3bd3adda94f1775af20cd946bfa3a4d9`;
 Web is `sha256:6f5afdd734ac3eb90c8ff32cd488024eff06c75b31b47db89fe5df0160580883`.

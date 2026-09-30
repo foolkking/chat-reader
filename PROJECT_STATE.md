@@ -1,6 +1,6 @@
 # Project State
 
-## Authentication recovery (2026-09-30, working tree)
+## Deployed authentication recovery (2026-09-30)
 
 The post-login private boundary no longer leaves session/network/storage
 failures indefinitely at "Checking trusted device". Auth requests have a
@@ -13,8 +13,7 @@ API authentication database I/O runs off the ASGI event loop. Password-change
 cookie deletion is no longer overwritten by sliding renewal. Invalid email,
 orphaned principal, session-list expiry and password-reset policy handling have
 regression coverage. The CI auth gate now provisions the email required to
-actually run its browser tests. No migration or production deployment is part
-of this working-tree change. Details and test ownership are in
+actually run its browser tests. No new migration is required. Details and test ownership are in
 `docs/system/AUTHENTICATION_CONTRACT.md`.
 
 Verification: full API suite **494 passed / 6 fixture/environment skips**;
@@ -23,8 +22,30 @@ login, logout, Share and password-change browser tests **4 passed**; targeted
 PWA account isolation, v1 package readability, transaction rollback, reload and
 reconnect regressions **5 passed**. Web lint/typecheck/build and Alembic single
 head `20260927_0033` pass. Browser failure screens were checked at 375px and
-1440px. This is local synthetic-fixture evidence, not authenticated production
-acceptance.
+1440px. These are local synthetic-fixture results.
+
+Production now runs source `5877558070311d1728974198f37a4500d25233b1` from
+Actions run `36669226287`. CI passed API **497 / 3 skips**, authentication
+browser **16**, default PWA **132 / 89 mode-specific skips**, and PWA negative
+**17**, together with the other browser, build and independent artifact gates.
+The release also patches the brace-expansion audit findings; the official npm
+audit reports zero advisories.
+
+Backup `/opt/chat-reader/backups/chat-reader-20260930T053642Z` passed all five
+component checks. API/worker writes were briefly stopped for a consistent
+backup after the live copy detected changing storage. Only API, worker and Web
+were replaced; PostgreSQL identity/start time and `.env.production` were
+unchanged. Runtime health, worker heartbeat, HTTPS, anonymous private-route 401,
+attachment integrity and Alembic `20260927_0033` passed. The operator confirmed
+successful login and library entry after Ctrl+F5. The full agent-driven
+authenticated desktop/mobile/logout checklist remains separately unverified.
+
+At the operator's request, the previous four application image tags and unused
+layers were removed after verification, releasing about **263 MiB**. Including
+the consumed image transfer archive, cleanup reclaimed about **446 MiB**; root
+has about **12.3 GiB** available after retaining the new backup. Current images,
+all backups, business volumes and server configuration remain. Release state
+reports `rollback_revision=none`; deployment details are in `docs/deployment.md`.
 
 ## 0B. Deployed merge capacity and source-preview synchronization (2026-09-27)
 

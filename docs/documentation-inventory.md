@@ -7,8 +7,13 @@ and the unchanged audit gate are recorded in `docs/system/RELEASE_SAFETY_BASELIN
 failure handling, offline expiry/cross-tab locking, cookie revocation and the
 repaired CI email/password fixture are current in
 `docs/system/AUTHENTICATION_CONTRACT.md` and `PROJECT_STATE.md`.
-These are working-tree changes; no production rollout or new migration is
-claimed. The tests use synthetic accounts and isolated storage.
+Source `5877558`, Actions run `36669226287`, backup `chat-reader-20260930T053642Z`,
+runtime checks, operator-confirmed login/library recovery and exact image
+cleanup are recorded in `docs/deployment.md` and
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`. No new migration was required.
+The automated tests use synthetic accounts and isolated storage; the full
+authenticated production checklist remains separate from the operator's
+confirmed login result.
 
 2026-09-27 merge-capacity and Source Preview synchronization: bounded final
 RenderBlock validation, the root-admin `maximum_merge_message_count` policy,

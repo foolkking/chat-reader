@@ -1,5 +1,45 @@
 # 生产部署
 
+## 2026-09-30 authentication recovery release
+
+Source `5877558070311d1728974198f37a4500d25233b1` was deployed from Actions run
+`36669226287`. API quality (497 passed, 3 skips), Web quality, the 16-test
+authentication/recovery gate, PWA matrices, image inspection and independent
+artifact inspection all passed. The brace-expansion patch required by the
+official dependency audit is included; the audit reports zero advisories.
+Archive SHA-256: `85b7a44ef96c91eac3d1008cec8605207e37b830466cb0e628e4218ff5c99c33`.
+
+API/worker image ID:
+`sha256:6b93c70651a2f2cc59172b5d24bc8d928688efe5b115e8a3121398ed43e0a7ce`.
+Web image ID:
+`sha256:f7f57a76660e7e2d08e5e4c6e711eaa7618a8044057626bb742d6eff36accdc0`.
+
+The live backup attempt detected changing storage and was not accepted. The
+idle worker and API were briefly stopped for a consistent five-component
+backup, then restored. Backup `/opt/chat-reader/backups/chat-reader-20260930T053642Z`
+passed checksum, archive and PostgreSQL readability checks before replacement.
+Only API, worker and Web were recreated from loaded images with `--no-build`.
+Migration remains `20260927_0033`; administrator deployment configuration was
+unchanged. PostgreSQL container identity/start time and `.env.production`
+checksum were unchanged throughout the release.
+
+Image IDs/revisions, runtime health, worker heartbeat, HTTPS redirect/health,
+anonymous private-route 401 and attachment-storage integrity passed. New
+containers reported no restarts, OOM kills or error keywords in startup logs.
+The operator confirmed successful login and library entry after Ctrl+F5.
+The full agent-driven authenticated desktop/mobile/logout checklist remains
+`NOT_VERIFIED`, separate from this operator-confirmed login recovery.
+
+After verification, the exact four `97146a6` application image tags and unused
+layers were removed, increasing free space by 276,160,512 bytes (about 263 MiB).
+Removing the consumed transfer archive raised total measured reclamation to
+467,345,408 bytes (about 446 MiB). About 12.3 GiB remains available with the new
+backup retained. Current images, all backups, business volumes, user data and
+other applications were preserved. Release state reports `rollback_revision=none`;
+root `current-images.env` links to the authoritative operator state file.
+The server checkout was not reset; matching deployment helper contents and
+release provenance are retained under the versioned release directory.
+
 ## 2026-09-27 bounded merge and synchronized Source Preview release
 
 Source `97146a69233b22da1caf250adac380e3802d764f` was deployed from GitHub
