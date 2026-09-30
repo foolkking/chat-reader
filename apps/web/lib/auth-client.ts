@@ -16,6 +16,7 @@ const OFFLINE_LEASE_KEY = "chat-reader:authenticated-offline-until";
 const OFFLINE_LEASE_USER_KEY = "chat-reader:authenticated-offline-user";
 export const AUTH_OFFLINE_IDENTITY_STORAGE_KEY = OFFLINE_LEASE_USER_KEY;
 const SESSION_PRESENCE_COOKIE = "chat_reader_session_present";
+export const AUTH_REQUEST_TIMEOUT_MS = 10_000;
 
 export type AuthSessionState = {
   authenticated: boolean;
@@ -44,30 +45,22 @@ export class AuthRequestError extends Error {
   }
 }
 
-export async function readAuthSession(): Promise<AuthSessionState> {
-  const response = await fetch("/api/auth/session", {
-    cache: "no-store",
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) throw new Error(`Authentication check returned ${response.status}`);
-  return response.json() as Promise<AuthSessionState>;
+export async function readAuthSession(signal?: AbortSignal): Promise<AuthSessionState> {
+  const session = await authRequest<AuthSessionState>("/api/auth/session", { signal });
+  if (typeof session?.authenticated !== "boolean" || (session.authenticated && !session.user_id && !session.principal_id)) {
+    throw new AuthRequestError("Invalid authentication response.", 502);
+  }
+  return session;
 }
 
 export async function readAuthSetup(): Promise<AuthSetupState> {
-  const response = await fetch("/api/auth/setup/status", {
-    cache: "no-store",
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) throw new AuthRequestError("Account setup check failed.", response.status);
-  return response.json() as Promise<AuthSetupState>;
+  return authRequest<AuthSetupState>("/api/auth/setup/status");
 }
 
 export async function loginWithPassword(email: string, password: string): Promise<AuthSessionState> {
-  const session = await authMutation<AuthSessionState>("/api/auth/login", { email, password });
-  await bindAuthenticatedOfflineContext(session);
-  return session;
+  // The private boundary initializes local storage after navigation. A local
+  // cache failure must not turn an accepted password into a failed login.
+  return authMutation<AuthSessionState>("/api/auth/login", { email, password });
 }
 
 export async function registerAccount(input: {
@@ -82,7 +75,6 @@ export async function registerAccount(input: {
     confirm_password: input.confirmPassword,
     invitation_token: input.invitationToken || undefined,
   });
-  if (session.authenticated) await bindAuthenticatedOfflineContext(session);
   return session;
 }
 
@@ -135,18 +127,24 @@ export async function changeOwnerPassword(input: {
 }
 
 export function rememberOfflineLease(expiresAt: string | null, userId?: string | null): void {
-  if (!expiresAt || !Number.isFinite(Date.parse(expiresAt))) {
-    window.localStorage.removeItem(OFFLINE_LEASE_KEY);
-    window.localStorage.removeItem(OFFLINE_LEASE_USER_KEY);
-    return;
+  try {
+    if (!expiresAt || !Number.isFinite(Date.parse(expiresAt))) {
+      window.localStorage.removeItem(OFFLINE_LEASE_KEY);
+      window.localStorage.removeItem(OFFLINE_LEASE_USER_KEY);
+      return;
+    }
+    window.localStorage.setItem(OFFLINE_LEASE_KEY, expiresAt);
+    const normalizedUserId = normalizeSessionUserId(userId) ?? readOfflineLeaseUserId() ?? readPersistedOfflineUserId();
+    if (normalizedUserId) window.localStorage.setItem(OFFLINE_LEASE_USER_KEY, normalizedUserId);
+  } catch {
+    // Browsers can disallow local storage while still accepting HttpOnly
+    // sessions. Such a browser can work online but cannot establish a lease.
+    removeOfflineLease();
   }
-  window.localStorage.setItem(OFFLINE_LEASE_KEY, expiresAt);
-  const normalizedUserId = normalizeSessionUserId(userId) ?? readOfflineLeaseUserId() ?? readPersistedOfflineUserId();
-  if (normalizedUserId) window.localStorage.setItem(OFFLINE_LEASE_USER_KEY, normalizedUserId);
 }
 
 export function hasCurrentOfflineLease(now = Date.now()): boolean {
-  const value = window.localStorage.getItem(OFFLINE_LEASE_KEY);
+  const value = readLocalStorage(OFFLINE_LEASE_KEY);
   return hasSessionPresenceMarker()
     && value !== null
     && Number.isFinite(Date.parse(value))
@@ -155,19 +153,23 @@ export function hasCurrentOfflineLease(now = Date.now()): boolean {
 }
 
 export function readOfflineLeaseUserId(): string | null {
-  const stored = normalizeSessionUserId(window.localStorage.getItem(OFFLINE_LEASE_USER_KEY));
+  const stored = normalizeSessionUserId(readLocalStorage(OFFLINE_LEASE_USER_KEY));
   if (stored) return stored;
   // Upgrade compatibility for a trusted-device lease created by the previous
   // single-owner release. Online verification promotes this logical identity
   // to the migrated User UUID before any other account can use the browser.
-  const legacyExpiry = window.localStorage.getItem(OFFLINE_LEASE_KEY);
+  const legacyExpiry = readLocalStorage(OFFLINE_LEASE_KEY);
   return legacyExpiry && Number.isFinite(Date.parse(legacyExpiry)) ? "local:default" : null;
 }
 
-export async function activateOfflineLeaseContext(): Promise<OfflineStorageContext> {
+export function offlineLeaseExpiresAt(): number {
+  return Date.parse(readLocalStorage(OFFLINE_LEASE_KEY) ?? "");
+}
+
+export async function activateOfflineLeaseContext(signal?: AbortSignal): Promise<OfflineStorageContext> {
   const userId = readOfflineLeaseUserId();
   if (!userId) throw new Error("Offline identity lease is unavailable.");
-  return activateProtectedOfflineData(userId);
+  return activateProtectedOfflineData(userId, { signal });
 }
 
 export function getCurrentOfflineRuntimeUserId(): string | null {
@@ -178,21 +180,39 @@ function hasSessionPresenceMarker(): boolean {
   return document.cookie.split(";").some((item) => item.trim() === `${SESSION_PRESENCE_COOKIE}=1`);
 }
 
-export async function clearBrowserAuthenticationState(): Promise<void> {
+let clearingAuthentication: Promise<void> | null = null;
+
+export function clearBrowserAuthenticationState(): Promise<void> {
+  if (clearingAuthentication) return clearingAuthentication;
   const offlineUserId = readOfflineLeaseUserId() ?? readPersistedOfflineUserId();
-  window.localStorage.removeItem(OFFLINE_LEASE_KEY);
-  window.localStorage.removeItem(OFFLINE_LEASE_USER_KEY);
-  const context = await clearProtectedOfflineData(offlineUserId);
-  await clearOfflineShellIdentity(context);
-  await purgeProtectedServiceWorkerContent(context);
+  removeOfflineLease();
+  document.cookie = `${SESSION_PRESENCE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+  // Revocation and navigation cannot depend on a functioning cache subsystem.
+  // Each cleanup still runs if another storage API is unavailable.
+  const cleanup = (async () => {
+    const context = await clearProtectedOfflineData(offlineUserId).catch(() => getActiveOfflineStorageContext());
+    const results = await Promise.allSettled([
+      clearOfflineShellIdentity(context),
+      purgeProtectedServiceWorkerContent(context),
+    ]);
+    if (results.some((result) => result.status === "rejected")) await disableOfflineShellAfterIdentityFailure();
+  })();
+  clearingAuthentication = settleCleanup(cleanup).finally(() => { clearingAuthentication = null; });
+  return clearingAuthentication;
 }
 
-export async function bindAuthenticatedOfflineContext(session: AuthSessionState): Promise<OfflineStorageContext> {
+export async function bindAuthenticatedOfflineContext(session: AuthSessionState, signal?: AbortSignal): Promise<OfflineStorageContext> {
   const userId = resolveSessionUserId(session);
-  const context = await activateProtectedOfflineData(userId);
+  const context = await activateProtectedOfflineData(userId, {
+    openDatabase: false,
+    claimLegacy: session.principal_id === "owner",
+    signal,
+  });
+  signal?.throwIfAborted();
   try {
-    await persistOfflineShellIdentity(context);
+    await persistOfflineShellIdentity(context, signal);
   } catch {
+    signal?.throwIfAborted();
     // Authentication must not be reported as failed after the server has
     // already created a valid session. If Cache Storage cannot persist the
     // identity pointer, remove the scoped worker so it cannot serve a previous
@@ -200,6 +220,7 @@ export async function bindAuthenticatedOfflineContext(session: AuthSessionState)
     // retried later.
     await disableOfflineShellAfterIdentityFailure();
   }
+  signal?.throwIfAborted();
   rememberOfflineLease(session.inactivity_expires_at, userId);
   return context;
 }
@@ -213,9 +234,11 @@ export function safeReturnPath(pathname: string): string {
     return "/";
   }
   if (decoded.startsWith("//") || decoded.includes("\\") || hasUnsafeControlCharacter(decoded)) return "/";
-  // Share capability tokens must never be copied into the login URL.
-  if (/^\/(?:share|shared)\//i.test(decoded)) return "/";
-  if (/^\/(?:login|register|account-upgrade|password-reset|reset-password)(?:\/|\?|$)/i.test(decoded)) return "/";
+  // Normalize dot segments before checking capability/auth routes, including
+  // paths such as /recent/../share/token. Never put API capabilities in a URL.
+  const normalized = new URL(decoded, "https://chat-reader.invalid");
+  if (/^\/(?:share|shared|api)(?:\/|$)/i.test(normalized.pathname)) return "/";
+  if (/^\/(?:login|register|account-upgrade|password-reset|reset-password)(?:\/|$)/i.test(normalized.pathname)) return "/";
   return pathname;
 }
 
@@ -225,25 +248,61 @@ export function loginLocation(pathname: string): string {
 }
 
 async function authMutation<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
+  return authRequest<T>(path, {
     method: "POST",
-    cache: "no-store",
-    credentials: "same-origin",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (!response.ok) {
-    let detail = "Authentication request failed.";
-    try {
-      const payload = await response.json() as { detail?: unknown };
-      if (typeof payload.detail === "string") detail = payload.detail;
-    } catch {
-      // Keep the generic message for non-JSON failures.
+}
+
+async function authRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+  const signal = init.signal ? AbortSignal.any([controller.signal, init.signal]) : controller.signal;
+  try {
+    const response = await fetch(path, {
+      ...init,
+      signal,
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "application/json", ...init.headers },
+    });
+    if (!response.ok) {
+      let detail = "Authentication request failed.";
+      try {
+        const payload = await response.json() as { detail?: unknown };
+        if (typeof payload.detail === "string") detail = payload.detail;
+      } catch {
+        // Keep the generic message for non-JSON failures.
+      }
+      throw new AuthRequestError(detail, response.status);
     }
-    throw new AuthRequestError(detail, response.status);
+    if (response.status === 204) return undefined as T;
+    return await response.json() as T;
+  } finally {
+    window.clearTimeout(timer);
   }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+}
+
+function readLocalStorage(key: string): string | null {
+  try { return window.localStorage.getItem(key); } catch { return null; }
+}
+
+function removeOfflineLease(): void {
+  for (const key of [OFFLINE_LEASE_KEY, OFFLINE_LEASE_USER_KEY]) {
+    try { window.localStorage.removeItem(key); } catch { /* Storage is unavailable. */ }
+  }
+}
+
+async function settleCleanup(cleanup: Promise<void>): Promise<void> {
+  let timer: number | undefined;
+  try {
+    await Promise.race([cleanup.catch(() => undefined), new Promise<void>((resolve) => {
+      timer = window.setTimeout(resolve, 3_000);
+    })]);
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 function resolveSessionUserId(session: AuthSessionState): string {

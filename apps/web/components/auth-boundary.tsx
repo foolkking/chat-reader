@@ -5,109 +5,190 @@ import { useEffect, useState } from "react";
 import {
   AUTH_UNAUTHORIZED_EVENT,
   AUTH_OFFLINE_IDENTITY_STORAGE_KEY,
+  AuthRequestError,
   activateOfflineLeaseContext,
   bindAuthenticatedOfflineContext,
   clearBrowserAuthenticationState,
   getCurrentOfflineRuntimeUserId,
   hasCurrentOfflineLease,
   loginLocation,
+  offlineLeaseExpiresAt,
   readAuthSession,
 } from "../lib/auth-client";
 
-type AuthState = "checking" | "granted" | "offline-locked";
+type AuthState = "checking" | "granted" | "offline-locked" | "unavailable" | "storage-error";
 
 export function AuthBoundary({ children, authEnabled = true }: { children: React.ReactNode; authEnabled?: boolean }) {
   const pathname = usePathname();
   const currentPath = pathname ?? "/";
   const publicShare = /^\/share\/[^/]+\/?$/i.test(currentPath);
   const publicAuth = /^\/(?:login|register|account-upgrade|password-reset|reset-password)(?:\/|$)/i.test(currentPath);
-  // Auth-disabled test/dev mode must preserve the legacy offline shell from the
-  // first render. Production and auth-enabled tests still begin fail-closed.
-  const [state, setState] = useState<AuthState>(!authEnabled || publicAuth || publicShare ? "granted" : "checking");
+  if (!authEnabled || publicAuth || publicShare) return children;
+  // A public page must never carry its granted state into private content.
+  return <PrivateAuthBoundary currentPath={currentPath}>{children}</PrivateAuthBoundary>;
+}
+
+function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactNode; currentPath: string }) {
+  const [state, setState] = useState<AuthState>("checking");
+  const [attempt, setAttempt] = useState(0);
+  const [zh, setZh] = useState(false);
 
   useEffect(() => {
-    if (!authEnabled) {
-      setState("granted");
-      return;
-    }
-    if (publicAuth || publicShare) {
-      setState("granted");
-      return;
-    }
+    setZh(document.documentElement.lang.toLowerCase().startsWith("zh"));
     let active = true;
+    let verifying = false;
+    let redirecting = false;
+    let controller: AbortController | null = null;
+    let expiryTimer: number | undefined;
+
+    const destination = () => window.location.pathname + window.location.search + window.location.hash;
+    const invalidate = async (offline: boolean) => {
+      if (!active || redirecting) return;
+      redirecting = true;
+      controller?.abort();
+      window.clearTimeout(expiryTimer);
+      setState(offline ? "offline-locked" : "checking");
+      await clearBrowserAuthenticationState();
+      if (!active) return;
+      if (offline) redirecting = false;
+      else window.location.replace(loginLocation(destination()));
+    };
+
+    const scheduleExpiry = (expiresAt: number) => {
+      window.clearTimeout(expiryTimer);
+      if (!Number.isFinite(expiresAt)) return;
+      expiryTimer = window.setTimeout(() => {
+        if (!active) return;
+        setState("checking");
+        void verify();
+      }, Math.max(0, Math.min(expiresAt - Date.now(), 2_147_483_647)));
+    };
 
     const verify = async () => {
-      if (!navigator.onLine) {
-        if (hasCurrentOfflineLease()) {
-          try {
-            const previousUserId = getCurrentOfflineRuntimeUserId();
-            const context = await activateOfflineLeaseContext();
-            if (previousUserId && previousUserId !== context.userId) {
-              window.location.replace(currentPath);
-              return;
-            }
-            if (active) setState("granted");
-          } catch {
-            await clearBrowserAuthenticationState();
-            if (active) setState("offline-locked");
-          }
-        } else {
-          await clearBrowserAuthenticationState();
-          if (active) setState("offline-locked");
-        }
-        return;
-      }
+      if (!active || verifying || redirecting) return;
+      verifying = true;
+      controller = new AbortController();
+      const signal = controller.signal;
+      let stage: "session" | "storage" = "session";
+      // Cover response bodies and storage as well as the HTTP connection.
+      const deadline = window.setTimeout(() => {
+        controller?.abort();
+        if (active && !redirecting) setState(stage === "storage" ? "storage-error" : "unavailable");
+      }, 15_000);
       try {
-        const session = await readAuthSession();
-        if (!session.authenticated) {
-          await clearBrowserAuthenticationState();
-          window.location.replace(loginLocation(currentPath));
-          return;
-        }
         const previousUserId = getCurrentOfflineRuntimeUserId();
-        const context = await bindAuthenticatedOfflineContext(session);
-        if (previousUserId && previousUserId !== context.userId) {
-          window.location.replace(currentPath);
-          return;
+        if (!navigator.onLine) {
+          if (!hasCurrentOfflineLease()) {
+            await invalidate(true);
+            return;
+          }
+          stage = "storage";
+          const context = await activateOfflineLeaseContext(signal);
+          if (!active || signal.aborted) return;
+          if (!hasCurrentOfflineLease()) {
+            await invalidate(true);
+            return;
+          }
+          if (previousUserId && previousUserId !== context.userId) {
+            window.location.replace(destination());
+            return;
+          }
+          scheduleExpiry(offlineLeaseExpiresAt());
+        } else {
+          const session = await readAuthSession(signal);
+          if (!active || signal.aborted) return;
+          if (!session.authenticated) {
+            await invalidate(false);
+            return;
+          }
+          if (previousUserId && previousUserId !== (session.user_id ?? session.principal_id)) setState("checking");
+          stage = "storage";
+          const context = await bindAuthenticatedOfflineContext(session, signal);
+          if (!active || signal.aborted) return;
+          if (previousUserId && previousUserId !== context.userId) {
+            window.location.replace(destination());
+            return;
+          }
+          scheduleExpiry(Date.parse(session.inactivity_expires_at ?? ""));
         }
-        if (active) setState("granted");
-      } catch {
-        // An unavailable authentication authority never grants a fresh session.
-        if (active) setState("checking");
+        setState("granted");
+      } catch (cause) {
+        if (!active || signal.aborted) return;
+        if (cause instanceof AuthRequestError && cause.status === 401) await invalidate(false);
+        else setState(stage === "storage" ? "storage-error" : "unavailable");
+      } finally {
+        window.clearTimeout(deadline);
+        verifying = false;
       }
     };
 
-    const unauthorized = () => {
-      void clearBrowserAuthenticationState().finally(() => {
-        window.location.replace(loginLocation(currentPath));
-      });
-    };
-    const recheck = () => void verify();
+    const unauthorized = () => { void invalidate(!navigator.onLine); };
+    const recheck = () => { void verify(); };
     const storageChanged = (event: StorageEvent) => {
-      if (event.key === AUTH_OFFLINE_IDENTITY_STORAGE_KEY) void verify();
+      if (event.key !== AUTH_OFFLINE_IDENTITY_STORAGE_KEY && event.key !== null) return;
+      // Hide the old account immediately, even with no network to revalidate.
+      controller?.abort();
+      setState("checking");
+      setAttempt((value) => value + 1);
     };
     void verify();
     const interval = window.setInterval(recheck, 5 * 60 * 1000);
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, unauthorized);
     window.addEventListener("online", recheck);
+    window.addEventListener("offline", recheck);
     window.addEventListener("focus", recheck);
     window.addEventListener("storage", storageChanged);
     return () => {
       active = false;
+      controller?.abort();
+      window.clearTimeout(expiryTimer);
       window.clearInterval(interval);
       window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, unauthorized);
       window.removeEventListener("online", recheck);
+      window.removeEventListener("offline", recheck);
       window.removeEventListener("focus", recheck);
       window.removeEventListener("storage", storageChanged);
     };
-  }, [authEnabled, currentPath, publicAuth, publicShare]);
+  }, [currentPath, attempt]);
 
-  if (publicAuth || publicShare) return children;
+  if (state === "granted") return children;
+  const copy = zh ? zhCopy : enCopy;
   if (state === "checking") {
-    return <main className="grid min-h-screen place-items-center bg-page p-6 text-sm text-secondary" aria-live="polite">Checking trusted device…</main>;
+    return <main className="grid min-h-screen place-items-center bg-page p-6 text-sm text-secondary" role="status">{copy.checking}</main>;
   }
-  if (state === "offline-locked") {
-    return <main className="grid min-h-screen place-items-center bg-page p-6"><section className="w-full max-w-md rounded-xl border border-ui bg-surface p-6 text-center shadow-sm"><h1 className="text-lg font-semibold text-primary">Password required</h1><p className="mt-2 text-sm text-secondary">Reconnect to verify this device. Offline business data has been locked and removed from the application cache.</p></section></main>;
-  }
-  return children;
+  const login = loginLocation(currentPath);
+  return <main className="grid min-h-screen place-items-center bg-page p-6">
+    <section className="w-full max-w-md rounded-xl border border-ui bg-surface p-6 text-center shadow-sm" aria-labelledby="auth-recovery-title">
+      <h1 id="auth-recovery-title" className="text-lg font-semibold text-primary">{state === "offline-locked" ? copy.locked : state === "storage-error" ? copy.storageTitle : copy.unavailable}</h1>
+      <p className="mt-2 text-sm leading-6 text-secondary" role="alert">{state === "offline-locked" ? copy.reconnect : state === "storage-error" ? copy.storageDescription : copy.connection}</p>
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
+        <button type="button" className="btn-primary min-h-11 px-4 text-sm font-medium" onClick={() => { setState("checking"); setAttempt((value) => value + 1); }}>{copy.retry}</button>
+        <a className="btn-secondary inline-flex min-h-11 items-center px-4 text-sm font-medium" href={login + (login.includes("?") ? "&" : "?") + "reauth=1"}>{copy.signIn}</a>
+      </div>
+    </section>
+  </main>;
 }
+
+const enCopy = {
+  checking: "Checking your session…",
+  locked: "Sign in required",
+  reconnect: "Your offline session has expired or ended. Reconnect to sign in and open your library.",
+  unavailable: "Unable to verify your session",
+  connection: "The sign-in service did not respond. Check your connection and try again.",
+  storageTitle: "Unable to open browser storage",
+  storageDescription: "This browser could not prepare your library. Close other library tabs and try again.",
+  retry: "Try again",
+  signIn: "Go to sign in",
+};
+
+const zhCopy: typeof enCopy = {
+  checking: "正在验证登录状态…",
+  locked: "需要重新登录",
+  reconnect: "离线会话已过期或已退出。请恢复网络连接后登录，重新打开资料库。",
+  unavailable: "暂时无法验证登录状态",
+  connection: "登录服务未能响应。请检查网络连接后重试。",
+  storageTitle: "无法打开浏览器存储",
+  storageDescription: "浏览器无法准备资料库。请关闭其他资料库标签页后重试。",
+  retry: "重试",
+  signIn: "前往登录",
+};

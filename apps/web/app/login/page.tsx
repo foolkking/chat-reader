@@ -25,21 +25,25 @@ function LoginForm() {
   const registerHref = destination === "/" ? "/register" : `/register?return_to=${encodeURIComponent(destination)}`;
   const upgraded = searchParams?.get("upgraded") === "1";
   const passwordReset = searchParams?.get("reset") === "1";
+  const reauthenticate = searchParams?.get("reauth") === "1";
   const resetHref = destination === "/" ? "/reset-password" : `/reset-password?return_to=${encodeURIComponent(destination)}`;
 
   useEffect(() => {
+    let active = true;
     void Promise.all([readAuthSetup(), readAuthSession()]).then(([setup, session]) => {
+      if (!active) return;
       if (setup.setup_required) {
         window.location.replace("/account-upgrade");
         return;
       }
-      if (session.authenticated) {
+      if (session.authenticated && !reauthenticate) {
         window.location.replace(destination);
         return;
       }
       setPasswordResetAvailable(session.password_reset_available);
     }).catch(() => undefined);
-  }, [destination]);
+    return () => { active = false; };
+  }, [destination, reauthenticate]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

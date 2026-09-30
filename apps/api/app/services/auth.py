@@ -278,7 +278,9 @@ def authenticate_session(
     if principal is None or session.credential_version != principal.credential_version:
         return None
     user = db.get(User, principal.user_id) if principal.user_id is not None else None
-    if user is not None and (user.status != "ACTIVE" or session.credential_version != user.credential_version):
+    if (user is None and (principal.user_id is not None or principal.id != OWNER_PRINCIPAL_ID)) or (
+        user is not None and (user.status != "ACTIVE" or session.credential_version != user.credential_version)
+    ):
         session.revoked_at = now
         db.commit()
         return None
@@ -365,7 +367,11 @@ def verify_login_for_email(
     now: datetime | None = None,
 ) -> AuthPrincipal | None:
     """Authenticate an account without revealing whether its email exists."""
-    normalized = normalize_email(email)
+    try:
+        normalized = normalize_email(email)
+    except ValueError:
+        verify_password(_dummy_password_hash, password)
+        return None
     user = db.query(User).filter(func.lower(User.normalized_email) == normalized).one_or_none()
     principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == user.id).one_or_none() if user else None
     throttle_id = principal.id if principal is not None else f"email:{normalized}"

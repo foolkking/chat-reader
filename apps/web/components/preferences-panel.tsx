@@ -20,13 +20,15 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
   const [accessRole, setAccessRole] = useState<"ADMIN" | "USER" | null>(null);
 
   useEffect(() => {
-    const currentDefault = window.localStorage.getItem("chat-reader:reader-default-focus");
-    const legacyDefault = window.localStorage.getItem("chat-reader:reader-focus-mode");
-    const migratedDefault = currentDefault ?? legacyDefault ?? "false";
-    setFocusDefault(migratedDefault === "true");
-    if (currentDefault === null) window.localStorage.setItem("chat-reader:reader-default-focus", migratedDefault);
-    if (legacyDefault !== null) window.localStorage.removeItem("chat-reader:reader-focus-mode");
-    setAnnotationPosition(window.localStorage.getItem("chat-reader:annotation-workspace-mode") === "docked" ? "docked" : "floating");
+    try {
+      const currentDefault = window.localStorage.getItem("chat-reader:reader-default-focus");
+      const legacyDefault = window.localStorage.getItem("chat-reader:reader-focus-mode");
+      const migratedDefault = currentDefault ?? legacyDefault ?? "false";
+      setFocusDefault(migratedDefault === "true");
+      if (currentDefault === null) window.localStorage.setItem("chat-reader:reader-default-focus", migratedDefault);
+      if (legacyDefault !== null) window.localStorage.removeItem("chat-reader:reader-focus-mode");
+      setAnnotationPosition(window.localStorage.getItem("chat-reader:annotation-workspace-mode") === "docked" ? "docked" : "floating");
+    } catch { /* Keep the defaults when browser persistence is unavailable. */ }
   }, []);
 
   useEffect(() => {
@@ -43,13 +45,13 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
 
   const updateFocusDefault = (value: boolean) => {
     setFocusDefault(value);
-    window.localStorage.setItem("chat-reader:reader-default-focus", String(value));
+    try { window.localStorage.setItem("chat-reader:reader-default-focus", String(value)); } catch { /* Optional preference. */ }
     window.dispatchEvent(new CustomEvent("chat-reader:reader-default-focus-change", { detail: value }));
   };
 
   const updateAnnotationPosition = (value: "floating" | "docked") => {
     setAnnotationPosition(value);
-    window.localStorage.setItem("chat-reader:annotation-workspace-mode", value);
+    try { window.localStorage.setItem("chat-reader:annotation-workspace-mode", value); } catch { /* Optional preference. */ }
     window.dispatchEvent(new CustomEvent("chat-reader:annotation-workspace-mode-change", { detail: value }));
   };
   return (

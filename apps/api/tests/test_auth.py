@@ -29,6 +29,113 @@ from app.services.auth import (
 )
 
 
+@pytest.mark.parametrize("email", ["not-an-email", "a@b", "a b@example.test"])
+def test_malformed_login_email_is_generic_not_a_server_error(auth_client: TestClient, email: str) -> None:
+    result = auth_client.post("/api/auth/login", json={"email": email, "password": "test passphrase"})
+    assert result.status_code == 401
+    assert result.json() == {"detail": "Email or password is incorrect."}
+
+
+def test_password_change_does_not_reissue_a_revoked_cookie_after_activity_touch(auth_client: TestClient) -> None:
+    assert owner_login(auth_client).status_code == 200
+    with auth_middleware.SessionLocal() as db:
+        db.query(AuthSession).one().last_activity_at = datetime.now(timezone.utc) - timedelta(minutes=11)
+        db.commit()
+    changed = auth_client.post("/api/auth/password", json={
+        "current_password": "correct horse battery staple",
+        "new_password": "new test account passphrase",
+        "confirm_password": "new test account passphrase",
+    })
+    assert changed.status_code == 204
+    assert auth_client.cookies.get("chat_reader_session") is None
+    assert auth_client.cookies.get("chat_reader_session_present") is None
+
+
+def test_session_list_excludes_expired_and_old_credential_sessions(auth_client: TestClient) -> None:
+    assert owner_login(auth_client).status_code == 200
+    with auth_middleware.SessionLocal() as db:
+        principal = db.get(AuthPrincipal, "owner")
+        issue_session(db, principal, get_settings(), now=datetime.now(timezone.utc) - timedelta(hours=49))
+        _, old = issue_session(db, principal, get_settings())
+        old.credential_version -= 1
+        db.commit()
+    rows = auth_client.get("/api/auth/sessions").json()
+    assert len(rows) == 1
+    assert rows[0]["current"] is True
+
+
+def test_session_status_clears_a_stale_presence_marker(auth_client: TestClient) -> None:
+    auth_client.cookies.set("chat_reader_session_present", "1", domain="testserver.local", path="/")
+    result = auth_client.get("/api/auth/session")
+    assert result.json()["authenticated"] is False
+    assert auth_client.cookies.get("chat_reader_session_present") is None
+
+
+def test_password_reset_availability_respects_admin_policy(auth_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.test")
+    monkeypatch.setenv("SMTP_FROM_ADDRESS", "noreply@example.test")
+    get_settings.cache_clear()
+    assert owner_login(auth_client).json()["password_reset_available"] is True
+    assert auth_client.put("/api/admin/access/registration", json={
+        "mode": "CLOSED", "password_reset_enabled": False,
+    }).status_code == 200
+    assert auth_client.get("/api/auth/session").json()["password_reset_available"] is False
+    assert auth_client.get("/api/auth/me").json()["password_reset_available"] is False
+    assert auth_client.post("/api/auth/password-reset/request", json={"email": "admin@example.test"}).status_code == 404
+
+
+def test_session_policy_database_failure_is_retryable(auth_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from sqlalchemy.exc import OperationalError
+    from app.api.routes import auth as auth_routes
+
+    def unavailable(*args):
+        raise OperationalError("redacted", {}, Exception("unavailable"))
+
+    monkeypatch.setattr(auth_routes, "registration_mode", unavailable)
+    result = auth_client.get("/api/auth/session")
+    assert result.status_code == 503
+    assert result.json() == {"detail": "Authentication service unavailable."}
+    assert result.headers["cache-control"] == "no-store"
+
+
+def test_malformed_origin_is_denied_without_server_error(auth_client: TestClient) -> None:
+    result = auth_client.post("/api/auth/logout", headers={"Origin": "http://[invalid"})
+    assert result.status_code == 403
+
+
+def test_detached_user_principal_cannot_fall_back_to_legacy_owner(auth_client: TestClient) -> None:
+    with auth_middleware.SessionLocal() as db:
+        _, principal = register_user(db, "orphan@example.test", "orphan test passphrase")
+        token, _ = issue_session(db, principal, get_settings())
+        principal.user_id = None
+        db.commit()
+        assert authenticate_session(db, token, get_settings()) is None
+
+
+def test_slow_private_authentication_does_not_block_public_session_checks(auth_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    assert owner_login(auth_client).status_code == 200
+    entered, release = Event(), Event()
+    authenticate = auth_middleware._authenticate_request
+
+    def delayed(*args):
+        entered.set()
+        assert release.wait(5), "Public session check was blocked by private authentication"
+        return authenticate(*args)
+
+    monkeypatch.setattr(auth_middleware, "_authenticate_request", delayed)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        private = executor.submit(auth_client.get, "/api/preferences")
+        assert entered.wait(3)
+        try:
+            assert auth_client.get("/api/auth/session").status_code == 200
+        finally:
+            release.set()
+        assert private.result().status_code == 200
+
+
 def owner_login(client: TestClient, password: str = "correct horse battery staple"):
     return client.post("/api/auth/login", json={"email": "admin@example.test", "password": password})
 

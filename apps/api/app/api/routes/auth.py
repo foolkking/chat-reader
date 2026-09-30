@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.core.observability import structured_event
 from app.models.user import User
@@ -107,6 +107,15 @@ class ProfileUpdateInput(BaseModel):
 
 @router.get("/session", response_model=AuthSessionRead)
 def read_session(request: Request, response: Response, db: Session = Depends(get_db)) -> AuthSessionRead:
+    try:
+        return _read_session(request, response, db)
+    except SQLAlchemyError as exc:
+        # Include account/policy lookups, not just the token query, in the
+        # fail-closed availability contract.
+        raise HTTPException(status_code=503, detail="Authentication service unavailable.") from exc
+
+
+def _read_session(request: Request, response: Response, db: Session) -> AuthSessionRead:
     settings = get_settings()
     if not settings.auth_enabled:
         return AuthSessionRead(authenticated=True, principal_id="owner", auth_mode="single_password")
@@ -121,12 +130,11 @@ def read_session(request: Request, response: Response, db: Session = Depends(get
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
     if authentication is None:
-        if token:
-            _clear_cookie(response)
+        _clear_cookie(response)
         return AuthSessionRead(
             authenticated=False,
             registration_mode=registration_mode(db, settings),
-            password_reset_available=bool(settings.smtp_host and settings.smtp_from_address),
+            password_reset_available=_password_reset_available(db, settings),
         )
     if authentication.touched and token is not None:
         _set_cookie(response, token)
@@ -143,7 +151,7 @@ def read_session(request: Request, response: Response, db: Session = Depends(get
         display_name=authentication.session.principal.user.display_name if authentication.session.principal.user else None,
         role=authentication.context.role,
         registration_mode=registration_mode(db, settings),
-        password_reset_available=bool(settings.smtp_host and settings.smtp_from_address),
+        password_reset_available=_password_reset_available(db, settings),
     )
 
 
@@ -218,7 +226,7 @@ def login(input: LoginInput, request: Request, response: Response, db: Session =
         display_name=user.display_name if user else None,
         role=user.role if user else "ADMIN",
         registration_mode=registration_mode(db, settings),
-        password_reset_available=bool(settings.smtp_host and settings.smtp_from_address),
+        password_reset_available=_password_reset_available(db, settings),
     )
 
 
@@ -272,7 +280,7 @@ def register(input: RegisterInput, request: Request, response: Response, db: Ses
         display_name=user.display_name,
         role=user.role,
         registration_mode=mode,
-        password_reset_available=bool(settings.smtp_host and settings.smtp_from_address),
+        password_reset_available=_password_reset_available(db, settings),
     )
 
 
@@ -293,7 +301,7 @@ def me(request: Request, response: Response, db: Session = Depends(get_db)) -> A
         display_name=user.display_name if user else None,
         role=authentication.context.role,
         registration_mode=registration_mode(db, settings),
-        password_reset_available=bool(settings.smtp_host and settings.smtp_from_address),
+        password_reset_available=_password_reset_available(db, settings),
     )
 
 
@@ -319,7 +327,7 @@ def update_me(input: ProfileUpdateInput, request: Request, db: Session = Depends
         display_name=user.display_name,
         role=user.role,
         registration_mode=registration_mode(db, settings),
-        password_reset_available=bool(settings.smtp_host and settings.smtp_from_address),
+        password_reset_available=_password_reset_available(db, settings),
     )
 
 
@@ -366,7 +374,8 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
 
 @router.get("/sessions", response_model=list[DeviceSessionRead])
 def list_sessions(request: Request, db: Session = Depends(get_db)) -> list[DeviceSessionRead]:
-    authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), get_settings(), touch=False)
+    settings = get_settings()
+    authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), settings, touch=False)
     if authentication is None:
         raise HTTPException(status_code=401, detail="Authentication required.")
     rows = (
@@ -374,6 +383,8 @@ def list_sessions(request: Request, db: Session = Depends(get_db)) -> list[Devic
         .filter(
             AuthSession.principal_id == authentication.context.principal_id,
             AuthSession.revoked_at.is_(None),
+            AuthSession.credential_version == authentication.session.credential_version,
+            AuthSession.last_activity_at > utc_now() - timedelta(seconds=settings.auth_inactivity_timeout_seconds),
         )
         .order_by(AuthSession.last_activity_at.desc())
         .all()
@@ -417,7 +428,9 @@ def update_password(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), get_settings(), touch=False)
-    principal_id = authentication.context.principal_id if authentication is not None else "owner"
+    if authentication is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    principal_id = authentication.context.principal_id
     if not change_password(db, input.current_password, input.new_password, principal_id=principal_id, now=utc_now()):
         raise HTTPException(status_code=401, detail="Incorrect password.")
     _clear_cookie(response)
@@ -494,3 +507,7 @@ def _consume_or_429(
             detail="Too many attempts. Try again later.",
             headers={"Retry-After": str(exc.retry_after_seconds), "Cache-Control": "no-store"},
         ) from exc
+
+
+def _password_reset_available(db: Session, settings: Settings) -> bool:
+    return bool(settings.smtp_host and settings.smtp_from_address and access_settings(db, settings)["password_reset_enabled"])

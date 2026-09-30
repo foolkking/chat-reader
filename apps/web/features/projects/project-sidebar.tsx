@@ -285,7 +285,9 @@ export function ProjectSidebar({
 
   useEffect(() => {
     if (!readerMode || currentProjectId) return;
-    setDesktopExpanded(window.localStorage.getItem("chat-reader:reader-sidebar-expanded") === "true");
+    try {
+      setDesktopExpanded(window.localStorage.getItem("chat-reader:reader-sidebar-expanded") === "true");
+    } catch { /* The online workspace also works when browser storage is disabled. */ }
   }, [currentProjectId, readerMode]);
 
   useEffect(() => {
@@ -301,7 +303,7 @@ export function ProjectSidebar({
         setShowMobileDrawer(true);
       } else {
         setDesktopExpanded(true);
-        window.localStorage.setItem("chat-reader:reader-sidebar-expanded", "true");
+        try { window.localStorage.setItem("chat-reader:reader-sidebar-expanded", "true"); } catch { /* Optional preference. */ }
       }
     };
     window.addEventListener("chat-reader:focus-global-search", openGlobalSearch);
@@ -321,7 +323,9 @@ export function ProjectSidebar({
 
   function setReaderSidebarExpanded(expanded: boolean) {
     setDesktopExpanded(expanded);
-    if (readerMode) window.localStorage.setItem("chat-reader:reader-sidebar-expanded", String(expanded));
+    if (readerMode) {
+      try { window.localStorage.setItem("chat-reader:reader-sidebar-expanded", String(expanded)); } catch { /* Optional preference. */ }
+    }
   }
 
   const projects = useMemo(() => (projectsQuery.data ?? []).filter((project) => !project.is_default), [projectsQuery.data]);

@@ -49,9 +49,9 @@ export default async function RootLayout({
             <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
               <InteractionDialogProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager /><WorkspaceShellBoundary>{children}</WorkspaceShellBoundary></AttachmentViewerProvider></ImportDialogProvider></InteractionDialogProvider>
             </PreferencesProvider>
+            <ServiceWorkerRegistration />
           </AuthBoundary>
         </QueryProvider>
-        <ServiceWorkerRegistration />
       </body>
     </html>
   );
@@ -74,7 +74,7 @@ async function loadInitialPreferences(): Promise<UserPreferenceRead> {
   };
   try {
     const apiUrl = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
-    const response = await fetch(`${apiUrl}/api/preferences`, { cache: "no-store" });
+    const response = await fetch(`${apiUrl}/api/preferences`, { cache: "no-store", signal: AbortSignal.timeout(5_000) });
     return response.ok ? await response.json() as UserPreferenceRead : fallback;
   } catch {
     return fallback;

@@ -89,9 +89,10 @@ export function markOfflineShellUnsupported(message: string): void {
   });
 }
 
-export async function persistOfflineShellIdentity(context: OfflineStorageContext = getActiveOfflineStorageContext()): Promise<void> {
+export async function persistOfflineShellIdentity(context: OfflineStorageContext = getActiveOfflineStorageContext(), signal?: AbortSignal): Promise<void> {
   if (typeof window === "undefined" || !("caches" in window)) return;
   const metadata = await caches.open(SHELL_META_CACHE);
+  signal?.throwIfAborted();
   await metadata.put(ACTIVE_IDENTITY_KEY, new Response(JSON.stringify({ namespace: context.namespace }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   }));

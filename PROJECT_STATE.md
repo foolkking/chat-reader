@@ -1,5 +1,31 @@
 # Project State
 
+## Authentication recovery (2026-09-30, working tree)
+
+The post-login private boundary no longer leaves session/network/storage
+failures indefinitely at "Checking trusted device". Auth requests have a
+10-second timeout, initialization a 15-second deadline, and recoverable error
+states. Online login does not require opening IndexedDB. Abandoned checks,
+cross-tab logout, offline expiry and legacy-account storage ownership are
+guarded; the service worker starts after private initialization.
+
+API authentication database I/O runs off the ASGI event loop. Password-change
+cookie deletion is no longer overwritten by sliding renewal. Invalid email,
+orphaned principal, session-list expiry and password-reset policy handling have
+regression coverage. The CI auth gate now provisions the email required to
+actually run its browser tests. No migration or production deployment is part
+of this working-tree change. Details and test ownership are in
+`docs/system/AUTHENTICATION_CONTRACT.md`.
+
+Verification: full API suite **494 passed / 6 fixture/environment skips**;
+authentication/recovery Web contracts **22 passed**; real PostgreSQL-backed
+login, logout, Share and password-change browser tests **4 passed**; targeted
+PWA account isolation, v1 package readability, transaction rollback, reload and
+reconnect regressions **5 passed**. Web lint/typecheck/build and Alembic single
+head `20260927_0033` pass. Browser failure screens were checked at 375px and
+1440px. This is local synthetic-fixture evidence, not authenticated production
+acceptance.
+
 ## 0B. Deployed merge capacity and source-preview synchronization (2026-09-27)
 
 This release fixes the production-observed Conversation Merge failure

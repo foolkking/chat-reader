@@ -38,7 +38,10 @@ test.describe("multi-account authentication boundary", () => {
       const userId = localStorage.getItem("chat-reader:offline-active-user-v1");
       if (!userId) throw new Error("The authenticated offline user namespace is missing.");
       const identityHex = Array.from(new TextEncoder().encode(userId), (byte) => byte.toString(16).padStart(2, "0")).join("");
-      const cacheName = `chat-reader-offline-assets-v1--user-${identityHex}`;
+      const legacyOwner = localStorage.getItem("chat-reader:offline-legacy-owner-v1");
+      const cacheName = legacyOwner === userId
+        ? "chat-reader-offline-assets-v1"
+        : `chat-reader-offline-assets-v1--user-${identityHex}`;
       const cache = await caches.open(cacheName);
       await cache.put("/protected-fixture", new Response("business content"));
       return cacheName;
@@ -46,7 +49,7 @@ test.describe("multi-account authentication boundary", () => {
     await page.goto(`${baseURL}/`);
     await page.getByRole("button", { name: /Settings|设置|Appearance|外观/ }).click();
     await page.getByRole("button", { name: /Account & security|账户与安全/ }).click();
-    await page.getByRole("button", { name: "Log out", exact: true }).click();
+    await page.getByRole("button", { name: /Log out current account|退出当前账户/, exact: true }).click();
     await expect(page).toHaveURL(/\/login(?:\?|$)/);
     expect(await page.evaluate((cacheName) => caches.has(cacheName), protectedCacheName)).toBe(false);
     expect((await context.cookies()).find((item) => item.name === "chat_reader_session")).toBeUndefined();
@@ -140,6 +143,7 @@ test.describe("multi-account authentication boundary", () => {
 
     await pageA.getByRole("button", { name: /Settings|设置|Appearance|外观/ }).click();
     await pageA.getByRole("button", { name: /Account & security|账户与安全/ }).click();
+    await pageA.getByRole("button", { name: /Change password|修改密码/, exact: true }).click();
     await pageA.getByLabel("Current password").fill(password!);
     await pageA.getByLabel("New password", { exact: true }).fill(newPassword);
     await pageA.getByLabel("Confirm new password").fill(newPassword);

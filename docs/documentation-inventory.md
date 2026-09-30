@@ -1,5 +1,12 @@
 # Markdown 文档台账
 
+2026-09-30 authentication recovery: login/session deadlines, browser-storage
+failure handling, offline expiry/cross-tab locking, cookie revocation and the
+repaired CI email/password fixture are current in
+`docs/system/AUTHENTICATION_CONTRACT.md` and `PROJECT_STATE.md`.
+These are working-tree changes; no production rollout or new migration is
+claimed. The tests use synthetic accounts and isolated storage.
+
 2026-09-27 merge-capacity and Source Preview synchronization: bounded final
 RenderBlock validation, the root-admin `maximum_merge_message_count` policy,
 migration `20260927_0033`, and mdast-offset CodeMirror-to-preview scroll

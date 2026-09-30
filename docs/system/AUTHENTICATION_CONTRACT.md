@@ -1,5 +1,46 @@
 # Authentication and account contract
 
+## Session recovery and browser persistence (2026-09-30, working tree)
+
+The private Web boundary distinguishes session verification, an unavailable
+authority, unavailable browser storage, and an expired offline lease. Auth
+HTTP requests (including response bodies) have a 10-second deadline; private
+initialization has a 15-second overall deadline and explicit retry/sign-in
+actions. API failures never grant a new session. `reauth=1` keeps the recovery
+sign-in form open even when the server still recognizes its cookie.
+
+Successful login/registration navigates before local initialization. Online
+use selects the verified user's Dexie namespace without requiring a database
+open; unavailable browser persistence cannot turn an accepted password into
+invalid credentials. Only the owner principal may claim a pre-account legacy
+database. Existing legacy bindings and v1 package readability are preserved;
+logout retains the binding so a failed deletion cannot expose it to another
+account. The service worker starts only after private initialization (and is
+excluded from public authentication and Share pages).
+
+Overlapping verification is suppressed and abandoned checks cannot redirect
+after navigation. Cross-tab identity changes hide the old account immediately.
+An expiry timer rechecks trust at the last server-confirmed deadline, including
+offline use. Logout removes the offline lease and presence marker immediately;
+storage cleanup is attempted independently and navigation waits at most three
+seconds for it. OS-downloaded files remain outside this boundary.
+
+The API runs synchronous authentication database work in a worker thread so it
+does not block the ASGI event loop. Sliding cookie renewal preserves explicit
+route-level cookie deletion after a password change. Session lists exclude
+expired and outdated credential versions; malformed login emails return the
+same generic credential failure; password-reset availability honors the admin
+policy as well as SMTP configuration. Orphaned regular-user principals cannot
+fall back to legacy owner authority. No migration or session-cookie format
+changes are required.
+
+Regression ownership: `apps/api/tests/test_auth.py`,
+`apps/web/e2e/auth-recovery.spec.ts`, `auth-gate.spec.ts`, and
+`multi-account-auth-contract.spec.ts`. The CI auth gate provisions both a
+synthetic email and password; missing email previously skipped its real browser
+tests. Production rollout and authenticated production acceptance are separate
+from these local checks.
+
 ## Current implementation (working tree, 2026-09-01)
 
 The next release upgrades the legacy single owner into one `ADMIN` account and

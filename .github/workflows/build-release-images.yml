@@ -303,6 +303,7 @@ jobs:
           AUTH_COOKIE_SECURE: "false"
           AUTH_ACTIVITY_TOUCH_INTERVAL_SECONDS: "600"
           AUTH_INACTIVITY_TIMEOUT_SECONDS: "172800"
+          E2E_AUTH_EMAIL: auth-ci@example.test
         run: |
           export E2E_AUTH_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(24) + "-owner")')"
           cd apps/api
@@ -312,7 +313,9 @@ jobs:
           from app.core.database import SessionLocal
           from app.services.auth import provision_owner
           with SessionLocal() as db:
-              provision_owner(db, os.environ["E2E_AUTH_PASSWORD"], get_settings())
+              principal = provision_owner(db, os.environ["E2E_AUTH_PASSWORD"], get_settings())
+              principal.user.normalized_email = os.environ["E2E_AUTH_EMAIL"]
+              db.commit()
           PY
           kill "$(cat "$RUNNER_TEMP/api.pid")" || true
           nohup env AUTH_ENABLED=true AUTH_SESSION_SECRET="$AUTH_SESSION_SECRET" AUTH_COOKIE_SECURE=false \
@@ -324,7 +327,7 @@ jobs:
           done
           cd ../..
           E2E_AUTH=1 E2E_AUTH_PASSWORD="$E2E_AUTH_PASSWORD" \
-            pnpm --filter web exec playwright test --config=playwright.config.ts e2e/auth-gate.spec.ts
+            pnpm --filter web exec playwright test --config=playwright.config.ts e2e/auth-gate.spec.ts e2e/auth-recovery.spec.ts
           kill "$auth_api_pid" || true
           cd apps/api
           nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/api.log" 2>&1 &

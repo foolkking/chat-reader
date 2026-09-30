@@ -93,6 +93,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     response = await fetch(path, {
       ...init,
+      signal: init.signal ?? AbortSignal.timeout(10_000),
       cache: "no-store",
       credentials: "same-origin",
       headers: { Accept: "application/json", ...init.headers },

@@ -149,23 +149,40 @@ export function getActiveOfflineStorageContext(): OfflineStorageContext {
 
 export function readPersistedOfflineUserId(): string | null {
   if (typeof window === "undefined") return null;
-  return normalizeOfflineUserId(window.localStorage.getItem(ACTIVE_OFFLINE_USER_KEY));
+  try { return normalizeOfflineUserId(window.localStorage.getItem(ACTIVE_OFFLINE_USER_KEY)); } catch { return null; }
 }
 
-export async function activateProtectedOfflineData(userId: string | null | undefined): Promise<OfflineStorageContext> {
+export async function activateProtectedOfflineData(
+  userId: string | null | undefined,
+  options: { openDatabase?: boolean; claimLegacy?: boolean; signal?: AbortSignal } = {},
+): Promise<OfflineStorageContext> {
   const normalizedUserId = normalizeOfflineUserId(userId) ?? LOCAL_DEFAULT_USER;
-  const context = await resolveOfflineStorageContext(normalizedUserId);
+  const context = await resolveOfflineStorageContext(normalizedUserId, { claimLegacy: options.claimLegacy }).catch((error: unknown) => {
+    if (options.openDatabase !== false) throw error;
+    // Online authentication does not require browser persistence. When it is
+    // unavailable, use only the verified account's namespace, never legacy data.
+    return namespacedOfflineStorageContext(normalizedUserId);
+  });
+  options.signal?.throwIfAborted();
   if (activeOfflineContext.userId === normalizedUserId && offlineDb.name === context.databaseName) {
+    if (options.openDatabase !== false) await offlineDb.open();
+    options.signal?.throwIfAborted();
     return getActiveOfflineStorageContext();
   }
 
   const nextDb = new OfflineLibraryDatabase(context.databaseName);
-  await nextDb.open();
+  if (options.openDatabase !== false) await nextDb.open();
+  if (options.signal?.aborted) {
+    nextDb.close();
+    options.signal.throwIfAborted();
+  }
   offlineDb.close();
   offlineDb = nextDb;
   activeOfflineContext = context;
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(ACTIVE_OFFLINE_USER_KEY, normalizedUserId);
+    try { window.localStorage.setItem(ACTIVE_OFFLINE_USER_KEY, normalizedUserId); } catch {
+      // The scoped in-memory pointer is sufficient for online use.
+    }
   }
   return getActiveOfflineStorageContext();
 }
@@ -173,21 +190,24 @@ export async function activateProtectedOfflineData(userId: string | null | undef
 export async function clearProtectedOfflineData(userId?: string | null): Promise<OfflineStorageContext> {
   const persistedUserId = normalizeOfflineUserId(userId) ?? readPersistedOfflineUserId() ?? activeOfflineContext.userId;
   const context = persistedUserId
-    ? await resolveOfflineStorageContext(persistedUserId, { claimLegacy: false })
+    ? await resolveOfflineStorageContext(persistedUserId, { claimLegacy: false }).catch(() => (
+      activeOfflineContext.userId === persistedUserId ? getActiveOfflineStorageContext() : namespacedOfflineStorageContext(persistedUserId)
+    ))
     : getActiveOfflineStorageContext();
   if (offlineDb.name === context.databaseName) offlineDb.close();
-  await Dexie.delete(context.databaseName);
-  if (typeof caches !== "undefined") {
-    await caches.delete(context.assetCacheName);
-  }
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem(ACTIVE_OFFLINE_USER_KEY);
-    if (context.usesLegacyStorage && window.localStorage.getItem(LEGACY_OFFLINE_OWNER_KEY) === persistedUserId) {
-      window.localStorage.removeItem(LEGACY_OFFLINE_OWNER_KEY);
-    }
-  }
   activeOfflineContext = legacyOfflineStorageContext(null);
   offlineDb = new OfflineLibraryDatabase(activeOfflineContext.databaseName);
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem(ACTIVE_OFFLINE_USER_KEY);
+      // Keep the legacy owner binding even if deletion fails or is blocked by
+      // another tab. A later account must never claim the remaining database.
+    } catch { /* Browser storage may already be unavailable. */ }
+  }
+  await Promise.allSettled([
+    Dexie.delete(context.databaseName),
+    ...(typeof caches !== "undefined" ? [caches.delete(context.assetCacheName)] : []),
+  ]);
   return context;
 }
 
@@ -235,7 +255,7 @@ async function resolveOfflineStorageContext(
   // A previous single-owner offline lease had no user id. Once that same
   // browser verifies the migrated account online, transfer the logical owner
   // binding to the real User UUID without copying a potentially large DB.
-  if (legacyOwner === LOCAL_DEFAULT_USER && persistedUser === LOCAL_DEFAULT_USER && userId !== LOCAL_DEFAULT_USER) {
+  if (claimLegacy && legacyOwner === LOCAL_DEFAULT_USER && persistedUser === LOCAL_DEFAULT_USER && userId !== LOCAL_DEFAULT_USER) {
     window.localStorage.setItem(LEGACY_OFFLINE_OWNER_KEY, userId);
     return legacyOfflineStorageContext(userId);
   }

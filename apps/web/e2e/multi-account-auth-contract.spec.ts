@@ -25,9 +25,11 @@ test.describe("multi-account authentication frontend contract", () => {
   test("return paths fail closed after URL decoding", async ({ page }) => {
     await page.route("**/api/auth/setup/status", (route) => route.fulfill({ json: { setup_required: false, registration_mode: "OPEN" } }));
     await page.route("**/api/auth/session", (route) => route.fulfill({ json: unauthenticatedSession("OPEN", false) }));
-    await page.goto("/login?return_to=%2F%252Foutside.example");
-    await expect(page.getByRole("link", { name: /Create an account|创建账户/ })).toHaveAttribute("href", "/register");
-    await expect(page.getByRole("link", { name: /Forgot password|忘记密码/ })).toHaveCount(0);
+    for (const destination of ["/%2Foutside.example", "/recent/../share/synthetic-token", "/api/shared/synthetic-token", "/recent/../login"]) {
+      await page.goto(`/login?return_to=${encodeURIComponent(destination)}`);
+      await expect(page.getByRole("link", { name: /Create an account|创建账户/ })).toHaveAttribute("href", "/register");
+      await expect(page.getByRole("link", { name: /Forgot password|忘记密码/ })).toHaveCount(0);
+    }
   });
 
   test("register represents CLOSED, OPEN, and INVITE_ONLY without guessing from authentication", () => {

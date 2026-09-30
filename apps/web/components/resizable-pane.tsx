@@ -34,7 +34,7 @@ export function useResizablePane({ storageKey, defaultSize, minSize, maxSize }: 
   }, [clampSize, storageKey]);
 
   const resetSize = useCallback(() => {
-    if (typeof window !== "undefined") window.localStorage.removeItem(storageKey);
+    try { window.localStorage.removeItem(storageKey); } catch { /* Optional preference. */ }
     setSize(defaultSize, false);
   }, [defaultSize, setSize, storageKey]);
 
@@ -174,13 +174,15 @@ function resolveLimit(limit: Limit): number {
 
 function readStoredNumber(storageKey: string): number | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(storageKey);
-  if (!raw) return null;
-  const value = Number.parseFloat(raw);
-  return Number.isFinite(value) ? value : null;
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const value = Number.parseFloat(raw);
+    return Number.isFinite(value) ? value : null;
+  } catch { return null; }
 }
 
 function writeStoredNumber(storageKey: string, value: number) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(storageKey, String(Math.round(value)));
+  try { window.localStorage.setItem(storageKey, String(Math.round(value))); } catch { /* Optional preference. */ }
 }
