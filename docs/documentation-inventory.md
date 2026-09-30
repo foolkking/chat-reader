@@ -1,5 +1,8 @@
 # Markdown 文档台账
 
+2026-09-30 release dependency prerequisite: patched `brace-expansion` versions
+and the unchanged audit gate are recorded in `docs/system/RELEASE_SAFETY_BASELINE.md`.
+
 2026-09-30 authentication recovery: login/session deadlines, browser-storage
 failure handling, offline expiry/cross-tab locking, cookie revocation and the
 repaired CI email/password fixture are current in

@@ -1,5 +1,11 @@
 # Release Safety Baseline
 
+2026-09-30 release prerequisite: the locked `brace-expansion` versions are
+`1.1.21` and `5.0.12`, resolving GHSA-q2hr-2g5m-vwhr,
+GHSA-qhr7-859c-m2p7 and GHSA-6j4f-fj2g-mc7p in the lint/tooling dependency
+chains. The official npm audit reports zero advisories after the patch;
+no security exception or gate relaxation was added.
+
 Release A introduced CSP in Report-Only mode. Release H supersedes the current
 application response mode with an evidence-derived enforcing policy; see
 `CSP_ENFORCEMENT_CONTRACT.md`. The Release A history below remains the baseline
