@@ -3,7 +3,7 @@
 ## Settings stages 1–4 checkpoint (2026-10-01, not deployed)
 
 The approved settings/user/admin/offline plan remains active. Stages one through
-four are implemented and locally verified; GitHub CI is the pending checkpoint.
+four are implemented and verified locally and in GitHub CI.
 The user paused stage five (personal/system Skill version editing):
 continue directly with stages six, seven and eight after this checkpoint.
 Production remains on the separately recorded deployed revision below.
@@ -56,8 +56,18 @@ Checkpoint `0aef140` is pushed to master. Initial CI `36837780428` exposed a
 new Next audit advisory, missing PostgreSQL fixture secret, obsolete appearance
 setup and bundled-Chromium recovery races. The replacement locks Next `16.3.6`
 and DOMPurify `3.4.16` (official audit: zero advisories), uses account appearance
-fixtures and retains lock state on session transport failure. Replacement CI
-is pending; production is unchanged.
+fixtures and retains lock state on session transport failure. Replacement source
+`7d24ce2362cc39f16a291265b3d6a74bf3f23bcc` is pushed to master; CI
+[`36844395975`](https://github.com/foolkking/chat-reader/actions/runs/36844395975)
+passed API, Web, settings, image creation and independent artifact inspection.
+CI results include API **592 passed / 3 skipped**, settings **79 passed / 0
+skipped**, default PWA **132 passed / 170 mode-specific skips**, authentication
+**18 passed**, and PWA negative **17 passed**. The final local settings plus
+authentication-recovery run passed **93 / 0 skipped** (79 real settings flows
+and 14 fault contracts, counted separately). Skips are not passes; overlapping
+suites are not additive. This is the stage-four GitHub checkpoint, not completion
+of the full plan. Next is stage six; stage five remains paused. Production is
+unchanged and no deployment was performed.
 
 ## Deployed authentication recovery (2026-09-30)
 

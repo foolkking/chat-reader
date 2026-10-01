@@ -321,3 +321,13 @@ SMTP 接收器和 `/api/settings-test/mail` 由临时 `fixture_app.py` 提供，
 - 设置 CI **67 passed / 12 failed**；本地整合 **70 passed / 9 failed**。九项均为旧测试以无账户归属 localStorage 初始化深色偏好，与阶段 4 的隔离规则冲突；现以实际偏好 PATCH/GET 建立每个测试账户的外观，保留深色断言。公共登录/注册/验证页按设备 color scheme 展示，避免读取其他账户缓存。
 - CI 另三项：小屏在 Library 参数初始化完成前点击菜单，现等到真实目标下载入口再交互；Linux bundled Chromium 的离线重载曾报告 online 后会话网络失败，已知锁定账户现始终显示需登录，网络转换会重做离线资格检查。新增“网络声称在线但已锁账户请求失败”故障合同，未放宽访问权限。
 - 修复版 lint/typecheck/build、两项 PostgreSQL 和官方审计已通过；正在用 CI 同版本 bundled Chromium 执行全部 **79 个设置用例 + 14 个认证恢复合同**。最终证据以后续运行结果为准。
+
+### GitHub 检查点通过（2026-10-01，未部署）
+
+- 修复提交 `7d24ce2362cc39f16a291265b3d6a74bf3f23bcc` 已推送 `origin/master`；[Actions 36844395975](https://github.com/foolkking/chat-reader/actions/runs/36844395975) 终态为 **success**。`api-quality`、`web-quality`、`settings-quality`、`build-images` 和 `inspect-release-artifact` 五项全部通过，运行的 head SHA 与推送代码一致。
+- 最新本地 bundled Chromium 整合 **93 passed / 0 skipped**：79 项真实设置流程及 14 项认证恢复故障合同。验证使用 Next `16.3.6`，故障合同与真实 API/持久化流程分列；机器证据为测试输出中的 `settings-ci-repair/gate-evidence.json`。
+- CI API 全量 **592 passed / 3 skipped**；真实 PostgreSQL 设置集成已启用，migration 确认为唯一 `20261001_0040 (head/current)`。另行执行的运维/清理安全子集 **53 passed** 与全量重叠，不重复累计。
+- CI 设置专项 **79 passed / 0 skipped**；默认 PWA **132 passed / 170 skipped**；认证专项 **18 passed**；离线故障矩阵 **17 passed**。导入恢复 **3 passed / 1 skipped**，CSP **4 passed**，在线/安全组合 **45 passed**，Share 焦点 **2 passed**，源码/缓存 **2 passed**，源码清理 **1 passed**，上传原子性 **18 passed**，Markdown/图片 **1 passed**，PDF.js **3 passed**。不同矩阵可能重叠，所有跳过均单独保留，不能视为通过。
+- CI lint、typecheck、生产构建及官方依赖审计通过；审计 **0 advisories / 0 exceptions**。API/worker/Web 镜像构建、内容检查、归档和独立下载检查均成功。产物保留期限遵循现有 workflow；没有向生产传输或部署。
+- 本次后验文档只更新检查点事实和测试证据，不改变上述已通过的代码、依赖、migration 或 CI 配置。既有 `apps/web/tsconfig.tsbuildinfo` 改动及隔离测试现场保留，不提交、不重置；用户 imports 和生产环境未改动。
+- 阶段 4 提交、推送和 CI 要求完成。总目标继续 active；阶段 5 暂停，接续阶段 6（个人/系统备份、分享管理、修改邮箱），然后阶段 7、8。本检查点不表示完整计划已完成，也不表示生产浏览器验收。

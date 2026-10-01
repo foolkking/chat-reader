@@ -4,6 +4,9 @@
 owned by the Next LTS and release safety contracts; authentication owns public
 device appearance and retained-lock recovery on transport failure. Failed and
 replacement CI runs belong to the dated settings execution record.
+The successful code checkpoint `7d24ce2` / Actions `36844395975` and separate
+local/CI counts are recorded there and summarized in `PROJECT_STATE.md`;
+production remains unchanged. Stage six is next, with stage five paused.
 
 2026-10-01 stage-four CI closeout: `docs/testing.md` owns the new required
 authenticated settings/SMTP/browser job and explicit PostgreSQL integration
