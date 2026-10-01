@@ -77,6 +77,19 @@ test("invalid session JSON fails closed with an explicit recovery state", async 
   await expect(page.getByText(ready)).toHaveCount(0);
 });
 
+test("a retained locked account stays locked when connectivity is reported online but session transport fails", async ({ page }) => {
+  await page.addInitScript((id) => {
+    localStorage.setItem("chat-reader:offline-active-user-v1", id);
+    localStorage.setItem("chat-reader:offline-locked-users-v1", JSON.stringify([id]));
+    Object.defineProperty(navigator, "onLine", { configurable: true, get: () => true });
+  }, userId);
+  await page.route("**/api/auth/session", (route) => route.abort("internetdisconnected"));
+  await page.goto("/library");
+  await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible();
+  await expect(page.getByText(ready)).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("chat-reader:offline-active-user-v1"))).toBe(userId);
+});
+
 test("unavailable IndexedDB does not prevent an authenticated online workspace", async ({ page }) => {
   await page.addInitScript(() => {
     IDBFactory.prototype.open = () => { throw new DOMException("Storage disabled", "SecurityError"); };

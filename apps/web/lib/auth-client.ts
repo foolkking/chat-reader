@@ -239,6 +239,11 @@ export function getCurrentOfflineRuntimeUserId(): string | null {
   return getActiveOfflineStorageContext().userId;
 }
 
+export function hasLockedOfflineAccount(): boolean {
+  const userId = getCurrentOfflineRuntimeUserId() ?? readPersistedOfflineUserId();
+  return Boolean(userId && lockedOfflineUsers().includes(userId));
+}
+
 function hasSessionPresenceMarker(): boolean {
   return document.cookie.split(";").some((item) => item.trim() === `${SESSION_PRESENCE_COOKIE}=1`);
 }

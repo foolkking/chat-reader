@@ -4,6 +4,13 @@ import { expect, type APIRequest, type APIRequestContext } from "@playwright/tes
 // across viewport cases rather than repeatedly exercising the login rate limit.
 let adminState: Awaited<ReturnType<APIRequestContext["storageState"]>> | undefined;
 
+export async function settingsAppearance(request: APIRequestContext, baseURL: string, locale: string): Promise<void> {
+  const expected = { theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale };
+  const saved = await request.patch(`${baseURL}/api/preferences`, { headers: { Origin: baseURL }, data: expected });
+  expect(saved.status()).toBe(200);
+  expect(await (await request.get(`${baseURL}/api/preferences`)).json()).toMatchObject(expected);
+}
+
 export async function settingsAdmin(request: APIRequest, baseURL: string): Promise<APIRequestContext> {
   const context = await request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL }, storageState: adminState });
   if (!adminState) {

@@ -17,6 +17,7 @@ import {
   suspendBrowserOfflineContext,
   getCurrentOfflineRuntimeUserId,
   hasCurrentOfflineLease,
+  hasLockedOfflineAccount,
   loginLocation,
   offlineLeaseExpiresAt,
   readAuthSession,
@@ -125,6 +126,8 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
         if (!active || signal.aborted) return;
         if (cause instanceof SignoutCleanupPendingError) { suspendBrowserOfflineContext(); queryClient.clear(); window.location.replace("/login?reauth=1"); }
         else if (cause instanceof AuthRequestError && cause.status === 401) await invalidate(false);
+        else if (stage === "session" && hasLockedOfflineAccount()) setState("offline-locked");
+        else if (stage === "session" && !navigator.onLine) { setState("checking"); setAttempt((value) => value + 1); }
         else setState(stage === "storage" ? "storage-error" : "unavailable");
       } finally {
         window.clearTimeout(deadline);

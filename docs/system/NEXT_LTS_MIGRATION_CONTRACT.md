@@ -1,9 +1,9 @@
 # Next LTS Migration Contract
 
-Last updated: 2026-09-22
+Last updated: 2026-10-01
 
-Current status: `NEXT_16_MAINTENANCE = PASS`. Release F established the Next 16
-boundary; the current maintenance baseline is Next 16.3.3. The original Release
+Current status: Next 16.3.6 is locally patched; final CI is pending. Release F established the Next 16
+boundary; the current maintenance baseline is Next 16.3.6. The original Release
 F artifact, backup, runtime identity and production acceptance remain historical
 evidence below.
 
@@ -22,13 +22,13 @@ The F1 checkpoint is retained as migration evidence only. Production must not de
 
 | Package | Version | Source |
 | --- | --- | --- |
-| next | 16.3.3 | official npm registry |
+| next | 16.3.6 | official npm registry |
 | react | 19.2.8 | official npm registry |
 | react-dom | 19.2.8 | official npm registry |
 | @types/react | 19.2.18 | official npm registry |
 | @types/react-dom | 19.2.4 | official npm registry |
 
-Next 16.3.3 requires Node >=20.9.0. Release F local, CI and production
+Next 16.3.6 requires Node >=20.9.0. Release F local, CI and production
 verification used Next 16.3.1 with Node 20.13.1. The Release G PDF.js work raised
 CI and the Web build/runtime images together to Node 22.13.1 because
 `pdfjs-dist 6.2.108` requires `>=22.13.0 || >=24`; Next and React versions do
@@ -39,7 +39,7 @@ G runtime requires its own final CI and production proof.
 
 | Package | Tarball | Integrity |
 | --- | --- | --- |
-| next 16.3.3 | https://registry.npmjs.org/next/-/next-16.3.3.tgz | sha512-tuRTx1nQ/yVw83cwJBo9F+njGUgMn3UHQycreWHB8XsStvvAh1AthbI8/4IpKnFaF58F+iSiHejYOlMQ/eq83g== |
+| next 16.3.6 | https://registry.npmjs.org/next/-/next-16.3.6.tgz | sha512-L+otWM/aQbYTx98aZhgEoMb4bZAXx1YVW4UMA/vuCyCoWG5HJyZUili8QAkqzrcC+5///tsz3s0M+SlyB5bLMw== |
 | react 19.2.8 | https://registry.npmjs.org/react/-/react-19.2.8.tgz | sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw== |
 | react-dom 19.2.8 | https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz | sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ== |
 

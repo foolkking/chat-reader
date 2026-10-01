@@ -1,5 +1,13 @@
 # Authentication and account contract
 
+Public login/registration/verification pages follow the device color scheme,
+without reading an unbound legacy account preference cache. Authenticated
+appearance continues to use account-scoped preference revisions.
+An already retained locked account remains in the sign-in-required state when
+the session transport fails even if the browser reports it is online. A network
+transition during session verification retries the offline eligibility check;
+it does not grant new authorization or discard data.
+
 ## Explicit signout cleanup (2026-10-01 working tree)
 
 Logout/password-change session revocation and local physical deletion are

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { settingsAdmin } from "./settings-test-helper";
+import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated settings PostgreSQL fixture and worker");
@@ -9,11 +9,11 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     test.setTimeout(120_000);
     const admin = await settingsAdmin(playwright.request, baseURL!);
     const context = await browser.newContext({ viewport: { width, height: 900 }, locale });
-    await context.addInitScript(({ locale }) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() })), { locale });
     const password = "synthetic rule browser passphrase";
     const email = `rules-${Date.now()}-${width}@example.test`;
     const headers = { Origin: baseURL! };
     expect((await context.request.post(`${baseURL}/api/auth/register`, { headers, data: { email, password, confirm_password: password } })).status()).toBe(201);
+    await settingsAppearance(context.request, baseURL!, locale);
     const page = await context.newPage();
     const marker = "\ue200cite\ue202turn12search4\ue201";
     const unique = `${Date.now()}_${width}_${locale}`;

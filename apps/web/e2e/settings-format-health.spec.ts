@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { settingsAdmin } from "./settings-test-helper";
+import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL settings fixture");
@@ -8,11 +8,11 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
   test(`${width}px ${locale}: full-batch health, retained results and real mapping repair`, async ({ browser, playwright, baseURL }) => {
     const admin = await settingsAdmin(playwright.request, baseURL!);
     const context = await browser.newContext({ viewport: { width, height: 900 }, locale });
-    await context.addInitScript(({ locale }) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() })), { locale });
     const suffix = `${Date.now()}_${width}_${locale.replaceAll("-", "_")}`;
     const password = "synthetic health browser passphrase";
     const headers = { Origin: baseURL! };
     expect((await context.request.post(`${baseURL}/api/auth/register`, { headers, data: { email: `health-${suffix}@example.test`, password, confirm_password: password } })).status()).toBe(201);
+    await settingsAppearance(context.request, baseURL!, locale);
     const bytes = (empty = false) => Buffer.from(JSON.stringify({ [`fixture_${suffix}`]: true, turns: [
       { speaker: "user", body: empty ? "" : "Synthetic question", alternate: "Synthetic replacement question" },
       { speaker: "assistant", body: "Synthetic answer", alternate: "Synthetic replacement answer" },

@@ -43,9 +43,6 @@ test.describe("registration verification with SMTP and persistence", () => {
         expect((await admin.post("/api/auth/login", { data: { email: process.env.E2E_AUTH_EMAIL, password: process.env.E2E_AUTH_PASSWORD } })).ok()).toBeTruthy();
         expect((await admin.put("/api/admin/access/registration", { data: { mode: "OPEN", require_admin_approval: true, email_verification_enabled: true } })).ok()).toBeTruthy();
         const context = await browser.newContext({ viewport: { width, height: 900 }, locale, colorScheme: locale === "en-US" ? "dark" : "light" });
-        await context.addInitScript(({ locale }) => {
-          localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() }));
-        }, { locale });
         const page = await context.newPage();
         const email = `settings-${Date.now()}-${width}@example.test`;
         const password = "synthetic registration browser passphrase";

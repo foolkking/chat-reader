@@ -52,6 +52,13 @@ recorded in the execution log.
 `docs/testing.md` owns the required authenticated settings CI job and explicit
 PostgreSQL integration gate. Pushing/building artifacts does not deploy them.
 
+Checkpoint `0aef140` is pushed to master. Initial CI `36837780428` exposed a
+new Next audit advisory, missing PostgreSQL fixture secret, obsolete appearance
+setup and bundled-Chromium recovery races. The replacement locks Next `16.3.6`
+and DOMPurify `3.4.16` (official audit: zero advisories), uses account appearance
+fixtures and retains lock state on session transport failure. Replacement CI
+is pending; production is unchanged.
+
 ## Deployed authentication recovery (2026-09-30)
 
 The post-login private boundary no longer leaves session/network/storage

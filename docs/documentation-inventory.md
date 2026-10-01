@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-01 CI repair: current patched Next/DOMPurify versions and provenance are
+owned by the Next LTS and release safety contracts; authentication owns public
+device appearance and retained-lock recovery on transport failure. Failed and
+replacement CI runs belong to the dated settings execution record.
+
 2026-10-01 stage-four CI closeout: `docs/testing.md` owns the new required
 authenticated settings/SMTP/browser job and explicit PostgreSQL integration
 opt-in. `AGENTS.md` now matches the existing Dexie v2/package v3 code, preserving

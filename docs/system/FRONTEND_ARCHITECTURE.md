@@ -124,7 +124,7 @@ Geometry is centralized in `app/globals.css`: 45rem reading, 55rem data, full-wi
 
 | 类别 | 实现 |
 | --- | --- |
-| 框架 | Next.js 16.3.3 App Router、React 19.2.8、TypeScript、Webpack production build |
+| 框架 | Next.js 16.3.6 App Router、React 19.2.8、TypeScript、Webpack production build |
 | 服务端状态 | TanStack Query |
 | 长消息虚拟化 | TanStack Virtual（动态测量 RenderBlock） |
 | 本地状态 | React context/state；局部 Zustand |

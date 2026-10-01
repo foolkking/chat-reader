@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { settingsAdmin } from "./settings-test-helper";
+import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires disposable PostgreSQL settings fixture and worker");
@@ -10,9 +10,9 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     const admin = await settingsAdmin(playwright.request, baseURL!);
     const context = await browser.newContext({ viewport: { width, height: 900 }, locale });
     context.setDefaultTimeout(20_000);
-    await context.addInitScript(({ locale }) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() })), { locale });
     const email = `cleanup-${Date.now()}-${width}@example.test`, password = "synthetic cleanup browser passphrase";
     expect((await context.request.post(`${baseURL}/api/auth/register`, { headers: { Origin: baseURL! }, data: { email, password, confirm_password: password } })).status()).toBe(201);
+    await settingsAppearance(context.request, baseURL!, locale);
     const page = await context.newPage();
     const marker = "\ue200cite\ue202turn12search4\ue201";
     const source = "Synthetic evidence " + (marker + " remains.\n\n").repeat(125) + "Code: `" + marker + "`";

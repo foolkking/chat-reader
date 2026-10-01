@@ -24,7 +24,6 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
     test.setTimeout(150_000);
     const admin = await settingsAdmin(playwright.request, baseURL!);
     const context = await browser.newContext({ viewport: { width, height: 900 }, locale });
-    await context.addInitScript((locale) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ locale_mode: locale, theme_mode: locale === "zh-CN" ? "light" : "dark" })), locale);
     const page = await context.newPage(), headers = { Origin: baseURL! };
     let release: (() => void) | undefined;
     try {
@@ -42,8 +41,12 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       expect((await context.request.post(`${baseURL}/api/conversations/${conversationId}/attachments`, { headers, data: { upload_item_ids: [(await file.json()).id] } })).status()).toBe(201);
       await page.goto(`${baseURL}/library?conversationId=${conversationId}`);
       await expect(page.locator("html")).toHaveAttribute("data-theme", locale === "zh-CN" ? "light" : "dark");
+      await expect(page.getByRole("button", { name: /Download offline copy|下载离线副本/, exact: true })).toBeVisible();
       const openCenter = async () => {
-        if (width < 768 && !await page.getByRole("button", { name: /Settings|设置/, exact: true }).isVisible()) await page.getByRole("button", { name: /Open sidebar|打开侧栏/, exact: true }).click();
+        const settings = page.getByRole("button", { name: /^(Settings|设置)$/ });
+        const sidebar = page.getByRole("button", { name: /^(Open sidebar|打开侧栏)$/ });
+        await expect(settings.or(sidebar).first()).toBeVisible();
+        if (width < 768 && !await settings.isVisible()) await sidebar.click();
         await page.getByRole("button", { name: /Settings|设置/, exact: true }).click();
         await page.getByRole("button", { name: /Offline & sync|离线与同步/ }).click();
         await expect(page.getByRole("dialog", { name: /Offline & sync|离线与同步/ })).toBeVisible();

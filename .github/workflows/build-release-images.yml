@@ -65,6 +65,7 @@ jobs:
       - name: API full suite
         env:
           SETTINGS_POSTGRES_INTEGRATION: "1"
+          AUTH_SESSION_SECRET: synthetic-settings-postgres-ci-secret-0123456789
         run: cd apps/api && pytest
       - name: Alembic single-head and current validation
         run: |

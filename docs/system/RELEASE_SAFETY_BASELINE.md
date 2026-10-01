@@ -1,5 +1,11 @@
 # Release Safety Baseline
 
+2026-10-01 CI prerequisite: Next is pinned to `16.3.6` for
+GHSA-vcvr-r3jv-pc5j and DOMPurify resolves to `3.4.16` for
+GHSA-p98j-92pf-mc4p. The official audit after updating the lockfile returns
+zero advisories. No exception or audit bypass is introduced; these changes
+await their exact-commit CI and are not deployed.
+
 2026-09-30 release prerequisite: the locked `brace-expansion` versions are
 `1.1.21` and `5.0.12`, resolving GHSA-q2hr-2g5m-vwhr,
 GHSA-qhr7-859c-m2p7 and GHSA-6j4f-fj2g-mc7p in the lint/tooling dependency
@@ -17,7 +23,8 @@ This contract defines the Release A security and provenance gate. It does not ch
 
 ## Release gate
 
-The deployable image job depends on the `quality` job and runs only when that job succeeds:
+The deployable image job requires `api-quality`, `web-quality` and
+`settings-quality` to succeed:
 
 ```text
 locked install without lifecycle scripts

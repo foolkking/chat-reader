@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { settingsAdmin } from "./settings-test-helper";
+import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 
@@ -20,14 +20,14 @@ test.describe("learned format ownership and publication", () => {
         const result = await context.request.post(`${baseURL}/api/auth/register`, { headers: { Origin: baseURL! }, data: { email, password, confirm_password: password } });
         expect(result.status()).toBe(201);
         expect((await context.request.post(`${baseURL}/api/auth/login`, { headers: { Origin: baseURL! }, data: { email, password } })).ok()).toBeTruthy();
-        await context.addInitScript(({ locale }) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() })), { locale });
+        await settingsAppearance(context.request, baseURL!, locale);
         return context;
       };
       const author = await userContext("author");
       const reader = await userContext("reader");
       const adminContext = await browser.newContext({ storageState: await admin.storageState(), viewport: { width, height: 900 }, locale });
       adminContext.setDefaultTimeout(20_000);
-      await adminContext.addInitScript(({ locale }) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() })), { locale });
+      await settingsAppearance(adminContext.request, baseURL!, locale);
       const a = await author.newPage(), b = await reader.newPage(), root = await adminContext.newPage();
       let learnedProfileId: string | null = null;
       const bytes = Buffer.from(JSON.stringify({ ["fixture_" + suffix]: true, title: "Synthetic format trial", turns: [{ speaker: "human", body: "Synthetic question" }, { speaker: "ai", body: "Synthetic answer" }] }));

@@ -312,3 +312,12 @@ SMTP 接收器和 `/api/settings-test/mail` 由临时 `fixture_app.py` 提供，
 - 本批之前的真实设置 **42**、认证合同 **13**、auth/Share **3**、API **569/26 skips**、阶段 4 PostgreSQL **12**、PWA 负面 **17**、长 Reader/Share **11** 的证据见上文；不同轮次和包含关系不能重复累计。
 - 知识状态：代码/相关合同已对齐，本地验收已记录；远端 CI 尚待提交后执行；生产验证/部署 out-of-scope；生成记忆只读；隔离测试现场和已有 tsbuildinfo 保留，不纳入提交或自动清场。
 - 最终构建已恢复为正常认证 API 8319/fault-seam-off；lint、typecheck、diff whitespace、单一 head `20261001_0040` 通过。阶段 4 本地检查点完成，接续 Git 提交和远端 CI。
+
+### 首次推送与 CI 修复
+
+- 阶段 4 检查点 `0aef140` 已推送 `origin/master`，手动运行 GitHub Actions `36837780428`。该次运行失败，没有生成部署镜像、没有部署。
+- API CI **590 passed / 2 failed / 3 skipped**：新启用的真实 PostgreSQL 邮箱确认测试缺少 AUTH_SESSION_SECRET，已补测试专用签名配置；相同配置下本地两项重新通过。
+- Web CI 被官方依赖审计阻止：Next `16.3.3` 命中 GHSA-vcvr-r3jv-pc5j。升级到修补版 `16.3.6`；DOMPurify 同步修补低风险 GHSA-p98j-92pf-mc4p 到 `3.4.16`。lockfile 只更新这些依赖链，官方审计 **0 advisories**，不添加豁免。
+- 设置 CI **67 passed / 12 failed**；本地整合 **70 passed / 9 failed**。九项均为旧测试以无账户归属 localStorage 初始化深色偏好，与阶段 4 的隔离规则冲突；现以实际偏好 PATCH/GET 建立每个测试账户的外观，保留深色断言。公共登录/注册/验证页按设备 color scheme 展示，避免读取其他账户缓存。
+- CI 另三项：小屏在 Library 参数初始化完成前点击菜单，现等到真实目标下载入口再交互；Linux bundled Chromium 的离线重载曾报告 online 后会话网络失败，已知锁定账户现始终显示需登录，网络转换会重做离线资格检查。新增“网络声称在线但已锁账户请求失败”故障合同，未放宽访问权限。
+- 修复版 lint/typecheck/build、两项 PostgreSQL 和官方审计已通过；正在用 CI 同版本 bundled Chromium 执行全部 **79 个设置用例 + 14 个认证恢复合同**。最终证据以后续运行结果为准。

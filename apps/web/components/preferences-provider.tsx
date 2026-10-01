@@ -86,7 +86,10 @@ export function PreferencesProvider({
   const privatePage = !/^\/(?:share|login|register|verify-email|reset-password|password-reset|account-upgrade)(?:\/|$)/.test(pathname);
   const preferencesRef = useRef<UserPreferenceRead>(initialPreferences);
   const [systemDark, setSystemDark] = useState(false);
-  const resolvedTheme = themeMode === "system" ? (systemDark ? "dark" : "light") : themeMode;
+  const publicAccountPage = /^\/(?:login|register|verify-email|reset-password|password-reset|account-upgrade)(?:\/|$)/.test(pathname);
+  // Public account pages follow this device, without reading another account's
+  // stored appearance or requiring an authenticated preference write.
+  const resolvedTheme = publicAccountPage || themeMode === "system" ? (systemDark ? "dark" : "light") : themeMode;
   const resolvedLocale = localeMode === "auto" ? initialLocale : resolveLocale(localeMode);
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { settingsAdmin } from "./settings-test-helper";
+import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated settings PostgreSQL fixture and worker");
@@ -14,12 +14,12 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       const context = await browser.newContext({ viewport: { width, height: 900 }, locale });
       const password = "synthetic rule publication passphrase";
       expect((await context.request.post(`${baseURL}/api/auth/register`, { headers, data: { email: `rule-${kind}-${suffix}@example.test`, password, confirm_password: password } })).status()).toBe(201);
-      await context.addInitScript(({ locale }) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() })), { locale });
+      await settingsAppearance(context.request, baseURL!, locale);
       return context;
     };
     const author = await initialize("author"), reader = await initialize("reader");
     const adminContext = await browser.newContext({ storageState: await admin.storageState(), viewport: { width, height: 900 }, locale });
-    await adminContext.addInitScript(({ locale }) => localStorage.setItem("chat-reader:user-preferences", JSON.stringify({ theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale, updated_at: new Date().toISOString() })), { locale });
+    await settingsAppearance(adminContext.request, baseURL!, locale);
     const root = await adminContext.newPage(), b = await reader.newPage();
     const value = `SYNTHETIC_NOISE_${suffix}`;
     const created = await author.request.post(`${baseURL}/api/content-cleanup/rules`, { headers, data: { name: "Synthetic private rule", match_value: value } });
