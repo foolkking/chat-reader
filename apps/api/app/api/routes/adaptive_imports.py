@@ -3,22 +3,25 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileRevision, ImportStructureFamily
+from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileAlias, ImportProfilePublication, ImportProfileRevision, ImportStructureFamily
 from app.models.import_record import ImportRecord
 from app.models.source_artifact import SourceArtifact
 from app.services.adaptive_import.contracts import AdaptiveImportError
+from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, publish_revision, related_profile_ids, revision_payload, visible_profile
+from app.services.administration import require_root_admin, record_admin_audit, request_id_from
 from app.services.adaptive_import.service import (
     MAX_ADAPTIVE_FILES,
     add_session_source,
     begin_session,
     cancel_session,
+    check_family_health,
     finalize_session,
     list_profiles,
     preview_family_mapping,
@@ -282,6 +285,23 @@ def save_family_mapping(
         raise HTTPException(status_code=422, detail={"code": "PROFILE_VALIDATION_FAILED", "message": str(exc)}) from exc
 
 
+@router.post("/api/adaptive-import/sessions/{import_id}/families/{family_id}/health")
+def check_format_health(
+    import_id: uuid.UUID, family_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
+    family = _family(import_id, family_id, db)
+    try:
+        result = check_family_health(db, record, family)
+        db.commit()
+        return result
+    except AdaptiveImportError as exc:
+        db.rollback()
+        raise _http_error(exc) from exc
+
+
 @router.post("/api/adaptive-import/sessions/{import_id}/families/{family_id}/mapping/preview")
 def preview_family_mapping_route(
     import_id: uuid.UUID,
@@ -339,12 +359,12 @@ def patch_import_format(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    profile = get_owned(db, ImportProfile, profile_id, ownership_scope)
+    profile = visible_profile(db, ownership_scope.owner_user_id, profile_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Import profile not found.")
     values = payload.model_dump(exclude_none=True)
     try:
-        update_profile(db, profile, values)
+        update_profile(db, profile, values, owner_user_id=ownership_scope.owner_user_id)
         db.commit()
         db.refresh(profile)
         return next(
@@ -363,12 +383,12 @@ def delete_import_format(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> None:
-    profile = get_owned(db, ImportProfile, profile_id, ownership_scope)
+    profile = visible_profile(db, ownership_scope.owner_user_id, profile_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Import profile not found.")
     if profile.kind != "LEARNED":
         raise HTTPException(status_code=409, detail={"code": "BUILTIN_READ_ONLY", "message": "Built-in import profiles cannot be deleted."})
-    db.delete(profile)
+    update_profile(db, profile, {"hidden": True}, owner_user_id=ownership_scope.owner_user_id)
     db.commit()
 
 
@@ -378,18 +398,77 @@ def get_import_format_revisions(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> list[dict[str, Any]]:
-    profile = get_owned(db, ImportProfile, profile_id, ownership_scope)
+    profile = visible_profile(db, ownership_scope.owner_user_id, profile_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="Import profile not found.")
-    return [
-        {
-            "id": str(item.id), "revision": item.revision, "status": item.status,
-            "mapping_spec": item.mapping_spec, "validation_spec": item.validation_spec,
-            "verification_summary": item.verification_summary, "created_at": item.created_at,
-            "verified_at": item.verified_at, "current": item.id == profile.current_revision_id,
-        }
-        for item in sorted(profile.revisions, key=lambda revision: revision.revision, reverse=True)
-    ]
+    visible = [revision for candidate, revision in available_revisions(db, ownership_scope.owner_user_id, include_disabled=True) if candidate.id == profile.id]
+    effective = max(visible, key=lambda revision: (revision.id == profile.current_revision_id, revision.created_at, revision.revision))
+    seen = set()
+    result = []
+    for item in sorted(visible, key=lambda revision: (revision.id == effective.id, revision.created_at, revision.revision), reverse=True):
+        digest = item.configuration_digest or str(item.id)
+        if digest not in seen:
+            seen.add(digest)
+            result.append(revision_payload(item, current=item.id == effective.id))
+    return result
+
+
+class ProfilePublicationRequest(BaseModel):
+    revision_id: uuid.UUID
+    name: str = Field(min_length=1, max_length=200)
+
+
+@router.get("/api/admin/import-formats")
+def admin_import_formats(request: Request, limit: int = Query(30, ge=1, le=100), offset: int = Query(0, ge=0), db: Session = Depends(get_db)) -> dict:
+    require_root_admin(request, db)
+    query = db.query(ImportProfile).filter(ImportProfile.kind == "LEARNED", ~ImportProfile.id.in_(db.query(ImportProfileAlias.old_profile_id)))
+    total = query.count()
+    items = []
+    for profile in query.order_by(ImportProfile.created_at.desc(), ImportProfile.id).offset(offset).limit(limit):
+        publication = db.get(ImportProfilePublication, profile.id)
+        revisions = db.query(ImportProfileRevision).filter(ImportProfileRevision.profile_id.in_(related_profile_ids(db, profile.id))).order_by(ImportProfileRevision.created_at.desc()).all()
+        seen = set()
+        unique = []
+        for revision in revisions:
+            digest = revision.configuration_digest or str(revision.id)
+            if digest not in seen:
+                seen.add(digest)
+                unique.append(revision_payload(revision, current=revision.id == profile.current_revision_id))
+        items.append({"id": str(profile.id), "name": publication.name if publication else f"{profile.source_mode} format",
+            "source_mode": profile.source_mode, "source_account_available": profile.owner_user_id is not None,
+            "published_revision_id": str(publication.revision_id) if publication and publication.withdrawn_at is None else None,
+            "revisions": unique})
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+@router.put("/api/admin/import-formats/{profile_id}/publication")
+def publish_import_format(profile_id: uuid.UUID, payload: ProfilePublicationRequest, request: Request, db: Session = Depends(get_db)) -> dict:
+    actor = require_root_admin(request, db)
+    if not payload.name.strip():
+        raise HTTPException(status_code=422, detail="Publication name is required.")
+    try:
+        publication = publish_revision(db, profile_id=profile_id, revision_id=payload.revision_id, actor_id=actor.id, name=payload.name.strip())
+        record_admin_audit(db, actor_user_id=actor.id, action="IMPORT_FORMAT_PUBLISHED", resource_type="IMPORT_PROFILE", resource_id=publication.profile_id,
+            metadata={"revision_id": str(publication.revision_id)}, request_id=request_id_from(request))
+        db.commit()
+        return {"profile_id": str(publication.profile_id), "revision_id": str(publication.revision_id), "published": True}
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/api/admin/import-formats/{profile_id}/publication", status_code=204)
+def withdraw_import_format(profile_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> None:
+    from datetime import datetime, timezone
+    actor = require_root_admin(request, db)
+    canonical = canonical_profile_id(db, profile_id)
+    db.query(ImportProfile).filter_by(id=canonical).with_for_update().first()
+    publication = db.get(ImportProfilePublication, canonical)
+    if publication and publication.withdrawn_at is None:
+        publication.withdrawn_at = datetime.now(timezone.utc)
+        record_admin_audit(db, actor_user_id=actor.id, action="IMPORT_FORMAT_WITHDRAWN", resource_type="IMPORT_PROFILE", resource_id=canonical, request_id=request_id_from(request))
+    db.commit()
+
 
 
 def _record(

@@ -14,7 +14,7 @@ class ContentCleanupRule(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     kind: Mapped[str] = mapped_column(String(24), nullable=False)
@@ -31,6 +31,18 @@ class ContentCleanupRule(Base):
 Index("idx_content_cleanup_rules_status", ContentCleanupRule.status)
 
 
+class ContentCleanupRulePreference(Base):
+    __tablename__ = "content_cleanup_rule_preferences"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    rule_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rules.id", ondelete="CASCADE"), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(nullable=False, default=True)
+    hidden: Mapped[bool] = mapped_column(nullable=False, default=False)
+    display_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    current_revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rule_revisions.id", ondelete="SET NULL"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
 class ContentCleanupRuleRevision(Base):
     __tablename__ = "content_cleanup_rule_revisions"
     __table_args__ = (UniqueConstraint("rule_id", "revision", name="uq_content_cleanup_rule_revision"),)
@@ -39,6 +51,8 @@ class ContentCleanupRuleRevision(Base):
     rule_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rules.id", ondelete="CASCADE"), nullable=False)
     revision: Mapped[int] = mapped_column(Integer, nullable=False)
     matcher_version: Mapped[str] = mapped_column(String(40), nullable=False, default="noise-v1")
+    configuration_digest: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     match_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     matcher_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="EXACT")
     normalization_profile: Mapped[str] = mapped_column(String(48), nullable=False, default="NONE")
@@ -46,7 +60,7 @@ class ContentCleanupRuleRevision(Base):
     boundary_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="ANYWHERE")
     case_sensitive: Mapped[bool] = mapped_column(default=True, nullable=False)
     role_filter: Mapped[str | None] = mapped_column(String(24), nullable=True)
-    default_decision: Mapped[str] = mapped_column(String(12), nullable=False, default="DELETE")
+    default_decision: Mapped[str] = mapped_column(String(12), nullable=False, default="KEEP")
     supersedes_revision_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rule_revisions.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
@@ -55,6 +69,47 @@ class ContentCleanupRuleRevision(Base):
 
 Index("idx_content_cleanup_rule_revisions_rule", ContentCleanupRuleRevision.rule_id)
 Index("idx_content_cleanup_rule_revisions_match", ContentCleanupRuleRevision.rule_id, ContentCleanupRuleRevision.match_value)
+
+
+class ContentCleanupRuleGrant(Base):
+    __tablename__ = "content_cleanup_rule_grants"
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    revision_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rule_revisions.id", ondelete="CASCADE"), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(16), nullable=False)
+    acquired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class ContentCleanupRulePublication(Base):
+    __tablename__ = "content_cleanup_rule_publications"
+    rule_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rules.id", ondelete="CASCADE"), primary_key=True)
+    revision_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rule_revisions.id", ondelete="RESTRICT"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    published_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ContentCleanupRuleAlias(Base):
+    __tablename__ = "content_cleanup_rule_aliases"
+    old_rule_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rules.id", ondelete="CASCADE"), primary_key=True)
+    canonical_rule_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rules.id", ondelete="RESTRICT"), nullable=False, index=True)
+
+
+class ContentCleanupException(Base):
+    __tablename__ = "content_cleanup_exceptions"
+    __table_args__ = (UniqueConstraint("owner_user_id", "scope_digest", name="uq_cleanup_exception_owner_scope"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    rule_revision_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("content_cleanup_rule_revisions.id", ondelete="CASCADE"), nullable=False, index=True)
+    scope_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    role: Mapped[str] = mapped_column(String(24), nullable=False)
+    match_value: Mapped[str] = mapped_column(Text, nullable=False)
+    context_before: Mapped[str] = mapped_column(Text, nullable=False)
+    context_after: Mapped[str] = mapped_column(Text, nullable=False)
+    at_start: Mapped[bool] = mapped_column(nullable=False)
+    at_end: Mapped[bool] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 
 class ContentCleanupScan(Base):
@@ -82,6 +137,7 @@ class ContentCleanupScan(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    apply_lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     targets = relationship("ContentCleanupScanTarget", back_populates="scan", cascade="all, delete-orphan")
     occurrences = relationship("ContentCleanupOccurrence", back_populates="scan", cascade="all, delete-orphan")
@@ -150,7 +206,8 @@ class ContentCleanupOccurrence(Base):
     block_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     kind: Mapped[str] = mapped_column(String(40), nullable=False)
     reason_code: Mapped[str] = mapped_column(String(80), nullable=False)
-    decision: Mapped[str] = mapped_column(String(16), nullable=False, default="DELETE")
+    decision: Mapped[str] = mapped_column(String(16), nullable=False, default="KEEP")
+    decision_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     match_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="RAW_EXACT")
     detector_version: Mapped[str] = mapped_column(String(40), nullable=False, default="noise-v2")
     evidence_codes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)

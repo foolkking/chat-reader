@@ -6,11 +6,10 @@ import {
   getConversationMessageWindow,
   getConversationToc,
   getMessageBlocks,
-  getReadingPosition,
   recordRecentConversation,
-  saveReadingPosition,
   searchConversations,
 } from "./api";
+import { readSyncedReadingPosition, saveLocalReadingPosition } from "./reading-position-sync";
 import { offlineDb, type OfflineMessageRecord } from "./offline-db";
 import { searchOffline } from "./offline-search";
 import type {
@@ -145,8 +144,8 @@ export const remoteReaderDataSource: ReaderDataSource = {
       limit: options.limit ?? 50,
     });
   },
-  getReadingPosition,
-  async saveReadingPosition(conversationId, input) { await saveReadingPosition(conversationId, input); },
+  getReadingPosition: (id) => readSyncedReadingPosition(id, true),
+  saveReadingPosition: saveLocalReadingPosition,
   async recordRecent(conversationId, projectId) {
     const recent = await recordRecentConversation(conversationId, { project_id: projectId ?? null });
     return recent.conversation;
@@ -315,22 +314,9 @@ export const offlineReaderDataSource: ReaderDataSource = {
     };
   },
   async getReadingPosition(conversationId) {
-    return { conversation_id: conversationId, position: await offlineDb.readingPositions.get(conversationId) ?? null };
+    return readSyncedReadingPosition(conversationId, navigator.onLine);
   },
-  async saveReadingPosition(conversationId, input) {
-    const current = await offlineDb.readingPositions.get(conversationId);
-    const now = new Date().toISOString();
-    await offlineDb.readingPositions.put({
-      id: current?.id ?? crypto.randomUUID(),
-      conversation_id: conversationId,
-      message_id: input.message_id ?? null,
-      block_index: input.block_index ?? null,
-      scroll_offset: input.scroll_offset,
-      anchor_data: input.anchor_data ?? {},
-      created_at: current?.created_at ?? now,
-      updated_at: now,
-    });
-  },
+  saveReadingPosition: saveLocalReadingPosition,
   async recordRecent(conversationId) {
     await offlineDb.conversations.update(conversationId, { last_read_at: new Date().toISOString() });
     return null;

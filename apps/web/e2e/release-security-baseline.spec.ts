@@ -139,9 +139,12 @@ test("normal production bundles do not expose the PWA negative fault bridge", as
 
 test("release workflow cannot build a deployable artifact before quality passes", () => {
   const workflow = fs.readFileSync(path.resolve(process.cwd(), "../../.github/workflows/build-release-images.yml"), "utf8").replace(/\r\n/g, "\n");
-  expect(workflow).toMatch(/\n {2}build-images:\n {4}needs: \[api-quality, web-quality\]\n {4}if: \$\{\{ needs\.api-quality\.result == 'success' && needs\.web-quality\.result == 'success' \}\}/);
+  expect(workflow).toMatch(/\n {2}build-images:\n {4}needs: \[api-quality, web-quality, settings-quality\]\n {4}if: \$\{\{ needs\.api-quality\.result == 'success' && needs\.web-quality\.result == 'success' && needs\.settings-quality\.result == 'success' \}\}/);
   expect(workflow).toMatch(/\n {2}api-quality:\n/);
   expect(workflow).toMatch(/\n {2}web-quality:\n/);
+  expect(workflow).toMatch(/\n {2}settings-quality:\n/);
+  expect(workflow).toContain('SETTINGS_POSTGRES_INTEGRATION: "1"');
+  expect(workflow).toContain('E2E_SETTINGS_MAILBOX: "1"');
   expect(workflow).not.toMatch(/continue-on-error:\s*true/);
   expect(workflow.indexOf("name: Upload non-deployable quality evidence")).toBeLessThan(workflow.indexOf("  build-images:"));
   expect(workflow.indexOf("name: Inspect release images")).toBeLessThan(workflow.indexOf("name: Package images and provenance"));

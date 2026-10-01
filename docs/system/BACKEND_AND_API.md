@@ -255,3 +255,26 @@ version anchors are remapped to the current Reader version rather than being
 looked up through rendered DOM text. Share uses a token-scoped variant after
 validating the share message scope; Offline resolves the same DTO against its
 local Dexie snapshot and never calls the owner endpoint.
+
+### Account preference versions (2026-10-01 working tree)
+
+`UserPreference` owns per-field server revisions plus default focus and
+annotation position. Migration `20261001_0039` retains existing preference
+values and adds account/operation-scoped `PreferenceSyncReceipt` rows. Both
+legacy PATCH and `/api/preferences/sync` use the same PostgreSQL account lock;
+concurrent independent field edits merge, stale conflicting values remain for
+explicit user choice, and replay returns the original receipt. User preference
+deletion cascades receipts. The HTTP contract is in `docs/api-reference.md`;
+local pending state and legacy-account migration are specified in the PWA
+offline contract. This introduces no background job or external model call.
+
+### Reading position versions (2026-10-01 working tree)
+
+Migration `20261001_0040` adds `ReadingPosition.revision` (existing rows start
+at one) and subject/operation-scoped `ReadingPositionSyncReceipt`. The new
+reading-position sync route checks conversation ownership before receipt lookup,
+serializes account writes in PostgreSQL, rejects changed requests under a reused
+ID, and returns either the applied anchor or a revision conflict. Stale identical
+values converge without advancing revision. Legacy PUT remains compatible and
+advances only changed positions. Conversation-scoped locking also serializes
+recent-item updates. Package serialization includes the additive revision.

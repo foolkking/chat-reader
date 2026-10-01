@@ -35,6 +35,7 @@ import type {
   AdaptiveImportSession,
 } from "../../lib/types";
 import { MappingWorkspace } from "./mapping-workspace";
+import { FormatHealthCheck } from "./format-health-check";
 
 export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, importing, error }: {
   session: AdaptiveImportSession;
@@ -197,6 +198,7 @@ function FamilyRow({ session, family, onConfigure, onSession }: {
         ) : null}
       </div>
       {handling === "NOT_MAPPABLE" ? <NotMappableRecovery session={session} family={family} onSession={onSession} /> : null}
+      {handling !== "NOT_MAPPABLE" ? <FormatHealthCheck session={session} family={family} onRepair={actionable ? onConfigure : undefined} /> : null}
       {selectMutation.isError ? <div className="mt-3"><ErrorLine message={selectMutation.error.message} /></div> : null}
     </article>
   );

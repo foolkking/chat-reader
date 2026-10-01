@@ -1,3 +1,4 @@
+import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
 import { getOfflineAttachmentBytes, offlineDb, type OfflineAttachmentRecord, type OfflineConversationRecord } from "./offline-db";
 import { strToU8, zipSync } from "fflate";
 import type { AnnotationRead, MessageListItem, NotebookRead } from "./types";
@@ -22,13 +23,15 @@ export type OfflineExportResult = {
 const MAX_LOCAL_BUNDLE_BYTES = 256 * 1024 * 1024;
 
 export async function exportOfflineConversation(conversationId: string, options: OfflineExportOptions): Promise<OfflineExportResult> {
-  const conversation = await offlineDb.conversations.get(conversationId);
+  const access = captureOfflineAccess();
+  const db = offlineDb;
+  const conversation = await db.conversations.get(conversationId);
   if (!conversation) throw new Error("Offline conversation was not found.");
   const [messages, annotations, notebook, attachments] = await Promise.all([
-    offlineDb.messages.where("conversation_id").equals(conversationId).sortBy("order_key"),
-    options.includeAnnotations ? offlineDb.annotations.where("conversation_id").equals(conversationId).toArray() : Promise.resolve([]),
-    options.includeNotebook ? offlineDb.notebooks.where("conversation_id").equals(conversationId).first() : Promise.resolve(undefined),
-    offlineDb.attachments.where("conversation_id").equals(conversationId).toArray(),
+    db.messages.where("conversation_id").equals(conversationId).sortBy("order_key"),
+    options.includeAnnotations ? db.annotations.where("conversation_id").equals(conversationId).toArray() : Promise.resolve([]),
+    options.includeNotebook ? db.notebooks.where("conversation_id").equals(conversationId).first() : Promise.resolve(undefined),
+    db.attachments.where("conversation_id").equals(conversationId).toArray(),
   ]);
   const exportedAt = new Date().toISOString();
   const source = options.format === "canjson"
@@ -36,6 +39,7 @@ export async function exportOfflineConversation(conversationId: string, options:
     : buildMarkdown(conversation, messages, annotations, notebook, options, exportedAt);
   const safeTitle = safeFilename(conversation.display_title || conversation.title);
   if (!options.includeAttachments) {
+    assertOfflineAccess(access);
     return {
       blob: new Blob([source], { type: options.format === "canjson" ? "application/x-ndjson;charset=utf-8" : "text/markdown;charset=utf-8" }),
       filename: `${safeTitle}${options.format === "canjson" ? ".canonical.jsonl" : ".md"}`,
@@ -113,6 +117,7 @@ export async function exportOfflineConversation(conversationId: string, options:
   } else {
     files["conversation.md"] = strToU8(rewriteMarkdownAttachments(source, attachments, objectPaths));
   }
+  assertOfflineAccess(access);
   return {
     blob: new Blob([zipSync(files, { level: 6 })], { type: "application/zip" }),
     filename: `${safeTitle}${options.format === "canjson" ? ".context.zip" : "-markdown.zip"}`,

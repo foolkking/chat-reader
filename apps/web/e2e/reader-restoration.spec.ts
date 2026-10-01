@@ -603,10 +603,16 @@ test("continuous wheel scrolling remains monotonic after virtual estimates warm 
 
   let readerTurnRequests = 0;
   let readingPositionWrites = 0;
+  let readingPositionReceipts = 0;
+  let submittedPosition: Record<string, unknown> | undefined;
   page.on("request", (request) => {
     if (request.url().includes("/reader-turn")) readerTurnRequests += 1;
-    if (request.method() === "PUT" && request.url().includes("/reading-position")) readingPositionWrites += 1;
+    if (request.method() === "POST" && request.url().endsWith("/reading-position/sync")) {
+      readingPositionWrites += 1;
+      submittedPosition = request.postDataJSON().position;
+    }
   });
+  page.on("response", (response) => { if (response.url().endsWith("/reading-position/sync") && response.ok()) readingPositionReceipts += 1; });
   await page.evaluate(() => {
     const telemetry = {
       frames: [] as number[],
@@ -653,6 +659,10 @@ test("continuous wheel scrolling remains monotonic after virtual estimates warm 
   await page.waitForTimeout(650);
   expect(readingPositionWrites).toBe(0);
   await expect.poll(() => readingPositionWrites, { timeout: 2500 }).toBe(1);
+  await expect.poll(() => readingPositionReceipts).toBe(1);
+  const persisted = await page.request.get(`/api/conversations/${conversationId}/reading-position`);
+  expect(persisted.ok()).toBe(true);
+  expect((await persisted.json()).position).toMatchObject(submittedPosition!);
   await expect.poll(() => page.locator("article[data-message-id]").count()).toBeLessThanOrEqual(6);
   await expect.poll(() => targetArticle.locator("[data-index]").count()).toBeLessThanOrEqual(36);
   await expectVirtualRowsNotToOverlap(targetArticle);

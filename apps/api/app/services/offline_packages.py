@@ -567,12 +567,12 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
             .order_by(Message.order_key, MessageVersionAttachment.display_order)
             .all()
         )
-        included = bool(
+        downloadable = bool(
             asset
             and asset.status == "available"
             and asset.scan_status in allowed_scan_statuses()
-            and (asset_mode == "all" or (asset_mode == "small" and asset.byte_size <= 10 * 1024 * 1024))
         )
+        included = downloadable and (asset_mode == "all" or (asset_mode == "small" and asset.byte_size <= 10 * 1024 * 1024))
         first_link, first_message, _ = links[0] if links else (None, None, None)
         payloads.append({
             "id": str(attachment.id),
@@ -602,6 +602,7 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
                 "caption": link.caption,
             } for link, message, block in links],
             "content_path": f"assets/objects/{asset.id}" if included and asset else None,
+            "downloadable": downloadable,
         })
     return payloads
 
@@ -775,6 +776,7 @@ def _reading_position_payload(position: ReadingPosition | None) -> dict[str, Any
         return None
     return {
         "id": position.id,
+        "revision": position.revision,
         "conversation_id": position.conversation_id,
         "message_id": position.message_id,
         "block_index": position.block_index,

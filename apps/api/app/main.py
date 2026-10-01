@@ -27,6 +27,7 @@ from app.api.routes.skills import router as skills_router
 from app.api.routes.admin_access import router as admin_access_router
 from app.api.routes.admin_content import router as admin_content_router
 from app.api.routes.admin_system import router as admin_system_router
+from app.api.routes.admin_noise_rules import router as admin_noise_rules_router
 from app.core.auth_middleware import AuthenticationMiddleware
 from app.core.observability import RequestObservabilityMiddleware
 
@@ -73,3 +74,4 @@ app.include_router(skills_router)
 app.include_router(admin_access_router)
 app.include_router(admin_content_router)
 app.include_router(admin_system_router)
+app.include_router(admin_noise_rules_router)

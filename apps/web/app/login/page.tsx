@@ -7,6 +7,8 @@ import { usePreferences } from "../../components/preferences-provider";
 import { AuthPageShell } from "../../features/auth/auth-page-shell";
 import { PasswordField } from "../../features/auth/password-field";
 import { AuthRequestError, loginWithPassword, readAuthSession, readAuthSetup, safeReturnPath } from "../../lib/auth-client";
+import { pendingSignoutCleanups } from "../../lib/signout-cleanup";
+import { SignoutCleanupRecovery } from "../../components/signout-cleanup-recovery";
 
 export default function LoginPage() {
   return <Suspense fallback={<LoginLoading />}><LoginForm /></Suspense>;
@@ -21,6 +23,7 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [passwordResetAvailable, setPasswordResetAvailable] = useState(false);
+  const [cleanupPending, setCleanupPending] = useState<boolean | null>(null);
   const destination = safeReturnPath(searchParams?.get("return_to") ?? "/");
   const registerHref = destination === "/" ? "/register" : `/register?return_to=${encodeURIComponent(destination)}`;
   const upgraded = searchParams?.get("upgraded") === "1";
@@ -30,6 +33,9 @@ function LoginForm() {
 
   useEffect(() => {
     let active = true;
+    const pending = pendingSignoutCleanups().length > 0;
+    if (pending) { setCleanupPending(true); return; }
+    setCleanupPending(false);
     void Promise.all([readAuthSetup(), readAuthSession()]).then(([setup, session]) => {
       if (!active) return;
       if (setup.setup_required) {
@@ -43,7 +49,7 @@ function LoginForm() {
       setPasswordResetAvailable(session.password_reset_available);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [destination, reauthenticate]);
+  }, [destination, reauthenticate, cleanupPending]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -64,9 +70,9 @@ function LoginForm() {
     <AuthPageShell
       title={copy.title}
       description={copy.description}
-      footer={<>{copy.noAccount} <Link href={registerHref} className="font-medium text-[var(--link)] underline decoration-[var(--link-decoration)] underline-offset-4 hover:text-[var(--link-hover)]">{copy.register}</Link></>}
+      footer={<div className="space-y-3"><p>{copy.noAccount} <Link href={registerHref} className="font-medium text-[var(--link)] underline decoration-[var(--link-decoration)] underline-offset-4 hover:text-[var(--link-hover)]">{copy.register}</Link></p><Link href="/verify-email" className="inline-flex min-h-11 items-center text-[var(--link)] underline underline-offset-4">{resolvedLocale === "zh-CN" ? "重新发送邮箱验证" : "Resend email verification"}</Link></div>}
     >
-      <form onSubmit={submit} className="space-y-4">
+      {cleanupPending ? <SignoutCleanupRecovery zh={resolvedLocale === "zh-CN"} onComplete={() => setCleanupPending(false)} /> : cleanupPending === null ? <p role="status">{resolvedLocale === "zh-CN" ? "正在检查本机清理状态…" : "Checking local cleanup…"}</p> : <form onSubmit={submit} className="space-y-4">
         {upgraded ? <p role="status" className="rounded-md bg-[var(--accent-soft)] px-3 py-2 text-sm leading-5 text-primary">{copy.upgradeComplete}</p> : null}
         {passwordReset ? <p role="status" className="rounded-md bg-[var(--accent-soft)] px-3 py-2 text-sm leading-5 text-primary">{copy.resetComplete}</p> : null}
         <div className="space-y-1.5 text-left">
@@ -95,7 +101,7 @@ function LoginForm() {
         <button type="submit" disabled={submitting || !email.trim() || !password} className="btn-primary min-h-11 w-full px-4 text-sm font-medium">
           {submitting ? copy.signingIn : copy.signIn}
         </button>
-      </form>
+      </form>}
     </AuthPageShell>
   );
 }

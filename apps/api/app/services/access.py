@@ -48,15 +48,18 @@ def set_access_settings(
     db: Session,
     *,
     mode: str,
-    require_admin_approval: bool,
-    email_verification_enabled: bool,
-    password_reset_enabled: bool,
+    require_admin_approval: bool | None = None,
+    email_verification_enabled: bool | None = None,
+    password_reset_enabled: bool | None = None,
     actor_user_id: uuid.UUID,
 ) -> InstanceAccessSetting:
     row = set_registration_mode(db, mode, actor_user_id)
-    row.require_admin_approval = require_admin_approval
-    row.email_verification_enabled = email_verification_enabled
-    row.password_reset_enabled = password_reset_enabled
+    if require_admin_approval is not None:
+        row.require_admin_approval = require_admin_approval
+    if email_verification_enabled is not None:
+        row.email_verification_enabled = email_verification_enabled
+    if password_reset_enabled is not None:
+        row.password_reset_enabled = password_reset_enabled
     row.updated_by_user_id = actor_user_id
     row.updated_at = utc_now()
     db.flush()
@@ -106,7 +109,8 @@ def consume_invitation(invitation: AccountInvitation, user_id: uuid.UUID, *, now
 
 
 def disable_user(db: Session, user: User, disabled: bool) -> None:
-    user.status = "DISABLED" if disabled else "ACTIVE"
+    db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
+    user.status = "DISABLED" if disabled else ("ACTIVE" if user.registration_requirements_met else "PENDING")
     user.updated_at = utc_now()
     if disabled:
         principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == user.id).one_or_none()
@@ -133,9 +137,13 @@ def revoke_user_sessions(db: Session, user: User) -> int:
 
 
 def review_pending_user(db: Session, user: User, *, approved: bool, actor_user_id: uuid.UUID) -> None:
-    if user.status != "PENDING":
+    # Share the verification service's user-first lock order. Concurrent
+    # approval and email confirmation must not leave a fully eligible user pending.
+    db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
+    if user.approval_status != "PENDING" or user.status == "DISABLED":
         raise ValueError("Only pending users can be reviewed.")
-    user.status = "ACTIVE" if approved else "DISABLED"
+    user.approval_status = "APPROVED" if approved else "REJECTED"
+    user.status = ("ACTIVE" if user.registration_requirements_met else "PENDING") if approved else "DISABLED"
     user.approval_reviewed_at = utc_now()
     user.approval_reviewed_by_user_id = actor_user_id
     user.updated_at = utc_now()
@@ -179,7 +187,7 @@ def consume_password_reset(db: Session, settings: Settings, token: str, new_pass
         raise ValueError("Password reset link is invalid or expired.")
     user = db.get(User, grant.user_id)
     principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == grant.user_id).one_or_none()
-    if user is None or principal is None or user.status != "ACTIVE":
+    if user is None or principal is None or not user.can_login:
         raise ValueError("Password reset link is invalid or expired.")
     principal.password_hash = hash_password(new_password)
     principal.credential_version += 1

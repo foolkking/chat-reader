@@ -1,3 +1,4 @@
+import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
 import type {
   CommitImportResponse,
   CleanupApplyResult,
@@ -37,6 +38,7 @@ import type {
   ImportStatusResponse,
   AdaptiveImportSession,
   AdaptiveMappingPreview,
+  ImportFormatHealth,
   ImportFormatProfile,
   ImportFormatRevision,
   NotebookRead,
@@ -58,7 +60,6 @@ import type {
   ProjectPlacementInput,
   ProjectUpdate,
   ProjectSortMode,
-  ReadingPositionInput,
   ReadingPositionResponse,
   RecentItemInput,
   RecentItemRead,
@@ -137,6 +138,7 @@ export function uploadAttachmentItem(
   file: File,
   onProgress?: (progress: number) => void,
 ): { promise: Promise<AttachmentUploadItemRead>; cancel: () => void } {
+  const requestGeneration = authenticationGeneration();
   const request = new XMLHttpRequest();
   const promise = new Promise<AttachmentUploadItemRead>((resolve, reject) => {
     request.open("POST", `/api/attachment-upload-sessions/${sessionId}/items`);
@@ -146,7 +148,7 @@ export function uploadAttachmentItem(
     request.addEventListener("load", () => {
       let payload: unknown;
       try { payload = request.responseText ? JSON.parse(request.responseText) : null; } catch { payload = null; }
-      if (request.status === 401) window.dispatchEvent(new Event("chat-reader:auth-unauthorized"));
+      if (request.status === 401) notifyAuthenticationFailure(requestGeneration);
       if (request.status >= 200 && request.status < 300) resolve(payload as AttachmentUploadItemRead);
       else reject(new Error(readApiError(payload, request.status)));
     });
@@ -181,12 +183,16 @@ export async function deleteConversationAttachment(conversationId: string, attac
   await fetchJson<void>(`/api/conversations/${conversationId}/attachments/${attachmentId}`, { method: "DELETE" });
 }
 
-export async function getPreferences(): Promise<UserPreferenceRead> {
-  return fetchJson<UserPreferenceRead>("/api/preferences");
+export async function getPreferences(signal?: AbortSignal): Promise<UserPreferenceRead> {
+  return fetchJson<UserPreferenceRead>("/api/preferences", { signal });
 }
 
 export async function updatePreferences(input: UserPreferenceUpdate): Promise<UserPreferenceRead> {
   return fetchJson<UserPreferenceRead>("/api/preferences", jsonRequest("PATCH", input));
+}
+
+export function syncPreferenceFields(input: import("./types").PreferenceSyncRequest, signal?: AbortSignal): Promise<import("./types").PreferenceSyncResponse> {
+  return fetchJson("/api/preferences/sync", { ...jsonRequest("POST", input), signal });
 }
 
 export async function getConversations(
@@ -252,8 +258,8 @@ export async function updateConversation(
   );
 }
 
-export async function getConversationAnnotations(conversationId: string): Promise<AnnotationRead[]> {
-  return fetchJson<AnnotationRead[]>(`/api/conversations/${conversationId}/annotations`);
+export async function getConversationAnnotations(conversationId: string, includeDeleted = false): Promise<AnnotationRead[]> {
+  return fetchJson<AnnotationRead[]>(`/api/conversations/${conversationId}/annotations${includeDeleted ? "?include_deleted=true" : ""}`);
 }
 
 export async function createConversationAnnotation(conversationId: string, input: AnnotationCreateInput): Promise<AnnotationRead> {
@@ -299,8 +305,10 @@ export async function queueOfflinePackage(
     known_revisions?: Record<string, number>;
     include_assets?: "none" | "small" | "all";
   },
+  idempotencyKey?: string,
 ): Promise<OfflinePackageQueued> {
-  return fetchJson<OfflinePackageQueued>("/api/offline/packages", jsonRequest("POST", input));
+  const request = jsonRequest("POST", input);
+  return fetchJson<OfflinePackageQueued>("/api/offline/packages", { ...request, headers: { ...request.headers, ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) } });
 }
 
 export function getOfflinePackageDownloadUrl(packageId: string): string {
@@ -837,29 +845,11 @@ export async function setConversationGlobalPin(
 }
 
 export async function getReadingPosition(conversationId: string): Promise<ReadingPositionResponse> {
-  return fetchJson<ReadingPositionResponse>(`/api/conversations/${conversationId}/reading-position`);
+  return fetchJson<ReadingPositionResponse>(`/api/conversations/${conversationId}/reading-position`, { signal: AbortSignal.timeout(10_000) });
 }
 
-export async function saveReadingPosition(
-  conversationId: string,
-  input: ReadingPositionInput,
-): Promise<ReadingPositionResponse["position"]> {
-  return fetchJson<ReadingPositionResponse["position"]>(
-    `/api/conversations/${conversationId}/reading-position`,
-    jsonRequest("PUT", input),
-  );
-}
-
-export function saveReadingPositionKeepalive(
-  conversationId: string,
-  input: ReadingPositionInput,
-): void {
-  void fetch(`/api/conversations/${conversationId}/reading-position`, {
-    method: "PUT",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-    keepalive: true,
-  });
+export function syncReadingPosition(conversationId: string, input: import("./types").ReadingPositionSyncRequest): Promise<import("./types").ReadingPositionSyncResponse> {
+  return fetchJson(`/api/conversations/${conversationId}/reading-position/sync`, { ...jsonRequest("POST", input), signal: AbortSignal.timeout(10_000) });
 }
 
 export async function recordRecentConversation(
@@ -1051,12 +1041,40 @@ export async function createCleanupRule(input: { name: string; match_value: stri
   return fetchJson<CleanupRuleRead>("/api/content-cleanup/rules", jsonRequest("POST", input));
 }
 
-export async function updateCleanupRule(ruleId: string, input: { name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }): Promise<CleanupRuleRead> {
+export async function updateCleanupRule(ruleId: string, input: { current_revision_id?: string; name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }): Promise<CleanupRuleRead> {
   return fetchJson<CleanupRuleRead>(`/api/content-cleanup/rules/${ruleId}`, jsonRequest("PATCH", input));
 }
 
 export async function deleteCleanupRule(ruleId: string): Promise<void> {
   await fetchJson<void>(`/api/content-cleanup/rules/${ruleId}`, { method: "DELETE" });
+}
+
+export async function trialCleanupRule(input: import("./types").CleanupRuleTrialInput): Promise<import("./types").CleanupRuleTrial> {
+  return fetchJson("/api/content-cleanup/rules/trial", jsonRequest("POST", input));
+}
+
+export async function learnCleanupRule(input: import("./types").CleanupRuleTrialInput, token: string): Promise<CleanupRuleRead> {
+  return fetchJson("/api/content-cleanup/rules/learn", jsonRequest("POST", { ...input, confirmed: true, preview_token: token }));
+}
+
+export async function getCleanupRuleRevisions(id: string, offset = 0): Promise<CleanupRuleRead[]> {
+  return fetchJson(`/api/content-cleanup/rules/${id}/revisions?limit=20&offset=${offset}`);
+}
+
+export async function getCleanupExceptions(offset = 0): Promise<import("./types").CleanupReviewPage<import("./types").CleanupException>> {
+  return fetchJson(`/api/content-cleanup/exceptions?limit=20&offset=${offset}`);
+}
+
+export async function deleteCleanupException(id: string): Promise<void> {
+  await fetchJson(`/api/content-cleanup/exceptions/${id}`, { method: "DELETE" });
+}
+
+export async function getCleanupExceptionPreview(scanId: string, occurrenceId: string): Promise<import("./types").CleanupExceptionPreview> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}/exception`);
+}
+
+export async function saveCleanupException(scanId: string, occurrenceId: string, token: string): Promise<{ id: string }> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}/exception`, jsonRequest("POST", { confirmed: true, preview_token: token }));
 }
 
 export async function scanExistingConversations(): Promise<CleanupScanRead> {
@@ -1087,8 +1105,30 @@ export async function updateCleanupDecisions(scanId: string, decisions: Array<{ 
   return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}/decisions`, jsonRequest("PATCH", { decisions }));
 }
 
-export async function applyCleanupScan(scanId: string): Promise<CleanupApplyResult> {
-  return fetchJson<CleanupApplyResult>(`/api/content-cleanup/scans/${scanId}/apply`, { method: "POST" });
+export async function applyCleanupScan(scanId: string, previewToken?: string): Promise<CleanupApplyResult> {
+  return fetchJson<CleanupApplyResult>(`/api/content-cleanup/scans/${scanId}/apply`, jsonRequest("POST", { preview_token: previewToken }));
+}
+
+export async function getCleanupReviewPage(scanId: string, filter: import("./types").CleanupReviewFilter, offset = 0): Promise<import("./types").CleanupReviewPage<CleanupOccurrenceRead>> {
+  const params = new URLSearchParams({ limit: "50", offset: String(offset) });
+  for (const [key, value] of Object.entries(filter)) if (value !== undefined) params.set(key, String(value));
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/review?${params}`);
+}
+
+export async function getCleanupReviewGroups(scanId: string, offset = 0): Promise<import("./types").CleanupReviewPage<import("./types").CleanupReviewGroup>> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/groups?limit=100&offset=${offset}`);
+}
+
+export async function updateCleanupFilter(scanId: string, filter: import("./types").CleanupReviewFilter, decision: "DELETE" | "KEEP"): Promise<{ matched: number }> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/decisions/filter`, jsonRequest("PATCH", { ...filter, decision, all_matching: true }));
+}
+
+export async function getCleanupPreview(scanId: string, offset = 0): Promise<import("./types").CleanupPreview> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/preview?limit=10&offset=${offset}`);
+}
+
+export async function rescanCleanup(scanId: string): Promise<CleanupScanRead> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/rescan`, { method: "POST" });
 }
 
 export async function dismissCleanupScan(scanId: string): Promise<void> {
@@ -1142,6 +1182,10 @@ export async function excludeAdaptiveImportGroup(importId: string, groupId: stri
   return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/groups/${groupId}`, {
     method: "DELETE",
   });
+}
+
+export async function checkAdaptiveFamilyHealth(importId: string, familyId: string): Promise<ImportFormatHealth> {
+  return fetchJson<ImportFormatHealth>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/health`, { method: "POST" });
 }
 
 export async function previewAdaptiveFamilyMapping(
@@ -1363,6 +1407,7 @@ function jsonRequest(method: string, body: unknown): RequestInit {
 }
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const requestGeneration = authenticationGeneration();
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -1387,7 +1432,7 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
       !path.startsWith("/api/shared/") &&
       !path.startsWith("/api/auth/")
     ) {
-      window.dispatchEvent(new Event("chat-reader:auth-unauthorized"));
+      notifyAuthenticationFailure(requestGeneration);
     }
     throw new ApiRequestError(await getErrorMessage(response, path), response.status, path);
   }

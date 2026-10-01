@@ -42,7 +42,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `${pnpmCommand} exec next start -p 3107`,
+    command: `${pnpmCommand} exec next start --hostname 127.0.0.1 -p 3107`,
     url: `${baseURL}/library`,
     timeout: 180_000,
     reuseExistingServer,

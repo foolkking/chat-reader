@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Uuid
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -60,3 +60,24 @@ class PasswordResetGrant(Base):
 
 Index("idx_password_reset_grants_user", PasswordResetGrant.user_id, PasswordResetGrant.created_at)
 Index("idx_password_reset_grants_expiry", PasswordResetGrant.expires_at, PasswordResetGrant.revoked_at)
+
+
+class EmailVerificationGrant(Base):
+    __tablename__ = "email_verification_grants"
+    __table_args__ = (
+        CheckConstraint("purpose IN ('REGISTER', 'EMAIL_CHANGE')", name="ck_email_verification_purpose"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(24), nullable=False)
+    target_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    credential_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    token_digest: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+Index("idx_email_verification_user_purpose", EmailVerificationGrant.user_id, EmailVerificationGrant.purpose)

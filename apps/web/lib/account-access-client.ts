@@ -1,4 +1,5 @@
-import { AUTH_UNAUTHORIZED_EVENT, type AuthSessionState, type RegistrationMode } from "./auth-client";
+import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
+import { type AuthSessionState, type RegistrationMode } from "./auth-client";
 
 export type DeviceSession = {
   id: string;
@@ -89,6 +90,7 @@ function json(method: string, body: unknown): RequestInit {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const requestGeneration = authenticationGeneration();
   let response: Response;
   try {
     response = await fetch(path, {
@@ -103,7 +105,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (!response.ok) {
     if (response.status === 401 && typeof window !== "undefined") {
-      window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+      notifyAuthenticationFailure(requestGeneration);
     }
     let message = `Request returned ${response.status}`;
     try {

@@ -30,6 +30,7 @@ class ReadingPosition(Base):
     block_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     scroll_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     anchor_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -46,3 +47,13 @@ Index("idx_reading_positions_conversation_id", ReadingPosition.conversation_id)
 Index("idx_reading_positions_subject_key", ReadingPosition.subject_key)
 Index("idx_reading_positions_message_id", ReadingPosition.message_id)
 Index("idx_reading_positions_updated_at", ReadingPosition.updated_at)
+
+
+class ReadingPositionSyncReceipt(Base):
+    __tablename__ = "reading_position_sync_receipts"
+    subject_key: Mapped[str] = mapped_column(Text, primary_key=True)
+    operation_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    request_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    response: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)

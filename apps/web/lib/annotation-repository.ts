@@ -4,11 +4,12 @@ import {
   getConversationAnnotations,
   getConversationNotebook,
   getConversationNotebookConflicts,
-  syncConversationAnnotations,
   updateConversationAnnotation,
   updateConversationNotebook,
 } from "./api";
-import { clearOfflineAnnotationSearch, offlineDb, queueOfflineOperation, syncOfflineAnnotationSearch } from "./offline-db";
+import { offlineDb, queueOfflineOperation, syncOfflineAnnotationSearch } from "./offline-db";
+import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
+export { flushAnnotationOutbox } from "./annotation-sync";
 import type {
   AnnotationCreateInput,
   AnnotationRead,
@@ -61,159 +62,95 @@ export const offlineAnnotationRepository: AnnotationRepository = {
       .map(normalizeAnnotationStatus);
   },
   async create(conversationId, input) {
-    const now = new Date().toISOString();
-    const annotation: AnnotationRead = {
-      id: input.id ?? crypto.randomUUID(),
-      conversation_id: conversationId,
-      message_id: input.message_id ?? null,
-      message_version_id: input.message_version_id ?? null,
-      annotation_type: input.annotation_type,
-      color: input.color ?? (input.annotation_type === "bookmark" ? null : "yellow"),
-      start_block_index: input.start_block_index ?? null,
-      start_offset: input.start_offset ?? null,
-      end_block_index: input.end_block_index ?? null,
-      end_offset: input.end_offset ?? null,
-      quote: input.quote ?? null,
-      prefix: input.prefix ?? null,
-      suffix: input.suffix ?? null,
-      comment_markdown: input.comment_markdown ?? "",
-      anchor_status: input.anchor_status ?? "valid",
-      revision: 1,
-      is_deleted: false,
-      conflict_of_id: null,
-      metadata: input.metadata ?? {},
-      created_at: now,
-      updated_at: now,
-    };
-    await offlineDb.annotations.put(annotation);
-    await syncOfflineAnnotationSearch(annotation);
-    await queueOfflineOperation({
-      operation_id: crypto.randomUUID(),
-      entity_type: "annotation",
-      entity_id: annotation.id,
-      action: "upsert",
-      conversation_id: conversationId,
-      base_revision: 0,
-      payload: annotationPayload(annotation),
+    return localEdit(async (db) => {
+      const now = new Date().toISOString();
+      const annotation: AnnotationRead = {
+        id: input.id ?? crypto.randomUUID(), conversation_id: conversationId,
+        message_id: input.message_id ?? null, message_version_id: input.message_version_id ?? null,
+        annotation_type: input.annotation_type, color: input.color ?? (input.annotation_type === "bookmark" ? null : "yellow"),
+        start_block_index: input.start_block_index ?? null, start_offset: input.start_offset ?? null,
+        end_block_index: input.end_block_index ?? null, end_offset: input.end_offset ?? null,
+        quote: input.quote ?? null, prefix: input.prefix ?? null, suffix: input.suffix ?? null,
+        comment_markdown: input.comment_markdown ?? "", anchor_status: input.anchor_status ?? "valid",
+        revision: 1, is_deleted: false, conflict_of_id: null, metadata: input.metadata ?? {}, created_at: now, updated_at: now,
+      };
+      await db.annotations.add(annotation);
+      await syncOfflineAnnotationSearch(annotation, db);
+      await queueOfflineOperation({ operation_id: crypto.randomUUID(), entity_type: "annotation", entity_id: annotation.id,
+        action: "upsert", conversation_id: conversationId, base_revision: 0, payload: annotationPayload(annotation) }, db);
+      return annotation;
     });
-    return annotation;
   },
   async update(annotation, input) {
-    const updated: AnnotationRead = {
-      ...annotation,
-      ...input,
-      revision: annotation.revision + 1,
-      updated_at: new Date().toISOString(),
-    };
-    await offlineDb.annotations.put(updated);
-    await syncOfflineAnnotationSearch(updated);
-    await queueOfflineOperation({
-      operation_id: crypto.randomUUID(),
-      entity_type: "annotation",
-      entity_id: updated.id,
-      action: "upsert",
-      conversation_id: updated.conversation_id,
-      base_revision: annotation.revision,
-      payload: annotationPayload(updated),
+    return localEdit(async (db) => {
+      const current = await db.annotations.get(annotation.id);
+      if (!current || current.is_deleted) throw new Error("Annotation is no longer available.");
+      for (const field of Object.keys(input) as Array<keyof typeof input>) {
+        if (!sameValue(current[field], annotation[field]) && !sameValue(current[field], input[field])) throw new Error("The annotation changed. Your draft is retained; reload before saving again.");
+      }
+      const updated = { ...current, ...input, revision: current.revision + 1, updated_at: new Date().toISOString() };
+      await db.annotations.put(updated);
+      await syncOfflineAnnotationSearch(updated, db);
+      await queueOfflineOperation({ operation_id: crypto.randomUUID(), entity_type: "annotation", entity_id: updated.id,
+        action: "upsert", conversation_id: updated.conversation_id, base_revision: current.revision, payload: annotationPayload(updated) }, db);
+      return updated;
     });
-    return updated;
   },
   async delete(annotation) {
-    const deleted: AnnotationRead = {
-      ...annotation,
-      is_deleted: true,
-      revision: annotation.revision + 1,
-      updated_at: new Date().toISOString(),
-    };
-    await offlineDb.annotations.put(deleted);
-    await syncOfflineAnnotationSearch(deleted);
-    await queueOfflineOperation({
-      operation_id: crypto.randomUUID(),
-      entity_type: "annotation",
-      entity_id: annotation.id,
-      action: "delete",
-      conversation_id: annotation.conversation_id,
-      base_revision: annotation.revision,
-      payload: {},
+    await localEdit(async (db) => {
+      const current = await db.annotations.get(annotation.id);
+      if (!current || current.is_deleted) return;
+      if (current.revision !== annotation.revision) throw new Error("The annotation changed. Review it before deleting.");
+      const deleted = { ...current, is_deleted: true, revision: current.revision + 1, updated_at: new Date().toISOString() };
+      await db.annotations.put(deleted);
+      await syncOfflineAnnotationSearch(deleted, db);
+      await queueOfflineOperation({ operation_id: crypto.randomUUID(), entity_type: "annotation", entity_id: current.id,
+        action: "delete", conversation_id: current.conversation_id, base_revision: current.revision, payload: {} }, db);
     });
   },
   async getNotebook(conversationId) {
-    const existing = await offlineDb.notebooks.where("conversation_id").equals(conversationId).filter((item) => !item.is_conflict).first();
-    if (existing) return existing;
-    const now = new Date().toISOString();
-    const notebook: NotebookRead = {
-      id: crypto.randomUUID(),
-      conversation_id: conversationId,
-      title: null,
-      blocks: [],
-      revision: 0,
-      is_conflict: false,
-      conflict_of_id: null,
-      created_at: now,
-      updated_at: now,
-    };
-    await offlineDb.notebooks.put(notebook);
-    return notebook;
+    const db = offlineDb;
+    return db.transaction("rw", db.notebooks, async () => {
+      const existing = await db.notebooks.where("conversation_id").equals(conversationId).filter((item) => !item.is_conflict).first();
+      if (existing) return existing;
+      const now = new Date().toISOString();
+      const notebook: NotebookRead = { id: crypto.randomUUID(), conversation_id: conversationId, title: null, blocks: [], revision: 0,
+        is_conflict: false, conflict_of_id: null, created_at: now, updated_at: now };
+      await db.notebooks.add(notebook);
+      return notebook;
+    });
   },
   async listNotebookConflicts(conversationId) {
     return offlineDb.notebooks.where("conversation_id").equals(conversationId).filter((item) => item.is_conflict).toArray();
   },
   async saveNotebook(notebook, blocks, title) {
-    const updated: NotebookRead = {
-      ...notebook,
-      title: title === undefined ? notebook.title : title,
-      blocks,
-      revision: notebook.revision + 1,
-      updated_at: new Date().toISOString(),
-    };
-    await offlineDb.notebooks.put(updated);
-    await queueOfflineOperation({
-      operation_id: crypto.randomUUID(),
-      entity_type: "notebook",
-      entity_id: updated.id,
-      action: "upsert",
-      conversation_id: updated.conversation_id,
-      base_revision: notebook.revision,
-      payload: { title: updated.title, blocks: updated.blocks },
+    return localEdit(async (db) => {
+      const current = await db.notebooks.get(notebook.id);
+      if (!current) throw new Error("Notebook changed. Reopen it before saving.");
+      const nextBlocks = sameValue(blocks, notebook.blocks) ? current.blocks : blocks;
+      const nextTitle = title === undefined || title === notebook.title ? current.title : title;
+      if ((!sameValue(current.blocks, notebook.blocks) && !sameValue(nextBlocks, current.blocks))
+        || (current.title !== notebook.title && nextTitle !== current.title)) {
+        throw new Error("The notebook changed. Your draft is retained; reload before saving again.");
+      }
+      const updated: NotebookRead = { ...current, title: nextTitle, blocks: nextBlocks, revision: current.revision + 1, updated_at: new Date().toISOString() };
+      await db.notebooks.put(updated);
+      await queueOfflineOperation({ operation_id: crypto.randomUUID(), entity_type: "notebook", entity_id: updated.id,
+        action: "upsert", conversation_id: updated.conversation_id, base_revision: current.revision,
+        payload: { title: updated.title, blocks: updated.blocks } }, db);
+      return updated;
     });
-    return updated;
   },
 };
 
-export async function flushAnnotationOutbox(): Promise<{ synced: number; conflicts: number }> {
-  if (!navigator.onLine) return { synced: 0, conflicts: 0 };
-  const operations = await offlineDb.outbox.orderBy("queued_at").toArray();
-  if (!operations.length) return { synced: 0, conflicts: 0 };
-  let response: Awaited<ReturnType<typeof syncConversationAnnotations>>;
-  try {
-    response = await syncConversationAnnotations(operations.map(({ queued_at: _queuedAt, attempts: _attempts, last_error: _lastError, ...operation }) => operation));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Sync failed";
-    await offlineDb.transaction("rw", offlineDb.outbox, async () => {
-      await Promise.all(operations.map((item) => offlineDb.outbox.update(item.operation_id, {
-        attempts: item.attempts + 1,
-        last_error: message,
-      })));
-    });
-    throw error;
-  }
-  const completed = response.results.map((item) => item.operation_id);
-  await offlineDb.outbox.bulkDelete(completed);
-  const conversationIds = Array.from(new Set(operations.map((item) => item.conversation_id)));
-  for (const conversationId of conversationIds) {
-    const annotations = await getConversationAnnotations(conversationId);
-    await offlineDb.annotations.where("conversation_id").equals(conversationId).delete();
-    if (annotations.length) await offlineDb.annotations.bulkPut(annotations);
-    await clearOfflineAnnotationSearch(conversationId);
-    for (const annotation of annotations) await syncOfflineAnnotationSearch(annotation);
-    const [notebook, notebookConflicts] = await Promise.all([
-      getConversationNotebook(conversationId),
-      getConversationNotebookConflicts(conversationId),
-    ]);
-    await offlineDb.notebooks.where("conversation_id").equals(conversationId).delete();
-    await offlineDb.notebooks.bulkPut([notebook, ...notebookConflicts]);
-  }
-  return { synced: completed.length, conflicts: response.results.filter((item) => item.status === "conflict").length };
+function sameValue(a: unknown, b: unknown): boolean { return JSON.stringify(a) === JSON.stringify(b); }
+
+async function localEdit<T>(edit: (db: typeof offlineDb) => Promise<T>): Promise<T> {
+  const access = captureOfflineAccess(), db = offlineDb;
+  const result = await db.transaction("rw", [db.annotations, db.notebooks, db.searchDocuments, db.conversations, db.outbox, db.settings], () => edit(db));
+  assertOfflineAccess(access);
+  window.dispatchEvent(new Event("chat-reader:outbox"));
+  return result;
 }
 
 function annotationPayload(annotation: AnnotationRead): Record<string, unknown> {

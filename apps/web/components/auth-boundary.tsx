@@ -2,13 +2,19 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { OfflineWriteBarrier } from "./offline-write-barrier";
+import { configureOfflineAccess, OFFLINE_ACCESS_LOCKED_EVENT } from "../lib/offline-access";
+import { SIGNOUT_CLEANUP_EVENT, SignoutCleanupPendingError } from "../lib/signout-cleanup";
+import { SignoutCleanupRecovery } from "./signout-cleanup-recovery";
 import {
   AUTH_UNAUTHORIZED_EVENT,
   AUTH_OFFLINE_IDENTITY_STORAGE_KEY,
   AuthRequestError,
   activateOfflineLeaseContext,
   bindAuthenticatedOfflineContext,
-  clearBrowserAuthenticationState,
+  lockBrowserAuthenticationState,
+  suspendBrowserOfflineContext,
   getCurrentOfflineRuntimeUserId,
   hasCurrentOfflineLease,
   loginLocation,
@@ -16,19 +22,21 @@ import {
   readAuthSession,
 } from "../lib/auth-client";
 
-type AuthState = "checking" | "granted" | "offline-locked" | "unavailable" | "storage-error";
+type AuthState = "checking" | "granted" | "offline-locked" | "unavailable" | "storage-error" | "signout-cleanup";
 
 export function AuthBoundary({ children, authEnabled = true }: { children: React.ReactNode; authEnabled?: boolean }) {
+  useState(() => { if (typeof window !== "undefined") configureOfflineAccess(authEnabled); });
   const pathname = usePathname();
   const currentPath = pathname ?? "/";
   const publicShare = /^\/share\/[^/]+\/?$/i.test(currentPath);
-  const publicAuth = /^\/(?:login|register|account-upgrade|password-reset|reset-password)(?:\/|$)/i.test(currentPath);
+  const publicAuth = /^\/(?:login|register|account-upgrade|password-reset|reset-password|verify-email)(?:\/|$)/i.test(currentPath);
   if (!authEnabled || publicAuth || publicShare) return children;
   // A public page must never carry its granted state into private content.
   return <PrivateAuthBoundary currentPath={currentPath}>{children}</PrivateAuthBoundary>;
 }
 
 function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactNode; currentPath: string }) {
+  const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>("checking");
   const [attempt, setAttempt] = useState(0);
   const [zh, setZh] = useState(false);
@@ -48,7 +56,8 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
       controller?.abort();
       window.clearTimeout(expiryTimer);
       setState(offline ? "offline-locked" : "checking");
-      await clearBrowserAuthenticationState();
+      lockBrowserAuthenticationState();
+      queryClient.clear();
       if (!active) return;
       if (offline) redirecting = false;
       else window.location.replace(loginLocation(destination()));
@@ -114,7 +123,8 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
         setState("granted");
       } catch (cause) {
         if (!active || signal.aborted) return;
-        if (cause instanceof AuthRequestError && cause.status === 401) await invalidate(false);
+        if (cause instanceof SignoutCleanupPendingError) { suspendBrowserOfflineContext(); queryClient.clear(); window.location.replace("/login?reauth=1"); }
+        else if (cause instanceof AuthRequestError && cause.status === 401) await invalidate(false);
         else setState(stage === "storage" ? "storage-error" : "unavailable");
       } finally {
         window.clearTimeout(deadline);
@@ -123,35 +133,49 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
     };
 
     const unauthorized = () => { void invalidate(!navigator.onLine); };
+    const accessLocked = () => { void invalidate(!navigator.onLine); };
     const recheck = () => { void verify(); };
+    const cleanupRequired = () => {
+      redirecting = true;
+      controller?.abort(); window.clearTimeout(expiryTimer);
+      suspendBrowserOfflineContext(); queryClient.clear(); setState("signout-cleanup");
+    };
     const storageChanged = (event: StorageEvent) => {
+      if (redirecting) return;
       if (event.key !== AUTH_OFFLINE_IDENTITY_STORAGE_KEY && event.key !== null) return;
       // Hide the old account immediately, even with no network to revalidate.
       controller?.abort();
+      suspendBrowserOfflineContext();
+      queryClient.clear();
       setState("checking");
       setAttempt((value) => value + 1);
     };
     void verify();
     const interval = window.setInterval(recheck, 5 * 60 * 1000);
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, unauthorized);
+    window.addEventListener(OFFLINE_ACCESS_LOCKED_EVENT, accessLocked);
     window.addEventListener("online", recheck);
     window.addEventListener("offline", recheck);
     window.addEventListener("focus", recheck);
     window.addEventListener("storage", storageChanged);
+    window.addEventListener(SIGNOUT_CLEANUP_EVENT, cleanupRequired);
     return () => {
       active = false;
       controller?.abort();
       window.clearTimeout(expiryTimer);
       window.clearInterval(interval);
       window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, unauthorized);
+      window.removeEventListener(OFFLINE_ACCESS_LOCKED_EVENT, accessLocked);
       window.removeEventListener("online", recheck);
       window.removeEventListener("offline", recheck);
       window.removeEventListener("focus", recheck);
       window.removeEventListener("storage", storageChanged);
+      window.removeEventListener(SIGNOUT_CLEANUP_EVENT, cleanupRequired);
     };
-  }, [currentPath, attempt]);
+  }, [currentPath, attempt, queryClient]);
 
-  if (state === "granted") return children;
+  if (state === "granted") return <OfflineWriteBarrier zh={zh}>{children}</OfflineWriteBarrier>;
+  if (state === "signout-cleanup") return <main className="grid min-h-screen place-items-center bg-page p-6"><div className="w-full max-w-md rounded-xl border border-ui bg-surface p-6"><SignoutCleanupRecovery zh={zh} onComplete={() => window.location.replace("/login")} /></div></main>;
   const copy = zh ? zhCopy : enCopy;
   if (state === "checking") {
     return <main className="grid min-h-screen place-items-center bg-page p-6 text-sm text-secondary" role="status">{copy.checking}</main>;
@@ -172,7 +196,7 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
 const enCopy = {
   checking: "Checking your session…",
   locked: "Sign in required",
-  reconnect: "Your offline session has expired or ended. Reconnect to sign in and open your library.",
+  reconnect: "Offline access is locked. Your local copies and unsynced edits are retained. Reconnect and sign in to the same account to restore access.",
   unavailable: "Unable to verify your session",
   connection: "The sign-in service did not respond. Check your connection and try again.",
   storageTitle: "Unable to open browser storage",
@@ -184,7 +208,7 @@ const enCopy = {
 const zhCopy: typeof enCopy = {
   checking: "正在验证登录状态…",
   locked: "需要重新登录",
-  reconnect: "离线会话已过期或已退出。请恢复网络连接后登录，重新打开资料库。",
+  reconnect: "离线访问已锁定，本地副本和未同步修改已保留。请联网并重新登录原账户以恢复访问。",
   unavailable: "暂时无法验证登录状态",
   connection: "登录服务未能响应。请检查网络连接后重试。",
   storageTitle: "无法打开浏览器存储",

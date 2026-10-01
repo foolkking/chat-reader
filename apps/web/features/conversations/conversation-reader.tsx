@@ -9,7 +9,6 @@ import {
   getTask,
   mergeMessages,
   restoreDeletedMessage,
-  saveReadingPositionKeepalive,
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
 import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
@@ -41,6 +40,7 @@ import { useMobileHeaderAutoHide } from "./use-mobile-header-auto-hide";
 import { ConversationSearchPanel, type ConversationSearchPanelState, type SearchNavigationContext, type SearchNavigationTarget } from "../search/conversation-search-panel";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { AnnotationWorkspace } from "../annotations/annotation-workspace";
+import { ReadingPositionSyncStatus } from "../../components/reading-position-sync-status";
 import { ConversationSplitWorkspace } from "../editing/conversation-split-workspace";
 import { offlineAnnotationRepository, remoteAnnotationRepository } from "../../lib/annotation-repository";
 import { ResizableDockPanel } from "../../components/resizable-pane";
@@ -87,7 +87,7 @@ export function ConversationReader({
   onFocusModeChange?: (active: boolean) => void;
 }) {
   const t = useTranslations();
-  const { readerDensityMode, readerFontSizePx, readerWidthMode, resolvedLocale } = usePreferences();
+  const { readerDensityMode, readerFontSizePx, readerWidthMode, readerDefaultFocus, resolvedLocale } = usePreferences();
   const dialog = useInteractionDialog();
   const workspace = useWorkspaceShell();
   const router = useRouter();
@@ -287,16 +287,8 @@ export function ConversationReader({
   }, [readerDensityMode, readerFontSizePx, readerWidthMode]);
 
   useEffect(() => {
-    const currentDefault = window.localStorage.getItem("chat-reader:reader-default-focus");
-    const legacyDefault = window.localStorage.getItem("chat-reader:reader-focus-mode");
-    const migratedDefault = currentDefault ?? legacyDefault ?? "false";
-    if (currentDefault === null) window.localStorage.setItem("chat-reader:reader-default-focus", migratedDefault);
-    if (legacyDefault !== null) window.localStorage.removeItem("chat-reader:reader-focus-mode");
-    setFocusMode(migratedDefault === "true");
-    const onPreferenceChange = (event: Event) => setFocusMode(Boolean((event as CustomEvent<boolean>).detail));
-    window.addEventListener("chat-reader:reader-default-focus-change", onPreferenceChange);
-    return () => window.removeEventListener("chat-reader:reader-default-focus-change", onPreferenceChange);
-  }, []);
+    setFocusMode(readerDefaultFocus);
+  }, [readerDefaultFocus]);
 
   useEffect(() => {
     const token = focusTransitionRef.current + 1;
@@ -415,6 +407,8 @@ export function ConversationReader({
   const readingRestoreTokenRef = useRef(0);
   const lastSavedSignatureRef = useRef("");
   const latestStablePositionRef = useRef<ReadingPositionInput | null>(null);
+  const [readingSaveError, setReadingSaveError] = useState(false);
+  const lastPersistedIntentRef = useRef(0);
   const messagesRef = useRef<MessageListItem[]>([]);
   const userScrollIntentRef = useRef(false);
   const lastReaderUserIntentAtRef = useRef(0);
@@ -485,9 +479,16 @@ export function ConversationReader({
     queryFn: () => dataSource.getReadingPosition(conversationId),
   });
 
-  const savedPosition = targetMessageId ? null : positionQuery.data?.position ?? null;
+  const positionContext = `${dataSource.mode}:${conversationId}`;
+  const [initialPosition, setInitialPosition] = useState<{ key: string; position: import("../../lib/types").ReadingPositionRead | null } | null>(null);
+  useEffect(() => {
+    if (initialPosition?.key !== positionContext && (positionQuery.isSuccess || positionQuery.isError)) {
+      setInitialPosition({ key: positionContext, position: positionQuery.data?.position ?? null });
+    }
+  }, [initialPosition?.key, positionContext, positionQuery.data, positionQuery.isError, positionQuery.isSuccess]);
+  const savedPosition = targetMessageId || initialPosition?.key !== positionContext ? null : initialPosition.position;
   const initialAnchorMessageId = targetMessageId ?? savedPosition?.message_id ?? null;
-  const canLoadInitialWindow = Boolean(targetMessageId) || positionQuery.isSuccess || positionQuery.isError;
+  const canLoadInitialWindow = Boolean(targetMessageId) || initialPosition?.key === positionContext;
 
   const windowQuery = useQuery({
     // The reader window is maintained locally after a mutation. Including the
@@ -636,6 +637,9 @@ export function ConversationReader({
     scrollDirectionRef.current = null;
     scrollIntentSequenceRef.current += 1;
     setInitialPaintReady(false);
+    lastPersistedIntentRef.current = scrollIntentSequenceRef.current;
+    latestStablePositionRef.current = null;
+    setReadingSaveError(false);
     firstContentStartedAtRef.current = window.performance.now();
     firstContentReportedRef.current = false;
     restoreAttemptedRef.current = false;
@@ -1290,7 +1294,7 @@ export function ConversationReader({
       return;
     }
     restoreAttemptedRef.current = true;
-    const position = positionQuery.data.position;
+    const position = savedPosition;
     if (!position) {
       return;
     }
@@ -1367,7 +1371,7 @@ export function ConversationReader({
         restoreInProgressRef.current = false;
       }
     });
-  }, [navigateToTarget, positionQuery.data, positionQuery.isError, positionQuery.isSuccess, targetMessageId, windowQuery.isSuccess]);
+  }, [navigateToTarget, savedPosition, positionQuery.isError, positionQuery.isSuccess, targetMessageId, windowQuery.isSuccess]);
 
   useEffect(() => {
     const sentinel = loadPreviousSentinelRef.current;
@@ -1458,7 +1462,10 @@ export function ConversationReader({
       if (
         !restoreAttemptedRef.current ||
         restoreInProgressRef.current ||
-        navigationInProgressRef.current
+        navigationInProgressRef.current ||
+        edgeTransitionRef.current !== null ||
+        root.dataset.readerLayoutCompensating === "true" ||
+        scrollIntentSequenceRef.current <= lastPersistedIntentRef.current
       ) {
         return;
       }
@@ -1470,9 +1477,11 @@ export function ConversationReader({
       if (signature === lastSavedSignatureRef.current) {
         return;
       }
-      lastSavedSignatureRef.current = signature;
       latestStablePositionRef.current = payload;
-      void dataSource.saveReadingPosition(conversationId, payload).catch(() => undefined);
+      const intent = scrollIntentSequenceRef.current;
+      void dataSource.saveReadingPosition(conversationId, payload).then(() => {
+        if (latestStablePositionRef.current === payload) { lastSavedSignatureRef.current = signature; lastPersistedIntentRef.current = intent; setReadingSaveError(false); }
+      }).catch(() => setReadingSaveError(true));
     };
     const persistWhenIdle = () => {
       persistTimer = null;
@@ -1488,10 +1497,7 @@ export function ConversationReader({
       if (persistTimer === null) persistTimer = window.setTimeout(persistWhenIdle, 1000);
     };
     const sendCachedPosition = () => {
-      const payload = latestStablePositionRef.current;
-      if (!payload) return;
-      if (dataSource.mode === "remote") saveReadingPositionKeepalive(conversationId, payload);
-      else void dataSource.saveReadingPosition(conversationId, payload).catch(() => undefined);
+      persist();
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") sendCachedPosition();
@@ -2358,6 +2364,24 @@ export function ConversationReader({
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
 
+        <ReadingPositionSyncStatus conversationId={conversationId} storageError={readingSaveError} onRetryStorage={async () => {
+          if (latestStablePositionRef.current) await dataSource.saveReadingPosition(conversationId, latestStablePositionRef.current);
+          setReadingSaveError(false);
+        }} onUseServer={async (position) => {
+          // Explicit navigation supersedes any pre-choice idle/pagehide save.
+          lastPersistedIntentRef.current = scrollIntentSequenceRef.current;
+          latestStablePositionRef.current = null;
+          lastSavedSignatureRef.current = "";
+          setReadingSaveError(false);
+          const anchor = position.anchor_data;
+          if (!position.message_id) return;
+          const result = await navigateToTarget({ messageId: position.message_id, blockIndex: position.block_index ?? undefined,
+            messageVersionId: typeof anchor.version_id === "string" ? anchor.version_id : undefined,
+            renderBlockId: typeof anchor.block_id === "string" ? anchor.block_id : undefined,
+            characterOffset: typeof anchor.character_offset === "number" ? anchor.character_offset : undefined,
+            source: "message-action" });
+          if (!result.ok) throw new Error("Unable to locate the saved reading position.");
+        }} />
         <div ref={scrollContainerRef} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
           <ResponsiveReaderFrame
             focusMode={focusMode}

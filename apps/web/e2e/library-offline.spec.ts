@@ -66,6 +66,19 @@ test("upgrades an active legacy library worker before preparing the shell", asyn
 });
 
 test("keeps the active revision after a failed update and cold-starts offline", async ({ page, context }) => {
+  await context.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      postMessage(value: unknown) {
+        // Exercise typing before the cold-start search index is ready.
+        if (!navigator.onLine && (value as { type?: string }).type === "init") {
+          window.setTimeout(() => super.postMessage(value), 1500);
+          return;
+        }
+        super.postMessage(value);
+      }
+    };
+  });
   await page.goto("/library");
   await expect(offlineReadyStatus(page)).toBeVisible();
   await seedOfflineFixture(page);
@@ -132,12 +145,15 @@ test("keeps the active revision after a failed update and cold-starts offline", 
 
   await context.setOffline(true);
   const offlinePage = await context.newPage();
+  const hydrationErrors: string[] = [];
+  offlinePage.on("pageerror", (error) => { if (/hydration|React error #418/i.test(error.message)) hydrationErrors.push(error.message); });
   const response = await offlinePage.goto("/library?conversationId=offline-fixture", { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(200);
   await expect(offlinePage.locator("h1:visible", { hasText: /离线资料库|Offline library/ }).first()).toBeVisible();
   await expect(offlineReadyStatus(offlinePage)).toBeVisible();
   await offlinePage.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]').fill("quantumfixture");
   await expect(offlinePage.locator("button:visible", { hasText: /quantumfixture 正文内容/ })).toBeVisible();
+  expect(hydrationErrors).toEqual([]);
 
   const normalPage = await context.newPage();
   let normalNavigationFailed = false;

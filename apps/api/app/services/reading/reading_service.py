@@ -1,5 +1,8 @@
 import uuid
+import hashlib
+import json
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.conversation import Conversation
@@ -7,13 +10,55 @@ from app.models.import_record import utc_now
 from app.models.message import Message
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
-from app.models.reading_position import ReadingPosition
+from app.models.reading_position import ReadingPosition, ReadingPositionSyncReceipt
+from app.schemas.reading import ReadingPositionRead, ReadingPositionSyncRequest, ReadingPositionSyncResponse
 from app.models.recent_item import RecentItem
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
 
 class ReadingServiceError(ValueError):
     pass
+
+
+class ReadingSyncReplayError(ReadingServiceError):
+    pass
+
+
+def _lock(db: Session, key: str) -> None:
+    if db.get_bind().dialect.name == "postgresql":
+        value = int.from_bytes(hashlib.sha256(key.encode()).digest()[:8], "big", signed=True)
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": value})
+
+
+def position_read(position: ReadingPosition) -> ReadingPositionRead:
+    return ReadingPositionRead.model_validate(position, from_attributes=True)
+
+
+def _same_position(position: ReadingPosition, values: dict) -> bool:
+    return all(getattr(position, key) == value for key, value in values.items())
+
+
+def sync_reading_position(db: Session, conversation_id: uuid.UUID, payload: ReadingPositionSyncRequest, *, subject_key: str,
+                          ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE) -> ReadingPositionSyncResponse:
+    _lock(db, f"reading-subject:{subject_key}")
+    _ensure_conversation(db, conversation_id, ownership_scope)
+    digest = hashlib.sha256(json.dumps({"conversation_id": str(conversation_id), **payload.model_dump(mode="json")}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    receipt = db.get(ReadingPositionSyncReceipt, (subject_key, payload.operation_id))
+    if receipt:
+        if receipt.request_hash != digest:
+            raise ReadingSyncReplayError("This reading operation was already used for different changes.")
+        return ReadingPositionSyncResponse.model_validate(receipt.response)
+    current = get_reading_position(db, conversation_id, subject_key=subject_key, ownership_scope=ownership_scope)
+    values = payload.position.model_dump()
+    if current and current.revision != payload.base_revision and not _same_position(current, values):
+        result = ReadingPositionSyncResponse(operation_id=payload.operation_id, status="conflict", position=position_read(current))
+    else:
+        position = upsert_reading_position(db, conversation_id, subject_key=subject_key, ownership_scope=ownership_scope, **values)
+        result = ReadingPositionSyncResponse(operation_id=payload.operation_id, status="applied", position=position_read(position))
+    db.add(ReadingPositionSyncReceipt(subject_key=subject_key, operation_id=payload.operation_id, conversation_id=conversation_id,
+        request_hash=digest, response=result.model_dump(mode="json")))
+    db.flush()
+    return result
 
 
 DEFAULT_READING_SUBJECT_KEY = "local:default"
@@ -34,6 +79,7 @@ def get_reading_position(
     _ensure_conversation(db, conversation_id, ownership_scope)
     return (
         db.query(ReadingPosition)
+        .populate_existing()
         .filter(
             ReadingPosition.conversation_id == conversation_id,
             ReadingPosition.subject_key == subject_key,
@@ -53,6 +99,8 @@ def upsert_reading_position(
     anchor_data: dict,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ReadingPosition:
+    _lock(db, f"reading-subject:{subject_key}")
+    _lock(db, f"reading-conversation:{conversation_id}")
     _ensure_conversation(db, conversation_id, ownership_scope)
     if block_index is not None and block_index < 0:
         raise ReadingServiceError("block_index cannot be negative.")
@@ -67,6 +115,7 @@ def upsert_reading_position(
 
     position = (
         db.query(ReadingPosition)
+        .populate_existing()
         .filter(
             ReadingPosition.conversation_id == conversation_id,
             ReadingPosition.subject_key == subject_key,
@@ -85,11 +134,14 @@ def upsert_reading_position(
         )
         db.add(position)
     else:
+        if _same_position(position, {"message_id": message_id, "block_index": block_index, "scroll_offset": scroll_offset, "anchor_data": anchor_data}):
+            return position
         position.message_id = message_id
         position.block_index = block_index
         position.scroll_offset = scroll_offset
         position.anchor_data = anchor_data
         position.updated_at = utc_now()
+        position.revision += 1
     db.flush()
     _touch_recent_item(
         db,
@@ -113,6 +165,7 @@ def record_recent_item(
     context: dict | None = None,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> RecentItem:
+    _lock(db, f"reading-conversation:{conversation_id}")
     _ensure_conversation(db, conversation_id, ownership_scope)
     if last_message_id is not None:
         _ensure_message_belongs_to_conversation(db, conversation_id, last_message_id)

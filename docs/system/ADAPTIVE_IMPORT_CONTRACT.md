@@ -85,15 +85,45 @@ SourceFile[]
 Profile 分为：
 
 - `BUILTIN`：Chat Reader Native JSON / Markdown、CanJSON v1、CanJSON v2、Prompt/Response Markdown。可查看，不可改名、禁用或删除。
-- `LEARNED`：用户对 UNKNOWN Family 完成 Mapping 并通过全 Family 校验后保存。可改名、禁用、删除和查看历史版本。
+- `LEARNED`：用户对 UNKNOWN Family 完成 Mapping 并通过全 Family 校验后获得版本授权。可修改个人显示名称、停用自动识别、查看有权使用的历史版本及重新学习；不提供独立新建或上传格式包。
 
-每次修复 DRIFTED 格式创建新的 VERIFIED revision，不覆盖旧 revision。Matcher 会考虑 current 与仍有效的历史 VERIFIED/SUPERSEDED revision，因此旧来源结构仍能继续导入。
+修复 DRIFTED 格式时，完全等价配置复用已有 revision；配置变化才创建新的 VERIFIED revision，不覆盖旧 revision。Matcher 在用户有权使用的 VERIFIED/SUPERSEDED revision 中进行匹配，因此旧来源结构仍能继续导入。
+
+Migration `20260930_0035` 引入个人版本授权、系统发布、个人偏好与旧 ID 别名。学习立即授予该版本；通过系统版本成功提交 canonical 导入后，在同一事务授予所用版本。格式身份独立于来源账户，删除原作者将来源关联置空，保留历史及他人授权。
+
+管理员发布明确且通过全 Family 验证的 revision，个人修复不会自动更新系统发布。撤回仅取消公共可用性，不撤销既有授权。导入已选定的版本保留在该 session，重新分析时仍可匹配；永久授权仍需成功提交。用户列表按稳定身份合并个人持有和系统提供，并标明实际可用的当前版本。个人名称和启停不影响他人。
+
+配置身份包含规范化结构、映射、受控转换、验证规则和 matcher/normalizer 版本。名称、样本和来源账户不参与等价比较。相同结构但映射或转换不同保持独立，继续走歧义确认。历史重复格式只有完整 revision 配置集合一致时才建立别名，保留旧 ID 和 revision 父关系。迁移先建立旧用户授权，且不自动发布全系统。
+
+管理员候选只返回白名单映射、验证计数和来源账户是否存在；不返回原作者私人名称、样本正文、来源文件名或对话信息。发布名称由管理员明确设置。旧 DELETE 接口只隐藏该用户的格式入口，不删除身份、版本或授权；新用户界面不再提供此操作。
 
 匹配结果为 `EXACT_MATCH / COMPATIBLE / DRIFTED / AMBIGUOUS / UNKNOWN / INVALID`。Hard requirements 与 semantic guards 不满足时不能自动套用；unknown role、required mapping 漂移、关系不完整或竞争 Profile 会阻断自动导入。文件名只能影响候选排序。
 
 Profile 只保存结构、selector、role value mapping、relation、noise rule、受控 transform 和 matcher metadata，不保存用户正文或完整样本。原 Gateway 的 SQLite Profile/Revision/Mapping 表在合并前为空，因此没有历史用户 Profile 可迁移；开发 fixture 不进入正式 schema。
 
 ## Mapping 与验证
+
+### Full-family health checks (working tree, 2026-10-01)
+
+Settings' Relearn / repair entry accepts representative source files through the
+existing import session. Its health action checks the session's pinned saved
+revision (or built-in parser), independently of an unsaved mapping draft. It
+normalizes every group, reports each group's issues and exposes a repair entry.
+Results and check time persist in the owned Family's `match_evidence.health_check`;
+source replacement/regrouping creates a new Family and invalidates the result.
+This is a check of the submitted batch, not a claim about every future source.
+It creates no conversation, grant or profile revision and does not change the
+published format's verification status. Missing sources are reported without
+exposing server paths. A pinned session can still be checked after withdrawal.
+
+Recognition, health, mapping preview and confirmed learning use one full-family
+validator. A failing member does not stop the remaining groups or copy its error
+onto valid groups. Only a bounded selected sample is retained for preview; a
+failed selected source never silently displays a different source's preview.
+Repair preloads the saved mapping and allows selecting another source content
+field from analyzer-provided field paths. New configurations still require full
+batch validation before a version is learned. Health result pages contain up to
+20 groups, with an optional failed-only filter. No new migration is needed.
 
 统一 Mapping Workspace 根据 `source_mode` 显示 JSON、Markdown 或 JSON + Markdown。JSON Mapping 包含 message locator、role/content/title/timestamp source；Markdown Mapping 使用 Analyzer 候选 boundary；配对模式额外支持 `ORDER / ID / ROLE_TIMESTAMP` relation。
 
@@ -109,7 +139,7 @@ Preview 展示 canonical title、message sequence、role、content 和 timestamp
 
 普通导入停留在现有轻量 Dialog。复杂 grouping、UNKNOWN、DRIFTED 或 AMBIGUOUS 时扩展为 Chat Reader 内的大型 Overlay，只有三个工作视图：Import Overview、条件式 Group Resolver、统一 Mapping Workspace。没有独立转换产品导航或结果下载页。
 
-设置中的“导入格式”展示 Built-in 与 Learned Profile。Learned Profile 可管理名称、启用状态和历史 revision；发生结构漂移时，通过重新导入代表性来源进入“修复导入格式”，成功后保存新 revision。
+设置中的“我的导入格式”优先展示已学习及系统提供的结果，随后展示内置格式。个人改名显式保存并有草稿退出保护；来源、可用版本与验证摘要合并为一条记录。发生结构漂移时，通过重新导入代表性来源进入“重新学习／修复”。管理员专区的“系统导入格式”支持候选分页、配置查看、明确版本发布和撤回。
 
 设置页的“修复格式”会把下一次代表性 JSON/Markdown session 显式绑定到目标 Learned Profile。来源必须形成恰好一个相同 source mode 的 Family；否则安全拒绝。验证通过后创建新 Revision，不通过删除旧 Profile 来重建。
 

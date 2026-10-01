@@ -19,7 +19,7 @@ export function AuthPageShell({
   const homeLabel = resolvedLocale === "zh-CN" ? "Chat Reader 首页" : "Chat Reader home";
 
   return (
-    <main className="grid min-h-[100dvh] place-items-center bg-page px-4 py-8 sm:px-6">
+    <main className="auth-page grid min-h-[100dvh] place-items-center bg-page px-4 py-8 sm:px-6">
       <section className="w-full max-w-[25rem]" aria-labelledby="auth-page-title">
         <Link href="/login" aria-label={homeLabel} className="mx-auto flex w-fit items-center gap-2.5 rounded-md text-primary">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-xs font-bold text-white" aria-hidden="true">CR</span>

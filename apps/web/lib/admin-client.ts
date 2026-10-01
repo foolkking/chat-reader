@@ -1,10 +1,15 @@
-import { AUTH_UNAUTHORIZED_EVENT } from "./auth-client";
-import type { ReaderTurnResponse } from "./types";
+import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
+import type { ImportFormatRevision, ReaderTurnResponse } from "./types";
+
+export type AdminImportFormat = { id: string; name: string; source_mode: string; source_account_available: boolean; published_revision_id: string | null; revisions: ImportFormatRevision[] };
+export type AdminNoiseRule = { id: string; name: string; source_account_available: boolean; published_revision_id: string | null; revision_count: number };
+export type AdminNoiseRevision = { id: string; revision: number; configuration: { match_value: string; role_filter: string | null; case_sensitive: boolean; matcher_mode: string; boundary_mode: string; matcher_version: string }; validated: boolean; created_at: string };
 
 export type AdminUserStatus = "ACTIVE" | "DISABLED" | "PENDING";
 export type AdminUser = {
   id: string; email: string; display_name: string | null; role: "ADMIN" | "USER"; status: AdminUserStatus;
   created_at: string; last_login_at: string | null; email_verified_at: string | null;
+  email_verification_required: boolean; approval_status: "APPROVED" | "PENDING" | "REJECTED";
   stats: { projects: number; conversations: number; attachments: number; attachment_bytes: number };
 };
 export type RegistrationPolicy = { registration_mode: "CLOSED" | "INVITE_ONLY" | "OPEN"; require_admin_approval: boolean; email_verification_enabled: boolean; password_reset_enabled: boolean; smtp_configured: boolean };
@@ -20,6 +25,13 @@ export type AuditEntry = { id: string; actor_user_id: string; action: string; ta
 export type ContentResult = { conversation_id: string; user_id: string; user_email: string; user_display_name: string | null; title: string; status: string; message_count: number; snippet: string; created_at: string; updated_at: string };
 
 export const adminApi = {
+  noiseRules: (offset = 0) => request<Page<AdminNoiseRule>>(`/api/admin/noise-rules?limit=20&offset=${offset}`),
+  noiseRuleRevisions: (id: string, offset = 0) => request<Page<AdminNoiseRevision>>(`/api/admin/noise-rules/${id}/revisions?limit=20&offset=${offset}`),
+  publishNoiseRule: (id: string, revision_id: string, name: string) => request<{ published: boolean }>(`/api/admin/noise-rules/${id}/publication`, json("PUT", { revision_id, name })),
+  withdrawNoiseRule: (id: string) => request<void>(`/api/admin/noise-rules/${id}/publication`, { method: "DELETE" }),
+  importFormats: (offset = 0) => request<Page<AdminImportFormat>>(`/api/admin/import-formats?limit=20&offset=${offset}`),
+  publishImportFormat: (id: string, revision_id: string, name: string) => request<{ published: boolean }>(`/api/admin/import-formats/${id}/publication`, json("PUT", { revision_id, name })),
+  withdrawImportFormat: (id: string) => request<void>(`/api/admin/import-formats/${id}/publication`, { method: "DELETE" }),
   users: () => request<AdminUser[]>("/api/admin/access/users"),
   setUserStatus: (id: string, status: "ACTIVE" | "DISABLED") => request<{ id: string; status: AdminUserStatus }>(`/api/admin/access/users/${id}/status`, json("PATCH", { status })),
   approveUser: (id: string) => request<{ id: string; status: AdminUserStatus }>(`/api/admin/access/users/${id}/approve`, { method: "POST" }),
@@ -56,9 +68,10 @@ function json(method: string, body: unknown, extraHeaders: Record<string, string
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const requestGeneration = authenticationGeneration();
   const response = await fetch(path, { ...init, cache: "no-store", credentials: "same-origin", headers: { Accept: "application/json", ...init.headers } });
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    if (response.status === 401 && typeof window !== "undefined") notifyAuthenticationFailure(requestGeneration);
     let message = `Request returned ${response.status}`;
     try { const payload = await response.json() as { detail?: unknown }; if (typeof payload.detail === "string") message = payload.detail; } catch { /* bounded fallback */ }
     throw new Error(message);

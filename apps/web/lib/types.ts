@@ -37,14 +37,21 @@ export type UserPreferenceRead = {
   conversation_sort_direction: SortDirection;
   project_sort_mode: ProjectSortMode;
   project_sort_direction: SortDirection;
+  reader_default_focus?: boolean;
+  annotation_default_position?: "floating" | "docked";
+  field_revisions?: Record<string, number>;
   created_at: string;
   updated_at: string;
 };
 
 export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead,
   "theme_mode" | "locale_mode" | "reader_width_mode" | "reader_density_mode" | "reader_font_size_px" | "section_toc_mode" | "conversation_sort_mode" |
-  "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction"
+  "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction" | "reader_default_focus" | "annotation_default_position"
 >>;
+
+export type PreferenceField = keyof UserPreferenceUpdate;
+export type PreferenceSyncRequest = { operation_id: string; changes: UserPreferenceUpdate; base_revisions: Partial<Record<PreferenceField, number>> };
+export type PreferenceSyncResponse = { operation_id: string; preferences: UserPreferenceRead; applied: PreferenceField[]; conflicts: PreferenceField[] };
 
 export type ConversationListItem = {
   id: string;
@@ -86,6 +93,11 @@ export type CleanupRuleRead = {
   scope: string;
   detector_id: string | null;
   revision: number;
+  revision_id?: string;
+  held?: boolean;
+  revision_held?: boolean;
+  system_provided?: boolean;
+  published_revision_id?: string | null;
   match_value: string | null;
   case_sensitive: boolean;
   role_filter: string | null;
@@ -94,6 +106,25 @@ export type CleanupRuleRead = {
   boundary_mode: string;
   last_used_at: string | null;
 };
+
+export type CleanupRuleConfiguration = {
+  name: string; match_value: string; case_sensitive: boolean; role_filter: string | null;
+  matcher_mode: "EXACT" | "NORMALIZED" | "APPROXIMATE";
+  boundary_mode: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END";
+};
+
+export type CleanupRuleTrialInput = CleanupRuleConfiguration & { rule_id?: string; base_revision?: number; base_revision_id?: string; conversation_id?: string };
+export type CleanupRuleTrial = {
+  configuration: CleanupRuleConfiguration; scanned_messages: number; matches: number; protected_matches: number;
+  skipped_messages: number; limited: boolean; message_limit: number; character_limit: number; message_character_limit: number;
+  samples: { role: string; match_text: string; context_before: string; context_after: string; protected: boolean }[];
+  preview_token: string;
+};
+export type CleanupException = {
+  id: string; rule_name: string; detector_id: string | null; revision: number; role: string;
+  match_value: string; context_before: string; context_after: string; at_start: boolean; at_end: boolean;
+};
+export type CleanupExceptionPreview = Omit<CleanupException, "id"> & { preview_token: string };
 
 export type CleanupScanRead = {
   id: string;
@@ -134,7 +165,7 @@ export type CleanupOccurrenceRead = {
   detector_id: string | null;
   kind: string;
   reason_code: string;
-  decision: "DELETE" | "KEEP" | "PROTECTED" | "CONFLICT";
+  decision: "DELETE" | "KEEP" | "PROTECTED" | "CONFLICT" | "APPLIED";
   start_offset: number;
   end_offset: number;
   line_start: number;
@@ -146,6 +177,11 @@ export type CleanupOccurrenceRead = {
   match_mode: string;
   evidence_codes: string[] | null;
 };
+
+export type CleanupReviewFilter = { rule_id?: string; conversation_id?: string; selected_only?: boolean };
+export type CleanupReviewPage<T> = { items: T[]; total: number; limit: number; offset: number };
+export type CleanupReviewGroup = { rule_id: string; rule_name: string; detector_id: string | null; conversation_id: string; conversation_title: string; count: number; selected: number; protected: number; conflicts: number };
+export type CleanupPreview = { summary: { conversations: number; messages: number; fragments: number }; items: Array<{ conversation_id: string; conversation_title: string; message_id: string; role: string; before: string; after: string; conflict: boolean; fragments: number }>; offset: number; limit: number; preview_token: string };
 
 export type ConversationUpdateInput = {
   title?: string | null;
@@ -546,6 +582,14 @@ export type AdaptiveMappingPreview = {
   };
 };
 
+export type ImportFormatHealth = Omit<AdaptiveMappingPreview["validation"], "groups"> & {
+  checked_at: string;
+  revision_id: string | null;
+  revision: number | null;
+  builtin_key: string | null;
+  groups: Array<{ group_id: string; valid: boolean; message_count: number; conversation_count: number; issues: AdaptiveImportDiagnostic[] }>;
+};
+
 export type ImportFormatProfile = {
   id: string | null;
   key: string | null;
@@ -556,6 +600,10 @@ export type ImportFormatProfile = {
   current_revision: number | null;
   current_revision_id: string | null;
   revision_count: number | null;
+  held?: boolean;
+  system_provided?: boolean;
+  published_revision_id?: string | null;
+  verification_summary?: { valid: boolean; group_count?: number; message_count?: number; conversation_count?: number };
   last_used_at: string | null;
   updated_at: string | null;
   description?: string;
@@ -660,7 +708,11 @@ export type ReadingPositionRead = {
   anchor_data: Record<string, unknown>;
   updated_at: string;
   created_at: string;
+  revision?: number;
 };
+
+export type ReadingPositionSyncRequest = { operation_id: string; base_revision: number; position: ReadingPositionInput };
+export type ReadingPositionSyncResponse = { operation_id: string; status: "applied" | "conflict"; position: ReadingPositionRead };
 
 export type ReadingPositionResponse = {
   conversation_id: string;
@@ -1155,7 +1207,7 @@ export type AnnotationSyncOperation = {
   operation_id: string;
   entity_type: "annotation" | "notebook";
   entity_id: string;
-  action: "upsert" | "delete";
+  action: "upsert" | "delete" | "resolve";
   conversation_id: string;
   base_revision: number;
   payload: Record<string, unknown>;

@@ -13,7 +13,7 @@ type DialogFocusOptions = {
 function focusable(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(
     'a[href],button:not([disabled]):not([data-dialog-backdrop]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
-  )).filter((element) => element.getAttribute("aria-hidden") !== "true");
+  )).filter((element) => element.getAttribute("aria-hidden") !== "true" && !element.closest("[inert]") && element.getClientRects().length > 0);
 }
 
 function initialFocusable(root: HTMLElement): HTMLElement | null {
@@ -40,6 +40,11 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
     const first = root ? initialFocusable(root) : null;
     (preferred?.isConnected ? preferred : first ?? root)?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
+      const dialog = rootRef.current?.closest('[role="dialog"][aria-modal="true"]');
+      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      // Nested confirmations own Escape/Tab until they close. The underlying
+      // settings dialog must not also close or steal their focus.
+      if (dialog && dialogs.length && dialogs[dialogs.length - 1] !== dialog) return;
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();

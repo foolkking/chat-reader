@@ -29,10 +29,11 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [invitationToken, setInvitationToken] = useState(searchParams?.get("invite") ?? "");
+  const [invitationToken, setInvitationToken] = useState(searchParams?.get("invitation") ?? searchParams?.get("invite") ?? "");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState<"sent" | "failed" | null>(null);
   const destination = safeReturnPath(searchParams?.get("return_to") ?? "/");
   const loginHref = destination === "/" ? "/login" : `/login?return_to=${encodeURIComponent(destination)}`;
 
@@ -87,6 +88,11 @@ function RegisterForm() {
         confirmPassword,
         invitationToken: mode === "INVITE_ONLY" ? invitationToken.trim() : undefined,
       });
+      if (!session.authenticated && session.auth_mode === "pending_verification") {
+        setPendingVerification(session.verification_delivery === "failed" ? "failed" : "sent");
+        setPassword(""); setConfirmPassword("");
+        return;
+      }
       if (!session.authenticated && session.auth_mode === "pending_approval") {
         setPendingApproval(true);
         return;
@@ -108,7 +114,8 @@ function RegisterForm() {
       {mode === "LOADING" ? <RegistrationLoading copy={copy} /> : null}
       {mode === "ERROR" ? <RegistrationLoadError copy={copy} onRetry={loadAvailability} /> : null}
       {mode === "CLOSED" ? <ClosedRegistration copy={copy} /> : null}
-      {pendingApproval ? <div className="rounded-md border border-ui bg-subtle px-4 py-4" role="status"><p className="font-medium text-primary">{copy.pendingTitle}</p><p className="mt-1.5 text-sm leading-5 text-secondary">{copy.pendingDescription}</p><Link href={loginHref} className="btn-secondary mt-4 inline-flex min-h-10 items-center px-4 text-sm font-medium">{copy.backToLogin}</Link></div> : mode === "OPEN" || mode === "INVITE_ONLY" ? (
+      {pendingVerification ? <div role="status" className="space-y-3 rounded-md border border-ui bg-subtle p-4"><p className="font-medium text-primary">{copy.verifyTitle}</p><p className="text-sm text-secondary">{pendingVerification === "sent" ? copy.verifySent : copy.verifyFailed}</p><Link href="/verify-email" className="btn-secondary inline-flex min-h-11 items-center px-4 text-sm">{copy.verifyResend}</Link></div> : null}
+      {pendingApproval ? <div className="rounded-md border border-ui bg-subtle px-4 py-4" role="status"><p className="font-medium text-primary">{copy.pendingTitle}</p><p className="mt-1.5 text-sm leading-5 text-secondary">{copy.pendingDescription}</p><Link href={loginHref} className="btn-secondary mt-4 inline-flex min-h-10 items-center px-4 text-sm font-medium">{copy.backToLogin}</Link></div> : !pendingVerification && (mode === "OPEN" || mode === "INVITE_ONLY") ? (
         <form onSubmit={submit} className="space-y-4">
           {mode === "INVITE_ONLY" ? <p className="rounded-md bg-[var(--color-semantic-warning-soft)] px-3 py-2 text-sm leading-5 text-[var(--color-semantic-warning)]">{copy.inviteOnly}</p> : null}
           <div className="space-y-1.5 text-left">
@@ -185,6 +192,10 @@ const enCopy = {
   loadError: "Registration availability could not be checked.",
   retry: "Try again",
   pendingTitle: "Account awaiting approval",
+  verifyTitle: "Account awaiting email verification",
+  verifySent: "Open the link in your verification email and confirm it within 30 minutes. Administrator approval may also be required.",
+  verifyFailed: "Your account was created, but email delivery failed. Request a new link when the mail service is available.",
+  verifyResend: "Resend verification email",
   pendingDescription: "Your account was created. A system administrator must approve it before you can sign in.",
 } as const;
 
@@ -217,5 +228,9 @@ const zhCopy: RegisterCopy = {
   loadError: "无法确认当前实例的注册状态。",
   retry: "重试",
   pendingTitle: "账户正在等待审批",
+  verifyTitle: "账户等待邮箱验证",
+  verifySent: "请在 30 分钟内打开验证邮件中的链接并确认。账户可能还需管理员审批。",
+  verifyFailed: "账户已创建，但验证邮件发送失败。邮件服务恢复后可重新发送。",
+  verifyResend: "重新发送验证邮件",
   pendingDescription: "账户已创建。系统管理员审批后才能登录。",
 };

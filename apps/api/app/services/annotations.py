@@ -3,6 +3,7 @@ import json
 import uuid
 from http import HTTPStatus
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
@@ -17,6 +18,7 @@ from app.schemas.annotation import (
     AnnotationSyncRequest,
     AnnotationSyncResponse,
     AnnotationUpdate,
+    ConflictResolution,
     NotebookBlock,
     NotebookPut,
     NotebookRead,
@@ -62,10 +64,11 @@ def create_annotation(
     *,
     subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationAnnotation:
+    _lock_subject(db, subject_key)
     conversation = _conversation(db, conversation_id)
     _validate_annotation_anchor(db, conversation_id, payload)
     annotation_id = payload.id or uuid.uuid4()
-    if db.get(ConversationAnnotation, annotation_id) is not None:
+    if db.get(ConversationAnnotation, annotation_id, populate_existing=True) is not None:
         raise AnnotationError("Annotation id already exists.", HTTPStatus.CONFLICT)
     now = utc_now()
     values = _annotation_values(payload)
@@ -93,6 +96,7 @@ def update_annotation(
     *,
     subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationAnnotation:
+    _lock_subject(db, subject_key)
     annotation = _annotation(db, annotation_id, subject_key)
     if annotation.revision != payload.base_revision:
         raise AnnotationError("Annotation revision conflict.", HTTPStatus.CONFLICT)
@@ -118,6 +122,7 @@ def delete_annotation(
     *,
     subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationAnnotation:
+    _lock_subject(db, subject_key)
     annotation = _annotation(db, annotation_id, subject_key)
     if annotation.revision != base_revision:
         raise AnnotationError("Annotation revision conflict.", HTTPStatus.CONFLICT)
@@ -136,9 +141,11 @@ def get_notebook(
     *,
     subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationNotebook:
+    _lock_subject(db, subject_key)
     _conversation(db, conversation_id)
     notebook = (
         db.query(ConversationNotebook)
+        .populate_existing()
         .filter(
             ConversationNotebook.conversation_id == conversation_id,
             ConversationNotebook.subject_key == subject_key,
@@ -178,6 +185,7 @@ def list_notebook_conflicts(
     _conversation(db, conversation_id)
     return (
         db.query(ConversationNotebook)
+        .populate_existing()
         .filter(
             ConversationNotebook.conversation_id == conversation_id,
             ConversationNotebook.subject_key == subject_key,
@@ -196,7 +204,8 @@ def put_notebook(
     subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationNotebook:
     notebook = get_notebook(db, conversation_id, subject_key=subject_key)
-    if payload.base_revision not in {0, notebook.revision}:
+    bootstrap = payload.base_revision == 0 and notebook.revision == 1 and not notebook.blocks and not notebook.title
+    if payload.base_revision != notebook.revision and not bootstrap:
         raise AnnotationError("Notebook revision conflict.", HTTPStatus.CONFLICT)
     _validate_notebook_references(db, conversation_id, payload.blocks)
     notebook.title = payload.title.strip() or None if payload.title else None
@@ -214,7 +223,11 @@ def sync_annotations(
     *,
     subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> AnnotationSyncResponse:
+    _lock_subject(db, subject_key)
     results: list[SyncOperationResult] = []
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        for operation_id in sorted({str(item.operation_id) for item in payload.operations}):
+            _advisory_lock(db, f"annotation-receipt:{operation_id}")
     for operation in payload.operations:
         request_hash = _operation_hash(operation)
         receipt = db.get(AnnotationSyncReceipt, operation.operation_id)
@@ -341,9 +354,61 @@ def _apply_sync_operation(
     subject_key: str,
 ) -> SyncOperationResult:
     _conversation(db, operation.conversation_id)
+    if operation.action == "resolve":
+        return _resolve_conflict(db, operation, subject_key)
     if operation.entity_type == "annotation":
         return _sync_annotation(db, operation, subject_key)
     return _sync_notebook(db, operation, subject_key)
+
+
+def _resolve_conflict(db: Session, operation: SyncOperation, subject_key: str) -> SyncOperationResult:
+    # Subject/receipt locks are already held by sync_annotations. The copy and
+    # canonical revision are both checked: a stale comparison never overwrites.
+    payload = ConflictResolution.model_validate(operation.payload)
+    model = ConversationAnnotation if operation.entity_type == "annotation" else ConversationNotebook
+    current = db.get(model, operation.entity_id, populate_existing=True)
+    copy = db.get(model, payload.conflict_copy_id, populate_existing=True)
+    if any(row is None or row.subject_key != subject_key or row.conversation_id != operation.conversation_id
+           for row in (current, copy)):
+        raise AnnotationError("Conflict not found.", HTTPStatus.NOT_FOUND)
+    if copy.conflict_of_id != current.id or (operation.entity_type == "notebook" and not copy.is_conflict):
+        raise AnnotationError("Conflict not found.", HTTPStatus.NOT_FOUND)
+    if current.revision != operation.base_revision or copy.revision != payload.conflict_revision:
+        raise AnnotationError("Conflict changed. Compare the current versions again.", HTTPStatus.CONFLICT)
+
+    if operation.entity_type == "annotation":
+        if payload.choice != "server":
+            if not payload.deleted:
+                _validate_annotation_anchor(db, operation.conversation_id, payload.annotation)
+                for key, value in _annotation_values(payload.annotation).items():
+                    setattr(current, key, value)
+                current.metadata_ = _annotation_metadata(db, operation.conversation_id, payload.annotation)
+            current.is_deleted = payload.deleted
+            current.revision += 1
+            current.updated_at = utc_now()
+            sync_annotation_document(db, current)
+        # Notebook references to the temporary copy keep pointing at the
+        # retained canonical annotation after resolution (even a tombstone).
+        notebooks = db.query(ConversationNotebook).filter_by(
+            conversation_id=operation.conversation_id, subject_key=subject_key).all()
+        for notebook in notebooks:
+            if any(str(block.get("annotation_id")) == str(copy.id) for block in notebook.blocks):
+                notebook.blocks = [{**block, "annotation_id": str(current.id)}
+                    if str(block.get("annotation_id")) == str(copy.id) else block for block in notebook.blocks]
+                notebook.revision += 1
+                notebook.updated_at = utc_now()
+        copy.is_deleted = True
+        sync_annotation_document(db, copy)
+    elif payload.choice != "server":
+        _validate_notebook_references(db, operation.conversation_id, payload.notebook.blocks)
+        current.title = payload.notebook.title
+        current.blocks = [block.model_dump(mode="json") for block in payload.notebook.blocks]
+        current.revision += 1
+        current.updated_at = utc_now()
+    db.delete(copy)
+    _touch_conversation(_conversation(db, operation.conversation_id))
+    db.flush()
+    return _sync_result(operation, current.id, "applied", current.revision)
 
 
 def _sync_annotation(
@@ -351,7 +416,7 @@ def _sync_annotation(
     operation: SyncOperation,
     subject_key: str,
 ) -> SyncOperationResult:
-    existing = db.get(ConversationAnnotation, operation.entity_id)
+    existing = db.get(ConversationAnnotation, operation.entity_id, populate_existing=True)
     if existing is not None and existing.subject_key != subject_key:
         raise AnnotationError("Annotation not found.", HTTPStatus.NOT_FOUND)
     if existing is not None and existing.conversation_id != operation.conversation_id:
@@ -374,6 +439,8 @@ def _sync_annotation(
             )
             return _sync_result(operation, deleted.id, "applied", deleted.revision)
         conflict = _clone_annotation(db, existing, conflict_of_id=existing.id)
+        conflict.is_deleted = True
+        sync_annotation_document(db, conflict)
         return _sync_result(operation, existing.id, "conflict", existing.revision, conflict.id)
 
     payload = AnnotationCreate.model_validate({**operation.payload, "id": operation.entity_id})
@@ -408,6 +475,7 @@ def _sync_notebook(
 ) -> SyncOperationResult:
     current = (
         db.query(ConversationNotebook)
+        .populate_existing()
         .filter(
             ConversationNotebook.conversation_id == operation.conversation_id,
             ConversationNotebook.subject_key == subject_key,
@@ -635,7 +703,7 @@ def _annotation(
     annotation_id: uuid.UUID,
     subject_key: str = DEFAULT_SUBJECT_KEY,
 ) -> ConversationAnnotation:
-    annotation = db.get(ConversationAnnotation, annotation_id)
+    annotation = db.get(ConversationAnnotation, annotation_id, populate_existing=True)
     if annotation is None or annotation.subject_key != subject_key:
         raise AnnotationError("Annotation not found.", HTTPStatus.NOT_FOUND)
     return annotation
@@ -714,3 +782,15 @@ def _sync_result(
         revision=revision,
         conflict_copy_id=conflict_copy_id,
     )
+
+
+def _lock_subject(db: Session, subject_key: str) -> None:
+    # The same lock covers online writes, lazy notebook creation and offline
+    # batches. It exists before a new entity/receipt row can be SELECTed FOR UPDATE.
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        _advisory_lock(db, f"annotation-subject:{subject_key}")
+
+
+def _advisory_lock(db: Session, key: str) -> None:
+    lock_id = int.from_bytes(hashlib.sha256(key.encode()).digest()[:8], "big", signed=True)
+    db.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": lock_id})

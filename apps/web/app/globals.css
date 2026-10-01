@@ -192,6 +192,8 @@ body {
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 .btn-primary { border-radius: var(--radius-md); background: var(--accent); color: white; box-shadow: var(--shadow-subtle); }
+.auth-page .btn-primary, .settings-dialog .btn-primary { background: var(--link); color: var(--surface); }
+.auth-page .btn-primary:hover, .settings-dialog .btn-primary:hover { background: var(--link-hover); }
 .btn-secondary { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); }
 .btn-ghost, .btn-icon { border-radius: var(--radius-md); background: transparent; color: var(--text); }
 .btn-ghost:hover, .btn-icon:hover { background: var(--subtle); }

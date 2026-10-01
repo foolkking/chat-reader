@@ -20,7 +20,7 @@ export function proxy(request: NextRequest) {
 }
 
 function isPublicPath(pathname: string): boolean {
-  return /^\/(?:login|register|account-upgrade|password-reset|reset-password)(?:\/|$)/i.test(pathname)
+  return /^\/(?:login|register|account-upgrade|password-reset|reset-password|verify-email)(?:\/|$)/i.test(pathname)
     || /^\/share\/[^/]+\/?$/i.test(pathname)
     || pathname === "/health"
     || pathname.startsWith("/api/")

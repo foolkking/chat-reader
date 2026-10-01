@@ -268,7 +268,7 @@ def test_drift_creates_revision_and_old_revision_remains_matchable(client: TestC
     assert old_again["families"][0]["matched_revision_id"] == revisions[1]["id"]
 
 
-def test_settings_remap_explicitly_creates_a_new_revision(client: TestClient) -> None:
+def test_equivalent_settings_remap_reuses_the_existing_revision(client: TestClient) -> None:
     original = _save_mapping(client, _create(client, [("v1.json", _json_bytes(), "application/json")]), "Repairable fixture")
     profile_id = original["families"][0]["matched_profile_id"]
     repair = client.post(
@@ -284,7 +284,7 @@ def test_settings_remap_explicitly_creates_a_new_revision(client: TestClient) ->
     repaired = _save_mapping(client, session, "Repairable fixture")
     revisions = client.get(f"/api/import-formats/{profile_id}/revisions").json()
     assert repaired["state"] == "READY"
-    assert [item["revision"] for item in revisions] == [2, 1]
+    assert [item["revision"] for item in revisions] == [1]
     matched = _create(client, [("after-remap.json", _json_bytes(body="After remap"), "application/json")])
     assert matched["families"][0]["resolution_status"] == "EXACT_MATCH"
     assert matched["families"][0]["matched_revision_id"] == revisions[0]["id"]
@@ -303,7 +303,7 @@ def test_disabled_and_deleted_profiles_do_not_auto_apply(client: TestClient) -> 
     assert all(item["id"] != profile_id for item in formats)
 
 
-def test_equal_profile_matches_stay_ambiguous_until_explicit_selection(client: TestClient, tmp_path: Path) -> None:
+def test_different_mappings_for_equal_structure_stay_ambiguous_until_selection(client: TestClient, tmp_path: Path) -> None:
     ready = _save_mapping(client, _create(client, [("learn.json", _json_bytes(), "application/json")]), "First candidate")
     original_profile_id = ready["families"][0]["matched_profile_id"]
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
@@ -326,7 +326,7 @@ def test_equal_profile_matches_stay_ambiguous_until_explicit_selection(client: T
             matcher_version=source_revision.matcher_version,
             normalizer_version=source_revision.normalizer_version,
             match_spec=source_revision.match_spec,
-            mapping_spec=source_revision.mapping_spec,
+            mapping_spec={**source_revision.mapping_spec, "transforms": {"content": ["TRIM"]}},
             validation_spec=source_revision.validation_spec,
             source_signature=source_revision.source_signature,
             signature_digest=source_revision.signature_digest,
@@ -337,6 +337,8 @@ def test_equal_profile_matches_stay_ambiguous_until_explicit_selection(client: T
         db.add(revision)
         db.flush()
         duplicate.current_revision_id = revision.id
+        from app.services.adaptive_import.profile_access import grant_revision
+        grant_revision(db, original.owner_user_id, revision, reason="LEARNED", display_name="Second candidate")
         selected_revision_id = str(revision.id)
         db.commit()
 

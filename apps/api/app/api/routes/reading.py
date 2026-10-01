@@ -11,6 +11,8 @@ from app.schemas.reading import (
     ReadingPositionRead,
     ReadingPositionResponse,
     ReadingPositionUpsert,
+    ReadingPositionSyncRequest,
+    ReadingPositionSyncResponse,
     RecentItemCreate,
     RecentItemRead,
 )
@@ -20,10 +22,24 @@ from app.services.reading.reading_service import (
     list_recent_items,
     record_recent_item,
     upsert_reading_position,
+    position_read,
+    sync_reading_position,
+    ReadingSyncReplayError,
 )
 from app.services.ownership import ownership_scope_from_request, subject_key_from_request
 
 router = APIRouter(tags=["reading"])
+
+
+@router.post("/api/conversations/{conversation_id}/reading-position/sync", response_model=ReadingPositionSyncResponse)
+def sync_position(conversation_id: uuid.UUID, payload: ReadingPositionSyncRequest, request: Request, db: Session = Depends(get_db)):
+    try:
+        result = sync_reading_position(db, conversation_id, payload, subject_key=subject_key_from_request(request), ownership_scope=ownership_scope_from_request(request))
+        db.commit()
+        return result
+    except ReadingServiceError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409 if isinstance(exc, ReadingSyncReplayError) else _status_for_reading_error(exc), detail=str(exc)) from exc
 
 
 @router.get(
@@ -111,16 +127,7 @@ def get_recent_items(
 
 
 def _position_read(position: ReadingPosition) -> ReadingPositionRead:
-    return ReadingPositionRead(
-        id=position.id,
-        conversation_id=position.conversation_id,
-        message_id=position.message_id,
-        block_index=position.block_index,
-        scroll_offset=position.scroll_offset,
-        anchor_data=position.anchor_data,
-        updated_at=position.updated_at,
-        created_at=position.created_at,
-    )
+    return position_read(position)
 
 
 def _recent_read(item: RecentItem) -> RecentItemRead:

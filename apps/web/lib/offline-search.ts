@@ -1,7 +1,15 @@
 import type { OfflineSearchDocument } from "./offline-db";
+import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
 
 let worker: Worker | null = null;
 const pending = new Map<string, (items: OfflineSearchDocument[]) => void>();
+
+export function resetOfflineSearch(): void {
+  worker?.terminate();
+  worker = null;
+  for (const resolve of pending.values()) resolve([]);
+  pending.clear();
+}
 
 function getWorker(): Worker {
   if (worker) return worker;
@@ -18,12 +26,17 @@ export function getOfflineSearchWorkerUrl(): string {
 }
 
 export async function initializeOfflineSearch(documents: OfflineSearchDocument[]): Promise<void> {
+  const access = captureOfflineAccess();
   await request("init", { documents });
+  assertOfflineAccess(access);
 }
 
 export async function searchOffline(query: string, limit = 80): Promise<OfflineSearchDocument[]> {
+  const access = captureOfflineAccess();
   if (!query.trim()) return [];
-  return request("search", { query, limit });
+  const result = await request("search", { query, limit });
+  assertOfflineAccess(access);
+  return result;
 }
 
 function request(type: string, payload: Record<string, unknown>): Promise<OfflineSearchDocument[]> {

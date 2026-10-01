@@ -1,9 +1,17 @@
 import { expect, test } from "@playwright/test";
 
+test.use({ trace: "off", extraHTTPHeaders: { Origin: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3107" } });
+
 test.skip(
   process.env.E2E_CONTENT_CLEANUP !== "1",
   "E2E_CONTENT_CLEANUP=1 is required",
 );
+
+test.beforeEach(async ({ page }) => {
+  if (process.env.E2E_SETTINGS_MAILBOX === "1") {
+    expect((await page.request.post("/api/auth/login", { data: { email: process.env.E2E_AUTH_EMAIL, password: process.env.E2E_AUTH_PASSWORD } })).ok()).toBeTruthy();
+  }
+});
 
 test("reviews a deterministic noise occurrence without silently changing content", async ({
   page,
@@ -53,13 +61,15 @@ test("reviews a deterministic noise occurrence without silently changing content
       page.getByRole("heading", { name: /^(Clean noise|清理噪声)$/ }),
     ).toBeVisible();
     await expect(
-      page.getByText("Cite turn2search1", { exact: true }),
+      page.getByTestId("content-cleanup-match"),
     ).toBeVisible();
-    await expect(page.getByText(/结构识别|structural/)).toBeVisible();
+    await expect(page.getByText(/完整可见引用协议|Visible citation protocol/)).toBeVisible();
     const candidateCheckbox = page.getByRole("checkbox", {
       name: /Process Cite turn2search1|处理 Cite turn2search1/,
     });
-    await expect(candidateCheckbox).toBeChecked({ timeout: 30_000 });
+    await expect(candidateCheckbox).not.toBeChecked({ timeout: 30_000 });
+    await candidateCheckbox.check();
+    await expect(page.getByText(/选择已保存|Selection saved/)).toBeVisible();
     await expect(page.getByTestId("content-cleanup-scroll")).toHaveCSS(
       "overflow-y",
       "auto",
@@ -85,8 +95,9 @@ test("reviews a deterministic noise occurrence without silently changing content
       fullPage: true,
     });
     await page
-      .getByRole("button", { name: /Apply 1 cleanup|应用 1 项清理/ })
+      .getByRole("button", { name: /Preview 1 removals|预览 1 项清理/ })
       .click();
+    await page.getByRole("button", { name: /Confirm 1 removals|确认应用 1 项清理/ }).click();
     await expect(page.getByTestId("content-cleanup-dialog")).toHaveCount(0);
     await expect(page.getByTestId("source-editor-codemirror")).toContainText(
       "🙂 Answer before  and after.",

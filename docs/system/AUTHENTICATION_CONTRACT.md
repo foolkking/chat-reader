@@ -1,5 +1,87 @@
 # Authentication and account contract
 
+## Explicit signout cleanup (2026-10-01 working tree)
+
+Logout/password-change session revocation and local physical deletion are
+separate outcomes. After successful revocation, failed/blocked database or
+cache deletion locks the private boundary and exposes retry, preserving an
+account-scoped cleanup record. The login page resumes durable cleanup. A same
+account bind must complete pending deletion before reopening its store;
+completion markers prevent stale tabs from deleting a later session's data.
+When browser storage cannot inspect pending edits, logout requires an explicit
+discard choice. Memory-only recovery remains on the current page if all browser
+persistence fails. Details and recovery limitations are in the PWA resilience
+contract. This does not change the expiry behavior: expiry/rejection retains
+data for reauthentication and does not create a destructive cleanup request.
+
+## Offline lock retention (working tree, 2026-10-01)
+
+Expiration and private API 401 handling now lock and retain account-local data;
+they no longer invoke the destructive logout cleanup. A runtime generation
+fences ongoing IndexedDB, attachment, search, export and sync work. A persisted
+per-account lock prevents a stale lease from unlocking a rejected/expired
+identity. Only a newly accepted server session for that UUID clears its lock;
+multi-account responses without a valid UUID fail closed. Private query caches
+are cleared on lock/account change. Late 401 responses from a previous runtime
+generation cannot invalidate a newly verified account, and locking an old tab
+does not erase another account's newly established shared lease.
+
+Explicit logout and password changes now inspect account-local pending edits,
+conflicts and notebook drafts first. Users can sync, export a readable recovery
+ZIP, or explicitly discard. The final action verifies the reviewed snapshot
+under the sync Web Lock and an account-specific write freeze; a changed snapshot
+returns to review. Other tabs temporarily stop accepting UI edits while their
+components remain mounted. Network failure releases the freeze and retains data;
+logout can retry an already-invalidated session. Successful explicit signout
+clears account-protected data and lets its caller settle dirty form state before
+navigating. It does not trigger a competing local expiry redirect during cleanup.
+Cross-tab lease removal still immediately locks the other tab's private runtime.
+Storage formats remain unchanged. See
+`PWA_OFFLINE_RESILIENCE_CONTRACT.md` for transaction/sync behavior and pending
+stage-four work. Production remains on its prior release.
+
+## Registration verification (working tree, migration 20260930_0034)
+
+Each account records `approval_status` (APPROVED/PENDING/REJECTED) and the
+registration-time `email_verification_required` snapshot. Login and existing
+session authentication require ACTIVE status, APPROVED approval and a verified
+email if required. Administrative enable does not bypass either requirement.
+Disabling or rejecting an account prevents a verification grant from activating
+it. Requirements only apply to new registrations; migration preserves existing
+active accounts. Legacy PENDING accounts become approval-pending. Legacy
+disabled accounts with a recorded approval review are conservatively retained
+as rejected because the former schema cannot distinguish rejection from a
+later disable after approval; they do not silently regain login access.
+
+`PUT /api/admin/access/registration` changes only provided, non-null fields.
+SMTP host and sender must be configured before enabling email verification.
+The response and access overview report `smtp_configured` as configuration
+presence, not an SMTP health assertion. Administrator password-reset grants
+remain available without SMTP.
+
+Registration creates no session while either requirement is outstanding.
+Verification sends a 30-minute grant, stores only an HMAC token digest, and
+binds purpose, target address, account and credential version. The mail URL is
+`/verify-email#token=...`; fragments avoid page request/referrer logging. GET of
+the confirmation endpoint is not supported. The public page never consumes on
+load. `POST /api/auth/email-verification/confirm` consumes the grant; it does not
+create a business session. `POST /api/auth/email-verification/request` requires
+the registration email and password, revokes older outstanding grants and sends
+a replacement. Delivery failure keeps the account pending and offers retry.
+Invalid credentials and unavailable/expired grants do not reveal account data.
+Both public mutations enforce same-origin and bounded subject/IP rate limits.
+Resend, confirmation, approval and disable serialize on the user row; concurrent
+confirmation can succeed once and approval cannot overwrite verified eligibility.
+
+`GET /api/auth/capabilities` is authenticated and reports account role, feature
+policy, effective import limit (minimum of deployment and policy), merge limit,
+and mail-configuration presence. It does not grant administrator API access.
+
+Regression suites: `test_registration_verification.py` and the explicitly
+enabled disposable-PostgreSQL `test_registration_verification_postgres.py`.
+Browser SMTP/registration verification is in `settings-registration.spec.ts`;
+its test mailbox is a fixture-only endpoint, absent from the application.
+
 ## Session recovery and browser persistence (deployed 2026-09-30)
 
 The private Web boundary distinguishes session verification, an unavailable

@@ -9,7 +9,7 @@ import {
 
 export function ServiceWorkerRegistration() {
   useEffect(() => {
-    if (/^\/(?:login|register|account-upgrade|password-reset|reset-password)(?:\/|$)/i.test(window.location.pathname) || /^\/share\/[^/]+\/?$/i.test(window.location.pathname)) return;
+    if (/^\/(?:login|register|account-upgrade|password-reset|reset-password|verify-email)(?:\/|$)/i.test(window.location.pathname) || /^\/share\/[^/]+\/?$/i.test(window.location.pathname)) return;
     if (!window.isSecureContext || !("serviceWorker" in navigator)) {
       if (window.location.pathname.startsWith("/library")) {
         markOfflineShellUnsupported("当前浏览器或连接不支持安全的离线启动。");

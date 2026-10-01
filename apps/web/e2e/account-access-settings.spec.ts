@@ -18,7 +18,7 @@ test("account and access clients keep the authenticated API contracts explicit",
     "/api/admin/access/invitations",
     "/password-reset",
   ]) expect(source).toContain(endpoint);
-  expect(source).toContain("AUTH_UNAUTHORIZED_EVENT");
+  expect(source).toContain("notifyAuthenticationFailure(requestGeneration)");
 });
 
 test("regular users see their account and devices but not instance maintenance", async ({ page }) => {
@@ -46,8 +46,9 @@ test("regular users see their account and devices but not instance maintenance",
   await openSettings(page);
   await expect(page.getByRole("button", { name: /Users & access|\u7528\u6237\u4e0e\u8bbf\u95ee/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Data archive|\u6570\u636e\u5f52\u6863/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Import formats|\u5bfc\u5165\u683c\u5f0f/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Noise rule library|\u566a\u58f0\u89c4\u5219\u5e93/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Import formats|\u5bfc\u5165\u683c\u5f0f/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Noise rule library|\u566a\u58f0\u89c4\u5219\u5e93/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /System import formats|System noise rules|系统导入格式|系统噪声规则/ })).toHaveCount(0);
   await page.getByRole("button", { name: /Account & security|\u8d26\u6237\u4e0e\u5b89\u5168/ }).click();
   await expect(page.getByLabel(/Email|\u90ae\u7bb1/)).toHaveValue("reader@example.test");
   await expect(page.getByText("Chrome on Windows")).toBeVisible();
@@ -62,13 +63,14 @@ test("regular users see their account and devices but not instance maintenance",
 test("administrators manage users, registration and invitations in one focused surface", async ({ page }) => {
   await mockSession(page, "ADMIN");
   let registrationMode = "";
-  let userStatus = "";
+  let userStatus = "ACTIVE";
   let invitationHours = 0;
   await page.route("**/api/auth/me", (route) => route.fulfill({ json: session("ADMIN", "Administrator") }));
-  await page.route("**/api/admin/access", (route) => route.fulfill({ json: { registration_mode: "CLOSED", smtp_configured: false } }));
+  const policy = { registration_mode: "CLOSED", smtp_configured: false, require_admin_approval: true, email_verification_enabled: false, password_reset_enabled: true };
+  await page.route("**/api/admin/access", (route) => route.fulfill({ json: policy }));
   await page.route("**/api/admin/access/users", (route) => route.fulfill({ json: [
-    { id: userId, email: "admin@example.test", display_name: "Administrator", role: "ADMIN", status: "ACTIVE", created_at: "2026-08-01T00:00:00Z" },
-    { id: otherUserId, email: "reader@example.test", display_name: "Reader", role: "USER", status: "ACTIVE", created_at: "2026-09-01T00:00:00Z" },
+    { id: userId, email: "admin@example.test", display_name: "Administrator", role: "ADMIN", status: "ACTIVE", created_at: "2026-08-01T00:00:00Z", stats: { projects: 0, conversations: 0, attachments: 0, attachment_bytes: 0 } },
+    { id: otherUserId, email: "reader@example.test", display_name: "Reader", role: "USER", status: userStatus, approval_status: "APPROVED", created_at: "2026-09-01T00:00:00Z", stats: { projects: 0, conversations: 0, attachments: 0, attachment_bytes: 0 } },
   ] }));
   await page.route("**/api/admin/access/invitations", async (route) => {
     if (route.request().method() === "POST") {
@@ -80,7 +82,9 @@ test("administrators manage users, registration and invitations in one focused s
   });
   await page.route("**/api/admin/access/registration", async (route) => {
     registrationMode = (route.request().postDataJSON() as { mode: string }).mode;
-    await route.fulfill({ json: { registration_mode: registrationMode, updated_at: "2026-09-01T00:00:00Z" } });
+    expect(route.request().postDataJSON()).toMatchObject({ require_admin_approval: true, email_verification_enabled: false, password_reset_enabled: true });
+    policy.registration_mode = registrationMode;
+    await route.fulfill({ json: policy });
   });
   await page.route("**/api/admin/access/users/*/status", async (route) => {
     userStatus = (route.request().postDataJSON() as { status: string }).status;
@@ -91,23 +95,23 @@ test("administrators manage users, registration and invitations in one focused s
   await openSettings(page);
   await expect(page.getByRole("button", { name: /Data archive|\u6570\u636e\u5f52\u6863/ })).toBeVisible();
   await page.getByRole("button", { name: /Users & access|\u7528\u6237\u4e0e\u8bbf\u95ee/ }).click();
-  await expect(page.getByRole("tab", { name: /Users|\u7528\u6237/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: /^(Users|用户)$/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("reader@example.test")).toBeVisible();
 
-  await page.getByRole("button", { name: /Disable account|\u7981\u7528\u8d26\u6237/ }).click();
-  await page.getByRole("button", { name: /Disable account|\u7981\u7528\u8d26\u6237/ }).last().click();
-  expect(userStatus).toBe("DISABLED");
+  await page.getByRole("button", { name: /^(Disable|禁用)$/ }).click();
+  await expect.poll(() => userStatus).toBe("DISABLED");
+  await expect(page.getByRole("button", { name: /^(Enable|启用)$/ })).toBeVisible();
 
-  await page.getByRole("tab", { name: /Registration|\u6ce8\u518c/ }).click();
-  await page.getByRole("button", { name: /Open|\u5f00\u653e/, exact: true }).click();
-  await page.getByRole("button", { name: /Save registration mode|\u4fdd\u5b58\u6ce8\u518c\u6a21\u5f0f/ }).click();
-  expect(registrationMode).toBe("OPEN");
+  await page.getByRole("button", { name: /Registration & invitations|注册与邀请/ }).click();
+  await page.getByRole("button", { name: /^(Open|开放)$/ }).click();
+  await page.getByRole("button", { name: /Save registration policy|保存注册策略/ }).click();
+  await expect.poll(() => registrationMode).toBe("OPEN");
+  await expect(page.getByRole("status").filter({ hasText: /Registration policy saved|注册策略已保存/ })).toBeVisible();
 
-  await page.getByRole("tab", { name: /Invitations|\u9080\u8bf7/ }).click();
-  await page.getByLabel(/Valid for|\u6709\u6548\u5c0f\u65f6\u6570/).fill("72");
+  await page.getByLabel(/Valid for|有效期/).fill("72");
   await page.getByRole("button", { name: /Create invitation|\u521b\u5efa\u9080\u8bf7/ }).click();
-  expect(invitationHours).toBe(72);
-  await expect(page.getByLabel(/One-time invitation link|\u4e00\u6b21\u6027\u9080\u8bf7\u94fe\u63a5/)).toHaveValue(/secret-token/);
+  await expect.poll(() => invitationHours).toBe(72);
+  await expect(page.getByLabel(/New invitation link|新邀请链接/)).toHaveValue(/secret-token/);
 });
 
 async function openSettings(page: Page) {
@@ -116,6 +120,11 @@ async function openSettings(page: Page) {
 }
 
 async function mockSession(page: Page, role: "ADMIN" | "USER") {
+  await page.route("**/api/auth/capabilities", (route) => route.fulfill({ json: {
+    role, allow_share_links: true, allow_public_share: true, allow_share_password: true,
+    allow_user_skills: true, allow_skill_import: true, allow_user_import: true,
+    maximum_import_size_mb: 500, maximum_merge_message_count: 1000, email_delivery_available: false,
+  } }));
   await page.route("**/api/auth/session*", (route) => route.fulfill({ json: session(role, role === "ADMIN" ? "Administrator" : "Reader") }));
 }
 

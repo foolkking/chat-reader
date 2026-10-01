@@ -129,14 +129,34 @@ class NotebookRead(BaseModel):
     updated_at: datetime
 
 
+class ConflictResolution(BaseModel):
+    conflict_copy_id: UUID
+    conflict_revision: int = Field(ge=1)
+    choice: Literal["local", "server", "merge"]
+    deleted: bool = False
+    annotation: AnnotationCreate | None = None
+    notebook: NotebookPut | None = None
+
+
 class SyncOperation(BaseModel):
     operation_id: UUID
     entity_type: Literal["annotation", "notebook"]
     entity_id: UUID
-    action: Literal["upsert", "delete"]
+    action: Literal["upsert", "delete", "resolve"]
     conversation_id: UUID
     base_revision: int = Field(default=0, ge=0)
     payload: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_resolution(self) -> "SyncOperation":
+        if self.action == "resolve":
+            resolution = ConflictResolution.model_validate(self.payload)
+            if resolution.choice != "server":
+                if self.entity_type == "annotation" and not resolution.deleted and resolution.annotation is None:
+                    raise ValueError("Annotation resolution requires content.")
+                if self.entity_type == "notebook" and (resolution.deleted or resolution.notebook is None):
+                    raise ValueError("Notebook resolution requires content.")
+        return self
 
 
 class AnnotationSyncRequest(BaseModel):

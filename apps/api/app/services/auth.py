@@ -279,7 +279,7 @@ def authenticate_session(
         return None
     user = db.get(User, principal.user_id) if principal.user_id is not None else None
     if (user is None and (principal.user_id is not None or principal.id != OWNER_PRINCIPAL_ID)) or (
-        user is not None and (user.status != "ACTIVE" or session.credential_version != user.credential_version)
+        user is not None and (not user.can_login or session.credential_version != user.credential_version)
     ):
         session.revoked_at = now
         db.commit()
@@ -380,7 +380,7 @@ def verify_login_for_email(
     if principal is None or user is None:
         verify_password(_dummy_password_hash, password)
         return None
-    if user.status != "ACTIVE":
+    if not user.can_login:
         verify_password(principal.password_hash, password)
         return None
     return _verify_principal_login(db, principal, password, throttle_id=throttle_id, now=now)

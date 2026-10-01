@@ -2,13 +2,17 @@
 
 import { KeyRound, Laptop, LogOut, RefreshCw, UserRound } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { getAccountProfile, getDeviceSessions, logoutOtherDeviceSessions, updateAccountProfile, type DeviceSession } from "../lib/account-access-client";
 import { changeOwnerPassword, logoutCurrentDevice, type AuthSessionState } from "../lib/auth-client";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { usePreferences } from "./preferences-provider";
+import { readOfflinePending, type OfflinePendingSnapshot } from "../lib/offline-pending";
+import { PendingChangesPanel } from "./pending-changes-panel";
+import { pendingSignoutCleanups, SIGNOUT_CLEANUP_EVENT } from "../lib/signout-cleanup";
 
 export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focused?: boolean; onDirtyChange?: (dirty: boolean) => void }) {
-  const { resolvedLocale } = usePreferences();
+  const { resolvedLocale, persistPreferenceDraft } = usePreferences();
   const { confirm } = useInteractionDialog();
   const copy = useMemo(() => accountCopy(resolvedLocale === "zh-CN"), [resolvedLocale]);
   const [profile, setProfile] = useState<AuthSessionState | null>(null);
@@ -22,6 +26,8 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [storageUnavailable, setStorageUnavailable] = useState(false);
+  const [pendingSignout, setPendingSignout] = useState<{ snapshot: OfflinePendingSnapshot; intent: "logout" | "password" } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,6 +49,18 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
   const passwordDirty = Boolean(passwords.current || passwords.next || passwords.confirm);
   useEffect(() => { onDirtyChange?.(profileDirty || passwordDirty); }, [onDirtyChange, passwordDirty, profileDirty]);
   const otherSessionCount = sessions.filter((session) => !session.current).length;
+  const finishSignout = () => {
+    // Remove the form's beforeunload guard before deliberate navigation. The
+    // server mutation has already succeeded. Failed local cleanup replaces the
+    // entire private boundary, keeping even memory-only recovery available.
+    flushSync(() => {
+      setPasswords({ current: "", next: "", confirm: "" });
+      setDisplayName(profile?.display_name ?? "");
+      onDirtyChange?.(false);
+    });
+    if (pendingSignoutCleanups().length) window.dispatchEvent(new Event(SIGNOUT_CLEANUP_EVENT));
+    else window.location.replace("/login");
+  };
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,12 +83,25 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     setSessionBusy(true);
     setError("");
     try {
-      await logoutCurrentDevice();
-      window.location.replace("/login");
+      const snapshot = await (async () => {
+        try { await persistPreferenceDraft(); const value = await readOfflinePending(); setStorageUnavailable(false); return value; }
+        catch (cause) { setStorageUnavailable(true); throw cause; }
+      })();
+      if (snapshot.count) { setPendingSignout({ snapshot, intent: "logout" }); setSessionBusy(false); return; }
+      await logoutCurrentDevice(snapshot.fingerprint);
+      finishSignout();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : copy.logoutFailed);
       setSessionBusy(false);
     }
+  };
+
+  const discardUnreadableAndLogout = async () => {
+    const zh = resolvedLocale === "zh-CN";
+    if (!await confirm({ title: zh ? "无法检查本机修改，仍然退出？" : "Sign out without checking local changes?", description: zh ? "浏览器存储不可用，无法检查或导出未同步修改、偏好与草稿。继续将放弃这些本机修改，并尝试清除本账户的本机资料；服务器资料保留。" : "Browser storage is unavailable, so unsynced changes, preferences and drafts cannot be checked or exported. Continuing discards those local changes and attempts to clear this account's local data. Server data remains.", confirmLabel: zh ? "放弃本机修改并退出" : "Discard local changes and sign out", danger: true })) return;
+    setSessionBusy(true); setError("");
+    try { await logoutCurrentDevice(undefined, true); finishSignout(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : copy.logoutFailed); setSessionBusy(false); }
   };
 
   const logoutOthers = async () => {
@@ -99,14 +130,23 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     setPasswordBusy(true);
     setError("");
     try {
-      await changeOwnerPassword({ currentPassword: passwords.current, newPassword: passwords.next, confirmPassword: passwords.confirm });
-      window.location.replace("/login");
+      await persistPreferenceDraft();
+      const snapshot = await readOfflinePending();
+      if (snapshot.count) { setPendingSignout({ snapshot, intent: "password" }); setPasswordBusy(false); return; }
+      await changeOwnerPassword({ currentPassword: passwords.current, newPassword: passwords.next, confirmPassword: passwords.confirm }, snapshot.fingerprint);
+      finishSignout();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : copy.passwordFailed);
       setPasswordBusy(false);
     }
   };
 
+  if (pendingSignout) return <PendingChangesPanel initial={pendingSignout.snapshot} onCancel={() => setPendingSignout(null)} onProceed={async (fingerprint) => {
+    await persistPreferenceDraft();
+    if (pendingSignout.intent === "password") await changeOwnerPassword({ currentPassword: passwords.current, newPassword: passwords.next, confirmPassword: passwords.confirm }, fingerprint);
+    else await logoutCurrentDevice(fingerprint);
+    finishSignout();
+  }} />;
   return <section className={focused ? "space-y-6" : "space-y-3 border-t border-ui pt-3"} aria-label={copy.title}>
     <SettingsSection icon={UserRound} title={copy.identity} description={copy.identityDescription}>
       {loading ? <p className="text-sm text-secondary" role="status">{copy.loading}</p> : profile ? <form onSubmit={saveProfile} className="space-y-3">
@@ -143,6 +183,7 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
 
     <div className="border-t border-ui pt-4"><button type="button" onClick={() => void logout()} disabled={sessionBusy} className="flex min-h-10 items-center gap-2 text-sm font-medium text-[var(--danger)] hover:underline"><LogOut className="h-4 w-4" aria-hidden="true" />{copy.logoutCurrent}</button></div>
     {error ? <p role="alert" className="text-sm text-[var(--danger)]">{error}</p> : null}
+    {storageUnavailable ? <button type="button" disabled={sessionBusy} className="btn-secondary min-h-11 px-3 text-sm text-[var(--danger)]" onClick={() => void discardUnreadableAndLogout()}>{resolvedLocale === "zh-CN" ? "存储不可用时退出…" : "Sign out with unavailable storage…"}</button> : null}
     {notice ? <p role="status" className="text-sm text-accent">{notice}</p> : null}
   </section>;
 }

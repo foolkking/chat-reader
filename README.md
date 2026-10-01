@@ -24,7 +24,7 @@ Chat Reader 是面向 AI 对话内容的长期阅读与管理系统。Adaptive I
 
 ## 技术栈
 
-- Web：Next.js 14、React 18、TypeScript、Tailwind CSS。
+- Web：Next.js 16、React 19、TypeScript、Tailwind CSS。
 - API：FastAPI、SQLAlchemy 2、Alembic、Python 3.11+。
 - 数据与部署：PostgreSQL 16、Dexie、Cache API、Docker Compose。
 - 包管理：Corepack + pnpm 9.15.4；Python 包使用 setuptools。

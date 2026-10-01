@@ -63,6 +63,8 @@ jobs:
           tests/test_artifact_transaction_boundary.py
           tests/test_import_queue.py
       - name: API full suite
+        env:
+          SETTINGS_POSTGRES_INTEGRATION: "1"
         run: cd apps/api && pytest
       - name: Alembic single-head and current validation
         run: |
@@ -381,9 +383,93 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  settings-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chat_reader
+          POSTGRES_USER: chat_reader
+          POSTGRES_PASSWORD: chat_reader_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chat_reader -d chat_reader"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      AUTH_ENABLED: "true"
+      AUTH_SESSION_SECRET: synthetic-settings-ci-session-secret-0123456789
+      AUTH_COOKIE_SECURE: "false"
+      E2E_SETTINGS_MAILBOX: "1"
+      IMPORT_COMMIT_INLINE: "true"
+      E2E_AUTH_EMAIL: settings-ci@example.test
+      E2E_AUTH_PASSWORD: synthetic-settings-ci-admin-passphrase
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: "8320"
+      SMTP_STARTTLS: "false"
+      SMTP_FROM_ADDRESS: noreply@example.test
+      PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+      PLAYWRIGHT_GATE_ID: settings-stages-1-4
+      NEXT_PUBLIC_PWA_NEGATIVE_TESTS: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.1"
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+      - name: Install and migrate disposable fixture
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          python -m pip install -e apps/api
+          mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
+          cd apps/api
+          python -m alembic upgrade head
+      - name: Build authenticated Web and install Chromium
+        run: |
+          pnpm --filter web build
+          pnpm --filter web exec playwright install --with-deps chromium
+      - name: Real settings, SMTP, offline and sync browser matrix
+        run: |
+          cd apps/api
+          uvicorn settings_browser_fixture:app --app-dir tests --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/settings-api.log" 2>&1 &
+          settings_api_pid=$!
+          python -m app.workers.import_worker > "$RUNNER_TEMP/settings-worker.log" 2>&1 &
+          settings_worker_pid=$!
+          trap 'kill "$settings_api_pid" "$settings_worker_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          cd ../..
+          pnpm --filter web exec playwright test --config=playwright.config.ts 'e2e/settings-.*\.spec\.ts'
+          PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4 node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-gate-summary.json
+      - name: Upload settings quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: settings-quality-evidence-${{ github.sha }}
+          path: |
+            apps/web/test-results
+            ${{ runner.temp }}/settings-api.log
+            ${{ runner.temp }}/settings-worker.log
+          retention-days: 14
+
   build-images:
-    needs: [api-quality, web-quality]
-    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' }}
+    needs: [api-quality, web-quality, settings-quality]
+    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

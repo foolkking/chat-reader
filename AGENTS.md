@@ -8,7 +8,7 @@
 - 浏览器使用同源 `/api/*`；Next.js 通过 `API_INTERNAL_URL` 转发到 FastAPI。
 - canonical 数据以 PostgreSQL、Alembic migration 和当前代码为准；导入原文不是渲染真值。
 - Reader、Share 和 Offline Reader 使用完整轮次语义；兼容的 message-window/block 接口不是主阅读路径。
-- `/library` 使用 Dexie version 1 和 offline package v2，必须保留 v1 包读取兼容。
+- `/library` 使用 Dexie version 2 和 offline package v3，必须保留 v1/v2/v3 包读取兼容及已有本机数据。
 
 ## 必需命令
 

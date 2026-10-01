@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import { previewAdaptiveFamilyMapping, saveAdaptiveFamilyMapping } from "../../lib/api";
 import type { AdaptiveImportDiagnostic, AdaptiveImportFamily, AdaptiveImportGroup, AdaptiveImportSession, AdaptiveMappingPreview } from "../../lib/types";
 import { asArray, asObject, DiagnosticLine, FormatIcon, formatBytes, modeLabel, ResolutionBadge } from "./adaptive-import-workspace";
+import { FormatHealthCheck } from "./format-health-check";
 
 type MappingSpec = Record<string, unknown>;
 
@@ -30,6 +31,7 @@ export function MappingWorkspace({ session, family, onBack, onSession }: { sessi
           <ResolutionBadge status={family.resolution_status} />
         </div>
       </header>
+      <FormatHealthCheck session={session} family={family} />
       <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(230px,.75fr)_minmax(360px,1.1fr)_minmax(300px,.9fr)]">
         <SourceStructurePane family={family} group={group} candidates={candidates} />
         <div className="border-ui py-5 lg:border-x lg:px-5"><h4 className="text-sm font-semibold text-primary">规范字段映射</h4><p className="mt-1 text-xs leading-5 text-secondary">只保存结构、字段映射与角色字典，不保存示例正文。</p><div className="mt-5 space-y-5">
@@ -68,7 +70,7 @@ function JsonMappingForm({ mapping, candidates, onChange }: FormProps) {
     onChange({ ...mapping, conversation: { ...conversation, title: candidate.title ?? conversation.title ?? null }, messages: { locator, role: candidate.role ?? null, content: candidate.content ?? null, external_id: candidate.external_id ?? null, timestamp: candidate.timestamp ?? null }, role_mapping: roleSuggestions(candidate.role_values) });
   }
   const current = options.find((item) => String(item.locator) === currentLocator);
-  return <section className="space-y-4" aria-label="JSON 字段映射"><MappingSelect id="mapping-message-locator" label="消息列表" value={currentLocator} options={options.map((item) => ({ value: String(item.locator), label: String(item.locator) }))} onChange={chooseLocator} /><ReadOnlyMapping label="角色来源" value={String(messages.role ?? "未设置")} /><ReadOnlyMapping label="正文来源" value={String(messages.content ?? "未设置")} /><ReadOnlyMapping label="标题来源" value={String(conversation.title ?? "使用文件名")} /><RoleMappingEditor mapping={mapping} values={asArray(current?.role_values).map(String)} onChange={onChange} /></section>;
+  return <section className="space-y-4" aria-label="JSON 字段映射"><MappingSelect id="mapping-message-locator" label="消息列表" value={currentLocator} options={options.map((item) => ({ value: String(item.locator), label: String(item.locator) }))} onChange={chooseLocator} /><ReadOnlyMapping label="角色来源" value={String(messages.role ?? "未设置")} /><MappingSelect id="mapping-message-content" label="正文来源" value={String(messages.content ?? "")} options={[...new Set([String(messages.content ?? ""), ...asArray(current?.field_paths).map(String)])].filter(Boolean).map((value) => ({ value, label: value }))} onChange={(content) => onChange({ ...mapping, messages: { ...messages, content } })} /><ReadOnlyMapping label="标题来源" value={String(conversation.title ?? "使用文件名")} /><RoleMappingEditor mapping={mapping} values={asArray(current?.role_values).map(String)} onChange={onChange} /></section>;
 }
 
 function MarkdownMappingForm({ mapping, candidates, onChange }: FormProps) {

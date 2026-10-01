@@ -1,29 +1,26 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Eraser,
-  Eye,
   LoaderCircle,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ContentCleanupRuleSettings } from "../../components/content-cleanup-rule-settings";
 import { usePreferences } from "../../components/preferences-provider";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import {
-  applyCleanupScan,
   createCleanupScan,
   dismissCleanupScan,
-  getCleanupOccurrences,
   getCleanupScan,
   getConversations,
-  updateCleanupDecisions,
+  rescanCleanup,
 } from "../../lib/api";
-import { cleanupRuleLabel } from "../../lib/content-cleanup";
+import { CleanupReviewWorkspace } from "./cleanup-review-workspace";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 import type {
   CleanupOccurrenceRead,
   ConversationListItem,
@@ -33,7 +30,6 @@ type ScopeType =
   | "CURRENT_CONVERSATION"
   | "SELECTED_CONVERSATIONS"
   | "ALL_ACTIVE";
-const OCCURRENCE_PAGE_SIZE = 100;
 
 export type CleanupSourceSelection = {
   messageId: string;
@@ -49,12 +45,20 @@ type ContentCleanupPanelProps = {
   onClose?: () => void;
   onLocate?: (occurrence: CleanupOccurrenceRead) => Promise<void> | void;
   onApplied?: () => Promise<void> | void;
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 export function ContentCleanupDialog(
   props: ContentCleanupPanelProps & { open: boolean },
 ) {
   const { open, onClose, ...panelProps } = props;
+  const [dirty, setDirty] = useState(false);
+  const { confirm } = useInteractionDialog();
+  const zh = usePreferences().resolvedLocale === "zh-CN";
+  const close = async () => {
+    if (dirty && !await confirm({ title: zh ? "放弃未保存的规则？" : "Discard unsaved rule?", confirmLabel: zh ? "放弃草稿" : "Discard draft" })) return;
+    setDirty(false); onClose?.();
+  };
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
@@ -63,16 +67,10 @@ export function ContentCleanupDialog(
       document.body.style.overflow = previous;
     };
   }, [open]);
-  useEffect(() => {
-    if (!open || !onClose) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const restoreRef = useRef<HTMLElement | null>(null);
+  useEffect(() => { if (open) restoreRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }, [open]);
+  useDialogFocus({ open, rootRef, onClose: () => void close(), restoreFocus: () => restoreRef.current });
   if (!open) return null;
   return (
     <div
@@ -85,13 +83,15 @@ export function ContentCleanupDialog(
       <button
         type="button"
         className="absolute inset-0 cursor-default"
-        onClick={onClose}
+        onClick={() => void close()}
         aria-label="Close cleanup review"
       />
       <div
-        className="relative h-[min(88dvh,800px)] max-h-[88dvh] min-h-0 w-full overflow-hidden rounded-t-2xl border border-ui bg-page shadow-2xl sm:max-w-4xl sm:rounded-xl"
+        ref={rootRef}
+        tabIndex={-1}
+        className="relative h-[min(88dvh,800px)] max-h-[88dvh] min-h-0 w-full overflow-hidden rounded-t-2xl border border-ui bg-page shadow-2xl sm:max-w-6xl sm:rounded-xl"
       >
-        <ContentCleanupPanel {...panelProps} onClose={onClose} />
+        <ContentCleanupPanel {...panelProps} onClose={() => void close()} onDirtyChange={setDirty} />
       </div>
     </div>
   );
@@ -104,21 +104,15 @@ export function ContentCleanupPanel({
   onClose,
   onLocate,
   onApplied,
+  onDirtyChange,
 }: ContentCleanupPanelProps) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const queryClient = useQueryClient();
   const autoStartedRef = useRef(false);
-  const disposableSelectionScanRef = useRef<{
-    id: string | null;
-    status: string | undefined;
-  }>({ id: initialScanId ?? null, status: undefined });
   const [view, setView] = useState<"review" | "rules">("review");
+  const [draftDirty, setDraftDirty] = useState(false);
+  useEffect(() => { onDirtyChange?.(draftDirty); }, [draftDirty, onDirtyChange]);
   const [scanId, setScanId] = useState<string | null>(initialScanId ?? null);
-  const [page, setPage] = useState(0);
-  const [decisionOverrides, setDecisionOverrides] = useState<
-    Record<string, "DELETE" | "KEEP">
-  >({});
   const [scopeType, setScopeType] = useState<ScopeType>("CURRENT_CONVERSATION");
   const [scanWholeConversation, setScanWholeConversation] = useState(false);
   const [selectedConversationIds, setSelectedConversationIds] = useState<
@@ -163,7 +157,6 @@ export function ContentCleanupPanel({
       });
     },
     onSuccess: (scan) => {
-      setPage(0);
       setScanId(scan.id);
     },
   });
@@ -187,136 +180,12 @@ export function ContentCleanupPanel({
         ? false
         : 1000,
   });
-  disposableSelectionScanRef.current = {
-    id: scanId,
-    status: scanQuery.data?.status,
-  };
-  const isSelectionReview = Boolean(activeSelection);
-  useEffect(
-    () => () => {
-      if (!isSelectionReview) return;
-      const current = disposableSelectionScanRef.current;
-      if (
-        current.id &&
-        ["READY", "FAILED", "STALE"].includes(current.status ?? "")
-      ) {
-        void dismissCleanupScan(current.id).catch(() => undefined);
-      }
-    },
-    [isSelectionReview],
-  );
-  const occurrencesQuery = useQuery({
-    queryKey: ["content-cleanup-occurrences", scanId, page],
-    queryFn: () =>
-      getCleanupOccurrences(scanId!, {
-        limit: OCCURRENCE_PAGE_SIZE,
-        offset: page * OCCURRENCE_PAGE_SIZE,
-      }),
-    enabled: Boolean(scanId && scanQuery.data?.status === "READY"),
-  });
-  const occurrences = occurrencesQuery.data ?? [];
-  useEffect(() => {
-    // Legacy reviews can contain PROTECTED decisions from the former default.
-    // Select those candidates when their page is first opened so every rule
-    // match follows the current default-selected review contract.
-    setDecisionOverrides((current) => {
-      let changed = false;
-      const next = { ...current };
-      for (const item of occurrences) {
-        if (!item.stale && item.decision === "PROTECTED" && next[item.id] === undefined) {
-          next[item.id] = "DELETE";
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, [occurrences]);
-  const groups = useMemo(
-    () =>
-      occurrences.reduce<Record<string, CleanupOccurrenceRead[]>>(
-        (acc, item) => {
-          (acc[cleanupRuleLabel(item.rule_name, item.detector_id, zh)] ??=
-            []).push(item);
-          return acc;
-        },
-        {},
-      ),
-    [occurrences, zh],
-  );
-  const isSelected = (item: CleanupOccurrenceRead) =>
-    (decisionOverrides[item.id] ?? item.decision) === "DELETE";
-  const deleteCount = useMemo(() => {
-    // The scan response is authoritative for pages that have not been opened
-    // yet. Reconcile only the visible page so a checked item can never leave
-    // the Apply button at zero while its decision is DELETE in the scan.
-    const serverCount = Math.max(0, scanQuery.data?.delete_count ?? 0);
-    const visibleBaseline = occurrences.reduce(
-      (count, item) => count + (item.decision === "DELETE" && !item.stale ? 1 : 0),
-      0,
-    );
-    const visibleSelected = occurrences.reduce(
-      (count, item) => count + (isSelected(item) && !item.stale ? 1 : 0),
-      0,
-    );
-    const reconciled = serverCount - visibleBaseline + visibleSelected;
-    return Math.max(visibleSelected, reconciled, 0);
-  }, [occurrences, scanQuery.data?.delete_count, decisionOverrides]);
-  const decisionMutation = useMutation({
-    mutationFn: async () => {
-      const decisions = Object.entries(decisionOverrides).map(
-        ([occurrence_id, decision]) => ({ occurrence_id, decision }),
-      );
-      if (decisions.length) await updateCleanupDecisions(scanId!, decisions);
-    },
-    onSuccess: () =>
-      void queryClient.invalidateQueries({
-        queryKey: ["content-cleanup-scan", scanId],
-      }),
-  });
-  const applyMutation = useMutation({
-    mutationFn: async () => {
-      await decisionMutation.mutateAsync();
-      return applyCleanupScan(scanId!);
-    },
-    onSuccess: async (result) => {
-      // Refresh the active source/editor target first.  The cleanup endpoint
-      // commits the new MessageVersion before returning; updating the focused
-      // editor before broad query invalidation prevents a stale reader query
-      // from winning the render race and hiding the change until refresh.
-      await onApplied?.();
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["reader-turn-window"] }),
-        queryClient.invalidateQueries({ queryKey: ["conversation"] }),
-        queryClient.invalidateQueries({ queryKey: ["conversation-index"] }),
-        queryClient.invalidateQueries({ queryKey: ["toc"] }),
-        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
-      ]);
-      if (result.conflicts === 0) onClose?.();
-    },
-  });
   const dismissMutation = useMutation({
     mutationFn: () => dismissCleanupScan(scanId!),
     onSuccess: () => onClose?.(),
   });
+  const retryScan = useMutation({ mutationFn: () => rescanCleanup(scanId!), onSuccess: (scan) => setScanId(scan.id) });
   const status = scanQuery.data?.status;
-  const toggle = (item: CleanupOccurrenceRead) =>
-    setDecisionOverrides((current) => ({
-      ...current,
-      [item.id]: isSelected(item) ? "KEEP" : "DELETE",
-    }));
-  const selectVisible = () =>
-    setDecisionOverrides((current) => ({
-      ...current,
-      ...Object.fromEntries(
-        occurrences
-          .filter((item) => !item.stale)
-          .map((item) => [item.id, "DELETE" as const]),
-      ),
-    }));
-  const pageCount = Math.max(
-    1,
-    Math.ceil((scanQuery.data?.occurrence_count ?? 0) / OCCURRENCE_PAGE_SIZE),
-  );
 
   return (
     <section
@@ -346,7 +215,7 @@ export function ContentCleanupPanel({
                 ? zh
                   ? "只审查你在当前 Markdown 源码中选择的内容；应用后会创建正常的消息版本。"
                   : "Review only the selected Markdown source. Applying creates a normal message version."
-                : initialScanId
+                : scanQuery.data?.source === "IMPORT"
                   ? zh
                     ? "导入后的异步审查。确认前不会改变正文。"
                     : "Post-import review. Content stays unchanged until you confirm."
@@ -360,6 +229,7 @@ export function ContentCleanupPanel({
           <button
             type="button"
             onClick={() => setView("rules")}
+            disabled={draftDirty}
             className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle"
           >
             <BookOpen className="h-3.5 w-3.5" />
@@ -386,6 +256,7 @@ export function ContentCleanupPanel({
           <ContentCleanupRuleSettings
             embedded
             onBack={() => setView("review")}
+            onDirtyChange={setDraftDirty}
           />
         ) : null}
         {view === "review" && activeSelection ? (
@@ -412,11 +283,8 @@ export function ContentCleanupPanel({
                 <button
                   type="button"
                   onClick={async () => {
-                    if (scanId) await dismissCleanupScan(scanId).catch(() => undefined);
                     setScanWholeConversation(true);
                     setScanId(null);
-                    setPage(0);
-                    setDecisionOverrides({});
                     autoStartedRef.current = false;
                   }}
                   className="min-h-9 rounded-lg border border-ui bg-page px-3 text-xs font-medium text-primary hover:bg-subtle"
@@ -449,7 +317,7 @@ export function ContentCleanupPanel({
           </p>
         ) : null}
         {view === "review" &&
-        (startMutation.isPending || (scanId && !scanQuery.data)) ? (
+        (startMutation.isPending || (scanId && !scanQuery.data && !scanQuery.isError)) ? (
           <div className="flex items-center gap-2 py-8 text-sm text-secondary">
             <LoaderCircle className="h-4 w-4 animate-spin" />
             {activeSelection
@@ -461,6 +329,7 @@ export function ContentCleanupPanel({
                 : "Preparing noise review…"}
           </div>
         ) : null}
+        {scanQuery.isError ? <div role="alert" className="space-y-2 text-sm text-[var(--danger)]"><p>{scanQuery.error.message}</p><button type="button" className="btn-secondary min-h-11 px-3" onClick={() => void scanQuery.refetch()}>{zh ? "重试读取" : "Retry loading"}</button></div> : null}
         {view === "review" &&
         status &&
         !["READY", "FAILED", "STALE"].includes(status) ? (
@@ -486,7 +355,8 @@ export function ContentCleanupPanel({
             </p>
           </div>
         ) : null}
-        {view === "review" && status === "FAILED" ? (
+        {view === "review" && (status === "FAILED" || status === "STALE") ? (
+          <div className="space-y-2">
           <p
             className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
             role="alert"
@@ -494,6 +364,9 @@ export function ContentCleanupPanel({
             {scanQuery.data?.error_message ??
               (zh ? "扫描失败。" : "Scan failed.")}
           </p>
+          <button type="button" disabled={retryScan.isPending} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => retryScan.mutate()}>{zh ? "重新扫描原对话" : "Rescan conversations"}</button>
+          {retryScan.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{retryScan.error.message}</p> : null}
+          </div>
         ) : null}
         {view === "review" &&
         status === "READY" &&
@@ -507,27 +380,15 @@ export function ContentCleanupPanel({
         {view === "review" &&
         status === "READY" &&
         (scanQuery.data?.occurrence_count ?? 0) > 0 ? (
-          <ReviewResults
-            zh={zh}
-            groups={groups}
+          <CleanupReviewWorkspace
+            key={scanId}
+            scan={scanQuery.data!}
             conversationId={conversationId}
             onLocate={onLocate}
-            isSelected={isSelected}
-            toggle={toggle}
-            selectVisible={selectVisible}
-            page={page}
-            pageCount={pageCount}
-            setPage={setPage}
-            deleteCount={deleteCount}
-            totalOccurrences={scanQuery.data?.occurrence_count ?? 0}
-            applying={applyMutation.isPending}
-            dismissing={dismissMutation.isPending}
-            onApply={() => applyMutation.mutate()}
-            onDismiss={() => dismissMutation.mutate()}
-            error={applyMutation.isError ? applyMutation.error.message : null}
-            processedMessages={scanQuery.data?.processed_messages ?? 0}
-            totalMessages={scanQuery.data?.total_messages ?? 0}
-            scopeType={scanQuery.data?.scope_type ?? scopeType}
+            onApplied={onApplied}
+            onClose={onClose}
+            onRescan={(id) => { setScanWholeConversation(true); setScanId(id); }}
+            onDirtyChange={setDraftDirty}
           />
         ) : null}
       </div>
@@ -670,235 +531,4 @@ function EmptyReview({
       </button>
     </div>
   );
-}
-
-function ReviewResults({
-  zh,
-  groups,
-  conversationId,
-  onLocate,
-  isSelected,
-  toggle,
-  selectVisible,
-  page,
-  pageCount,
-  setPage,
-  deleteCount,
-  totalOccurrences,
-  applying,
-  dismissing,
-  onApply,
-  onDismiss,
-  error,
-  processedMessages,
-  totalMessages,
-  scopeType,
-}: {
-  zh: boolean;
-  groups: Record<string, CleanupOccurrenceRead[]>;
-  conversationId?: string;
-  onLocate?: (occurrence: CleanupOccurrenceRead) => Promise<void> | void;
-  isSelected: (item: CleanupOccurrenceRead) => boolean;
-  toggle: (item: CleanupOccurrenceRead) => void;
-  selectVisible: () => void;
-  page: number;
-  pageCount: number;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
-  deleteCount: number;
-  totalOccurrences: number;
-  applying: boolean;
-  dismissing: boolean;
-  onApply: () => void;
-  onDismiss: () => void;
-  error: string | null;
-  processedMessages: number;
-  totalMessages: number;
-  scopeType: string;
-}) {
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3 border-b border-ui pb-3">
-        <div>
-          <p className="text-sm font-medium text-primary">
-            {totalOccurrences} {zh ? "个候选" : "candidates found"}
-          </p>
-          <p className="mt-1 text-xs text-secondary">
-            {scopeType === "CURRENT_CONVERSATION"
-              ? zh
-                ? `已扫描 ${processedMessages} / ${totalMessages} 条消息；候选按页显示`
-                : `Scanned ${processedMessages} / ${totalMessages} messages; candidates are paged`
-              : zh
-                ? `已扫描 ${processedMessages} / ${totalMessages} 条消息`
-                : `Scanned ${processedMessages} / ${totalMessages} messages`}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={selectVisible}
-          className="text-xs font-medium text-accent underline"
-        >
-          {zh ? "选择本页候选" : "Select candidates on page"}
-        </button>
-      </div>
-      {Object.entries(groups).map(([name, items]) => (
-        <section key={name}>
-          <h3 className="mb-2 text-xs font-semibold text-secondary">
-            {name} · {items.length}
-          </h3>
-          <div className="divide-y divide-ui border-y border-ui">
-            {items.map((item) => (
-              <article key={item.id} className="py-3">
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={isSelected(item)}
-                    disabled={item.stale}
-                    onChange={() => toggle(item)}
-                    className="mt-1 h-4 w-4 accent-[var(--accent)]"
-                    aria-label={`${zh ? "处理" : "Process"} ${item.match_text}`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm leading-6 text-primary">
-                      <span className="text-secondary">
-                        {item.context_before}
-                      </span>
-                      <mark
-                        data-testid="content-cleanup-match"
-                        className="rounded bg-[var(--warning-soft)] px-0.5 font-semibold text-primary underline decoration-[var(--warning)] decoration-2 underline-offset-2"
-                        title={zh ? "检测到的噪声标记" : "Detected noise marker"}
-                      >
-                        {item.match_text}
-                      </mark>
-                      <span className="text-secondary">
-                        {item.context_after}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-[11px] text-secondary">
-                      <span className="font-medium text-primary">
-                        {item.conversation_title}
-                      </span>{" "}
-                      · {item.role} · {zh ? "第" : "line "}
-                      {item.line_start}
-                      {zh ? "行" : ""} ·
-                      {cleanupDetectionLabel(item, zh)}
-                      {item.stale
-                        ? zh
-                          ? " · 版本已变化"
-                          : " · version changed"
-                        : ""}
-                    </p>
-                    {isProtectedCandidate(item) ? (
-                      <p className="mt-1 text-xs text-[var(--warning)]">
-                        {zh
-                          ? "此命中位于 Markdown 结构中，已默认选中；应用前请确认删除后结构仍然正确。"
-                          : "This match is inside Markdown structure. It is selected by default; review the resulting structure before applying."}
-                      </p>
-                    ) : null}
-                    {item.reason_code === "PARTIAL_SELECTION" &&
-                    !isProtectedCandidate(item) ? (
-                      <p className="mt-1 text-xs text-[var(--warning)]">
-                        {zh
-                          ? "当前只选中了标记的一部分；候选已扩展到完整范围，请确认后再处理。"
-                          : "The selection covers only part of the marker. Review the expanded range before processing."}
-                      </p>
-                    ) : null}
-                    {onLocate && item.conversation_id === conversationId ? (
-                      <button
-                        type="button"
-                        onClick={() => void onLocate(item)}
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent underline"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        {zh ? "在正文中查看" : "Locate in reader"}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ))}
-      {pageCount > 1 ? (
-        <nav
-          className="flex items-center justify-between border-t border-ui pt-3"
-          aria-label={zh ? "候选分页" : "Candidate pages"}
-        >
-          <button
-            type="button"
-            disabled={page === 0}
-            onClick={() => setPage((current) => Math.max(0, current - 1))}
-            className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle disabled:opacity-40"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            {zh ? "上一页" : "Previous"}
-          </button>
-          <span className="text-xs text-secondary">
-            {page + 1} / {pageCount}
-          </span>
-          <button
-            type="button"
-            disabled={page + 1 >= pageCount}
-            onClick={() =>
-              setPage((current) => Math.min(pageCount - 1, current + 1))
-            }
-            className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle disabled:opacity-40"
-          >
-            {zh ? "下一页" : "Next"}
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </nav>
-      ) : null}
-      <div className="sticky bottom-0 -mx-4 border-t border-ui bg-page/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            disabled={dismissing}
-            onClick={onDismiss}
-            className="min-h-10 rounded-lg px-3 text-xs font-medium text-secondary hover:bg-subtle"
-          >
-            {zh ? "忽略并删除本次记录" : "Ignore and delete this review"}
-          </button>
-          <button
-            type="button"
-            disabled={applying || deleteCount === 0}
-            onClick={onApply}
-            className="min-h-10 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"
-          >
-            {applying
-              ? zh
-                ? "正在应用…"
-                : "Applying…"
-              : zh
-                ? `应用 ${deleteCount} 项清理`
-                : `Apply ${deleteCount} cleanup${deleteCount === 1 ? "" : "s"}`}
-          </button>
-        </div>
-        {error ? (
-          <p className="mt-2 text-xs text-[var(--danger)]" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function cleanupDetectionLabel(
-  item: CleanupOccurrenceRead,
-  zh: boolean,
-): string {
-  if (item.reason_code === "PARTIAL_SELECTION")
-    return zh ? "局部选区" : "partial selection";
-  if (item.match_mode === "BOUNDED_FUZZY")
-    return zh ? "近似建议" : "approximate";
-  if (item.match_mode === "NORMALIZED_EXACT")
-    return zh ? "规范化匹配" : "normalized";
-  if (item.match_mode === "STRUCTURAL") return zh ? "结构识别" : "structural";
-  if (item.match_mode === "MANUAL") return zh ? "手动选择" : "manual";
-  return zh ? "精确匹配" : "exact";
-}
-
-function isProtectedCandidate(item: CleanupOccurrenceRead): boolean {
-  return item.decision === "PROTECTED" || Boolean(item.evidence_codes?.includes("PROTECTED_RANGE"));
 }

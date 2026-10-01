@@ -1,5 +1,8 @@
-import Dexie, { type EntityTable } from "dexie";
+import Dexie, { type DBCoreTransaction, type EntityTable } from "dexie";
 import { unzipSync, strFromU8 } from "fflate";
+import { assertOfflineAccess, captureOfflineAccess, lockOfflineAccess } from "./offline-access";
+import { assertOfflineWritable } from "./offline-write-guard";
+import { ingestReadingPosition } from "./reading-position-sync";
 import type {
   AnnotationRead,
   AnnotationSyncOperation,
@@ -15,6 +18,7 @@ import type {
 export type OfflineConversationRecord = ConversationDetail & {
   downloaded_at: string;
   last_read_at: string | null;
+  offline_asset_mode?: "none" | "small" | "all";
 };
 
 export type OfflineMessageRecord = Omit<MessageListItem, "render_blocks"> & { conversation_id: string };
@@ -44,7 +48,7 @@ type OfflinePackageMeta = {
   byte_size: number;
   downloaded_at: string;
 };
-type OfflineOutboxRecord = AnnotationSyncOperation & { queued_at: string; attempts: number; last_error: string | null };
+export type OfflineOutboxRecord = Omit<AnnotationSyncOperation, "entity_type"> & { entity_type: AnnotationSyncOperation["entity_type"] | "reading_position"; queued_at: string; attempts: number; last_error: string | null; submitted?: boolean; retry_after?: number };
 type OfflineSetting = { key: string; value: unknown };
 export type OfflineAttachmentRecord = {
   id: string;
@@ -58,6 +62,7 @@ export type OfflineAttachmentRecord = {
   byte_size: number;
   sha256: string;
   content_path: string | null;
+  downloadable?: boolean;
   status?: string;
   scan_status?: string;
   resolution_status?: string;
@@ -78,7 +83,14 @@ export type OfflineAttachmentRecord = {
   }>;
 };
 
-class OfflineLibraryDatabase extends Dexie {
+const protectedTransactions = new Set<DBCoreTransaction>();
+
+function abortProtectedTransactions(): void {
+  for (const transaction of protectedTransactions) { try { transaction.abort(); } catch { /* Already settled. */ } }
+  protectedTransactions.clear();
+}
+
+export class OfflineLibraryDatabase extends Dexie {
   conversations!: EntityTable<OfflineConversationRecord, "id">;
   messages!: EntityTable<OfflineMessageRecord, "id">;
   blocks!: EntityTable<OfflineBlockRecord, "key">;
@@ -121,6 +133,49 @@ class OfflineLibraryDatabase extends Dexie {
       settings: "key",
       attachments: "id, conversation_id, message_id, message_version_id",
     });
+    const isCurrentDatabase = () => this === offlineDb;
+    this.use({ stack: "dbcore", name: "protected-offline-access", create: (core) => {
+      const tickets = new WeakMap<DBCoreTransaction, number>();
+      function guard(transaction: DBCoreTransaction): number {
+        const ticket = tickets.get(transaction) ?? captureOfflineAccess();
+        assertOfflineAccess(ticket);
+        if (!isCurrentDatabase()) throw new Error("Offline account changed. Open the current library again.");
+        return ticket;
+      }
+      function checked<T>(transaction: DBCoreTransaction, operation: () => Promise<T>): Promise<T> {
+        const ticket = guard(transaction);
+        return operation().then((value) => { assertOfflineAccess(ticket); guard(transaction); return value; });
+      }
+      return { ...core,
+        transaction(stores, mode, options) {
+          const ticket = captureOfflineAccess();
+          if (mode === "readwrite") assertOfflineWritable(getActiveOfflineStorageContext().userId);
+          if (!isCurrentDatabase()) throw new Error("Offline account changed.");
+          const transaction = core.transaction(stores, mode, options);
+          tickets.set(transaction, ticket);
+          protectedTransactions.add(transaction);
+          const raw = transaction as IDBTransaction;
+          raw.addEventListener("complete", () => protectedTransactions.delete(transaction), { once: true });
+          raw.addEventListener("abort", () => protectedTransactions.delete(transaction), { once: true });
+          return transaction;
+        },
+        table(name) {
+          const table = core.table(name);
+          return { ...table,
+            get: (request) => checked(request.trans, () => table.get(request)),
+            getMany: (request) => checked(request.trans, () => table.getMany(request)),
+            query: (request) => checked(request.trans, () => table.query(request)),
+            count: (request) => checked(request.trans, () => table.count(request)),
+            openCursor: (request) => checked(request.trans, () => table.openCursor(request)),
+            mutate: (request) => checked(request.trans, () => {
+              try { assertOfflineWritable(getActiveOfflineStorageContext().userId); }
+              catch (error) { request.trans.abort(); throw error; }
+              return table.mutate(request);
+            }),
+          };
+        },
+      };
+    } });
   }
 }
 
@@ -142,6 +197,20 @@ export type OfflineStorageContext = {
 
 let activeOfflineContext: OfflineStorageContext = legacyOfflineStorageContext(null);
 export let offlineDb = new OfflineLibraryDatabase(activeOfflineContext.databaseName);
+const attachmentObjectUrls = new Set<string>();
+
+export function lockProtectedOfflineData(notify = true): void {
+  abortProtectedTransactions();
+  lockOfflineAccess(notify);
+  offlineDb.close();
+  // Keep persisted owner bindings and the real database/cache. The disconnected
+  // handle cannot auto-open a former account's data while authentication runs.
+  activeOfflineContext = { userId: null, namespace: "locked", databaseName: "chat-reader-offline-locked", assetCacheName: "chat-reader-offline-locked", usesLegacyStorage: false };
+  offlineDb = new OfflineLibraryDatabase(activeOfflineContext.databaseName);
+  offlineDb.close();
+  for (const url of attachmentObjectUrls) URL.revokeObjectURL(url);
+  attachmentObjectUrls.clear();
+}
 
 export function getActiveOfflineStorageContext(): OfflineStorageContext {
   return { ...activeOfflineContext };
@@ -178,6 +247,8 @@ export async function activateProtectedOfflineData(
   }
   offlineDb.close();
   offlineDb = nextDb;
+  abortProtectedTransactions();
+  lockOfflineAccess(false);
   activeOfflineContext = context;
   if (typeof window !== "undefined") {
     try { window.localStorage.setItem(ACTIVE_OFFLINE_USER_KEY, normalizedUserId); } catch {
@@ -187,28 +258,39 @@ export async function activateProtectedOfflineData(
   return getActiveOfflineStorageContext();
 }
 
-export async function clearProtectedOfflineData(userId?: string | null): Promise<OfflineStorageContext> {
+export async function clearProtectedOfflineData(userId?: string | null, notify = true): Promise<OfflineStorageContext> {
+  const context = await captureProtectedOfflineStorageContext(userId);
+  const persistedUserId = context.userId;
+  if (offlineDb.name === context.databaseName || activeOfflineContext.userId === null) lockProtectedOfflineData(notify);
+  if (typeof window !== "undefined") {
+    try {
+      if (readPersistedOfflineUserId() === persistedUserId) window.localStorage.removeItem(ACTIVE_OFFLINE_USER_KEY);
+      // Keep the legacy owner binding if deletion is blocked by another tab.
+    } catch { /* Browser storage may already be unavailable. */ }
+  }
+  await deleteProtectedOfflineStorage(context);
+  return context;
+}
+
+export async function captureProtectedOfflineStorageContext(userId?: string | null): Promise<OfflineStorageContext> {
   const persistedUserId = normalizeOfflineUserId(userId) ?? readPersistedOfflineUserId() ?? activeOfflineContext.userId;
+  if (persistedUserId && activeOfflineContext.userId === persistedUserId) return getActiveOfflineStorageContext();
   const context = persistedUserId
     ? await resolveOfflineStorageContext(persistedUserId, { claimLegacy: false }).catch(() => (
       activeOfflineContext.userId === persistedUserId ? getActiveOfflineStorageContext() : namespacedOfflineStorageContext(persistedUserId)
     ))
     : getActiveOfflineStorageContext();
-  if (offlineDb.name === context.databaseName) offlineDb.close();
-  activeOfflineContext = legacyOfflineStorageContext(null);
-  offlineDb = new OfflineLibraryDatabase(activeOfflineContext.databaseName);
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.removeItem(ACTIVE_OFFLINE_USER_KEY);
-      // Keep the legacy owner binding even if deletion fails or is blocked by
-      // another tab. A later account must never claim the remaining database.
-    } catch { /* Browser storage may already be unavailable. */ }
-  }
-  await Promise.allSettled([
+  return context;
+}
+
+// Operates on an already captured account context, including after signout has
+// cleared the active account pointer. A failed deletion must stay retryable.
+export async function deleteProtectedOfflineStorage(context: OfflineStorageContext): Promise<void> {
+  const results = await Promise.allSettled([
     Dexie.delete(context.databaseName),
     ...(typeof caches !== "undefined" ? [caches.delete(context.assetCacheName)] : []),
   ]);
-  return context;
+  if (results.some((result) => result.status === "rejected")) throw new Error("Protected browser data could not be cleared.");
 }
 
 function normalizeOfflineUserId(value: string | null | undefined): string | null {
@@ -281,6 +363,7 @@ type PackageConversation = Record<string, unknown> & {
 type OfflinePackagePayload = {
   format: "chat-reader-offline-package";
   version: 1 | 2 | 3;
+  asset_mode?: "none" | "small" | "all";
   update_mode?: "conversation-delta";
   base_revisions?: Record<string, number>;
   catalog_revision: string;
@@ -402,7 +485,11 @@ function estimateOfflineStorageBytes(
   );
 }
 
-export async function importOfflinePackage(packageId: string, response: Response): Promise<OfflinePackageMeta> {
+export async function importOfflinePackage(packageId: string, response: Response, options: { signal?: AbortSignal; onWriting?: () => void } = {}): Promise<OfflinePackageMeta> {
+  options.signal?.throwIfAborted();
+  const access = captureOfflineAccess();
+  const db = offlineDb;
+  const context = getActiveOfflineStorageContext();
   if (!response.ok) throw new OfflinePackageImportError("DOWNLOAD", `Offline package download failed (${response.status}).`);
   const declaredBytes = Number(response.headers.get("content-length") ?? 0);
   const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
@@ -410,6 +497,7 @@ export async function importOfflinePackage(packageId: string, response: Response
     throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.");
   }
   const compressed = new Uint8Array(await response.arrayBuffer());
+  options.signal?.throwIfAborted();
   let entries: ReturnType<typeof unzipSync>;
   try {
     entries = unzipSync(compressed);
@@ -454,14 +542,16 @@ export async function importOfflinePackage(packageId: string, response: Response
     downloaded_at: now,
   };
 
-  const cache = await caches.open(activeOfflineContext.assetCacheName);
+  assertOfflineAccess(access);
+  const cache = await caches.open(context.assetCacheName);
   const cachedUrls = new Set<string>();
   const previousCacheEntries = new Map<string, Response | null>();
   const previousAttachments = conversationIds.length
-    ? await offlineDb.attachments.where("conversation_id").anyOf(conversationIds).toArray()
+    ? await db.attachments.where("conversation_id").anyOf(conversationIds).toArray()
     : [];
 
   try {
+    options.onWriting?.();
     if (payload.version === 3) {
       for (const conversation of payload.conversations) {
         for (const attachment of conversation.attachments ?? []) {
@@ -474,27 +564,31 @@ export async function importOfflinePackage(packageId: string, response: Response
             const previous = await cache.match(url);
             previousCacheEntries.set(url, previous ? previous.clone() : null);
           }
+          assertOfflineAccess(access);
+          options.signal?.throwIfAborted();
           await cache.put(url, new Response(binary, { headers: { "Content-Type": attachment.detected_mime_type, "Content-Length": String(binary.byteLength) } }));
           cachedUrls.add(url);
         }
       }
     }
-    await offlineDb.transaction(
+    assertOfflineAccess(access);
+    await db.transaction(
     "rw",
-    [offlineDb.conversations, offlineDb.messages, offlineDb.blocks, offlineDb.headings, offlineDb.searchDocuments, offlineDb.annotations, offlineDb.notebooks, offlineDb.readingPositions, offlineDb.packages, offlineDb.outbox, offlineDb.attachments],
+    [db.conversations, db.messages, db.blocks, db.headings, db.searchDocuments, db.annotations, db.notebooks, db.readingPositions, db.packages, db.outbox, db.attachments, db.settings],
     async () => {
+      options.signal?.throwIfAborted();
+      const transaction = Dexie.currentTransaction!;
+      const abort = () => transaction.abort();
+      options.signal?.addEventListener("abort", abort, { once: true });
+      transaction.on("complete", () => options.signal?.removeEventListener("abort", abort));
+      transaction.on("abort", () => options.signal?.removeEventListener("abort", abort));
       const existingConversations = new Map(
-        (await offlineDb.conversations.bulkGet(conversationIds))
+        (await db.conversations.bulkGet(conversationIds))
           .filter((item): item is OfflineConversationRecord => Boolean(item))
           .map((item) => [item.id, item]),
       );
-      const existingPositions = new Map(
-        (await offlineDb.readingPositions.bulkGet(conversationIds))
-          .filter((item): item is ReadingPositionRead => Boolean(item))
-          .map((item) => [item.conversation_id, item]),
-      );
       const pendingOperations = conversationIds.length
-        ? await offlineDb.outbox.where("conversation_id").anyOf(conversationIds).toArray()
+        ? await db.outbox.where("conversation_id").anyOf(conversationIds).toArray()
         : [];
       const pendingAnnotationIds = new Set(
         pendingOperations.filter((item) => item.entity_type === "annotation").map((item) => item.entity_id),
@@ -502,17 +596,31 @@ export async function importOfflinePackage(packageId: string, response: Response
       const pendingNotebookIds = new Set(
         pendingOperations.filter((item) => item.entity_type === "notebook").map((item) => item.entity_id),
       );
-      const pendingAnnotations = await offlineDb.annotations.bulkGet(Array.from(pendingAnnotationIds));
-      const pendingNotebooks = await offlineDb.notebooks.bulkGet(Array.from(pendingNotebookIds));
+      const pendingNotebookConversations = new Set(
+        pendingOperations.filter((item) => item.entity_type === "notebook").map((item) => item.conversation_id),
+      );
+      // A conflicted operation has a durable receipt and may have no outbox
+      // descendants. Package refresh must still preserve its working rows,
+      // including while a resolution is awaiting acknowledgment.
+      const conflictMarkers = await db.settings.where("key").startsWith("sync-conflict:").toArray();
+      for (const row of conflictMarkers) {
+        const marker = row.value as { entity_type: string; conversation_id: string; entity_id: string; local_entity_id: string; conflict_copy_id: string };
+        if (!conversationIds.includes(marker.conversation_id)) continue;
+        const ids = marker.entity_type === "notebook" ? pendingNotebookIds : pendingAnnotationIds;
+        for (const id of [marker.entity_id, marker.local_entity_id, marker.conflict_copy_id]) if (id) ids.add(id);
+        if (marker.entity_type === "notebook") pendingNotebookConversations.add(marker.conversation_id);
+      }
+      const pendingAnnotations = await db.annotations.bulkGet(Array.from(pendingAnnotationIds));
+      const pendingNotebooks = await db.notebooks.bulkGet(Array.from(pendingNotebookIds));
       if (conversationIds.length) {
         await Promise.all([
-          offlineDb.messages.where("conversation_id").anyOf(conversationIds).delete(),
-          offlineDb.blocks.where("conversation_id").anyOf(conversationIds).delete(),
-          offlineDb.headings.where("conversation_id").anyOf(conversationIds).delete(),
-          offlineDb.searchDocuments.where("conversation_id").anyOf(conversationIds).delete(),
-          offlineDb.annotations.where("conversation_id").anyOf(conversationIds).delete(),
-          offlineDb.notebooks.where("conversation_id").anyOf(conversationIds).delete(),
-          offlineDb.attachments.where("conversation_id").anyOf(conversationIds).delete(),
+          db.messages.where("conversation_id").anyOf(conversationIds).delete(),
+          db.blocks.where("conversation_id").anyOf(conversationIds).delete(),
+          db.headings.where("conversation_id").anyOf(conversationIds).delete(),
+          db.searchDocuments.where("conversation_id").anyOf(conversationIds).delete(),
+          db.annotations.where("conversation_id").anyOf(conversationIds).delete(),
+          db.notebooks.where("conversation_id").anyOf(conversationIds).delete(),
+          db.attachments.where("conversation_id").anyOf(conversationIds).delete(),
         ]);
       }
       for (const raw of payload.conversations) {
@@ -543,27 +651,28 @@ export async function importOfflinePackage(packageId: string, response: Response
           }
         }
         const conversation = normalizeOfflineConversation(raw, now);
+        conversation.offline_asset_mode = payload.asset_mode ?? (payload.version === 3 ? "all" : undefined);
         conversation.last_read_at = existingConversations.get(raw.id)?.last_read_at ?? conversation.last_read_at;
-        await offlineDb.conversations.put(conversation);
+        await db.conversations.put(conversation);
         // Keep IndexedDB request batches bounded. Large exports can contain
         // tens of thousands of search documents; queuing every request in one
         // transaction causes Chromium to abort the transaction mid-write
         // (often reported as "N of M operations failed"). Chunking preserves
         // the package transaction/rollback semantics while avoiding oversized
         // request queues.
-        if (messages.length) await bulkPutChunked(offlineDb.messages, messages);
+        if (messages.length) await bulkPutChunked(db.messages, messages);
         // A package that advertises messages but writes none is corrupt. Do
         // not leave a misleading conversation shell in IndexedDB: fail the
         // package transaction so the previous offline copy remains intact.
         if (messages.length) {
-          let storedCount = await offlineDb.messages.where("conversation_id").equals(String(raw.id)).count();
+          let storedCount = await db.messages.where("conversation_id").equals(String(raw.id)).count();
           if (storedCount === 0) {
-            storedCount = (await offlineDb.messages.toArray()).filter((item) => String(item.conversation_id) === String(raw.id)).length;
+            storedCount = (await db.messages.toArray()).filter((item) => String(item.conversation_id) === String(raw.id)).length;
           }
           if (storedCount < messages.length) throw new OfflinePackageImportError("STORAGE_WRITE", "Offline package message records could not be verified.");
         }
-        if (blocks.length) await bulkPutChunked(offlineDb.blocks, blocks);
-        if (raw.headings?.length) await bulkPutChunked(offlineDb.headings, raw.headings.map((item) => ({ ...item, conversation_id: raw.id })));
+        if (blocks.length) await bulkPutChunked(db.blocks, blocks);
+        if (raw.headings?.length) await bulkPutChunked(db.headings, raw.headings.map((item) => ({ ...item, conversation_id: raw.id })));
         if (raw.search_documents?.length) {
           const documents = raw.search_documents.map((item) => {
             const { search_text, ...rest } = item;
@@ -573,22 +682,21 @@ export async function importOfflinePackage(packageId: string, response: Response
               conversation_id: raw.id,
             };
           });
-          await bulkPutChunked(offlineDb.searchDocuments, documents);
+          await bulkPutChunked(db.searchDocuments, documents);
         }
-        if (raw.annotations?.length) await bulkPutChunked(offlineDb.annotations, raw.annotations);
-        if (raw.notebook) await offlineDb.notebooks.put(raw.notebook);
-        if (raw.reading_position && isNewerReadingPosition(raw.reading_position, existingPositions.get(raw.id))) {
-          await offlineDb.readingPositions.put(raw.reading_position);
-        }
+        if (raw.annotations?.length) await bulkPutChunked(db.annotations, raw.annotations);
+        if (raw.notebook && !pendingNotebookConversations.has(raw.id)) await db.notebooks.put(raw.notebook);
+        if (raw.reading_position) await ingestReadingPosition(raw.id, raw.reading_position, db);
         if (raw.attachments?.length) {
-          await bulkPutChunked(offlineDb.attachments, raw.attachments.map((attachment) => ({ ...attachment, conversation_id: raw.id })));
+          await bulkPutChunked(db.attachments, raw.attachments.map((attachment) => ({ ...attachment, conversation_id: raw.id })));
         }
       }
       const localAnnotations = pendingAnnotations.filter((item): item is AnnotationRead => Boolean(item));
       const localNotebooks = pendingNotebooks.filter((item): item is NotebookRead => Boolean(item));
-      if (localAnnotations.length) await bulkPutChunked(offlineDb.annotations, localAnnotations);
-      if (localNotebooks.length) await bulkPutChunked(offlineDb.notebooks, localNotebooks);
-      await offlineDb.packages.put(packageMeta);
+      if (localAnnotations.length) await bulkPutChunked(db.annotations, localAnnotations);
+      for (const annotation of localAnnotations) await syncOfflineAnnotationSearch(annotation, db);
+      if (localNotebooks.length) await bulkPutChunked(db.notebooks, localNotebooks);
+      await db.packages.put(packageMeta);
     },
     );
   } catch (error) {
@@ -611,6 +719,10 @@ export async function importOfflinePackage(packageId: string, response: Response
     throw error;
   }
   const retainedCacheUrls = new Set(cachedUrls);
+  // A lower download tier never clears files that are already available.
+  for (const raw of payload.conversations) for (const attachment of raw.attachments ?? []) {
+    for (const url of offlineAttachmentCacheUrls(attachment)) retainedCacheUrls.add(url);
+  }
   await Promise.all(
     previousAttachments
       .flatMap(offlineAttachmentCacheUrls)
@@ -620,70 +732,140 @@ export async function importOfflinePackage(packageId: string, response: Response
   return packageMeta;
 }
 
-export async function removeOfflineConversations(conversationIds: string[]): Promise<void> {
+export class OfflinePendingChangesError extends Error {
+  constructor(readonly count: number) {
+    super("Unsynced changes must be resolved before deleting this offline copy.");
+    this.name = "OfflinePendingChangesError";
+  }
+}
+
+export class OfflineDownloadInProgressError extends Error {
+  constructor() { super("Wait for the download to finish or cancel it before clearing local data."); this.name = "OfflineDownloadInProgressError"; }
+}
+
+async function assertNoActiveOfflineDownload(db: OfflineLibraryDatabase): Promise<void> {
+  const active = await db.settings.where("key").startsWith("offline-download:").filter((row) =>
+    ["queued", "generating", "downloading", "writing"].includes((row.value as { state: string }).state)).count();
+  if (active) throw new OfflineDownloadInProgressError();
+}
+
+export async function removeOfflineConversations(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {
+  return withOfflineDataWrite(() => removeOfflineConversationsUnlocked(conversationIds, reviewedFingerprint));
+}
+
+async function withOfflineDataWrite(work: () => Promise<void>): Promise<void> {
+  const access = captureOfflineAccess(), db = offlineDb;
+  await assertNoActiveOfflineDownload(db);
+  const run = async () => { assertOfflineAccess(access); await assertNoActiveOfflineDownload(db); await work(); };
+  const synchronize = () => navigator.locks ? navigator.locks.request(`chat-reader:sync:${db.name}`, run) : run();
+  if (navigator.locks) await navigator.locks.request(`chat-reader:downloads:${db.name}`, { ifAvailable: true }, async (lock) => {
+    if (!lock) throw new OfflineDownloadInProgressError();
+    await synchronize();
+  });
+  else await synchronize();
+}
+
+async function verifyReviewedPending(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {
+  if (reviewedFingerprint === undefined) {
+    const pending = await countOfflinePendingChanges(conversationIds);
+    if (pending) throw new OfflinePendingChangesError(pending);
+    return;
+  }
+  // Keep the containing write transaction alive while hashing. New edits cannot
+  // slip between the reviewed snapshot check and removal of the selected rows.
+  const { readOfflinePending, OfflinePendingChangedError } = await Dexie.waitFor(import("./offline-pending"));
+  const snapshot = await Dexie.waitFor(readOfflinePending(conversationIds));
+  if (snapshot.fingerprint !== reviewedFingerprint) throw new OfflinePendingChangedError();
+}
+
+async function removeOfflineConversationsUnlocked(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {
+  const access = captureOfflineAccess();
+  const db = offlineDb;
+  const context = getActiveOfflineStorageContext();
   const attachments = conversationIds.length
-    ? await offlineDb.attachments.where("conversation_id").anyOf(conversationIds).toArray()
+    ? await db.attachments.where("conversation_id").anyOf(conversationIds).toArray()
     : [];
-  await offlineDb.transaction(
+  await db.transaction(
     "rw",
-    [offlineDb.conversations, offlineDb.messages, offlineDb.blocks, offlineDb.headings, offlineDb.searchDocuments, offlineDb.annotations, offlineDb.notebooks, offlineDb.readingPositions, offlineDb.packages, offlineDb.attachments],
+    [db.conversations, db.messages, db.blocks, db.headings, db.searchDocuments, db.annotations, db.notebooks, db.readingPositions, db.packages, db.attachments, db.outbox, db.settings],
     async () => {
+      await assertNoActiveOfflineDownload(db);
+      await verifyReviewedPending(conversationIds, reviewedFingerprint);
+      const conflictKeys = await db.settings.where("key").startsWith("sync-conflict:")
+        .filter((row) => conversationIds.includes((row.value as { conversation_id: string }).conversation_id)).primaryKeys();
+      await db.settings.bulkDelete(conflictKeys.map((key) => `sync-resolution-draft:${key}`));
       await Promise.all([
-        offlineDb.conversations.bulkDelete(conversationIds),
-        offlineDb.messages.where("conversation_id").anyOf(conversationIds).delete(),
-        offlineDb.blocks.where("conversation_id").anyOf(conversationIds).delete(),
-        offlineDb.headings.where("conversation_id").anyOf(conversationIds).delete(),
-        offlineDb.searchDocuments.where("conversation_id").anyOf(conversationIds).delete(),
-        offlineDb.annotations.where("conversation_id").anyOf(conversationIds).delete(),
-        offlineDb.notebooks.where("conversation_id").anyOf(conversationIds).delete(),
-        offlineDb.readingPositions.bulkDelete(conversationIds),
-        offlineDb.attachments.where("conversation_id").anyOf(conversationIds).delete(),
+        db.conversations.bulkDelete(conversationIds),
+        db.messages.where("conversation_id").anyOf(conversationIds).delete(),
+        db.blocks.where("conversation_id").anyOf(conversationIds).delete(),
+        db.headings.where("conversation_id").anyOf(conversationIds).delete(),
+        db.searchDocuments.where("conversation_id").anyOf(conversationIds).delete(),
+        db.annotations.where("conversation_id").anyOf(conversationIds).delete(),
+        db.notebooks.where("conversation_id").anyOf(conversationIds).delete(),
+        db.readingPositions.bulkDelete(conversationIds),
+        db.attachments.where("conversation_id").anyOf(conversationIds).delete(),
+        db.outbox.where("conversation_id").anyOf(conversationIds).delete(),
+        db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("reading-sync:"))
+          && conversationIds.includes((row.value as { conversation_id: string }).conversation_id)).delete(),
       ]);
-      const packages = await offlineDb.packages.toArray();
+      const packages = await db.packages.toArray();
       for (const item of packages) {
         const remaining = item.conversation_ids.filter((id) => !conversationIds.includes(id));
-        if (!remaining.length) await offlineDb.packages.delete(item.id);
-        else if (remaining.length !== item.conversation_ids.length) await offlineDb.packages.update(item.id, { conversation_ids: remaining });
+        if (!remaining.length) await db.packages.delete(item.id);
+        else if (remaining.length !== item.conversation_ids.length) await db.packages.update(item.id, { conversation_ids: remaining });
       }
     },
   );
   if (attachments.length) {
-    const cache = await caches.open(activeOfflineContext.assetCacheName);
+    assertOfflineAccess(access);
+    const cache = await caches.open(context.assetCacheName);
     await Promise.all(attachments.flatMap(offlineAttachmentCacheUrls).map((url) => cache.delete(url)));
   }
 }
 
 export async function getOfflineAttachment(attachmentId: string): Promise<AttachmentRead> {
+  const access = captureOfflineAccess();
   const record = await offlineDb.attachments.get(attachmentId);
   if (!record) throw new Error("Offline attachment metadata was not found.");
   const cached = await readVerifiedCachedAttachment(record);
-  return offlineAttachmentRead(record, cached ? URL.createObjectURL(await cached.blob()) : null, Boolean(cached));
+  const blob = cached ? await cached.blob() : null;
+  assertOfflineAccess(access);
+  const url = blob ? URL.createObjectURL(blob) : null;
+  if (url) attachmentObjectUrls.add(url);
+  return offlineAttachmentRead(record, url, Boolean(cached));
 }
 
 export async function getOfflineAttachmentBytes(attachmentId: string): Promise<Uint8Array | null> {
+  const access = captureOfflineAccess();
   const record = await offlineDb.attachments.get(attachmentId);
   if (!record) return null;
   const response = await readVerifiedCachedAttachment(record);
-  return response ? new Uint8Array(await response.arrayBuffer()) : null;
+  const bytes = response ? new Uint8Array(await response.arrayBuffer()) : null;
+  assertOfflineAccess(access);
+  return bytes;
 }
 
 export async function listOfflineConversationAttachments(conversationId: string): Promise<AttachmentRead[]> {
+  const access = captureOfflineAccess();
   const records = await offlineDb.attachments.where("conversation_id").equals(conversationId).toArray();
   const cached = await Promise.all(records.map(async (record) => Boolean(await readVerifiedCachedAttachment(record))));
+  assertOfflineAccess(access);
   return records
     .map((record, index) => offlineAttachmentRead(record, null, cached[index]))
     .sort((left, right) => left.display_name.localeCompare(right.display_name));
 }
 
 async function readVerifiedCachedAttachment(record: OfflineAttachmentRecord): Promise<Response | null> {
-  if (!record.content_path) return null;
+  const access = captureOfflineAccess();
+  if (!record.sha256 || record.resolution_status === "missing" || record.downloadable === false) return null;
   try {
     const cache = await caches.open(activeOfflineContext.assetCacheName);
     for (const url of offlineAttachmentCacheUrls(record)) {
       const response = await cache.match(url);
       if (!response) continue;
-      const bytes = new Uint8Array(await response.clone().arrayBuffer());
-      if (record.byte_size >= 0 && bytes.byteLength !== record.byte_size) {
+      const blob = await response.clone().blob();
+      assertOfflineAccess(access);
+      if (record.byte_size >= 0 && blob.size !== record.byte_size) {
         await cache.delete(url);
         continue;
       }
@@ -695,10 +877,46 @@ async function readVerifiedCachedAttachment(record: OfflineAttachmentRecord): Pr
   }
 }
 
+export async function inspectOfflineCopyAssets(conversationId: string, mode: "none" | "small" | "all"): Promise<{ total: number; available: number; required: number; missing: number; metadataKnown: boolean }> {
+  const access = captureOfflineAccess(), db = offlineDb;
+  const conversation = await db.conversations.get(conversationId);
+  const attachments = await db.attachments.where("conversation_id").equals(conversationId).toArray();
+  let available = 0, required = 0, missing = 0;
+  for (const attachment of attachments) {
+    const cached = Boolean(await readVerifiedCachedAttachment(attachment));
+    if (cached) available += 1;
+    const needed = mode !== "none" && Boolean(attachment.sha256) && attachment.resolution_status !== "missing" && attachment.downloadable !== false
+      && (mode === "all" || attachment.byte_size <= 10 * 1024 * 1024);
+    if (needed) { required += 1; if (!cached) missing += 1; }
+  }
+  assertOfflineAccess(access);
+  return { total: attachments.length, available, required, missing, metadataKnown: conversation?.offline_asset_mode !== undefined };
+}
+
+export async function clearOfflineAttachmentCache(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {
+  return withOfflineDataWrite(() => clearOfflineAttachmentCacheUnlocked(conversationIds, reviewedFingerprint));
+}
+
+async function clearOfflineAttachmentCacheUnlocked(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {
+  const access = captureOfflineAccess(), db = offlineDb, context = getActiveOfflineStorageContext();
+  await assertNoActiveOfflineDownload(db);
+  await db.transaction("rw", [db.outbox, db.settings, db.annotations, db.notebooks, db.attachments, db.readingPositions], async () => {
+    await verifyReviewedPending(conversationIds, reviewedFingerprint);
+    const attachments = await db.attachments.where("conversation_id").anyOf(conversationIds).toArray();
+    await Dexie.waitFor((async () => {
+      const cache = await caches.open(context.assetCacheName);
+      for (const attachment of attachments) for (const url of offlineAttachmentCacheUrls(attachment)) {
+        assertOfflineAccess(access);
+        await cache.delete(url);
+      }
+    })());
+  });
+}
+
 export function releaseOfflineAttachmentUrls(attachment?: AttachmentRead | null): void {
   const urls = new Set([attachment?.content_url, attachment?.download_url]);
   urls.forEach((url) => {
-    if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+    if (url?.startsWith("blob:")) { URL.revokeObjectURL(url); attachmentObjectUrls.delete(url); }
   });
 }
 
@@ -786,19 +1004,32 @@ export async function requestPersistentStorage(): Promise<{ persisted: boolean; 
   return { persisted, quota: estimate?.quota ?? null, usage: estimate?.usage ?? null };
 }
 
-export async function queueOfflineOperation(operation: AnnotationSyncOperation): Promise<void> {
-  await offlineDb.outbox.put({ ...operation, queued_at: new Date().toISOString(), attempts: 0, last_error: null });
-  if (typeof window !== "undefined") window.dispatchEvent(new Event("chat-reader:outbox"));
+export async function queueOfflineOperation(operation: AnnotationSyncOperation, db = offlineDb): Promise<void> {
+  const last = await db.outbox.orderBy("queued_at").last();
+  const time = Math.max(Date.now(), last ? Date.parse(last.queued_at) + 1 : 0);
+  const entity = operation.entity_type === "notebook" ? operation.conversation_id : operation.entity_id;
+  const conflict = await db.settings.get(`sync-conflict:${operation.entity_type}:${entity}`);
+  await db.outbox.put({ ...operation, queued_at: new Date(time).toISOString(), attempts: 0, last_error: conflict ? "CONFLICT" : null });
 }
 
-export async function syncOfflineAnnotationSearch(annotation: AnnotationRead): Promise<void> {
-  const existing = await offlineDb.searchDocuments.where("document_type").equals("annotation").filter((item) => item.metadata?.annotation_id === annotation.id).toArray();
-  if (existing.length) await offlineDb.searchDocuments.bulkDelete(existing.map((item) => item.id));
+export async function countOfflinePendingChanges(conversationIds: string[], db = offlineDb): Promise<number> {
+  const ids = new Set(conversationIds);
+  const operations = await db.outbox.where("conversation_id").anyOf(conversationIds).count();
+  const conflicts = await db.settings.where("key").startsWith("sync-conflict:")
+    .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
+  const drafts = await db.settings.where("key").startsWith("notebook-draft:")
+    .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
+  return operations + conflicts + drafts;
+}
+
+export async function syncOfflineAnnotationSearch(annotation: AnnotationRead, db = offlineDb): Promise<void> {
+  const existing = await db.searchDocuments.where("document_type").equals("annotation").filter((item) => item.metadata?.annotation_id === annotation.id).toArray();
+  if (existing.length) await db.searchDocuments.bulkDelete(existing.map((item) => item.id));
   if (annotation.is_deleted) return;
   const plainText = [annotation.comment_markdown, annotation.quote].filter(Boolean).join(" ").trim();
   if (!plainText) return;
-  const conversation = await offlineDb.conversations.get(annotation.conversation_id);
-  await offlineDb.searchDocuments.put({
+  const conversation = await db.conversations.get(annotation.conversation_id);
+  await db.searchDocuments.put({
     id: `local-annotation:${annotation.id}`,
     conversation_id: annotation.conversation_id,
     message_id: annotation.message_id,
@@ -820,13 +1051,13 @@ export async function syncOfflineAnnotationSearch(annotation: AnnotationRead): P
   });
 }
 
-export async function clearOfflineAnnotationSearch(conversationId: string): Promise<void> {
-  const stale = await offlineDb.searchDocuments
+export async function clearOfflineAnnotationSearch(conversationId: string, db = offlineDb): Promise<void> {
+  const stale = await db.searchDocuments
     .where("document_type")
     .equals("annotation")
     .filter((item) => item.conversation_id === conversationId)
     .primaryKeys();
-  if (stale.length) await offlineDb.searchDocuments.bulkDelete(stale);
+  if (stale.length) await db.searchDocuments.bulkDelete(stale);
 }
 
 function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: string): OfflineConversationRecord {
@@ -862,13 +1093,4 @@ function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: st
     sort_time: typeof raw.updated_at === "string" ? raw.updated_at : null,
     downloaded_at: downloadedAt,
   };
-}
-
-function isNewerReadingPosition(incoming: ReadingPositionRead, current?: ReadingPositionRead): boolean {
-  if (!current) return true;
-  const incomingTimestamp = Date.parse(incoming.updated_at);
-  const currentTimestamp = Date.parse(current.updated_at);
-  if (!Number.isFinite(incomingTimestamp)) return false;
-  if (!Number.isFinite(currentTimestamp)) return true;
-  return incomingTimestamp > currentTimestamp;
 }

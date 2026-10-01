@@ -155,7 +155,8 @@ apps/web/
   合同保持同源不变。
 - TanStack Query 管理在线列表、详情、TOC、位置和 mutation invalidation。
 - `ReaderDataSource` 统一 remote/offline 合同；`capabilities` 控制编辑、Share、Export 等入口。
-- PreferencesProvider 先从 localStorage cache 启动，再与 `/api/preferences` 同步跨浏览器偏好。
+- PreferencesProvider 从当前账户 Dexie settings 恢复偏好，再通过 `/api/preferences/sync` 按字段 revision 同步。旧 localStorage 仅按已绑定 UUID 一次迁移；窗口几何仍留在设备。存储失败保留内存草稿并显示重试，详见 PWA 离线合同。
+- Reader 的阅读进度以现有真实锚点写入同一账户 readingPositions/outbox，服务端按 revision 比较。远端更新不移动当前 Reader；冲突需明确选择，恢复、程序导航和布局补偿不计为用户滚动。
 - Reader target 包含 source identity/revision、conversation/message/block/offset/quote，防止在线、离线和旧 revision 混用。
 - 选择控制器统一 Project、未归类和归档列表的桌面/移动批量状态。
 

@@ -302,3 +302,73 @@ retained.
 The explicit `--execute` step is an operator action after the recovery chain
 has been verified. Never replace it with `docker image prune`, a wildcard
 delete, or cleanup of named volumes/backups.
+# Pending settings migration (2026-09-30; not deployed)
+
+The working tree adds `20260930_0034` after `20260927_0033`. Run the ordinary
+backup and migration release gates before deploying matching API/worker/Web
+images. It adds approval/verification state, email grants and personal noise
+preferences; no existing user import files or browser data are transformed.
+Existing ACTIVE accounts do not acquire a new verification requirement.
+Legacy disabled accounts with an approval-review record stay conservatively
+rejected because the old schema cannot distinguish rejection from later disable.
+
+Email verification uses the existing `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_FROM_ADDRESS`, `SMTP_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD` and
+`PUBLIC_WEB_BASE_URL`. Do not enable it before mail configuration is usable.
+The admin UI reports configuration presence, not tested delivery health.
+No credentials, production configuration changes or release action accompany
+this working-tree implementation. Downgrade removes pending verification grants
+and per-user rule preferences; prefer the established pre-release backup for
+rollback rather than treating schema downgrade as data restoration.
+
+`20260930_0035` follows `0034` on the same migration chain. It backfills existing
+format revisions as personal grants before replacing the source-owner cascade
+with SET NULL; it does not publish any existing format. Equivalent complete
+revision sets receive aliases while old IDs remain intact. Apply with matching
+API/worker code. Downgrade restores the source owner's personal label/status
+but cannot represent shared grants; once a source account has been deleted,
+it explicitly refuses downgrade. Restore the verified pre-release backup for
+a full rollback rather than deleting retained formats to force downgrade.
+
+`20260930_0036` follows `0035`: explicit cleanup decision timestamps and apply
+leases. Existing automatically selected DELETE candidates reset to KEEP for
+re-review; no message content is rewritten. Deploy matching Web/API/worker so
+protected-range checks, saved decisions and preview tokens agree. The single
+working-tree head is now `20261001_0040`; production remains unchanged.
+
+`20260930_0037` follows `0036`, adding per-account revision/context-bound cleanup
+exceptions with owner/scope uniqueness. It changes no existing message content.
+Downgrade removes only these new exception records. Apply the migration before
+the matching API and worker, because scans consult the exception table. The
+trial/confirmation flow reuses the existing session signing secret and does not
+introduce new deployment settings.
+
+The isolated browser fixture must supply the same `API_INTERNAL_URL` during
+both Web build (compiled rewrites) and Web startup (the import commit proxy).
+Runtime configuration alone does not replace a compiled rewrite destination.
+
+`20261001_0038` follows `0037`: backfill literal-rule grants and personal labels,
+status and selected version before changing source-owner deletion to SET NULL.
+It adds publications, aliases and revision configuration digests; nothing is
+published automatically. Deploy the matching API/worker after migration because
+rule listing and scans consult these relationships. Downgrade cannot represent
+shared grants and refuses retained rules whose source account no longer exists;
+use the verified pre-release backup for a full rollback. Full-family format
+health checks reuse existing session JSON fields and add no migration or env var.
+
+`20261001_0039` follows `0038`: add default focus/annotation position and a JSON
+field-revision map to user preferences, plus account-scoped idempotent receipts.
+Existing values stay intact and start at revision one; no browser storage or
+package migration is required. Deploy matching API after the schema update,
+then Web. Legacy PATCH still works and advances only changed field versions.
+Downgrade removes the new default fields and receipts, so use the pre-release
+backup if these values must survive rollback. Actual PostgreSQL tests exercise
+upgrade/downgrade/upgrade, receipt cascade and concurrent requests.
+
+`20261001_0040` follows `0039`: existing reading positions gain revision one,
+and a subject/operation receipt table references conversations with deletion
+cascade. Existing position values and anchors are unchanged. Deploy matching
+API/worker after the migration and then Web; legacy position PUT remains valid.
+Downgrade removes revision/receipt metadata while preserving positions. It does
+not migrate Dexie or offline-package versions. PostgreSQL tests verify actual
+upgrade/downgrade/upgrade, FK deletion, concurrent replay and competing updates.

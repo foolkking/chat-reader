@@ -1,11 +1,12 @@
 import logging
+import hashlib
 import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import SessionLocal
@@ -27,7 +28,7 @@ from app.services.exporting.attachment_bundle import create_attachment_bundle, M
 from app.services.exporting.system_archive import create_system_archive
 from app.services.exporting.attachment_download import create_attachment_download, validate_attachment_download
 from app.schemas.export import ExportOptions
-from app.services.offline_packages import build_catalog, build_offline_package, changed_conversations, select_conversations
+from app.services.offline_packages import OfflinePackageError, build_catalog, build_offline_package, changed_conversations, select_conversations
 from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
@@ -572,18 +573,27 @@ def queue_offline_package(
     base_revisions = known_revisions or {}
     changed = changed_conversations(conversations, base_revisions)
     if idempotency_key:
+        if len(idempotency_key) > 200:
+            raise OfflinePackageError("Idempotency key is too long.")
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            lock = int.from_bytes(hashlib.sha256(f"offline:{subject_key}:{idempotency_key}".encode()).digest()[:8], "big", signed=True)
+            db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock})
         existing = (
             db.query(BackgroundJob)
             .filter(
                 BackgroundJob.job_type == "offline_package",
                 BackgroundJob.idempotency_key == idempotency_key,
                 ownership_scope.predicate(BackgroundJob),
-                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
             )
             .order_by(BackgroundJob.created_at.desc())
             .first()
         )
         if existing is not None:
+            expected = {"scope": scope, "conversation_id": str(conversation_id) if conversation_id else None,
+                "project_id": str(project_id) if project_id else None,
+                "known_revisions": {str(key): value for key, value in base_revisions.items()}, "include_assets": include_assets}
+            if any(existing.payload.get(key) != value for key, value in expected.items()):
+                raise OfflinePackageError("Idempotency key was reused for a different download.", 409)
             return existing
     job = BackgroundJob(
         id=uuid.uuid4(),

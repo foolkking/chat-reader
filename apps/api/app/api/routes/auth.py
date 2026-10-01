@@ -12,11 +12,13 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.core.observability import structured_event
 from app.models.user import User
-from app.models.auth import AuthSession
+from app.models.auth import AuthPrincipal, AuthSession
 from app.services.access import access_settings, consume_invitation, consume_password_reset, invitation_for_token, registration_mode
 from app.services.access import create_password_reset_grant
 from app.services.auth_rate_limit import RateLimitExceeded, consume_auth_attempt
-from app.services.password_mail import send_password_reset
+from app.services.password_mail import send_email_verification, send_password_reset
+from app.services.email_verification import confirm_registration_email, create_email_verification
+from app.services.feature_policies import POLICY_FIELDS, effective_import_size_mb, get_feature_policy
 from app.services.auth import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
@@ -34,6 +36,8 @@ from app.services.auth import (
     verify_login_for_email,
     utc_now,
     validate_new_password,
+    normalize_email,
+    verify_password,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -91,6 +95,18 @@ class AuthSessionRead(BaseModel):
     role: str | None = None
     registration_mode: str | None = None
     password_reset_available: bool = False
+    email_verification_required: bool = False
+    approval_required: bool = False
+    verification_delivery: str | None = None
+
+
+class EmailVerificationRequestInput(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=1, max_length=PASSWORD_MAX_LENGTH)
+
+
+class EmailVerificationConfirmInput(BaseModel):
+    token: str = Field(min_length=32, max_length=512)
 
 
 class DeviceSessionRead(BaseModel):
@@ -248,19 +264,33 @@ def register(input: RegisterInput, request: Request, response: Response, db: Ses
         user, principal = register_user(db, input.email, input.password, display_name=input.display_name)
         if invitation is not None:
             consume_invitation(invitation, user.id)
-        approval_required = access_settings(db, settings)["require_admin_approval"]
-        if approval_required:
+        policy = access_settings(db, settings)
+        approval_required = policy["require_admin_approval"]
+        verification_required = policy["email_verification_enabled"]
+        if verification_required and not (settings.smtp_host and settings.smtp_from_address):
+            db.rollback()
+            raise HTTPException(status_code=503, detail="Email verification is unavailable. Try again later.")
+        user.approval_status = "PENDING" if approval_required else "APPROVED"
+        user.email_verification_required = verification_required
+        if approval_required or verification_required:
             user.status = "PENDING"
+            db.flush()
+            verification_token = create_email_verification(db, settings, user) if verification_required else None
             db.commit()
+            delivery = _deliver_verification(settings, user, verification_token) if verification_token else None
+            _clear_cookie(response)
             return AuthSessionRead(
                 authenticated=False,
                 user_id=str(user.id),
-                auth_mode="pending_approval",
+                auth_mode="pending_verification" if verification_required else "pending_approval",
                 email=user.normalized_email,
                 display_name=user.display_name,
                 role=user.role,
                 registration_mode=mode,
                 password_reset_available=False,
+                email_verification_required=verification_required,
+                approval_required=approval_required,
+                verification_delivery=delivery,
             )
         token, session = issue_session(db, principal, settings, device_label=describe_user_agent(request.headers.get("user-agent")))
     except ValueError as exc:
@@ -282,6 +312,67 @@ def register(input: RegisterInput, request: Request, response: Response, db: Ses
         registration_mode=mode,
         password_reset_available=_password_reset_available(db, settings),
     )
+
+
+@router.post("/email-verification/request", status_code=204)
+def request_email_verification(input: EmailVerificationRequestInput, request: Request, db: Session = Depends(get_db)) -> None:
+    settings = get_settings()
+    _consume_or_429(db, request, "email-verification-request-ip", "all", limit=20, window_seconds=3600)
+    _consume_or_429(db, request, "email-verification-request", input.email, limit=5, window_seconds=3600)
+    try:
+        normalized = normalize_email(input.email)
+    except ValueError:
+        normalized = ""
+    user = db.query(User).filter(User.normalized_email == normalized).one_or_none()
+    principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == user.id).one_or_none() if user else None
+    if principal is None or not verify_password(principal.password_hash, input.password):
+        raise HTTPException(status_code=401, detail="Email or password is incorrect.")
+    if not (settings.smtp_host and settings.smtp_from_address):
+        raise HTTPException(status_code=503, detail="Email delivery is unavailable. Try again later.")
+    try:
+        token = create_email_verification(db, settings, user)
+        db.commit()
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if _deliver_verification(settings, user, token) == "failed":
+        raise HTTPException(status_code=503, detail="Email delivery failed. Request another link shortly.")
+
+
+@router.post("/email-verification/confirm")
+def confirm_email_verification(input: EmailVerificationConfirmInput, request: Request, db: Session = Depends(get_db)) -> dict:
+    _consume_or_429(db, request, "email-verification-confirm-ip", "all", limit=60, window_seconds=900)
+    _consume_or_429(db, request, "email-verification-confirm", input.token, limit=10, window_seconds=900)
+    try:
+        user = confirm_registration_email(db, get_settings(), input.token)
+        db.commit()
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"verified": True, "approval_required": user.approval_status == "PENDING"}
+
+
+def _deliver_verification(settings: Settings, user: User, token: str) -> str:
+    # Fragment keeps the grant out of page requests, access logs and referrers.
+    url = f"{settings.public_web_base_url.rstrip('/')}/verify-email#token={token}"
+    try:
+        send_email_verification(settings, user.normalized_email, url)
+    except Exception:
+        structured_event(auth_logger, logging.ERROR, "email_verification_delivery_failed")
+        return "failed"
+    return "sent"
+
+
+@router.get("/capabilities")
+def read_capabilities(request: Request, db: Session = Depends(get_db)) -> dict:
+    policy = get_feature_policy(db)
+    context = getattr(request.state, "auth", None)
+    result = {field: getattr(policy, field) for field in POLICY_FIELDS}
+    result["maximum_import_size_mb"] = effective_import_size_mb(db)
+    result["role"] = getattr(context, "role", "ADMIN")
+    result["email_delivery_available"] = bool(get_settings().smtp_host and get_settings().smtp_from_address)
+    db.commit()
+    return result
 
 
 @router.get("/me", response_model=AuthSessionRead)

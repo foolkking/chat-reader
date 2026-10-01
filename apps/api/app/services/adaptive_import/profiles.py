@@ -5,10 +5,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
 from app.models.import_profile import ImportProfile, ImportProfileRevision
+from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, grant_revision, personal_name, visible_profile
+from app.services.adaptive_import.profile_identity import configuration_digest_v1, normalize_mapping_v1, verification_summary_v1
 from app.services.adaptive_import.analysis import default_mapping
 from app.services.adaptive_import.normalization import _draft_conversation, _draft_message
 from app.services.adaptive_import.contracts import AnalysisResult, MatchResult, SourceDocument
@@ -45,6 +47,7 @@ def match_profile(
     documents: list[SourceDocument],
     *,
     owner_user_id: uuid.UUID | None = None,
+    admitted_revision_ids: tuple[uuid.UUID, ...] = (),
 ) -> MatchResult:
     builtin = match_builtin(analysis, documents)
     if builtin is not None:
@@ -53,18 +56,12 @@ def match_profile(
             profile_name=builtin.name, evidence={"matcher": MATCHER_VERSION, "kind": "BUILTIN"},
         )
     candidates: list[tuple[int, str, ImportProfile, ImportProfileRevision, dict[str, Any]]] = []
-    profiles = db.query(ImportProfile).filter(
-        ImportProfile.status == "ACTIVE",
-        ImportProfile.source_mode == analysis.mode,
-        or_(ImportProfile.kind == "BUILTIN", ImportProfile.owner_user_id == owner_user_id),
-    ).all()
-    for profile in profiles:
-        for revision in profile.revisions:
-            if revision.status not in {"VERIFIED", "SUPERSEDED"}:
-                continue
-            status, score, evidence = _revision_match(analysis, revision)
-            if status != "NO_MATCH":
-                candidates.append((score, status, profile, revision, evidence))
+    for profile, revision in available_revisions(db, owner_user_id, admitted_revision_ids=admitted_revision_ids):
+        if profile.source_mode != analysis.mode:
+            continue
+        status, score, evidence = _revision_match(analysis, revision)
+        if status != "NO_MATCH":
+            candidates.append((score, status, profile, revision, evidence))
     candidates = _best_revision_per_profile(candidates)
     exact = [item for item in candidates if item[1] == "EXACT_MATCH"]
     compatible = [item for item in candidates if item[1] == "COMPATIBLE"]
@@ -75,12 +72,12 @@ def match_profile(
         if len(best) > 1:
             return MatchResult(
                 status="AMBIGUOUS", profile_key=None, profile_id=None, revision_id=None, profile_name=None,
-                evidence={"candidates": [_candidate_evidence(item) for item in best]},
+                evidence={"candidates": [{**_candidate_evidence(item), "name": personal_name(db, owner_user_id, item[2])} for item in best]},
             )
         _, status, profile, revision, evidence = best[0]
         return MatchResult(
             status=status, profile_key=None, profile_id=str(profile.id), revision_id=str(revision.id),
-            profile_name=profile.name, evidence=evidence,
+            profile_name=personal_name(db, owner_user_id, profile), evidence=evidence,
         )
     drifted = [item for item in candidates if item[1] == "DRIFTED"]
     if drifted:
@@ -88,7 +85,7 @@ def match_profile(
         _, _, profile, revision, evidence = drifted[0]
         return MatchResult(
             status="DRIFTED", profile_key=None, profile_id=str(profile.id), revision_id=str(revision.id),
-            profile_name=profile.name, evidence=evidence,
+            profile_name=personal_name(db, owner_user_id, profile), evidence=evidence,
         )
     return MatchResult(status="UNKNOWN", profile_key=None, profile_id=None, revision_id=None, profile_name=None)
 
@@ -180,61 +177,56 @@ def create_verified_revision(
     owner_user_id: uuid.UUID | None = None,
 ) -> tuple[ImportProfile, ImportProfileRevision]:
     now = datetime.now(timezone.utc)
-    if existing_profile_id:
-        profile = db.get(ImportProfile, existing_profile_id)
-        if profile is None or profile.kind != "LEARNED" or profile.owner_user_id != owner_user_id:
-            raise ValueError("Learned import profile not found.")
-        previous = max(profile.revisions, key=lambda item: item.revision, default=None)
+    mapping_spec = normalize_mapping_v1(mapping_spec)
+    match_spec = _match_spec(analysis, mapping_spec)
+    digest = configuration_digest_v1(source_mode=analysis.mode, source_signature=analysis.signature,
+        match_spec=match_spec, mapping_spec=mapping_spec, validation_spec=validation_spec,
+        matcher_version=MATCHER_VERSION, normalizer_version="adaptive-normalizer-v1")
+    if db.bind.dialect.name == "postgresql":
+        # Equal simultaneous learning requests serialize before finding/creating
+        # their identity. The lock contains only a configuration hash, no content.
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": int(digest[:16], 16) - (1 << 63)})
+    profile = visible_profile(db, owner_user_id, existing_profile_id) if existing_profile_id else None
+    if existing_profile_id and (profile is None or profile.kind != "LEARNED"):
+        raise ValueError("Learned import profile not found.")
+    for candidate in db.query(ImportProfileRevision).join(ImportProfile, ImportProfile.id == ImportProfileRevision.profile_id).filter(
+        ImportProfile.source_mode == analysis.mode,
+        ImportProfileRevision.status.in_(("VERIFIED", "SUPERSEDED")),
+        or_(ImportProfileRevision.configuration_digest == digest, ImportProfileRevision.configuration_digest.is_(None)),
+    ).order_by(ImportProfileRevision.created_at, ImportProfileRevision.id):
+        existing_digest = candidate.configuration_digest or configuration_digest_v1(source_mode=analysis.mode,
+            **{key: getattr(candidate, key) for key in ("source_signature", "match_spec", "mapping_spec", "validation_spec", "matcher_version", "normalizer_version")})
+        if existing_digest == digest:
+            existing = db.get(ImportProfile, canonical_profile_id(db, candidate.profile_id))
+            grant_revision(db, owner_user_id, candidate, reason="LEARNED", display_name=name)
+            return existing, candidate
+    if profile is not None:
+        profile = db.query(ImportProfile).filter_by(id=profile.id).with_for_update().one()
+        previous = db.query(ImportProfileRevision).filter_by(profile_id=profile.id).order_by(ImportProfileRevision.revision.desc()).first()
         revision_number = (previous.revision if previous else 0) + 1
     else:
-        profile = ImportProfile(
-            name=name,
-            kind="LEARNED",
-            source_mode=analysis.mode,
-            status="ACTIVE",
-            owner_user_id=owner_user_id,
-        )
+        profile = ImportProfile(name=name, kind="LEARNED", source_mode=analysis.mode, status="ACTIVE", owner_user_id=owner_user_id)
         db.add(profile)
         db.flush()
         previous = None
         revision_number = 1
     revision = ImportProfileRevision(
-        profile_id=profile.id,
-        revision=revision_number,
-        matcher_version=MATCHER_VERSION,
-        normalizer_version="adaptive-normalizer-v1",
-        match_spec=_match_spec(analysis, mapping_spec),
-        mapping_spec=mapping_spec,
-        validation_spec=validation_spec,
-        source_signature=analysis.signature,
-        signature_digest=analysis.signature_digest,
-        status="VERIFIED",
+        profile_id=profile.id, revision=revision_number, matcher_version=MATCHER_VERSION,
+        normalizer_version="adaptive-normalizer-v1", match_spec=match_spec, mapping_spec=mapping_spec,
+        validation_spec=validation_spec, source_signature=analysis.signature, signature_digest=analysis.signature_digest,
+        configuration_digest=digest, created_by_user_id=owner_user_id, status="VERIFIED",
         supersedes_revision_id=previous.id if previous else None,
-        verification_summary=verification_summary,
-        verified_at=now,
+        verification_summary=verification_summary_v1(verification_summary), verified_at=now,
     )
     db.add(revision)
     db.flush()
     if previous and previous.status == "VERIFIED":
         previous.status = "SUPERSEDED"
     profile.current_revision_id = revision.id
-    profile.name = name or profile.name
     profile.updated_at = now
     profile.last_used_at = now
+    grant_revision(db, owner_user_id, revision, reason="LEARNED", display_name=name)
     return profile, revision
-
-
-def profile_payload(profile: ImportProfile) -> dict[str, Any]:
-    current = next((item for item in profile.revisions if item.id == profile.current_revision_id), None)
-    return {
-        "id": str(profile.id), "key": None, "name": profile.name, "kind": profile.kind,
-        "source_mode": profile.source_mode, "status": profile.status,
-        "current_revision": current.revision if current else None,
-        "current_revision_id": str(current.id) if current else None,
-        "revision_count": len(profile.revisions),
-        "last_used_at": profile.last_used_at,
-        "updated_at": profile.updated_at,
-    }
 
 
 def builtin_payload(item: BuiltinProfile) -> dict[str, Any]:
@@ -313,7 +305,7 @@ def _role_mapping(mapping: dict[str, Any]) -> dict[str, str]:
 
 def _candidate_evidence(item: tuple[int, str, ImportProfile, ImportProfileRevision, dict[str, Any]]) -> dict[str, Any]:
     score, status, profile, revision, evidence = item
-    return {"profile_id": str(profile.id), "revision_id": str(revision.id), "name": profile.name, "status": status, "score": score, **evidence}
+    return {"profile_id": str(profile.id), "revision_id": str(revision.id), "status": status, "score": score, **evidence}
 
 
 def _best_revision_per_profile(

@@ -1,5 +1,67 @@
 # Markdown 文档台账
 
+2026-10-01 stage-four CI closeout: `docs/testing.md` owns the new required
+authenticated settings/SMTP/browser job and explicit PostgreSQL integration
+opt-in. `AGENTS.md` now matches the existing Dexie v2/package v3 code, preserving
+v1/v2/v3 package readers. Cold-start search requery belongs to the PWA contract.
+Final run/commit status is maintained in the dated execution record.
+
+2026-09-30 settings completion (active working tree, not deployed): approved
+scope and order in `docs/planning/SETTINGS_COMPLETION_2026-09-30.md`; dated
+progress and evidence in `docs/execution/SETTINGS_COMPLETION_2026-09-30.md`.
+These are historical task records, not contract authorities. Current stage-one
+registration/permission changes and stage-two learned format grants/publication
+(format grants `20260930_0035`; conservative noise review `20260930_0036`;
+personal exceptions `20260930_0037`; `20261001_0038` adds rule
+grants/publication and personal version selection, alongside trial/learning
+and revision-edit workflows) are maintained in
+`PROJECT_STATE.md`, `docs/system/AUTHENTICATION_CONTRACT.md`,
+`docs/system/CONTENT_CLEANUP_CONTRACT.md`, `docs/api-reference.md` and
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` and
+`docs/system/ADAPTIVE_IMPORT_CONTRACT.md`. Later stages remain pending.
+
+2026-10-01 continuation: the existing cleanup contract, API/deployment references
+and dated execution record own exception/learning, rule promotion and full-family
+format health behavior and evidence.
+No duplicate design document or new documentation hierarchy was introduced.
+
+2026-10-01 account preferences: migration `20261001_0039` adds per-field
+versions and durable sync receipts. Its offline/legacy-owner/Reader boundaries
+are in `docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`; HTTP and migration
+contracts are in `docs/api-reference.md`, `docs/system/BACKEND_AND_API.md` and
+`docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`. Evidence remains in the existing
+execution record. Stage five remains paused by the user.
+
+2026-10-01 reading sync: current head `20261001_0040` adds reading revisions
+and receipts. The same API/backend/deployment contracts own schema and HTTP;
+the PWA contract and frontend architecture own immutable submitted positions,
+explicit conflicts, package preservation, true-scroll intent and recovery export.
+The existing execution record tracks the new browser/API/PostgreSQL evidence.
+The authentication and PWA contracts now also own explicit signout cleanup
+recovery, bounded deletion waits, same-account reopening gates, stale-tab
+completion tokens and confirmed discard when storage is unreadable.
+
+2026-10-01 stage-four continuation: account-local lock retention, runtime access
+fences, atomic outbox writes and acknowledgment/snapshot behavior are owned by
+`docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` and
+`docs/system/AUTHENTICATION_CONTRACT.md`. `PROJECT_STATE.md` remains the short
+checkpoint; tests and unfinished stage-four features are recorded in the existing
+dated execution record. No storage format or migration change in this batch.
+
+The same offline contract now owns the shared Offline & sync center, persisted
+browser download/job association, attachment-tier completeness, cancellation and
+explicit cache clearing. Offline admission's idempotency enforcement is also
+recorded in `docs/api-reference.md`; evidence remains in the dated settings
+execution log. The same contract/API reference also own explicit conflict
+comparison and resolution, local merge drafts, durable resolution receipts and
+concurrent-edit preservation. Notebook-panel draft persistence and unified conflict
+entry, pending-change export, reviewed copy cleanup and guarded logout/password
+change are now owned by those same offline/auth contracts. Browser evidence and
+remaining cross-device/negative acceptance are in the dated execution record.
+Dexie/package version numbers and migration head are unchanged. The 2026-10-01
+user adjustment pauses stage five and moves directly from stage four to six;
+the original plan and current Project State both record this scope change.
+
 2026-09-30 release dependency prerequisite: patched `brace-expansion` versions
 and the unchanged audit gate are recorded in `docs/system/RELEASE_SAFETY_BASELINE.md`.
 

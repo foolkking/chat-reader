@@ -1,19 +1,26 @@
 import {
   activateProtectedOfflineData,
-  clearProtectedOfflineData,
+  captureProtectedOfflineStorageContext,
+  lockProtectedOfflineData,
   getActiveOfflineStorageContext,
   readPersistedOfflineUserId,
   type OfflineStorageContext,
 } from "./offline-db";
 import {
-  clearOfflineShellIdentity,
   disableOfflineShellAfterIdentityFailure,
   persistOfflineShellIdentity,
 } from "./offline-shell";
+import { authorizeOfflineAccess } from "./offline-access";
+import { resetOfflineSearch } from "./offline-search";
+import { freezeOfflineWrites } from "./offline-write-guard";
+import { OfflinePendingChangedError, readOfflinePending } from "./offline-pending";
+import { pendingSignoutCleanups, rememberSignoutCleanup, retrySignoutCleanup, SignoutCleanupPendingError } from "./signout-cleanup";
 
-export const AUTH_UNAUTHORIZED_EVENT = "chat-reader:auth-unauthorized";
+export { AUTH_UNAUTHORIZED_EVENT } from "./offline-access";
+export const ACCOUNT_CAPABILITIES_CHANGED_EVENT = "chat-reader:account-capabilities-changed";
 const OFFLINE_LEASE_KEY = "chat-reader:authenticated-offline-until";
 const OFFLINE_LEASE_USER_KEY = "chat-reader:authenticated-offline-user";
+const OFFLINE_LOCKED_USERS_KEY = "chat-reader:offline-locked-users-v1";
 export const AUTH_OFFLINE_IDENTITY_STORAGE_KEY = OFFLINE_LEASE_USER_KEY;
 const SESSION_PRESENCE_COOKIE = "chat_reader_session_present";
 export const AUTH_REQUEST_TIMEOUT_MS = 10_000;
@@ -23,12 +30,15 @@ export type AuthSessionState = {
   principal_id: string | null;
   user_id: string | null;
   inactivity_expires_at: string | null;
-  auth_mode: "single_password" | "multi_account" | "pending_approval";
+  auth_mode: "single_password" | "multi_account" | "pending_approval" | "pending_verification";
   email: string | null;
   display_name: string | null;
   role: "ADMIN" | "USER" | null;
   registration_mode: RegistrationMode;
   password_reset_available: boolean;
+  email_verification_required?: boolean;
+  approval_required?: boolean;
+  verification_delivery?: "sent" | "failed" | null;
 };
 
 export type RegistrationMode = "CLOSED" | "INVITE_ONLY" | "OPEN";
@@ -95,6 +105,31 @@ export async function requestPasswordReset(email: string): Promise<void> {
   await authMutation<void>("/api/auth/password-reset/request", { email });
 }
 
+export async function requestEmailVerification(email: string, password: string): Promise<void> {
+  return authMutation<void>("/api/auth/email-verification/request", { email, password });
+}
+
+export async function confirmEmailVerification(token: string): Promise<{ verified: boolean; approval_required: boolean }> {
+  return authMutation("/api/auth/email-verification/confirm", { token });
+}
+
+export type AccountCapabilities = {
+  role: "ADMIN" | "USER";
+  allow_share_links: boolean;
+  allow_public_share: boolean;
+  allow_share_password: boolean;
+  allow_user_skills: boolean;
+  allow_skill_import: boolean;
+  allow_user_import: boolean;
+  maximum_import_size_mb: number;
+  maximum_merge_message_count: number;
+  email_delivery_available: boolean;
+};
+
+export function readAccountCapabilities(): Promise<AccountCapabilities> {
+  return authRequest<AccountCapabilities>("/api/auth/capabilities");
+}
+
 export async function resetPassword(input: {
   token: string;
   newPassword: string;
@@ -108,22 +143,42 @@ export async function resetPassword(input: {
   await clearBrowserAuthenticationState();
 }
 
-export async function logoutCurrentDevice(): Promise<void> {
-  await authMutation<void>("/api/auth/logout", undefined);
-  await clearBrowserAuthenticationState();
+export async function logoutCurrentDevice(expectedFingerprint?: string, discardUnreadableStorage = false): Promise<void> {
+  return withPreparedSignout(expectedFingerprint, async () => {
+    try { await authMutation<void>("/api/auth/logout", undefined); }
+    catch (error) { if (!(error instanceof AuthRequestError && error.status === 401)) throw error; }
+  }, discardUnreadableStorage);
+}
+
+async function withPreparedSignout(expectedFingerprint: string | undefined, mutation: () => Promise<void>, discardUnreadableStorage = false): Promise<void> {
+  const userId = getActiveOfflineStorageContext().userId;
+  const databaseName = getActiveOfflineStorageContext().databaseName;
+  if (!userId) throw new AuthRequestError("Authentication required.", 401);
+  const work = async () => {
+    if (getActiveOfflineStorageContext().userId !== userId) throw new OfflinePendingChangedError();
+    const release = freezeOfflineWrites(userId);
+    try {
+      const snapshot = await readOfflinePending().catch((error: unknown) => { if (!discardUnreadableStorage) throw error; return null; });
+      if (snapshot && (snapshot.userId !== userId || (expectedFingerprint ? snapshot.fingerprint !== expectedFingerprint : snapshot.count > 0))) throw new OfflinePendingChangedError();
+      await mutation();
+      const currentUser = getActiveOfflineStorageContext().userId ?? readPersistedOfflineUserId();
+      if (currentUser && currentUser !== userId) throw new OfflinePendingChangedError();
+      await clearBrowserAuthenticationState();
+    } finally { release(); }
+  };
+  return navigator.locks ? navigator.locks.request(`chat-reader:sync:${databaseName}`, work) : work();
 }
 
 export async function changeOwnerPassword(input: {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}): Promise<void> {
-  await authMutation<void>("/api/auth/password", {
+}, expectedFingerprint?: string): Promise<void> {
+  await withPreparedSignout(expectedFingerprint, () => authMutation<void>("/api/auth/password", {
     current_password: input.currentPassword,
     new_password: input.newPassword,
     confirm_password: input.confirmPassword,
-  });
-  await clearBrowserAuthenticationState();
+  }));
 }
 
 export function rememberOfflineLease(expiresAt: string | null, userId?: string | null): void {
@@ -149,7 +204,8 @@ export function hasCurrentOfflineLease(now = Date.now()): boolean {
     && value !== null
     && Number.isFinite(Date.parse(value))
     && Date.parse(value) > now
-    && readOfflineLeaseUserId() !== null;
+    && readOfflineLeaseUserId() !== null
+    && !lockedOfflineUsers().includes(readOfflineLeaseUserId()!);
 }
 
 export function readOfflineLeaseUserId(): string | null {
@@ -168,8 +224,15 @@ export function offlineLeaseExpiresAt(): number {
 
 export async function activateOfflineLeaseContext(signal?: AbortSignal): Promise<OfflineStorageContext> {
   const userId = readOfflineLeaseUserId();
-  if (!userId) throw new Error("Offline identity lease is unavailable.");
-  return activateProtectedOfflineData(userId, { signal });
+  if (!userId || !hasCurrentOfflineLease()) throw new Error("Offline identity lease is unavailable.");
+  const context = await activateProtectedOfflineData(userId, { signal });
+  signal?.throwIfAborted();
+  if (!hasCurrentOfflineLease() || readOfflineLeaseUserId() !== userId) {
+    lockBrowserAuthenticationState();
+    throw new Error("Offline identity lease expired.");
+  }
+  authorizeOfflineAccess(userId, offlineLeaseExpiresAt(), () => hasCurrentOfflineLease() && readOfflineLeaseUserId() === userId);
+  return context;
 }
 
 export function getCurrentOfflineRuntimeUserId(): string | null {
@@ -182,27 +245,61 @@ function hasSessionPresenceMarker(): boolean {
 
 let clearingAuthentication: Promise<void> | null = null;
 
+export function lockBrowserAuthenticationState(notify = true): void {
+  const storedUserId = readOfflineLeaseUserId();
+  const userId = getActiveOfflineStorageContext().userId ?? storedUserId ?? readPersistedOfflineUserId();
+  if (userId) writeLockedOfflineUsers([...new Set([...lockedOfflineUsers(), userId])]);
+  // Another tab may already have verified B while this tab still holds A.
+  // Lock A's runtime without erasing B's newly established shared lease.
+  if (!storedUserId || storedUserId === userId) {
+    removeOfflineLease();
+    document.cookie = `${SESSION_PRESENCE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+  }
+  lockProtectedOfflineData(notify);
+  resetOfflineSearch();
+}
+
+export function suspendBrowserOfflineContext(): void {
+  lockProtectedOfflineData(false);
+  resetOfflineSearch();
+}
+
 export function clearBrowserAuthenticationState(): Promise<void> {
   if (clearingAuthentication) return clearingAuthentication;
-  const offlineUserId = readOfflineLeaseUserId() ?? readPersistedOfflineUserId();
-  removeOfflineLease();
-  document.cookie = `${SESSION_PRESENCE_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
+  const offlineUserId = getActiveOfflineStorageContext().userId ?? readOfflineLeaseUserId() ?? readPersistedOfflineUserId();
+  // Capture before locking: storage may be unavailable and the verified runtime
+  // context can be the only remaining account binding.
+  const captured = captureProtectedOfflineStorageContext(offlineUserId);
+  // The initiating UI owns navigation after explicit signout. Broadcasting the
+  // local expiry event here navigates before cleanup and dirty-form settlement.
+  // Shared lease removal still locks other tabs immediately.
+  lockBrowserAuthenticationState(false);
   // Revocation and navigation cannot depend on a functioning cache subsystem.
   // Each cleanup still runs if another storage API is unavailable.
-  const cleanup = (async () => {
-    const context = await clearProtectedOfflineData(offlineUserId).catch(() => getActiveOfflineStorageContext());
-    const results = await Promise.allSettled([
-      clearOfflineShellIdentity(context),
-      purgeProtectedServiceWorkerContent(context),
-    ]);
-    if (results.some((result) => result.status === "rejected")) await disableOfflineShellAfterIdentityFailure();
+  clearingAuthentication = (async () => {
+    const context = await captured;
+    if (!context.userId) return;
+    rememberSignoutCleanup(context);
+    // Failed or blocked deletes retain a durable recovery marker. The login
+    // surface displays it and the same account cannot reopen data underneath
+    // a deletion that may still finish later.
+    await retrySignoutCleanup(context.userId);
   })();
-  clearingAuthentication = settleCleanup(cleanup).finally(() => { clearingAuthentication = null; });
+  clearingAuthentication = clearingAuthentication.finally(() => { clearingAuthentication = null; });
   return clearingAuthentication;
 }
 
 export async function bindAuthenticatedOfflineContext(session: AuthSessionState, signal?: AbortSignal): Promise<OfflineStorageContext> {
+  if (!session.authenticated || !session.user_id && !session.principal_id) throw new AuthRequestError("Authentication required.", 401);
   const userId = resolveSessionUserId(session);
+  if (pendingSignoutCleanups().some((context) => context.userId === userId)) {
+    if (!await retrySignoutCleanup(userId)) throw new SignoutCleanupPendingError();
+    signal?.throwIfAborted();
+  }
+  try {
+    const priorUser = readPersistedOfflineUserId();
+    if (priorUser && !localStorage.getItem("chat-reader:legacy-preferences-owner-v1")) localStorage.setItem("chat-reader:legacy-preferences-owner-v1", priorUser);
+  } catch { /* Unbound legacy preferences are not automatically uploaded. */ }
   const context = await activateProtectedOfflineData(userId, {
     openDatabase: false,
     claimLegacy: session.principal_id === "owner",
@@ -221,7 +318,16 @@ export async function bindAuthenticatedOfflineContext(session: AuthSessionState,
     await disableOfflineShellAfterIdentityFailure();
   }
   signal?.throwIfAborted();
+  writeLockedOfflineUsers(lockedOfflineUsers().filter((id) => id !== userId));
   rememberOfflineLease(session.inactivity_expires_at, userId);
+  const expiresAt = Date.parse(session.inactivity_expires_at ?? "");
+  authorizeOfflineAccess(userId, expiresAt, () => {
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return false;
+    const storedUser = readOfflineLeaseUserId();
+    // Online authentication can work when localStorage is unavailable. Offline
+    // reads always require the persisted, account-bound server lease.
+    return navigator.onLine ? (!storedUser || storedUser === userId) : hasCurrentOfflineLease() && storedUser === userId;
+  });
   return context;
 }
 
@@ -294,21 +400,24 @@ function removeOfflineLease(): void {
   }
 }
 
-async function settleCleanup(cleanup: Promise<void>): Promise<void> {
-  let timer: number | undefined;
-  try {
-    await Promise.race([cleanup.catch(() => undefined), new Promise<void>((resolve) => {
-      timer = window.setTimeout(resolve, 3_000);
-    })]);
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
 function resolveSessionUserId(session: AuthSessionState): string {
+  if (session.auth_mode === "multi_account" && !session.user_id?.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    throw new AuthRequestError("The server did not verify an account UUID.", 502);
+  }
   return normalizeSessionUserId(session.user_id)
     ?? normalizeSessionUserId(session.principal_id)
     ?? "local:default";
+}
+
+function lockedOfflineUsers(): string[] {
+  try {
+    const value: unknown = JSON.parse(readLocalStorage(OFFLINE_LOCKED_USERS_KEY) ?? "[]");
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [];
+  } catch { return []; }
+}
+
+function writeLockedOfflineUsers(users: string[]): void {
+  try { window.localStorage.setItem(OFFLINE_LOCKED_USERS_KEY, JSON.stringify(users)); } catch { /* No persisted lease can be used without storage. */ }
 }
 
 function normalizeSessionUserId(value: string | null | undefined): string | null {
@@ -323,17 +432,4 @@ function hasUnsafeControlCharacter(value: string): boolean {
     if (code <= 31 || code === 127) return true;
   }
   return false;
-}
-
-async function purgeProtectedServiceWorkerContent(context: OfflineStorageContext): Promise<void> {
-  if (!("serviceWorker" in navigator)) return;
-  const workers = new Set<ServiceWorker>();
-  if (navigator.serviceWorker.controller) workers.add(navigator.serviceWorker.controller);
-  const registration = await navigator.serviceWorker.getRegistration("/library").catch(() => undefined);
-  if (registration?.active) workers.add(registration.active);
-  workers.forEach((worker) => worker.postMessage({
-    type: "PURGE_PROTECTED_CONTENT",
-    namespace: context.namespace,
-    purgeLegacy: context.usesLegacyStorage,
-  }));
 }

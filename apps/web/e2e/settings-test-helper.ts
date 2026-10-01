@@ -1,0 +1,16 @@
+import { expect, type APIRequest, type APIRequestContext } from "@playwright/test";
+
+// Only a synthetic fixture session, held in this test worker's memory. Reuse it
+// across viewport cases rather than repeatedly exercising the login rate limit.
+let adminState: Awaited<ReturnType<APIRequestContext["storageState"]>> | undefined;
+
+export async function settingsAdmin(request: APIRequest, baseURL: string): Promise<APIRequestContext> {
+  const context = await request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL }, storageState: adminState });
+  if (!adminState) {
+    const response = await context.post("/api/auth/login", { data: { email: process.env.E2E_AUTH_EMAIL, password: process.env.E2E_AUTH_PASSWORD } });
+    expect(response.status(), "Synthetic settings administrator login").toBe(200);
+    adminState = await context.storageState();
+  }
+  expect((await context.put("/api/admin/access/registration", { data: { mode: "OPEN", require_admin_approval: false, email_verification_enabled: false } })).status()).toBe(200);
+  return context;
+}

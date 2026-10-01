@@ -613,6 +613,12 @@ async function mockOwnerApi(
   const request = route.request();
   const url = new URL(request.url());
   const path = url.pathname;
+  if (path === "/api/auth/capabilities") return json(route, {
+    role: "ADMIN", allow_user_import: true, maximum_import_size_mb: 500,
+    maximum_merge_message_count: 1000, allow_share_links: true,
+    allow_public_share: true, allow_share_password: true,
+    allow_user_skills: true, allow_skill_import: true, email_delivery_available: false,
+  });
   if (path === "/api/auth/session") return json(route, {
     authenticated: true,
     principal_id: "owner",

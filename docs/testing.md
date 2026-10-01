@@ -1,5 +1,28 @@
 # Testing Addendum 2026-08-24
 
+The Playwright-managed Web server binds to `127.0.0.1`; it is started for the
+selected test run and stopped by Playwright. Reuse an existing server only
+when it has the matching build-time API rewrite, auth mode and optional PWA
+fault seam. Auth-disabled/fault-injection builds are local synthetic fixtures,
+not deployable release artifacts.
+
+## Settings stages 1–4 CI gate (2026-10-01)
+
+`Build release images` is manually dispatched and does not deploy. Its required
+`settings-quality` job uses its own PostgreSQL service, authenticated API,
+loopback SMTP sink and single worker. `tests/settings_browser_fixture.py` requires
+both `APP_ENV=test` and `E2E_SETTINGS_MAILBOX=1`; its mailbox is administrator-only
+and is absent from application images. Synthetic import commits run inline;
+scans, downloads and deletion still exercise the worker. The job executes all
+`e2e/settings-*.spec.ts` with real API and browser persistence. Its evidence is
+uploaded separately from the default/fault-injection browser matrices.
+
+The full API job explicitly enables `SETTINGS_POSTGRES_INTEGRATION=1` so account,
+grant, revision, outbox and migration concurrency tests do not silently skip.
+Image creation requires API, Web and settings jobs to succeed. Local commands
+must use an explicitly disposable PostgreSQL database and storage directories;
+do not use repository imports or a production environment for these fixtures.
+
 ## 多账户 owner 验证（工作树，2026-09-01）
 
 认证、owner scope、projects、conversation management、cleanup、export、archive

@@ -1,5 +1,211 @@
 # PWA and Offline Resilience Contract
 
+## Settings completion: lock and sync (working tree, 2026-10-01)
+
+Reading positions use server revisions and account/operation-scoped receipts
+(`20261001_0040`). The existing readingPositions store holds the local working
+anchor; settings stores the server comparison and conflict marker. Only an
+unsubmitted position may coalesce. Submitted outbox IDs and payloads remain
+immutable through timeout/reload; at most five positions are sent per batch,
+with ten-second request deadlines and at most five automatic attempts. A
+response acknowledges only its own operation and preserves/rebases a newer
+unsent position. Old unversioned local positions are queued for comparison;
+client timestamps do not choose a winner.
+
+Reader restoration freezes the initial saved anchor for that mounted source.
+Remote progress refreshes do not scroll or replace the active window. Only
+real user scroll intent creates progress; layout, restoration and navigation
+do not. Explicit use-server choice goes through the existing real-DOM locator
+and clears older captured idle/pagehide intent. Conflict choices recheck both
+the displayed local anchor and server revision, including a strict online
+refresh; unavailable or changed comparisons remain unresolved. Local storage
+failures preserve the last durable position and expose retry. Online reading
+can still restore freshly fetched server progress if local storage is unavailable.
+
+Offline package replacement preserves pending/conflicted reading positions.
+Their actual working anchors are included in scoped recovery ZIPs, fingerprints,
+copy-removal review and the shared Offline & sync center. No Dexie/package
+version change accompanies the server migration.
+
+Account preferences use the existing Dexie settings store, with durable local
+changes, per-field server base revisions, conflicts and the exact in-flight
+operation identity. Migration `20261001_0039` adds server field revisions,
+default Reader focus, default annotation position and account-scoped receipts.
+Independent fields merge; a stale changed field requires keep-local or use-server.
+Client timestamps never choose a winner. New edits during a response remain local
+and rebase only after their predecessor is acknowledged. Responses older than
+the cached field revision cannot roll that field back.
+
+Preference requests have a ten-second deadline and exponential backoff capped at
+five automatic attempts, persisted across reload. Window focus and reconnect do
+not reset the limit; explicit Retry does. A lost response replays the same request
+and operation ID. Authentication stops sync; invalid requests require intervention.
+Layout changes from either local controls or incoming preferences use the Reader's
+existing anchor capture/restore events. Default focus and annotation docking are
+account values; floating window geometry remains device-local.
+
+Legacy preferences migrate once only when the old authenticated account binding
+matches the current UUID. Unowned values and another account's values are never
+uploaded. Public authentication/Share pages do not initialize private preference
+sync. Storage failures keep the current selection in memory, expose retry and
+guard browser exit; deliberate logout/password change first persists that draft.
+Pending preference fields and their values participate in signout review,
+fingerprints and the explicit recovery ZIP. Removing a conversation copy excludes
+account-wide preferences. No Dexie or offline package version changes are needed.
+
+Expired authorization and an explicit server authentication rejection lock the
+private Reader without deleting its account database, attachment cache or
+outbox. The runtime closes the database, aborts pending IndexedDB transactions,
+revokes attachment Object URLs, terminates the search worker and clears private
+query results. Reads, exports, package writes and sync responses carry an access
+generation: work begun for A cannot finish in B's namespace or after locking.
+Only a server-verified session for the same account UUID removes that account's
+persisted lock. Another account gets its own namespace. Explicit logout still
+clears its protected local data after pending-edit review. The current account
+panel offers sync, readable recovery export and explicit discard before logout
+or password change. A SHA-256 snapshot fingerprint is checked again under the
+sync Web Lock; changed drafts/operations abort the action. A short account-scoped
+write freeze fences local writes and makes all tabs inert during the final
+request. Request failure releases it and retains both stored and mounted edits.
+The initiating UI navigates after cleanup, avoiding a competing expiry-event
+redirect and a stale password-form beforeunload prompt.
+
+Explicit logout no longer treats best-effort deletion as confirmed cleanup.
+The exact account database/cache context is captured before locking. Failed or
+blocked deletion retains a cleanup request in localStorage, with sessionStorage
+and memory fallbacks. The private boundary is replaced by a cleanup recovery
+screen; login can also resume persisted cleanup. A pending account cannot reopen
+protected storage while its old deletion may still complete. A per-account
+completion token makes other tabs' stale requests inert after a later login.
+Cleanup removes only that account's database, assets, shell and stale identity
+pointer, and preserves the legacy-owner binding. It waits up to three seconds
+before offering retry; timeout does not mean success or cancel the IDB request.
+
+When pending work cannot be inspected, ordinary logout retains the session.
+The account panel offers an explicit destructive confirmation explaining that
+local changes/preferences/drafts cannot be checked or exported. Only that
+choice permits logout with unreadable storage. It still locks data immediately
+and retains cleanup recovery; server request failure retains the session/data.
+The temporary write freeze uses memory and BroadcastChannel when localStorage
+is unavailable. If no browser persistence works, keep the recovery page open
+until retry or clear this site's data in browser settings; no persistence across
+closing that page is promised in that state.
+
+Dexie stays at version 2, package writes at version 3, and package readers keep
+versions 1/2/3. These changes introduce no migration. Local annotation/note
+edits commit their row, search data and outbox operation in one transaction.
+Queue timestamps are monotonic within the account transaction, including
+multiple edits made in the same millisecond. Removal checks pending work inside
+the removal transaction and refuses to delete without an explicit reviewed
+snapshot. The center offers sync/export/discard for just the selected copy.
+Deletion verifies that snapshot inside the write transaction, then atomically
+removes its records, outbox, notebook drafts, conflict markers and merge drafts.
+Download and sync locks coordinate removal with package/snapshot writers.
+Other conversations and server data remain. Attachment-only cleanup requires
+sync or export first and retains pending text edits and drafts.
+Package replacement preserves pending notes and regenerates pending annotation
+search entries rather than restoring the stale server search text.
+
+Sync sends at most 50 operations per request and only the earliest operation
+for each entity. Web Locks serialize tabs where supported; account-local
+in-flight deduplication and server receipts also prevent duplicate application.
+Receipts must correspond to the submitted operations. Snapshot reads happen
+before local acknowledgment; a failed read retains the operation ID for an
+idempotent retry. One local transaction acknowledges confirmed operations,
+updates snapshots and preserves rows with newly queued edits. Failure counters
+and bounded error categories persist; retry backs off with at most five
+automatic attempts. Authentication failures suspend access, invalid operations
+stop, and conflicts pause descendant edits. Conflict markers remain in the
+existing settings store with the acknowledged local payload and action, so even
+a deletion or an empty descendant queue retains the local intent for comparison.
+
+PostgreSQL serializes online annotation/notebook writes, lazy notebook creation
+and offline sync by subject, and locks receipt identities before first insert.
+Concurrent retries apply once; competing base revisions preserve conflict
+copies. A zero notebook base revision only bootstraps an untouched empty note,
+never overwrites an already edited note.
+
+The settings menu and Library menu open the same Offline & sync center. It has
+offline copies, pending edits, and failures/conflicts views, with paged rows,
+asset completeness, manual sync retry, source links, download cancellation and
+retry, explicit attachment-cache cleanup and copy removal. The center compares
+current canonical and local content and offers keep-local, keep-server and manual
+merge. Merge drafts persist in account-local settings; edits to Markdown blocks,
+titles and comments preserve reference blocks. Resolution checks both canonical
+and conflict-copy revisions under the same PostgreSQL subject lock. Changed
+versions require a fresh comparison; confirmed resolution removes the temporary
+copy and updates annotation search and notebook references.
+
+A resolution request and the specific descendant operation IDs included in its
+comparison are persisted before sending. Retry reuses that operation ID through
+the existing server receipt table, including after the copy was already removed.
+Only an acknowledged resolution removes its marker and superseded outbox items.
+New edits queued during its snapshot fetch remain; only fields changed by those
+edits are rebased onto the selected resolution. Failed snapshot/storage work
+retains the request for retry. A conflict marker counts as pending work even
+without descendant outbox records and prevents copy removal/cache cleanup. Package
+replacement also preserves its canonical working row and conflict copy while a
+resolution is awaiting acknowledgment, even if the new server package already
+contains the resolved version.
+
+Notebook inputs wait for the initial record and account-local draft. Drafts
+persist on input in the existing settings table with a tab identity and a
+compare-and-set version. Their original notebook base revision is retained on
+reload. Failed saves preserve the draft and offer current-version comparison,
+keep-current or explicit application against that compared version. Draft links
+in the center can reopen another tab's draft; no second notebook is created.
+The former append-copy conflict action is replaced by the center's resolver.
+Expanded/mobile/desktop notebook views use the same editor. Input not yet safely
+stored guards closing and browser navigation.
+
+`chat-reader-unsynced-changes.zip` contains `changes.json` and readable `notes.md`.
+It includes scoped pending operations/deletions, annotations, notebooks, notebook
+drafts and conflict merge drafts. Export never acknowledges work or clears data.
+This is an explicit recovery export, not a `.cr` archive or an automatic restore
+format; the UI explains copying text back and the exclusion of attachment bytes.
+No authentication credentials or session values are included. Export is limited
+to 256 MiB of encoded source data. Changes made after export invalidate the
+reviewed fingerprint before destructive cleanup.
+
+Download requests persist in the account's existing Dexie settings store before
+HTTP admission. Their stable idempotency keys, scope, asset tier, base revisions,
+server job/package IDs, cancellation and current phase survive refresh. The
+global download manager resumes one writer per account using Web Locks where
+available, while the existing API worker remains single-concurrency. Closing a
+settings panel does not cancel the underlying work. Network interruption keeps
+a resumable record; failures expose explicit retry. A lost admission response
+replays the same key and request; PostgreSQL serializes admission and rejects a
+changed request with 409. Terminal server jobs also retain their identity on
+replay. Rebuilding a cancelled/failed generation uses a new key deliberately.
+
+Usable base revisions now require known attachment metadata and complete cached
+bytes for the requested asset tier. Same-version packages therefore still fetch
+missing files or a higher tier. Each imported conversation records its last
+asset tier; package v3 carries an additive `downloadable` flag derived from
+server asset/scan policy. Older packages without it remain readable. Cache
+presence alone cannot override an explicit non-downloadable flag. Switching to
+a lower tier retains existing files; only explicit cleanup releases them.
+Cancellation aborts the package transaction and rolls back staged cache writes;
+a package already committed remains committed. Removal/attachment cleanup reject
+unreviewed pending edits and active downloads, and share browser writer/sync locks.
+
+Evidence: `settings-offline-conflicts.spec.ts`, `test_annotation_conflict_resolution.py`,
+`settings-offline-center.spec.ts`, `test_offline_download_postgres.py`,
+`settings-offline-lock.spec.ts`, `settings-offline-sync.spec.ts`,
+`auth-recovery.spec.ts`, `test_annotation_sync_postgres.py` and existing
+annotation API tests. Subsequent draft/cleanup/signout integration passes nineteen
+real browser cases plus three real authentication/Share cases, thirteen
+authentication-recovery contracts and fifteen annotation API tests. All use
+synthetic data. Preferences have dedicated two-device, reload/retry and Reader
+anchor tests in `settings-preferences.spec.ts`. Nine real reading sync cases
+cover both conflict choices, incoming remote progress without scrolling,
+lost receipts, newer edits, quota failure/retry, stale/unavailable comparisons,
+package replacement, unavailable initial IndexedDB/reopen and scoped export/removal.
+The latest integrated gate passes 42 real settings browser cases and 13 auth
+fault contracts, with four cleanup failure cases and three additional real
+authentication/Share cases. The full negative/PWA/long-Reader matrix is not yet revalidated for
+this settings release. Older sections describe the existing baseline.
+
 Last verified: 2026-08-15
 
 ## Scope and Existing Versions
@@ -71,6 +277,14 @@ The standalone incomplete response has no external script, style, font, API,
 or image dependency. It cannot enter a reload loop.
 
 ## Critical and Optional Resources
+
+Library searches rerun after the local search index finishes loading or
+refreshing. A query entered during cold start cannot remain an empty result
+from an uninitialized index; superseded queries cannot replace current results.
+Cached `/library` HTML hydrates with a stable initial shell snapshot, selection
+and connectivity state; the requested conversation and live network status are
+applied after hydration. This avoids replacing the cached tree during a cold
+offline navigation with query parameters.
 
 Critical resources are current document scripts/styles, Library navigation,
 the offline search worker, icons, bundled KaTeX assets, and warmed Viewer

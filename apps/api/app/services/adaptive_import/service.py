@@ -12,7 +12,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileRevision, ImportStructureFamily
+from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfilePreference, ImportProfileRevision, ImportStructureFamily
+from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, may_use_revision, personal_name, personal_profile_payload, visible_profile
 from app.models.import_record import ImportRecord
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import SourceProfile
@@ -25,7 +26,6 @@ from app.services.adaptive_import.profiles import (
     create_verified_revision,
     match_profile,
     normalize_builtin,
-    profile_payload,
 )
 from app.services.import_pipeline.draft_store import attach_import_draft
 from app.services.storage.local_storage import save_import_file
@@ -116,6 +116,12 @@ def finalize_session(db: Session, record: ImportRecord) -> ImportRecord:
 
 
 def analyze_session(db: Session, record: ImportRecord) -> None:
+    # Admission belongs to this owned session, not to the account library.
+    # Preserve server-selected versions across source replacement/reanalysis;
+    # successful canonical commit is still required for a permanent grant.
+    admitted = set((record.analysis_summary or {}).get("admitted_format_revisions", []))
+    admitted.update(str(family.matched_revision_id) for family in record.structure_families if family.matched_revision_id)
+    record.analysis_summary = {**(record.analysis_summary or {}), "admitted_format_revisions": sorted(admitted)}
     _clear_import_plan(record)
     record.session_state = "ANALYZING"
     record.status = "analyzing"
@@ -158,12 +164,11 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
     repair_profile: ImportProfile | None = None
     repair_profile_id = (record.analysis_summary or {}).get("repair_profile_id")
     if repair_profile_id:
-        repair_profile = db.get(ImportProfile, uuid.UUID(str(repair_profile_id)))
+        repair_profile = visible_profile(db, record.owner_user_id, uuid.UUID(str(repair_profile_id)))
         if (
             repair_profile is None
             or repair_profile.kind != "LEARNED"
             or repair_profile.status != "ACTIVE"
-            or repair_profile.owner_user_id != record.owner_user_id
         ):
             raise AdaptiveImportError("REPAIR_PROFILE_UNAVAILABLE", "The learned import profile is not available for repair.", layer="profile")
         if invalid or len(buckets) != 1 or next(iter(buckets))[0] != repair_profile.source_mode:
@@ -181,9 +186,10 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
             representative,
             documents,
             owner_user_id=record.owner_user_id,
+            admitted_revision_ids=tuple(uuid.UUID(value) for value in admitted),
         )
         if repair_profile is not None:
-            current_revision = next((item for item in repair_profile.revisions if item.id == repair_profile.current_revision_id), None)
+            current_revision = next((item for profile, item in sorted(available_revisions(db, record.owner_user_id, include_disabled=True), key=lambda pair: pair[1].revision, reverse=True) if profile.id == repair_profile.id), None)
             if current_revision is None:
                 raise AdaptiveImportError("REPAIR_PROFILE_INVALID", "The learned import profile has no current revision.", layer="profile")
             from app.services.adaptive_import.contracts import MatchResult
@@ -192,7 +198,7 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
                 profile_key=None,
                 profile_id=str(repair_profile.id),
                 revision_id=str(current_revision.id),
-                profile_name=repair_profile.name,
+                profile_name=personal_name(db, record.owner_user_id, repair_profile),
                 evidence={"reason": "user_requested_remap", "revision": current_revision.revision},
             )
         family = ImportStructureFamily(
@@ -205,7 +211,7 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
             matched_profile_key=match.profile_key,
             matched_profile_id=uuid.UUID(match.profile_id) if match.profile_id else None,
             matched_revision_id=uuid.UUID(match.revision_id) if match.revision_id else None,
-            mapping_draft=default_mapping(representative),
+            mapping_draft=current_revision.mapping_spec if repair_profile is not None else default_mapping(representative),
             validation_result={},
             match_evidence={
                 **match.evidence,
@@ -377,43 +383,30 @@ def verify_family_mapping(
     _require_session_state(record, {"RESOLVING"})
     _require_mappable_family(family)
     analysis = _analysis_for_family(record, family)
-    all_drafts = []
-    group_results = []
-    for group in family.groups:
-        try:
-            drafts = normalize_group(_group_documents(record, group), mapping_spec, profile_name)
-            result = validate_drafts(drafts)
-            group_results.append({"group_id": str(group.id), **result})
-            if not result["valid"]:
-                raise AdaptiveImportError("FAMILY_VALIDATION_FAILED", "A group in this family does not satisfy the import contract.", layer="validation")
-            all_drafts.extend(drafts)
-        except AdaptiveImportError as exc:
-            group.diagnostics = [exc.diagnostic(group_id=str(group.id))]
-            family.validation_result = {"valid": False, "groups": group_results, "failed_group_id": str(group.id)}
-            record.session_state = "RESOLVING"
-            raise
-    verification = validate_drafts(all_drafts)
+    verification = evaluate_family(record, family, mapping_spec, profile_name)["validation"]
+    if not verification["valid"]:
+        raise AdaptiveImportError("FAMILY_VALIDATION_FAILED", "Some groups do not satisfy the import contract. Preview the mapping for per-group details.", layer="validation", action="repair_mapping")
     existing_profile_id = family.matched_profile_id if family.resolution_status == "DRIFTED" else None
     profile, revision = create_verified_revision(
         db,
         analysis=analysis,
         mapping_spec=mapping_spec,
         validation_spec={"minimum_messages": 1, "content_non_empty": True, "role_coverage": True},
-        verification_summary={**verification, "group_count": len(family.groups)},
+        verification_summary={**{key: verification[key] for key in ("valid", "conversation_count", "message_count", "issues")}, "group_count": len(family.groups)},
         name=profile_name,
         existing_profile_id=existing_profile_id,
         owner_user_id=record.owner_user_id,
     )
     family.resolution_status = "EXACT_MATCH"
-    family.display_name = profile.name
+    family.display_name = personal_name(db, record.owner_user_id, profile)
     family.matched_profile_key = None
     family.matched_profile_id = profile.id
     family.matched_revision_id = revision.id
     family.mapping_draft = mapping_spec
-    family.validation_result = {**verification, "groups": group_results}
+    family.validation_result = verification
     family.match_evidence = {"kind": "LEARNED", "revision": revision.revision, "verified_on_full_family": True}
     for group in family.groups:
-        group.profile_resolution = {"status": "EXACT_MATCH", "profile_name": profile.name, "revision": revision.revision}
+        group.profile_resolution = {"status": "EXACT_MATCH", "profile_name": family.display_name, "revision": revision.revision}
         group.diagnostics = []
     _update_session_state(db, record)
 
@@ -428,35 +421,7 @@ def preview_family_mapping(
 ) -> dict[str, Any]:
     _require_session_state(record, {"RESOLVING"})
     _require_mappable_family(family)
-    drafts = []
-    groups = []
-    drafts_by_group: dict[str, list] = {}
-    for group in family.groups:
-        try:
-            group_drafts = normalize_group(_group_documents(record, group), mapping_spec, profile_name)
-            result = validate_drafts(group_drafts)
-            groups.append({"group_id": str(group.id), **result})
-            drafts.extend(group_drafts)
-            drafts_by_group[str(group.id)] = group_drafts
-        except AdaptiveImportError as exc:
-            groups.append({"group_id": str(group.id), "valid": False, "issues": [exc.diagnostic(group_id=str(group.id))]})
-    validation = validate_drafts(drafts) if drafts else {"valid": False, "conversation_count": 0, "message_count": 0, "issues": []}
-    validation["valid"] = validation["valid"] and all(item["valid"] for item in groups)
-    sample_group_key = str(sample_group_id) if sample_group_id else (str(family.groups[0].id) if family.groups else "")
-    sample_drafts = drafts_by_group.get(sample_group_key, [])
-    sample = sample_drafts[0] if sample_drafts else (drafts[0] if drafts else None)
-    return {
-        "validation": {**validation, "groups": groups, "verified_on_full_family": True},
-        "sample_group_id": sample_group_key if sample is not None else None,
-        "preview": None if sample is None else {
-            "title": sample.title,
-            "message_count": len(sample.messages),
-            "messages": [
-                {"role": message.role, "content": message.display_text[:2000], "timestamp": message.created_at}
-                for message in sample.messages[:12]
-            ],
-        },
-    }
+    return evaluate_family(record, family, mapping_spec, profile_name, sample_group_id=sample_group_id)
 
 
 def select_profile_revision(db: Session, record: ImportRecord, family: ImportStructureFamily, revision_id: uuid.UUID) -> None:
@@ -465,21 +430,22 @@ def select_profile_revision(db: Session, record: ImportRecord, family: ImportStr
     revision = db.get(ImportProfileRevision, revision_id)
     if revision is None or revision.status not in {"VERIFIED", "SUPERSEDED"}:
         raise AdaptiveImportError("PROFILE_NOT_FOUND", "The selected verified profile revision was not found.", layer="profile")
-    profile = db.get(ImportProfile, revision.profile_id)
+    profile = db.get(ImportProfile, canonical_profile_id(db, revision.profile_id))
     if (
         profile is None
         or profile.status != "ACTIVE"
         or profile.source_mode != family.source_mode
-        or profile.owner_user_id != record.owner_user_id
+        or (str(revision.id) not in (record.analysis_summary or {}).get("admitted_format_revisions", [])
+            and not may_use_revision(db, record.owner_user_id, revision.id))
     ):
         raise AdaptiveImportError("PROFILE_NOT_AVAILABLE", "The selected profile cannot be used for this family.", layer="profile")
     family.matched_profile_id = profile.id
     family.matched_revision_id = revision.id
     family.matched_profile_key = None
-    family.display_name = profile.name
+    family.display_name = personal_name(db, record.owner_user_id, profile)
     family.mapping_draft = revision.mapping_spec
     family.resolution_status = "EXACT_MATCH"
-    _validate_resolved_family(record, family, revision.mapping_spec, profile.name, revision.validation_spec)
+    _validate_resolved_family(record, family, revision.mapping_spec, family.display_name, revision.validation_spec)
     profile.last_used_at = datetime.now(timezone.utc)
     _update_session_state(db, record)
 
@@ -546,27 +512,34 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
 
 
 def list_profiles(db: Session, owner_user_id: uuid.UUID | None = None) -> list[dict[str, Any]]:
-    learned = db.query(ImportProfile).filter(
-        ImportProfile.kind == "LEARNED",
-        ImportProfile.owner_user_id == owner_user_id,
-    ).order_by(ImportProfile.name).all()
-    return [*(builtin_payload(item) for item in BUILTINS), *(profile_payload(item) for item in learned)]
+    grouped = {}
+    for profile, revision in available_revisions(db, owner_user_id, include_disabled=True):
+        grouped.setdefault(profile.id, (profile, []))[1].append(revision)
+    learned = [personal_profile_payload(db, owner_user_id, profile, revisions) for profile, revisions in grouped.values()]
+    return [*(builtin_payload(item) for item in BUILTINS), *sorted(learned, key=lambda item: item["name"].casefold())]
 
 
-def update_profile(db: Session, profile: ImportProfile, payload: dict[str, Any]) -> None:
+def update_profile(db: Session, profile: ImportProfile, payload: dict[str, Any], *, owner_user_id: uuid.UUID) -> None:
     if profile.kind != "LEARNED":
         raise AdaptiveImportError("BUILTIN_READ_ONLY", "Built-in import profiles cannot be changed.", layer="profile")
+    preference = db.get(ImportProfilePreference, (owner_user_id, profile.id))
+    if preference is None:
+        preference = ImportProfilePreference(user_id=owner_user_id, profile_id=profile.id, enabled=True, hidden=False)
+        db.add(preference)
     if "name" in payload:
         name = str(payload["name"]).strip()
         if not name:
             raise AdaptiveImportError("PROFILE_NAME_REQUIRED", "Profile name cannot be empty.", layer="profile")
-        profile.name = name[:200]
+        preference.display_name = name[:200]
     if "status" in payload:
         status = str(payload["status"]).upper()
         if status not in {"ACTIVE", "DISABLED"}:
             raise AdaptiveImportError("PROFILE_STATUS_INVALID", "Profile status must be ACTIVE or DISABLED.", layer="profile")
-        profile.status = status
-    profile.updated_at = datetime.now(timezone.utc)
+        preference.enabled = status == "ACTIVE"
+    if payload.get("hidden") is True:
+        preference.hidden = True
+        preference.enabled = False
+    db.flush()
 
 
 def cancel_session(record: ImportRecord) -> None:
@@ -640,18 +613,24 @@ def _resolve_known_families(db: Session, record: ImportRecord) -> None:
             continue
         try:
             if family.matched_profile_key:
-                validation = _validate_resolved_family(record, family, None, family.matched_profile_key, None)
+                validation = evaluate_family(record, family, None, family.matched_profile_key, builtin_key=family.matched_profile_key)["validation"]
             elif family.matched_revision_id:
                 revision = db.get(ImportProfileRevision, family.matched_revision_id)
                 if revision is None:
                     raise AdaptiveImportError("PROFILE_NOT_FOUND", "Matched profile revision is missing.", layer="profile")
-                validation = _validate_resolved_family(record, family, revision.mapping_spec, family.display_name, revision.validation_spec)
+                validation = evaluate_family(record, family, revision.mapping_spec, family.display_name, validation_spec=revision.validation_spec)["validation"]
                 profile = db.get(ImportProfile, revision.profile_id)
                 if profile:
                     profile.last_used_at = datetime.now(timezone.utc)
             else:
                 continue
             family.validation_result = validation
+            if not validation["valid"]:
+                family.resolution_status = "DRIFTED"
+                family.match_evidence = {**(family.match_evidence or {}), "handling_class": "MAPPABLE", "handling_reason": _handling_reason_for_status("DRIFTED")}
+                by_group = {item["group_id"]: item for item in validation["groups"]}
+                for group in family.groups:
+                    group.diagnostics = by_group[str(group.id)]["issues"]
         except (AdaptiveImportError, ValueError) as exc:
             family.resolution_status = "DRIFTED"
             family.validation_result = {"valid": False, "message": str(exc)}
@@ -675,17 +654,66 @@ def _validate_resolved_family(
     profile_name: str,
     validation_spec: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    drafts = []
+    result = evaluate_family(record, family, mapping_spec, profile_name, validation_spec=validation_spec, builtin_key=family.matched_profile_key)["validation"]
+    if not result["valid"]:
+        raise AdaptiveImportError("FAMILY_VALIDATION_FAILED", "Some groups do not satisfy this profile. Check the full-family results.", layer="validation", action="repair_mapping")
+    return result
+
+
+def evaluate_family(record: ImportRecord, family: ImportStructureFamily, mapping_spec: dict | None,
+                    profile_name: str, *, validation_spec: dict | None = None,
+                    builtin_key: str | None = None, sample_group_id: uuid.UUID | None = None) -> dict:
+    """One validation authority for recognition, learning, preview and health.
+
+    Normalize every group, retain only bounded preview text, and attribute each
+    failure to its own group. A failed selected sample never shows another file.
+    """
     groups = []
-    for group in family.groups:
-        group_drafts = normalize_builtin(family.matched_profile_key, _group_documents(record, group)) if family.matched_profile_key else normalize_group(_group_documents(record, group), mapping_spec or {}, profile_name)
-        result = validate_drafts(group_drafts, validation_spec)
+    ordered_groups = sorted(family.groups, key=lambda item: (item.display_name.casefold(), str(item.id)))
+    sample_key = str(sample_group_id) if sample_group_id else str(ordered_groups[0].id) if ordered_groups else None
+    preview = None
+    for group in ordered_groups:
+        try:
+            documents = _group_documents(record, group)
+            drafts = normalize_builtin(builtin_key, documents) if builtin_key else normalize_group(documents, mapping_spec or {}, profile_name)
+            result = validate_drafts(drafts, validation_spec)
+            result["valid"] = result["valid"] and bool(drafts)
+            result["issues"] = [{**issue, "group_id": str(group.id)} for issue in result["issues"]]
+            if str(group.id) == sample_key and drafts:
+                sample = drafts[0]
+                preview = {"title": sample.title, "message_count": len(sample.messages), "messages": [
+                    {"role": message.role, "content": message.display_text[:2000], "timestamp": message.created_at}
+                    for message in sample.messages[:12]]}
+        except (AdaptiveImportError, OSError, ValueError) as exc:
+            diagnostic = exc.diagnostic(group_id=str(group.id)) if isinstance(exc, AdaptiveImportError) else {
+                "code": "SOURCE_UNAVAILABLE" if isinstance(exc, OSError) else "NORMALIZATION_FAILED",
+                "layer": "normalization", "blocking": True, "group_id": str(group.id),
+                "message": "Source is unavailable. Upload the source again." if isinstance(exc, OSError) else "This group could not be normalized with the selected mapping.",
+                "action": "replace_source" if isinstance(exc, OSError) else "repair_mapping"}
+            result = {"valid": False, "conversation_count": 0, "message_count": 0, "issues": [diagnostic]}
         groups.append({"group_id": str(group.id), **result})
-        if not result["valid"]:
-            raise AdaptiveImportError("FAMILY_VALIDATION_FAILED", "A group does not satisfy this profile.", layer="validation", action="repair_mapping")
-        drafts.extend(group_drafts)
-    result = validate_drafts(drafts, validation_spec)
-    return {**result, "groups": groups, "verified_on_full_family": True}
+    validation = {"valid": bool(groups) and all(item["valid"] for item in groups),
+        "conversation_count": sum(item["conversation_count"] for item in groups),
+        "message_count": sum(item["message_count"] for item in groups),
+        "issues": [], "groups": groups, "verified_on_full_family": True}
+    return {"validation": validation, "sample_group_id": sample_key if preview else None, "preview": preview}
+
+
+def check_family_health(db: Session, record: ImportRecord, family: ImportStructureFamily) -> dict:
+    _require_session_state(record, RECOVERABLE_SESSION_STATES)
+    revision = db.get(ImportProfileRevision, family.matched_revision_id) if family.matched_revision_id else None
+    if revision is None and not family.matched_profile_key:
+        raise AdaptiveImportError("PROFILE_NOT_FOUND", "Choose a learned or built-in format before checking its health.", layer="profile")
+    # The owned session already pins this version. Checking it acquires no grant,
+    # and remains available when its public offering is later withdrawn.
+    result = evaluate_family(record, family, revision.mapping_spec if revision else None,
+        family.display_name, validation_spec=revision.validation_spec if revision else None,
+        builtin_key=family.matched_profile_key)["validation"]
+    result = {**result, "checked_at": datetime.now(timezone.utc).isoformat(),
+        "revision_id": str(revision.id) if revision else None,
+        "revision": revision.revision if revision else None, "builtin_key": family.matched_profile_key}
+    family.match_evidence = {**(family.match_evidence or {}), "health_check": result}
+    return result
 
 
 def _update_session_state(db: Session, record: ImportRecord) -> None:
@@ -760,6 +788,7 @@ def _summary(record: ImportRecord) -> dict[str, Any]:
     statuses = _count_statuses(family.resolution_status for family in record.structure_families)
     return {
         **({"repair_profile_id": record.analysis_summary["repair_profile_id"]} if (record.analysis_summary or {}).get("repair_profile_id") else {}),
+        "admitted_format_revisions": (record.analysis_summary or {}).get("admitted_format_revisions", []),
         "group_count": len(record.input_groups), "family_count": len(record.structure_families),
         "resolution_counts": statuses, "ready": record.session_state == "READY",
     }

@@ -365,6 +365,7 @@ def _json_mapping_candidates(payload: Any, arrays: list[dict[str, Any]]) -> dict
         role_values = sorted({str(value) for sample in samples for value in _select_relative(sample, role) if value is not None})
         candidate = {
             "locator": array["path"], "role": role, "content": content,
+            "field_paths": paths,
             "external_id": _best_relative_path(paths, ("id", "message_id", "uuid")),
             "timestamp": _best_relative_path(paths, _TIME_KEYS),
             "title": _best_root_path(payload, _TITLE_KEYS),

@@ -1,15 +1,17 @@
 "use client";
 
+import { liveQuery } from "dexie";
+import { enqueueOfflineDownload, listOfflineDownloads, usableOfflineRevisions } from "../../lib/offline-downloads";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Download, FolderTree, HardDrive, Library, LoaderCircle, PanelLeftClose, RefreshCw, Search, Trash2, Wifi, WifiOff, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ConversationReader } from "../conversations/conversation-reader";
-import { getOfflineCatalog, getTask, queueOfflinePackage } from "../../lib/api";
-import { importOfflinePackage, OfflinePackageImportError, offlineDb, removeOfflineConversations, requestPersistentStorage, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
+import { getOfflineCatalog } from "../../lib/api";
+import { OfflinePackageImportError, OfflinePendingChangesError, OfflineDownloadInProgressError, offlineDb, removeOfflineConversations, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
 import { offlineReaderDataSource } from "../../lib/reader-data-source";
 import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
-import { getOfflineShellStatus, prepareOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../../lib/offline-shell";
+import { getInitialOfflineShellStatus, getOfflineShellStatus, prepareOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../../lib/offline-shell";
 import type { OfflineCatalogConversation, OfflineCatalogResponse } from "../../lib/types";
 import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
 import { SidebarPreferences } from "../../components/sidebar-preferences";
@@ -39,9 +41,12 @@ export function LibraryShell() {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [conversations, setConversations] = useState<OfflineConversationRecord[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(searchParams?.get("conversationId") ?? null);
+  const requestedId = searchParams?.get("conversationId") ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(!selectedId);
-  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  // Cached HTML was rendered online. Match it during hydration, then read the
+  // device state; otherwise an offline cold start regenerates the whole tree.
+  const [online, setOnline] = useState(true);
   const [download, setDownload] = useState<DownloadState>(null);
   const [error, setError] = useState<string | null>(null);
   const [failedDownload, setFailedDownload] = useState<DownloadRequest | null>(null);
@@ -51,14 +56,21 @@ export function LibraryShell() {
   const [readerFocusMode, setReaderFocusMode] = useState(false);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OfflineSearchDocument[]>([]);
+  const [searchIndexRevision, setSearchIndexRevision] = useState(0);
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
   const autoRefreshRunningRef = useRef(false);
+  const completedDownloadsRef = useRef("");
   const selectedConversation = selectedId ? conversations.find((item) => item.id === selectedId) ?? null : null;
   const offlineShellStatus = useSyncExternalStore(
     subscribeOfflineShellStatus,
     getOfflineShellStatus,
-    getOfflineShellStatus,
+    getInitialOfflineShellStatus,
   );
+
+  useEffect(() => {
+    // Offline navigation reuses the cached /library HTML without query params.
+    if (requestedId) { setSelectedId(requestedId); setMobileOpen(false); }
+  }, [requestedId]);
 
   // A cached Library navigation can complete without replaying the global
   // window-load hook that normally starts shell reconciliation. Keep the
@@ -167,17 +179,21 @@ export function LibraryShell() {
       }),
     ];
     await initializeOfflineSearch([...documents, ...privateDocuments]);
+    // Cold-start input can arrive before IndexedDB and the worker are ready.
+    // Re-run the current query after each committed index refresh.
+    setSearchIndexRevision((revision) => revision + 1);
     if (!selectedId && reconciled[0]) {
       const rememberedId = window.localStorage.getItem(LAST_LIBRARY_CONVERSATION_KEY);
-      setSelectedId(reconciled.find((item) => item.id === rememberedId)?.id ?? reconciled[0].id);
+      setSelectedId(requestedId ?? reconciled.find((item) => item.id === rememberedId)?.id ?? reconciled[0].id);
     }
     const estimate: StorageEstimate | undefined = await navigator.storage?.estimate?.().catch(() => undefined);
     const persisted = await navigator.storage?.persisted?.().catch(() => false);
     setStorage({ persisted: persisted ?? false, quota: estimate?.quota ?? null, usage: estimate?.usage ?? null });
-  }, [selectedId]);
+  }, [selectedId, requestedId]);
 
   useEffect(() => { void reloadLocal(); }, [reloadLocal]);
   useEffect(() => {
+    setOnline(navigator.onLine);
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
     window.addEventListener("online", onOnline);
@@ -203,51 +219,23 @@ export function LibraryShell() {
     window.localStorage.setItem("chat-reader:reader-sidebar-expanded", String(expanded));
   }, []);
 
-  const runDownload = useCallback(async (
-    scope: "conversation" | "project" | "all",
-    scopeId?: string,
-    silent = false,
-  ) => {
-    const catalog = catalogQuery.data ?? await getOfflineCatalog();
-    const scopedLocal = conversations.filter((conversation) => (
-      scope === "all"
-      || (scope === "conversation" && conversation.id === scopeId)
-      || (scope === "project" && conversation.project_id === scopeId)
-    ));
-    const knownRevisions = Object.fromEntries(
-      scopedLocal.map((conversation) => [conversation.id, conversation.offline_revision]),
-    );
-    const estimate = estimateScope(catalog, scope, scopeId, knownRevisions);
-    const storageState = await requestPersistentStorage();
-    setStorage(storageState);
-    const available = storageState.quota !== null && storageState.usage !== null
-      ? storageState.quota - storageState.usage
-      : null;
-    if (available !== null && estimate > available) throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.");
-    const key = `${scope}:${scopeId ?? "all"}`;
-    if (!silent) setDownload({ key, progress: 1, label: "正在创建离线包" });
-    const queued = await queueOfflinePackage({
-      scope,
-      conversation_id: scope === "conversation" ? scopeId : undefined,
-      project_id: scope === "project" ? scopeId : undefined,
-      known_revisions: knownRevisions,
-      include_assets: assetMode,
-    });
-    let task = await getTask(queued.job_id);
-    for (let attempt = 0; attempt < 300 && !["committed", "failed"].includes(task.status); attempt += 1) {
-      if (!silent) setDownload({ key, progress: task.progress, label: offlineTaskLabel(task.phase, task.processed_items, task.total_items, zh) });
-      await delay(750);
-      task = await getTask(queued.job_id);
-    }
-    if (task.status !== "committed") throw new Error(task.error_message ?? "离线包生成失败。");
-    const packageId = String(task.result.package_id ?? queued.package_id);
-    const url = String(task.result.download_url ?? `/api/offline/packages/${packageId}/download`);
-    if (!silent) setDownload({ key, progress: 96, label: "正在写入离线资料库" });
-    await importOfflinePackage(packageId, await fetch(url, { credentials: "same-origin" }));
-    if (!silent) setDownload({ key, progress: 100, label: "已完成" });
-    await reloadLocal();
-    if (!silent) window.setTimeout(() => setDownload(null), 800);
-  }, [assetMode, catalogQuery.data, conversations, reloadLocal, zh]);
+  const runDownload = useCallback(async (scope: "conversation" | "project" | "all", scopeId?: string, _silent = false) => {
+    await enqueueOfflineDownload({ scope, scopeId, assetMode });
+  }, [assetMode]);
+
+  useEffect(() => {
+    const subscription = liveQuery(() => listOfflineDownloads()).subscribe({ next: (records) => {
+      const completed = records.filter((item) => item.state === "completed").map((item) => item.id).join("|");
+      if (completed !== completedDownloadsRef.current) {
+        completedDownloadsRef.current = completed;
+        void reloadLocal().catch(() => undefined);
+      }
+      const current = records.find((item) => ["queued", "generating", "downloading", "writing"].includes(item.state));
+      setDownload(current ? { key: `${current.scope}:${current.scopeId ?? "all"}`, progress: current.progress,
+        label: (zh ? { queued: "排队中", generating: "正在生成离线包", downloading: "正在下载", writing: "正在写入离线资料库" } : { queued: "Queued", generating: "Generating package", downloading: "Downloading", writing: "Writing offline copy" })[current.state as "queued"] } : null);
+    }, error: () => undefined });
+    return () => subscription.unsubscribe();
+  }, [reloadLocal, zh]);
 
   const startDownload = useCallback((request: DownloadRequest) => {
     setError(null);
@@ -289,11 +277,15 @@ export function LibraryShell() {
   }, [catalogQuery.data, conversations, download, reloadLocal, runDownload]);
 
   useEffect(() => {
+    if (!searchIndexRevision) return;
+    let active = true;
     const timer = window.setTimeout(() => {
-      void searchOffline(query).then(setSearchResults);
+      void searchOffline(query).then((results) => {
+        if (active) setSearchResults(results);
+      }).catch(() => { if (active) setSearchResults([]); });
     }, 120);
-    return () => window.clearTimeout(timer);
-  }, [query]);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [query, searchIndexRevision]);
 
   function openConversation(conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) {
     setSelectedId(conversationId);
@@ -307,13 +299,20 @@ export function LibraryShell() {
   }
 
   async function removeLocal(ids: string[]) {
-    await removeOfflineConversations(ids);
-    if (selectedId && ids.includes(selectedId)) {
-      setSelectedId(null);
-      window.localStorage.removeItem(LAST_LIBRARY_CONVERSATION_KEY);
-      router.replace("/library");
+    setError(null);
+    try {
+      await removeOfflineConversations(ids);
+      if (selectedId && ids.includes(selectedId)) {
+        setSelectedId(null);
+        window.localStorage.removeItem(LAST_LIBRARY_CONVERSATION_KEY);
+        router.replace("/library");
+      }
+      await reloadLocal();
+    } catch (cause) {
+      setError(cause instanceof OfflineDownloadInProgressError ? (zh ? "下载进行中，请先取消或等待完成再清理。" : "A download is running. Cancel it or wait before clearing data.") : cause instanceof OfflinePendingChangesError
+        ? (zh ? `仍有 ${cause.count} 项未同步修改。请先联网同步；本地副本已保留。` : `${cause.count} unsynced changes remain. Reconnect and sync first; your local copy is retained.`)
+        : (zh ? "无法删除本地副本，请重试。" : "Unable to delete the offline copy. Try again."));
     }
-    await reloadLocal();
   }
 
   const sidebarConversations = useMemo(
@@ -447,8 +446,14 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
     if (!selectedProjectId) return;
     setExpandedProjects((current) => current.has(selectedProjectId) ? current : new Set([...current, selectedProjectId]));
   }, [selectedProjectId]);
-  const knownRevisions = Object.fromEntries(conversations.map((conversation) => [conversation.id, conversation.offline_revision]));
-  const pendingSummary = catalog ? summarizeScope(catalog, "all", undefined, knownRevisions) : { bytes: 0, count: 0 };
+  const [knownRevisions, setKnownRevisions] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    let active = true;
+    setKnownRevisions(null);
+    void usableOfflineRevisions(assetMode).then((value) => { if (active) setKnownRevisions(value); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [assetMode, conversations]);
+  const pendingSummary = catalog ? summarizeScope(catalog, "all", undefined, knownRevisions ?? {}) : { bytes: 0, count: 0 };
   const onlineHref = selectedId ? `/conversations/${selectedId}` : "/";
   return <div className="flex h-full min-h-0 flex-col">
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-xs font-bold text-white">CR</span><div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{zh ? "离线资料库" : "Offline library"}</h1><p className="flex items-center gap-1 text-xs text-secondary">{online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{online ? (zh ? "已联网" : "Online") : (zh ? "离线阅读" : "Offline reading")}</p></div><button type="button" onClick={onCollapse} className="hidden h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-surface md:flex" aria-label={zh ? "收起侧栏" : "Collapse sidebar"} title={zh ? "收起侧栏" : "Collapse sidebar"}><PanelLeftClose className="h-5 w-5" /></button><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary md:hidden" aria-label={zh ? "关闭" : "Close"}><X className="h-5 w-5" /></button></header>
@@ -456,7 +461,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
       <label className="flex min-h-10 items-center gap-2 rounded-md border border-ui bg-surface px-3"><Search className="h-4 w-4 text-secondary" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索本地正文、代码与批注" : "Search offline text, code, and annotations"} /></label>
       <OfflineShellIndicator status={offlineShellStatus} online={online} onRetry={onRetryShell} />
       {online && catalog ? <label className="grid gap-1 text-xs text-secondary"><span>{zh ? "离线附件" : "Offline attachments"}</span><select value={assetMode} onChange={(event) => onAssetModeChange(event.target.value as OfflineAssetMode)} disabled={Boolean(download)} className="min-h-9 rounded-md border border-ui bg-surface px-2 text-sm text-primary disabled:opacity-50"><option value="none">{zh ? "仅附件信息" : "Metadata only"}</option><option value="small">{zh ? "小附件（≤10 MiB）" : "Small files (≤10 MiB)"}</option><option value="all">{zh ? "全部附件" : "All attachments"}</option></select></label> : null}
-      {online && catalog ? <button type="button" disabled={Boolean(download) || pendingSummary.count === 0} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{pendingSummary.count > 0 ? (zh ? `更新 ${pendingSummary.count} 个对话 · ${formatBytes(pendingSummary.bytes)}` : `Update ${pendingSummary.count} conversations · ${formatBytes(pendingSummary.bytes)}`) : (zh ? "离线资料已是最新" : "Offline library is up to date")}</button> : null}
+      {online && catalog ? <button type="button" disabled={Boolean(download) || knownRevisions === null || pendingSummary.count === 0} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{knownRevisions === null ? (zh ? "正在检查离线资源" : "Checking offline resources") : pendingSummary.count > 0 ? (zh ? `更新 ${pendingSummary.count} 个对话 · ${formatBytes(pendingSummary.bytes)}` : `Update ${pendingSummary.count} conversations · ${formatBytes(pendingSummary.bytes)}`) : (zh ? "离线资料已是最新" : "Offline library is up to date")}</button> : null}
       {download ? <div className="space-y-1" role="status"><div className="h-1.5 overflow-hidden rounded bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${download.progress}%` }} /></div><p className="flex items-center gap-1 text-xs text-secondary"><LoaderCircle className="h-3 w-3 animate-spin" />{download.label}</p></div> : null}
       {error ? <div className="flex items-center gap-2 rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)]"><p className="min-w-0 flex-1">{error}</p>{failedDownload && online ? <button type="button" onClick={onRetryDownload} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium hover:bg-surface" aria-label={zh ? "重试离线下载" : "Retry offline download"}><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试" : "Retry"}</button> : null}</div> : null}
     </div>
@@ -577,15 +582,6 @@ function mergeLibraryConversations(localConversations: OfflineConversationRecord
   return [...localRows, ...remoteRows];
 }
 
-function estimateScope(
-  catalog: OfflineCatalogResponse,
-  scope: "conversation" | "project" | "all",
-  id: string | undefined,
-  knownRevisions: Record<string, number>,
-): number {
-  return summarizeScope(catalog, scope, id, knownRevisions).bytes;
-}
-
 function summarizeScope(
   catalog: OfflineCatalogResponse,
   scope: "conversation" | "project" | "all",
@@ -613,6 +609,19 @@ function formatBytes(value: number): string {
   return `${(value / 1024 ** 3).toFixed(1)} GB`;
 }
 
+function libraryActivityTime(conversation: OfflineConversationRecord): number {
+  const timestamp = new Date(conversation.last_read_at ?? conversation.downloaded_at).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function metadataNumber(metadata: Record<string, unknown>, key: string): number | null {
+  const value = metadata[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function offlineDownloadErrorMessage(reason: unknown, zh: boolean): string {
   if (reason instanceof OfflinePackageImportError) {
     if (reason.code === "QUOTA") {
@@ -633,37 +642,4 @@ function offlineDownloadErrorMessage(reason: unknown, zh: boolean): string {
     return zh ? "离线资料下载失败，请检查网络后重试。" : "The offline package download failed. Check the connection and retry.";
   }
   return reason instanceof Error ? reason.message : (zh ? "离线资料更新失败。" : "Offline library update failed.");
-}
-
-function offlineTaskLabel(phase: string, processed: number, total: number, zh: boolean): string {
-  const progress = total > 0 ? ` · ${processed}/${total}` : "";
-  if (phase === "queued") return zh ? "等待生成离线资料" : "Waiting to build offline library";
-  if (phase === "packaging_messages") return zh ? `正在整理对话消息${progress}` : `Packaging conversation messages${progress}`;
-  if (phase === "packaging_headings") return zh ? `正在整理章节目录${progress}` : `Packaging section index${progress}`;
-  if (phase === "packaging_search") return zh ? `正在整理离线搜索索引${progress}` : `Packaging offline search index${progress}`;
-  if (phase === "packaging_annotations") return zh ? `正在整理批注${progress}` : `Packaging annotations${progress}`;
-  if (phase === "packaging_metadata") return zh ? `正在整理阅读状态与笔记${progress}` : `Packaging reading state and notes${progress}`;
-  if (phase === "packaging_attachments") return zh ? `正在整理附件索引${progress}` : `Packaging attachment index${progress}`;
-  if (phase === "packaging_conversations") return zh ? `正在整理离线对话${progress}` : `Packaging offline conversations${progress}`;
-  if (phase === "packaging_assets") return zh ? `正在写入离线附件${progress}` : `Packaging offline attachments${progress}`;
-  if (phase === "validating_package") return zh ? "正在校验离线资料" : "Validating offline package";
-  if (phase === "packaging") return zh ? `正在整理离线资料${progress}` : `Packaging offline library${progress}`;
-  if (phase === "publishing") return zh ? "正在保存离线资料" : "Saving offline library";
-  return zh ? `正在生成离线资料${progress}` : `Building offline library${progress}`;
-}
-
-function libraryActivityTime(conversation: OfflineConversationRecord): number {
-  const value = conversation.last_read_at ?? conversation.downloaded_at;
-  const timestamp = new Date(value).getTime();
-  return Number.isFinite(timestamp) ? timestamp : 0;
-}
-
-function delay(milliseconds: number): Promise<void> { return new Promise((resolve) => window.setTimeout(resolve, milliseconds)); }
-
-function metadataNumber(metadata: Record<string, unknown>, key: string): number | null {
-  const value = metadata[key];
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value !== "string") return null;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : null;
 }

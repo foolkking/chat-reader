@@ -15,6 +15,9 @@ class CleanupRuleCreate(BaseModel):
 
 
 class CleanupRuleUpdate(BaseModel):
+    base_revision: int | None = Field(default=None, ge=1)
+    base_revision_id: UUID | None = None
+    current_revision_id: UUID | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
     status: Literal["ACTIVE", "DISABLED"] | None = None
     match_value: str | None = Field(default=None, min_length=1, max_length=500)
@@ -22,6 +25,23 @@ class CleanupRuleUpdate(BaseModel):
     role_filter: Literal["user", "assistant", "system", "tool"] | None = None
     matcher_mode: Literal["EXACT", "NORMALIZED", "APPROXIMATE"] | None = None
     boundary_mode: Literal["ANYWHERE", "WHOLE_LINE", "BLOCK_END"] | None = None
+
+
+class CleanupRuleTrial(CleanupRuleCreate):
+    rule_id: UUID | None = None
+    base_revision: int | None = Field(default=None, ge=1)
+    base_revision_id: UUID | None = None
+    conversation_id: UUID | None = None
+
+
+class CleanupRuleLearn(CleanupRuleTrial):
+    confirmed: Literal[True]
+    preview_token: str = Field(min_length=65, max_length=100)
+
+
+class CleanupExceptionConfirm(BaseModel):
+    confirmed: Literal[True]
+    preview_token: str = Field(min_length=65, max_length=100)
 
 
 class CleanupRuleRead(BaseModel):
@@ -32,6 +52,11 @@ class CleanupRuleRead(BaseModel):
     scope: str
     detector_id: str | None
     revision: int
+    revision_id: UUID | None = None
+    held: bool = False
+    revision_held: bool = False
+    system_provided: bool = False
+    published_revision_id: UUID | None = None
     match_value: str | None
     case_sensitive: bool
     role_filter: str | None
@@ -105,6 +130,18 @@ class CleanupDecisionInput(BaseModel):
 
 class CleanupDecisionBatch(BaseModel):
     decisions: list[CleanupDecisionInput] = Field(min_length=1, max_length=10000)
+
+
+class CleanupFilteredDecision(BaseModel):
+    decision: Literal["DELETE", "KEEP"]
+    all_matching: Literal[True]
+    rule_id: UUID | None = None
+    conversation_id: UUID | None = None
+    selected_only: bool = False
+
+
+class CleanupApplyInput(BaseModel):
+    preview_token: str | None = Field(default=None, min_length=64, max_length=64)
 
 
 class CleanupApplyRead(BaseModel):

@@ -49,7 +49,7 @@ def test_private_citation_detector_covers_repeated_reference_separators() -> Non
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_CITATION"
-    assert matches[0].decision == "DELETE"
+    assert matches[0].decision == "KEEP"
     assert text[matches[0].start:matches[0].end].count("turn") == 4
 
 
@@ -63,7 +63,7 @@ def test_private_memcite_without_references_is_noise() -> None:
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_CITATION"
-    assert matches[0].decision == "DELETE"
+    assert matches[0].decision == "KEEP"
 
 
 def test_private_citation_accepts_new_reference_kinds_inside_wrapper() -> None:
@@ -75,7 +75,7 @@ def test_private_citation_accepts_new_reference_kinds_inside_wrapper() -> None:
         _revision(),
     )
     assert len(matches) == 1
-    assert matches[0].decision == "DELETE"
+    assert matches[0].decision == "KEEP"
 
 
 def test_unknown_private_marker_is_surfaced_for_user_review() -> None:
@@ -88,7 +88,7 @@ def test_unknown_private_marker_is_surfaced_for_user_review() -> None:
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_MARKER"
-    assert matches[0].decision == "DELETE"
+    assert matches[0].decision == "KEEP"
     assert text[matches[0].start:matches[0].end] == "\ue200url\ue202opaque-resource-42\ue201"
 
 
@@ -104,7 +104,7 @@ def test_damaged_private_citation_is_surfaced_without_auto_delete() -> None:
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_CITATION_FRAGMENT"
-    assert matches[0].decision == "DELETE"
+    assert matches[0].decision == "KEEP"
 
 
 def test_generic_private_marker_is_reviewable_in_any_message_role() -> None:
@@ -117,15 +117,15 @@ def test_generic_private_marker_is_reviewable_in_any_message_role() -> None:
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_MARKER"
-    assert matches[0].decision == "DELETE"
+    assert matches[0].decision == "KEEP"
 
 
 def test_private_citation_variants_and_real_url_marker() -> None:
     text = "\ue200 cite \ue202 turn1search0 \ue201 and \ue200cite\u200bturn2news3"
     matches = detect_occurrences("assistant", text, _rule("openai-private-citation-v1", "ASSISTANT_ONLY"), _revision())
     assert [item.reason_code for item in matches] == ["PRIVATE_CITATION", "PRIVATE_CITATION_BROKEN"]
-    assert matches[0].decision == "DELETE"
-    assert matches[1].decision == "DELETE"
+    assert matches[0].decision == "KEEP"
+    assert matches[1].decision == "KEEP"
     url = "\ue200 url \ue202 Example \ue202 https://example.test \ue201"
     assert detect_occurrences("assistant", url, _rule("openai-private-citation-v1", "ASSISTANT_ONLY"), _revision()) == []
     mixed = f"{url} then Cite turn4search2"
@@ -141,7 +141,7 @@ def test_visible_citation_tolerates_only_bounded_syntax_damage() -> None:
     )
     assert len(full_width) == 1
     assert full_width[0].reason_code == "VISIBLE_CITATION_NORMALIZED"
-    assert full_width[0].decision == "DELETE"
+    assert full_width[0].decision == "KEEP"
 
     damaged = detect_occurrences(
         "assistant",
@@ -151,7 +151,7 @@ def test_visible_citation_tolerates_only_bounded_syntax_damage() -> None:
     )
     assert len(damaged) == 1
     assert damaged[0].reason_code == "VISIBLE_CITATION_FUZZY_TOKEN"
-    assert damaged[0].decision == "DELETE"
+    assert damaged[0].decision == "KEEP"
 
     ordinary = detect_occurrences(
         "assistant",
@@ -169,7 +169,7 @@ def test_normalized_and_approximate_rules_have_distinct_evidence() -> None:
     approximate = _revision("citation marker", True)
     approximate.matcher_mode = "APPROXIMATE"
     matches = detect_occurrences("assistant", "citation markeX", _rule(), approximate)
-    assert matches and matches[0].decision == "DELETE"
+    assert matches and matches[0].decision == "KEEP"
 
 
 def test_approximate_rules_have_a_bounded_candidate_budget() -> None:
@@ -177,14 +177,14 @@ def test_approximate_rules_have_a_bounded_candidate_budget() -> None:
     approximate.matcher_mode = "APPROXIMATE"
     matches = detect_occurrences("assistant", "a" * 50_000, _rule(), approximate)
     assert len(matches) <= MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE
-    assert all(item.decision == "DELETE" for item in matches)
+    assert all(item.decision == "KEEP" for item in matches)
 
 
 def test_literal_detector_is_case_sensitive_by_default_and_can_ignore_code() -> None:
     text = "keep NOISE and `NOISE` and noise"
     matches = detect_occurrences("assistant", text, _rule(), _revision("NOISE"))
     assert len(matches) == 2
-    assert matches[1].decision == "DELETE"
+    assert matches[1].decision == "PROTECTED"
     assert "PROTECTED_RANGE" in matches[1].evidence_codes
 
 
@@ -313,7 +313,7 @@ def test_reader_scan_applies_all_multi_reference_private_markers(client) -> None
 
     occurrences = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences").json()
     assert len(occurrences) == 2
-    assert all(item["decision"] == "DELETE" for item in occurrences)
+    assert all(item["decision"] == "KEEP" for item in occurrences)
     assert client.patch(
         f"/api/content-cleanup/scans/{scan_id}/decisions",
         json={"decisions": [{"occurrence_id": item["id"], "decision": "DELETE"} for item in occurrences]},
@@ -370,7 +370,7 @@ def test_full_conversation_scan_finds_markers_across_all_messages(client) -> Non
     occurrences = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences?limit=500").json()
     assert len(occurrences) == 4
     assert {item["reason_code"] for item in occurrences} == {"PRIVATE_CITATION", "PRIVATE_MARKER"}
-    assert any(item["role"] == "user" and item["decision"] == "DELETE" for item in occurrences)
+    assert any(item["role"] == "user" and item["decision"] == "KEEP" for item in occurrences)
 
 
 def test_rule_library_scan_covers_project_and_unclassified_active_conversations(client) -> None:
@@ -418,7 +418,7 @@ def test_rule_library_scan_covers_project_and_unclassified_active_conversations(
         project_conversation["conversation"]["id"],
         unclassified_conversation["conversation"]["id"],
     }
-    assert all(item["decision"] == "DELETE" for item in occurrences)
+    assert all(item["decision"] == "KEEP" for item in occurrences)
     assert all("confidence" not in item and "similarity_score" not in item for item in occurrences)
 
 
@@ -591,7 +591,7 @@ def test_literal_rule_updates_create_an_immutable_revision(client) -> None:
     assert rejected.status_code == 422
 
 
-def test_zero_match_scan_is_deleted_when_scanning_finishes(client) -> None:
+def test_zero_match_scan_retains_a_readable_completion_until_dismissed(client) -> None:
     created = client.post(
         "/api/conversations",
         json={
@@ -620,7 +620,11 @@ def test_zero_match_scan_is_deleted_when_scanning_finishes(client) -> None:
         db.close()
         generator.close()
 
-    assert client.get(f"/api/content-cleanup/scans/{scan_id}").status_code == 404
+    completed = client.get(f"/api/content-cleanup/scans/{scan_id}")
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "READY"
+    assert completed.json()["occurrence_count"] == 0
+    assert client.delete(f"/api/content-cleanup/scans/{scan_id}").status_code == 204
 
 
 def test_source_selection_uses_code_point_offsets_and_deletes_scan_after_apply(client) -> None:
@@ -726,7 +730,7 @@ def test_source_selection_classifies_builtin_noise_instead_of_manual_fallback(cl
     assert "REFERENCE_SEQUENCE" in item["evidence_codes"]
 
 
-def test_partial_selection_expands_to_candidate_and_preselects_delete(client) -> None:
+def test_partial_selection_expands_to_candidate_and_keeps_it(client) -> None:
     marker = "\ue200cite\ue202turn8search3\ue201"
     source = f"before {marker} after"
     created = client.post(
@@ -758,7 +762,7 @@ def test_partial_selection_expands_to_candidate_and_preselects_delete(client) ->
     item = client.get(f"/api/content-cleanup/scans/{scan['id']}/occurrences").json()[0]
     assert item["reason_code"] == "PARTIAL_SELECTION"
     assert item["match_text"] == marker
-    assert item["decision"] == "DELETE"
+    assert item["decision"] == "KEEP"
 
 
 def test_source_selection_surfaces_protected_ranges_for_explicit_review(client) -> None:
@@ -805,12 +809,19 @@ def test_source_selection_surfaces_protected_ranges_for_explicit_review(client) 
         db.close()
         generator.close()
     occurrence = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences").json()[0]
-    assert occurrence["decision"] == "DELETE"
+    assert occurrence["decision"] == "PROTECTED"
     assert "PROTECTED_RANGE" in occurrence["evidence_codes"]
     updated = client.patch(
         f"/api/content-cleanup/scans/{scan_id}/decisions",
         json={"decisions": [{"occurrence_id": occurrence["id"], "decision": "DELETE"}]},
     )
-    assert updated.status_code == 200, updated.text
-    assert client.post(f"/api/content-cleanup/scans/{scan_id}/apply").json() == {"applied": 1, "conflicts": 0}
-    assert client.get(f"/api/content-cleanup/scans/{scan_id}").status_code == 404
+    assert updated.status_code == 422, updated.text
+    assert client.post(f"/api/content-cleanup/scans/{scan_id}/apply").json() == {"applied": 0, "conflicts": 0}
+    generator = override()
+    db = next(generator)
+    try:
+        message = db.get(Message, uuid.UUID(message_id))
+        assert db.get(MessageVersion, message.current_version_id).display_text == source
+    finally:
+        db.close()
+        generator.close()

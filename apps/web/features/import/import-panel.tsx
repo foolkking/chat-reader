@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, previewImport } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
+import { readAccountCapabilities } from "../../lib/auth-client";
 import { ImportPreviewCard } from "./import-preview-card";
 import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
 
@@ -29,6 +30,7 @@ export function ImportPanel({
   onWorkspaceChange?: (open: boolean) => void;
 } = {}) {
   const queryClient = useQueryClient();
+  const capabilities = useQuery({ queryKey: ["account-capabilities"], queryFn: readAccountCapabilities, staleTime: 0 });
   const router = useRouter();
   const [mode, setMode] = useState<ImportMode>(initialMode);
   const [files, setFiles] = useState<File[]>([]);
@@ -109,7 +111,11 @@ export function ImportPanel({
     },
   });
 
-  const validationError = useMemo(() => validateFiles(files, mode), [files, mode]);
+  const validationError = useMemo(() => {
+    if (capabilities.data && !capabilities.data.allow_user_import) return "管理员已关闭导入功能。";
+    if (capabilities.data && files.some((file) => file.size > capabilities.data.maximum_import_size_mb * 1024 * 1024)) return `单个文件不能超过当前上限 ${capabilities.data.maximum_import_size_mb} MiB。`;
+    return validateFiles(files, mode);
+  }, [files, mode, capabilities.data]);
 
   function reset(nextMode = mode) {
     setMode(nextMode);
@@ -179,11 +185,12 @@ export function ImportPanel({
         <p className="mt-1 text-xs text-secondary">{mode === "adaptive" ? "支持单 JSON、单 Markdown、JSON + Markdown 及批量文件" : ".cr 使用独立归档恢复流程"}</p>
       </div>
       {validationError ? <ErrorLine message={validationError} /> : null}
+      {capabilities.data ? <p className="text-xs text-secondary">当前单文件上限：{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">无法读取导入限制。<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>重试</button></div> : <p role="status" className="text-sm text-secondary">正在读取导入限制…</p>}
       {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error.message} /> : null}
       {archiveMutation.isError ? <ErrorLine message={archiveMutation.error.message} /> : null}
       {commitMutation.isError ? <ErrorLine message={commitMutation.error.message} /> : null}
       <div className="flex flex-wrap gap-3">
-        <button type="button" disabled={!files.length || Boolean(validationError) || busy} data-testid="preview-import-button" onClick={() => mode === "archive" ? archiveMutation.mutate(files) : adaptiveMutation.mutate(files)} className="btn-primary min-h-10 px-4 text-sm font-medium">
+        <button type="button" disabled={!files.length || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={() => mode === "archive" ? archiveMutation.mutate(files) : adaptiveMutation.mutate(files)} className="btn-primary min-h-10 px-4 text-sm font-medium">
           {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />正在识别格式</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />分析并继续</> : "检查归档"}
         </button>
         {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? "正在导入" : "恢复归档"}</button> : null}

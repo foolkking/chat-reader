@@ -182,12 +182,13 @@ function TaskSection({ title, count, children }: { title: string; count: number;
 }
 
 function NoiseReviewSummary({ scans, tasks, onReview, onDismiss }: { scans: CleanupScanRead[]; tasks: BackgroundTaskRead[]; onReview: (id: string) => void; onDismiss: (id: string) => void }) {
-  const visible = scans.filter((scan) => scan.source === "IMPORT" || scan.source === "BATCH");
+  const zh = usePreferences().resolvedLocale === "zh-CN";
+  const visible = scans;
   const scanIds = new Set(visible.map((scan) => scan.id));
   const pendingTasks = tasks.filter((task) => !task.result.scan_id || !scanIds.has(task.result.scan_id));
   if (!visible.length && !pendingTasks.length) return null;
   return (
-    <div className="divide-y divide-ui" aria-label="Noise reviews">
+    <div className="divide-y divide-[var(--border)]" aria-label={zh ? "噪声审查" : "Noise reviews"}>
       {pendingTasks.map((task) => <div key={task.job_id} className="px-4 py-3"><TaskContent task={task} compact /></div>)}
       {visible.map((scan) => {
         const task = tasks.find((item) => item.result.scan_id === scan.id);
@@ -195,17 +196,15 @@ function NoiseReviewSummary({ scans, tasks, onReview, onDismiss }: { scans: Clea
           <div key={scan.id} className="px-4 py-3 text-xs text-primary">
             <p className="flex items-center gap-1.5 font-medium">
               <Eraser className="h-3.5 w-3.5 text-accent" />
-              {scan.source === "BATCH"
-                ? (scan.status === "READY" ? `${scan.occurrence_count} candidates found in existing conversations` : `Existing conversation scan ${scan.progress}%`)
-                : (scan.status === "READY" ? `${scan.occurrence_count} noise candidates ready for review` : `Noise review ${scan.progress}%`)}
+              {scan.status === "READY" ? (zh ? `${scan.occurrence_count} 个噪声候选待审查` : `${scan.occurrence_count} noise candidates ready for review`) : ["FAILED", "STALE"].includes(scan.status) ? (zh ? "噪声扫描需要重试" : "Noise scan needs retry") : (zh ? `噪声审查 ${scan.progress}%` : `Noise review ${scan.progress}%`)}
             </p>
             <p className="mt-1 text-[11px] text-secondary">
-              {task?.result.parent_task_id ? "Import follow-up · " : ""}{scan.target_count} conversations · {scan.processed_messages}/{scan.total_messages} messages
+              {task?.result.parent_task_id ? (zh ? "导入后扫描 · " : "Import follow-up · ") : ""}{scan.target_count} {zh ? "个对话" : "conversations"} · {scan.processed_messages}/{scan.total_messages} {zh ? "条消息" : "messages"}
             </p>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${Math.max(scan.progress, 2)}%` }} /></div>
             <div className="mt-2 flex items-center gap-3">
-              <button type="button" onClick={() => onReview(scan.id)} disabled={scan.status !== "READY"} className="font-medium text-accent underline disabled:opacity-50">Open review</button>
-              <button type="button" onClick={() => onDismiss(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="text-secondary underline disabled:opacity-50">Ignore this result</button>
+              <button type="button" onClick={() => onReview(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 font-medium text-accent underline disabled:opacity-50">{zh ? "打开审查" : "Open review"}</button>
+              <button type="button" onClick={() => onDismiss(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 text-secondary underline disabled:opacity-50">{zh ? "忽略本次结果" : "Ignore this result"}</button>
             </div>
           </div>
         );

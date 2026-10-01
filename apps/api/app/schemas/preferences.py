@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Literal
+import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 ThemeMode = Literal["light", "dark", "system"]
@@ -29,6 +30,9 @@ class UserPreferenceRead(BaseModel):
     conversation_sort_direction: SortDirection
     project_sort_mode: ProjectSortMode
     project_sort_direction: SortDirection
+    reader_default_focus: bool = False
+    annotation_default_position: Literal["floating", "docked"] = "floating"
+    field_revisions: dict[str, int] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 
@@ -44,3 +48,25 @@ class UserPreferenceUpdate(BaseModel):
     conversation_sort_direction: SortDirection | None = None
     project_sort_mode: ProjectSortMode | None = None
     project_sort_direction: SortDirection | None = None
+    reader_default_focus: bool | None = None
+    annotation_default_position: Literal["floating", "docked"] | None = None
+
+
+class PreferenceSyncRequest(BaseModel):
+    operation_id: uuid.UUID
+    changes: UserPreferenceUpdate
+    base_revisions: dict[str, int] = Field(max_length=12)
+
+    @model_validator(mode="after")
+    def matching_revisions(self):
+        values = self.changes.model_dump(exclude_none=True, exclude_unset=True)
+        if not values or set(values) != set(self.base_revisions) or any(value < 1 for value in self.base_revisions.values()):
+            raise ValueError("Each changed field requires its positive server revision.")
+        return self
+
+
+class PreferenceSyncResponse(BaseModel):
+    operation_id: uuid.UUID
+    preferences: UserPreferenceRead
+    applied: list[str]
+    conflicts: list[str]

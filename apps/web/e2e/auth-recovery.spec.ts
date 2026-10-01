@@ -161,6 +161,27 @@ test("leaving a pending private check cannot redirect a public page", async ({ p
   await expect(page.getByText(checking)).toHaveCount(0);
 });
 
+test("a late unauthorized response cannot lock a newly verified account", async ({ page, context }) => {
+  let release: (() => Promise<void>) | undefined;
+  await page.route("**/api/projects**", (route) => {
+    if (release) return route.fallback();
+    release = () => route.fulfill({ status: 401, json: {} });
+  });
+  await page.goto("/");
+  await expect.poll(() => Boolean(release)).toBe(true);
+  const secondUser = "00000000-0000-4000-8000-00000000000b";
+  await page.route("**/api/auth/session", (route) => route.fulfill({ json: { ...session, user_id: secondUser, principal_id: `user:${secondUser}` } }));
+  const other = await context.newPage();
+  await other.goto("/login?reauth=1");
+  await other.evaluate((id) => localStorage.setItem("chat-reader:authenticated-offline-user", id), secondUser);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("chat-reader:offline-active-user-v1"))).toBe(secondUser);
+  await page.unroute("**/api/projects**");
+  await release!();
+  await expect(page.getByText(ready)).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  expect(await page.evaluate(() => localStorage.getItem("chat-reader:authenticated-offline-user"))).toBe(secondUser);
+});
+
 for (const width of [375, 1440]) {
   test(`recovery actions are visible and keyboard accessible at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

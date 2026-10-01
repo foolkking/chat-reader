@@ -1,5 +1,57 @@
 # Project State
 
+## Settings stages 1–4 checkpoint (2026-10-01, not deployed)
+
+The approved settings/user/admin/offline plan remains active. Stages one through
+four are implemented and locally verified; GitHub CI is the pending checkpoint.
+The user paused stage five (personal/system Skill version editing):
+continue directly with stages six, seven and eight after this checkpoint.
+Production remains on the separately recorded deployed revision below.
+Dated scope and evidence: `docs/planning/SETTINGS_COMPLETION_2026-09-30.md` and
+`docs/execution/SETTINGS_COMPLETION_2026-09-30.md`.
+
+- Account capabilities align personal settings with effective policy limits.
+  Approval and email verification are independent; omitted policy fields are
+  preserved. Email confirmation is an explicit POST with a purpose-bound,
+  expiring one-use grant. SMTP is required to demand verification. See
+  `docs/system/AUTHENTICATION_CONTRACT.md`.
+- Learned formats and explicitly learned noise rules have revision-scoped
+  account grants, equivalent-identity aliases and separate system publication.
+  Withdrawal or source-account deletion preserves acquired versions. Personal
+  controls cannot change global publication. Format health uses full-family
+  validation. See `docs/system/ADAPTIVE_IMPORT_CONTRACT.md` and
+  `docs/system/CONTENT_CLEANUP_CONTRACT.md`.
+- Noise review defaults to KEEP, protects source syntax, persists cross-page
+  selection, previews complete changes and rejects stale source revisions.
+  Exceptions and learning require explicit confirmation; applied batches have
+  durable markers and leases. Reader, search and export use new canonical
+  message versions after an acknowledged apply.
+- Settings and Library share the offline/sync center. Downloads retain durable
+  job association, verify attachment tiers and preserve old copies on failure.
+  Annotation/notebook outboxes, drafts and conflicts survive reload and newer
+  edits. Account preferences use per-field server revisions; reading positions
+  use durable idempotent operations and real anchors. Remote progress never
+  scrolls the active Reader without an explicit choice.
+- Expiry locks and retains account data; only the same verified UUID can reopen
+  it. Signout and copy cleanup review pending changes, support a readable ZIP
+  recovery export and recheck the snapshot. Failed physical signout cleanup
+  stays locked and retryable; completion tokens protect new downloads from
+  stale tabs. See `docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`.
+
+The single Alembic head is `20261001_0040`. Existing Dexie v2 and offline package
+v3 remain; v1/v2/v3 readers stay compatible. Migration/deployment boundaries are
+in `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`.
+
+Local evidence includes 42 real stage-four browser cases plus 13 authentication
+fault contracts, 3 real auth/Share cases, full API **569 passed / 26 skipped**,
+stage-four PostgreSQL **12 passed**, PWA negative **17 passed**, and long
+Reader/Share **11 passed**. These suites overlap; counts are not additive. The
+full default PWA rerun passes **132 / 169 mode-specific skips**. Lint, typecheck,
+normal authenticated build and single migration head pass; detailed results are
+recorded in the execution log.
+`docs/testing.md` owns the required authenticated settings CI job and explicit
+PostgreSQL integration gate. Pushing/building artifacts does not deploy them.
+
 ## Deployed authentication recovery (2026-09-30)
 
 The post-login private boundary no longer leaves session/network/storage

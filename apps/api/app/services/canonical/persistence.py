@@ -257,6 +257,8 @@ def commit_import_preview(
     import_record.heartbeat_at = import_record.committed_at
     import_record.error_message = None
     import_record.warnings = list(dict.fromkeys((import_record.warnings or []) + all_warnings))
+    from app.services.adaptive_import.profile_access import grant_successful_import
+    grant_successful_import(db, import_record)
     db.commit()
 
     return CommitImportResult(

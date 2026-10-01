@@ -35,9 +35,9 @@ router = APIRouter(prefix="/api/admin/access", tags=["admin-access"])
 
 class RegistrationUpdate(BaseModel):
     mode: str = Field(pattern="^(CLOSED|INVITE_ONLY|OPEN)$")
-    require_admin_approval: bool = False
-    email_verification_enabled: bool = False
-    password_reset_enabled: bool = True
+    require_admin_approval: bool | None = None
+    email_verification_enabled: bool | None = None
+    password_reset_enabled: bool | None = None
 
 
 class InvitationCreate(BaseModel):
@@ -77,6 +77,9 @@ def get_access_overview(request: Request, db: Session = Depends(get_db)) -> dict
 @router.put("/registration")
 def update_registration(payload: RegistrationUpdate, request: Request, db: Session = Depends(get_db)) -> dict:
     actor = _admin(request, db)
+    settings = get_settings()
+    if payload.email_verification_enabled is True and not (settings.smtp_host and settings.smtp_from_address):
+        raise HTTPException(status_code=422, detail="Configure SMTP before requiring email verification.")
     row = set_access_settings(
         db,
         mode=payload.mode,
@@ -85,14 +88,10 @@ def update_registration(payload: RegistrationUpdate, request: Request, db: Sessi
         password_reset_enabled=payload.password_reset_enabled,
         actor_user_id=actor.id,
     )
-    _record(db, request, actor.id, "REGISTRATION_MODE_CHANGED", resource_type="INSTANCE_ACCESS", resource_id="1", metadata={
-        "registration_mode": payload.mode,
-        "require_admin_approval": payload.require_admin_approval,
-        "email_verification_enabled": payload.email_verification_enabled,
-        "password_reset_enabled": payload.password_reset_enabled,
-    })
+    _record(db, request, actor.id, "REGISTRATION_MODE_CHANGED", resource_type="INSTANCE_ACCESS", resource_id="1",
+            metadata={key: value for key, value in payload.model_dump(exclude_unset=True).items() if value is not None})
     db.commit()
-    return {**access_settings(db, get_settings()), "updated_at": row.updated_at}
+    return {**access_settings(db, settings), "smtp_configured": bool(settings.smtp_host and settings.smtp_from_address), "updated_at": row.updated_at}
 
 
 @router.get("/users")
@@ -125,6 +124,8 @@ def list_users(request: Request, db: Session = Depends(get_db)) -> list[dict]:
             "created_at": row.created_at,
             "last_login_at": row.last_login_at,
             "email_verified_at": row.email_verified_at,
+            "email_verification_required": row.email_verification_required,
+            "approval_status": row.approval_status,
             "approval_reviewed_at": row.approval_reviewed_at,
             "stats": {
                 "projects": project_counts.get(row.id, 0),

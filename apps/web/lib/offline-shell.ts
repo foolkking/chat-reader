@@ -56,7 +56,7 @@ const listeners = new Set<() => void>();
 let registrationPromise: Promise<ServiceWorkerRegistration> | null = null;
 let preparationPromise: Promise<OfflineShellStatus> | null = null;
 let reconciliationPromise: Promise<OfflineShellStatus> | null = null;
-let currentStatus: OfflineShellStatus = {
+const initialStatus: OfflineShellStatus = {
   availability: "unknown",
   updatePhase: "checking",
   revision: null,
@@ -66,6 +66,11 @@ let currentStatus: OfflineShellStatus = {
   missing: [],
   message: null,
 };
+let currentStatus = initialStatus;
+
+export function getInitialOfflineShellStatus(): OfflineShellStatus {
+  return initialStatus;
+}
 
 export function getOfflineShellStatus(): OfflineShellStatus {
   return currentStatus;

@@ -18,6 +18,8 @@ PUBLIC_PATHS = frozenset({
     "/api/auth/setup/upgrade",
     "/api/auth/password-reset",
     "/api/auth/password-reset/request",
+    "/api/auth/email-verification/request",
+    "/api/auth/email-verification/confirm",
 })
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 

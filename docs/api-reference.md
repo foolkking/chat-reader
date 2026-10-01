@@ -1,5 +1,33 @@
 # API 参考
 
+## Offline conflict resolution (working tree, 2026-10-01)
+
+`POST /api/annotations/sync` accepts additive `action: "resolve"` for an
+annotation or notebook. `entity_id` is the canonical ID and `base_revision` is
+the compared canonical revision. The payload contains `conflict_copy_id`,
+`conflict_revision`, `choice` (`local`, `server`, `merge`), and the selected
+`annotation` or `notebook` content; an annotation deletion uses `deleted: true`.
+Server choice needs no replacement content. Schema validation rejects incomplete
+requests; subject/conversation ownership and both revisions are checked before
+writing. Changed revisions return 409 with the copy intact. Canonical content,
+copy removal, annotation search, notebook-reference remapping and receipt commit
+atomically. Exact operation replay returns the saved receipt with `duplicate`,
+without requiring the removed conflict copy to exist. Existing upsert/delete
+calls and response shapes are unchanged. No migration is required.
+
+## Offline download admission (working tree, 2026-10-01)
+
+`POST /api/offline/packages` keeps its existing payload and now enforces stable
+replay for `Idempotency-Key` (at most 200 characters): the same account/key and
+request returns the same job, including terminal jobs; a changed scope, IDs,
+known revisions or asset tier returns 409. PostgreSQL serializes concurrent
+admission. Clients persist the key/request before sending, and deliberately use
+a new key to rebuild a cancelled or failed generation. Existing task status and
+cancel endpoints remain authoritative; no second server queue is introduced.
+Package v3 adds optional attachment `downloadable` metadata while preserving
+v1/v2 readers and the current format number. Details are in
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`.
+
 ## 当前账户接口合同（工作树，2026-09-01）
 
 私有 API 需要 owner session，并按已认证用户 UUID 限定返回记录。首次部署账号是
@@ -190,14 +218,21 @@ Owner 可通过 `POST /api/conversations/{id}/toc/refresh` 手动排队目录更
 
 ## Reading
 
-阅读位置由服务端身份解析器绑定到 `local:default`，客户端不能提交身份字段。当前客户端写入 `anchor_data.position_mode=block-relative-v2`，包含 block id/index、version id、order key、scroll ratio、block 内像素及字符偏移；恢复按 `block_id -> block_index/message_id -> order_key -> scroll_ratio` 降级，并继续读取 v1。重新进入会话时直接请求包含保存 message 的完整 `reader-turn`。
+阅读位置由服务端身份解析器绑定到已验证的账户 UUID，客户端不能提交身份字段。当前客户端写入 `anchor_data.position_mode=block-relative-v2`，包含 block id/index、version id、order key、scroll ratio、block 内像素及字符偏移；恢复按 `block_id -> block_index/message_id -> order_key -> scroll_ratio` 降级，并继续读取 v1。重新进入会话时直接请求包含保存 message 的完整 `reader-turn`。Share 的本机位置继续独立保存。
 
 | Method | Path | 说明 |
 | --- | --- | --- |
 | GET | `/api/conversations/{id}/reading-position` | 获取阅读位置 |
 | PUT | `/api/conversations/{id}/reading-position` | 保存 message/block/scroll offset |
+| POST | `/api/conversations/{id}/reading-position/sync` | 按基础 revision 幂等同步，返回 applied/conflict 及服务器位置 |
 | POST | `/api/conversations/{id}/recent` | 记录最近打开 |
 | GET | `/api/recent-items` | 最近项目，仅 active 会话 |
+
+位置读响应增加 `revision`。同步请求为 `{operation_id, base_revision, position}`；
+`position` 沿用既有写入字段，anchor JSON 上限 64 KiB。相同账户/operation 重试
+返回原回执；同 ID 改内容或会话返回 409。过期基础版本且内容不同返回 conflict，
+不覆盖服务器位置；同值无需新增 revision。客户端只有收到相符回执才删除 outbox。
+既有 GET/PUT 保持兼容；普通用户不能同步其他用户的位置或读取其回执。
 
 会话生命周期和归属：
 
@@ -248,6 +283,7 @@ expiry and revocation, and cannot call private owner APIs.
 | --- | --- | --- |
 | GET | `/api/preferences` | 获取主题、语言、正文宽度、Markdown 间距、字号、TOC 与列表排序偏好 |
 | PATCH | `/api/preferences` | 更新外观或 Conversation/Project 排序模式与方向 |
+| POST | `/api/preferences/sync` | 按字段基础版本幂等同步账户偏好，返回已应用字段、冲突字段及当前版本 |
 
 `reader_width_mode` 支持 `compact / standard / wide`；`reader_density_mode` 支持 `compact / comfortable / large`，界面语义为 Markdown 间距；`reader_font_size_px` 范围为 15-22，默认 17。客户端不能提交 `subject_key`；当前服务端身份固定解析为 `local:default`。
 
@@ -378,3 +414,113 @@ Root-only `GET /api/admin/features` and `PUT /api/admin/features` include
 the selected conversations before queueing and returns HTTP 422 when that
 instance limit would be exceeded. The existing background-task response and
 idempotency contract are unchanged for admitted merges.
+# Settings completion additions (working tree, 2026-09-30)
+
+- `GET /api/auth/capabilities`: authenticated effective feature policy and limits.
+- `POST /api/auth/email-verification/request`: email/password-authenticated
+  verification resend, 204 on delivery, 401 credentials, 409 ineligible,
+  429 bounded retry, 503 mail unavailable. Does not establish a session.
+- `POST /api/auth/email-verification/confirm`: token consumption; returns
+  `{verified, approval_required}`. GET never consumes. Invalid/used/expired
+  grants return 422. All mutations retain same-origin enforcement.
+- `PUT /api/admin/access/registration`: mode plus optional policy flags; omitted
+  flags are preserved. SMTP configuration is required to enable verification.
+- Existing built-in noise-rule status PATCH now changes only personal
+  enablement; other built-in configuration mutations return 403.
+
+Migration: `20260930_0034`; see `system/AUTHENTICATION_CONTRACT.md` and
+`system/CONTENT_CLEANUP_CONTRACT.md`. These additions are not deployed yet.
+
+Format sharing additions (migration `20260930_0035`, working tree):
+
+- `GET /api/import-formats`: one row per available canonical identity, including
+  `held`, `system_provided`, `published_revision_id`, effective current version
+  and a safe full-family verification summary. Revisions are filtered by grant
+  or current publication before matching and before listing.
+- Existing personal PATCH changes only personal name/enablement. Legacy DELETE
+  hides the personal entry and preserves grants/history. Relearning restores it.
+- `GET /api/admin/import-formats?limit=30&offset=0`: Root Admin candidate page
+  with safe revision configuration and validation counts; no sample content,
+  source filename, original private name or conversation metadata.
+- `PUT /api/admin/import-formats/{id}/publication`: explicit `{revision_id,name}`
+  publishes a verified revision; `DELETE` on the same path withdraws public
+  availability. Both are audited. Existing grants and admitted imports survive.
+
+This format change uses migration `20260930_0035`; production deployment remains
+a separate release step. See `system/ADAPTIVE_IMPORT_CONTRACT.md`.
+
+Noise review safety/workspace additions (migration `20260930_0036`, working tree):
+
+- `GET /api/content-cleanup/scans/{id}/groups`: paginated rule/conversation
+  counts, selected counts and protected/conflict counts.
+- `GET /scans/{id}/review`: paginated occurrence rows and total, filtered by
+  `rule_id`, `conversation_id` and `selected_only`; old `/occurrences` remains.
+- `PATCH /scans/{id}/decisions/filter`: `{decision,all_matching:true}` plus
+  filters persists a decision across every matching page. Protected candidates
+  cannot be deleted by individual or bulk requests.
+- `GET /scans/{id}/preview`: complete before/after text, bounded message pages,
+  impact counts and a token binding the selected occurrences and source versions.
+- `POST /scans/{id}/apply`: optional `{preview_token}` for legacy compatibility;
+  the Web supplies it after preview. Stale previews return 409. Explicit saved
+  decisions are required, and completed conversation batches are not replayed.
+- `POST /scans/{id}/rescan`: fresh scan of the original active conversations;
+  the old selection is not silently moved to new source positions.
+
+All paths above share the `/api/content-cleanup` prefix and account ownership
+checks. Zero-match results remain readable until dismissed. Current single
+head: `20261001_0040`. System promotion is explicit and revision-scoped.
+
+Personal rule learning/exception additions (working tree, 2026-10-01):
+
+- `POST /rules/trial`: configuration plus optional `rule_id`, `base_revision`
+  and `conversation_id`; returns a bounded, non-mutating trial and a ten-minute
+  account/configuration-bound preview token. Foreign resources return 404.
+- `POST /rules/learn`: the trial input, `confirmed:true` and `preview_token`;
+  creates a personal rule or appends an immutable revision. Stale configuration,
+  expired token or edit-base conflict returns 409. Legacy explicit create/PATCH
+  remains supported; PATCH accepts optional `base_revision`.
+- `GET /rules/{id}/revisions?limit=20&offset=0`: entitled revision history, with
+  the effective personal version first; unavailable private versions are excluded.
+- `GET /scans/{id}/occurrences/{occurrence_id}/exception`: exact scope preview.
+  `POST` to the same path requires `{confirmed:true,preview_token}` and saves
+  an account-local exception idempotently, keeping this candidate unchanged.
+- `GET /exceptions?limit=20&offset=0`: own paginated exceptions and total.
+  `DELETE /exceptions/{id}` revokes only the current account's exception.
+
+All paths share `/api/content-cleanup`. See the cleanup contract for trial
+bounds and exact exception matching; no sample source is persisted by trials.
+
+Noise-rule publication additions (`20261001_0038`, working tree):
+
+- Rule list/read responses include `revision_id`, `held`, `revision_held`,
+  `system_provided` and `published_revision_id`. PATCH accepts
+  `current_revision_id` for an explicitly selected entitled revision, plus
+  `base_revision_id` for optimistic configuration edits. Trial/learn binds the
+  same base UUID. Personal deletion hides the entry without destroying grants.
+- Root-only `GET /api/admin/noise-rules?limit=30&offset=0` and
+  `GET /api/admin/noise-rules/{id}/revisions?limit=20&offset=0` return paged safe
+  candidate/configuration results. `PUT /{id}/publication` accepts
+  `{revision_id,name}`; `DELETE /{id}/publication` withdraws it. Both are audited.
+  Ordinary users cannot invoke these routes.
+- `POST /api/adaptive-import/sessions/{id}/families/{family_id}/health` checks
+  the owned session's pinned saved format against every group. It returns and
+  persists per-group validation, revision and check time, without creating a
+  format grant, revision or conversation. The session must remain recoverable.
+  Source errors return failed group results; unknown format/session access and
+  invalid lifecycle states fail explicitly. Source replacement invalidates the
+  prior check. Mapping preview and learning share the same validator.
+
+Preference sync additions (`20261001_0039`, working tree):
+
+- GET/PATCH `/api/preferences` include `reader_default_focus`,
+  `annotation_default_position` (`floating`/`docked`) and `field_revisions`.
+  Subject identity is always the authenticated account; PATCH changes only
+  explicitly submitted fields and increments the revisions of changed values.
+- POST `/api/preferences/sync` takes `operation_id` (UUID), `changes` (one to
+  twelve supported preference fields), and matching positive `base_revisions`.
+  It returns that operation ID, `preferences`, `applied` and `conflicts` fields.
+  An independent field applies even if another field conflicts. A stale field
+  with the same value converges without another revision increment.
+- Same account/operation/payload returns the stored receipt. Changed payload on
+  the same operation returns 409. PostgreSQL serializes updates by account.
+  Receipts and field revisions never use client wall time to resolve conflicts.
