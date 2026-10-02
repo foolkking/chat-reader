@@ -834,3 +834,31 @@ Task Center创建context崩溃不再出现；仅离线冷启动搜索结果超�
 将继续复验，不能将此孤立通过计为整轮通过。CSP4项及导入3项已全部通过。
 阶段6/7和整合修复准备提交推送，GitHub全新Linux实例与本机剩余离线测试分别验收。
 阶段5继续暂停；生产不变。
+
+
+实现提交c4073a79086de43e2ac8e25cad0ad9aa59124ad6已推送master；手动触发
+Build release images，Actions 36947635947，API/Web/settings均在执行，尚未完成。
+本地stage8-pwa-negative：17 passed / 0 skipped，48.3秒，含独立浏览器/worker重启。
+完整Chromium默认PWA下一轮：131 passed / 203 skipped / 1 failed，1.4分钟；之前
+搜索场景通过，本轮为离线Context Package的download.path canceled。C盘仍无剩余
+空间，TEMP/TMP和浏览器资料目录已位于E盘，但此次取消的独立根因未证实。没有
+把取消当成功、减少断言或添加自动重试；整轮以GitHub新Linux实例独立门禁继续核验。
+本机不再反复跑同一环境的完整矩阵；负面场景已通过，恢复普通认证构建并关闭故障注入。
+
+
+Actions 36947635947终态失败：API通过737 / 3 skipped（Linux symlink项可执行，
+其余缺少外部fixture）；Web全部门禁通过，默认PWA132 / 203 mode-specific skipped，
+导入3 / 1 external-fixture skipped，CSP4、在线安全/Reader45、Share焦点2、源码2、
+清理1、上传18、附件1、PDF3、认证18、PWA负面17。各组存在重叠，不相加。
+设置108 passed / 3 failed，11.2分钟；新实例恢复和镜像任务因依赖失败未执行。
+三失败均为快速修改后Esc关闭绕过草稿确认（改邮箱375/1440、注册策略），与之前
+本机限流问题不同。草稿标记经被动effect跨组件传递，外层关闭检查可能读取旧值。
+将已实施设置面板的dirty通知改为layout提交阶段传播，在下一次用户键盘事件前
+更新外层退出保护；暂停的Skill版本编辑仍未实施。未移除/延迟原测试的Esc断言。
+
+stage8-ci-draft-fix：5 passed / 0 skipped，23秒，覆盖全部4改邮箱真实SMTP/持久化/
+会话撤销/错误恢复及注册策略草稿/菜单滚动/焦点。相同通知修复包含格式、规则、
+分享、备份和离线冲突草稿。首轮lint发现4个遗留未使用导入，已移除；最终lint、
+typecheck、普通认证build和diff检查通过。后端没有后续改动。接下来推送并重新
+运行全量GitHub门禁。GitHub旧actions运行时及runner迁移提示为非阻断平台提示，
+未改动生产或清理本机用户文件。

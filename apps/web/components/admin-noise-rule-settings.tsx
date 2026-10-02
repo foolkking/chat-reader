@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState, useLayoutEffect } from "react";
 import { adminApi, type AdminNoiseRule, type AdminNoiseRevision } from "../lib/admin-client";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { usePreferences } from "./preferences-provider";
@@ -11,7 +11,7 @@ export function AdminNoiseRuleSettings({ onDirtyChange }: { onDirtyChange?: (dir
   const [offset, setOffset] = useState(0);
   const [dirtyRows, setDirtyRows] = useState<Set<string>>(new Set());
   const query = useQuery({ queryKey: ["admin-noise-rules", offset], queryFn: () => adminApi.noiseRules(offset) });
-  useEffect(() => { onDirtyChange?.(dirtyRows.size > 0); }, [dirtyRows, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirtyRows.size > 0); }, [dirtyRows, onDirtyChange]);
   return <section className="space-y-4"><p className="text-sm leading-6 text-secondary">{zh ? "选择一个已验证的规则版本，确认匹配范围后向全系统提供。个人修改不自动发布；用户已学习或成功应用的版本在撤回后仍然可用。" : "Review a validated rule version and its matching scope before publishing. Personal edits are not published automatically. Versions learned or successfully applied remain available after withdrawal."}</p>
     {query.isLoading ? <p role="status">{zh ? "正在读取候选规则…" : "Loading candidate rules…"}</p> : null}
     {query.error ? <Retry error={query.error} retry={() => void query.refetch()} zh={zh} /> : null}
@@ -31,7 +31,7 @@ function PublicationRow({ rule, onDirtyChange }: { rule: AdminNoiseRule; onDirty
   const [selected, setSelected] = useState<AdminNoiseRevision | null>(null);
   const name = nameDraft ?? rule.name;
   const dirty = (nameDraft !== null && nameDraft !== rule.name) || (selected !== null && selected.id !== rule.published_revision_id);
-  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
   const revisions = useQuery({ queryKey: ["admin-noise-rule-revisions", rule.id, offset], queryFn: () => adminApi.noiseRuleRevisions(rule.id, offset), enabled: open });
   const mutation = useMutation({ mutationFn: async (action: "publish" | "withdraw") => { if (action === "publish") await adminApi.publishNoiseRule(rule.id, selected!.id, name.trim()); else await adminApi.withdrawNoiseRule(rule.id); }, onSuccess: async () => {
     await Promise.all([client.invalidateQueries({ queryKey: ["admin-noise-rules"] }), client.invalidateQueries({ queryKey: ["content-cleanup-rules"] }), client.invalidateQueries({ queryKey: ["cleanup-rule-revisions"] })]);

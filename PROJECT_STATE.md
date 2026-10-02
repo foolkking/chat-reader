@@ -4,7 +4,7 @@
 
 Stages 1–4 and 6–7 are implemented. Stage 5 (personal/system Skill version
 editing) remains paused by the user. Stage 8 integration is finishing; current
-commit/push and GitHub CI are pending. Production has not been changed.
+GitHub CI remains pending after the first pushed implementation. Production has not been changed.
 
 - Personal settings include owner-scoped My shares, additive personal archive
   restore with preview and durable receipts, and password-checked email changes
@@ -38,9 +38,11 @@ Current contracts: [Administration](docs/system/ADMINISTRATION_CONTRACT.md),
 The [dated execution log](docs/execution/SETTINGS_COMPLETION_2026-09-30.md)
 records individual runs, failures, skips and follow-up evidence. Latest complete
 API: **736 passed / 4 skipped** with PostgreSQL integration enabled. Settings:
-**109 passed / 2 failed** (disposable-instance rate limits), with both failures
-passing targeted reruns; a fresh full CI run is still required. Remaining local
-browser gates and current GitHub results will be recorded before delivery.
+**108 passed / 3 failed** in the first CI run, which exposed fast-Escape draft
+protection races. The fix propagates dirty guards before the next keyboard event;
+its five-case local SMTP/settings rerun passes. API and all Web CI gates passed
+(including default PWA 132 / 203 mode-specific skips and offline negative 17).
+The updated complete CI and new-instance archive/image gates remain required.
 
 ## Settings stages 1–4 checkpoint (2026-10-01, not deployed)
 

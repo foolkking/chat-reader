@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState, useLayoutEffect } from "react";
 import { adminApi, type AdminImportFormat } from "../lib/admin-client";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { usePreferences } from "./preferences-provider";
@@ -11,7 +11,7 @@ export function AdminImportFormatSettings({ onDirtyChange }: { onDirtyChange?: (
   const [offset, setOffset] = useState(0);
   const [dirtyRows, setDirtyRows] = useState<Set<string>>(new Set());
   const query = useQuery({ queryKey: ["admin-import-formats", offset], queryFn: () => adminApi.importFormats(offset) });
-  useEffect(() => { onDirtyChange?.(dirtyRows.size > 0); }, [dirtyRows, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirtyRows.size > 0); }, [dirtyRows, onDirtyChange]);
   return <section className="space-y-4">
     <p className="text-sm leading-6 text-secondary">{zh ? "从已通过全批次校验的版本中选择一个向系统提供。个人修复不会自动发布；撤回后，已有用户保有的版本和进行中的导入仍可继续使用。" : "Publish a specific version that passed full batch validation. Personal repairs are not published automatically. Withdrawal preserves acquired versions and imports already in progress."}</p>
     {query.isLoading ? <p role="status">{zh ? "正在读取候选格式…" : "Loading candidate formats…"}</p> : null}
@@ -31,7 +31,7 @@ function PublicationRow({ format, onDirtyChange }: { format: AdminImportFormat; 
   const revisionId = draft?.revisionId ?? format.published_revision_id ?? format.revisions[0]?.id ?? "";
   const revision = format.revisions.find((item) => item.id === revisionId);
   const dirty = draft !== null && (name !== format.name || revisionId !== (format.published_revision_id ?? format.revisions[0]?.id));
-  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
   const mutation = useMutation({ mutationFn: async (action: "publish" | "withdraw") => { if (action === "publish") await adminApi.publishImportFormat(format.id, revisionId, name.trim()); else await adminApi.withdrawImportFormat(format.id); }, onSuccess: async () => {
     await Promise.all([queryClient.invalidateQueries({ queryKey: ["admin-import-formats"] }), queryClient.invalidateQueries({ queryKey: ["import-formats"] }), queryClient.invalidateQueries({ queryKey: ["import-format-revisions"] })]);
     setDraft(null);

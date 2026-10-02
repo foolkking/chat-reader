@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Link2, Plus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { adminApi, type AdminInvitation } from "../lib/admin-client";
 import { AdminLoadError, AdminPageControls, adminButton } from "./admin-users-panel";
 import { useInteractionDialog } from "./interaction-dialog-provider";
@@ -18,7 +18,7 @@ export function AdminInvitationsPanel({ onDirtyChange }: { onDirtyChange?: (dirt
   const [issued, setIssued] = useState<{ id: string; invite_url: string; expires_at: string } | null>(null), [copied, setCopied] = useState(false);
   const createButton = useRef<HTMLButtonElement>(null), linkInput = useRef<HTMLInputElement>(null), inFlight = useRef(false);
   const list = useQuery({ queryKey: ["admin-invitations", state, offset], queryFn: () => adminApi.invitationPage(state, offset), retry: false });
-  useEffect(() => { onDirtyChange?.(Boolean(issued && !copied) || busy === "create"); }, [issued, copied, busy, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(Boolean(issued && !copied) || busy === "create"); }, [issued, copied, busy, onDirtyChange]);
   useEffect(() => { if (issued) linkInput.current?.focus(); }, [issued]);
   const date = (value: string) => new Date(value).toLocaleString(resolvedLocale);
   async function run(key: string, work: () => Promise<void>) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState, useLayoutEffect } from "react";
 import { deleteCleanupRule, getCleanupRuleRevisions, getCleanupRules, getPendingCleanupScans, scanExistingConversations, updateCleanupRule } from "../lib/api";
 import { cleanupRuleLabel } from "../lib/content-cleanup";
 import type { CleanupRuleRead } from "../lib/types";
@@ -21,7 +21,7 @@ export function ContentCleanupRuleSettings({ embedded = false, onBack, onDirtyCh
   const [editor, setEditor] = useState<CleanupRuleRead | "new" | null>(null);
   const [dirty, setDirty] = useState(false);
   const [feedback, setFeedback] = useState("");
-  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   const scan = useMutation({ mutationFn: scanExistingConversations, onSuccess: async () => {
     await client.invalidateQueries({ queryKey: ["content-cleanup-pending"] });
     setFeedback(zh ? "扫描已排队，可在任务中心继续审查。" : "Scan queued. Continue review from the task center.");

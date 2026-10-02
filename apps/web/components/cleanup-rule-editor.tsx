@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { getCleanupRuleRevisions, learnCleanupRule, trialCleanupRule } from "../lib/api";
 import type { CleanupRuleConfiguration, CleanupRuleRead, CleanupRuleTrialInput } from "../lib/types";
 import { useInteractionDialog } from "./interaction-dialog-provider";
@@ -29,7 +29,7 @@ export function CleanupRuleEditor({ rule, initialText = "", initialRole = null, 
   useEffect(() => { if (trial.data) resultRef.current?.scrollIntoView({ block: "nearest" }); }, [trial.data]);
   const trialMatchesDraft = trial.data && JSON.stringify(trial.variables) === JSON.stringify(input);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial) || (!rule && Boolean(initialText));
-  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };

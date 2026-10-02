@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { adminApi, type RegistrationPolicy } from "../lib/admin-client";
 import { AdminInvitationsPanel } from "./admin-invitations-panel";
 import { usePreferences } from "./preferences-provider";
@@ -15,7 +15,7 @@ export function AdminRegistrationSettings({ onDirtyChange }: { onDirtyChange?: (
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const dirty = JSON.stringify(saved) !== JSON.stringify(policy);
-  useEffect(() => { onDirtyChange?.(dirty || invitationDirty); }, [dirty, invitationDirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirty || invitationDirty); }, [dirty, invitationDirty, onDirtyChange]);
 
   const load = useCallback(async () => {
     setBusy("load"); setError("");

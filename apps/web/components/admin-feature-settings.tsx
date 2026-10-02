@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useLayoutEffect } from "react";
 import { adminApi, type FeaturePolicy } from "../lib/admin-client";
 import { ACCOUNT_CAPABILITIES_CHANGED_EVENT } from "../lib/auth-client";
 import { usePreferences } from "./preferences-provider";
@@ -16,7 +16,7 @@ export function AdminFeaturesPanel({ onDirtyChange }: { onDirtyChange?: (dirty: 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const dirty = JSON.stringify(policy) !== JSON.stringify(saved);
-  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   const load = useCallback(async () => {
     setBusy(true); setError("");
     try { const value = await adminApi.features(); setPolicy(value); setSaved(value); }

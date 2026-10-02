@@ -1,7 +1,7 @@
 "use client";
 
 import { Mail } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { cancelEmailChange, emailChangeError, readEmailChange, requestEmailChange, type EmailChangeState } from "../lib/auth-client";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { usePreferences } from "./preferences-provider";
@@ -14,7 +14,7 @@ export function EmailChangePanel({ onDirtyChange, onRefreshProfile }: { onDirtyC
   const [busy, setBusy] = useState(false), [loading, setLoading] = useState(true);
   const [error, setError] = useState(""), [notice, setNotice] = useState("");
   const dirty = !!email || !!password || busy;
-  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
   useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
   const refresh = useCallback(async () => {
     setLoading(true);

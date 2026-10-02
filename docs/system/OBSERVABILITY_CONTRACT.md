@@ -1,7 +1,5 @@
 # Observability Contract
 
-## Scope
-
 ## In-app help and administrator runtime status (2026-10-02, not deployed)
 
 Personal settings and Offline Library share **Help & diagnostics**. It shows

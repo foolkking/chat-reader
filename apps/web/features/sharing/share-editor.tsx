@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, useLayoutEffect } from "react";
 import { ArrowLeft, ChevronDown, FileText, Link2, LockKeyhole, Palette, ShieldCheck } from "lucide-react";
 import { getConversationDialogueIndex, updateShare } from "../../lib/api";
 import { readAccountCapabilities } from "../../lib/auth-client";
@@ -58,7 +58,7 @@ export function ShareEditor({ share, onSaved, onClose, onDirtyChange }: {
   const dirty = title !== (share.title ?? "") || description !== (share.description ?? "") || expires !== localDate(share.expires_at)
     || scope !== share.scope || JSON.stringify(selected) !== JSON.stringify(share.selected_message_ids ?? [])
     || flags.some((flag) => options[flag] !== share[flag]) || passwordMode !== "keep" || !!password || !!confirmation || theme !== share.theme || locale !== share.locale;
-  useEffect(() => { onDirtyChange(dirty || busy); }, [dirty, busy, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange(dirty || busy); }, [dirty, busy, onDirtyChange]);
   useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
   async function close() {

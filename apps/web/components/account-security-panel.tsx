@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyRound, Laptop, LogOut, RefreshCw, UserRound } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { getAccountProfile, getDeviceSessions, logoutOtherDeviceSessions, updateAccountProfile, type DeviceSession } from "../lib/account-access-client";
 import { changeOwnerPassword, logoutCurrentDevice, type AuthSessionState } from "../lib/auth-client";
@@ -49,7 +49,7 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
   useEffect(() => { void load(); }, [load]);
   const profileDirty = profile !== null && displayName.trim() !== (profile.display_name ?? "");
   const passwordDirty = Boolean(passwords.current || passwords.next || passwords.confirm);
-  useEffect(() => { onDirtyChange?.(profileDirty || passwordDirty || emailDirty); }, [onDirtyChange, passwordDirty, profileDirty, emailDirty]);
+  useLayoutEffect(() => { onDirtyChange?.(profileDirty || passwordDirty || emailDirty); }, [onDirtyChange, passwordDirty, profileDirty, emailDirty]);
   const refreshIdentity = useCallback(() => { void getAccountProfile().then(setProfile).catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to refresh account.")); }, []);
   const otherSessionCount = sessions.filter((session) => !session.current).length;
   const finishSignout = () => {

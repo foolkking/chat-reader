@@ -568,7 +568,8 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `apps/api/app/services/exporting/system_archive.py` | Current | System `.cr v5` export, v4/v5 empty-instance restore and shared bounded serialization/validation. |
 | `apps/api/app/services/exporting/system_archive_preflight.py` | Current | Read-only system graph, identity, reference and configuration preflight shared with restore/export. |
 | `apps/api/app/services/exporting/system_archive_configuration.py` | Current | V5 configuration schema 1, policy defaults, bootstrap target checks and account-aware transactional restore. |
-| `docs/system/DATA_ARCHIVE_CONTRACT.md` | Current contract | Archive format/scope, account mapping, validation/rollback and incomplete feature boundaries. |
+| `docs/system/DATA_ARCHIVE_CONTRACT.md` | Current contract | Personal/system archive scope, account mapping, worker preflight, additive restore receipts and rollback. |
+| `docs/system/ADMINISTRATION_CONTRACT.md` | Current contract | Account/invitation/audit pagination, background deletion, shared-resource retention and audited complete-turn Reader. |
 | `.github/workflows/build-release-images.yml` | Current | API/Web quality ownership split, then manual external Linux image build for low-memory production deployment. |
 | `apps/web/features/attachments/conversation-files-panel.tsx` | Current | Current conversation file drawer, upload and occurrence actions. |
 | `apps/web/e2e/attachment-upload-flow.spec.ts` | Current | Ordinary upload, insertion, version switching and file reuse acceptance. |

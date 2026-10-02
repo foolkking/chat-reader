@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Clipboard, KeyRound, Link2, Search, UserRound, UsersRound, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useLayoutEffect } from "react";
 import {
   createAccessInvitation,
   createUserPasswordReset,
@@ -62,7 +62,7 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
 
   useEffect(() => { void load(); }, [load]);
   const registrationDirty = overview !== null && registration !== overview.registration_mode;
-  useEffect(() => { onDirtyChange?.(registrationDirty); }, [onDirtyChange, registrationDirty]);
+  useLayoutEffect(() => { onDirtyChange?.(registrationDirty); }, [onDirtyChange, registrationDirty]);
 
   const saveRegistration = async () => {
     setBusy("registration");

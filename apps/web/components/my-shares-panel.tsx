@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { Copy, Link2, LockKeyhole, Pencil, RefreshCw, Search } from "lucide-react";
 import { getMyShares, revokeShares } from "../lib/api";
 import type { OwnedShareRead, ShareBatchResult } from "../lib/types";
@@ -23,7 +23,7 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
   const root = useRef<HTMLDivElement>(null), restore = useRef<{ id: string; scroll: number } | null>(null);
   const shares = useQuery({ queryKey: ["my-shares", q, status, conversation?.id, offset], queryFn: () => getMyShares({ q, status, conversationId: conversation?.id, offset }), retry: false, enabled: online });
   useEffect(() => { const update = () => setOnline(navigator.onLine); update(); window.addEventListener("online", update); window.addEventListener("offline", update); return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); }; }, []);
-  useEffect(() => { if (!editing) onDirtyChange(busy); }, [busy, editing, onDirtyChange]);
+  useLayoutEffect(() => { if (!editing) onDirtyChange(busy); }, [busy, editing, onDirtyChange]);
   useEffect(() => {
     if (!editing && restore.current) {
       const { id, scroll } = restore.current;

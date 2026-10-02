@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Braces, ChevronDown, ChevronUp, FileText, Layers3, Wrench } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState, useLayoutEffect } from "react";
 import { getImportFormats, getImportFormatRevisions, updateImportFormat } from "../lib/api";
 import type { ImportFormatProfile } from "../lib/types";
 import { useImportDialog } from "./import-dialog-provider";
@@ -16,7 +16,7 @@ export function ImportFormatSettings({ focused = false, onDirtyChange, onOpenImp
   const [open, setOpen] = useState(focused);
   const [dirtyProfiles, setDirtyProfiles] = useState<Set<string>>(new Set());
   const query = useQuery({ queryKey: ["import-formats"], queryFn: getImportFormats, enabled: open });
-  useEffect(() => { onDirtyChange?.(dirtyProfiles.size > 0); }, [dirtyProfiles, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirtyProfiles.size > 0); }, [dirtyProfiles, onDirtyChange]);
   const title = zh ? "我的导入格式" : "My import formats";
   return <section className={focused ? "space-y-4" : "border-t border-ui pt-3"}>
     {!focused ? <button type="button" onClick={() => setOpen(!open)} className="flex min-h-11 w-full items-center justify-between text-left text-sm font-medium text-primary" aria-expanded={open}>{title}{open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button> : <h3 className="text-sm font-semibold text-primary">{title}</h3>}
@@ -46,7 +46,7 @@ function FormatRow({ profile, onDirtyChange, onOpenImport }: { profile: ImportFo
     await queryClient.invalidateQueries({ queryKey: ["import-formats"] });
     if (input.name !== undefined) setNameDraft(null);
   } });
-  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
   const Icon = profile.source_mode === "JSON_MARKDOWN" ? Layers3 : profile.source_mode === "MARKDOWN" ? FileText : Braces;
   const source = profile.kind === "BUILTIN" ? (zh ? "内置 · 只读" : "Built-in · Read only") : [profile.held ? (zh ? "已学习" : "Learned") : null, profile.system_provided ? (zh ? "系统提供" : "System provided") : null].filter(Boolean).join(" · ");
   const descriptions: Record<string, string> = {

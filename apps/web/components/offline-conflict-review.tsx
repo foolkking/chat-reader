@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { offlineDb } from "../lib/offline-db";
 import { ConflictChangedError, loadOfflineConflict, prepareOfflineResolution, retryOfflineResolution, type ConflictMarker, type ConflictPreview } from "../lib/offline-conflicts";
@@ -33,7 +33,7 @@ export function OfflineConflictReview({ conflictKey, onBack, onDirtyChange }: { 
     finally { if (current === generation.current) setBusy(false); }
   }, [conflictKey, zh]);
   useEffect(() => { void load(); heading.current?.focus(); return () => { generation.current++; }; }, [load]);
-  useEffect(() => { onDirtyChange?.(draftState !== "saved"); return () => onDirtyChange?.(false); }, [draftState, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(draftState !== "saved"); return () => onDirtyChange?.(false); }, [draftState, onDirtyChange]);
 
   const saveDraft = async (value: Content) => {
     const version = ++draftVersion.current;

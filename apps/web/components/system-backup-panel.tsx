@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Download, FileArchive, RefreshCw, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { cancelTask, confirmSystemArchiveRestore, discardSystemArchiveUpload, getSystemArchiveCapabilities, getSystemArchiveTasks, getTask, queueSystemArchiveExport, retryTask, uploadSystemArchive } from "../lib/api";
 import type { BackgroundTaskRead } from "../lib/types";
 import { ArchivePreview, ArchiveProgress, archiveError, archiveStatus, archiveTaskLabel } from "./archive-ui";
@@ -41,7 +41,7 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
 
   useEffect(() => { const update = () => setOnline(navigator.onLine); update(); window.addEventListener("online", update); window.addEventListener("offline", update); return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); }; }, []);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; uploadHandle.current?.cancel(); }; }, []);
-  useEffect(() => { onDirtyChange?.(busy || mappingBusy || !!file); }, [busy, mappingBusy, file, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(busy || mappingBusy || !!file); }, [busy, mappingBusy, file, onDirtyChange]);
   useEffect(() => {
     for (const task of history.data?.pages.flat() ?? []) {
       if (task.job_type !== "system_archive_restore" || task.status !== "committed" || handled.current.has(task.job_id)) continue;
