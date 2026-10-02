@@ -60,7 +60,8 @@ Verification: `test_email_change.py`, `test_email_change_postgres.py`, and
 includes offline reload and separately identifies the injected request/lost
 response recovery case. Existing registration verification remains covered by
 `settings-registration.spec.ts`. Complete run evidence is in the dated settings
-execution record; this working-tree feature is not deployed.
+execution record. The code is deployed as `ad223cd` on 2026-10-02; production
+SMTP is unconfigured, so email delivery remains unavailable there.
 
 ## Explicit signout cleanup (2026-10-01 working tree)
 

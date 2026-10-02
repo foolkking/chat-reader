@@ -519,7 +519,8 @@ idempotency contract are unchanged for admitted merges.
   enablement; other built-in configuration mutations return 403.
 
 Migration: `20260930_0034`; see `system/AUTHENTICATION_CONTRACT.md` and
-`system/CONTENT_CLEANUP_CONTRACT.md`. These additions are not deployed yet.
+`system/CONTENT_CLEANUP_CONTRACT.md`. Deployed with `ad223cd` on 2026-10-02;
+production mail delivery remains unavailable while SMTP is unconfigured.
 
 Format sharing additions (migration `20260930_0035`, working tree):
 
@@ -630,7 +631,7 @@ attachment URLs; `/search` returns current-message matches with real anchors,
 pagination and literal text matching. Content and attachment lists now audit
 reads without requiring a nonempty query. Full contract:
 [Administration](system/ADMINISTRATION_CONTRACT.md).
-## 帮助与运行状态（2026-10-02，未部署）
+## 帮助与运行状态（2026-10-02，已部署）
 
 - `GET /api/app-info`：已认证账户读取 API 语义版本与镜像构建 revision；未知为 null。
 - `GET /api/admin/runtime-status`：仅 Root；返回有界 Worker/任务状态、存储完整性、

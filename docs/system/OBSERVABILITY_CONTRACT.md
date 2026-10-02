@@ -1,6 +1,6 @@
 # Observability Contract
 
-## In-app help and administrator runtime status (2026-10-02, not deployed)
+## In-app help and administrator runtime status (deployed 2026-10-02)
 
 Personal settings and Offline Library share **Help & diagnostics**. It shows
 the authenticated API connection, API version/build, the Web build, a guarded

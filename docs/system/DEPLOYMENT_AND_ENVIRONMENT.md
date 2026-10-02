@@ -1,6 +1,6 @@
 # 部署与运行环境
 
-2026-10-02 未部署的版本与诊断扩展：生产镜像构建参数 `BUILD_REVISION` 为完整40位
+2026-10-02 已部署的版本与诊断扩展：生产镜像构建参数 `BUILD_REVISION` 为完整40位
 小写 Git commit；省略则帮助页显示未知，非法非空值拒绝构建。GitHub workflow
 将当前 `GITHUB_SHA` 注入 API/Web，production Compose 本机构建也传递该可选参数。
 API 将其写入镜像内 `app/build_metadata.json`；Web 将其编译到客户端配置。
@@ -10,9 +10,31 @@ API 将其写入镜像内 `app/build_metadata.json`；Web 将其编译到客户�
 离线包；详见 [Observability Contract](OBSERVABILITY_CONTRACT.md)。不需要新增运行时
 secret，发布和部署仍是独立步骤。
 
-2026-10-02 未部署的归档扩展：系统导出 `.cr v5` 保留 v4 显式归属映射和旧 v5 无配置扩展兼容；新配置 schema 1 保存个人授权、系统发布、偏好及功能/访问策略。普通账户恢复后重设密码，目标 Root 凭据不变；启用邮箱验证的策略恢复前要求目标已配置 SMTP。个人恢复新增幂等 receipt migration，当前唯一 head 为 `20261002_0042`（包含归属选择表）。上传沿用 `BUNDLE_MAX_COMPRESSED_BYTES`（默认 512 MiB）；Nginx 为精确路径 `/api/me/archive/previews` 与 `/api/system/archive/previews` 添加 520 MiB multipart 上限并直连 loopback FastAPI，避免 Next rewrite 缓冲截断。导出现在同时验证上传/展开大小、文件/对象数量、单对象及 JSONL/manifest 限制；容量失败需一致核对 `BUNDLE_MAX_*`、`CANJSON_MAX_LINE_BYTES` 和网关上限后重试，不静默忽略附件。没有新增环境变量；后续发布需同步该网关规则，当前没有部署。系统预检、持久归属映射和恢复已接入 worker 与管理员页面，详情见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。应用归档不能替代部署前服务器备份。
+2026-10-02 已部署的归档扩展：系统导出 `.cr v5` 保留 v4 显式归属映射和旧 v5 无配置扩展兼容；新配置 schema 1 保存个人授权、系统发布、偏好及功能/访问策略。普通账户恢复后重设密码，目标 Root 凭据不变；启用邮箱验证的策略恢复前要求目标已配置 SMTP。个人恢复新增幂等 receipt migration，当前唯一 head 为 `20261002_0042`（包含归属选择表）。上传沿用 `BUNDLE_MAX_COMPRESSED_BYTES`（默认 512 MiB）；Nginx 为精确路径 `/api/me/archive/previews` 与 `/api/system/archive/previews` 添加 520 MiB multipart 上限并直连 loopback FastAPI，避免 Next rewrite 缓冲截断。导出现在同时验证上传/展开大小、文件/对象数量、单对象及 JSONL/manifest 限制；容量失败需一致核对 `BUNDLE_MAX_*`、`CANJSON_MAX_LINE_BYTES` 和网关上限后重试，不静默忽略附件。没有新增环境变量；此次发布已同步两条精确网关规则。系统预检、持久归属映射和恢复已接入 worker 与管理员页面，详情见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。应用归档不能替代部署前服务器备份。
 
-## Current deployed snapshot (2026-09-30)
+## Current deployed snapshot (2026-10-02)
+
+Production runs `ad223cd4bcbbad7a4ff0c5ea5f33ed2846f3a3ca` from successful
+Actions `36955004824`, with Alembic `20261002_0042 (head/current)`. Verified
+backup: `/opt/chat-reader/backups/chat-reader-20261002T031735Z`. Only prebuilt
+API/worker/Web images were replaced; PostgreSQL identity/start time, the
+administrator configuration and `.env.production` remain unchanged. Runtime
+image IDs and authenticated/public checks are in the
+[deployment record](../execution/DEPLOYMENT_SETTINGS_2026-10-02.md).
+
+The current image pointer is authoritative in `/etc/chat-reader/release-state`;
+previous `5877558` images and the backup are retained. The live Compose runtime
+settings match the release template; only unused local-build revision args
+differ, so the existing server checkout was preserved. Exact archive upload
+routes are installed through the dedicated Nginx snippet. No data/image cleanup
+was performed. Root free space is about 9.2 GiB.
+
+Production SMTP is not configured. Email verification and email-change delivery
+remain unavailable; existing account access is unchanged. Public login rendering
+and authenticated HTTP smoke pass; full owner desktop/mobile browser acceptance
+is recorded separately as NOT_VERIFIED.
+
+## Previous deployed snapshot (2026-09-30)
 
 Production runs source `5877558070311d1728974198f37a4500d25233b1` from Actions
 run `36669226287`. API/worker image ID is
@@ -314,11 +336,10 @@ retained.
 The explicit `--execute` step is an operator action after the recovery chain
 has been verified. Never replace it with `docker image prune`, a wildcard
 delete, or cleanup of named volumes/backups.
-# Pending settings migration (2026-09-30; not deployed)
+# Settings migration chain (deployed 2026-10-02)
 
-The working tree adds `20260930_0034` after `20260927_0033`. Run the ordinary
-backup and migration release gates before deploying matching API/worker/Web
-images. It adds approval/verification state, email grants and personal noise
+The chain starts at `20260930_0034` after `20260927_0033` and was deployed
+through `20261002_0042` with the ordinary backup and migration gates. It adds approval/verification state, email grants and personal noise
 preferences; no existing user import files or browser data are transformed.
 Existing ACTIVE accounts do not acquire a new verification requirement.
 Legacy disabled accounts with an approval-review record stay conservatively
@@ -328,17 +349,18 @@ Email verification uses the existing `SMTP_HOST`, `SMTP_PORT`,
 `SMTP_FROM_ADDRESS`, `SMTP_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD` and
 `PUBLIC_WEB_BASE_URL`. Do not enable it before mail configuration is usable.
 The admin UI reports configuration presence, not tested delivery health.
-No credentials, production configuration changes or release action accompany
-this working-tree implementation. Downgrade removes pending verification grants
+The 2026-10-02 deployment preserved credentials and the production environment.
+SMTP remains unconfigured. Downgrade removes pending verification grants
 and per-user rule preferences; prefer the established pre-release backup for
 rollback rather than treating schema downgrade as data restoration.
 
 Stage-six regular-account email changes reuse this SMTP configuration and the
 existing EMAIL_CHANGE grant purpose. They require matching Web/API code, but
-no additional migration or environment keys; the single head stays
-`20261001_0040`. Root administrator email remains deployment-managed. SMTP
+no additional migration or environment keys of their own. The later archive
+migrations advance the current single head to `20261002_0042`. Root administrator email remains deployment-managed. SMTP
 presence enables the form, while delivery failure remains a retryable error
-and never changes the old address. This addition is not deployed.
+and never changes the old address. The deployed form reports unavailable mail
+until SMTP is configured.
 
 `20260930_0035` follows `0034` on the same migration chain. It backfills existing
 format revisions as personal grants before replacing the source-owner cascade

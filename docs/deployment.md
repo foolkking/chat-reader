@@ -1,5 +1,37 @@
 # 生产部署
 
+## 2026-10-02 settings, sharing and offline release
+
+Source `ad223cd4bcbbad7a4ff0c5ea5f33ed2846f3a3ca` from successful Actions
+`36955004824` is deployed. API/worker image:
+`sha256:dcc20270a69ece03623ac1bd77d4ffb65fa79e8ac0b2d17f82e430235c9614f0`;
+Web image: `sha256:68ec6ec335a99604b9f9b2dcdd40f229843b2426646298e7b20ed06b67e94b7f`.
+The verified transfer archive SHA-256 is
+`cbe92190111ca4b2cca1c06617f39a9e7d2182fa93d47ef152e67bcf0aa9cfd0`.
+
+API/worker writes were stopped for the verified five-component backup
+`/opt/chat-reader/backups/chat-reader-20261002T031735Z`. The migration advanced
+`20260927_0033` to `20261002_0042`; canonical counts and all 301 attachment
+checksums remain unchanged. Only API, worker and Web were recreated with
+`--no-build`. PostgreSQL was not restarted/replaced; administrator deployment
+configuration and `.env.production` remain unchanged. Existing server checkout
+changes were preserved; release helpers are kept in the versioned release directory.
+
+Nginx adds only the two exact archive upload routes through
+`/etc/nginx/snippets/chat-reader-archive-upload.locations.conf`. Syntax testing
+and reload passed; existing TLS, ordinary limits and other sites are preserved.
+Runtime image/health/heartbeat checks, public HTTPS/redirect, real credential
+login, twelve read-only settings requests, logout and subsequent private 401
+all passed. Public login rendering passed in the in-app browser; full
+authenticated desktop/mobile UI acceptance is **NOT_VERIFIED**.
+
+SMTP is currently unconfigured; email verification and email-change delivery
+are not operational until mail is configured. Release state records current
+`ad223cd` and retained previous images `5877558`; the validated database backup
+is the recovery point for evaluating any schema rollback. No images, backups,
+volumes or user data were removed. Root free space is about 9.2 GiB.
+Detailed evidence: [deployment execution](execution/DEPLOYMENT_SETTINGS_2026-10-02.md).
+
 ## 2026-09-30 authentication recovery release
 
 Source `5877558070311d1728974198f37a4500d25233b1` was deployed from Actions run

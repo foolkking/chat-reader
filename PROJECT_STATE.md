@@ -1,12 +1,35 @@
 # Project State
 
-## Settings completion status (2026-10-02, not deployed)
+## Current deployment (2026-10-02)
+
+Production at `https://chat.king.2bd.net` now runs verified source
+`ad223cd4bcbbad7a4ff0c5ea5f33ed2846f3a3ca` from successful Actions
+`36955004824`. Alembic is **`20261002_0042 (head/current)`**. API, worker and
+Web were replaced with prebuilt images; PostgreSQL identity/start time and
+the production environment file are unchanged. Stage five remains paused.
+
+The consistent five-component backup
+`/opt/chat-reader/backups/chat-reader-20261002T031735Z` passed all checks.
+Canonical row counts and 301 attachment file checksums match before/after
+migration. Service health, worker heartbeat, HTTPS/redirect, authenticated
+settings reads and logout isolation pass. The two archive upload routes now
+stream to loopback FastAPI with exact 520 MiB limits. Previous images and the
+backup are retained; no cleanup or business-data deletion was performed.
+
+SMTP is not configured in production, so verification/email-change delivery
+remains unavailable until mail is configured. The public login page renders
+in the browser; authenticated desktop/mobile UI acceptance remains separate
+from the passing authenticated HTTP smoke. Details and verification limits:
+[deployment record](docs/execution/DEPLOYMENT_SETTINGS_2026-10-02.md).
+
+## Settings implementation checkpoint (2026-10-02, before deployment)
 
 Stages 1–4 and 6–8 are complete. Stage 5 (personal/system Skill version editing)
 remains paused by the user. Source `ad223cd4bcbbad7a4ff0c5ea5f33ed2846f3a3ca`
 is pushed to master; [CI 36955004824](https://github.com/foolkking/chat-reader/actions/runs/36955004824)
 passes API, Web, settings, image creation and independent artifact inspection.
-Production has not been changed. Later closeout changes update documentation only.
+This implementation checkpoint preceded the deployment recorded above. Later
+closeout changes update documentation only.
 
 - Personal settings include owner-scoped My shares, additive personal archive
   restore with preview and durable receipts, and password-checked email changes

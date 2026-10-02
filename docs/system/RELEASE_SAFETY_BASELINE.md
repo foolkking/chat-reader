@@ -4,7 +4,8 @@
 GHSA-vcvr-r3jv-pc5j and DOMPurify resolves to `3.4.16` for
 GHSA-p98j-92pf-mc4p. The official audit after updating the lockfile returns
 zero advisories. No exception or audit bypass is introduced; these changes
-await their exact-commit CI and are not deployed.
+passed exact-source CI `36955004824` and were deployed with `ad223cd` on
+2026-10-02.
 
 2026-09-30 release prerequisite: the locked `brace-expansion` versions are
 `1.1.21` and `5.0.12`, resolving GHSA-q2hr-2g5m-vwhr,

@@ -1,11 +1,11 @@
 # 数据与持久化
 
-2026-10-02 工作树归档更新：系统 `.cr v5` 增加无凭据身份和新实例归属恢复，保留 v4 显式映射兼容；可选 `configuration_version: 1` 保存格式/规则授权、发布与撤回、偏好、既有 Skill 和功能/访问策略。旧 v5 无配置扩展仍可读取。个人归档已有序列化、完整预检、新增恢复、任务和设置界面。导出在发布前完成全图预检和容量自检，过高压缩率条目有界重打包。`20261001_0041` 保存账户/摘要幂等 receipt。`20261002_0042` 为当前唯一 head，增加按预检任务和来源身份保存的归属草稿，目标用户删除时关联置空。系统预检、归属确认和恢复沿用 worker；完整边界见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。未部署。
+2026-10-02 已部署归档更新：系统 `.cr v5` 增加无凭据身份和新实例归属恢复，保留 v4 显式映射兼容；可选 `configuration_version: 1` 保存格式/规则授权、发布与撤回、偏好、既有 Skill 和功能/访问策略。旧 v5 无配置扩展仍可读取。个人归档已有序列化、完整预检、新增恢复、任务和设置界面。导出在发布前完成全图预检和容量自检，过高压缩率条目有界重打包。`20261001_0041` 保存账户/摘要幂等 receipt。`20261002_0042` 为当前唯一 head，增加按预检任务和来源身份保存的归属草稿，目标用户删除时关联置空。系统预检、归属确认和恢复沿用 worker；完整边界见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。已于2026-10-02随ad223cd部署。
 
-## Current implementation (working tree, 2026-09-01)
+## Account migration checkpoint (2026-09-01, historical)
 
-Alembic head in this working tree is `20260901_0031` and is not yet applied
-to the operator database. Migrations `0030` and `0031` add `users`, account access/invitation/reset
+At this checkpoint the working-tree head was `20260901_0031`; it was applied
+in a subsequent release. Current deployed head is `20261002_0042`. Migrations `0030` and `0031` add `users`, account access/invitation/reset
 tables, auth rate limits, and owner columns on private conversation, project,
 import, job, learned-profile and content-cleanup records. Existing account-
 scoped subject keys are backfilled from `local:default` to the migrated admin

@@ -1,5 +1,13 @@
 # Markdown 文档台账
 
+2026-10-02 production rollout: `PROJECT_STATE.md`, `deployment.md` and
+`system/DEPLOYMENT_AND_ENVIRONMENT.md` own deployed source `ad223cd`, migration
+0042, exact archive gateway routes and the unchanged environment/database
+container boundary. New historical execution record
+`execution/DEPLOYMENT_SETTINGS_2026-10-02.md` owns backup/image/runtime evidence,
+SMTP unavailability and the distinction between HTTP and browser acceptance.
+Earlier "not deployed" checkpoint statements below retain their historical meaning.
+
 2026-10-02 final settings closeout: `PROJECT_STATE.md` identifies verified source
 `ad223cd` and successful Actions `36955004824`; the existing execution record
 owns final local/CI counts, explicit skips and earlier failures. Stages 1–4 and
