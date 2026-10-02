@@ -1053,8 +1053,9 @@ database, migrates it to head and starts the normal API/worker with isolated
 storage. It runs `system-archive-new-instance.spec.ts` against actual v5 input,
 checking restored accounts/configuration, duplicate receipts and real downloads.
 The expiry UI uses a fixed browser clock; backend expiry is tested independently.
-Both gate results are required in the settings evidence summary. This CI wiring
-has not yet run on GitHub for the current working tree.
+Both gate results are required in the settings evidence summary. The dated
+settings execution record tracks their completed CI runs and exact source
+revisions; skips and earlier failed runs remain separate from passing evidence.
 
 `APP_ENV=test`, `E2E_SETTINGS_MAILBOX=1` and a new `E2E_SYSTEM_ARCHIVE_SOURCE=.cr`
 path explicitly enable `python tests/build_system_archive_browser_fixture.py`
@@ -1101,6 +1102,12 @@ acceptance are in the dated settings execution record.
 
 ## Local integration temp storage
 
+`PLAYWRIGHT_USE_BUNDLED_CHROMIUM=1` selects Playwright's pinned full Chromium
+with the `chromium` channel (new headless mode), including the persistent-profile
+restart probe. The separate headless-shell binary produced native teardown
+crashes on Windows and Linux CI. This changes the browser executable only:
+test coverage, assertions, required gates and retry count are unchanged.
+
 For long Windows browser/API matrices, set process-local `TEMP` and `TMP` to a
 writable disposable directory with enough free space before starting pytest,
 Playwright, the API and worker. Chromium downloads and pytest's temporary SQLite
@@ -1116,3 +1123,10 @@ runtime upstream in addition to Next's built rewrite.
 Inbox creation with a real transaction barrier. The winner is reused and both
 callers' pre-existing transaction writes must survive. It runs under the existing
 `SETTINGS_POSTGRES_INTEGRATION=1` opt-in and full API CI gate.
+
+`library-offline.spec.ts` verifies the actual compiled search worker and its
+imports in the critical shell inventory, clears the ordinary browser HTTP cache,
+then searches retained documents in a new offline page. Cache Storage is kept
+intact. A separate injected worker-error case verifies the visible failure and
+real worker/IndexedDB retry. The final PWA negative suite also exercises account
+cache isolation and an independent browser/Service Worker restart.

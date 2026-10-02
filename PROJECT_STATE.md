@@ -3,9 +3,10 @@
 ## Settings completion status (2026-10-02, not deployed)
 
 Stages 1–4 and 6–7 are implemented. Stage 5 (personal/system Skill version
-editing) remains paused by the user. Stage 8 integration is finishing; the
-remaining CI failure was cold-start offline search. Its worker inventory/scope
-correction passes local cold-start validation; complete CI will run again.
+editing) remains paused by the user. Stage 8 integration is finishing. The
+cold-start offline search correction passes locally and in CI; the remaining
+CI failure is a native headless-shell crash before a test could create a page.
+The runner now selects the same pinned full Chromium; complete CI will run again.
 Production has not been changed.
 
 - Personal settings include owner-scoped My shares, additive personal archive
@@ -43,10 +44,12 @@ API: **736 passed / 4 skipped** locally and **737 passed / 3 skipped** in CI,
 with PostgreSQL integration enabled. Latest CI settings: **111 passed / 0
 skipped**, plus **1 passed** for system archive recovery in a fresh instance.
 Fast-Escape draft guards now propagate before the next keyboard event. The
-latest default PWA run had **131 passed / 203 mode-specific skips / 1 failed**
-(cold-start search). The correction caches actual compiled worker resources
+latest default PWA run had **132 passed / 203 mode-specific skips / 1 failed**
+(native browser crash). The correction caches actual compiled worker resources
 and serves worker entries inside the existing `/library` scope. HTTP-cache-free
-cold search and failure/retry pass locally; final full CI/image gates remain.
+cold search and failure/retry pass in CI. Local offline/CSP/negative tests pass
+**32 / 0 skipped**, with **4 / 0 skipped** for download/identity recovery.
+Final full CI/image gates remain.
 
 ## Settings stages 1–4 checkpoint (2026-10-01, not deployed)
 

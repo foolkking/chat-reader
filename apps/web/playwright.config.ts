@@ -37,7 +37,9 @@ export default defineConfig({
   reporter: [["list"], ...gateEvidenceReporter],
   use: {
     baseURL,
-    ...(useBundledChromium ? {} : chromiumExecutablePath ? { launchOptions: { executablePath: chromiumExecutablePath } } : { channel: "chrome" }),
+    // Use Playwright's pinned full Chromium/new headless mode. The separate
+    // headless-shell binary can crash during context teardown (SIGSEGV on CI).
+    ...(useBundledChromium ? { channel: "chromium" } : chromiumExecutablePath ? { launchOptions: { executablePath: chromiumExecutablePath } } : { channel: "chrome" }),
     serviceWorkers: "allow",
     trace: "retain-on-failure",
   },

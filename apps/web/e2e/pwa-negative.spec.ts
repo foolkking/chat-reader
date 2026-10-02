@@ -414,6 +414,7 @@ test.describe("Release E PWA negative matrix", () => {
     let persistent: BrowserContext | null = null;
     try {
       persistent = await chromium.launchPersistentContext(profile, {
+        channel: "chromium",
         baseURL: "http://127.0.0.1:3107",
         headless: true,
         serviceWorkers: "allow",
@@ -427,6 +428,7 @@ test.describe("Release E PWA negative matrix", () => {
       persistent = null;
 
       persistent = await chromium.launchPersistentContext(profile, {
+        channel: "chromium",
         baseURL: "http://127.0.0.1:3107",
         headless: true,
         serviceWorkers: "allow",

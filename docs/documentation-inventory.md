@@ -5,6 +5,9 @@ inventory, `/library/_next/static/` scope-preserving rewrites and recoverable
 search failure. The settings execution log records ordinary-HTTP-cache-free
 cold-start validation and the separate local and GitHub outcomes. No Dexie,
 offline package, migration or deployment change.
+`docs/testing.md` also owns the pinned full Chromium/new-headless runner choice
+and the HTTP-cache-free search gate; native headless-shell failures remain in
+the dated execution record.
 
 2026-10-02 stage-eight integration: `ADAPTIVE_IMPORT_CONTRACT.md` owns localized
 import controls and mapping draft/busy/error behavior. The dated settings log

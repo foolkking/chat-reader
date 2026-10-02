@@ -203,8 +203,10 @@ lost receipts, newer edits, quota failure/retry, stale/unavailable comparisons,
 package replacement, unavailable initial IndexedDB/reopen and scoped export/removal.
 The latest integrated gate passes 42 real settings browser cases and 13 auth
 fault contracts, with four cleanup failure cases and three additional real
-authentication/Share cases. The full negative/PWA/long-Reader matrix is not yet revalidated for
-this settings release. Older sections describe the existing baseline.
+authentication/Share cases. Subsequent complete PWA, negative and long-Reader
+runs and the compiled-worker cold-start correction are tracked in the dated
+settings execution record; counts from overlapping runs must not be added.
+Older sections describe the existing baseline.
 
 Last verified: 2026-08-15
 
