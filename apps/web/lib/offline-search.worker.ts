@@ -8,6 +8,15 @@ let index = createIndex();
 
 self.addEventListener("message", (event: MessageEvent<{ type: string; requestId: string; documents?: OfflineSearchDocument[]; query?: string; limit?: number }>) => {
   const { type, requestId } = event.data;
+  if (type === "runtime") {
+    // Report the compiled entry and importScripts dependencies from inside the
+    // running worker. A main-thread URL expression emits the raw TypeScript asset.
+    self.postMessage({ requestId, items: [], runtime: {
+      workerUrl: self.location.href,
+      assets: [...new Set([self.location.href, ...performance.getEntriesByType("resource").map((entry) => entry.name)])],
+    } });
+    return;
+  }
   if (type === "init") {
     documents = new Map();
     index = createIndex();

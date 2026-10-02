@@ -1,4 +1,4 @@
-import { getOfflineSearchWorkerUrl } from "./offline-search";
+import { getOfflineSearchRuntime } from "./offline-search";
 import { getActiveOfflineStorageContext, type OfflineStorageContext } from "./offline-db";
 import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
 
@@ -403,10 +403,10 @@ function startOfflineShellReconciliation(
 
 async function reconcileOfflineShell(serviceWorker: ServiceWorker, existing: WorkerStatusResponse, force = false): Promise<OfflineShellStatus> {
   setStatus({ ...currentStatus, updatePhase: "preparing", completed: 0, total: 0, message: null });
-  const runtimeAssets = await warmAttachmentViewerRuntime();
-  const assets = collectLibraryShellAssets(runtimeAssets);
+  const [runtimeAssets, searchRuntime] = await Promise.all([warmAttachmentViewerRuntime(), getOfflineSearchRuntime()]);
+  const assets = collectLibraryShellAssets([...runtimeAssets, ...searchRuntime.assets]);
   const criticalAssets = assets.filter((asset) => !isOptionalShellAsset(asset));
-  const workerUrl = getOfflineSearchWorkerUrl();
+  const workerUrl = searchRuntime.workerUrl;
   const revision = await createRevision(assets);
   if (existing.ok && existing.status?.ready && existing.status.revision === revision && !force) {
     return applyWorkerStatus(existing);
@@ -469,7 +469,6 @@ function collectLibraryShellAssets(runtimeAssets: string[] = []): string[] {
     "/icons/apple-touch-icon.png",
     "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
     "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
-    getOfflineSearchWorkerUrl(),
   ]);
   document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>("script[src], link[href]").forEach((element) => {
     const value = element instanceof HTMLScriptElement ? element.src : element.href;
@@ -518,6 +517,7 @@ function normalizeShellAsset(value: string): string | null {
     const url = new URL(value, window.location.origin);
     if (url.origin !== window.location.origin) return null;
     const allowed = url.pathname.startsWith("/_next/static/")
+      || url.pathname.startsWith("/library/_next/static/")
       || url.pathname.startsWith("/icons/")
       || url.pathname.startsWith("/skills/")
       || url.pathname === "/library/manifest.webmanifest";

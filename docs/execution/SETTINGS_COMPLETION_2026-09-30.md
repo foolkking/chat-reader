@@ -862,3 +862,33 @@ stage8-ci-draft-fix：5 passed / 0 skipped，23秒，覆盖全部4改邮箱真�
 typecheck、普通认证build和diff检查通过。后端没有后续改动。接下来推送并重新
 运行全量GitHub门禁。GitHub旧actions运行时及runner迁移提示为非阻断平台提示，
 未改动生产或清理本机用户文件。
+
+
+草稿保护修复提交544578bebf502b9a17604a2ff401f4b953e2c7c9已推送，Actions
+36950091168重新执行。额外本机stage8-draft-surfaces覆盖34项：33 passed / 1 failed，
+4.1分钟。格式学习/发布、个人规则、分享、备份三尺寸真实往返、系统归属与离线冲突
+通过；唯一失败是个人备份从Task Center关闭后焦点没有回到触发按钮，业务恢复/
+移除已持久化。保持实现与断言，stage8-backup-focus-verified单独复验通过1项。
+不把33/1改写为全绿；完整设置矩阵由当前CI独立重新检查。
+
+Actions 36950091168终态失败：Settings **111 passed / 0 skipped**，全新PostgreSQL
+实例系统归档恢复 **1 passed / 0 skipped**，API **737 passed / 3 skipped**。
+Web默认PWA **131 passed / 203 skipped / 1 failed**，唯一失败为离线冷启动搜索；
+后续Web门禁与镜像任务没有执行。失败在Linux也出现，不能归因本机磁盘/浏览器。
+
+追查确认原URL getter让Webpack生成原始TS静态资产，未可靠缓存真正的worker入口
+及其importScripts依赖。首轮运行时清单修复stage8-search-runtime为10 passed /
+1 failed：清单已包含真实编译资源，但清空普通HTTP缓存后worker入口仍离线失败。
+专用worker是独立client，根路径入口不在/library的Service Worker scope内。
+通过Next精确静态rewrite和Webpack workerPublicPath将入口移到/library范围，
+保留原scope、同源CSP及旧离线数据格式。失败/超时明确报错并可重建搜索，保留副本。
+
+stage8-worker-scope：**11 passed / 0 skipped，47.7秒**。实际compiled入口与依赖
+均在清单；普通HTTP缓存清空后断网新页搜索成功；错误后重试恢复真实索引；窄屏、
+TOC、附件、快照导出及长消息复制通过。随后修正搜索失败不能阻断对话自动选择，
+重试时清除旧结果并显示准备状态；最终代码将再次验收。阶段五暂停，未部署。
+
+最终代码stage8-worker-final-offline：**32 passed / 0 skipped，1.5分钟**，包含
+Library11、CSP4、PWA负面17；实际故障恢复、账户缓存隔离、旧v1包、事务回滚和
+独立浏览器重启均通过。最终lint/typecheck/故障注入build通过，diff无空白错误。
+接下来恢复普通认证build，复验过期与同账户解锁，并推送运行完整GitHub门禁。

@@ -113,6 +113,17 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   expect(activeBefore.assets).toContain("/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md");
   expect(activeBefore.assets.some((asset) => asset.startsWith("/_next/static/media/KaTeX_Main-Regular."))).toBe(true);
   expect(activeBefore.assets.some((asset) => asset.startsWith("/_next/static/media/KaTeX_Math-Italic."))).toBe(true);
+  const searchWorker = page.workers().find((item) => item.url().includes("/_next/static/chunks/"));
+  expect(searchWorker, "The real compiled search worker must be running").toBeTruthy();
+  const runtime = await searchWorker!.evaluate(() => ({
+    entry: self.location.href,
+    assets: [self.location.href, ...performance.getEntriesByType("resource").map((entry) => entry.name)],
+  }));
+  expect(activeBefore.workerUrl).toBe(new URL(runtime.entry).pathname);
+  expect(new URL(runtime.entry).pathname).toMatch(/^\/library\/_next\/static\//);
+  const compiledAssets = runtime.assets.map((url) => new URL(url).pathname);
+  expect(compiledAssets.length).toBeGreaterThan(1);
+  for (const asset of compiledAssets) expect(activeBefore.assets).toContain(asset);
 
   const failedUpdate = await page.evaluate(async (record) => {
     const registration = await navigator.serviceWorker.getRegistration("/library");
@@ -144,6 +155,11 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   expect(scopes).toEqual(["http://127.0.0.1:3107/library"]);
 
   await context.setOffline(true);
+  // A warm HTTP cache must not hide a missing compiled worker or its imports.
+  // Keep the Service Worker Cache Storage intact for a genuine cold start.
+  const cacheSession = await context.newCDPSession(page);
+  await cacheSession.send("Network.clearBrowserCache");
+  await cacheSession.detach();
   const offlinePage = await context.newPage();
   const hydrationErrors: string[] = [];
   offlinePage.on("pageerror", (error) => { if (/hydration|React error #418/i.test(error.message)) hydrationErrors.push(error.message); });
@@ -163,6 +179,33 @@ test("keeps the active revision after a failed update and cold-starts offline", 
     normalNavigationFailed = true;
   }
   expect(normalNavigationFailed).toBe(true);
+});
+
+test("offline search exposes worker failure and retries against the retained copy", async ({ page, context }) => {
+  await context.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      postMessage(value: unknown) {
+        if (localStorage.getItem("e2e-search-failure") && (value as { type?: string }).type === "init") {
+          this.dispatchEvent(new Event("error"));
+          return;
+        }
+        super.postMessage(value);
+      }
+    };
+  });
+  await page.goto("/library");
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await seedOfflineFixture(page);
+  await page.evaluate(() => localStorage.setItem("e2e-search-failure", "1"));
+  await page.reload();
+  await page.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]').fill("quantumfixture");
+  await expect(page.getByRole("alert").filter({ hasText: /离线搜索暂不可用|Offline search is unavailable/ })).toBeVisible();
+  await expect(page.getByText(/^(无本地结果|No offline results)$/)).toHaveCount(0);
+  await page.evaluate(() => localStorage.removeItem("e2e-search-failure"));
+  await page.getByRole("button", { name: /重试离线搜索|Retry offline search/ }).click();
+  await expect(page.locator("button:visible", { hasText: /quantumfixture 正文内容/ })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: /离线搜索暂不可用|Offline search is unavailable/ })).toHaveCount(0);
 });
 
 test("prepares and cold-starts the library at the mobile PWA viewport", async ({ browser }) => {

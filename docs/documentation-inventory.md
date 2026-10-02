@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-10-02 cold-start search correction: the PWA contract owns compiled worker
+inventory, `/library/_next/static/` scope-preserving rewrites and recoverable
+search failure. The settings execution log records ordinary-HTTP-cache-free
+cold-start validation and the separate local and GitHub outcomes. No Dexie,
+offline package, migration or deployment change.
+
 2026-10-02 stage-eight integration: `ADAPTIVE_IMPORT_CONTRACT.md` owns localized
 import controls and mapping draft/busy/error behavior. The dated settings log
 records full-suite outcomes, PostgreSQL default-project concurrency recovery,

@@ -281,6 +281,23 @@ or image dependency. It cannot enter a reload loop.
 Library searches rerun after the local search index finishes loading or
 refreshing. A query entered during cold start cannot remain an empty result
 from an uninitialized index; superseded queries cannot replace current results.
+The search worker reports its compiled entry and imported resources after it
+starts. These actual JavaScript assets are critical shell resources; a separate
+URL expression for the TypeScript source is not a usable worker manifest.
+Webpack worker entries use `/library/_next/static/`, rewritten by Next to the
+same `/_next/static/` build assets. A dedicated worker is its own client, so its
+entry must stay inside the existing `/library` service-worker scope for offline
+startup. Imported static chunks remain on the same origin and in the shell
+allowlist. No wider service-worker scope or blob/eval CSP exception is added.
+
+Worker errors, message errors and ten-second request deadlines reject pending
+search work and expose a retry action instead of an empty-results success.
+Retry rebuilds from the retained local documents; search failure does not block
+conversation selection or remove offline copies. Expiry still terminates the
+worker and invalidates outstanding access generations. The cold-start browser
+gate clears the ordinary HTTP cache while preserving Cache Storage, disconnects
+the network, and verifies actual search results in a new page.
+
 Cached `/library` HTML hydrates with a stable initial shell snapshot, selection
 and connectivity state; the requested conversation and live network status are
 applied after hydration. This avoids replacing the cached tree during a cold

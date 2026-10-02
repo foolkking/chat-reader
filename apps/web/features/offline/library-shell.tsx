@@ -57,6 +57,7 @@ export function LibraryShell() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OfflineSearchDocument[]>([]);
   const [searchIndexRevision, setSearchIndexRevision] = useState(0);
+  const [searchFailed, setSearchFailed] = useState(false);
   const lastAutoRefreshKeyRef = useRef<string | null>(null);
   const autoRefreshRunningRef = useRef(false);
   const completedDownloadsRef = useRef("");
@@ -178,10 +179,15 @@ export function LibraryShell() {
         };
       }),
     ];
-    await initializeOfflineSearch([...documents, ...privateDocuments]);
-    // Cold-start input can arrive before IndexedDB and the worker are ready.
-    // Re-run the current query after each committed index refresh.
-    setSearchIndexRevision((revision) => revision + 1);
+    try {
+      await initializeOfflineSearch([...documents, ...privateDocuments]);
+      setSearchFailed(false);
+      // Cold-start input can arrive before IndexedDB and the worker are ready.
+      // Re-run the current query after each committed index refresh.
+      setSearchIndexRevision((revision) => revision + 1);
+    } catch {
+      setSearchFailed(true);
+    }
     if (!selectedId && reconciled[0]) {
       const rememberedId = window.localStorage.getItem(LAST_LIBRARY_CONVERSATION_KEY);
       setSelectedId(requestedId ?? reconciled.find((item) => item.id === rememberedId)?.id ?? reconciled[0].id);
@@ -191,7 +197,7 @@ export function LibraryShell() {
     setStorage({ persisted: persisted ?? false, quota: estimate?.quota ?? null, usage: estimate?.usage ?? null });
   }, [selectedId, requestedId]);
 
-  useEffect(() => { void reloadLocal(); }, [reloadLocal]);
+  useEffect(() => { void reloadLocal().catch(() => setSearchFailed(true)); }, [reloadLocal]);
   useEffect(() => {
     setOnline(navigator.onLine);
     const onOnline = () => setOnline(true);
@@ -282,7 +288,7 @@ export function LibraryShell() {
     const timer = window.setTimeout(() => {
       void searchOffline(query).then((results) => {
         if (active) setSearchResults(results);
-      }).catch(() => { if (active) setSearchResults([]); });
+      }).catch(() => { if (active) setSearchFailed(true); });
     }, 120);
     return () => { active = false; window.clearTimeout(timer); };
   }, [query, searchIndexRevision]);
@@ -354,6 +360,13 @@ export function LibraryShell() {
       query={query}
       setQuery={setQuery}
       searchResults={searchResults}
+      searchState={searchFailed ? "unavailable" : searchIndexRevision ? "ready" : "loading"}
+      onRetrySearch={() => {
+        setSearchFailed(false);
+        setSearchIndexRevision(0);
+        setSearchResults([]);
+        void reloadLocal().catch(() => setSearchFailed(true));
+      }}
       download={download}
       storage={storage}
       assetMode={assetMode}
@@ -412,7 +425,7 @@ function formatLibraryConversationTitle(conversation: { display_title: string; p
   return project ? `${project} / ${title}` : title;
 }
 
-function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, download, storage, assetMode, offlineShellStatus, error, failedDownload, onClose, onCollapse, onOpen, onDownload, onRetryDownload, onAssetModeChange, onRetryShell, onRemove }: {
+function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, searchState, onRetrySearch, download, storage, assetMode, offlineShellStatus, error, failedDownload, onClose, onCollapse, onOpen, onDownload, onRetryDownload, onAssetModeChange, onRetryShell, onRemove }: {
   online: boolean;
   catalog?: OfflineCatalogResponse;
   conversations: OfflineConversationRecord[];
@@ -423,6 +436,8 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
   query: string;
   setQuery: (value: string) => void;
   searchResults: OfflineSearchDocument[];
+  searchState: "loading" | "ready" | "unavailable";
+  onRetrySearch: () => void;
   download: DownloadState;
   storage: { persisted: boolean; quota: number | null; usage: number | null } | null;
   assetMode: OfflineAssetMode;
@@ -466,7 +481,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
       {error ? <div className="flex items-center gap-2 rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)]"><p className="min-w-0 flex-1">{error}</p>{failedDownload && online ? <button type="button" onClick={onRetryDownload} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium hover:bg-surface" aria-label={zh ? "重试离线下载" : "Retry offline download"}><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试" : "Retry"}</button> : null}</div> : null}
     </div>
     <div className="min-h-0 flex-1 overflow-y-auto p-2">
-      {query ? <SearchResultList items={searchResults} conversations={conversations} onOpen={onOpen} /> : <>
+      {query ? searchState === "unavailable" ? <div role="alert" className="space-y-2 px-3 py-5 text-sm text-secondary"><p>{zh ? "离线搜索暂不可用。若离线资源缺失，请联网更新后重试。已下载的对话仍然保留。" : "Offline search is unavailable. If resources are missing, reconnect to update them and retry. Downloaded conversations are retained."}</p><button type="button" onClick={onRetrySearch} className="btn-secondary min-h-11 px-3">{zh ? "重试离线搜索" : "Retry offline search"}</button></div> : searchState === "loading" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "正在准备离线搜索…" : "Preparing offline search…"}</p> : <SearchResultList items={searchResults} conversations={conversations} onOpen={onOpen} /> : <>
         <section aria-labelledby="library-projects-heading">
           <div className="flex min-h-8 items-center justify-between px-2"><h2 id="library-projects-heading" className="text-xs font-semibold text-secondary">{zh ? "项目" : "Projects"}</h2><span className="text-[11px] text-secondary">{groupedProjects.length}</span></div>
           <ProjectRows projects={groupedProjects} selectedId={selectedId} expandedProjects={expandedProjects} setExpandedProjects={setExpandedProjects} catalog={catalog} onOpen={onOpen} onDownload={onDownload} onRemove={onRemove} />

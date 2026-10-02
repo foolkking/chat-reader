@@ -70,6 +70,12 @@ const nextConfig = {
     : {}),
   async rewrites() {
     return {
+      beforeFiles: [
+        {
+          source: "/library/_next/static/:path*",
+          destination: "/_next/static/:path*",
+        },
+      ],
       fallback: [
         {
           source: "/api/:path*",
@@ -94,7 +100,10 @@ const nextConfig = {
       { source: "/((?!_next/static|icons/).*)", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
     ];
   },
-  webpack(config) {
+  webpack(config, { isServer }) {
+    // A dedicated worker is its own client: its entry must be inside the
+    // Library service-worker scope to start from Cache Storage while offline.
+    if (!isServer) config.output.workerPublicPath = "/library/_next/";
     // PDF.js exposes an optional Node canvas integration. Browser viewers use
     // the DOM canvas path, so bundling the native addon would be both invalid
     // and unnecessary.

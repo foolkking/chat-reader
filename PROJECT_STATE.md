@@ -3,8 +3,10 @@
 ## Settings completion status (2026-10-02, not deployed)
 
 Stages 1–4 and 6–7 are implemented. Stage 5 (personal/system Skill version
-editing) remains paused by the user. Stage 8 integration is finishing; current
-GitHub CI remains pending after the first pushed implementation. Production has not been changed.
+editing) remains paused by the user. Stage 8 integration is finishing; the
+remaining CI failure was cold-start offline search. Its worker inventory/scope
+correction passes local cold-start validation; complete CI will run again.
+Production has not been changed.
 
 - Personal settings include owner-scoped My shares, additive personal archive
   restore with preview and durable receipts, and password-checked email changes
@@ -37,12 +39,14 @@ Current contracts: [Administration](docs/system/ADMINISTRATION_CONTRACT.md),
 [Diagnostics/runtime](docs/system/OBSERVABILITY_CONTRACT.md).
 The [dated execution log](docs/execution/SETTINGS_COMPLETION_2026-09-30.md)
 records individual runs, failures, skips and follow-up evidence. Latest complete
-API: **736 passed / 4 skipped** with PostgreSQL integration enabled. Settings:
-**108 passed / 3 failed** in the first CI run, which exposed fast-Escape draft
-protection races. The fix propagates dirty guards before the next keyboard event;
-its five-case local SMTP/settings rerun passes. API and all Web CI gates passed
-(including default PWA 132 / 203 mode-specific skips and offline negative 17).
-The updated complete CI and new-instance archive/image gates remain required.
+API: **736 passed / 4 skipped** locally and **737 passed / 3 skipped** in CI,
+with PostgreSQL integration enabled. Latest CI settings: **111 passed / 0
+skipped**, plus **1 passed** for system archive recovery in a fresh instance.
+Fast-Escape draft guards now propagate before the next keyboard event. The
+latest default PWA run had **131 passed / 203 mode-specific skips / 1 failed**
+(cold-start search). The correction caches actual compiled worker resources
+and serves worker entries inside the existing `/library` scope. HTTP-cache-free
+cold search and failure/retry pass locally; final full CI/image gates remain.
 
 ## Settings stages 1–4 checkpoint (2026-10-01, not deployed)
 
