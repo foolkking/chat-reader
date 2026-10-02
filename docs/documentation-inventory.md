@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-02 final settings closeout: `PROJECT_STATE.md` identifies verified source
+`ad223cd` and successful Actions `36955004824`; the existing execution record
+owns final local/CI counts, explicit skips and earlier failures. Stages 1–4 and
+6–8 are complete, stage five remains paused, and production is unchanged.
+
 2026-10-02 cold-start search correction: the PWA contract owns compiled worker
 inventory, `/library/_next/static/` scope-preserving rewrites and recoverable
 search failure. The settings execution log records ordinary-HTTP-cache-free

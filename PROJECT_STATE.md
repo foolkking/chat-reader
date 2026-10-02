@@ -2,12 +2,11 @@
 
 ## Settings completion status (2026-10-02, not deployed)
 
-Stages 1–4 and 6–7 are implemented. Stage 5 (personal/system Skill version
-editing) remains paused by the user. Stage 8 integration is finishing. The
-cold-start offline search correction passes locally and in CI; the remaining
-CI failure is a native headless-shell crash before a test could create a page.
-The runner now selects the same pinned full Chromium; complete CI will run again.
-Production has not been changed.
+Stages 1–4 and 6–8 are complete. Stage 5 (personal/system Skill version editing)
+remains paused by the user. Source `ad223cd4bcbbad7a4ff0c5ea5f33ed2846f3a3ca`
+is pushed to master; [CI 36955004824](https://github.com/foolkking/chat-reader/actions/runs/36955004824)
+passes API, Web, settings, image creation and independent artifact inspection.
+Production has not been changed. Later closeout changes update documentation only.
 
 - Personal settings include owner-scoped My shares, additive personal archive
   restore with preview and durable receipts, and password-checked email changes
@@ -43,13 +42,16 @@ records individual runs, failures, skips and follow-up evidence. Latest complete
 API: **736 passed / 4 skipped** locally and **737 passed / 3 skipped** in CI,
 with PostgreSQL integration enabled. Latest CI settings: **111 passed / 0
 skipped**, plus **1 passed** for system archive recovery in a fresh instance.
-Fast-Escape draft guards now propagate before the next keyboard event. The
-latest default PWA run had **132 passed / 203 mode-specific skips / 1 failed**
-(native browser crash). The correction caches actual compiled worker resources
-and serves worker entries inside the existing `/library` scope. HTTP-cache-free
-cold search and failure/retry pass in CI. Local offline/CSP/negative tests pass
-**32 / 0 skipped**, with **4 / 0 skipped** for download/identity recovery.
-Final full CI/image gates remain.
+Final CI default PWA: **133 passed / 203 mode-specific skips**; authentication:
+**18 passed**; offline negative: **17 passed**. All twelve Web gates and both
+settings gates report PASS; optional external-fixture skips are recorded
+separately. Fast-Escape draft guards propagate before the next keyboard event.
+Offline search caches actual compiled worker resources and serves their entries
+inside the existing `/library` scope. HTTP-cache-free cold search and failure/
+retry pass in CI. Playwright uses its pinned full Chromium to avoid the separate
+headless-shell's native teardown crash. Local offline/CSP/negative tests pass
+**32 / 0 skipped**, with **4 / 0 skipped** for download/identity recovery and a
+complete **133 passed / 203 skipped** default PWA run. These suites overlap.
 
 ## Settings stages 1–4 checkpoint (2026-10-01, not deployed)
 
