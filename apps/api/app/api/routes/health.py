@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.services.assets.scanner import configured_scanner_name
+from app.services.app_info import app_info
 
 router = APIRouter(tags=["health"])
 
@@ -49,6 +50,17 @@ def root_health() -> HealthResponse:
 @router.get("/api/health", response_model=HealthResponse)
 def api_health() -> HealthResponse:
     return health_payload()
+
+
+class AppInfoResponse(BaseModel):
+    api_version: str
+    revision: str | None
+
+
+@router.get("/api/app-info", response_model=AppInfoResponse)
+def read_app_info(response: Response) -> dict:
+    response.headers["Cache-Control"] = "private, no-store"
+    return app_info()
 
 
 @router.get("/api/capabilities", response_model=CapabilitiesResponse)

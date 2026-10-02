@@ -1,5 +1,82 @@
 # API 参考
 
+## 邀请、审计与删除后清理（工作树，2026-10-02）
+
+- `GET /api/admin/access/invitations/page`：Root，`state=ALL|PENDING|USED|EXPIRED|REVOKED`、
+  `offset>=0`、`limit=1..100`（默认20），返回 items/total/offset/limit；无令牌、摘要或链接。
+  旧 invitations 数组保留；撤销幂等，与一次性注册使用串行化。
+- `GET /api/admin/audit/page`：Root，`action/actor/target/result`、可选
+  `actor_user_id/target_user_id`、带时区 `created_after/created_before`、offset/limit；
+  默认20、最大100。账户文字按字面匹配，历史已删除账户完整UUID仍可检索。
+- `GET /api/admin/audit/actions`：最多200个现有操作代码。旧 `/audit` 数组保留。
+- 用户删除任务结果增加 `account_deleted/asset_cleanup_status/asset_cleanup_pending`；
+  canonical 已提交但文件清理未完成时，`POST /api/tasks/{id}/retry` 仅重试剩余清理。
+  存储键不进入API结果，不重复删除账户或写完成审计。
+  `/api/tasks/active` 另保留最多20项待清理删除结果，超过普通终态窗口仍可重试；
+  已完成清理的记录继续遵循原有终态保留时间。
+
+详见 [Administration Contract](system/ADMINISTRATION_CONTRACT.md)。
+
+## 系统归档任务（工作树，2026-10-02）
+
+全部 Root 专用，普通用户返回 404。旧同步 `/api/system/archive/restore` 保留。
+
+| 方法 | 路径 | 行为 |
+| --- | --- | --- |
+| GET | `/api/system/archive/capabilities` | 上传限制、空实例/配置原因、SMTP 状态 |
+| GET | `/api/system/archive/tasks` | 本人系统任务，`before` 游标、`limit` 1–100 默认30；实时 artifact 状态 |
+| POST | `/api/system/archive/previews` | multipart `file` + 必填 `Idempotency-Key`，202 后台预检 |
+| GET | `/api/system/archive/previews/{id}/accounts` | `offset/limit/unresolved_only`，总数/未决数/全清单 revision |
+| GET | `/api/system/archive/account-targets` | `q/offset/limit` 搜索目标账户 |
+| PATCH | `/api/system/archive/previews/{id}/accounts/{source_key}` | `base_revision/decision/target_user_id`；NEW/EXISTING 草稿，冲突409 |
+| POST | `/api/system/archive/restores` | `preview_job_id/content_digest/ownership_revision`，202；空实例检查与重复恢复幂等 |
+| DELETE | `/api/system/archive/previews/{id}` | 204移除临时来源；活跃任务409 |
+
+导出沿用 `/api/system/archive/exports`；同 key 并发去重、不同选项409。上传24小时
+后不能新确认，已确认恢复仍可完成。详见 [Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)。
+
+## 个人数据归档（工作树，2026-10-02）
+
+下列接口严格限定当前有效账户；Root 在此也只能访问本人归档。写入执行
+既有同源检查，任务重入复用 `/api/tasks`，不会向管理员系统备份接口回退。
+
+| Method | Path | Contract |
+| --- | --- | --- |
+| GET | `/api/me/archive/capabilities` | 当前 `maximum_upload_bytes` 与 `upload_lifetime_hours` |
+| GET | `/api/me/archive/tasks` | 本人归档任务；`limit` 1–100（默认 30），可选 `before` 任务 UUID 游标；结果补当前 `expires_at`、`artifact_available` |
+| POST | `/api/me/archive/exports` | `{include_archived: true}`；必填 `Idempotency-Key`（1–160 字符），202 `BackgroundTaskRead` |
+| POST | `/api/me/archive/previews` | multipart `file`、必填 `Idempotency-Key`；按大小上限分块落盘后返回 202 预检任务，ZIP 解析在 worker |
+| POST | `/api/me/archive/restores` | `{preview_job_id, content_digest, include_preferences: false}`；成功预检后显式确认，202；同预检重复确认复用任务 |
+| DELETE | `/api/me/archive/previews/{preview_id}` | 204，移除临时上传，不删除已恢复内容；有关联活跃任务时 409 |
+
+个人任务类型：`personal_archive_export`、`personal_archive_preflight`、
+`personal_archive_restore`。支持既有任务取消/失败重试。导出下载仍为
+`/api/exports/{artifact_id}/download`，仅已提交的本人导出可访问，24 小时
+后 410；上传来源永不通过该接口提供下载。预检结果包含 counts、最多各
+50 个项目/对话标题、缺失附件数量与规范化摘要。偏好默认不导入；归档正文
+和所有内部引用经重映射后新增恢复，按账户与内容摘要持久幂等。
+
+主要错误：401 未登录，403 账户不可用，404 无权访问/不存在，409 状态或
+确认选项冲突，410 上传过期/已移除，413 超出上传上限。后台未知异常只提供
+静态安全信息，不回传 SQL 参数、正文或存储路径。详细合同见
+[Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)。
+
+## 修改邮箱（工作树，2026-10-01）
+
+以下接口需要有效的同账户 USER 会话；ADMIN 邮箱仍由部署配置管理。
+所有写入执行同源检查，返回 no-store。无需新增 migration。
+
+| Method | Path | Contract |
+| --- | --- | --- |
+| GET | `/api/auth/email-change` | 返回 `pending: {target_email, expires_at} \| null` 和 `email_delivery_available`，仅当前账户 |
+| POST | `/api/auth/email-change/request` | `{new_email, current_password}`；校验当前密码后发送 30 分钟一次性邮件，返回 `{target_email, expires_at}`；重发使用同接口并替换旧授权 |
+| POST | `/api/auth/email-change/cancel` | 撤销当前账户未完成的邮箱修改，204；不更改邮箱 |
+| POST | `/api/auth/email-change/preview` | `{token}`；验证用途、账户、版本和有效期，仅返回目标/到期时间，不消费授权 |
+| POST | `/api/auth/email-change/confirm` | `{token}`；原子更换邮箱、撤销其他会话和旧重置/验证授权，返回更新后的 `AuthSessionRead`，保留当前 session token 和 UUID |
+
+发起前检查 SMTP 和邮箱唯一性，确认时再次检查唯一性并由 PostgreSQL 约束兜底。
+错误为 401（未认证）、403（不允许的账户）、409（邮箱不可用）、422（输入/授权无效）、429（限流）、503（邮件暂不可用）。邮箱验证链接使用 fragment，GET 不消费。完整身份与恢复合同见 `system/AUTHENTICATION_CONTRACT.md`。
+
 ## Offline conflict resolution (working tree, 2026-10-01)
 
 `POST /api/annotations/sync` accepts additive `action: "resolve"` for an
@@ -259,8 +336,21 @@ expiry and revocation, and cannot call private owner APIs.
 | --- | --- | --- |
 | POST | `/api/conversations/{id}/shares` | 创建 full/selected 分享；原 token 只在创建响应返回 |
 | GET | `/api/conversations/{id}/shares` | 列出该会话的分享记录，不返回原 token |
+| GET | `/api/shares` | 本人分享分页；`status=all/active/expired/revoked`、`conversation_id`、`q`（对话/分享标题）、`offset`、`limit`（1–100，默认 20）；返回 items/total/has_more，含来源标题和状态 |
 | PATCH | `/api/shares/{share_id}` | 更新标题、描述、过期时间或分享选项 |
 | POST | `/api/shares/{share_id}/revoke` | 撤销分享 |
+| POST | `/api/shares/revoke-batch` | `share_ids` 为 1–100 项；按账户逐项提交，返回 `revoked/not_found/failed`，重复 ID 去重，重试不重复撤销事件 |
+
+上述管理接口按服务器认证的账户及对话归属隔离；Root 的本人列表也不包含
+其他账户。汇总查询不公开，响应使用 `Cache-Control: no-store`。撤销优先于过期
+状态；归档对话仍在本人范围内。不存在和无权访问的批量目标均返回 `not_found`。
+关闭分享策略后，本人列表与撤销继续可用；既有公共端点的策略检查保持不变。
+
+PATCH 只处理明确提交的字段，支持清空标题/说明/有效期/密码，以及
+`scope`、`selected_message_ids`、`include_toc/metadata/description/annotations/notebook`
+和 `allow_export`。切换为整个对话时清空 selected IDs；所选消息必须是该对话
+未删除消息，按有界批次校验。已撤销分享不能编辑或恢复。更新不会生成新 URL。
+批量撤销逐项事务提交，失败项回滚；重复或并发撤销只记录一次事件。
 
 公开分享采用轻量 bootstrap、完整轮次正文和 token 约束兼容分页，不允许通过分享 token 调用内部 conversation/message API：
 
@@ -295,8 +385,8 @@ expiry and revocation, and cannot call private owner APIs.
 | GET | `/api/conversations/{id}/exports/canjson` | 流式 CanJSON v2 JSONL；支持 metadata、versions、annotations、notebook、source refs、message ids 和 gzip |
 | POST | `/api/conversations/{id}/exports` | API 兼容多种内部 format；产品 UI 只调用附件 Markdown/CanJSON package |
 | GET | `/api/conversations/{id}/export` | 一个兼容周期的旧接口；`canonical_json` 仍映射 CanJSON v1 |
-| POST | `/api/system/archive/exports` | 生成系统 `.cr v4`；附件自动包含，可选择是否包含 archived |
-| POST | `/api/system/archive/restore` | 只恢复到没有 conversation/attachment 的空实例；非空返回 409 |
+| POST | `/api/system/archive/exports` | 生成系统 `.cr v5`，配置 schema 1；包含无凭据身份、历史附件、格式/规则授权与发布、偏好、既有 Skill 和功能/访问策略，可选择 archived |
+| POST | `/api/system/archive/restore` | v4/v5 空实例恢复，保留旧 v5 无配置扩展兼容；可选 multipart `owner_mapping` JSON 字段指定旧账户归属；非空/配置冲突/缺少必要映射或 SMTP 返回 409 |
 
 对话产品 UI 始终导出完整当前对话，只显示 CanJSON/Markdown 与“包含附件”。无附件分别调用流式 `.canjsonl`/`.md`；含附件排队 `.context.zip`/可移植 Markdown ZIP。API 中旧 selection/context format 暂保兼容，但不在新 UI 暴露。`.context.zip` 只含 `manifest.json`、`conversation.canjsonl` 和内容寻址附件对象；manifest 分开记录 conversation/asset completeness。当前对话投影排除 `status=detached` 的 Attachment；系统 `.cr v4` 仍保留历史版本引用。CanJSON metadata-only 仍保留 active Attachment 和 occurrence；Markdown metadata-only 使用人类可读缺失占位。
 
@@ -331,7 +421,7 @@ expiry and revocation, and cannot call private owner APIs.
 
 `POST /api/offline/packages` 可提交 `known_revisions: {conversation_id: revision}`。服务器逐 conversation 与当前 catalog 比对，v3 `conversation-delta` 包只写新增或 revision 不同的 conversation；全部未变化时返回可安全导入的空增量。旧 v1/v2 包仍可由浏览器导入。
 
-系统 `.cr v4` 从 `/api/system/archive/exports` 排队，轮询任务后下载；旧对话级 `.cr` 仍可导入，但新对话导出 UI 不再生成。下载 artifact 默认 24 小时过期。
+系统 `.cr v5` 从 `/api/system/archive/exports` 排队，轮询任务后下载；v4 系统档与旧对话级 `.cr` 仍可读取，但新对话导出 UI 不再生成旧 `.cr`。下载 artifact 默认 24 小时过期。v5 将归档管理员关联目标 Root Admin，普通账户使用新 UUID 且须重设密码，正文/项目/Reader 归属一同更新。v4 的 `owner_mapping` 从来源 UUID（无归属用 `unowned`）映射到已有目标用户 UUID，不静默认领。校验失败为 400，映射参数格式错误为 422。个人导出/预检/新增恢复采用本页开头的 `/api/me/archive/*` 接口，系统恢复仍待任务/UI 整合；当前边界见 [Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)。
 
 `format=markdown_bundle` 输出 Markdown 与相对 `assets/objects/<sha-prefix>/<sha256>` 文件；`format=canjson_bundle` 输出带附件对象路径的 CanJSON JSONL。两种 Bundle 只包含当前版本，并接受 `include_description`、`annotation_scope`、`notebook_scope` 与 `include_source_refs` 二级选项。当前不做附件内容秘密扫描；对象仍需通过状态、大小和 SHA-256 完整性校验，manifest 中 `excluded_object_count` 为兼容字段。
 
@@ -468,7 +558,7 @@ Noise review safety/workspace additions (migration `20260930_0036`, working tree
 
 All paths above share the `/api/content-cleanup` prefix and account ownership
 checks. Zero-match results remain readable until dismissed. Current single
-head: `20261001_0040`. System promotion is explicit and revision-scoped.
+head: `20261002_0042`. System promotion is explicit and revision-scoped.
 
 Personal rule learning/exception additions (working tree, 2026-10-01):
 
@@ -524,3 +614,28 @@ Preference sync additions (`20261001_0039`, working tree):
 - Same account/operation/payload returns the stored receipt. Changed payload on
   the same operation returns 409. PostgreSQL serializes updates by account.
   Receipts and field revisions never use client wall time to resolve conflicts.
+
+
+## Administrator directory and content inspection (current)
+
+Root-only additions: `GET /api/admin/access/users/page` (q, state, limit, offset)
+and `GET /api/admin/access/users/{id}`. Legacy array listing remains compatible.
+Deletion impact/confirmation retain their URLs; repeat keys return the same task,
+including after deletion, and mismatched targets return 409. Pending deletion
+blocks re-enabling the account. Task results include the target for Root re-entry.
+
+`GET /api/admin/content/users/{id}/conversations/{conversationId}` returns
+read-only metadata; `/reader-turn` hydrates the complete turn using administrator
+attachment URLs; `/search` returns current-message matches with real anchors,
+pagination and literal text matching. Content and attachment lists now audit
+reads without requiring a nonempty query. Full contract:
+[Administration](system/ADMINISTRATION_CONTRACT.md).
+## 帮助与运行状态（2026-10-02，未部署）
+
+- `GET /api/app-info`：已认证账户读取 API 语义版本与镜像构建 revision；未知为 null。
+- `GET /api/admin/runtime-status`：仅 Root；返回有界 Worker/任务状态、存储完整性、
+  最新系统备份/恢复结果与邮件是否配置。普通账户404，匿名401；不包含业务ID、
+  路径、文件名、错误正文或凭据，失败指标显式 unavailable。
+- 两者均 no-store；旧 health 响应和内部 loopback diagnostics 保持原边界。
+  30秒可见性刷新、统计预算、隐私白名单及离线缓存语义见
+  [Observability Contract](system/OBSERVABILITY_CONTRACT.md)。

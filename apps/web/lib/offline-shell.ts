@@ -1,5 +1,6 @@
 import { getOfflineSearchWorkerUrl } from "./offline-search";
 import { getActiveOfflineStorageContext, type OfflineStorageContext } from "./offline-db";
+import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
 
 export type OfflineShellAvailability = "unknown" | "ready" | "unavailable" | "unsupported";
 export type OfflineShellUpdatePhase = "idle" | "checking" | "preparing" | "failed";
@@ -79,6 +80,15 @@ export function getOfflineShellStatus(): OfflineShellStatus {
 export function subscribeOfflineShellStatus(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+/** Inspect this account's existing shell without registering a worker or downloading resources. */
+export async function inspectOfflineShell(): Promise<OfflineShellStatus> {
+  const ticket = captureOfflineAccess();
+  if (typeof window === "undefined" || !("caches" in window)) return { ...initialStatus, availability: "unsupported", updatePhase: "idle" };
+  const cached = await inspectCachedShellFromWindow();
+  assertOfflineAccess(ticket);
+  return cached ?? { ...initialStatus, availability: "unknown", updatePhase: "idle" };
 }
 
 export function markOfflineShellUnsupported(message: string): void {

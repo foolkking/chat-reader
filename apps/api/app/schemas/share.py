@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -65,6 +66,41 @@ class ShareUpdate(BaseModel):
     theme: ResolvedTheme | None = None
     locale: ResolvedLocale | None = None
     share_password: str | None = Field(default=None, min_length=12, max_length=1024)
+    scope: Literal["conversation", "selected_messages"] | None = None
+    selected_message_ids: list[UUID] | None = Field(default=None, max_length=10000)
+    include_toc: bool | None = None
+    include_metadata: bool | None = None
+    include_description: bool | None = None
+    include_annotations: bool | None = None
+    include_notebook: bool | None = None
+    allow_export: bool | None = None
+
+
+class OwnedShareRead(ShareRead):
+    conversation_title: str
+    conversation_deleted: bool
+    status: Literal["active", "expired", "revoked"]
+
+
+class OwnedSharePage(BaseModel):
+    items: list[OwnedShareRead]
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
+
+
+class ShareBatchRevokeInput(BaseModel):
+    share_ids: list[UUID] = Field(min_length=1, max_length=100)
+
+
+class ShareBatchResult(BaseModel):
+    share_id: UUID
+    status: Literal["revoked", "not_found", "failed"]
+
+
+class ShareBatchRevokeResponse(BaseModel):
+    results: list[ShareBatchResult]
 
 
 class ShareRevokeResponse(ShareRead):

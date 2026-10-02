@@ -1,5 +1,7 @@
 # 数据与持久化
 
+2026-10-02 工作树归档更新：系统 `.cr v5` 增加无凭据身份和新实例归属恢复，保留 v4 显式映射兼容；可选 `configuration_version: 1` 保存格式/规则授权、发布与撤回、偏好、既有 Skill 和功能/访问策略。旧 v5 无配置扩展仍可读取。个人归档已有序列化、完整预检、新增恢复、任务和设置界面。导出在发布前完成全图预检和容量自检，过高压缩率条目有界重打包。`20261001_0041` 保存账户/摘要幂等 receipt。`20261002_0042` 为当前唯一 head，增加按预检任务和来源身份保存的归属草稿，目标用户删除时关联置空。系统预检、归属确认和恢复沿用 worker；完整边界见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。未部署。
+
 ## Current implementation (working tree, 2026-09-01)
 
 Alembic head in this working tree is `20260901_0031` and is not yet applied

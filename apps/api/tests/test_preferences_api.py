@@ -1,12 +1,9 @@
 from fastapi.testclient import TestClient
 
-from app.main import app
+from test_import_preview_api import client  # noqa: F401
 
 
-client = TestClient(app)
-
-
-def _restore_default_preferences() -> None:
+def _restore_default_preferences(client: TestClient) -> None:
     response = client.patch(
         "/api/preferences",
         json={
@@ -24,8 +21,8 @@ def _restore_default_preferences() -> None:
     assert response.status_code == 200
 
 
-def test_preferences_defaults_and_updates() -> None:
-    _restore_default_preferences()
+def test_preferences_defaults_and_updates(client: TestClient) -> None:
+    _restore_default_preferences(client)
     initial = client.get("/api/preferences")
     assert initial.status_code == 200
     assert initial.json()["theme_mode"] in {"light", "dark", "system"}
@@ -62,11 +59,14 @@ def test_preferences_defaults_and_updates() -> None:
     assert updated.json()["conversation_sort_mode"] == "title"
     assert updated.json()["conversation_sort_direction"] == "asc"
     assert updated.json()["project_sort_mode"] == "conversation_count"
+    persisted = client.get("/api/preferences")
+    assert persisted.status_code == 200
+    assert persisted.json() == updated.json()
 
-    _restore_default_preferences()
+    _restore_default_preferences(client)
 
 
-def test_preferences_reject_invalid_values() -> None:
+def test_preferences_reject_invalid_values(client: TestClient) -> None:
     response = client.patch("/api/preferences", json={"theme_mode": "midnight"})
     assert response.status_code == 422
 

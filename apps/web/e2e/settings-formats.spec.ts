@@ -49,11 +49,35 @@ test.describe("learned format ownership and publication", () => {
       };
       try {
         await startImport(a);
-        await a.getByRole("button", { name: "设置格式", exact: true }).click();
-        await a.getByLabel("保存为导入格式").fill("Synthetic personal format");
-        await a.getByRole("button", { name: "验证映射", exact: true }).click();
-        await expect(a.getByText("全部对话通过", { exact: true })).toBeVisible();
-        await a.getByRole("button", { name: "保存映射并继续", exact: true }).click();
+        await a.getByRole("button", { name: (locale === "zh-CN" ? "设置格式" : "Map format"), exact: true }).click();
+        await a.getByLabel((locale === "zh-CN" ? "保存为导入格式" : "Format name")).fill("Synthetic personal format");
+        await expect(a.getByRole("heading", { name: locale === "zh-CN" ? "设置新的导入格式" : "Learn a new import format", exact: true })).toBeVisible();
+        if (locale === "en-US") expect(/[\u4e00-\u9fff]/.test(await a.getByRole("dialog", { name: "Import data", exact: true }).innerText()), "English mapping has no untranslated interface text").toBe(false);
+        await a.getByTestId("import-dialog-close").click();
+        const discard = a.getByRole("dialog", { name: locale === "zh-CN" ? "放弃未保存的映射？" : "Discard unsaved mapping?", exact: true });
+        await expect(discard).toBeVisible();
+        await discard.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
+        await expect(a.getByLabel(locale === "zh-CN" ? "保存为导入格式" : "Format name")).toHaveValue("Synthetic personal format");
+        await expect(a.getByTestId("import-dialog-close")).toBeFocused();
+        let releaseValidation: (() => void) | undefined;
+        if (width === 1440 && locale === "en-US") {
+          await a.route("**/mapping/preview", (route) => route.abort("failed"));
+          await a.getByRole("button", { name: "Validate mapping", exact: true }).click();
+          await expect(a.getByRole("alert").filter({ hasText: "Cannot connect to the server. Check your network and retry; your input is retained." })).toBeVisible();
+          await expect(a.getByLabel("Format name")).toHaveValue("Synthetic personal format");
+          await a.unroute("**/mapping/preview");
+          const pause = new Promise<void>((resolve) => { releaseValidation = resolve; });
+          await a.route("**/mapping/preview", async (route) => { const response = await route.fetch(); await pause; await route.fulfill({ response }); });
+        }
+        await a.getByRole("button", { name: (locale === "zh-CN" ? "验证映射" : "Validate mapping"), exact: true }).click();
+        if (releaseValidation) {
+          await expect(a.getByLabel("Format name")).toBeDisabled();
+          await expect(a.getByTestId("import-dialog-close")).toBeDisabled();
+          releaseValidation();
+        }
+        await expect(a.getByText((locale === "zh-CN" ? "全部对话通过" : "All conversations validated"), { exact: true })).toBeVisible();
+        if (process.env.SETTINGS_SCREENSHOT_DIR) await a.getByRole("dialog", { name: /Import data|导入数据/ }).screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/mapping-${width}-${locale}.png` });
+        await a.getByRole("button", { name: (locale === "zh-CN" ? "保存映射并继续" : "Learn mapping & continue"), exact: true }).click();
         await expect(a.getByTestId("commit-import-button")).toBeEnabled();
         const learned = (await formats(author.request)).filter((item) => item.kind === "LEARNED");
         expect(learned).toHaveLength(1);

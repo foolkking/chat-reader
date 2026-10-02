@@ -35,6 +35,24 @@ def send_email_verification(settings: Settings, recipient: str, verification_url
     _deliver(settings, message)
 
 
+def send_email_change(settings: Settings, recipient: str, verification_url: str) -> None:
+    if not settings.smtp_host or not settings.smtp_from_address:
+        raise RuntimeError("SMTP is not configured.")
+    message = EmailMessage()
+    message["Subject"] = "Confirm your new Chat Reader email / 确认修改邮箱"
+    message["From"] = settings.smtp_from_address
+    message["To"] = recipient
+    message.set_content(
+        "A change to this email address was requested. Sign in to the original account and confirm on this page.\n"
+        "有人申请将 Chat Reader 账户邮箱改为此地址。请登录原账户，并在下方页面明确确认。\n"
+        "The link expires in 30 minutes and works once. Your old address works until confirmation.\n"
+        "链接 30 分钟内有效，只能使用一次。确认前旧邮箱继续有效。\n\n"
+        f"{verification_url}\n\n"
+        "If you did not request this, ignore this email. / 如果你没有申请，请忽略此邮件。"
+    )
+    _deliver(settings, message)
+
+
 def _deliver(settings: Settings, message: EmailMessage) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as client:
         if settings.smtp_starttls:

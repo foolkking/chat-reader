@@ -86,7 +86,7 @@ function RegisterForm() {
         email: email.trim(),
         password,
         confirmPassword,
-        invitationToken: mode === "INVITE_ONLY" ? invitationToken.trim() : undefined,
+        invitationToken: invitationToken.trim() || undefined,
       });
       if (!session.authenticated && session.auth_mode === "pending_verification") {
         setPendingVerification(session.verification_delivery === "failed" ? "failed" : "sent");
@@ -99,7 +99,7 @@ function RegisterForm() {
       }
       window.location.replace(destination);
     } catch (cause) {
-      setError(registrationErrorMessage(cause, mode, copy));
+      setError(registrationErrorMessage(cause, mode, copy, Boolean(invitationToken.trim())));
     } finally {
       setSubmitting(false);
     }
@@ -118,6 +118,11 @@ function RegisterForm() {
       {pendingApproval ? <div className="rounded-md border border-ui bg-subtle px-4 py-4" role="status"><p className="font-medium text-primary">{copy.pendingTitle}</p><p className="mt-1.5 text-sm leading-5 text-secondary">{copy.pendingDescription}</p><Link href={loginHref} className="btn-secondary mt-4 inline-flex min-h-10 items-center px-4 text-sm font-medium">{copy.backToLogin}</Link></div> : !pendingVerification && (mode === "OPEN" || mode === "INVITE_ONLY") ? (
         <form onSubmit={submit} className="space-y-4">
           {mode === "INVITE_ONLY" ? <p className="rounded-md bg-[var(--color-semantic-warning-soft)] px-3 py-2 text-sm leading-5 text-[var(--color-semantic-warning)]">{copy.inviteOnly}</p> : null}
+          {mode === "OPEN" && invitationToken ? <div className="rounded-md bg-subtle px-3 py-2 text-sm text-secondary"><p>{copy.invitationApplied}</p><button type="button" disabled={submitting} className="min-h-11 text-accent underline" onClick={() => {
+            setInvitationToken(""); setError("");
+            const url = new URL(window.location.href); url.searchParams.delete("invitation"); url.searchParams.delete("invite");
+            window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+          }}>{copy.removeInvitation}</button></div> : null}
           <div className="space-y-1.5 text-left">
             <label htmlFor="register-email" className="text-sm font-medium text-primary">{copy.email}</label>
             <input id="register-email" name="email" type="email" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoFocus required maxLength={320} value={email} onChange={(event) => setEmail(event.target.value)} disabled={submitting} className="input-base min-h-11 w-full px-3" />
@@ -156,10 +161,10 @@ function RegisterLoading() {
   return <AuthPageShell title="Chat Reader" description=""><div className="h-52 animate-pulse rounded-md bg-subtle" aria-label="Loading" /></AuthPageShell>;
 }
 
-function registrationErrorMessage(cause: unknown, mode: RegistrationState, copy: RegisterCopy): string {
+function registrationErrorMessage(cause: unknown, mode: RegistrationState, copy: RegisterCopy, invited = false): string {
   if (cause instanceof AuthRequestError) {
     if (cause.status === 429) return copy.tooManyAttempts;
-    if (cause.status === 403 && mode === "INVITE_ONLY") return copy.invalidInvitation;
+    if (cause.status === 403 && (mode === "INVITE_ONLY" || invited)) return copy.invalidInvitation;
     if (cause.status === 422 || cause.status === 409) return copy.invalidDetails;
   }
   return copy.unavailable;
@@ -176,6 +181,8 @@ const enCopy = {
   showConfirmPassword: "Show confirmed password",
   hideConfirmPassword: "Hide confirmed password",
   invitationCode: "Invitation code",
+  invitationApplied: "Your invitation link will be used for this registration.",
+  removeInvitation: "Register without an invitation",
   inviteOnly: "This instance accepts new accounts by invitation only.",
   createAccount: "Create account",
   creating: "Creating account...",
@@ -212,6 +219,8 @@ const zhCopy: RegisterCopy = {
   showConfirmPassword: "显示确认密码",
   hideConfirmPassword: "隐藏确认密码",
   invitationCode: "邀请码",
+  invitationApplied: "本次注册将使用邀请链接。",
+  removeInvitation: "不使用邀请注册",
   inviteOnly: "当前实例仅接受受邀用户注册。",
   createAccount: "创建账户",
   creating: "正在创建账户...",

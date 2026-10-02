@@ -27,6 +27,13 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       const learned = await context.request.post(`${baseURL}/api/adaptive-import/sessions/${session.import_id}/families/${family.id}/mapping`, { headers, data: { profile_name: "Synthetic health format", mapping_spec: family.mapping_draft } });
       expect(learned.status()).toBe(200);
       const profileId = (await learned.json()).families[0].matched_profile_id;
+      // Stable identities can already expose a published revision from another
+      // account. Repair must add exactly one visible version and retain every
+      // version this account could use before the repair.
+      const baselineResponse = await context.request.get(`${baseURL}/api/import-formats/${profileId}/revisions`);
+      expect(baselineResponse.ok()).toBe(true);
+      const baseline = await baselineResponse.json() as Array<{ id: string; mapping_spec: { messages: { content: string } } }>;
+      expect(baseline[0].mapping_spec.messages.content).toBe("$.body");
       const openRepair = async () => {
         await page.goto(baseURL!);
         if (width < 768) await page.getByRole("button", { name: /打开侧栏|Open sidebar/, exact: true }).click();
@@ -55,16 +62,21 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await health.getByRole("button", { name: /打开映射修复|Open mapping repair/ }).click();
       // Health tests the saved version; editing the draft uses the same validator
       // and saving only learns a revision, without importing conversations.
-      await expect(page.getByRole("region", { name: "JSON 字段映射", exact: true })).toBeVisible();
-      await page.getByRole("combobox", { name: "正文来源", exact: true }).selectOption("$.alternate");
-      await page.getByRole("button", { name: "验证映射", exact: true }).click();
-      await expect(page.getByText("全部对话通过", { exact: true })).toBeVisible();
-      await page.getByRole("button", { name: "保存新版本并继续", exact: true }).click();
+      await expect(page.getByRole("region", { name: (locale === "zh-CN" ? "JSON 字段映射" : "JSON field mapping"), exact: true })).toBeVisible();
+      await page.getByRole("combobox", { name: (locale === "zh-CN" ? "正文来源" : "Content source"), exact: true }).selectOption("$.alternate");
+      await page.getByRole("button", { name: (locale === "zh-CN" ? "验证映射" : "Validate mapping"), exact: true }).click();
+      await expect(page.getByText((locale === "zh-CN" ? "全部对话通过" : "All conversations validated"), { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: (locale === "zh-CN" ? "保存新版本并继续" : "Save new version & continue"), exact: true }).click();
       await expect(page.getByTestId("commit-import-button")).toBeEnabled();
-      const versions = await (await context.request.get(`${baseURL}/api/import-formats/${profileId}/revisions`)).json();
-      expect(versions).toHaveLength(2);
+      const versionsResponse = await context.request.get(`${baseURL}/api/import-formats/${profileId}/revisions`);
+      expect(versionsResponse.ok()).toBe(true);
+      const versions = await versionsResponse.json() as typeof baseline;
+      const baselineIds = baseline.map((version) => version.id);
+      expect(versions).toHaveLength(baseline.length + 1);
+      expect(versions.filter((version) => !baselineIds.includes(version.id))).toHaveLength(1);
+      expect(versions.map((version) => version.id)).toEqual(expect.arrayContaining(baselineIds));
       expect(versions[0].mapping_spec.messages.content).toBe("$.alternate");
-      expect(versions[1].mapping_spec.messages.content).toBe("$.body");
+      expect(versions.find((version) => version.id === baseline[0].id)?.mapping_spec.messages.content).toBe("$.body");
       const conversations = await (await context.request.get(`${baseURL}/api/conversations`)).json();
       expect(conversations).toHaveLength(0);
     } finally { await context.close(); await admin.dispose(); }

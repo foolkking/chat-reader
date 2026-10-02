@@ -14,6 +14,7 @@ from app.models.reading_position import ReadingPosition, ReadingPositionSyncRece
 from app.schemas.reading import ReadingPositionRead, ReadingPositionSyncRequest, ReadingPositionSyncResponse
 from app.models.recent_item import RecentItem
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
+from app.services.subject_account import lock_subject_account
 
 
 class ReadingServiceError(ValueError):
@@ -41,6 +42,7 @@ def _same_position(position: ReadingPosition, values: dict) -> bool:
 def sync_reading_position(db: Session, conversation_id: uuid.UUID, payload: ReadingPositionSyncRequest, *, subject_key: str,
                           ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE) -> ReadingPositionSyncResponse:
     _lock(db, f"reading-subject:{subject_key}")
+    lock_subject_account(db, subject_key)
     _ensure_conversation(db, conversation_id, ownership_scope)
     digest = hashlib.sha256(json.dumps({"conversation_id": str(conversation_id), **payload.model_dump(mode="json")}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     receipt = db.get(ReadingPositionSyncReceipt, (subject_key, payload.operation_id))
@@ -100,6 +102,7 @@ def upsert_reading_position(
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ReadingPosition:
     _lock(db, f"reading-subject:{subject_key}")
+    lock_subject_account(db, subject_key)
     _lock(db, f"reading-conversation:{conversation_id}")
     _ensure_conversation(db, conversation_id, ownership_scope)
     if block_index is not None and block_index < 0:

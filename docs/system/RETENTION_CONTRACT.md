@@ -1,6 +1,6 @@
 # Task And Offline Retention Contract
 
-Last verified: 2026-08-31
+Last verified: 2026-10-02
 
 ## Scope
 
@@ -14,6 +14,7 @@ backup retention.
 | Object | Current window | What expiry/replacement means |
 | --- | --- | --- |
 | Terminal Task Center result | `TASK_TERMINAL_RESULT_RETENTION_SECONDS`, default 600 seconds; accepted range 60 seconds to 24 hours | `/api/tasks/active` may return committed, failed, or cancelled jobs/imports completed inside this window so users can reopen a result after navigation or refresh. Falling outside the window removes it from this active-result view; it does not create or promise a permanent task history. |
+| Completed account deletion with pending file cleanup | Until cleanup completes | Canonical deletion remains committed. `/api/tasks/active` includes a separate bounded window of up to 20 pending cleanup results beyond terminal retention, without consuming the active-job limit. Tasks groups them under Needs attention and retries only remaining cleanup; file keys stay in the worker payload. This is unfinished work, not a permanent completed-task history. |
 | Current server Offline Package | No time-based expiry | One canonical `OfflinePackageArtifact` is retained per owner/scope. A successfully committed replacement becomes current; the prior row is removed in the same transaction and its file is eligible for best-effort post-commit cleanup. A failed replacement leaves the previous canonical package available. |
 | Superseded/orphan/staging Offline files | No automatic retention deadline | `ARTIFACT_CLEANUP_GRACE_HOURS` defaults to 24 hours and is only a technical race-safety minimum. After the grace period, an unreferenced file may appear in a dry-run report. Deletion still requires an explicit category plus exact confirmed tokens and a fresh safety recheck. Automatic cleanup is disabled. |
 | Downloaded browser Offline Library | Browser-managed, no server TTL | Imported data lives in the Library Dexie/Cache Storage boundary until the user updates/removes it or the browser evicts storage. Server package replacement or Task Center expiry does not delete an already imported local library. Persistent-storage approval reduces eviction risk but is not an infinite-retention guarantee. |

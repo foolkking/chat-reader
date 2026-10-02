@@ -664,7 +664,7 @@ function SidebarContent(props: SidebarContentProps) {
         <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} onNewConversation={props.onNewConversation} />
       </div>
       <div className="shrink-0 border-t border-ui p-3">
-        <SidebarPreferences />
+        <SidebarPreferences onNavigate={props.closeMobile} />
       </div>
     </>
   );

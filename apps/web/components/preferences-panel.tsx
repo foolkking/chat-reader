@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, FileClock, RefreshCw, Library, LockKeyhole, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles, Wrench } from "lucide-react";
+import { Activity, CircleHelp, ArrowLeft, ChevronDown, ChevronUp, FileClock, RefreshCw, Library, LockKeyhole, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles, Wrench, Link2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ACCOUNT_CAPABILITIES_CHANGED_EVENT, readAccountCapabilities, type AccountCapabilities } from "../lib/auth-client";
 import { usePreferences, useTranslations } from "./preferences-provider";
 import { PreferenceSyncStatus } from "./preference-sync-status";
 
-export type SettingsCategory = "offline" | "data" | "security" | "formats" | "cleanup" | "skills" | "access" | "admin-users" | "admin-access" | "admin-skills" | "admin-formats" | "admin-noise" | "admin-features" | "admin-system" | "admin-audit";
+export type SettingsCategory = "help" | "admin-runtime" | "offline" | "shares" | "data" | "security" | "formats" | "cleanup" | "skills" | "access" | "admin-users" | "admin-access" | "admin-skills" | "admin-formats" | "admin-noise" | "admin-features" | "admin-system" | "admin-audit";
 
 export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/", onOpenCategory }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string; onOpenCategory?: (category: SettingsCategory) => void }) {
   const preferences = usePreferences();
@@ -109,16 +109,19 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         {libraryMode ? t("backOnline") : t("offlineLibrary")}
       </Link>
       <SettingsCategoryButton icon={RefreshCw} label={preferences.resolvedLocale === "zh-CN" ? "离线与同步" : "Offline & sync"} description={preferences.resolvedLocale === "zh-CN" ? "副本、附件与待同步修改" : "Copies, files and pending edits"} onClick={() => onOpenCategory?.("offline")} />
+      <SettingsCategoryButton icon={CircleHelp} label={preferences.resolvedLocale === "zh-CN" ? "帮助与诊断" : "Help & diagnostics"} description={preferences.resolvedLocale === "zh-CN" ? "版本、离线范围、常见问题" : "Version, offline availability and common questions"} onClick={() => onOpenCategory?.("help")} />
       {!libraryMode && capabilities ? <p className="text-xs leading-5 text-secondary">{preferences.resolvedLocale === "zh-CN" ? `当前导入上限 ${capabilities.maximum_import_size_mb} MiB · 合并上限 ${capabilities.maximum_merge_message_count} 条消息` : `Import limit ${capabilities.maximum_import_size_mb} MiB · Merge limit ${capabilities.maximum_merge_message_count} messages`}</p> : null}
       {!libraryMode && capabilityError ? <div role="alert" className="text-xs text-secondary"><p>{preferences.resolvedLocale === "zh-CN" ? "无法读取账户功能和限制。" : "Account capabilities are unavailable."}</p><button type="button" onClick={() => setCapabilityAttempt((value) => value + 1)} className="btn-secondary mt-2 min-h-11 px-3">{preferences.resolvedLocale === "zh-CN" ? "重试" : "Retry"}</button></div> : null}
       {!libraryMode ? <div className="settings-category-list space-y-2 border-t border-ui pt-3">
         <SettingsCategoryButton icon={Database} label={t("dataArchive")} description={t("dataArchiveDescription")} onClick={() => onOpenCategory?.("data")} />
+        <SettingsCategoryButton icon={Link2} label={preferences.resolvedLocale === "zh-CN" ? "我的分享" : "My shares"} description={preferences.resolvedLocale === "zh-CN" ? "查找、编辑与撤销自己的分享链接" : "Find, edit and revoke your share links"} onClick={() => onOpenCategory?.("shares")} />
         <SettingsCategoryButton icon={ShieldCheck} label={t("accountSecurity")} description={t("accountSecurity")} onClick={() => onOpenCategory?.("security")} />
         <SettingsCategoryButton icon={Sparkles} label={t("skillManagement")} description={t("skillManagementDescription")} onClick={() => onOpenCategory?.("skills")} />
           <SettingsCategoryButton icon={SlidersHorizontal} label={t("importFormats")} description={t("importFormatsDescription")} onClick={() => onOpenCategory?.("formats")} />
           <SettingsCategoryButton icon={Eraser} label={t("noiseRuleLibrary")} description={t("noiseRuleLibraryDescription")} onClick={() => onOpenCategory?.("cleanup")} />
         {accessRole === "ADMIN" ? <div className="space-y-2 border-t border-ui pt-3" aria-labelledby="settings-administration-heading">
           <div className="px-1"><h3 id="settings-administration-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406" : "Administration"}</h3><p className="mt-1 text-xs text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u4ec5\u7cfb\u7edf\u7ba1\u7406\u5458\u53ef\u89c1" : "Visible only to the system administrator"}</p></div>
+          <SettingsCategoryButton icon={Activity} label={preferences.resolvedLocale === "zh-CN" ? "运行状态" : "Runtime status"} description={preferences.resolvedLocale === "zh-CN" ? "Worker、任务队列与存储汇总" : "Worker, task queues and storage summaries"} onClick={() => onOpenCategory?.("admin-runtime")} />
           <SettingsCategoryButton icon={LockKeyhole} label={preferences.resolvedLocale === "zh-CN" ? "用户与访问" : "Users & access"} description={preferences.resolvedLocale === "zh-CN" ? "账号、注册和邀请" : "Accounts, registration, and invitations"} onClick={() => onOpenCategory?.("access")} />
           <SettingsCategoryButton icon={Eraser} label={preferences.resolvedLocale === "zh-CN" ? "系统噪声规则" : "System noise rules"} description={preferences.resolvedLocale === "zh-CN" ? "审核匹配范围、发布与撤回" : "Review scope, publish and withdraw"} onClick={() => onOpenCategory?.("admin-noise")} />
           <SettingsCategoryButton icon={SlidersHorizontal} label={preferences.resolvedLocale === "zh-CN" ? "系统导入格式" : "System import formats"} description={preferences.resolvedLocale === "zh-CN" ? "审核版本、发布与撤回" : "Review versions, publish and withdraw"} onClick={() => onOpenCategory?.("admin-formats")} />

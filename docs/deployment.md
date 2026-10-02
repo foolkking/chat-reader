@@ -1446,3 +1446,6 @@ HTTPS redirect/health and anonymous admin `401` all passed. The previous
 `ba287e1aebe182fa232992da436a450569121eac` image set remains the direct
 rollback. Authenticated browser acceptance is `NOT_VERIFIED`; the operator will
 perform Web verification separately.
+当前未部署的帮助/运行状态与构建来源说明见
+[Deployment And Environment](system/DEPLOYMENT_AND_ENVIRONMENT.md)：`BUILD_REVISION`
+只用于镜像构建，省略显示未知；发布镜像检查验证实际嵌入的 revision。

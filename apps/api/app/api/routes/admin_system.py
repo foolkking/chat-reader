@@ -6,12 +6,13 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.routes.tasks import background_job_read
 from app.core.database import get_db
+from app.core.config import get_settings
 from app.models.administration import AdminAuditLog, SystemBackupRecord, SystemSkill
 from app.models.background_job import BackgroundJob
 from app.models.export_artifact import ExportArtifact
@@ -31,6 +32,15 @@ from app.services.system_skills import (
 
 
 router = APIRouter(prefix="/api/admin", tags=["root-administration"])
+
+
+@router.get("/runtime-status")
+def read_runtime_status(request: Request, response: Response, db: Session = Depends(get_db)) -> dict:
+    require_root_admin(request, db)
+    from app.services.admin_runtime import runtime_snapshot
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Robots-Tag"] = "noindex, noarchive"
+    return runtime_snapshot(db, get_settings())
 
 
 class FeaturePolicyUpdate(BaseModel):
@@ -222,12 +232,16 @@ def create_backup(
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
     actor = require_root_admin(request, db)
-    job = queue_system_archive_export(
-        db,
-        include_archived=payload.include_archived,
-        idempotency_key=idempotency_key,
-        ownership_scope=ownership_scope_from_request(request),
-    )
+    try:
+        job = queue_system_archive_export(
+            db,
+            include_archived=payload.include_archived,
+            idempotency_key=idempotency_key,
+            ownership_scope=ownership_scope_from_request(request),
+        )
+    except SystemArchiveError as exc:
+        db.rollback()
+        raise HTTPException(exc.status_code, str(exc)) from exc
     record = db.query(SystemBackupRecord).filter(SystemBackupRecord.background_job_id == job.id).one_or_none()
     if record is None:
         record = SystemBackupRecord(
@@ -274,7 +288,7 @@ def restore_backup(backup_id: uuid.UUID, request: Request, db: Session = Depends
     db.add(record)
     db.commit()
     try:
-        restored = restore_system_archive(db, Path(artifact.storage_uri))
+        restored = restore_system_archive(db, Path(artifact.storage_uri), target_root_id=actor.id)
         record = db.get(SystemBackupRecord, record.id)
         assert record is not None
         record.status = "COMPLETED"
@@ -310,6 +324,46 @@ def restore_backup(backup_id: uuid.UUID, request: Request, db: Session = Depends
         )
         db.commit()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/audit/page")
+def paginated_audit_events(
+    request: Request,
+    action: str = Query(default="", max_length=64),
+    actor: str = Query(default="", max_length=200),
+    target: str = Query(default="", max_length=200),
+    result: str = Query(default="ALL", pattern="^(ALL|SUCCESS|FAILURE|DENIED)$"),
+    created_after: datetime | None = None,
+    created_before: datetime | None = None,
+    actor_user_id: uuid.UUID | None = None,
+    target_user_id: uuid.UUID | None = None,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+) -> dict:
+    require_root_admin(request, db)
+    from app.services.admin_audit import audit_page
+    start = _audit_time(created_after)
+    end = _audit_time(created_before)
+    if start and end and start > end:
+        raise HTTPException(422, "The end time must be after the start time.")
+    return audit_page(db, action=action, actor=actor, target=target, result=result,
+        created_after=start, created_before=end, offset=offset, limit=limit,
+        actor_user_id=actor_user_id, target_user_id=target_user_id)
+
+
+@router.get("/audit/actions")
+def audit_action_choices(request: Request, db: Session = Depends(get_db)) -> list[str]:
+    require_root_admin(request, db)
+    return [row[0] for row in db.query(AdminAuditLog.action).distinct().order_by(AdminAuditLog.action).limit(200)]
+
+
+def _audit_time(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        raise HTTPException(422, "Audit time filters require a timezone.")
+    return value.astimezone(timezone.utc)
 
 
 @router.get("/audit")

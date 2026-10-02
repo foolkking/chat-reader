@@ -1,5 +1,14 @@
 # Authentication and account contract
 
+Invitation lookup/consumption and administrator revocation now serialize on the
+invitation row. Both INVITE_ONLY and OPEN registration consume an explicitly
+supplied invitation once; invalid, expired, used or revoked supplied tokens are
+rejected before account creation. Open registration without a token is unchanged.
+Authenticated writes to legacy subject-key personal tables recheck the account
+under a shared row lock, so stale requests cannot recreate private records after
+disable/deletion. Details and cleanup recovery are in
+[Administration Contract](ADMINISTRATION_CONTRACT.md).
+
 Public login/registration/verification pages follow the device color scheme,
 without reading an unbound legacy account preference cache. Authenticated
 appearance continues to use account-scoped preference revisions.
@@ -7,6 +16,51 @@ An already retained locked account remains in the sign-in-required state when
 the session transport fails even if the browser reports it is online. A network
 transition during session verification retries the offline eligibility check;
 it does not grant new authorization or discard data.
+
+## Regular-account email change (working tree, 2026-10-01)
+
+Account & security offers a new address plus the current password for USER
+accounts. The server checks the password, normalizes and checks the address,
+then issues an EMAIL_CHANGE grant in the existing verification table. SMTP
+configuration is required; no new environment variable or migration is needed.
+ADMIN email remains deployment-managed. The old address stays active until an
+explicit confirmation; sending, viewing and resending do not change it.
+
+The 30-minute, single-use grant stores only a digest and binds the user UUID,
+target address, purpose and credential version. The URL uses
+`/verify-email#purpose=email-change&token=...`, keeping the grant out of page
+requests/referrers. Preview and confirmation require a valid session for the
+same regular account. A signed-out recipient can sign in to the original
+account in another tab and recheck the page. Opening/reloading the page never
+consumes a grant. Resend verifies the password again and revokes prior grants;
+cancel revokes the pending request. GET exposes only that account's current
+unexpired pending address and mail-configuration availability.
+
+Confirmation locks user, principal and current session in that order, rechecks
+eligibility and grant validity, and updates email/verification time while
+preserving UUID, ownership and the current opaque session token. User/principal
+credential versions and the current session advance together. Other sessions
+and outstanding password-reset/email grants are revoked in the same transaction.
+The unique address constraint resolves competing confirmations with rollback;
+failed attempts preserve both the original address and unconsumed grant.
+Password change and password-reset consumption now follow the same user-first
+lock order; reset consumption rechecks the grant after acquiring its lock.
+
+Account/IP throttles reuse the existing auth limiter (5 per subject/IP and 20
+per IP per hour for issuance). Preview and confirmation are also bounded. All
+mutations retain same-origin checks and no-store responses. Delivery failures
+leave the original address usable and permit retry; neither mail content nor
+addresses/tokens enter diagnostic events. A lost confirmation response can be
+reported as recovered success only after a fresh session read proves the
+previously previewed UUID and target email. No local signout cleanup runs:
+account-local offline copies, drafts and pending operations retain their owner.
+
+Verification: `test_email_change.py`, `test_email_change_postgres.py`, and
+`settings-email-change.spec.ts`. The browser suite uses real SMTP/PG flows,
+includes offline reload and separately identifies the injected request/lost
+response recovery case. Existing registration verification remains covered by
+`settings-registration.spec.ts`. Complete run evidence is in the dated settings
+execution record; this working-tree feature is not deployed.
 
 ## Explicit signout cleanup (2026-10-01 working tree)
 

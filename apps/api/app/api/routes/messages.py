@@ -157,6 +157,7 @@ def delete_message_endpoint(
             db,
             conversation_id=conversation_id,
             idempotency_key=f"message-delete:{message_id}:{result.message.deleted_at.isoformat()}",
+            ownership_scope=scope,
         )
         db.commit()
     except MessageEditError as exc:

@@ -3,18 +3,14 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.access import AccountInvitation
 from app.models.administration import AdminAuditLog
-from app.models.attachment import Attachment, AssetObject
-from app.models.conversation import Conversation
-from app.models.project import Project
 from app.models.user import User
 from app.services.access import (
     create_invitation,
@@ -28,7 +24,8 @@ from app.services.access import (
 from app.services.auth import root_admin_user
 from app.api.routes.tasks import background_job_read
 from app.schemas.task import BackgroundTaskRead
-from app.services.user_deletion import account_deletion_impact, queue_user_account_delete
+from app.services.user_deletion import account_deletion_impact, queue_user_account_delete, ensure_not_deleting
+from app.services.admin_users import user_rows, users_page
 
 router = APIRouter(prefix="/api/admin/access", tags=["admin-access"])
 
@@ -98,44 +95,29 @@ def update_registration(payload: RegistrationUpdate, request: Request, db: Sessi
 def list_users(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     _admin(request, db)
     rows = db.query(User).order_by(User.created_at.asc(), User.id.asc()).all()
-    conversation_counts = dict(db.query(Conversation.owner_user_id, func.count(Conversation.id)).filter(
-        Conversation.deleted_at.is_(None), Conversation.owner_user_id.is_not(None)
-    ).group_by(Conversation.owner_user_id).all())
-    project_counts = dict(db.query(Project.owner_user_id, func.count(Project.id)).filter(
-        Project.owner_user_id.is_not(None)
-    ).group_by(Project.owner_user_id).all())
-    attachment_counts = dict(db.query(Conversation.owner_user_id, func.count(Attachment.id)).join(
-        Attachment, Attachment.conversation_id == Conversation.id
-    ).filter(
-        Conversation.deleted_at.is_(None), Attachment.deleted_at.is_(None), Conversation.owner_user_id.is_not(None)
-    ).group_by(Conversation.owner_user_id).all())
-    attachment_bytes = dict(db.query(Conversation.owner_user_id, func.coalesce(func.sum(AssetObject.byte_size), 0)).join(
-        Attachment, Attachment.conversation_id == Conversation.id
-    ).outerjoin(AssetObject, AssetObject.id == Attachment.asset_object_id).filter(
-        Conversation.deleted_at.is_(None), Attachment.deleted_at.is_(None), Conversation.owner_user_id.is_not(None)
-    ).group_by(Conversation.owner_user_id).all())
-    return [
-        {
-            "id": str(row.id),
-            "email": row.normalized_email,
-            "display_name": row.display_name,
-            "role": row.role,
-            "status": row.status,
-            "created_at": row.created_at,
-            "last_login_at": row.last_login_at,
-            "email_verified_at": row.email_verified_at,
-            "email_verification_required": row.email_verification_required,
-            "approval_status": row.approval_status,
-            "approval_reviewed_at": row.approval_reviewed_at,
-            "stats": {
-                "projects": project_counts.get(row.id, 0),
-                "conversations": conversation_counts.get(row.id, 0),
-                "attachments": attachment_counts.get(row.id, 0),
-                "attachment_bytes": int(attachment_bytes.get(row.id, 0) or 0),
-            },
-        }
-        for row in rows
-    ]
+    return user_rows(db, rows)
+
+
+@router.get("/users/page")
+def list_user_page(
+    request: Request,
+    q: str = Query(default="", max_length=200),
+    state: str = Query(default="ALL", pattern="^(ALL|ACTIVE|DISABLED|PENDING|UNVERIFIED|REJECTED)$"),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+) -> dict:
+    _admin(request, db)
+    return users_page(db, q=q, state=state, offset=offset, limit=limit)
+
+
+@router.get("/users/{user_id}")
+def user_detail(user_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> dict:
+    _admin(request, db)
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return user_rows(db, [user])[0]
 
 
 @router.patch("/users/{user_id}/status")
@@ -147,8 +129,9 @@ def update_user_status(
 ) -> dict:
     actor = _admin(request, db)
     user = db.get(User, user_id)
-    if user is None or user.id == actor.id:
+    if user is None or user.role == "ADMIN":
         raise HTTPException(status_code=404, detail="User not found.")
+    _check_not_deleting(db, user)
     disable_user(db, user, payload.status == "DISABLED")
     _record(db, request, actor.id, "USER_DISABLED" if payload.status == "DISABLED" else "USER_ENABLED", target_user_id=user.id,
             resource_type="USER", resource_id=str(user.id))
@@ -177,7 +160,36 @@ def issue_invitation(payload: InvitationCreate, request: Request, db: Session = 
 def list_invitations(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     _admin(request, db)
     now = datetime.now(timezone.utc)
-    rows = db.query(AccountInvitation).order_by(AccountInvitation.created_at.desc()).all()
+    rows = db.query(AccountInvitation).order_by(AccountInvitation.created_at.desc(), AccountInvitation.id.desc()).all()
+    return _invitation_rows(rows, now)
+
+
+@router.get("/invitations/page")
+def list_invitation_page(
+    request: Request,
+    state: str = Query(default="ALL", pattern="^(ALL|PENDING|USED|EXPIRED|REVOKED)$"),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+) -> dict:
+    _admin(request, db)
+    now = datetime.now(timezone.utc)
+    query = db.query(AccountInvitation)
+    if state == "REVOKED":
+        query = query.filter(AccountInvitation.revoked_at.is_not(None))
+    elif state != "ALL":
+        query = query.filter(AccountInvitation.revoked_at.is_(None))
+        if state == "USED":
+            query = query.filter(AccountInvitation.used_at.is_not(None))
+        else:
+            query = query.filter(AccountInvitation.used_at.is_(None),
+                AccountInvitation.expires_at <= now if state == "EXPIRED" else AccountInvitation.expires_at > now)
+    total = query.count()
+    rows = query.order_by(AccountInvitation.created_at.desc(), AccountInvitation.id.desc()).offset(offset).limit(limit).all()
+    return {"items": _invitation_rows(rows, now), "total": total, "limit": limit, "offset": offset}
+
+
+def _invitation_rows(rows: list[AccountInvitation], now: datetime) -> list[dict]:
     return [
         {
             "id": str(row.id),
@@ -196,9 +208,11 @@ def list_invitations(request: Request, db: Session = Depends(get_db)) -> list[di
 @router.delete("/invitations/{invitation_id}", status_code=204)
 def revoke_invitation(invitation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> None:
     actor = _admin(request, db)
-    invitation = db.get(AccountInvitation, invitation_id)
+    invitation = db.query(AccountInvitation).filter_by(id=invitation_id).with_for_update().populate_existing().one_or_none()
     if invitation is None or invitation.used_at is not None:
         raise HTTPException(status_code=404, detail="Invitation not found.")
+    if invitation.revoked_at is not None:
+        return
     invitation.revoked_at = datetime.now(timezone.utc)
     _record(db, request, actor.id, "INVITATION_REVOKED", resource_type="INVITATION", resource_id=str(invitation.id))
     db.commit()
@@ -215,6 +229,7 @@ def issue_password_reset(
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found.")
+    _check_not_deleting(db, user)
     token, grant = create_password_reset_grant(
         db,
         get_settings(),
@@ -239,7 +254,7 @@ def _utc(value: datetime) -> datetime:
 def revoke_all_user_sessions(user_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> dict:
     actor = _admin(request, db)
     user = db.get(User, user_id)
-    if user is None or user.id == actor.id:
+    if user is None or user.role == "ADMIN":
         raise HTTPException(status_code=404, detail="User not found.")
     revoked = revoke_user_sessions(db, user)
     _record(db, request, actor.id, "USER_SESSIONS_REVOKED", target_user_id=user.id,
@@ -261,8 +276,9 @@ def reject_user(user_id: uuid.UUID, request: Request, db: Session = Depends(get_
 def _review_user(user_id: uuid.UUID, request: Request, db: Session, *, approved: bool) -> dict:
     actor = _admin(request, db)
     user = db.get(User, user_id)
-    if user is None or user.id == actor.id:
+    if user is None or user.role == "ADMIN":
         raise HTTPException(status_code=404, detail="User not found.")
+    _check_not_deleting(db, user)
     try:
         review_pending_user(db, user, approved=approved, actor_user_id=actor.id)
     except ValueError as exc:
@@ -277,7 +293,7 @@ def _review_user(user_id: uuid.UUID, request: Request, db: Session, *, approved:
 def user_deletion_impact(user_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> dict:
     actor = _admin(request, db)
     user = db.get(User, user_id)
-    if user is None or user.id == actor.id:
+    if user is None or user.role == "ADMIN":
         raise HTTPException(status_code=404, detail="User not found.")
     return {"user_id": str(user.id), **account_deletion_impact(db, user.id)}
 
@@ -287,7 +303,7 @@ def delete_user_account(
     user_id: uuid.UUID,
     payload: DeleteUserRequest,
     request: Request,
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=160),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
     actor = _admin(request, db)
@@ -331,3 +347,10 @@ def _record(
         event_metadata=metadata or {},
         request_id=request.headers.get("x-request-id"),
     ))
+
+
+def _check_not_deleting(db: Session, user: User) -> None:
+    try:
+        ensure_not_deleting(db, user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

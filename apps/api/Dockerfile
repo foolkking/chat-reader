@@ -11,6 +11,8 @@ COPY app ./app
 COPY scripts ./scripts
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
+ARG BUILD_REVISION=
+RUN python -m scripts.write_build_metadata "$BUILD_REVISION"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libmagic1 \

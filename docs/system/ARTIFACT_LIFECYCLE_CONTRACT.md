@@ -1,5 +1,22 @@
 # Artifact Lifecycle Contract
 
+2026-10-02 personal/system archive extension: uploads are internal ExportArtifact
+references with `scope_type=archive_upload`, never downloadable via the export
+route. They expire for new confirmation after 24 hours and remain referenced
+until explicit source removal; active preflight/restore prevents removal.
+Confirmation and removal share a database lock. Failed upload/export commits
+and restore cancellation remove transaction-owned new files. A failed physical
+source unlink leaves a managed orphan for the existing manual cleanup flow.
+Both preflight types protect active source directories from orphan cleanup.
+System restore retains saved choices after rollback. Both backups use the normal final export/download lifetime. Details are in
+[Data Archive Contract](DATA_ARCHIVE_CONTRACT.md); Offline semantics remain.
+
+2026-10-01 archive extension: canonical `.cr` checksum/record validation,
+read-only export snapshots and transaction-owned restored-object cleanup are
+defined in [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md). Existing Offline
+publication semantics below remain unchanged; final export orphans retain the
+existing dry-run cleanup boundary.
+
 ## Scope
 
 This contract covers Offline Package v2 files and Export artifacts. It does not

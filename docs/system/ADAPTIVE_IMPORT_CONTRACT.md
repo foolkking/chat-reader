@@ -137,6 +137,12 @@ Preview 展示 canonical title、message sequence、role、content 和 timestamp
 
 ## UI 与设置
 
+Import Overview、分组和 Mapping Workspace 的操作文案跟随账户语言；来源正文、
+文件名和角色原值保持原样。Mapping 未保存时关闭或返回需明确放弃，取消后保留
+草稿并恢复焦点；页面卸载提供浏览器保护。验证/保存期间禁止修改映射、切换示例、
+重复提交与关闭。连接失败显示可重试说明并保留输入；验证覆盖完整 Family，
+成功后才允许保存。文件级诊断只提供实际可执行的修复动作。
+
 普通导入停留在现有轻量 Dialog。复杂 grouping、UNKNOWN、DRIFTED 或 AMBIGUOUS 时扩展为 Chat Reader 内的大型 Overlay，只有三个工作视图：Import Overview、条件式 Group Resolver、统一 Mapping Workspace。没有独立转换产品导航或结果下载页。
 
 设置中的“我的导入格式”优先展示已学习及系统提供的结果，随后展示内置格式。个人改名显式保存并有草稿退出保护；来源、可用版本与验证摘要合并为一条记录。发生结构漂移时，通过重新导入代表性来源进入“重新学习／修复”。管理员专区的“系统导入格式”支持候选分页、配置查看、明确版本发布和撤回。

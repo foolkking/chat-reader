@@ -645,6 +645,14 @@ export type BackgroundTaskRead = {
       cleaned_messages?: number;
       scan_id?: string;
       parent_task_id?: string;
+    counts?: Record<string, number>;
+    content_digest?: string;
+    expires_at?: string | null;
+    artifact_available?: boolean;
+    missing_assets?: number;
+    missing_attachments?: number;
+    preferences_imported?: boolean;
+    already_restored?: boolean;
   } & Record<string, unknown>;
   error_message: string | null;
   queued_at: string | null;
@@ -1127,7 +1135,23 @@ export type ShareUpdateInput = {
   theme?: ResolvedTheme | null;
   locale?: ResolvedLocale | null;
   share_password?: string | null;
+  scope?: "conversation" | "selected_messages";
+  selected_message_ids?: string[];
+  include_toc?: boolean;
+  include_metadata?: boolean;
+  include_description?: boolean;
+  include_annotations?: boolean;
+  include_notebook?: boolean;
+  allow_export?: boolean;
 };
+
+export type OwnedShareRead = ShareRead & {
+  conversation_title: string;
+  conversation_deleted: boolean;
+  status: "active" | "expired" | "revoked";
+};
+export type OwnedSharePage = { items: OwnedShareRead[]; total: number; offset: number; limit: number; has_more: boolean };
+export type ShareBatchResult = { share_id: string; status: "revoked" | "not_found" | "failed" };
 
 export type SharedConversationBootstrap = {
   share: ShareRead;

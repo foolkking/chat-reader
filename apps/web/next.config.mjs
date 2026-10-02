@@ -6,6 +6,8 @@ const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 const standaloneBuild = process.env.NEXT_STANDALONE === "1";
 const standaloneBuildCpus = Math.max(1, Number.parseInt(process.env.NEXT_BUILD_CPUS ?? "1", 10) || 1);
 const distDir = process.env.NEXT_DIST_DIR?.trim() || ".next";
+const buildRevision = process.env.BUILD_REVISION ?? "";
+if (buildRevision && !/^[0-9a-f]{40}$/.test(buildRevision)) throw new Error("BUILD_REVISION must be a complete lowercase Git commit hash.");
 
 const apiInternalUrl = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const scriptSource = process.env.NODE_ENV === "production"
@@ -54,6 +56,7 @@ const nextConfig = {
   distDir,
   poweredByHeader: false,
   env: {
+    NEXT_PUBLIC_BUILD_REVISION: buildRevision,
     NEXT_PUBLIC_PWA_NEGATIVE_TESTS: process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS === "1" ? "1" : "0",
   },
   ...(standaloneBuild

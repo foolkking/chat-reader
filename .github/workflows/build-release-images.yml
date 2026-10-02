@@ -457,6 +457,42 @@ jobs:
           cd ../..
           pnpm --filter web exec playwright test --config=playwright.config.ts 'e2e/settings-.*\.spec\.ts'
           PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4 node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-gate-summary.json
+      - name: System archive restore into a fresh PostgreSQL instance
+        run: |
+          export E2E_SYSTEM_ARCHIVE_SOURCE="$RUNNER_TEMP/synthetic-system.cr"
+          cd apps/api
+          python tests/build_system_archive_browser_fixture.py
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["DATABASE_URL"], isolation_level="AUTOCOMMIT")
+          with engine.connect() as db:
+              db.execute(text('CREATE DATABASE "chat_reader_archive_restore"'))
+          url = engine.url.set(database="chat_reader_archive_restore").render_as_string(hide_password=False)
+          Path(os.environ["RUNNER_TEMP"], "archive-database-url").write_text(url)
+          PY
+          export DATABASE_URL="$(cat "$RUNNER_TEMP/archive-database-url")"
+          export IMPORT_STORAGE_DIR="$RUNNER_TEMP/archive-restore/imports"
+          export EXPORT_STORAGE_DIR="$RUNNER_TEMP/archive-restore/exports"
+          export OFFLINE_STORAGE_DIR="$RUNNER_TEMP/archive-restore/offline"
+          export ASSET_STORAGE_DIR="$RUNNER_TEMP/archive-restore/assets"
+          mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
+          python -m alembic upgrade head
+          uvicorn settings_browser_fixture:app --app-dir tests --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/archive-api.log" 2>&1 &
+          archive_api_pid=$!
+          python -m app.workers.import_worker > "$RUNNER_TEMP/archive-worker.log" 2>&1 &
+          archive_worker_pid=$!
+          trap 'kill "$archive_api_pid" "$archive_worker_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          cd ../..
+          PLAYWRIGHT_GATE_ID=system-archive-new-instance pnpm --filter web exec playwright test --config=playwright.config.ts e2e/system-archive-new-instance.spec.ts
+          PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4,system-archive-new-instance node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-gate-summary.json
       - name: Upload settings quality evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -466,6 +502,8 @@ jobs:
             apps/web/test-results
             ${{ runner.temp }}/settings-api.log
             ${{ runner.temp }}/settings-worker.log
+            ${{ runner.temp }}/archive-api.log
+            ${{ runner.temp }}/archive-worker.log
           retention-days: 14
 
   build-images:
@@ -483,6 +521,7 @@ jobs:
       - name: Build API and worker image
         run: |
           docker build \
+            --build-arg BUILD_REVISION="${GITHUB_SHA}" \
             --label org.opencontainers.image.created="${IMAGE_BUILD_TIME}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
             --label org.opencontainers.image.source="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
@@ -495,6 +534,7 @@ jobs:
           docker build \
             --file apps/web/Dockerfile \
             --build-arg API_INTERNAL_URL=http://api:8000 \
+            --build-arg BUILD_REVISION="${GITHUB_SHA}" \
             --build-arg COMPLEX_ATTACHMENT_PREVIEW_ENABLED=false \
             --build-arg WEB_BUILD_HEAP_MB=2048 \
             --label org.opencontainers.image.created="${IMAGE_BUILD_TIME}" \

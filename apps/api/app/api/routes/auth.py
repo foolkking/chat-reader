@@ -16,8 +16,13 @@ from app.models.auth import AuthPrincipal, AuthSession
 from app.services.access import access_settings, consume_invitation, consume_password_reset, invitation_for_token, registration_mode
 from app.services.access import create_password_reset_grant
 from app.services.auth_rate_limit import RateLimitExceeded, consume_auth_attempt
-from app.services.password_mail import send_email_verification, send_password_reset
+from app.services.password_mail import send_email_change, send_email_verification, send_password_reset
 from app.services.email_verification import confirm_registration_email, create_email_verification
+from app.services.email_change import (
+    confirm_email_change, lock_email_account, pending_email_change,
+    request_email_change as create_email_change, validate_email_change,
+)
+from app.models.access import EmailVerificationGrant
 from app.services.feature_policies import POLICY_FIELDS, effective_import_size_mb, get_feature_policy
 from app.services.auth import (
     PASSWORD_MAX_LENGTH,
@@ -107,6 +112,11 @@ class EmailVerificationRequestInput(BaseModel):
 
 class EmailVerificationConfirmInput(BaseModel):
     token: str = Field(min_length=32, max_length=512)
+
+
+class EmailChangeRequestInput(BaseModel):
+    new_email: str = Field(min_length=3, max_length=320)
+    current_password: str = Field(min_length=1, max_length=PASSWORD_MAX_LENGTH)
 
 
 class DeviceSessionRead(BaseModel):
@@ -254,8 +264,10 @@ def register(input: RegisterInput, request: Request, response: Response, db: Ses
         _consume_or_429(db, request, "invitation", input.invitation_token, limit=10, window_seconds=900)
     mode = registration_mode(db, settings)
     invitation = None
-    if mode == "INVITE_ONLY" and input.invitation_token:
+    if mode in {"INVITE_ONLY", "OPEN"} and input.invitation_token:
         invitation = invitation_for_token(db, input.invitation_token, settings)
+        if invitation is None:
+            raise HTTPException(status_code=403, detail="Invitation is invalid or expired.")
     if legacy_account_setup_required(db) or not settings.auth_enabled or (mode != "OPEN" and invitation is None):
         raise HTTPException(status_code=403, detail="Registration is not open on this instance.")
     if input.password != input.confirm_password:
@@ -373,6 +385,104 @@ def read_capabilities(request: Request, db: Session = Depends(get_db)) -> dict:
     result["email_delivery_available"] = bool(get_settings().smtp_host and get_settings().smtp_from_address)
     db.commit()
     return result
+
+
+def _email_change_auth(request: Request, db: Session):
+    authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), get_settings(), touch=False)
+    if authentication is None or authentication.context.user_id is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    if authentication.context.role != "USER":
+        raise HTTPException(status_code=403, detail="Administrator email is managed by deployment configuration.")
+    return authentication
+
+
+def _email_change_read(grant: EmailVerificationGrant) -> dict:
+    return {"target_email": grant.target_email, "expires_at": grant.expires_at.isoformat()}
+
+
+@router.get("/email-change")
+def read_email_change(request: Request, db: Session = Depends(get_db)) -> dict:
+    authentication = _email_change_auth(request, db)
+    pending = pending_email_change(db, authentication.session.principal.user)
+    settings = get_settings()
+    return {"pending": _email_change_read(pending) if pending else None,
+            "email_delivery_available": bool(settings.smtp_host and settings.smtp_from_address)}
+
+
+@router.post("/email-change/request")
+def start_email_change(input: EmailChangeRequestInput, request: Request, db: Session = Depends(get_db)) -> dict:
+    authentication = _email_change_auth(request, db)
+    settings = get_settings()
+    if not settings.smtp_host or not settings.smtp_from_address:
+        raise HTTPException(status_code=503, detail="Email delivery is unavailable.")
+    _consume_or_429(db, request, "email-change-ip", "all", limit=20, window_seconds=3600)
+    _consume_or_429(db, request, "email-change-user", str(authentication.context.user_id), limit=5, window_seconds=3600)
+    try:
+        token, grant = create_email_change(db, settings, authentication, input.new_email, input.current_password)
+        result = _email_change_read(grant)
+        db.commit()
+    except PermissionError as exc:
+        db.rollback()
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except FileExistsError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    url = f"{settings.public_web_base_url.rstrip('/')}/verify-email#purpose=email-change&token={token}"
+    try:
+        send_email_change(settings, result["target_email"], url)
+    except Exception as exc:
+        structured_event(auth_logger, logging.ERROR, "email_change_delivery_failed")
+        raise HTTPException(status_code=503, detail="Email delivery failed. Your old email still works; retry sending.") from exc
+    return result
+
+
+@router.post("/email-change/cancel", status_code=204)
+def cancel_email_change(request: Request, db: Session = Depends(get_db)) -> None:
+    authentication = _email_change_auth(request, db)
+    try:
+        user, _, _ = lock_email_account(db, authentication)
+        db.query(EmailVerificationGrant).filter(
+            EmailVerificationGrant.user_id == user.id, EmailVerificationGrant.purpose == "EMAIL_CHANGE",
+            EmailVerificationGrant.used_at.is_(None), EmailVerificationGrant.revoked_at.is_(None),
+        ).update({"revoked_at": utc_now()}, synchronize_session="fetch")
+        db.commit()
+    except PermissionError as exc:
+        db.rollback()
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+@router.post("/email-change/preview")
+def preview_email_change(input: EmailVerificationConfirmInput, request: Request, db: Session = Depends(get_db)) -> dict:
+    authentication = _email_change_auth(request, db)
+    _consume_or_429(db, request, "email-change-preview", str(authentication.context.user_id), limit=60, window_seconds=900)
+    try:
+        return _email_change_read(validate_email_change(db, get_settings(), authentication.session.principal.user, input.token))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/email-change/confirm", response_model=AuthSessionRead)
+def finish_email_change(input: EmailVerificationConfirmInput, request: Request, response: Response, db: Session = Depends(get_db)) -> AuthSessionRead:
+    authentication = _email_change_auth(request, db)
+    _consume_or_429(db, request, "email-change-confirm", str(authentication.context.user_id), limit=10, window_seconds=900)
+    try:
+        confirm_email_change(db, get_settings(), authentication, input.token)
+        db.commit()
+    except PermissionError as exc:
+        db.rollback()
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except (FileExistsError, IntegrityError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="This email address is unavailable. Request a different address.") from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    _set_cookie(response, request.cookies[SESSION_COOKIE_NAME])
+    structured_event(auth_logger, logging.INFO, "email_changed", other_sessions_invalidated=True)
+    return me(request, response, db)
 
 
 @router.get("/me", response_model=AuthSessionRead)

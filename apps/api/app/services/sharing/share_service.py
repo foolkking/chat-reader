@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Query, Session
 
 from app.core.config import get_settings
@@ -21,7 +21,7 @@ from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.schemas.conversation import ConversationListItem
 from app.schemas.message import DialogueIndexItem, DialogueIndexResponse, MessageListItem, MessageVersionRead, ReaderTurnResponse, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
-from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareUpdate, SharedConversationBootstrap
+from app.schemas.share import OwnedSharePage, OwnedShareRead, ShareCreate, ShareCreateResponse, ShareRead, ShareUpdate, SharedConversationBootstrap
 from app.services.auth import hash_password, verify_password
 from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
@@ -134,6 +134,41 @@ def list_shares(
     if not include_revoked:
         query = query.filter(Share.revoked_at.is_(None))
     return query.order_by(Share.created_at.desc()).all()
+
+
+def list_owned_shares(
+    db: Session, ownership_scope: OwnershipScope, *, status: str = "all",
+    conversation_id: uuid.UUID | None = None, query: str = "", offset: int = 0, limit: int = 20,
+) -> OwnedSharePage:
+    now = _utc_now()
+    rows = db.query(Share, Conversation).join(Conversation, Conversation.id == Share.conversation_id).filter(
+        ownership_scope.predicate(Conversation)
+    )
+    if conversation_id is not None:
+        rows = rows.filter(Share.conversation_id == conversation_id)
+    if query.strip():
+        # contains(..., autoescape=True) treats percent/underscore as literal user text.
+        needle = query.strip().lower()
+        rows = rows.filter(or_(
+            func.lower(Conversation.display_title).contains(needle, autoescape=True),
+            func.lower(Share.title).contains(needle, autoescape=True),
+        ))
+    if status == "revoked":
+        rows = rows.filter(Share.revoked_at.is_not(None))
+    elif status == "expired":
+        rows = rows.filter(Share.revoked_at.is_(None), Share.expires_at <= now)
+    elif status == "active":
+        rows = rows.filter(Share.revoked_at.is_(None), or_(Share.expires_at.is_(None), Share.expires_at > now))
+    total = rows.count()
+    page = rows.order_by(Share.created_at.desc(), Share.id.desc()).offset(offset).limit(limit).all()
+    items = [OwnedShareRead(
+        **share_read(share).model_dump(), conversation_title=conversation.display_title,
+        conversation_deleted=conversation.deleted_at is not None,
+        status="revoked" if share.revoked_at is not None else (
+            "expired" if share.expires_at and _as_utc(share.expires_at) <= now else "active"
+        ),
+    ) for share, conversation in page]
+    return OwnedSharePage(items=items, total=total, offset=offset, limit=limit, has_more=offset + len(items) < total)
 
 
 def get_shared_conversation_by_token(db: Session, token: str, unlock_token: str | None = None) -> SharedConversationBootstrap:
@@ -376,6 +411,7 @@ def revoke_share(
         db.query(Share)
         .join(Conversation, Conversation.id == Share.conversation_id)
         .filter(Share.id == share_id, ownership_scope.predicate(Conversation))
+        .with_for_update(of=Share)
         .first()
     )
     if share is None:
@@ -410,17 +446,20 @@ def update_share(
         db.query(Share)
         .join(Conversation, Conversation.id == Share.conversation_id)
         .filter(Share.id == share_id, ownership_scope.predicate(Conversation))
+        .with_for_update(of=Share)
         .first()
     )
     if share is None:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
     provided_fields = payload.model_fields_set
+    if share.revoked_at is not None:
+        raise ShareError("Share has been revoked.", HTTPStatus.GONE)
     if "expires_at" in provided_fields and payload.expires_at is not None and _as_utc(payload.expires_at) <= _utc_now():
         raise ShareError("Share expiry must be in the future.")
     if "title" in provided_fields:
-        share.title = payload.title.strip() or None
+        share.title = (payload.title or "").strip() or None
     if "description" in provided_fields:
-        share.description = payload.description.strip() or None
+        share.description = (payload.description or "").strip() or None
     if "expires_at" in provided_fields:
         share.expires_at = payload.expires_at
     if "theme" in provided_fields and payload.theme is not None:
@@ -431,6 +470,18 @@ def update_share(
         if payload.locale not in {"zh-CN", "en-US"}:
             raise ShareError("Unsupported share locale.")
         share.locale = payload.locale
+    if {"scope", "selected_message_ids"} & provided_fields:
+        scope = payload.scope or share.scope
+        ids = payload.selected_message_ids if payload.selected_message_ids is not None else [uuid.UUID(item) for item in share.selected_message_ids]
+        if scope == "conversation":
+            ids = []
+        _validate_share_payload(db, share.conversation, ShareCreate(scope=scope, selected_message_ids=ids))
+        share.scope = scope
+        share.selected_message_ids = [str(item) for item in dict.fromkeys(ids)]
+    for field in ("include_toc", "include_metadata", "include_description", "include_annotations", "include_notebook", "allow_export"):
+        value = getattr(payload, field)
+        if field in provided_fields and value is not None:
+            setattr(share, field, value)
     if "share_password" in provided_fields:
         if payload.share_password and not policy.allow_share_password:
             raise ShareError("Password-protected shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
@@ -603,14 +654,14 @@ def _validate_share_payload(db: Session, conversation: Conversation, payload: Sh
     if payload.scope == "selected_messages" and not payload.selected_message_ids:
         raise ShareError("selected_messages share requires at least one message.")
     if payload.selected_message_ids:
-        valid_ids = {
-            row[0]
-            for row in db.query(Message.id)
-            .filter(Message.conversation_id == conversation.id, Message.is_deleted.is_(False))
-            .all()
-        }
-        if any(message_id not in valid_ids for message_id in payload.selected_message_ids):
-            raise ShareError("Selected message ids must belong to the conversation.")
+        requested = list(set(payload.selected_message_ids))
+        for start in range(0, len(requested), 5000):
+            batch = requested[start:start + 5000]
+            valid_count = db.query(Message.id).filter(
+                Message.conversation_id == conversation.id, Message.is_deleted.is_(False), Message.id.in_(batch)
+            ).count()
+            if valid_count != len(batch):
+                raise ShareError("Selected message ids must belong to the conversation.")
 
 
 def _assert_share_accessible(share: Share) -> None:

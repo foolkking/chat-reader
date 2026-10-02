@@ -509,6 +509,11 @@ def change_password(
 ) -> bool:
     now = now or utc_now()
     principal = db.get(AuthPrincipal, principal_id)
+    # Credential mutations serialize with email changes and password-reset
+    # consumption. Always acquire the user before the principal/session rows.
+    if principal is not None and principal.user_id is not None:
+        db.query(User).filter(User.id == principal.user_id).with_for_update().populate_existing().one_or_none()
+    principal = db.query(AuthPrincipal).filter(AuthPrincipal.id == principal_id).with_for_update().populate_existing().one_or_none()
     if principal is None or not verify_password(principal.password_hash, current_password):
         return False
     validate_new_password(new_password)

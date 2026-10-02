@@ -61,8 +61,17 @@ def ensure_default_project(
         is_default=True,
         sort_order=0,
     )
-    db.add(project)
-    db.flush()
+    try:
+        # First login lists projects while first-create/import may initialize
+        # the same Inbox. Roll back only this insert, preserving outer writes.
+        with db.begin_nested():
+            db.add(project)
+            db.flush()
+    except IntegrityError:
+        winner = owned_query(db, Project, ownership_scope).filter(Project.is_default.is_(True)).one_or_none()
+        if winner is None:
+            raise
+        return winner
     return project
 
 

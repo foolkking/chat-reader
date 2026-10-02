@@ -128,8 +128,8 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const viewport = useViewerViewport();
 
   const attachmentQuery = useQuery({
-    queryKey: ["attachment-viewer", access.kind, access.kind === "share" ? access.token : "owner", item?.attachmentId],
-    queryFn: () => access.kind === "offline" ? getOfflineAttachment(item!.attachmentId) : getAttachment(item!.attachmentId, access.kind === "share" ? access.token : undefined),
+    queryKey: ["attachment-viewer", access.kind, access.kind === "admin" ? access.userId : access.kind === "share" ? access.token : "owner", item?.attachmentId],
+    queryFn: () => access.kind === "offline" ? getOfflineAttachment(item!.attachmentId) : getAttachment(item!.attachmentId, access.kind === "share" ? access.token : undefined, access.kind === "admin" ? access.userId : undefined),
     enabled: Boolean(item),
     staleTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
     gcTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
@@ -310,8 +310,8 @@ function ViewerThumbnailImage({ attachment, alt, fallbackLabel, className }: { a
 
 function useViewerAttachment(attachmentId: string, access: AttachmentAccess) {
   const query = useQuery({
-    queryKey: ["attachment-viewer-item", access.kind, access.kind === "share" ? access.token : "owner", attachmentId],
-    queryFn: () => access.kind === "offline" ? getOfflineAttachment(attachmentId) : getAttachment(attachmentId, access.kind === "share" ? access.token : undefined),
+    queryKey: ["attachment-viewer-item", access.kind, access.kind === "admin" ? access.userId : access.kind === "share" ? access.token : "owner", attachmentId],
+    queryFn: () => access.kind === "offline" ? getOfflineAttachment(attachmentId) : getAttachment(attachmentId, access.kind === "share" ? access.token : undefined, access.kind === "admin" ? access.userId : undefined),
     staleTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
     gcTime: access.kind === "offline" ? 0 : 5 * 60 * 1000,
   });

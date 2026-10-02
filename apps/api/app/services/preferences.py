@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.import_record import utc_now
 from app.models.user_preference import PreferenceSyncReceipt, UserPreference
 from app.schemas.preferences import PreferenceSyncRequest, PreferenceSyncResponse, UserPreferenceRead, UserPreferenceUpdate
+from app.services.subject_account import lock_subject_account
 
 DEFAULT_SUBJECT_KEY = "local:default"
 PREFERENCE_FIELDS = tuple(UserPreferenceUpdate.model_fields)
@@ -22,8 +23,9 @@ def _lock(db: Session, subject_key: str) -> None:
         db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
 
 
-def get_or_create_preferences(db: Session, subject_key: str = DEFAULT_SUBJECT_KEY) -> UserPreference:
+def get_or_create_preferences(db: Session, subject_key: str = DEFAULT_SUBJECT_KEY, *, allow_inactive: bool = False) -> UserPreference:
     _lock(db, subject_key)
+    lock_subject_account(db, subject_key, allow_inactive=allow_inactive)
     preference = db.scalar(select(UserPreference).where(UserPreference.subject_key == subject_key).execution_options(populate_existing=True))
     if preference is None:
         preference = UserPreference(subject_key=subject_key)
@@ -42,8 +44,8 @@ def _apply(preference: UserPreference, values: dict) -> None:
     preference.updated_at = utc_now()
 
 
-def update_preferences(db: Session, payload: UserPreferenceUpdate, subject_key: str = DEFAULT_SUBJECT_KEY) -> UserPreference:
-    preference = get_or_create_preferences(db, subject_key)
+def update_preferences(db: Session, payload: UserPreferenceUpdate, subject_key: str = DEFAULT_SUBJECT_KEY, *, allow_inactive: bool = False) -> UserPreference:
+    preference = get_or_create_preferences(db, subject_key, allow_inactive=allow_inactive)
     _apply(preference, payload.model_dump(exclude_none=True, exclude_unset=True))
     db.flush()
     return preference

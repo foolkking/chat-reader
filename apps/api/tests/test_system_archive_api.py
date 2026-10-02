@@ -20,6 +20,8 @@ from app.models.reading_position import ReadingPosition
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
 from app.models.source_message_ref import SourceMessageRef
+from app.models.user import User
+from app.services.ownership import LEGACY_OWNER_USER_ID
 from background_job_test_utils import process_queued_jobs
 from test_import_preview_api import client  # noqa: F401
 
@@ -49,7 +51,7 @@ def _import_attachment_conversation(client) -> str:
     return commit.json()["conversation_ids"][0]
 
 
-def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: Path, monkeypatch) -> None:
+def test_system_archive_v5_empty_instance_restore_round_trip(client, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
     monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
     monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
@@ -57,6 +59,16 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
     monkeypatch.setenv("EXPORT_STORAGE_DIR", str(tmp_path / "exports"))
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "imports"))
     get_settings.cache_clear()
+    # Auth-disabled SQLite fixtures used to create owner references without a
+    # corresponding User. Real PostgreSQL requires this identity to exist.
+    fixture_db = app.dependency_overrides[get_db]()
+    db = next(fixture_db)
+    try:
+        db.add(User(id=LEGACY_OWNER_USER_ID, role="ADMIN", normalized_email="archive-root@example.test"))
+        db.commit()
+    finally:
+        db.close()
+        fixture_db.close()
     conversation_id = _import_attachment_conversation(client)
     upload_session = client.post(
         f"/api/conversations/{conversation_id}/attachment-upload-sessions",
@@ -110,7 +122,8 @@ def test_system_archive_v4_empty_instance_restore_round_trip(client, tmp_path: P
     with zipfile.ZipFile(io.BytesIO(archive_bytes)) as package:
         manifest = json.loads(package.read("manifest.json"))
         assert manifest["format"] == "chat-reader-system-archive"
-        assert manifest["version"] == 4
+        assert manifest["version"] == 5
+        assert "data/users.jsonl" in package.namelist()
         assert manifest["restore_mode"] == "empty_instance_only"
         names = set(package.namelist())
         assert "data/message_versions.jsonl" in names

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.user_skill import UserSkill, UserSkillSelection
+from app.services.subject_account import lock_subject_account
 
 MAX_SKILL_BYTES = 512 * 1024
 DEFAULT_SUBJECT_KEY = "local:default"
@@ -104,6 +105,7 @@ def create_skill(db: Session, *, category: str, locale: str, name: str, content:
     if size > MAX_SKILL_BYTES: raise ValueError("Skill file exceeds 512 KiB.")
     digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
     subject = _subject(subject_key)
+    lock_subject_account(db, subject)
     existing = db.scalar(select(UserSkill).where(UserSkill.subject_key == subject, UserSkill.category == category, UserSkill.locale == locale, UserSkill.content_digest == digest))
     if existing is not None: raise KeyError(str(existing.id))
     item = UserSkill(subject_key=subject, category=category, locale=locale, name=clean_name, content=content, byte_size=size, content_digest=digest)
@@ -112,11 +114,13 @@ def create_skill(db: Session, *, category: str, locale: str, name: str, content:
 
 
 def get_user_skill(db: Session, skill_id: uuid.UUID, subject_key: str | None = None) -> UserSkill | None:
+    lock_subject_account(db, _subject(subject_key))
     return db.scalar(select(UserSkill).where(UserSkill.id == skill_id, UserSkill.subject_key == _subject(subject_key)))
 
 
 def update_selection(db: Session, *, category: str, locale: str, skill_id: uuid.UUID | None, subject_key: str | None = None) -> None:
     subject = _subject(subject_key)
+    lock_subject_account(db, subject)
     if skill_id is not None:
         item = get_user_skill(db, skill_id, subject)
         if item is None or item.category != category or item.locale != locale or item.status != "ACTIVE":
@@ -134,6 +138,7 @@ def resolve_skill(db: Session, *, category: str, locale: str, subject_key: str |
     from app.services.feature_policies import get_feature_policy
     from app.services.system_skills import system_default_for
 
+    lock_subject_account(db, _subject(subject_key))
     system_item, builtin = system_default_for(db, category, locale)
     chosen = selected_id(db, category, locale, subject_key)
     item = get_user_skill(db, chosen, subject_key) if chosen and get_feature_policy(db).allow_user_skills else None

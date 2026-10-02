@@ -1,7 +1,9 @@
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -9,6 +11,7 @@ from app.schemas.message import DialogueIndexResponse, LocatorTargetRequest, Rea
 from app.schemas.search import MessageWindowResponse
 from app.schemas.annotation import AnnotationRead, NotebookRead
 from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUnlockInput, ShareUnlockResponse, ShareUpdate, SharedConversationBootstrap
+from app.schemas.share import OwnedSharePage, ShareBatchResult, ShareBatchRevokeInput, ShareBatchRevokeResponse
 from app.schemas.toc import TocResponse
 from app.services.sharing.share_service import (
     ShareError,
@@ -22,6 +25,7 @@ from app.services.sharing.share_service import (
     get_shared_notebook,
     get_shared_toc,
     list_shares,
+    list_owned_shares,
     revoke_share,
     share_create_response,
     share_read,
@@ -36,6 +40,41 @@ from app.services.reader_locator import resolve_reader_locator
 from app.services.ownership import ownership_scope_from_request
 
 router = APIRouter(tags=["shares"])
+
+
+@router.get("/api/shares", response_model=OwnedSharePage)
+def get_my_shares(
+    request: Request, response: Response, db: Session = Depends(get_db),
+    status_filter: Literal["all", "active", "expired", "revoked"] = Query(default="all", alias="status"),
+    conversation_id: uuid.UUID | None = None, q: str = Query(default="", max_length=200),
+    offset: int = Query(default=0, ge=0), limit: int = Query(default=20, ge=1, le=100),
+) -> OwnedSharePage:
+    response.headers["Cache-Control"] = "no-store"
+    return list_owned_shares(db, ownership_scope_from_request(request), status=status_filter,
+                             conversation_id=conversation_id, query=q, offset=offset, limit=limit)
+
+
+@router.post("/api/shares/revoke-batch", response_model=ShareBatchRevokeResponse)
+def revoke_my_shares(
+    payload: ShareBatchRevokeInput, request: Request, db: Session = Depends(get_db),
+) -> ShareBatchRevokeResponse:
+    scope = ownership_scope_from_request(request)
+    results = []
+    # Independent transactions retain acknowledged successes if another item fails.
+    # Repeating the same ID is safe: revoke_share emits its event only once.
+    for share_id in dict.fromkeys(payload.share_ids):
+        try:
+            revoke_share(db, share_id, scope)
+            db.commit()
+            result = "revoked"
+        except ShareError as exc:
+            db.rollback()
+            result = "not_found" if exc.status_code == 404 else "failed"
+        except SQLAlchemyError:
+            db.rollback()
+            result = "failed"
+        results.append(ShareBatchResult(share_id=share_id, status=result))
+    return ShareBatchRevokeResponse(results=results)
 
 
 @router.post("/api/conversations/{conversation_id}/shares", response_model=ShareCreateResponse)

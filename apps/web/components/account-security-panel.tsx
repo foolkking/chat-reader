@@ -9,6 +9,7 @@ import { useInteractionDialog } from "./interaction-dialog-provider";
 import { usePreferences } from "./preferences-provider";
 import { readOfflinePending, type OfflinePendingSnapshot } from "../lib/offline-pending";
 import { PendingChangesPanel } from "./pending-changes-panel";
+import { EmailChangePanel } from "./email-change-panel";
 import { pendingSignoutCleanups, SIGNOUT_CLEANUP_EVENT } from "../lib/signout-cleanup";
 
 export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focused?: boolean; onDirtyChange?: (dirty: boolean) => void }) {
@@ -24,6 +25,7 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [passwordBusy, setPasswordBusy] = useState(false);
+  const [emailDirty, setEmailDirty] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [storageUnavailable, setStorageUnavailable] = useState(false);
@@ -47,7 +49,8 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
   useEffect(() => { void load(); }, [load]);
   const profileDirty = profile !== null && displayName.trim() !== (profile.display_name ?? "");
   const passwordDirty = Boolean(passwords.current || passwords.next || passwords.confirm);
-  useEffect(() => { onDirtyChange?.(profileDirty || passwordDirty); }, [onDirtyChange, passwordDirty, profileDirty]);
+  useEffect(() => { onDirtyChange?.(profileDirty || passwordDirty || emailDirty); }, [onDirtyChange, passwordDirty, profileDirty, emailDirty]);
+  const refreshIdentity = useCallback(() => { void getAccountProfile().then(setProfile).catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to refresh account.")); }, []);
   const otherSessionCount = sessions.filter((session) => !session.current).length;
   const finishSignout = () => {
     // Remove the form's beforeunload guard before deliberate navigation. The
@@ -55,6 +58,7 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     // entire private boundary, keeping even memory-only recovery available.
     flushSync(() => {
       setPasswords({ current: "", next: "", confirm: "" });
+      setEmailDirty(false);
       setDisplayName(profile?.display_name ?? "");
       onDirtyChange?.(false);
     });
@@ -156,6 +160,9 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
         <div className="flex justify-end"><button type="submit" disabled={!profileDirty || profileBusy} className="btn-primary min-h-9 px-4 text-xs font-medium disabled:opacity-45">{profileBusy ? copy.saving : copy.saveProfile}</button></div>
       </form> : null}
     </SettingsSection>
+
+    {profile?.role === "USER" ? <EmailChangePanel onDirtyChange={setEmailDirty} onRefreshProfile={refreshIdentity} /> : null}
+    {profile?.role === "ADMIN" ? <p className="text-xs text-secondary">{resolvedLocale === "zh-CN" ? "管理员邮箱由部署配置管理。" : "Administrator email is managed by deployment configuration."}</p> : null}
 
     <SettingsSection icon={Laptop} title={copy.devices} description={copy.devicesDescription}>
       <div className="divide-y divide-[var(--border)] border-y border-ui">

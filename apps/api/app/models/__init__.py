@@ -1,4 +1,5 @@
 from app.models.background_job import BackgroundJob
+from app.models.archive_restore import ArchiveRestoreAccount, ArchiveRestoreReceipt
 from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthRateLimit, AuthSession
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
 from app.models.attachment import (

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy import func, or_, text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, object_session, sessionmaker
 
 from app.core.database import SessionLocal
 from app.core.config import get_settings
@@ -26,6 +26,8 @@ from app.services.exporting.cr_archive import create_cr_archive
 from app.services.exporting.context_package import create_context_package
 from app.services.exporting.attachment_bundle import create_attachment_bundle, MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT
 from app.services.exporting.system_archive import create_system_archive
+from app.services.exporting.archive_jobs import PERSONAL_JOB_TYPES, archive_job_error, process_personal_archive_job
+from app.services.exporting.system_archive_jobs import SYSTEM_JOB_TYPES, process_system_archive_job, sync_system_archive_record
 from app.services.exporting.attachment_download import create_attachment_download, validate_attachment_download
 from app.schemas.export import ExportOptions
 from app.services.offline_packages import OfflinePackageError, build_catalog, build_offline_package, changed_conversations, select_conversations
@@ -33,10 +35,9 @@ from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
 from app.services.assets.derivatives import build_asset_derivative
-from app.services.assets.lifecycle import delete_asset_files
 from app.services.content_cleanup import process_scan_chunk
 from app.services.conversations.conversation_deletion import delete_conversation_record
-from app.services.user_deletion import execute_user_account_delete, mark_user_deletion_failed
+from app.services.user_deletion import cleanup_deleted_account_assets, execute_user_account_delete, mark_user_deletion_failed, mark_user_deletion_queued
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.services.feature_policies import get_feature_policy
 from app.core.observability import structured_event
@@ -45,6 +46,7 @@ from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_o
 logger = logging.getLogger(__name__)
 
 ACTIVE_JOB_STATUSES = ("queued", "processing", "cancelling")
+CANCELLABLE_JOB_TYPES = {"conversation_merge", "conversation_batch_delete", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
 ProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -203,18 +205,12 @@ def queue_system_archive_export(
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
     if idempotency_key:
-        existing = (
-            db.query(BackgroundJob)
-            .filter(
-                ownership_scope.predicate(BackgroundJob),
-                BackgroundJob.job_type == "system_archive_export",
-                BackgroundJob.idempotency_key == idempotency_key,
-                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
-            )
-            .order_by(BackgroundJob.created_at.desc())
-            .first()
-        )
+        from app.services.exporting.archive_jobs import _existing
+        from app.services.exporting.system_archive import SystemArchiveError
+        existing = _existing(db, ownership_scope.owner_user_id, "system_archive_export", idempotency_key)
         if existing is not None:
+            if existing.payload.get("include_archived", True) != include_archived:
+                raise SystemArchiveError("This request key was already used for different backup options.", 409)
             return existing
     conversation_query = db.query(Conversation).filter(Conversation.deleted_at.is_(None))
     if not include_archived:
@@ -708,6 +704,8 @@ def claim_next_job(
     job.error_message = None
     job.attempt_count += 1
     db.flush()
+    if job.job_type in SYSTEM_JOB_TYPES:
+        sync_system_archive_record(db, job, status="RUNNING")
     structured_event(
         logger,
         logging.INFO,
@@ -760,6 +758,8 @@ def process_background_job(
                     job.heartbeat_at = now
                     job.completed_at = now
                     job.error_message = None
+                    if job.job_type in SYSTEM_JOB_TYPES:
+                        sync_system_archive_record(db, job, status="CANCELLED")
                     db.commit()
                 return
             if job.status != "processing":
@@ -839,6 +839,14 @@ def process_background_job(
                 }
                 processed_items = result.message_count
                 report("publishing", 99, processed_items, processed_items)
+            elif job.job_type in PERSONAL_JOB_TYPES:
+                job_result = process_personal_archive_job(db, job, report)
+                processed_items = int((job_result.get("counts") or {}).get("conversations", job.total_items))
+                report("publishing", 99, processed_items, processed_items)
+            elif job.job_type in {"system_archive_preflight", "system_archive_restore"}:
+                job_result = process_system_archive_job(db, job, report)
+                processed_items = int((job_result.get("counts") or {}).get("conversations", 0))
+                report("publishing", 99, processed_items, processed_items)
             elif job.job_type == "system_archive_export":
                 artifact = create_system_archive(
                     db,
@@ -851,6 +859,8 @@ def process_background_job(
                     "filename": artifact.filename,
                     "byte_size": artifact.byte_size,
                     "download_url": f"/api/exports/{artifact.id}/download",
+                    "expires_at": artifact.expires_at.isoformat(),
+                    **artifact.archive_summary,
                 }
                 processed_items = job.total_items
             elif job.job_type == "conversation_export":
@@ -1188,8 +1198,10 @@ def process_background_job(
                 )
                 if updated != 1:
                     raise BackgroundJobCancelled("Background job cancellation won the publish race.")
+            if job.job_type in SYSTEM_JOB_TYPES:
+                sync_system_archive_record(db, job, result=job_result, status="COMPLETED")
             db.commit()
-            if job.job_type in {"system_archive_export", "conversation_export", "attachment_batch_download"}:
+            if job.job_type in {"system_archive_export", "personal_archive_export", "conversation_export", "attachment_batch_download"}:
                 structured_event(logger, logging.INFO, "artifact_db_committed", category="export", job_id=str(job_id))
             elif job.job_type == "offline_package":
                 structured_event(logger, logging.INFO, "artifact_db_committed", category="offline", job_id=str(job_id))
@@ -1204,7 +1216,7 @@ def process_background_job(
             for category, paths, root in post_commit_cleanup:
                 cleanup_committed_artifacts(paths, root=root, category=category)
             if account_asset_cleanup_keys:
-                delete_asset_files(account_asset_cleanup_keys)
+                cleanup_deleted_account_assets(db, job_id)
     except BackgroundJobCancelled:
         structured_event(logger, logging.INFO, "background_job_cancelled", job_id=str(job_id))
         with session_factory() as db:
@@ -1216,6 +1228,8 @@ def process_background_job(
                 job.heartbeat_at = now
                 job.completed_at = now
                 job.error_message = None
+                if job.job_type in SYSTEM_JOB_TYPES:
+                    sync_system_archive_record(db, job, status="CANCELLED")
                 db.commit()
     except Exception as exc:
         structured_event(
@@ -1229,38 +1243,51 @@ def process_background_job(
             job = db.get(BackgroundJob, job_id)
             if job is not None:
                 if job.job_type == "user_account_delete":
+                    if job.status == "committed":
+                        # Canonical deletion succeeded; durable cleanup remains
+                        # retryable even if its subsequent checkpoint failed.
+                        return
                     mark_user_deletion_failed(db, job.id)
                 now = datetime.now(timezone.utc)
                 cancelled = job.status in {"cancelling", "cancelled"}
                 job.status = "cancelled" if cancelled else "failed"
                 job.phase = "cancelled" if cancelled else "failed"
-                job.error_message = None if cancelled else _safe_error(exc)
+                job.error_message = None if cancelled else "DELETION_FAILED" if job.job_type == "user_account_delete" else archive_job_error(exc) if job.job_type in {*PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES} else _safe_error(exc)
                 job.heartbeat_at = now
                 job.completed_at = now
+                if job.job_type in SYSTEM_JOB_TYPES:
+                    sync_system_archive_record(db, job, status="CANCELLED" if cancelled else "FAILED")
                 db.commit()
 
 
 def retry_background_job(job: BackgroundJob) -> BackgroundJob:
-    if job.status != "failed":
+    cleanup_only = (job.job_type == "user_account_delete" and job.status in {"committed", "failed"}
+                    and bool((job.payload or {}).get("account_cleanup_keys")))
+    if job.status != "failed" and not cleanup_only:
         return job
     now = datetime.now(timezone.utc)
     job.status = "queued"
     job.phase = "queued"
     job.progress = 0
     job.processed_items = 0
-    job.result = {}
+    if not cleanup_only:
+        job.result = {}
     job.error_message = None
     job.queued_at = now
     job.started_at = None
     job.heartbeat_at = None
     job.completed_at = None
     job.attempt_count = 0
+    if job.job_type in SYSTEM_JOB_TYPES and (db := object_session(job)) is not None:
+        sync_system_archive_record(db, job, status="QUEUED")
+    if job.job_type == "user_account_delete" and (db := object_session(job)) is not None:
+        mark_user_deletion_queued(db, job)
     structured_event(logger, logging.INFO, "background_job_manual_retry", job_id=str(job.id), job_type=job.job_type)
     return job
 
 
 def request_background_job_cancellation(job: BackgroundJob) -> BackgroundJob:
-    if job.job_type not in {"conversation_merge", "conversation_batch_delete"}:
+    if job.job_type not in CANCELLABLE_JOB_TYPES:
         raise MessageEditError("This background task cannot be cancelled.", 409)
     now = datetime.now(timezone.utc)
     if job.status == "queued":
@@ -1269,6 +1296,8 @@ def request_background_job_cancellation(job: BackgroundJob) -> BackgroundJob:
         job.heartbeat_at = now
         job.completed_at = now
         job.error_message = None
+        if job.job_type in SYSTEM_JOB_TYPES and (db := object_session(job)) is not None:
+            sync_system_archive_record(db, job, status="CANCELLED")
         return job
     if job.status == "processing":
         job.status = "cancelling"
@@ -1277,7 +1306,7 @@ def request_background_job_cancellation(job: BackgroundJob) -> BackgroundJob:
         return job
     if job.status in {"cancelling", "cancelled"}:
         return job
-    raise MessageEditError("This merge task can no longer be cancelled.", 409)
+    raise MessageEditError("This background task can no longer be cancelled.", 409)
 
 
 def _safe_error(exc: Exception) -> str:

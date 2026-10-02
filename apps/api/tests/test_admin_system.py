@@ -151,6 +151,32 @@ def test_system_backup_queue_has_record_and_audit(auth_client: TestClient) -> No
     assert audit.json()[0]["resource_type"] == "system_backup"
 
 
+def test_existing_admin_restore_route_maps_archived_root_to_current_root(auth_client, tmp_path, monkeypatch):
+    from app.models.auth import AuthPrincipal
+    monkeypatch.setenv("EXPORT_STORAGE_DIR", str(tmp_path / "system-exports"))
+    get_settings.cache_clear()
+    assert owner_login(auth_client).status_code == 200
+    with auth_middleware.SessionLocal() as db:
+        original_hash = db.get(AuthPrincipal, "owner").password_hash
+    queued = auth_client.post("/api/admin/backups", json={"include_archived": True},
+                             headers={"Idempotency-Key": "root-mapping-round-trip"})
+    assert queued.status_code == 202
+    job_id = uuid.UUID(queued.json()["job_id"])
+    with auth_middleware.SessionLocal() as db:
+        assert claim_next_job(db, job_type="system_archive_export") == job_id
+        db.commit()
+    process_background_job(job_id, session_factory=auth_middleware.SessionLocal)
+    record = next(row for row in auth_client.get("/api/admin/backups").json() if row["background_job_id"] == str(job_id))
+    assert record["status"] == "COMPLETED"
+    restored = auth_client.post(f"/api/admin/backups/{record['id']}/restore")
+    assert restored.status_code == 200, restored.text
+    assert restored.json()["status"] == "COMPLETED"
+    with auth_middleware.SessionLocal() as db:
+        assert db.get(AuthPrincipal, "owner").password_hash == original_hash
+        assert db.query(User).filter_by(role="ADMIN").one().id == ROOT_ADMIN_USER_ID
+        assert db.query(AdminAuditLog).filter_by(action="SYSTEM_RESTORE", result="SUCCESS").count() == 1
+
+
 def test_user_deletion_job_preserves_shared_asset_and_removes_exclusive_asset(
     auth_client: TestClient,
     tmp_path,

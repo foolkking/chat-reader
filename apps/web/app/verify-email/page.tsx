@@ -5,12 +5,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import { AuthPageShell } from "../../features/auth/auth-page-shell";
 import { PasswordField } from "../../features/auth/password-field";
+import { EmailChangeConfirmation } from "../../features/auth/email-change-confirmation";
 import { AuthRequestError, confirmEmailVerification, requestEmailVerification } from "../../lib/auth-client";
 
 export default function VerifyEmailPage() {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [token, setToken] = useState("");
+  const [emailChange, setEmailChange] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,8 +21,12 @@ export default function VerifyEmailPage() {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    setToken(new URLSearchParams(window.location.hash.slice(1)).get("token") ?? "");
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    setToken(params.get("token") ?? "");
+    setEmailChange(params.get("purpose") === "email-change");
   }, []);
+
+  if (emailChange) return <EmailChangeConfirmation token={token} />;
 
   const handleError = (cause: unknown) => {
     if (cause instanceof AuthRequestError) {

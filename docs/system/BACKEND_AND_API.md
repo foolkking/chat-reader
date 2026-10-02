@@ -1,5 +1,28 @@
 # 后端与 API
 
+Administrator invitation/audit pagination and durable account-deletion cleanup
+reuse the current models, task worker and API boundary. Authenticated personal
+subject-key writes acquire a shared account row lock after their existing
+resource advisory locks; deletion retains preference-lock ordering. This prevents
+late request resurrection without serializing all Reader reads. Public task
+results contain cleanup counts, never file storage keys. Current details:
+[Administration Contract](ADMINISTRATION_CONTRACT.md).
+
+2026-10-02 current archive update: system exports now use `.cr v5` with
+credential-free account identities; v4 restores require explicit ownership
+mapping when authenticated. Bounded export snapshots, validation and rollback
+are defined in [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md), which
+supersedes the older v4 export description below. Personal backup and restore
+use `/api/me/archive/*`, the existing worker, complete preflight and the
+account/digest receipt migration `20261001_0041`. The personal settings/Task
+Center flow has API/PostgreSQL/browser coverage. System restore now uses `/api/system/archive/*`, persisted revision-checked
+account choices (`20261002_0042`) and the existing worker. Root-only admission,
+global restore locking, a second empty-instance check and atomic receipts guard
+retries/concurrency. The old synchronous route remains compatible. V5 configuration schema 1 now covers
+format/rule grants and publication, account preferences, existing Skills and
+feature/access policy. Export runs full preflight and restore-capacity checks
+before publication. Earlier v4/v5 reading is preserved. Not deployed.
+
 ## Current account and ownership contract (working tree, 2026-09-01)
 
 `AuthenticationMiddleware` protects private API routes and derives an
@@ -278,3 +301,14 @@ ID, and returns either the applied anchor or a revision conflict. Stale identica
 values converge without advancing revision. Legacy PUT remains compatible and
 advances only changed positions. Conversation-scoped locking also serializes
 recent-item updates. Package serialization includes the additive revision.
+
+
+## Administrator account and content boundary (current)
+
+Root directory reads aggregate statistics for the bounded current page. Deletion
+uses request-key/target locks, owner-scoped resource cleanup and the worker's
+canonical transaction/terminal result. Other users' resource grants survive.
+Administrator full-turn and attachment reads use their own audited authorization
+path; owner endpoints are not broadened. Manual insertion now queues the existing
+derived-data rebuild, and message deletion supplies its actual owner scope.
+See [Administration](ADMINISTRATION_CONTRACT.md).

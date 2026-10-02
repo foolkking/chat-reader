@@ -1,5 +1,9 @@
 # 文档导航
 
+当前管理员账户与内容合同：[Administration Contract](system/ADMINISTRATION_CONTRACT.md)，定义账户搜索分页、真实登录状态、后台删除幂等与共享资源保留，以及完整只读 Reader 和审计附件访问。
+
+当前应用数据归档：[Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)，定义系统 `.cr v5` 的身份/配置恢复、v4 显式映射及旧 v5 兼容、个人归档预检与新增恢复、幂等任务、导出容量自检与事务回滚，以及系统预检任务、持久归属选择和管理员恢复流程。
+
 当前渲染合同：[AI Rich Markdown Renderer](system/AI_RICH_MARKDOWN_CONTRACT.md)，定义 Reader、源码预览和 Markdown 附件共享的 Math/GFM/Footnote、安全、无障碍、溢出与离线资源行为。
 
 当前 Adaptive Import 合同：[Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)，定义 JSON/Markdown 的 session、group、family、profile revision、Mapping、canonical draft、直接导入和 `.cr` 独立恢复边界。

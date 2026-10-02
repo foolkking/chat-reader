@@ -96,14 +96,11 @@ test("project create Escape restores its trigger", () => {
   expect(projectSidebar).toContain("props.onCancel()");
 });
 
-test("archive restore stays in Import data and files use the annotation-style reader workspace", () => {
-  const backupPanel = source("components/data-backup-panel.tsx");
-  const importPanel = source("features/import/import-panel.tsx");
+test("files use the annotation-style reader workspace", () => {
+  // Personal/system archive flows now have real restore/receipt coverage in
+  // settings-personal-backup and settings-system-backup, replacing the old
+  // requirement that settings only redirect to the import dialog.
   const reader = source("features/conversations/conversation-reader.tsx");
-  expect(backupPanel).toContain("Restore system archives from the Import data entry");
-  expect(backupPanel).not.toContain("restoreSystemArchive");
-  expect(backupPanel).not.toContain("恢复系统归档");
-  expect(importPanel).toContain('label=".cr 归档"');
   expect(reader).toContain('storageKey="chat-reader:conversation-files-workspace-floating-v2"');
   expect(reader).toContain('placement="reader-floating"');
   expect(reader).toContain("重置文件窗口位置");

@@ -26,6 +26,7 @@ from app.schemas.annotation import (
     SyncOperationResult,
 )
 from app.services.preferences import DEFAULT_SUBJECT_KEY
+from app.services.subject_account import lock_subject_account
 from app.services.search.annotation_indexer import sync_annotation_document
 
 
@@ -789,6 +790,7 @@ def _lock_subject(db: Session, subject_key: str) -> None:
     # batches. It exists before a new entity/receipt row can be SELECTed FOR UPDATE.
     if db.bind is not None and db.bind.dialect.name == "postgresql":
         _advisory_lock(db, f"annotation-subject:{subject_key}")
+    lock_subject_account(db, subject_key)
 
 
 def _advisory_lock(db: Session, key: str) -> None:

@@ -39,8 +39,8 @@ export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupI
   const shareToken = access.kind === "share" ? access.token : undefined;
   const queries = useQueries({
     queries: items.map((item) => ({
-      queryKey: ["attachment", access.kind, shareToken ?? "owner", item.attachmentId],
-      queryFn: () => access.kind === "offline" ? getOfflineAttachment(item.attachmentId) : getAttachment(item.attachmentId, shareToken),
+      queryKey: ["attachment", access.kind, access.kind === "admin" ? access.userId : shareToken ?? "owner", item.attachmentId],
+      queryFn: () => access.kind === "offline" ? getOfflineAttachment(item.attachmentId) : getAttachment(item.attachmentId, shareToken, access.kind === "admin" ? access.userId : undefined),
       staleTime: 5 * 60 * 1000,
       enabled: !item.attachment,
     })),

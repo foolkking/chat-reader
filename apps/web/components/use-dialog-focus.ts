@@ -13,7 +13,7 @@ type DialogFocusOptions = {
 function focusable(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(
     'a[href],button:not([disabled]):not([data-dialog-backdrop]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
-  )).filter((element) => element.getAttribute("aria-hidden") !== "true" && !element.closest("[inert]") && element.getClientRects().length > 0);
+  )).filter((element) => !element.matches(":disabled") && element.getAttribute("aria-hidden") !== "true" && !element.closest("[inert]") && element.getClientRects().length > 0);
 }
 
 function initialFocusable(root: HTMLElement): HTMLElement | null {

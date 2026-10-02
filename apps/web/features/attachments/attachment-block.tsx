@@ -59,8 +59,8 @@ export function AttachmentBlock(props: AttachmentBlockProps) {
   const [runtime, setRuntime] = useState<AttachmentRuntimeRenderState>({ status: "idle" });
   const shareToken = access.kind === "share" ? access.token : undefined;
   const query = useQuery({
-    queryKey: ["attachment", access.kind, shareToken ?? "owner", attachmentId],
-    queryFn: () => access.kind === "offline" ? getOfflineAttachment(attachmentId) : getAttachment(attachmentId, shareToken),
+    queryKey: ["attachment", access.kind, access.kind === "admin" ? access.userId : shareToken ?? "owner", attachmentId],
+    queryFn: () => access.kind === "offline" ? getOfflineAttachment(attachmentId) : getAttachment(attachmentId, shareToken, access.kind === "admin" ? access.userId : undefined),
     staleTime: 5 * 60 * 1000,
     enabled: !props.attachment,
   });

@@ -1,12 +1,73 @@
 # Markdown 文档台账
 
+2026-10-02 stage-eight integration: `ADAPTIVE_IMPORT_CONTRACT.md` owns localized
+import controls and mapping draft/busy/error behavior. The dated settings log
+records full-suite outcomes, PostgreSQL default-project concurrency recovery,
+failed/cancelled browser runs and their follow-up verification.
+
+2026-10-02 invitation/audit and deletion boundaries: the existing
+`ADMINISTRATION_CONTRACT.md` now owns durable post-commit cleanup, authenticated
+subject-write fencing, invitation single-use/pagination and audit query contracts.
+API reference, user-flow/backend and authentication docs link those facts.
+The settings execution log records PostgreSQL/browser passes and failed setup or
+selector runs separately. No migration, new documentation category or deployment.
+
+2026-10-02 administrator account/content slice: new current contract
+`docs/system/ADMINISTRATION_CONTRACT.md` owns bounded directory queries, deletion
+confirmation/worker/transaction boundaries and audited complete-turn viewing.
+API/user-flow/backend documents link this contract. The settings execution log
+owns local evidence and current integration/push/CI outcomes. No migration or
+production deployment was added.
+
+2026-10-02 system restore tasks: `DATA_ARCHIVE_CONTRACT.md` owns persisted
+ownership, worker/receipt/cancellation and lock ordering. API, user flow,
+backend/storage and deployment docs own their matching boundaries. `testing.md`
+owns the fresh-instance browser gate and synthetic fixture builder. The existing
+execution log keeps test results and remaining work; no new document category.
+
+2026-10-02 system configuration and archive capacity: `DATA_ARCHIVE_CONTRACT.md`
+owns the optional v5 configuration extension, bootstrap replacement, target
+credential/SMTP boundaries and export/restore capacity parity. `DATA_AND_STORAGE.md`,
+`BACKEND_AND_API.md`, deployment and API references link this current contract.
+The dated settings execution log owns test outcomes and remaining integration work.
+
+2026-10-02 personal archive flow: `DATA_ARCHIVE_CONTRACT.md` owns preview,
+additive restore/receipts, configuration reuse, missing files and source expiry.
+`api-reference.md` owns private archive/task endpoints; deployment documentation
+owns receipt migration `20261001_0041`, ownership migration `20261002_0042`
+and both exact large-upload gateway routes.
+`USER_FLOWS.md` owns the grouped personal panel and Task Center re-entry.
+Current status is in `PROJECT_STATE.md`; counts and remaining integration
+belong to the dated settings execution log. Stage five remains paused.
+
+2026-10-01 archive foundation: `docs/system/DATA_ARCHIVE_CONTRACT.md` owns
+system v5 account mapping, v4 compatibility, bounded serialization, checksums,
+restore transaction/file cleanup and the personal archive serializer.
+The settings execution log owns test counts and failure/re-entry evidence.
+Current stage status is maintained in PROJECT_STATE.md.
+
+2026-10-01 stage-six email change: `AUTHENTICATION_CONTRACT.md` owns
+password verification, purpose-bound grants, credential/session atomicity and
+offline ownership preservation. `docs/api-reference.md` owns the five private
+endpoints; `USER_FLOWS.md` owns request/preview/confirmation/recovery behavior.
+Current stage status is in `PROJECT_STATE.md`, with real PostgreSQL,
+SMTP/browser and failure evidence in the dated settings execution log.
+
+2026-10-01 stage-six My shares: `docs/api-reference.md` owns the account-scoped
+list, bounded batch results and content-scope update contract;
+`docs/system/USER_FLOWS.md` owns settings navigation, opt-in batch selection,
+the secondary action menu, progressive editing sections and failure recovery.
+Current stage status is in `PROJECT_STATE.md`; local
+test evidence remains in the existing dated settings execution log. Personal
+archives and email changes are implemented; stage five remains paused.
+
 2026-10-01 CI repair: current patched Next/DOMPurify versions and provenance are
 owned by the Next LTS and release safety contracts; authentication owns public
 device appearance and retained-lock recovery on transport failure. Failed and
 replacement CI runs belong to the dated settings execution record.
 The successful code checkpoint `7d24ce2` / Actions `36844395975` and separate
 local/CI counts are recorded there and summarized in `PROJECT_STATE.md`;
-production remains unchanged. Stage six is next, with stage five paused.
+production remains unchanged. Later integration is recorded in the same log; stage five remains paused.
 
 2026-10-01 stage-four CI closeout: `docs/testing.md` owns the new required
 authenticated settings/SMTP/browser job and explicit PostgreSQL integration
@@ -26,7 +87,7 @@ and revision-edit workflows) are maintained in
 `PROJECT_STATE.md`, `docs/system/AUTHENTICATION_CONTRACT.md`,
 `docs/system/CONTENT_CLEANUP_CONTRACT.md`, `docs/api-reference.md` and
 `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` and
-`docs/system/ADAPTIVE_IMPORT_CONTRACT.md`. Later stages remain pending.
+`docs/system/ADAPTIVE_IMPORT_CONTRACT.md`. Current delivery status is in PROJECT_STATE.md.
 
 2026-10-01 continuation: the existing cleanup contract, API/deployment references
 and dated execution record own exception/learning, rule promotion and full-family
@@ -40,7 +101,7 @@ contracts are in `docs/api-reference.md`, `docs/system/BACKEND_AND_API.md` and
 `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`. Evidence remains in the existing
 execution record. Stage five remains paused by the user.
 
-2026-10-01 reading sync: current head `20261001_0040` adds reading revisions
+2026-10-01 reading sync: migration `20261001_0040` adds reading revisions
 and receipts. The same API/backend/deployment contracts own schema and HTTP;
 the PWA contract and frontend architecture own immutable submitted positions,
 explicit conflicts, package preservation, true-scroll intent and recovery export.
@@ -504,7 +565,10 @@ No new documentation category, public API, migration or persisted Reader contrac
 | `apps/api/app/api/routes/attachments.py` | Current | Upload sessions, conversation files, metadata, Range content, derivatives and Share attachment access. |
 | `apps/api/app/services/assets/asset_store.py` | Current | Local and optional S3-compatible storage providers with controlled keys. |
 | `apps/api/app/services/assets/scanner.py` | Current | Disabled, ClamAV and remote scanner providers; deployment-policy status. |
-| `apps/api/app/services/exporting/system_archive.py` | Current | System `.cr v4` export and empty-instance restore. |
+| `apps/api/app/services/exporting/system_archive.py` | Current | System `.cr v5` export, v4/v5 empty-instance restore and shared bounded serialization/validation. |
+| `apps/api/app/services/exporting/system_archive_preflight.py` | Current | Read-only system graph, identity, reference and configuration preflight shared with restore/export. |
+| `apps/api/app/services/exporting/system_archive_configuration.py` | Current | V5 configuration schema 1, policy defaults, bootstrap target checks and account-aware transactional restore. |
+| `docs/system/DATA_ARCHIVE_CONTRACT.md` | Current contract | Archive format/scope, account mapping, validation/rollback and incomplete feature boundaries. |
 | `.github/workflows/build-release-images.yml` | Current | API/Web quality ownership split, then manual external Linux image build for low-memory production deployment. |
 | `apps/web/features/attachments/conversation-files-panel.tsx` | Current | Current conversation file drawer, upload and occurrence actions. |
 | `apps/web/e2e/attachment-upload-flow.spec.ts` | Current | Ordinary upload, insertion, version switching and file reuse acceptance. |
@@ -733,3 +797,8 @@ backlog; it does not replace release quality jobs.
 release-safety contract, deployment record and improvement backlog now point to
 the deployed multi-account source `7101f6a`. Authentication production UI
 acceptance remains `NOT_VERIFIED` pending operator-run browser verification.
+2026-10-02 帮助与运行状态扩展：当前合同归 `system/OBSERVABILITY_CONTRACT.md`；
+接口入口归 `api-reference.md`，构建参数/不可变版本和独立镜像检查归
+`system/DEPLOYMENT_AND_ENVIRONMENT.md`（`deployment.md`链接），专项入口归`testing.md`。
+阶段验收、失败与未执行项仅记录于 `execution/SETTINGS_COMPLETION_2026-09-30.md`，
+不将工作树结果当作生产或GitHub CI事实。新增功能没有新migration/包版本。

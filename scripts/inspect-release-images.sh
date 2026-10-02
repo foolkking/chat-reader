@@ -28,6 +28,18 @@ for image in $images; do
   docker export "$container" > "$work_dir/image.tar"
   docker rm "$container" >/dev/null
 
+  # Verify the version actually embedded in the app, independently of image labels.
+  case "$image" in
+    chat-reader-web:*)
+      tar -xOf "$work_dir/image.tar" app/apps/web/server.js > "$work_dir/web-server.js"
+      grep -F "\"NEXT_PUBLIC_BUILD_REVISION\":\"$revision\"" "$work_dir/web-server.js" >/dev/null
+      ;;
+    *)
+      tar -xOf "$work_dir/image.tar" app/app/build_metadata.json > "$work_dir/build-metadata.json"
+      jq -e --arg revision "$revision" '.revision == $revision' "$work_dir/build-metadata.json" >/dev/null
+      ;;
+  esac
+
   if tar -tf "$work_dir/image.tar" | grep -E '(^|/)(\.env($|\.)|\.git/|\.next/cache/|node_modules/\.cache/|storage/imports/)' >/dev/null; then
     echo "Forbidden release path detected in $image" >&2
     exit 1

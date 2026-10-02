@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -214,15 +215,20 @@ def worker_status(
     }
 
 
-def storage_usage(root: Path, *, max_entries: int = STORAGE_ENTRY_LIMIT) -> dict[str, int | bool]:
+def storage_usage(root: Path, *, max_entries: int = STORAGE_ENTRY_LIMIT, time_budget_seconds: float | None = None) -> dict[str, int | bool]:
     root = root.resolve()
-    if not root.exists():
-        return {"file_count": 0, "bytes": 0, "complete": True}
+    if not root.is_dir():
+        return {"file_count": 0, "bytes": 0, "complete": False}
     count = 0
+    visited = 0
+    deadline = time.monotonic() + time_budget_seconds if time_budget_seconds is not None else None
     byte_size = 0
     stack = [root]
     complete = True
     while stack:
+        if deadline is not None and time.monotonic() >= deadline:
+            complete = False
+            break
         directory = stack.pop()
         try:
             entries = os.scandir(directory)
@@ -231,10 +237,11 @@ def storage_usage(root: Path, *, max_entries: int = STORAGE_ENTRY_LIMIT) -> dict
             continue
         with entries:
             for entry in entries:
-                if count >= max_entries:
+                if visited >= max_entries or (deadline is not None and time.monotonic() >= deadline):
                     complete = False
                     stack.clear()
                     break
+                visited += 1
                 try:
                     if entry.is_symlink():
                         continue

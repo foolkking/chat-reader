@@ -1,5 +1,6 @@
 "use client";
 
+import { importErrorMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, FileJson2, LoaderCircle, ScanSearch, UploadCloud, type LucideIcon } from "lucide-react";
 import Link from "next/link";
@@ -23,14 +24,17 @@ export function ImportPanel({
   initialMode = "adaptive",
   onImportCommitted,
   onWorkspaceChange,
+  onMappingStateChange,
 }: {
   repairProfileId?: string | null;
   initialMode?: ImportMode;
   onImportCommitted?: () => void;
   onWorkspaceChange?: (open: boolean) => void;
+  onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
 } = {}) {
+  const tr = useImportCopy();
   const queryClient = useQueryClient();
-  const capabilities = useQuery({ queryKey: ["account-capabilities"], queryFn: readAccountCapabilities, staleTime: 0 });
+  const capabilities = useQuery({ queryKey: ["account-capabilities"], queryFn: ({ signal }) => readAccountCapabilities(signal), staleTime: 0 });
   const router = useRouter();
   const [mode, setMode] = useState<ImportMode>(initialMode);
   const [files, setFiles] = useState<File[]>([]);
@@ -112,10 +116,10 @@ export function ImportPanel({
   });
 
   const validationError = useMemo(() => {
-    if (capabilities.data && !capabilities.data.allow_user_import) return "管理员已关闭导入功能。";
-    if (capabilities.data && files.some((file) => file.size > capabilities.data.maximum_import_size_mb * 1024 * 1024)) return `单个文件不能超过当前上限 ${capabilities.data.maximum_import_size_mb} MiB。`;
-    return validateFiles(files, mode);
-  }, [files, mode, capabilities.data]);
+    if (capabilities.data && !capabilities.data.allow_user_import) return tr("管理员已关闭导入功能。");
+    if (capabilities.data && files.some((file) => file.size > capabilities.data.maximum_import_size_mb * 1024 * 1024)) return tr("单个文件不能超过当前上限 {0} MiB。", capabilities.data.maximum_import_size_mb);
+    return validateFiles(files, mode, tr);
+  }, [files, mode, capabilities.data, tr]);
 
   function reset(nextMode = mode) {
     setMode(nextMode);
@@ -146,6 +150,7 @@ export function ImportPanel({
   if (session) {
     return (
       <AdaptiveImportWorkspace
+        onMappingStateChange={onMappingStateChange}
         session={session}
         onSession={setSession}
         onBack={() => cancelMutation.mutate(session.import_id)}
@@ -157,15 +162,15 @@ export function ImportPanel({
   }
 
   const busy = adaptiveMutation.isPending || archiveMutation.isPending;
-  const selectedLabel = files.length === 0 ? "尚未选择文件" : files.length === 1 ? files[0]?.name : `已选择 ${files.length} 个文件`;
+  const selectedLabel = files.length === 0 ? tr("尚未选择文件") : files.length === 1 ? files[0]?.name : tr("已选择 {0} 个文件", files.length);
   const archiveCanCommit = Boolean(archivePreview?.can_commit ?? archivePreview?.archive_summary);
 
   return (
     <section className="space-y-5">
-      <p className="text-sm leading-6 text-secondary">{repairProfileId ? "选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。" : "选择对话源文件。已知格式会直接准备导入；陌生结构只需设置一次，以后会自动识别。"}</p>
-      <div className="grid grid-cols-1 rounded-lg bg-subtle p-1 min-[440px]:grid-cols-2" role="group" aria-label="导入类型">
-        <ModeButton active={mode === "adaptive"} icon={FileJson2} label="JSON / Markdown" description="已知与已学习格式" onClick={() => reset("adaptive")} initialFocus />
-        {!repairProfileId ? <ModeButton active={mode === "archive"} icon={Archive} label=".cr 归档" description="恢复 Chat Reader 归档" onClick={() => reset("archive")} /> : <div className="flex min-h-12 items-center px-3 text-xs text-secondary">修复只接受 JSON / Markdown</div>}
+      <p className="text-sm leading-6 text-secondary">{repairProfileId ? tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。") : tr("选择对话源文件。已知格式会直接准备导入；陌生结构只需设置一次，以后会自动识别。")}</p>
+      <div className="grid grid-cols-1 rounded-lg bg-subtle p-1 min-[440px]:grid-cols-2" role="group" aria-label={tr("导入类型")}>
+        <ModeButton active={mode === "adaptive"} icon={FileJson2} label="JSON / Markdown" description={tr("已知与已学习格式")} onClick={() => reset("adaptive")} initialFocus />
+        {!repairProfileId ? <ModeButton active={mode === "archive"} icon={Archive} label={tr(".cr 归档")} description={tr("恢复 Chat Reader 归档")} onClick={() => reset("archive")} /> : <div className="flex min-h-12 items-center px-3 text-xs text-secondary">{tr("修复只接受 JSON / Markdown")}</div>}
       </div>
       <div
         onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
@@ -175,28 +180,28 @@ export function ImportPanel({
         className={`border border-dashed px-6 py-8 text-center transition-colors ${dragging ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-ui bg-subtle"}`}
       >
         <UploadCloud className="mx-auto h-6 w-6 text-secondary" aria-hidden="true" />
-        <p className="mt-3 text-sm font-medium text-primary">拖放文件到这里</p>
-        <p className="my-2 text-xs text-secondary">或</p>
+        <p className="mt-3 text-sm font-medium text-primary">{tr("拖放文件到这里")}</p>
+        <p className="my-2 text-xs text-secondary">{tr("或")}</p>
         <label className="btn-secondary inline-flex min-h-10 cursor-pointer items-center justify-center px-4 text-sm font-medium">
-          {mode === "adaptive" ? "选择 JSON / Markdown 文件" : "选择 .cr 归档"}
+          {mode === "adaptive" ? tr("选择 JSON / Markdown 文件") : tr("选择 .cr 归档")}
           <input key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
         </label>
         <p className="mt-3 break-all text-sm text-secondary">{selectedLabel}</p>
-        <p className="mt-1 text-xs text-secondary">{mode === "adaptive" ? "支持单 JSON、单 Markdown、JSON + Markdown 及批量文件" : ".cr 使用独立归档恢复流程"}</p>
+        <p className="mt-1 text-xs text-secondary">{mode === "adaptive" ? tr("支持单 JSON、单 Markdown、JSON + Markdown 及批量文件") : tr(".cr 使用独立归档恢复流程")}</p>
       </div>
       {validationError ? <ErrorLine message={validationError} /> : null}
-      {capabilities.data ? <p className="text-xs text-secondary">当前单文件上限：{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">无法读取导入限制。<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>重试</button></div> : <p role="status" className="text-sm text-secondary">正在读取导入限制…</p>}
+      {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
       {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error.message} /> : null}
       {archiveMutation.isError ? <ErrorLine message={archiveMutation.error.message} /> : null}
       {commitMutation.isError ? <ErrorLine message={commitMutation.error.message} /> : null}
       <div className="flex flex-wrap gap-3">
         <button type="button" disabled={!files.length || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={() => mode === "archive" ? archiveMutation.mutate(files) : adaptiveMutation.mutate(files)} className="btn-primary min-h-10 px-4 text-sm font-medium">
-          {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />正在识别格式</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />分析并继续</> : "检查归档"}
+          {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
         </button>
-        {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? "正在导入" : "恢复归档"}</button> : null}
+        {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? tr("正在导入") : tr("恢复归档")}</button> : null}
       </div>
       {archivePreview ? <ImportPreviewCard preview={archivePreview} /> : null}
-      {archivePreview?.duplicate_conversation_id ? <div className="border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary"><p>系统中已有相同归档。默认会创建副本，不覆盖原记录。</p><Link href={`/conversations/${archivePreview.duplicate_conversation_id}`} className="mt-2 inline-block font-medium text-accent underline">打开已有对话</Link></div> : null}
+      {archivePreview?.duplicate_conversation_id ? <div className="border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary"><p>{tr("系统中已有相同归档。默认会创建副本，不覆盖原记录。")}</p><Link href={`/conversations/${archivePreview.duplicate_conversation_id}`} className="mt-2 inline-block font-medium text-accent underline">{tr("打开已有对话")}</Link></div> : null}
       {commitResult && !pendingImportId ? <ImportCompletionSummary result={commitResult} onClose={() => onImportCommitted?.()} onOpenFirst={(conversationId) => { onImportCommitted?.(); router.push(`/conversations/${conversationId}`); }} /> : null}
     </section>
   );
@@ -211,21 +216,22 @@ function ImportCompletionSummary({
   onClose: () => void;
   onOpenFirst: (conversationId: string) => void;
 }) {
+  const tr = useImportCopy();
   const firstConversationId = result.conversation_ids[0] ?? null;
   const multiple = result.conversation_count > 1;
   const visibleIds = result.conversation_ids.slice(0, 8);
   return (
     <div role="status" data-testid="import-completion-summary" className="space-y-3 border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-4 text-sm text-primary">
       <div>
-        <p className="font-semibold text-accent">导入已完成</p>
-        <p className="mt-1 text-secondary">已提交 {result.conversation_count} 个对话，共 {result.message_count} 条消息。</p>
+        <p className="font-semibold text-accent">{tr("导入已完成")}</p>
+        <p className="mt-1 text-secondary">{tr("已提交 {0} 个对话，共 {1} 条消息。", result.conversation_count, result.message_count)}</p>
       </div>
-      {result.warnings.length ? <div className="border-l-2 border-[var(--warning)] pl-3 text-xs text-secondary"><p className="font-medium text-primary">导入提示</p><ul className="mt-1 list-disc space-y-1 pl-4">{result.warnings.slice(0, 4).map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul></div> : null}
-      {visibleIds.length ? <div className="space-y-1"><p className="text-xs font-medium text-secondary">{multiple ? "已导入的对话" : "已导入对话"}</p><div className="flex flex-wrap gap-x-3 gap-y-1">{visibleIds.map((conversationId, index) => <button key={conversationId} type="button" onClick={() => onOpenFirst(conversationId)} className="text-xs text-accent underline underline-offset-2 hover:text-primary">打开第 {index + 1} 条</button>)}</div>{result.conversation_ids.length > visibleIds.length ? <p className="text-xs text-secondary">另有 {result.conversation_ids.length - visibleIds.length} 个对话可在资料库中查看。</p> : null}</div> : null}
+      {result.warnings.length ? <div className="border-l-2 border-[var(--warning)] pl-3 text-xs text-secondary"><p className="font-medium text-primary">{tr("导入提示")}</p><ul className="mt-1 list-disc space-y-1 pl-4">{result.warnings.slice(0, 4).map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul></div> : null}
+      {visibleIds.length ? <div className="space-y-1"><p className="text-xs font-medium text-secondary">{multiple ? tr("已导入的对话") : tr("已导入对话")}</p><div className="flex flex-wrap gap-x-3 gap-y-1">{visibleIds.map((conversationId, index) => <button key={conversationId} type="button" onClick={() => onOpenFirst(conversationId)} className="text-xs text-accent underline underline-offset-2 hover:text-primary">{tr("打开第 {0} 条", index + 1)}</button>)}</div>{result.conversation_ids.length > visibleIds.length ? <p className="text-xs text-secondary">{tr("另有")}{result.conversation_ids.length - visibleIds.length} {tr("个对话可在资料库中查看。")}</p> : null}</div> : null}
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        {multiple ? <Link href="/" onClick={onClose} className="btn-primary min-h-9 px-3 text-sm font-medium">查看导入的对话</Link> : firstConversationId ? <button type="button" onClick={() => onOpenFirst(firstConversationId)} className="btn-primary min-h-9 px-3 text-sm font-medium">打开对话</button> : null}
-        {multiple && firstConversationId ? <button type="button" onClick={() => onOpenFirst(firstConversationId)} className="btn-secondary min-h-9 px-3 text-sm font-medium">打开第一条</button> : null}
-        <button type="button" onClick={onClose} className="btn-secondary min-h-9 px-3 text-sm font-medium">关闭</button>
+        {multiple ? <Link href="/" onClick={onClose} className="btn-primary min-h-9 px-3 text-sm font-medium">{tr("查看导入的对话")}</Link> : firstConversationId ? <button type="button" onClick={() => onOpenFirst(firstConversationId)} className="btn-primary min-h-9 px-3 text-sm font-medium">{tr("打开对话")}</button> : null}
+        {multiple && firstConversationId ? <button type="button" onClick={() => onOpenFirst(firstConversationId)} className="btn-secondary min-h-9 px-3 text-sm font-medium">{tr("打开第一条")}</button> : null}
+        <button type="button" onClick={onClose} className="btn-secondary min-h-9 px-3 text-sm font-medium">{tr("关闭")}</button>
       </div>
     </div>
   );
@@ -235,12 +241,12 @@ function ModeButton({ active, icon: Icon, label, description, onClick, initialFo
   return <button type="button" data-dialog-initial-focus={initialFocus ? "true" : undefined} aria-pressed={active} onClick={onClick} className={`min-w-0 rounded-md px-3 py-2 text-left transition-colors ${active ? "bg-surface text-primary shadow-sm" : "text-secondary hover:text-primary"}`}><span className="flex items-center gap-2 text-sm font-medium"><Icon className="h-4 w-4 shrink-0" /><span>{label}</span></span><span className="mt-0.5 block text-xs leading-5 text-secondary">{description}</span></button>;
 }
 
-function validateFiles(files: File[], mode: ImportMode): string | null {
+function validateFiles(files: File[], mode: ImportMode, tr: ImportCopy): string | null {
   if (!files.length) return null;
   const extensions = files.map((file) => fileExtension(file.name));
-  if (mode === "archive") return files.length === 1 && extensions[0] === ".cr" ? null : ".cr 归档必须单独导入。";
-  if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"].includes(extension))) return "仅支持 JSON、Markdown 或文本源文件。";
-  if (files.length > 500) return "一次最多分析 500 个文件。";
+  if (mode === "archive") return files.length === 1 && extensions[0] === ".cr" ? null : tr(".cr 归档必须单独导入。");
+  if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"].includes(extension))) return tr("仅支持 JSON、Markdown 或文本源文件。");
+  if (files.length > 500) return tr("一次最多分析 500 个文件。");
   return null;
 }
 
@@ -252,4 +258,4 @@ function fileExtension(filename: string): string {
   return dot >= 0 ? lower.slice(dot) : "";
 }
 
-function ErrorLine({ message }: { message: string }) { return <div role="alert" className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{message}</div>; }
+function ErrorLine({ message }: { message: string }) { const tr = useImportCopy(); return <div role="alert" className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{importErrorMessage(message, tr)}</div>; }

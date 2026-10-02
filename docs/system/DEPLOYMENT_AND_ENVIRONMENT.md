@@ -1,5 +1,17 @@
 # 部署与运行环境
 
+2026-10-02 未部署的版本与诊断扩展：生产镜像构建参数 `BUILD_REVISION` 为完整40位
+小写 Git commit；省略则帮助页显示未知，非法非空值拒绝构建。GitHub workflow
+将当前 `GITHUB_SHA` 注入 API/Web，production Compose 本机构建也传递该可选参数。
+API 将其写入镜像内 `app/build_metadata.json`；Web 将其编译到客户端配置。
+运行时不读取环境值来代替构建来源。独立镜像检查同时核对应用内版本与 OCI label。
+本地生成的 API metadata 被 Git 忽略。新增 `/api/app-info` 与 Root 专用
+`/api/admin/runtime-status` 不改变 health、loopback运维入口、数据库migration或
+离线包；详见 [Observability Contract](OBSERVABILITY_CONTRACT.md)。不需要新增运行时
+secret，发布和部署仍是独立步骤。
+
+2026-10-02 未部署的归档扩展：系统导出 `.cr v5` 保留 v4 显式归属映射和旧 v5 无配置扩展兼容；新配置 schema 1 保存个人授权、系统发布、偏好及功能/访问策略。普通账户恢复后重设密码，目标 Root 凭据不变；启用邮箱验证的策略恢复前要求目标已配置 SMTP。个人恢复新增幂等 receipt migration，当前唯一 head 为 `20261002_0042`（包含归属选择表）。上传沿用 `BUNDLE_MAX_COMPRESSED_BYTES`（默认 512 MiB）；Nginx 为精确路径 `/api/me/archive/previews` 与 `/api/system/archive/previews` 添加 520 MiB multipart 上限并直连 loopback FastAPI，避免 Next rewrite 缓冲截断。导出现在同时验证上传/展开大小、文件/对象数量、单对象及 JSONL/manifest 限制；容量失败需一致核对 `BUNDLE_MAX_*`、`CANJSON_MAX_LINE_BYTES` 和网关上限后重试，不静默忽略附件。没有新增环境变量；后续发布需同步该网关规则，当前没有部署。系统预检、持久归属映射和恢复已接入 worker 与管理员页面，详情见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。应用归档不能替代部署前服务器备份。
+
 ## Current deployed snapshot (2026-09-30)
 
 Production runs source `5877558070311d1728974198f37a4500d25233b1` from Actions
@@ -321,6 +333,13 @@ this working-tree implementation. Downgrade removes pending verification grants
 and per-user rule preferences; prefer the established pre-release backup for
 rollback rather than treating schema downgrade as data restoration.
 
+Stage-six regular-account email changes reuse this SMTP configuration and the
+existing EMAIL_CHANGE grant purpose. They require matching Web/API code, but
+no additional migration or environment keys; the single head stays
+`20261001_0040`. Root administrator email remains deployment-managed. SMTP
+presence enables the form, while delivery failure remains a retryable error
+and never changes the old address. This addition is not deployed.
+
 `20260930_0035` follows `0034` on the same migration chain. It backfills existing
 format revisions as personal grants before replacing the source-owner cascade
 with SET NULL; it does not publish any existing format. Equivalent complete
@@ -334,7 +353,7 @@ a full rollback rather than deleting retained formats to force downgrade.
 leases. Existing automatically selected DELETE candidates reset to KEEP for
 re-review; no message content is rewritten. Deploy matching Web/API/worker so
 protected-range checks, saved decisions and preview tokens agree. The single
-working-tree head is now `20261001_0040`; production remains unchanged.
+working-tree head is now `20261002_0042`; production remains unchanged.
 
 `20260930_0037` follows `0036`, adding per-account revision/context-bound cleanup
 exceptions with owner/scope uniqueness. It changes no existing message content.

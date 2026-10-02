@@ -24,6 +24,7 @@ function MessageItemComponent({
   onDelete,
   scrollRootMode = "element",
   attachmentAccess = { kind: "owner" },
+  userLabel,
 }: {
   message: MessageListItem;
   onChanged?: (message?: MessageListItem, conversationRevision?: number) => Promise<void> | void;
@@ -38,6 +39,7 @@ function MessageItemComponent({
   onDelete?: (message: MessageListItem) => void | Promise<void>;
   scrollRootMode?: "element" | "window";
   attachmentAccess?: AttachmentAccess;
+  userLabel?: string;
 }) {
   const { t, resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -180,7 +182,7 @@ function MessageItemComponent({
       <div className="min-w-0 w-full max-w-full flex-1">
         <div data-message-meta className="relative mb-2 flex min-h-10 items-center gap-2">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${isUser ? "bg-[var(--accent-soft)] text-accent" : "bg-[var(--text)] text-[var(--surface)]"}`}>{isUser ? "U" : "CR"}</span>
-          <span className="text-xs font-semibold text-secondary">{isUser ? t("you") : "Assistant"} - #{message.ordinal ?? message.order_key}</span>
+          <span className="text-xs font-semibold text-secondary">{isUser ? userLabel ?? t("you") : "Assistant"} - #{message.ordinal ?? message.order_key}</span>
           {!isUser ? <span className="hidden font-mono text-[11px] text-secondary group-hover:inline">{message.order_key}</span> : null}
           {hasActions ? (
             <>
@@ -243,6 +245,7 @@ function MessageItemComponent({
 
 export const MessageItem = memo(MessageItemComponent, (previous, next) => (
   previous.message === next.message
+  && previous.userLabel === next.userLabel
   && previous.readOnly === next.readOnly
   && previous.selected === next.selected
   && previous.highlightTargetId === next.highlightTargetId
@@ -251,6 +254,7 @@ export const MessageItem = memo(MessageItemComponent, (previous, next) => (
   && previous.onDelete === next.onDelete
   && previous.scrollRootMode === next.scrollRootMode
   && previous.attachmentAccess?.kind === next.attachmentAccess?.kind
+  && (previous.attachmentAccess?.kind !== "admin" || next.attachmentAccess?.kind !== "admin" || previous.attachmentAccess.userId === next.attachmentAccess.userId)
   && (previous.attachmentAccess?.kind !== "share" || next.attachmentAccess?.kind !== "share" || previous.attachmentAccess.token === next.attachmentAccess.token)
 ));
 

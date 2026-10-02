@@ -71,6 +71,8 @@ import type {
   ShareCreateInput,
   ShareCreateResponse,
   ShareRead,
+  OwnedSharePage,
+  ShareBatchResult,
   ShareUpdateInput,
   SharedConversationBootstrap,
   TocResponse,
@@ -109,8 +111,8 @@ export async function getCapabilities(): Promise<CapabilitiesRead> {
   return fetchJson<CapabilitiesRead>("/api/capabilities");
 }
 
-export async function getAttachment(attachmentId: string, shareToken?: string): Promise<AttachmentRead> {
-  const path = shareToken
+export async function getAttachment(attachmentId: string, shareToken?: string, adminUserId?: string): Promise<AttachmentRead> {
+  const path = adminUserId ? `/api/admin/content/users/${encodeURIComponent(adminUserId)}/attachments/${attachmentId}` : shareToken
     ? `/api/shared/${encodeURIComponent(shareToken)}/attachments/${attachmentId}`
     : `/api/attachments/${attachmentId}`;
   return fetchJson<AttachmentRead>(path);
@@ -984,12 +986,12 @@ export async function queueConversationAttachmentBundleExport(
   });
 }
 
-export async function queueSystemArchiveExport(includeArchived: boolean): Promise<BackgroundTaskRead> {
+export async function queueSystemArchiveExport(includeArchived: boolean, key?: string): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>("/api/system/archive/exports", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Idempotency-Key": `system-archive-${includeArchived}-${Date.now()}`,
+      "Idempotency-Key": key ?? `system-archive-${includeArchived}-${Date.now()}`,
     },
     body: JSON.stringify({ include_archived: includeArchived }),
   });
@@ -1026,6 +1028,101 @@ export async function revokeShare(shareId: string): Promise<ShareRead> {
 
 export async function updateShare(shareId: string, input: ShareUpdateInput): Promise<ShareRead> {
   return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}`, jsonRequest("PATCH", input)));
+}
+
+export function getPersonalArchiveCapabilities(): Promise<{ maximum_upload_bytes: number; upload_lifetime_hours: number }> {
+  return fetchJson("/api/me/archive/capabilities");
+}
+
+export function getPersonalArchiveTasks(before?: string): Promise<BackgroundTaskRead[]> {
+  return fetchJson(`/api/me/archive/tasks?limit=30${before ? `&before=${encodeURIComponent(before)}` : ""}`);
+}
+
+export function queuePersonalArchiveExport(includeArchived: boolean, key: string): Promise<BackgroundTaskRead> {
+  return fetchJson("/api/me/archive/exports", {
+    ...jsonRequest("POST", { include_archived: includeArchived }),
+    headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+  });
+}
+
+export function confirmPersonalArchiveRestore(previewId: string, digest: string, includePreferences: boolean): Promise<BackgroundTaskRead> {
+  return fetchJson("/api/me/archive/restores", jsonRequest("POST", {
+    preview_job_id: previewId, content_digest: digest, include_preferences: includePreferences,
+  }));
+}
+
+export function discardPersonalArchiveUpload(previewId: string): Promise<void> {
+  return fetchJson(`/api/me/archive/previews/${encodeURIComponent(previewId)}`, { method: "DELETE" });
+}
+
+export function uploadPersonalArchive(file: File, key: string, onProgress: (percent: number) => void): { promise: Promise<BackgroundTaskRead>; cancel: () => void } {
+  return uploadDataArchive("/api/me/archive/previews", file, key, onProgress);
+}
+
+export function uploadSystemArchive(file: File, key: string, onProgress: (percent: number) => void): { promise: Promise<BackgroundTaskRead>; cancel: () => void } {
+  return uploadDataArchive("/api/system/archive/previews", file, key, onProgress);
+}
+
+function uploadDataArchive(url: string, file: File, key: string, onProgress: (percent: number) => void): { promise: Promise<BackgroundTaskRead>; cancel: () => void } {
+  const generation = authenticationGeneration(), request = new XMLHttpRequest();
+  const promise = new Promise<BackgroundTaskRead>((resolve, reject) => {
+    request.open("POST", url);
+    request.setRequestHeader("Idempotency-Key", key);
+    request.upload.addEventListener("progress", (event) => { if (event.lengthComputable) onProgress(Math.round(event.loaded * 100 / event.total)); });
+    request.addEventListener("load", () => {
+      if (generation !== authenticationGeneration()) { reject(new Error("Account changed during upload.")); return; }
+      let payload: unknown;
+      try { payload = JSON.parse(request.responseText); } catch { payload = null; }
+      if (request.status === 401) notifyAuthenticationFailure(generation);
+      if (request.status >= 200 && request.status < 300) resolve(payload as BackgroundTaskRead);
+      else reject(new ApiRequestError(readApiError(payload, request.status), request.status, url));
+    });
+    request.addEventListener("error", () => reject(new Error("Archive upload interrupted. Reconnect and retry.")));
+    request.addEventListener("abort", () => reject(new DOMException("Upload cancelled.", "AbortError")));
+    const body = new FormData(); body.append("file", file); request.send(body);
+  });
+  return { promise, cancel: () => request.abort() };
+}
+
+export type ArchiveAccountTarget = { id: string; email: string | null; display_name: string | null; role: string };
+export type ArchiveAccountChoice = { source_key: string; role: string; email: string | null; display_name: string | null;
+  decision: "ROOT" | "NEW" | "EXISTING" | "UNSET"; target: ArchiveAccountTarget | null; suggested_target: ArchiveAccountTarget | null };
+export type ArchiveAccountPage = { total: number; matched: number; unresolved: number; offset: number; limit: number;
+  revision: string; items: ArchiveAccountChoice[] };
+export function getSystemArchiveCapabilities(): Promise<{ maximum_upload_bytes: number; upload_lifetime_hours: number;
+  empty_instance: boolean; restore_blocked_reason: string | null; smtp_configured: boolean }> {
+  return fetchJson("/api/system/archive/capabilities");
+}
+export function getSystemArchiveTasks(before?: string): Promise<BackgroundTaskRead[]> {
+  return fetchJson(`/api/system/archive/tasks?limit=30${before ? `&before=${encodeURIComponent(before)}` : ""}`);
+}
+export function getArchiveAccountChoices(previewId: string, offset: number, unresolvedOnly: boolean): Promise<ArchiveAccountPage> {
+  return fetchJson(`/api/system/archive/previews/${encodeURIComponent(previewId)}/accounts?offset=${offset}&limit=20&unresolved_only=${unresolvedOnly}`);
+}
+export function findArchiveAccountTargets(q: string, offset = 0): Promise<{ total: number; items: ArchiveAccountTarget[] }> {
+  return fetchJson(`/api/system/archive/account-targets?q=${encodeURIComponent(q)}&offset=${offset}&limit=20`);
+}
+export function saveArchiveAccountChoice(previewId: string, sourceKey: string, revision: string, target: string | null): Promise<{ revision: string }> {
+  return fetchJson(`/api/system/archive/previews/${encodeURIComponent(previewId)}/accounts/${encodeURIComponent(sourceKey)}`, jsonRequest("PATCH", {
+    base_revision: revision, decision: target ? "EXISTING" : "NEW", target_user_id: target,
+  }));
+}
+export function confirmSystemArchiveRestore(previewId: string, digest: string, revision: string): Promise<BackgroundTaskRead> {
+  return fetchJson("/api/system/archive/restores", jsonRequest("POST", { preview_job_id: previewId, content_digest: digest, ownership_revision: revision }));
+}
+export function discardSystemArchiveUpload(previewId: string): Promise<void> {
+  return fetchJson(`/api/system/archive/previews/${encodeURIComponent(previewId)}`, { method: "DELETE" });
+}
+
+export async function getMyShares(input: { status: string; q: string; conversationId?: string; offset: number }): Promise<OwnedSharePage> {
+  const query = new URLSearchParams({ status: input.status, q: input.q, offset: String(input.offset), limit: "20" });
+  if (input.conversationId) query.set("conversation_id", input.conversationId);
+  const result = await fetchJson<OwnedSharePage>(`/api/shares?${query}`);
+  return { ...result, items: result.items.map(normalizeShareUrl) };
+}
+
+export function revokeShares(shareIds: string[]): Promise<{ results: ShareBatchResult[] }> {
+  return fetchJson(`/api/shares/revoke-batch`, jsonRequest("POST", { share_ids: shareIds }));
 }
 
 export async function getSharedConversation(token: string): Promise<SharedConversationBootstrap> {

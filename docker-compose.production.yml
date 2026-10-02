@@ -29,6 +29,8 @@ services:
     image: ${API_IMAGE:-chat-reader-api:latest}
     build:
       context: ./apps/api
+      args:
+        BUILD_REVISION: ${BUILD_REVISION:-}
     restart: "no"
     command: ["sh", "-c", "alembic upgrade head && python -m scripts.owner_auth ensure-configured"]
     environment: &api-environment
@@ -98,6 +100,8 @@ services:
     image: ${API_IMAGE:-chat-reader-api:latest}
     build:
       context: ./apps/api
+      args:
+        BUILD_REVISION: ${BUILD_REVISION:-}
     restart: unless-stopped
     environment: *api-environment
     volumes:
@@ -134,6 +138,8 @@ services:
     image: ${API_IMAGE:-chat-reader-api:latest}
     build:
       context: ./apps/api
+      args:
+        BUILD_REVISION: ${BUILD_REVISION:-}
     restart: unless-stopped
     command: ["python", "-m", "app.workers.import_worker"]
     mem_limit: ${IMPORT_WORKER_MEMORY_LIMIT:-640m}
@@ -171,6 +177,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         API_INTERNAL_URL: http://api:8000
+        BUILD_REVISION: ${BUILD_REVISION:-}
         COMPLEX_ATTACHMENT_PREVIEW_ENABLED: ${COMPLEX_ATTACHMENT_PREVIEW_ENABLED:-false}
         ATTACHMENT_PREVIEW_ORIGIN: ${ATTACHMENT_PREVIEW_ORIGIN:-}
     restart: unless-stopped

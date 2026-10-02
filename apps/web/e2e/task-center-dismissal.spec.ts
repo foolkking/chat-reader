@@ -217,15 +217,15 @@ test("batch import completion reports the full scope and waits for an explicit d
 
   const summary = page.getByTestId("import-completion-summary");
   await expect(summary).toBeVisible();
-  await expect(summary).toContainText("已提交 2 个对话，共 4 条消息");
+  await expect(summary).toContainText(/已提交 2 个对话，共 4 条消息|Imported 2 conversations with 4 messages/);
   await expect(summary).toContainText("One duplicate was skipped.");
-  await expect(summary.getByRole("link", { name: "查看导入的对话" })).toHaveAttribute("href", "/");
-  await expect(summary.getByRole("button", { name: "打开第一条" })).toBeVisible();
-  await expect(summary.getByRole("button", { name: "打开第 2 条" })).toBeVisible();
-  await expect(summary.getByRole("button", { name: "关闭" })).toBeVisible();
+  await expect(summary.getByRole("link", { name: /查看导入的对话|View imported conversations/ })).toHaveAttribute("href", "/");
+  await expect(summary.getByRole("button", { name: /打开第一条|Open first conversation/ })).toBeVisible();
+  await expect(summary.getByRole("button", { name: /^(打开第 2 条|Open conversation 2)$/ })).toBeVisible();
+  await expect(summary.getByRole("button", { name: /^(关闭|Close)$/ })).toBeVisible();
   await expect(page).toHaveURL("/");
 
-  await summary.getByRole("button", { name: "打开第一条" }).click();
+  await summary.getByRole("button", { name: /打开第一条|Open first conversation/ }).click();
   await expect(page).toHaveURL(`/conversations/${conversationIds[0]}`);
 });
 

@@ -6,7 +6,7 @@ import { PreferencesPanel, type SettingsCategory } from "./preferences-panel";
 import { SettingsFocusedDialog } from "./settings-focused-dialog";
 import { usePreferences, useTranslations } from "./preferences-provider";
 
-export function SidebarPreferences({ libraryMode = false, onlineHref = "/" }: { libraryMode?: boolean; onlineHref?: string }) {
+export function SidebarPreferences({ libraryMode = false, onlineHref = "/", onNavigate }: { libraryMode?: boolean; onlineHref?: string; onNavigate?: () => void }) {
   const [open, setOpen] = useState(false);
   const [focusedCategory, setFocusedCategory] = useState<SettingsCategory | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -44,7 +44,7 @@ export function SidebarPreferences({ libraryMode = false, onlineHref = "/" }: { 
         <span className="min-w-0 flex-1 text-left">{open ? (resolvedLocale === "zh-CN" ? "收回设置" : "Collapse settings") : t("settings")}</span>
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
       </button>
-      {focusedCategory ? <SettingsFocusedDialog category={focusedCategory} onClose={() => { setFocusedCategory(null); setOpen(true); }} restoreFocus={() => categoryTriggerRef.current?.isConnected ? categoryTriggerRef.current : triggerRef.current} /> : null}
+      {focusedCategory ? <SettingsFocusedDialog category={focusedCategory} onClose={() => { setFocusedCategory(null); setOpen(true); }} onNavigate={() => { setOpen(false); onNavigate?.(); }} restoreFocus={() => categoryTriggerRef.current?.isConnected ? categoryTriggerRef.current : triggerRef.current} /> : null}
     </div>
   );
 }

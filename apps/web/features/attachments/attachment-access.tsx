@@ -5,7 +5,8 @@ import { createContext, useContext } from "react";
 export type AttachmentAccess =
   | { kind: "owner" }
   | { kind: "share"; token: string }
-  | { kind: "offline" };
+  | { kind: "offline" }
+  | { kind: "admin"; userId: string };
 
 const AttachmentAccessContext = createContext<AttachmentAccess>({ kind: "owner" });
 

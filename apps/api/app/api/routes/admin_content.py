@@ -23,7 +23,7 @@ from app.models.user import User
 from app.schemas.attachment import AttachmentRead
 from app.schemas.message import ReaderTurnResponse
 from app.services.assets.attachment_service import AttachmentAccessError, attachment_content, attachment_read
-from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn
+from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn_from_query
 
 
 router = APIRouter(prefix="/api/admin/content", tags=["admin-content"])
@@ -119,24 +119,24 @@ def search_admin_content(
         query = query.filter(Conversation.imported_at <= created_before)
     clean_q = (q or "").strip()
     if clean_q:
-        like = f"%{clean_q}%"
+        like = _literal_like(clean_q)
         query = query.filter(or_(
-            Conversation.display_title.ilike(like),
-            Conversation.title.ilike(like),
+            Conversation.display_title.ilike(like, escape="\\"),
+            Conversation.title.ilike(like, escape="\\"),
             exists().where(
                 (SearchDocument.conversation_id == Conversation.id)
-                & (SearchDocument.search_text.ilike(like))
+                & (SearchDocument.plain_text.ilike(like, escape="\\"))
             ),
         ))
     total = query.count()
-    rows = query.order_by(Conversation.sort_time.desc().nullslast(), Conversation.imported_at.desc()).offset(offset).limit(limit).all()
+    rows = query.order_by(Conversation.sort_time.desc().nullslast(), Conversation.imported_at.desc(), Conversation.id.desc()).offset(offset).limit(limit).all()
     items = []
     for conversation, user in rows:
         snippet = conversation.summary or conversation.first_user_message
         if clean_q:
             hit = db.query(SearchDocument.plain_text).filter(
                 SearchDocument.conversation_id == conversation.id,
-                SearchDocument.search_text.ilike(f"%{clean_q}%"),
+                SearchDocument.plain_text.ilike(_literal_like(clean_q), escape="\\"),
             ).order_by(SearchDocument.indexed_at.desc()).first()
             if hit:
                 snippet = _bounded_snippet(hit[0], clean_q)
@@ -152,17 +152,9 @@ def search_admin_content(
             "updated_at": conversation.updated_at,
             "snippet": (snippet or "")[:360],
         })
-        if clean_q:
-            _audit(
-                db,
-                request,
-                actor_user_id=actor.id,
-                action="VIEW_USER_CONVERSATION",
-                target_user_id=user.id,
-                resource_type="CONVERSATION",
-                resource_id=conversation.id,
-            )
-    if clean_q and items:
+        _audit(db, request, actor_user_id=actor.id, action="VIEW_USER_CONVERSATION",
+               target_user_id=user.id, resource_type="CONVERSATION", resource_id=conversation.id)
+    if items:
         db.commit()
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
@@ -191,16 +183,19 @@ def list_user_conversations(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
-    _admin(request, db)
+    actor = _admin(request, db)
     _target_user(db, user_id)
     query = db.query(Conversation).filter(
         Conversation.owner_user_id == user_id, Conversation.deleted_at.is_(None)
     )
     if (q or "").strip():
-        like = f"%{q.strip()}%"
-        query = query.filter(or_(Conversation.display_title.ilike(like), Conversation.title.ilike(like)))
+        like = _literal_like(q.strip())
+        query = query.filter(or_(Conversation.display_title.ilike(like, escape="\\"), Conversation.title.ilike(like, escape="\\")))
     total = query.count()
-    rows = query.order_by(Conversation.sort_time.desc().nullslast(), Conversation.imported_at.desc()).offset(offset).limit(limit).all()
+    rows = query.order_by(Conversation.sort_time.desc().nullslast(), Conversation.imported_at.desc(), Conversation.id.desc()).offset(offset).limit(limit).all()
+    _audit(db, request, actor_user_id=actor.id, action="LIST_USER_CONVERSATIONS", target_user_id=user_id,
+           resource_type="USER", resource_id=user_id)
+    db.commit()
     return {"items": [{
         "id": str(row.id), "title": row.display_title, "status": row.status,
         "message_count": row.message_count, "turn_count": row.turn_count,
@@ -221,7 +216,9 @@ def read_user_conversation(
     _target_user(db, user_id)
     _conversation(db, user_id, conversation_id)
     try:
-        result = load_reader_turn(db, conversation_id, anchor_message_id)
+        result = load_reader_turn_from_query(db, conversation_id,
+            db.query(Message).filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False)),
+            anchor_message_id, attachment_content_prefix=f"/api/admin/content/users/{user_id}/attachments")
     except (ValueError, ReaderTurnHydrationError) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     _audit(db, request, actor_user_id=actor.id, action="VIEW_USER_CONVERSATION", target_user_id=user_id,
@@ -239,7 +236,7 @@ def list_user_attachments(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
-    _admin(request, db)
+    actor = _admin(request, db)
     _target_user(db, user_id)
     query = db.query(Attachment).options(joinedload(Attachment.asset_object)).join(
         Conversation, Conversation.id == Attachment.conversation_id
@@ -249,14 +246,17 @@ def list_user_attachments(
         Attachment.deleted_at.is_(None),
     )
     if (q or "").strip():
-        like = f"%{q.strip()}%"
-        query = query.filter(or_(Attachment.display_name.ilike(like), Attachment.original_filename.ilike(like)))
+        like = _literal_like(q.strip())
+        query = query.filter(or_(Attachment.display_name.ilike(like, escape="\\"), Attachment.original_filename.ilike(like, escape="\\")))
     total = query.count()
     rows = query.order_by(Attachment.created_at.desc(), Attachment.id).offset(offset).limit(limit).all()
     items = []
     for row in rows:
         payload = attachment_read(row, content_prefix=f"/api/admin/content/users/{user_id}/attachments").model_dump()
         items.append(payload)
+    _audit(db, request, actor_user_id=actor.id, action="LIST_USER_ATTACHMENTS", target_user_id=user_id,
+           resource_type="USER", resource_id=user_id)
+    db.commit()
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
@@ -309,3 +309,43 @@ def _bounded_snippet(value: str, query: str) -> str:
     start = max(0, index - 120)
     end = min(len(value), index + len(query) + 220)
     return ("…" if start else "") + value[start:end] + ("…" if end < len(value) else "")
+
+
+def _literal_like(value: str) -> str:
+    return "%" + value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+@router.get("/users/{user_id}/conversations/{conversation_id}")
+def user_conversation_detail(user_id: uuid.UUID, conversation_id: uuid.UUID, request: Request,
+                             db: Session = Depends(get_db)) -> dict:
+    actor = _admin(request, db)
+    row = _conversation(db, user_id, conversation_id)
+    _audit(db, request, actor_user_id=actor.id, action="VIEW_USER_CONVERSATION", target_user_id=user_id,
+           resource_type="CONVERSATION", resource_id=conversation_id)
+    db.commit()
+    return {"id": str(row.id), "title": row.display_title or row.title, "message_count": row.message_count,
+            "turn_count": row.turn_count, "status": row.status}
+
+
+@router.get("/users/{user_id}/conversations/{conversation_id}/search")
+def search_user_messages(user_id: uuid.UUID, conversation_id: uuid.UUID, request: Request,
+                         q: str = Query(min_length=1, max_length=256),
+                         offset: int = Query(default=0, ge=0), limit: int = Query(default=20, ge=1, le=100),
+                         db: Session = Depends(get_db)) -> dict:
+    actor = _admin(request, db)
+    _conversation(db, user_id, conversation_id)
+    if not q.strip():
+        raise HTTPException(status_code=422, detail="Enter a search term.")
+    query = db.query(SearchDocument, Message).join(Message, Message.id == SearchDocument.message_id).filter(
+        Message.conversation_id == conversation_id, Message.is_deleted.is_(False),
+        SearchDocument.document_type == "message", SearchDocument.message_version_id == Message.current_version_id,
+        SearchDocument.plain_text.ilike(_literal_like(q.strip()), escape="\\"),
+    )
+    total = query.count()
+    items = [{"message_id": str(message.id), "role": message.role,
+              "snippet": _bounded_snippet(doc.plain_text, q.strip())}
+             for doc, message in query.order_by(Message.order_key, SearchDocument.id).offset(offset).limit(limit).all()]
+    _audit(db, request, actor_user_id=actor.id, action="SEARCH_USER_CONVERSATION", target_user_id=user_id,
+           resource_type="CONVERSATION", resource_id=conversation_id)
+    db.commit()
+    return {"items": items, "total": total, "limit": limit, "offset": offset}

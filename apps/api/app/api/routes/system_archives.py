@@ -2,8 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile, status
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.routes.tasks import background_job_read
@@ -12,10 +12,11 @@ from app.core.database import get_db
 from app.schemas.task import BackgroundTaskRead
 from app.services.background_jobs import queue_system_archive_export
 from app.services.exporting.system_archive import SystemArchiveError, restore_system_archive
-from app.services.ownership import ownership_scope_from_request
+from app.services.ownership import LEGACY_OWNER_USER_ID, ownership_scope_from_request
 from app.api.routes.admin_access import _admin
 from app.models.administration import SystemBackupRecord
 from app.models.user import User
+from app.models.auth import AuthPrincipal
 from app.services.administration import record_admin_audit, request_id_from
 
 
@@ -35,16 +36,20 @@ class SystemArchiveRestoreResponse(BaseModel):
 def queue_system_archive(
     payload: SystemArchiveExportRequest,
     request: Request,
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=160),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
     actor = _require_admin_if_enabled(request, db)
-    job = queue_system_archive_export(
-        db,
-        include_archived=payload.include_archived,
-        idempotency_key=idempotency_key,
-        ownership_scope=ownership_scope_from_request(request),
-    )
+    try:
+        job = queue_system_archive_export(
+            db,
+            include_archived=payload.include_archived,
+            idempotency_key=idempotency_key,
+            ownership_scope=ownership_scope_from_request(request),
+        )
+    except SystemArchiveError as exc:
+        db.rollback()
+        raise HTTPException(exc.status_code, str(exc)) from exc
     if actor is not None:
         record = db.query(SystemBackupRecord).filter(SystemBackupRecord.background_job_id == job.id).one_or_none()
         if record is None:
@@ -74,9 +79,20 @@ def queue_system_archive(
 def restore_system_archive_route(
     request: Request,
     file: UploadFile = File(...),
+    owner_mapping: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> SystemArchiveRestoreResponse:
     actor = _require_admin_if_enabled(request, db)
+    mapping = None
+    if owner_mapping is not None:
+        try:
+            if len(owner_mapping) > 64 * 1024:
+                raise ValueError("Ownership mapping is too large.")
+            mapping = {key: str(value) for key, value in TypeAdapter(dict[str, uuid.UUID]).validate_json(owner_mapping).items()}
+        except (ValidationError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail="Invalid ownership mapping.") from exc
+    legacy_root = db.get(AuthPrincipal, "owner") if actor is None else None
+    target_root_id = actor.id if actor else (legacy_root.user_id if legacy_root else LEGACY_OWNER_USER_ID)
     import_root = Path(get_settings().import_storage_dir).resolve()
     temp_dir = (import_root / "system-restore-temp").resolve()
     if not temp_dir.is_relative_to(import_root):
@@ -103,7 +119,7 @@ def restore_system_archive_route(
                 if written > get_settings().bundle_max_compressed_bytes:
                     raise HTTPException(status_code=413, detail="System archive exceeds the upload size limit.")
                 destination.write(chunk)
-        restored = restore_system_archive(db, path)
+        restored = restore_system_archive(db, path, target_root_id=target_root_id, owner_mapping=mapping)
         if operation is not None and actor is not None:
             operation = db.get(SystemBackupRecord, operation.id)
             operation.status = "COMPLETED"

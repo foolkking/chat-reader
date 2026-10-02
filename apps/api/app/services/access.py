@@ -90,22 +90,23 @@ def create_invitation(
 
 
 def invitation_for_token(db: Session, token: str, settings: Settings, *, now: datetime | None = None) -> AccountInvitation | None:
-    now = now or utc_now()
     try:
         digest = token_digest(token, settings)
     except (UnicodeEncodeError, ValueError):
         return None
-    row = db.query(AccountInvitation).filter(AccountInvitation.token_digest == digest).one_or_none()
+    row = db.query(AccountInvitation).filter(AccountInvitation.token_digest == digest).with_for_update().populate_existing().one_or_none()
+    now = utc_now() if now is None else now
     if row is None or row.revoked_at is not None or row.used_at is not None or _utc(row.expires_at) <= now:
         return None
     return row
 
 
 def consume_invitation(invitation: AccountInvitation, user_id: uuid.UUID, *, now: datetime | None = None) -> None:
-    if invitation.used_at is not None or invitation.revoked_at is not None:
+    now = now or utc_now()
+    if invitation.used_at is not None or invitation.revoked_at is not None or _utc(invitation.expires_at) <= now:
         raise ValueError("Invitation is no longer valid.")
     invitation.used_by_user_id = user_id
-    invitation.used_at = now or utc_now()
+    invitation.used_at = now
 
 
 def disable_user(db: Session, user: User, disabled: bool) -> None:
@@ -185,9 +186,11 @@ def consume_password_reset(db: Session, settings: Settings, token: str, new_pass
     grant = db.query(PasswordResetGrant).filter(PasswordResetGrant.token_digest == digest).one_or_none()
     if grant is None or grant.used_at is not None or grant.revoked_at is not None or _utc(grant.expires_at) <= now:
         raise ValueError("Password reset link is invalid or expired.")
-    user = db.get(User, grant.user_id)
-    principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == grant.user_id).one_or_none()
-    if user is None or principal is None or not user.can_login:
+    user = db.query(User).filter(User.id == grant.user_id).with_for_update().populate_existing().one_or_none()
+    principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == grant.user_id).with_for_update().populate_existing().one_or_none()
+    db.refresh(grant)
+    if (user is None or principal is None or not user.can_login or grant.used_at is not None
+            or grant.revoked_at is not None or _utc(grant.expires_at) <= utc_now()):
         raise ValueError("Password reset link is invalid or expired.")
     principal.password_hash = hash_password(new_password)
     principal.credential_version += 1

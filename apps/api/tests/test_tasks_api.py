@@ -42,6 +42,12 @@ def test_active_tasks_include_only_terminal_results_inside_the_retention_window(
             phase="committed",
             completed_at=now - timedelta(minutes=11),
         )
+        pending_cleanup = BackgroundJob(job_type="user_account_delete", status="committed", phase="completed",
+            completed_at=now - timedelta(days=3),
+            payload={"account_cleanup_keys": ["objects/synthetic-pending"]},
+            result={"account_deleted": True, "asset_cleanup_status": "pending", "asset_cleanup_pending": 1})
+        finished_cleanup = BackgroundJob(job_type="user_account_delete", status="committed", phase="completed",
+            completed_at=now - timedelta(days=3), result={"account_deleted": True, "asset_cleanup_pending": 0})
         recent_import = ImportRecord(
             source_profile="fixture",
             source_fingerprint="recent",
@@ -56,10 +62,10 @@ def test_active_tasks_include_only_terminal_results_inside_the_retention_window(
             phase="failed",
             completed_at=now - timedelta(minutes=12),
         )
-        db.add_all((active, recent_job, expired_job, recent_import, expired_import))
+        db.add_all((active, recent_job, expired_job, recent_import, expired_import, pending_cleanup, finished_cleanup))
         db.commit()
-        expected_ids = {str(active.id), str(recent_job.id), str(recent_import.id)}
-        excluded_ids = {str(expired_job.id), str(expired_import.id)}
+        expected_ids = {str(active.id), str(recent_job.id), str(recent_import.id), str(pending_cleanup.id)}
+        excluded_ids = {str(expired_job.id), str(expired_import.id), str(finished_cleanup.id)}
     finally:
         db.close()
         generator.close()
@@ -72,6 +78,7 @@ def test_active_tasks_include_only_terminal_results_inside_the_retention_window(
     assert returned_ids == expected_ids
     assert returned_ids.isdisjoint(excluded_ids)
     assert payload[0]["status"] == "processing"
+    assert "account_cleanup_keys" not in response.text
 
 
 def test_noise_task_exposes_import_parent_relation(client: TestClient) -> None:

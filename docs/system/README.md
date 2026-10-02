@@ -13,6 +13,7 @@
 | [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) | 产品边界、模块和部署总览 |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | 当前能力与明确未实现项 |
 | [PAGE_AND_ROUTE_MAP.md](PAGE_AND_ROUTE_MAP.md) | 页面、覆盖层和跳转关系 |
+| [ADMINISTRATION_CONTRACT.md](ADMINISTRATION_CONTRACT.md) | 管理员用户目录、后台删除、只读完整内容与审计附件访问 |
 | [USER_ROLES_AND_PERMISSIONS.md](USER_ROLES_AND_PERMISSIONS.md) | 身份、能力凭证和权限边界 |
 | [USER_FLOWS.md](USER_FLOWS.md) | 主要端到端用户流程 |
 | [FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md) | 前端模块、状态和浏览器持久化 |

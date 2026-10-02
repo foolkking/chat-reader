@@ -113,6 +113,44 @@ export async function confirmEmailVerification(token: string): Promise<{ verifie
   return authMutation("/api/auth/email-verification/confirm", { token });
 }
 
+export type PendingEmailChange = { target_email: string; expires_at: string };
+export type EmailChangeState = { pending: PendingEmailChange | null; email_delivery_available: boolean };
+
+export function readEmailChange(): Promise<EmailChangeState> {
+  return authRequest("/api/auth/email-change");
+}
+
+export function requestEmailChange(newEmail: string, currentPassword: string): Promise<PendingEmailChange> {
+  return authMutation("/api/auth/email-change/request", { new_email: newEmail, current_password: currentPassword });
+}
+
+export function cancelEmailChange(): Promise<void> {
+  return authMutation("/api/auth/email-change/cancel", undefined);
+}
+
+export function previewEmailChange(token: string): Promise<PendingEmailChange> {
+  return authMutation("/api/auth/email-change/preview", { token });
+}
+
+export function confirmEmailChange(token: string): Promise<AuthSessionState> {
+  return authMutation("/api/auth/email-change/confirm", { token });
+}
+
+export function emailChangeError(cause: unknown, zh: boolean): string {
+  if (cause instanceof AuthRequestError) {
+    if (cause.status === 429) return zh ? "请求过于频繁，请稍后再试。" : "Too many requests. Please try again later.";
+    if (cause.status === 401) return zh ? "请先登录申请修改邮箱的原账户，再重试。" : "Sign in to the account that requested this change, then retry.";
+    if (cause.status === 403) return zh ? "当前账户无法修改邮箱。管理员邮箱由部署配置管理。" : "This account cannot change its email. Administrator email is managed by deployment configuration.";
+    if (cause.status === 409) return zh ? "此邮箱不可用，请使用其他邮箱重新申请。" : "This email is unavailable. Request a different address.";
+    if (cause.status === 503) return zh ? "邮件服务暂不可用。旧邮箱仍有效，请稍后重新发送。" : "Email delivery is unavailable. Your old address still works; retry sending later.";
+    if (cause.message === "Current password is incorrect.") return zh ? "当前密码不正确，请重新输入。" : "Your current password is incorrect. Try again.";
+    if (cause.message === "Enter a valid email address.") return zh ? "请输入有效的邮箱地址。" : "Enter a valid email address.";
+    if (cause.message === "Enter a different email address.") return zh ? "新邮箱必须与当前邮箱不同。" : "Enter an address different from your current email.";
+    if (cause.status === 422) return zh ? "链接无效、已使用、已过期或不属于当前账户。请使用正确账户及最新链接。" : "The link is invalid, used, expired, or belongs to another account. Use the correct account and latest link.";
+  }
+  return zh ? "无法完成操作，请检查网络后重试。输入已保留。" : "Unable to complete this action. Check your connection and retry. Your input is retained.";
+}
+
 export type AccountCapabilities = {
   role: "ADMIN" | "USER";
   allow_share_links: boolean;
@@ -126,8 +164,13 @@ export type AccountCapabilities = {
   email_delivery_available: boolean;
 };
 
-export function readAccountCapabilities(): Promise<AccountCapabilities> {
-  return authRequest<AccountCapabilities>("/api/auth/capabilities");
+export function readAccountCapabilities(signal?: AbortSignal): Promise<AccountCapabilities> {
+  return authRequest<AccountCapabilities>("/api/auth/capabilities", { signal });
+}
+
+export type AppInfo = { api_version: string; revision: string | null };
+export function readAppInfo(signal?: AbortSignal): Promise<AppInfo> {
+  return authRequest<AppInfo>("/api/app-info", { signal });
 }
 
 export async function resetPassword(input: {

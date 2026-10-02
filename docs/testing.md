@@ -8,6 +8,18 @@ not deployable release artifacts.
 
 ## Settings stages 1–4 CI gate (2026-10-01)
 
+Stage-seven help/runtime additions: `test_admin_runtime.py` verifies access,
+whitelists, real aggregate results, storage budgets, worker liveness, immutable
+build metadata and PostgreSQL timeout recovery in a read-only transaction.
+`settings-help-runtime.spec.ts` verifies three viewports, real capability data,
+clipboard denial/manual recovery, offline reload/account isolation/expiry,
+runtime stale-result recovery and visibility-based polling. The bundled
+Chromium replacement renderer requires reapplying real CDP network emulation
+after service-worker navigation, as in the existing email-change offline test;
+this does not mock navigator values or bypass authorization. Multiline clipboard
+comparison normalizes Windows CRLF only. These run through the existing full API
+and authenticated settings selectors; skips remain separately reported.
+
 `Build release images` is manually dispatched and does not deploy. Its required
 `settings-quality` job uses its own PostgreSQL service, authenticated API,
 loopback SMTP sink and single worker. `tests/settings_browser_fixture.py` requires
@@ -19,6 +31,29 @@ uploaded separately from the default/fault-injection browser matrices.
 
 The full API job explicitly enables `SETTINGS_POSTGRES_INTEGRATION=1` so account,
 grant, revision, outbox and migration concurrency tests do not silently skip.
+Stage-seven `test_user_deletion_postgres.py` verifies shared assets, rollback,
+durable storage-cleanup retry, post-commit exceptions and stale authenticated
+preference/Skill/annotation/reading writes after deletion. Existing Skill guards
+do not implement the paused stage-five editing feature.
+`test_invitation_postgres.py` verifies simultaneous token consumption creates one
+account; `test_admin_invitation_audit.py` covers status/filter/pagination and
+credential-free history. `settings-admin-invitations-audit.spec.ts` runs the real
+invitation UI, clipboard failure recovery, revoke persistence, audit filters,
+cross-user Reader and invitation registration at three viewport sizes. Transient
+links are kept in memory; screenshot evidence is captured after they are hidden.
+Stage-six archive cases also use this gate: `test_system_archive_postgres.py`
+checks new-instance FK/identity/password-reset recovery, full configuration
+restoration with rollback/commit failure and personal export snapshot consistency.
+`test_archive_export_limits.py` verifies restore-compatible repetitive content,
+capacity failure without publication and bounded repack cancellation.
+`test_system_archive_configuration.py` covers configuration integrity, policy
+admission and historical v5 compatibility. `test_personal_restore_postgres.py` and
+`test_personal_archive_jobs_postgres.py` cover real FK remapping, concurrent
+restore/confirmation, late cancellation, rollback and migration round trips.
+Personal API/job/auth tests and `settings-personal-backup.spec.ts` verify actual
+download/upload/preflight/restore and re-entry at 375/768/1440px. The latter is
+included by the existing `settings-*.spec.ts` CI selector. Dated local evidence
+does not establish GitHub CI, production or full system recovery UI acceptance.
 Image creation requires API, Web and settings jobs to succeed. Local commands
 must use an explicitly disposable PostgreSQL database and storage directories;
 do not use repository imports or a production environment for these fixtures.
@@ -1006,3 +1041,78 @@ The desktop Share utility drawer opened successfully, but Esc restoration landed
 - `share-drawer-focus.spec.ts` creates and deletes its own QA Conversation and asserts initial focus plus `document.activeElement` after Esc, X and backdrop. It runs only in the full online matrix via `E2E_SHARE_DRAWER_FOCUS=1`, never in the lightweight PWA matrix. The previous Release A production failure is preserved as historical evidence and is not overwritten.
 - Final Actions run `31736593196` uses PostgreSQL and `POSTGRES_EXPORT_INTEGRATION=1`: API `265 passed / 4 skipped`, including the actual `.cr` Attachment query; focused browser `28 passed`, including Share focus; default PWA `67 passed / 37 skipped`. Earlier run `31735786444` failed one valid retained-shell status assertion and produced no deployable image, preserving quality-gate evidence.
 - Production QA separately passed Offline A/B publication/download, committed `.cr` immediate download/archive sanity, and normal Import preview/commit. Fault injection remains production-equivalent only. The operator later completed manual production Chrome Share focus verification for Esc/X/backdrop/remounted-trigger restoration; this evidence is user-provided rather than browser-bridge automation.
+
+
+## System archive task and fresh-instance gates (2026-10-02 working tree)
+
+The required settings CI job includes `settings-system-backup.spec.ts` alongside
+the existing settings suite: 375/768/1440 layouts, paginated persisted ownership,
+offline state, lost upload response, stale choice and Task Center re-entry.
+The separate `system-archive-new-instance` gate provisions a fresh PostgreSQL
+database, migrates it to head and starts the normal API/worker with isolated
+storage. It runs `system-archive-new-instance.spec.ts` against actual v5 input,
+checking restored accounts/configuration, duplicate receipts and real downloads.
+The expiry UI uses a fixed browser clock; backend expiry is tested independently.
+Both gate results are required in the settings evidence summary. This CI wiring
+has not yet run on GitHub for the current working tree.
+
+`APP_ENV=test`, `E2E_SETTINGS_MAILBOX=1` and a new `E2E_SYSTEM_ARCHIVE_SOURCE=.cr`
+path explicitly enable `python tests/build_system_archive_browser_fixture.py`
+(from `apps/api`). This builder creates synthetic source data in temporary local
+storage, exports through the actual archive service, and never edits the target
+PostgreSQL database. The new-instance test must run against a separate empty
+disposable database, not the shared settings fixture or a user instance. It
+requires the existing synthetic admin login variables and authenticated Web
+build. Missing opt-in skips this test, never counts as passing.
+
+Backend coverage: `test_system_archive_tasks.py` exercises real auth/API/worker,
+choice persistence/revision, expiry, cancellation and records; the matching
+`_postgres.py` covers real FK/migration, concurrent export/restore admission,
+late cancellation and preference/table lock order. Use
+`SETTINGS_POSTGRES_INTEGRATION=1` with a disposable PostgreSQL URL for those
+integration tests. The declared head is `20261002_0042`.
+
+The legacy preference API test now uses the existing isolated database fixture
+and verifies persisted GET data; it must not write preferences to the configured
+development database. The diagnostics gateway test recognizes both new exact
+archive upload paths without increasing ordinary route limits.
+
+
+## Stage-seven account and content tests
+
+`tests/test_admin_users.py` covers literal pagination, effective status filters,
+ordinary-account isolation and deletion idempotency/retry. `test_admin_reader.py`
+exercises complete-turn boundaries, scoped attachment hydration, search anchors,
+audit and real worker rebuilds after insert/delete/restore. The ordinary-user
+delete path is exercised rather than only Root-owned fixtures.
+
+With `SETTINGS_POSTGRES_INTEGRATION=1`, `test_user_deletion_postgres.py` uses a
+disposable migrated database for concurrent confirmations, injected transactional
+rollback, real worker retry and shared asset/format/rule preservation. The full
+API CI gate already opts into these PostgreSQL tests.
+
+`settings-admin-users.spec.ts` runs actual PostgreSQL-backed account inspection,
+conversation pagination, Reader navigation/search, attachment viewing/download
+and deletion at 375/768/1440. It also covers approval, disable/enable, session
+revocation, password reset-link generation and an accepted deletion whose network
+response is lost. The existing settings CI regex includes this file. Browser
+screenshots contain synthetic fixtures only. Current counts and unfinished
+acceptance are in the dated settings execution record.
+
+## Local integration temp storage
+
+For long Windows browser/API matrices, set process-local `TEMP` and `TMP` to a
+writable disposable directory with enough free space before starting pytest,
+Playwright, the API and worker. Chromium downloads and pytest's temporary SQLite
+fixtures use that directory independently of `*_STORAGE_DIR`. A cancelled
+browser download alone does not prove an application failure; check its actual
+failure and available space, retain the failed run, then rerun against real data.
+Do not clear user storage or change global environment variables to run tests.
+Authenticated tests require `AUTH_ENABLED=true` and `API_INTERNAL_URL` both at
+Web build and Playwright startup: the dedicated import-commit proxy reads its
+runtime upstream in addition to Next's built rewrite.
+
+`test_default_project_postgres.py` reproduces concurrent first-login/default
+Inbox creation with a real transaction barrier. The winner is reused and both
+callers' pre-existing transaction writes must survive. It runs under the existing
+`SETTINGS_POSTGRES_INTEGRATION=1` opt-in and full API CI gate.

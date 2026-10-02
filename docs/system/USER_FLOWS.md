@@ -1,5 +1,50 @@
 # 当前用户流程
 
+管理员「用户与访问」中的邀请按需展开创建，当前链接只显示一次，复制失败保留
+链接，撤销后立即失效；历史邀请按状态服务端分页。跨用户正文搜索归入用户查看，
+点击结果打开完整只读 Reader 并留审计。审计面板按操作/结果筛选，账户及时间范围
+渐进展开，记录详情保留已删除账户的历史标识。账户删除完成后的文件清理单独显示
+待处理数量，可从任务中心重试，不将已删除账户误报为“资料已保留”。当前合同见
+[Administration Contract](ADMINISTRATION_CONTRACT.md)。
+
+## 个人数据与备份（工作树，2026-10-02）
+
+个人设置先选择「备份我的数据」或「恢复归档」。备份展示本人资料清单，
+可选择是否包含归档内容；任务完成后下载 `.cr`，过期或文件移除后重新生成。
+Root 的个人面板仍是本人范围，系统级备份另在管理员专区。
+
+恢复按「上传 → 后台预检 → 核对清单 → 确认新增恢复」进行。预检覆盖全部
+内容，清单各显示前 50 项项目/对话；缺失附件明确提示。账户偏好默认不勾选。
+恢复新增项目和对话，不覆盖当前资料；同归档再次提交返回既有恢复结果。
+用户可关闭或刷新，再从归档记录或 Task Center 的预检入口继续。窗口关闭
+与任务取消分离；未上传文件/未确认偏好有丢弃确认，响应丢失重试保持幂等。
+
+界面分组使用既有阅读工作台 tokens，清单按需展开，确认按钮留在当前滚动
+区域底部。上传显示进度与取消，后台任务显示阶段/失败/重试；移除上传文件
+只释放临时来源。离线明确提示服务器备份与恢复需要网络，保留资料库已有
+离线快照能力，不新增提醒。系统流程见下。
+
+## 系统备份与恢复（工作树，2026-10-02）
+
+Root 的「系统」面板分为备份与恢复。备份列出整个实例的资料、账户身份和配置，
+任务完成后下载，过期可重新生成。恢复先上传并后台预检，再核对内容清单与
+「来源账户 → 目标账户」。Root 固定关联当前管理员；普通账户可新建，邮箱
+冲突与旧 v4 来源需要明确选择。目标账户可搜索/分页，无需手写 UUID。
+
+来源清单支持分页/只看待确认，草稿自动保存，关闭与刷新后仍在。所有页均确认且
+实例为空才执行恢复；重复归档返回原结果。新建账户须重设密码。任务中心与本面板
+互相进入；上传丢响应可重试，后台任务可取消；失败后可重试或修改归属重新确认。
+另一窗口改过归属时要求重新核对。移除上传不会删除已恢复资料。系统归档不是
+服务器灾备；离线时暂停新操作，已入队服务器任务继续。
+
+## 修改邮箱（工作树，2026-10-01）
+
+普通用户在“账户与安全 → 修改邮箱”输入新邮箱和当前密码，发送验证邮件；界面显示服务器保存的待验证地址及有效期，刷新后仍可查看、重新发送/更换地址或取消申请。管理员只显示部署配置说明。未配置 SMTP 时入口说明不可用，不能仅显示发送成功。
+
+新邮箱中的链接打开确认页，预览不会消费授权；确认前旧邮箱继续有效。必须使用发起申请的同一账户：未登录时可在新标签页登录原账户，再回到确认页重新检查。页面明确显示新地址、到期时间及其他设备会话撤销影响。确认后当前设备保持登录，账户 UUID、内容和离线资料归属不变；其他设备需用新邮箱重新登录。错误/过期/已使用/错误账户链接不产生更换。
+
+表单输入有未保存退出确认；失败保留输入，重发替换旧链接。确认响应丢失时，只有重新读取的服务器会话同时匹配原 UUID 和预览的新邮箱才显示恢复成功。链接始终放在 URL fragment，成功后清除 fragment。没有用户自助注销入口。
+
 ## Current account flows (deployed, 2026-09-02)
 
 ```text
@@ -166,6 +211,10 @@ Owner Reader 右上角“更多”提供“更新目录”：
 ## 7. Share 与导出
 
 - Share 选择 full/selected、expiry、private flags 和 allow export；创建后可复制、更新或撤销。
+- 设置中的「我的分享」集中查询本人的有效、过期和已撤销链接，支持对话/分享标题搜索、仅此对话筛选和服务端分页。跨页保留最多 100 项选择；“选择本页”只覆盖当前页可撤销项，筛选变化清空选择。撤销先确认，逐项显示结果，失败项保留并可重试。管理员关闭分享后仍可查询和撤销，公共 Share 的原有策略检查不变。
+- 分享编辑在独立详情中调整标题、说明、有效期、密码、整个对话/所选消息和私人内容标记；消息选择同样分页保留。应用前确认访问范围，失败保留输入，离开未保存详情需确认。成功后沿用原链接；移除密码使用现有密码版本和解锁会话失效机制。返回列表恢复焦点与滚动位置；打开来源关闭设置及手机侧栏。分享管理需要联网，离线显示明确状态，不加入离线资料包。
+- 分享列表默认显示状态、来源、访问摘要和“复制链接／编辑分享”；打开分享、来源定位、仅此对话和撤销收纳进“更多”。菜单支持方向键、Home/End、Escape 返回触发器；Escape 不穿透关闭设置。进入“批量管理”后才显示复选框、当前页选择与固定底部撤销栏，结束选择会清空本次选择。状态筛选采用带明确选中态的按钮组；空结果提供清除筛选入口。
+- 编辑详情按“分享内容／访问权限／链接外观”逐项展开，默认仅展开内容，每组显示当前选择摘要。附加内容默认收起；批注、笔记说明其私人性质。访问方式用“持有链接的人／需要密码”及简短说明呈现，已有密码默认保留，可显式更换；有效期支持永久、从现在起 7/30 天或自定义，未修改的到期时间保留精度。固定底部显示未保存状态和保存操作；错误会展开并聚焦相应字段，修改输入后清除旧错误。手机纵向选择项与桌面并排选择项沿用同一行为。
 - 访客只读取 `/api/shared/{token}/*` 授权范围。
 - Markdown v2/CanJSON v2 可流式导出；`.cr` 通过后台 job 生成临时 artifact。CanJSON v1 只保留 Legacy 兼容。
 - `format=context_package` 通过同一后台 job 生成 `<title>.context.zip`；只包含 manifest、当前版本 `conversation.canjsonl` 和 content-addressed available assets，支持完整对话/当前阅读范围两种 scope。历史版本、blocks、TOC 和 search 仍仅属于 `.cr`。
@@ -220,3 +269,15 @@ Owner Reader 右上角“更多”提供“更新目录”：
 Project deletion is available only from the Archived page. The user archives a project first, then may restore it or permanently delete the project container. A destructive confirmation explains that the project itself cannot be restored but all conversations and messages are kept and return to Unclassified. Batch deletion uses the same contract and retains failed rows as selected.
 
 The API rejects default or active project deletion. On accepted deletion it atomically moves each `ProjectConversation` to the internal default project, clears project pin state, updates recent placement and the conversation offline revision, records a placement event, then deletes only the archived Project row. Conversation, message, attachment and export lifecycle is unchanged.
+
+
+## Administrator account inspection and deletion (current)
+
+Users & access starts with the searchable, paginated account directory. Open an
+account for access actions, password assistance and opt-in content inspection.
+Conversation links open the complete-turn read-only Reader in a separate tab,
+retaining the directory position. Search navigates to a real message; attachment
+viewing/download uses audited Root routes. Delete opens a separate impact page;
+confirm locks the account and queues work. Failed tasks retain canonical data
+and can be retried from the account or Task Center. Successful completion removes
+the row. See [Administration](ADMINISTRATION_CONTRACT.md).

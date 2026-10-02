@@ -20,7 +20,7 @@ from app.services.exporting.cr_archive import ARCHIVE_MIME
 from app.services.exporting.attachment_bundle import BUNDLE_MIME, CANJSON_BUNDLE_FORMAT, MARKDOWN_BUNDLE_FORMAT
 from app.services.exporting.context_package import CONTEXT_PACKAGE_FORMAT, CONTEXT_PACKAGE_MIME
 from app.services.artifact_lifecycle import validate_final_artifact
-from app.services.ownership import get_owned, ownership_scope_from_request
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 from app.services.exporting.export_service import (
     ExportError,
     content_disposition,
@@ -148,12 +148,12 @@ def download_archive(
     artifact_id: uuid.UUID,
     request: Request,
     db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> FileResponse:
     artifact = db.get(ExportArtifact, artifact_id)
-    if artifact is None:
+    if artifact is None or artifact.scope_type == "archive_upload":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export not found.")
     job = db.get(BackgroundJob, artifact.job_id)
-    ownership_scope = ownership_scope_from_request(request)
     if job is None or get_owned(db, BackgroundJob, job.id, ownership_scope) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export not found.")
     if job.status != "committed":

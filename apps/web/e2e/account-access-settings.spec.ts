@@ -68,10 +68,13 @@ test("administrators manage users, registration and invitations in one focused s
   await page.route("**/api/auth/me", (route) => route.fulfill({ json: session("ADMIN", "Administrator") }));
   const policy = { registration_mode: "CLOSED", smtp_configured: false, require_admin_approval: true, email_verification_enabled: false, password_reset_enabled: true };
   await page.route("**/api/admin/access", (route) => route.fulfill({ json: policy }));
-  await page.route("**/api/admin/access/users", (route) => route.fulfill({ json: [
+  const reader = () => ({ id: otherUserId, email: "reader@example.test", display_name: "Reader", role: "USER", status: userStatus, approval_status: "APPROVED", email_verification_required: false, email_verified_at: null, last_login_at: null, can_login: userStatus === "ACTIVE", deletion: null, created_at: "2026-09-01T00:00:00Z", stats: { projects: 0, conversations: 0, attachments: 0, attachment_bytes: 0 } });
+  await page.route(`**/api/admin/access/users/${otherUserId}`, (route) => route.fulfill({ json: reader() }));
+  await page.route("**/api/admin/access/users/page?*", (route) => route.fulfill({ json: { items: [
     { id: userId, email: "admin@example.test", display_name: "Administrator", role: "ADMIN", status: "ACTIVE", created_at: "2026-08-01T00:00:00Z", stats: { projects: 0, conversations: 0, attachments: 0, attachment_bytes: 0 } },
-    { id: otherUserId, email: "reader@example.test", display_name: "Reader", role: "USER", status: userStatus, approval_status: "APPROVED", created_at: "2026-09-01T00:00:00Z", stats: { projects: 0, conversations: 0, attachments: 0, attachment_bytes: 0 } },
-  ] }));
+    reader(),
+  ], total: 2, limit: 20, offset: 0 } }));
+  await page.route("**/api/admin/access/invitations/page?*", (route) => route.fulfill({ json: { items: [], total: 0, limit: 20, offset: 0 } }));
   await page.route("**/api/admin/access/invitations", async (route) => {
     if (route.request().method() === "POST") {
       invitationHours = Number((route.request().postDataJSON() as { expires_in_hours: number }).expires_in_hours);
@@ -97,10 +100,10 @@ test("administrators manage users, registration and invitations in one focused s
   await page.getByRole("button", { name: /Users & access|\u7528\u6237\u4e0e\u8bbf\u95ee/ }).click();
   await expect(page.getByRole("button", { name: /^(Users|用户)$/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("reader@example.test")).toBeVisible();
-
-  await page.getByRole("button", { name: /^(Disable|禁用)$/ }).click();
+  await page.getByRole("button", { name: /^(View account|查看账户): Reader$/ }).click();
+  await page.getByRole("button", { name: /^(Disable account|禁用账户)$/ }).click();
   await expect.poll(() => userStatus).toBe("DISABLED");
-  await expect(page.getByRole("button", { name: /^(Enable|启用)$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^(Enable account|启用账户)$/ })).toBeVisible();
 
   await page.getByRole("button", { name: /Registration & invitations|注册与邀请/ }).click();
   await page.getByRole("button", { name: /^(Open|开放)$/ }).click();
@@ -108,10 +111,11 @@ test("administrators manage users, registration and invitations in one focused s
   await expect.poll(() => registrationMode).toBe("OPEN");
   await expect(page.getByRole("status").filter({ hasText: /Registration policy saved|注册策略已保存/ })).toBeVisible();
 
-  await page.getByLabel(/Valid for|有效期/).fill("72");
   await page.getByRole("button", { name: /Create invitation|\u521b\u5efa\u9080\u8bf7/ }).click();
+  await page.getByLabel(/Valid for|有效期/).fill("72");
+  await page.getByRole("button", { name: /Generate invite link|生成邀请链接/ }).click();
   await expect.poll(() => invitationHours).toBe(72);
-  await expect(page.getByLabel(/New invitation link|新邀请链接/)).toHaveValue(/secret-token/);
+  await expect(page.getByRole("textbox", { name: /New invitation link|新邀请链接/ })).toHaveValue(/secret-token/);
 });
 
 async function openSettings(page: Page) {

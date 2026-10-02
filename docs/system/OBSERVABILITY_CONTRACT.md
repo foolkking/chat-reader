@@ -2,6 +2,56 @@
 
 ## Scope
 
+## In-app help and administrator runtime status (2026-10-02, not deployed)
+
+Personal settings and Offline Library share **Help & diagnostics**. It shows
+the authenticated API connection, API version/build, the Web build, a guarded
+inspection of this account's existing startup cache, the offline authorization
+expiry, effective account limits and task-specific FAQ. Reading this panel does
+not register a worker or download resources. Capability snapshots use the
+existing account-bound Dexie v2 settings table; offline/failed refresh values
+are explicitly last-known, never current. A generation fence surrounds cache
+reads and writes. Expiry removes the panel with the private workspace; another
+account cannot read or claim the snapshot. Package formats remain unchanged.
+
+Diagnostics are generated only by the explicit copy action. The serializer
+constructs a new fixed schema with validated enums, numbers, version/revision
+strings and timestamps. It never serializes API objects, exceptions, shell
+messages/missing-resource paths, account identifiers, filenames, content,
+URLs, environment configuration, cookies or credentials. Copy failure keeps
+the text selected for manual copying. Nothing is uploaded automatically.
+
+`GET /api/app-info` is authenticated and non-cacheable. It returns only
+`api_version` and the immutable image build `revision` (or null when unknown).
+The existing `/api/health` three-field contract is unchanged. Release images
+embed the full lowercase 40-character Git revision at build time; runtime
+environment values do not replace it. See the deployment contract.
+
+`GET /api/admin/runtime-status` is Root-only (ordinary accounts receive 404),
+non-cacheable and read-only. It returns worker liveness, fixed job/import status
+counts, storage summaries, latest system backup/restore statuses and mail
+configuration presence. No names, IDs, payloads, errors, storage keys, addresses
+or paths are included. This is a separate application service, not a proxy for
+the loopback operator endpoint below.
+
+Each PostgreSQL metric has a 1.5-second statement timeout and savepoint so one
+failure does not poison later metrics. Local storage scans count at most 10,000
+directory entries per root and use a 150ms cooperative time budget (an individual
+filesystem call can still block). They never read file contents. Missing roots,
+errors and partial scans are explicitly unavailable/incomplete. Object storage
+shows database object-record count/logical bytes, not measured remote usage.
+No/future heartbeat is unavailable; stale heartbeat is labelled stale, even
+when metrics are complete. Mail configured does not imply tested delivery.
+Latest archive status is derived without updating the backup record.
+
+The administrator panel refreshes every 30 seconds while visible, pauses when
+hidden and refreshes on return. A failed refresh retains the last result with
+an outdated warning. No cleanup, restart, automated backup or notification
+action is added. Tests and dated execution evidence distinguish these snapshots
+from operational remediation and production validation.
+
+## Existing operator observability
+
 The current contract combines the Release C request/logging and bounded
 aggregate diagnostics baseline with the Release L worker-liveness and protected
 operator-access closure. It does not collect user analytics, Reader telemetry,

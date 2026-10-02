@@ -18,6 +18,8 @@ from app.api.routes.annotations import router as annotations_router
 from app.api.routes.offline import router as offline_router
 from app.api.routes.attachments import router as attachments_router
 from app.api.routes.system_archives import router as system_archives_router
+from app.api.routes.personal_archives import router as personal_archives_router
+from app.api.routes.system_archive_tasks import router as system_archive_tasks_router
 from app.core.config import get_settings
 from app.api.routes.diagnostics import router as diagnostics_router
 from app.api.routes.auth import router as auth_router
@@ -30,12 +32,13 @@ from app.api.routes.admin_system import router as admin_system_router
 from app.api.routes.admin_noise_rules import router as admin_noise_rules_router
 from app.core.auth_middleware import AuthenticationMiddleware
 from app.core.observability import RequestObservabilityMiddleware
+from app.services.app_info import API_VERSION
 
 settings = get_settings()
 
 app = FastAPI(
     title="chat-reader API",
-    version="0.12.0",
+    version=API_VERSION,
     description="Canonical archive, search, editing, project, share, and export API for Chat Reader.",
 )
 
@@ -66,6 +69,8 @@ app.include_router(annotations_router)
 app.include_router(offline_router)
 app.include_router(attachments_router)
 app.include_router(system_archives_router)
+app.include_router(personal_archives_router)
+app.include_router(system_archive_tasks_router)
 app.include_router(diagnostics_router)
 app.include_router(auth_router)
 app.include_router(adaptive_imports_router)

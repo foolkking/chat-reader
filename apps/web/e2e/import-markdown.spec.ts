@@ -46,14 +46,14 @@ print("paired markdown")
     { name: "markdown-import-e2e.md", mimeType: "text/markdown", buffer: Buffer.from(markdown) },
   ]);
   await page.getByTestId("preview-import-button").click();
-  await expect(page.getByRole("heading", { name: "导入概览" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /导入概览|Import overview/ })).toBeVisible();
   await expect(page.getByText("Chat Reader Native JSON / Markdown")).toBeVisible();
-  await expect(page.getByText("准备导入 1 个对话、2 条消息。")).toBeVisible();
+  await expect(page.getByText(/准备导入 1 个对话、2 条消息。|Ready to import 1 conversations and 2 messages./)).toBeVisible();
 
   await page.getByTestId("commit-import-button").click();
   await expect(page.getByTestId("import-completion-summary")).toBeVisible();
-  await expect(page.getByText("导入已完成")).toBeVisible();
-  await page.getByRole("button", { name: "打开对话" }).click();
+  await expect(page.getByText(/导入已完成|Import complete/)).toBeVisible();
+  await page.getByRole("button", { name: /^(打开对话|Open conversation)$/ }).click();
   await expect(page).toHaveURL(/\/conversations\/[0-9a-f-]+$/);
   await expect(page.getByRole("heading", { name: "Reader structure" })).toBeVisible();
   await expect(page.locator("code", { hasText: 'print("paired markdown")' })).toBeVisible();
@@ -65,7 +65,7 @@ test("previews a real response-only JSON and Markdown pair without dropping cont
   test.skip(!jsonPath || !markdownPath, "E2E_IMPORT_PAIR_JSON and E2E_IMPORT_PAIR_MARKDOWN are required");
 
   await page.goto("/");
-  await page.getByRole("button", { name: /Import data|瀵煎叆鏁版嵁/ }).click();
+  await page.getByRole("button", { name: /Import data|导入数据/ }).click();
   await page.getByTestId("import-file-input").setInputFiles([
     resolve(jsonPath!),
     resolve(markdownPath!),
@@ -73,7 +73,7 @@ test("previews a real response-only JSON and Markdown pair without dropping cont
   await page.getByTestId("preview-import-button").click();
 
   await expect(page.getByTestId("commit-import-button")).toBeEnabled();
-  await expect(page.getByText(/准备导入 1 个对话/)).toBeVisible();
+  await expect(page.getByText(/准备导入 1 个对话|Ready to import 1 conversations/)).toBeVisible();
 });
 
 test("maps one unknown structure family once and reuses the learned profile", async ({ page }) => {
@@ -101,17 +101,17 @@ test("maps one unknown structure family once and reuses the learned profile", as
       { name: `second-${suffix}.json`, mimeType: "application/json", buffer: Buffer.from(source(`Second adaptive ${suffix}`, "two")) },
     ]);
     await page.getByTestId("preview-import-button").click();
-    await expect(page.getByText("发现 2 个对话，识别出 1 种格式")).toBeVisible();
-    await page.getByRole("button", { name: "设置格式" }).click();
-    await expect(page.getByRole("heading", { name: "设置新的导入格式" })).toBeVisible();
-    await page.getByLabel("保存为导入格式").fill(profileName);
-    await page.getByRole("button", { name: "验证映射" }).click();
-    await expect(page.getByText("全部对话通过")).toBeVisible();
-    await page.getByRole("button", { name: "保存映射并继续" }).click();
-    await expect(page.getByText(/准备导入 2 个对话/)).toBeVisible();
+    await expect(page.getByText(/发现 2 个对话，识别出 1 种格式|Found 2 conversations in 1 formats/)).toBeVisible();
+    await page.getByRole("button", { name: /设置格式|Map format/ }).click();
+    await expect(page.getByRole("heading", { name: /设置新的导入格式|Learn a new import format/ })).toBeVisible();
+    await page.getByLabel(/保存为导入格式|Format name/).fill(profileName);
+    await page.getByRole("button", { name: /验证映射|Validate mapping/ }).click();
+    await expect(page.getByText(/全部对话通过|All conversations validated/)).toBeVisible();
+    await page.getByRole("button", { name: /保存映射并继续|Learn mapping & continue/ }).click();
+    await expect(page.getByText(/准备导入 2 个对话|Ready to import 2 conversations/)).toBeVisible();
     await page.getByTestId("commit-import-button").click();
     await expect(page.getByTestId("import-completion-summary")).toBeVisible();
-    await page.getByRole("button", { name: "打开第一条" }).click();
+    await page.getByRole("button", { name: /打开第一条|Open first conversation/ }).click();
     await expect(page).toHaveURL(/\/conversations\/[0-9a-f-]+$/);
     conversations.push(page.url().split("/").pop()!);
 
@@ -124,10 +124,10 @@ test("maps one unknown structure family once and reuses the learned profile", as
     });
     await page.getByTestId("preview-import-button").click();
     await expect(page.getByText(profileName)).toBeVisible();
-    await expect(page.getByRole("button", { name: "设置格式" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /设置格式|Map format/ })).toHaveCount(0);
     await page.getByTestId("commit-import-button").click();
     await expect(page.getByTestId("import-completion-summary")).toBeVisible();
-    await page.getByRole("button", { name: "打开对话" }).click();
+    await page.getByRole("button", { name: /^(打开对话|Open conversation)$/ }).click();
     await expect(page).toHaveURL(/\/conversations\/[0-9a-f-]+$/);
     conversations.push(page.url().split("/").pop()!);
   } finally {
@@ -167,41 +167,41 @@ test("keeps valid mapping work while invalid groups are excluded or replaced", a
     ]);
     await page.getByTestId("preview-import-button").click();
 
-    await expect(page.getByRole("heading", { name: "导入概览" })).toBeVisible();
-    await expect(page.getByText("暂不可映射 · 需要先转换")).toBeVisible();
-    await expect(page.getByRole("article").filter({ hasText: "broken-a-" }).getByText("JSON 无法解析")).toBeVisible();
-    await expect(page.getByText("语法或编码错误无法通过字段映射解决。")).toHaveCount(2);
-    const replaceButton = page.getByRole("button", { name: /替换 broken-/ }).first();
+    await expect(page.getByRole("heading", { name: /导入概览|Import overview/ })).toBeVisible();
+    await expect(page.getByText(/暂不可映射 · 需要先转换|Not mappable · Convert the source first/)).toBeVisible();
+    await expect(page.getByRole("article").filter({ hasText: "broken-a-" }).getByText(/JSON 无法解析|Cannot parse JSON/)).toBeVisible();
+    await expect(page.getByText(/语法或编码错误无法通过字段映射解决。|Field mapping cannot fix syntax or encoding errors\./)).toHaveCount(2);
+    const replaceButton = page.getByRole("button", { name: /(?:替换|Replace) broken-/ }).first();
     await replaceButton.focus();
     await expect(replaceButton).toBeFocused();
-    await expect(page.getByRole("button", { name: "使用 Conversation Rescue" })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: /使用 Conversation Rescue|Use Conversation Rescue/ })).toHaveCount(2);
 
-    await page.getByRole("button", { name: "设置格式" }).click();
-    await page.getByLabel("保存为导入格式").fill(profileName);
-    await page.getByRole("button", { name: "验证映射" }).click();
-    await expect(page.getByText("全部对话通过")).toBeVisible();
-    await page.getByRole("button", { name: "保存映射并继续" }).click();
-    await expect(page.getByText("暂不可映射 · 需要先转换")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "已支持 · 可直接导入" })).toBeVisible();
+    await page.getByRole("button", { name: /设置格式|Map format/ }).click();
+    await page.getByLabel(/保存为导入格式|Format name/).fill(profileName);
+    await page.getByRole("button", { name: /验证映射|Validate mapping/ }).click();
+    await expect(page.getByText(/全部对话通过|All conversations validated/)).toBeVisible();
+    await page.getByRole("button", { name: /保存映射并继续|Learn mapping & continue/ }).click();
+    await expect(page.getByText(/暂不可映射 · 需要先转换|Not mappable · Convert the source first/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /已支持 · 可直接导入|Supported · Ready to import/ })).toBeVisible();
 
     const firstInvalidGroup = page.getByRole("article").filter({ hasText: `broken-a-${suffix}.json` });
-    await firstInvalidGroup.getByRole("button", { name: "不导入此项" }).click();
-    await page.getByRole("button", { name: "确认不导入" }).click();
-    await expect(page.getByText("暂不可映射 · 需要先转换")).toBeVisible();
+    await firstInvalidGroup.getByRole("button", { name: /不导入此项|Exclude this item/ }).click();
+    await page.getByRole("button", { name: /确认不导入|Confirm exclusion/ }).click();
+    await expect(page.getByText(/暂不可映射 · 需要先转换|Not mappable · Convert the source first/)).toBeVisible();
     await expect(page.getByText(`broken-a-${suffix}.json`)).toHaveCount(0);
     await expect(page.getByText(`broken-b-${suffix}.json`)).toBeVisible();
 
     const remainingGroup = page.getByRole("article").filter({ hasText: `broken-b-${suffix}.json` });
-    await expect(remainingGroup.getByRole("button", { name: `替换 broken-b-${suffix}.json` })).toBeEnabled();
+    await expect(remainingGroup.getByRole("button", { name: new RegExp(`(?:替换|Replace) broken-b-${suffix}\\.json`) })).toBeEnabled();
     await remainingGroup.locator('input[data-testid^="replace-import-file-"]').setInputFiles({
       name: `replacement-${suffix}.json`,
       mimeType: "application/json",
       buffer: Buffer.from(source(`Replacement ${suffix}`, "replacement")),
     });
-    await expect(page.getByText(/准备导入 2 个对话/)).toBeVisible();
+    await expect(page.getByText(/准备导入 2 个对话|Ready to import 2 conversations/)).toBeVisible();
     await expect(page.getByTestId("commit-import-button")).toBeEnabled();
 
-    await page.getByRole("button", { name: "重新选择文件" }).click();
+    await page.getByRole("button", { name: /重新选择文件|Choose different files/ }).click();
     await expect(page.getByTestId("import-file-input")).toBeVisible();
   } finally {
     await cleanupAdaptiveE2EProfiles(page);

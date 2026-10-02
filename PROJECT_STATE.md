@@ -1,5 +1,47 @@
 # Project State
 
+## Settings completion status (2026-10-02, not deployed)
+
+Stages 1–4 and 6–7 are implemented. Stage 5 (personal/system Skill version
+editing) remains paused by the user. Stage 8 integration is finishing; current
+commit/push and GitHub CI are pending. Production has not been changed.
+
+- Personal settings include owner-scoped My shares, additive personal archive
+  restore with preview and durable receipts, and password-checked email changes
+  that preserve account UUID and revoke other sessions. Share controls prioritize
+  copy/edit, opt-in batch actions and grouped content/access/appearance editing.
+- System `.cr v5` archives restore identities, ownership and held configuration
+  into an empty instance. Old v4 archives require explicit ownership mapping;
+  existing v5 and conversation archives remain readable. Both restore flows
+  use the worker, expiring private sources, preflight and failure recovery.
+- Administration supports paginated account/invitation/audit management, audited
+  complete-turn content viewing and background account deletion. Deletion keeps
+  other accounts' shared resources and fences late personal writes; failed file
+  cleanup remains separately retryable. Invitations are consumed once.
+- Help offers manual whitelist-only diagnostics and actual account/offline
+  capability status. Root runtime exposes bounded worker/queue/storage/backup/
+  mail state, with unavailable/stale results and visibility-aware polling.
+- Import controls follow account language and preserve unsaved mappings on
+  cancellation/failure. Busy operations guard edits/closing. Concurrent default
+  Inbox creation preserves callers' outer transactions through a savepoint.
+
+Current Alembic head: **`20261002_0042`**. Dexie v2, offline package v3 and
+v1/v2/v3 package readers remain unchanged. No new Skill version editing,
+self-deletion, reminders, quotas, recycle bin or scheduled backups were added.
+
+Current contracts: [Administration](docs/system/ADMINISTRATION_CONTRACT.md),
+[Archives](docs/system/DATA_ARCHIVE_CONTRACT.md),
+[Authentication](docs/system/AUTHENTICATION_CONTRACT.md),
+[Offline/sync](docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md),
+[Import](docs/system/ADAPTIVE_IMPORT_CONTRACT.md), and
+[Diagnostics/runtime](docs/system/OBSERVABILITY_CONTRACT.md).
+The [dated execution log](docs/execution/SETTINGS_COMPLETION_2026-09-30.md)
+records individual runs, failures, skips and follow-up evidence. Latest complete
+API: **736 passed / 4 skipped** with PostgreSQL integration enabled. Settings:
+**109 passed / 2 failed** (disposable-instance rate limits), with both failures
+passing targeted reruns; a fresh full CI run is still required. Remaining local
+browser gates and current GitHub results will be recorded before delivery.
+
 ## Settings stages 1–4 checkpoint (2026-10-01, not deployed)
 
 The approved settings/user/admin/offline plan remains active. Stages one through
@@ -38,7 +80,7 @@ Dated scope and evidence: `docs/planning/SETTINGS_COMPLETION_2026-09-30.md` and
   stays locked and retryable; completion tokens protect new downloads from
   stale tabs. See `docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`.
 
-The single Alembic head is `20261001_0040`. Existing Dexie v2 and offline package
+At this stage-four checkpoint the Alembic head was `20261001_0040`. Existing Dexie v2 and offline package
 v3 remain; v1/v2/v3 readers stay compatible. Migration/deployment boundaries are
 in `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md`.
 
@@ -66,7 +108,7 @@ skipped**, default PWA **132 passed / 170 mode-specific skips**, authentication
 authentication-recovery run passed **93 / 0 skipped** (79 real settings flows
 and 14 fault contracts, counted separately). Skips are not passes; overlapping
 suites are not additive. This is the stage-four GitHub checkpoint, not completion
-of the full plan. Next is stage six; stage five remains paused. Production is
+of the full plan. Later stages are summarized in the current status above; stage five remains paused. Production is
 unchanged and no deployment was performed.
 
 ## Deployed authentication recovery (2026-09-30)
@@ -262,7 +304,7 @@ generation is `050f257ceb702490885bae8aabcbf5a1ce60ba84`.
 | Primary languages | TypeScript/React/Next.js, Python/FastAPI, SQL/Alembic |
 | Package manager | pnpm via Corepack; Python dependencies in `apps/api/pyproject.toml` |
 | Main entry points | `apps/web`, `apps/api`, `docker-compose.production.yml` |
-| Database | PostgreSQL with Alembic; repository and deployed head `20260927_0033` |
+| Database | PostgreSQL with Alembic; repository head `20261002_0042`; deployed head `20260927_0033` |
 | Branch / baseline | `master`; deployed source SHA `97146a69233b22da1caf250adac380e3802d764f` |
 | Deployment | Production runs immutable `97146a69233b22da1caf250adac380e3802d764f`; no previous application image generation is retained |
 | Docs status | `docs/system/` is authoritative; dated execution/release notes are historical |

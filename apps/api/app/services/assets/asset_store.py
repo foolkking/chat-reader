@@ -61,21 +61,23 @@ class LocalAssetStore(AssetStore):
         path = directory / f"{uuid.uuid4()}.part"
         digest = hashlib.sha256()
         byte_size = 0
-        with path.open("xb") as destination:
-            while True:
-                chunk = source.read(1024 * 1024)
-                if not chunk:
-                    break
-                byte_size += len(chunk)
-                if byte_size > max_bytes:
-                    destination.close()
-                    path.unlink(missing_ok=True)
-                    raise ValueError("Asset exceeds the configured size limit.")
-                digest.update(chunk)
-                destination.write(chunk)
-            destination.flush()
-            os.fsync(destination.fileno())
-        os.chmod(path, 0o600)
+        try:
+            with path.open("xb") as destination:
+                while True:
+                    chunk = source.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    byte_size += len(chunk)
+                    if byte_size > max_bytes:
+                        raise ValueError("Asset exceeds the configured size limit.")
+                    digest.update(chunk)
+                    destination.write(chunk)
+                destination.flush()
+                os.fsync(destination.fileno())
+            os.chmod(path, 0o600)
+        except BaseException:
+            path.unlink(missing_ok=True)
+            raise
         return StagedAsset(path=path, sha256=digest.hexdigest(), byte_size=byte_size)
 
     def object_key(self) -> str:

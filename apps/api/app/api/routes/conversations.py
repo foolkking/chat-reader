@@ -60,7 +60,7 @@ from app.services.editing.message_edit_service import (
     plan_conversation_split,
     split_conversation,
 )
-from app.services.background_jobs import queue_conversation_batch_delete, queue_conversation_merge
+from app.services.background_jobs import queue_conversation_batch_delete, queue_conversation_merge, queue_conversation_derived_rebuild
 from app.services.projects.project_service import (
     ProjectServiceError,
     add_conversation_to_project,
@@ -115,7 +115,8 @@ def insert_message_endpoint(
     request: Request,
     db: Session = Depends(get_db),
 ) -> MessageInsertResponse:
-    _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
+    scope = ownership_scope_from_request(request)
+    _managed_conversation_or_404(db, conversation_id, scope)
     try:
         messages = [
             (item.role or "", item.content_markdown)
@@ -130,6 +131,8 @@ def insert_message_endpoint(
             messages=messages,
             expected_offline_revision=payload.expected_offline_revision,
         )
+        queue_conversation_derived_rebuild(db, conversation_id=conversation_id,
+            idempotency_key=f"message-insert:{result.messages[0].id}", ownership_scope=scope, rebuild_versions=False)
         db.commit()
         db.refresh(result.conversation)
     except (MessageEditError, ProjectServiceError) as exc:

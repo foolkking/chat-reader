@@ -1,0 +1,76 @@
+import { useCallback } from "react";
+import { usePreferences } from "../../components/preferences-provider";
+
+const english: Record<string, string> = {
+  "没有可靠的消息边界": "No reliable message boundaries", "当前内容不足以安全分割为 Conversation 消息。": "This content cannot be safely divided into conversation messages.",
+  "这不是对话记录": "This is not a conversation transcript", "当前文件是说明文档或转换指令，不是可直接分段的 Conversation。": "This file contains documentation or conversion instructions, rather than a conversation transcript.",
+  "文件没有可导入内容": "No importable content", "文件为空，无法建立 Conversation。": "The file is empty and cannot form a conversation.",
+  "文件类型不属于标准导入格式": "Unsupported file type", "当前文件类型没有可用的确定性解析器。": "No supported parser is available for this file type.",
+  "JSON 无法解析": "Cannot parse JSON", "语法或编码错误无法通过字段映射解决。": "Field mapping cannot fix syntax or encoding errors.",
+  "文本编码无法读取": "Unreadable text encoding", "请先转换为 UTF-8 文本，或使用 Conversation Rescue。": "Convert the file to UTF-8 text, or use Conversation Rescue.",
+  "当前结构不足以安全生成 Conversation。": "This structure cannot safely form a conversation.",
+  "无法连接服务器。请检查网络后重试，当前输入仍然保留。": "Cannot connect to the server. Check your network and retry; your input is retained.",
+  "服务暂时不可用，请稍后重试。": "The service is temporarily unavailable. Please retry shortly.",
+  "已提交 {0} 个对话，共 {1} 条消息。": "Imported {0} conversations with {1} messages.",
+  "打开第 {0} 条": "Open conversation {0}",
+  "发现 {0} 个对话，识别出 {1} 种格式": "Found {0} conversations in {1} formats",
+  "管理员已关闭导入功能。": "Importing is disabled by the administrator.", "单个文件不能超过当前上限 {0} MiB。": "Each file must be within the current {0} MiB limit.", "尚未选择文件": "No files selected", "已选择 {0} 个文件": "{0} files selected",
+  "选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。": "Choose representative sources for this format. Successful validation saves a new version while retaining earlier versions.", "选择对话源文件。已知格式会直接准备导入；陌生结构只需设置一次，以后会自动识别。": "Choose your conversation files. Known formats are ready to import. Map an unfamiliar structure once to recognize it in future imports.",
+  "导入类型": "Import type", "已知与已学习格式": "Built-in and learned formats", ".cr 归档": ".cr archive", "恢复 Chat Reader 归档": "Restore a Chat Reader archive", "修复只接受 JSON / Markdown": "Repair accepts JSON / Markdown sources", "拖放文件到这里": "Drop files here", "或": "or",
+  "选择 JSON / Markdown 文件": "Choose JSON / Markdown files", "选择 .cr 归档": "Choose a .cr archive", "支持单 JSON、单 Markdown、JSON + Markdown 及批量文件": "Supports JSON, Markdown, paired files and batches", ".cr 使用独立归档恢复流程": ".cr files use the archive restore flow", "当前单文件上限：": "Current limit per file: ", "无法读取导入限制。": "Import limits are unavailable.", "重试": "Retry", "正在读取导入限制…": "Reading import limits…",
+  "正在识别格式": "Recognizing formats…", "分析并继续": "Analyze & continue", "检查归档": "Check archive", "恢复归档": "Restore archive", "系统中已有相同归档。默认会创建副本，不覆盖原记录。": "This archive already exists. By default, restoring creates a copy and preserves the original.", "打开已有对话": "Open existing conversation",
+  "导入已完成": "Import complete", "已提交": "Imported ", "个对话，共": " conversations with ", "条消息。": " messages.", "导入提示": "Import notes", "已导入的对话": "Imported conversations", "已导入对话": "Imported conversation", "打开第": "Open conversation ", "条": "", "另有": "There are ", "个对话可在资料库中查看。": " more conversations in the library.", "查看导入的对话": "View imported conversations", "打开对话": "Open conversation", "打开第一条": "Open first conversation",
+  ".cr 归档必须单独导入。": "Import one .cr archive at a time.", "仅支持 JSON、Markdown 或文本源文件。": "Choose JSON, Markdown or text source files.", "一次最多分析 500 个文件。": "Analyze up to 500 files at a time.",
+  "放弃未保存的映射？": "Discard unsaved mapping?", "字段映射尚未保存，导入会话和原始文件仍会保留。": "The field mapping has not been saved. The import session and source files will remain available.", "放弃更改": "Discard changes",
+  "返回导入概览": "Back to import overview", "修复导入格式": "Repair import format", "设置新的导入格式": "Learn a new import format",
+  "此设置会应用于当前结构的": "This mapping applies to all ", "个对话。": " conversations with this structure.",
+  "示例对话": "Sample conversation", "切换当前结构的示例对话": "Choose a sample with this structure", "示例：": "Sample: ", "当前文件": "Current file",
+  "规范字段映射": "Field mapping", "只保存结构、字段映射与角色字典，不保存示例正文。": "Only the structure, field mapping and role dictionary are learned. Sample content is not saved.",
+  "保存为导入格式": "Format name", "验证会运行此格式的全部": "Validation checks all ", "个对话，不只检查示例。": " conversations using this format, including those outside the preview.",
+  "正在验证": "Validating…", "验证映射": "Validate mapping", "正在保存": "Saving…", "保存新版本并继续": "Save new version & continue", "保存映射并继续": "Learn mapping & continue",
+  "来源结构": "Source structure", "结构分析": "Structure analysis", "个候选结构。点击诊断可定位到对应字段。": " candidate structures. Use a diagnostic to locate its field.",
+  "JSON 字段映射": "JSON field mapping", "消息列表": "Message list", "角色来源": "Role source", "未设置": "Not set", "正文来源": "Content source", "标题来源": "Title source", "使用文件名": "Use filename",
+  "Markdown 字段映射": "Markdown field mapping", "消息分界": "Message boundary", "H{0} 角色标题": "H{0} role headings", "角色标签行": "Role label lines", "Markdown 前置内容": "Markdown preamble",
+  "忽略并提示": "Ignore with notice", "保留到首条": "Keep in first message", "JSON 与 Markdown 字段映射": "JSON and Markdown field mapping", "JSON 来源": "JSON source", "Markdown 来源": "Markdown source",
+  "JSON 与 Markdown 对应关系": "JSON and Markdown alignment", "角色 + 时间": "Role + time", "顺序": "Order",
+  "默认使用 Markdown 正文、JSON 角色和时间。完整文件组合必须通过关系校验。": "Uses Markdown content with JSON roles and timestamps by default. The complete file group must pass alignment validation.",
+  "角色值": "Role values", "{0} 对应的标准角色": "Standard role for {0}", "需要确认": "Choose a role", "导入预览": "Import preview", "全部对话通过": "All conversations validated", "验证失败": "Validation failed",
+  "正在验证所有对话": "Validating every conversation…", "确认字段后运行“验证映射”，这里会显示 Chat Reader 实际将要导入的对话。": "Choose the fields, then validate the mapping to preview the actual conversation that Chat Reader will import.",
+  "条消息": " messages", "返回概览处理输入": "Return to overview to fix input", "自定义 JSON + Markdown": "Custom JSON + Markdown", "自定义 Markdown": "Custom Markdown", "自定义 JSON": "Custom JSON", "你": "You",
+  "重新选择文件": "Choose different files", "导入概览": "Import overview", "发现": "Found ", "个对话，识别出": " conversations in ", "种格式": " formats", "个对话需要修复输入": " conversations need input repair",
+  "其他已识别格式仍可继续设置。替换、排除或重新组合这些文件后，系统会自动重新分析。": "You can configure other recognized formats now. Replacing, excluding or regrouping these files automatically runs analysis again.",
+  "调整文件组合": "Adjust file groups", "导入格式处理状态": "Import format status", "已支持": "Supported", "可设置格式": "Can be mapped", "暂不可映射": "Cannot be mapped yet",
+  "已支持 · 可直接导入": "Supported · Ready to import", "可设置格式 · 需要确认一次": "Mappable · Confirm the mapping once", "暂不可映射 · 需要先转换": "Not mappable · Convert the source first",
+  "准备导入 {0} 个对话、{1} 条消息。": "Ready to import {0} conversations and {1} messages.", "还有 {0} 个对话需要设置或修复。已完成的处理会保留。": "{0} conversations still need mapping or repair. Completed work is retained.",
+  "正在整理导入计划。": "Preparing the import plan…", "正在导入": "Importing…", "导入 {0} 个对话": "Import {0} conversations", "个对话 ·": " conversations · ",
+  "检测到来源结构变化，需要保存一个新版本。": "The source structure has changed. Save a new format version to continue.", "使用": "Use ", "修复格式": "Repair format", "设置格式": "Map format",
+  "需要处理的输入": "Input requiring attention", "使用 Conversation Rescue": "Use Conversation Rescue", "保留": "Keep", "确认不导入": "Confirm exclusion", "最后一项不能排除，请替换文件或重新选择。": "The last item cannot be excluded. Replace it or choose different files.",
+  "从本次导入中排除这一项": "Exclude this item from the import", "不导入此项": "Exclude this item",
+  "将不可映射的源文件恢复为 Chat Reader 可导入的 Markdown。Chat Reader 不会自动上传原文。": "Recover an unmappable source as importable Markdown. Chat Reader does not upload the original content automatically.",
+  "关闭": "Close", "查看 Skill 摘要": "View skill summary", "Skill 只负责把无法安全映射的源文件整理为 Chat Reader Native Markdown Export v2；不会回答、总结或改写原对话。": "The skill converts unmappable sources into Chat Reader Native Markdown Export v2 without answering, summarizing or rewriting the transcript.",
+  "当前文件：": "Current file: ", "当前结构没有可靠的消息边界。继续设置角色或内容字段无法安全得到 Conversation。": "This structure has no reliable message boundaries. Choosing role or content fields cannot safely reconstruct the conversation.",
+  "复制或下载 Rescue Skill。": "Copy or download the Rescue skill.", "将源文件和 Skill 提供给你选择的大模型。": "Provide the source and skill to a model of your choice.", "要求输出 Chat Reader Native Markdown Export v2。": "Request Chat Reader Native Markdown Export v2.", "回到这里替换当前文件，再重新分析。": "Return here, replace the file and analyze it again.",
+  "中文 Skill": "Chinese skill", "下载 Skill": "Download skill", "复制 Skill": "Copy skill", "已复制，可粘贴到大模型。": "Copied. Paste it into your chosen model.", "下载文件后，与源文件一起提供给外部大模型。": "Provide the downloaded skill along with your source to the external model.",
+  "转换请求模板": "Conversion request template", "复制模板": "Copy template", "已复制。": "Copied.", "输出后请重新上传生成的 .md 文件。": "Upload the generated .md file when conversion is complete.",
+  "隐私提示：外部大模型可能会读取源文件中的对话内容。Chat Reader 不会代替你向第三方服务上传文件，请自行确认隐私范围。": "The external model may read the conversation in your source. Chat Reader does not send files to third parties for you. Choose what you want to share.",
+  "替换当前文件": "Replace current file", "稍后处理": "Do this later", "替换 {0}": "Replace {0}", "替换文件": "Replace file", "这个导入会话需要恢复": "This import session needs recovery",
+  "源文件仍然保留。可以使用当前分析器重新检查，或先调整文件组合。": "Your source files are retained. Analyze them again or adjust their grouping first.", "调整组合": "Adjust groups", "重新分析": "Analyze again", "对话组合 {0}": "Conversation group {0}",
+  "取消本次导入": "Cancel this import", "确认文件组合": "Confirm file groups", "把属于同一段对话的 JSON 与 Markdown 设为相同组合编号。一个组合最多包含一个 JSON 和一个 Markdown；单文件也可以独立导入。": "Give the JSON and Markdown files of the same conversation the same group number. Each group can contain at most one of each. Single files can also be imported independently.",
+  "组合": "Group", "{0} 的组合编号": "Group number for {0}", "正在重新分析": "Analyzing…", "确认组合并继续": "Confirm groups & continue", "请为每个文件填写组合编号。": "Enter a group number for every file.", "组合 {0} 不是有效组合：最多放入一个 JSON 和一个 Markdown。": "Group {0} is invalid: use at most one JSON and one Markdown file.",
+  "准备导入": "Ready to import", "需要恢复": "Recovery needed", "{0} 项待处理": "{0} items need attention", "兼容": "Compatible", "结构变化": "Structure changed", "需要选择": "Choose a format", "需要设置": "Mapping needed", "需要修复": "Repair needed",
+  "定位：": "Locate: ", "位置：": "Location: ",
+  "JSON 文件不完整、编码错误或语法无效。请替换为修正后的文件，或不导入这一项。": "The JSON file is incomplete or has invalid encoding or syntax. Replace it with a corrected file, or exclude it.",
+  "没有找到可确认的消息结构。可以替换文件，或调整文件组合后重试。": "No reliable message structure was found. Replace the file or adjust file groups, then retry.",
+  "Markdown 不是有效的 UTF-8 文本。请转换编码后替换文件。": "The Markdown is not valid UTF-8 text. Convert its encoding and replace the file.", "Markdown 文件没有可导入内容。请替换文件，或不导入这一项。": "The Markdown file has no importable content. Replace it or exclude it.",
+  "Markdown 中有未闭合的代码块。请修正后替换文件。": "The Markdown has an unclosed code fence. Correct it and replace the file.", "这些文件不能安全组成一个对话。请调整文件组合。": "These files cannot safely form one conversation. Adjust the file groups.", "临时源文件已丢失。请替换该文件或重新选择。": "The temporary source is missing. Replace it or choose files again.",
+  "无法分析的 JSON + Markdown": "Unrecognized JSON + Markdown", "无法分析的 Markdown": "Unrecognized Markdown", "无法分析的 JSON": "Unrecognized JSON", "未知 JSON + Markdown 格式": "Unknown JSON + Markdown format", "未知 Markdown 格式": "Unknown Markdown format", "未知 JSON 格式": "Unknown JSON format", "第 {0} 行": "Line {0}", "文本文件": "Text file",
+};
+
+export type ImportCopy = (key: string, ...values: Array<string | number>) => string;
+export function importErrorMessage(message: string, tr: ImportCopy): string {
+  return tr(message === "CONNECTION_FAILED" ? "无法连接服务器。请检查网络后重试，当前输入仍然保留。" : message);
+}
+export function useImportCopy(): ImportCopy {
+  const { resolvedLocale } = usePreferences();
+  return useCallback((key, ...values) => (resolvedLocale === "zh-CN" ? key : english[key] ?? key).replace(/\{(\d+)\}/g, (_, index: string) => String(values[Number(index)] ?? "")), [resolvedLocale]);
+}
