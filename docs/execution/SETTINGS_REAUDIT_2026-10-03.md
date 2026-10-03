@@ -131,3 +131,18 @@ Next rewrite，存在 10 MiB 截断风险。已补齐窄范围 Nginx 直连路�
 两条超限 413、四条无关路由保持原路径。仅启动独立 loopback 测试进程，未 reload
 生产配置。第一次运行因服务器 Python 3.6 不支持 future annotations 未启动；
 脚本改为兼容该版本后通过，同脚本纳入 CI。生产应用仍未发布。
+
+第四轮 `4e96dc3` / [Actions 37135406992](https://github.com/foolkking/chat-reader/actions/runs/37135406992)：
+API、上传网关、30 项 Context 通过。focused gate 为 42 通过、3 失败，三处中文
+批注按钮旧定位已改为实际“全部批注”；不是放宽定位与正文保持断言。
+设置为 125 通过、1 失败：清缓存时 durable download 已完成，但后台空闲扫描短暂
+持锁，应用误报正在下载。改为无活动任务时有界等待锁交接，取得锁后仍复查账户、
+任务与待同步指纹。新增真实浏览器锁屏障，验证不会误报且实际 Cache Storage 变空；
+活动下载仍禁用清理。初次中文 Reader 复验为 1 通过、2 Chrome 加载/启动失败，
+未计通过；恢复已停止的本地合成服务后改用已安装的 Playwright Chromium 复验。
+
+`reader-clear-cache-lock-final`：6 通过、0 跳过。三项中文批注回归通过，三个宽度的
+离线下载/恢复/档位/取消用例均通过；手动持有空闲下载锁时清理排队，释放后实际
+Cache Storage 为空且正文副本保留。`release-browser-remainder-final`：27 通过、
+0 跳过，覆盖 Share 焦点、源码冲突/撤销、附件上传原子性、噪声显式处理与 PDF/Markdown
+查看器。lint、typecheck、Web build 均通过。等待下一轮完整 CI；尚未部署。

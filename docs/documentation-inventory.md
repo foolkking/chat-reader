@@ -1,5 +1,9 @@
 # Markdown 文档台账
 
+2026-10-04 offline cleanup: `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` records
+bounded idle-lock handoff and unchanged active-download/pending-edit guards.
+The settings execution log preserves the CI-discovered race and browser evidence.
+
 2026-10-04 Context/Skill gateway follow-up: deployment docs and
 `system/DEPLOYMENT_AND_ENVIRONMENT.md` own exact upload routing/size boundaries;
 `testing.md` owns the real isolated Nginx transport gate. The existing dated

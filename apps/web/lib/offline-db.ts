@@ -783,11 +783,22 @@ async function withOfflineDataWrite(work: () => Promise<void>): Promise<void> {
   await assertNoActiveOfflineDownload(db);
   const run = async () => { assertOfflineAccess(access); await assertNoActiveOfflineDownload(db); await work(); };
   const synchronize = () => navigator.locks ? navigator.locks.request(`chat-reader:sync:${db.name}`, run) : run();
-  if (navigator.locks) await navigator.locks.request(`chat-reader:downloads:${db.name}`, { ifAvailable: true }, async (lock) => {
-    if (!lock) throw new OfflineDownloadInProgressError();
-    await synchronize();
-  });
-  else await synchronize();
+  if (navigator.locks) {
+    // The coordinator briefly takes this lock even to discover an empty queue,
+    // and releases it just after committing a terminal download state. Wait for
+    // that handoff instead of treating an idle scan as an active download.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    try {
+      await navigator.locks.request(`chat-reader:downloads:${db.name}`, { signal: controller.signal }, async () => {
+        clearTimeout(timer);
+        await synchronize(); // Recheck durable active jobs and account access.
+      });
+    } catch (error) {
+      if (controller.signal.aborted) throw new OfflineDownloadInProgressError();
+      throw error;
+    } finally { clearTimeout(timer); }
+  } else await synchronize();
 }
 
 async function verifyReviewedPending(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {

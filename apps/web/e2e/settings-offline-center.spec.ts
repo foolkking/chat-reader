@@ -84,9 +84,32 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await dialog.getByRole("button", { name: /Check and update|检查并更新/ }).click();
       await expect.poll(async () => (await storedDownloads(page, userId)).filter((item) => item.state === "completed").length).toBe(3);
       await expect(dialog.getByText(/1\/1/)).toBeVisible();
+      // Reproduce the coordinator's terminal-state/idle-scan lock handoff.
+      // No download remains active. Cleanup must wait, then really remove bytes.
+      await page.evaluate(async (id) => {
+        const namespace = Array.from(new TextEncoder().encode(id), b => b.toString(16).padStart(2, "0")).join("");
+        const name = localStorage.getItem("chat-reader:offline-legacy-owner-v1") === id ? "chat-reader-offline-library" : `chat-reader-offline-library--user-${namespace}`;
+        await new Promise<void>(ready => {
+          void navigator.locks.request(`chat-reader:downloads:${name}`, () => new Promise<void>(resolve => {
+            (window as Window & { releaseIdleDownload?: () => void }).releaseIdleDownload = resolve;
+            ready();
+          }));
+        });
+      }, userId);
       await dialog.getByRole("button", { name: /Clear cached files|仅清附件缓存/ }).click();
       await page.getByRole("button", { name: /^(Clear|清除)$/ }).click();
+      try {
+        await expect.poll(() => page.evaluate(async () => (await navigator.locks.query()).pending?.some(lock => lock.name?.startsWith("chat-reader:downloads:"))), { timeout: 2000, intervals: [25, 50, 100] }).toBe(true);
+        await expect(dialog.getByRole("alert")).toHaveCount(0);
+      } finally {
+        await page.evaluate(() => (window as Window & { releaseIdleDownload?: () => void }).releaseIdleDownload?.());
+      }
       await expect(dialog.getByText(/0\/1/)).toBeVisible();
+      expect(await page.evaluate(async id => {
+        const namespace = Array.from(new TextEncoder().encode(id), b => b.toString(16).padStart(2, "0")).join("");
+        const name = localStorage.getItem("chat-reader:offline-legacy-owner-v1") === id ? "chat-reader-offline-assets-v1" : `chat-reader-offline-assets-v1--user-${namespace}`;
+        return (await (await caches.open(name)).keys()).length;
+      }, userId)).toBe(0);
       await dialog.getByRole("combobox", { name: /Download attachments|下载附件/ }).selectOption("all");
       let downloading = false;
       const pending = new Promise<void>((resolve) => { release = resolve; });
@@ -95,6 +118,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       });
       await dialog.getByRole("button", { name: /Check and update|检查并更新/ }).click();
       await expect.poll(() => downloading).toBe(true);
+      await expect(dialog.getByRole("button", { name: /Clear cached files|仅清附件缓存/ })).toBeDisabled();
       await dialog.getByRole("button", { name: /Cancel|取消/, exact: true }).click();
       await expect.poll(async () => (await storedDownloads(page, userId)).filter((item) => item.state === "cancelled").length).toBe(1);
       release!();

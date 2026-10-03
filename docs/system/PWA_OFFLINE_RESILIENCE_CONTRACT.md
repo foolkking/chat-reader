@@ -1,5 +1,15 @@
 # PWA and Offline Resilience Contract
 
+## Cleanup after completed downloads (2026-10-04)
+
+Copy/attachment cleanup checks durable active downloads before acquiring the
+account's download lock. With no active job it waits up to 2.5 seconds for the
+coordinator's short idle scan or terminal-state handoff, instead of reporting a
+false active download. After acquiring the lock it rechecks the account and active
+jobs under the existing sync lock; pending-change fingerprints still protect
+deletion. Active downloads remain blocked and a busy lock times out without
+clearing data. No Dexie version or package format changes.
+
 ## Context export after actual ingestion (2026-10-03)
 
 Offline v3 optionally stores per-message `annotation_versions`, conversation

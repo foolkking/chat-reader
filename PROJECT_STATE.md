@@ -3,14 +3,15 @@
 ## Context migration — current local state (2026-10-03)
 
 Local source head is **`20261003_0046`**, a single Alembic head. The production
-snapshot below remains on 0042. Context/settings source `4240080` is pushed;
-its CI passed API and 126 settings cases but failed a new dependency advisory
-and an obsolete selector in the separate fresh-instance restore test. Source
-`90c8fda` fixes those issues; its API, 126 settings cases, fresh-instance restore,
-patched-dependency regression and audit pass. A later import test still used the
-old Skill name. Its corrected selector, missing English copy and authenticated
-draft-test namespace now pass locally, pending replacement CI. Nothing has been deployed. Preserve
-the unrelated tsconfig build info.
+snapshot below remains on 0042. Source `4e96dc3` adds tested scoped upload
+gateways. CI `37135406992` passed API and all 30 Context browser cases; its
+focused browser gate exposed three obsolete Chinese annotation selectors, and
+settings passed 125/126 with a real idle-download lock/cleanup race. Both fixes
+now pass six targeted browser cases; the remaining focused Share/source/attachment/
+cleanup/viewer flows pass 27 cases. Lint, typecheck and build pass, pending
+replacement CI. Earlier failed runs and their
+fixes remain in the dated settings log. Nothing has been deployed. Preserve the
+unrelated tsconfig build info.
 Current product authority: [Context contract](docs/system/CONTEXT_PACKAGE_CONTRACT.md).
 Dated results and superseded designs: [execution record](docs/execution/CONTEXT_MIGRATION_2026-10-03.md).
 
