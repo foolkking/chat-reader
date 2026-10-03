@@ -3,13 +3,14 @@
 ## Context migration — current local state (2026-10-03)
 
 Local source head is **`20261003_0046`**, a single Alembic head. The production
-snapshot below remains on 0042. Source `4e96dc3` adds tested scoped upload
-gateways. CI `37135406992` passed API and all 30 Context browser cases; its
-focused browser gate exposed three obsolete Chinese annotation selectors, and
-settings passed 125/126 with a real idle-download lock/cleanup race. Both fixes
-now pass six targeted browser cases; the remaining focused Share/source/attachment/
-cleanup/viewer flows pass 27 cases. Lint, typecheck and build pass, pending
-replacement CI. Earlier failed runs and their
+snapshot below remains on 0042. CI `37140545335` passed API, settings, all 30
+Context browser cases and the focused Reader/Share/source/upload gates, but the
+PDF gate timed out before opening the Viewer: its menu locator omitted the
+Chinese "消息操作" label. The corrected gate now explicitly exercises both account
+languages: five local owner/Share PDF cases pass with real workers, Range,
+rendered canvases, focus and malicious/corrupt inputs. The prior idle-download
+lock fix also passes all 17 offline negative cases. Replacement full CI remains
+required. Earlier failed runs and their
 fixes remain in the dated settings log. Nothing has been deployed. Preserve the
 unrelated tsconfig build info.
 Current product authority: [Context contract](docs/system/CONTEXT_PACKAGE_CONTRACT.md).

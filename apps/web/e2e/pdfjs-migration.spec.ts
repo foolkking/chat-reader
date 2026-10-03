@@ -1,11 +1,17 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { settingsAppearance } from "./settings-test-helper";
 
 const enabled = process.env.E2E_PDFJS_MIGRATION === "1";
 test.skip(!enabled, "E2E_PDFJS_MIGRATION=1 is required");
 
 type Attachment = { id: string; display_name: string; content_url: string };
+
+for (const locale of ["zh-CN", "en-US"]) test.describe(locale, () => {
+  test.beforeEach(async ({ page, baseURL }) => {
+    await settingsAppearance(page.request, baseURL!, locale);
+  });
 
 test("PDF.js 6 uses a real version-matched worker and renders single and multi-page PDFs", async ({ page }) => {
   test.setTimeout(180_000);
@@ -116,6 +122,8 @@ test("malicious and corrupted PDFs fail safely without escaping the unified View
   }
 });
 
+});
+
 async function createConversation(request: APIRequestContext): Promise<string> {
   const suffix = crypto.randomUUID().slice(0, 8);
   const preview = await request.post("/api/imports/preview", {
@@ -175,7 +183,9 @@ async function uploadAttachment(request: APIRequestContext, conversationId: stri
 
 async function openConversationFiles(page: Page, conversationId: string): Promise<void> {
   await page.goto(`/conversations/${conversationId}`);
-  await page.getByRole("button", { name: /Message actions|More|更多/ }).first().click();
+  const actions = page.getByRole("button", { name: /^(Message actions|消息操作)$/ });
+  await expect(actions).toBeVisible();
+  await actions.click();
   await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
   await expect(page.getByTestId("conversation-files-panel")).toBeVisible();
 }

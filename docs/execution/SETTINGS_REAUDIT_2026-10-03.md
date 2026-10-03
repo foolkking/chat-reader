@@ -146,3 +146,17 @@ API、上传网关、30 项 Context 通过。focused gate 为 42 通过、3 失�
 Cache Storage 为空且正文副本保留。`release-browser-remainder-final`：27 通过、
 0 跳过，覆盖 Share 焦点、源码冲突/撤销、附件上传原子性、噪声显式处理与 PDF/Markdown
 查看器。lint、typecheck、Web build 均通过。等待下一轮完整 CI；尚未部署。
+
+源码 `e1e10077e3dc551d936d44fcd0d5ff6e97f1f251` 已推送，
+[Actions 37140545335](https://github.com/foolkking/chat-reader/actions/runs/37140545335)
+已失败：API、设置、Context、Reader/Share/源码/附件等门槛通过，PDF 两项超时。
+此后本地 `pwa-negative-lock-final` 17 通过、0 跳过（独立故障测试构建），
+覆盖账户/缓存隔离、配额与写入失败保留旧包、v1/v2 读取、缺资源及浏览器重启恢复。
+生产仍未修改；后续全站至少十五项 UI/UX 改进仍未开始，不把本批修复计入该轮。
+
+CI trace 确认两项 PDF 均停在打开当前对话文件的菜单定位：正则只有英文 Message
+actions 和 More/更多，遗漏当前中文“消息操作”。尚未触发 PDF 下载或渲染；最终清理
+请求因测试预算已耗尽，掩盖了原始等待。现使用精确中英文入口并先断言可见，保留
+全部真实 worker、Range、canvas、焦点与恶意/损坏文件断言。两个 owner 场景明确按
+账户中英文分别运行。本地 `pdf-locales-final` 5 通过、0 跳过（含 Share），同时设置
+CI 的截图环境变量；不增加超时，不跳过原场景。生产未改，继续完整 CI。
