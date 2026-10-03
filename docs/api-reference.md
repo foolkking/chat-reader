@@ -1,5 +1,65 @@
 # API 参考
 
+2026-10-03 离线 v3 增加可选消息 `annotation_versions`（仅本人批注需要的历史版本）、
+对话 `project_context` 和附件来源字段，沿用现有下载接口与 Dexie v2。项目说明更新会
+递增关联对话离线 revision。旧包缺失这些字段仍可读取；离线导出明确记录缺失锚点，
+保留引用文字，不猜测替换版本。详见 [离线合同](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md)。
+
+2026-10-03 Context 写出：专用导出现在统一使用 canonical JSONL v2，与实际默认
+Acquisition/Maintainer 的读取器兼容。正文使用 `content_markdown`，附件引用为独立
+`attachment_ref`；保留批注锚点版本与白名单来源显示信息。部分范围排除无关附件及
+Current/Index。应用回传依然直接更新文件，不恢复候选、语义校验或采用流程。
+详见 [Context 合同](system/CONTEXT_PACKAGE_CONTRACT.md)。
+
+Candidate API retirement (2026-10-03): all legacy candidate routes now return
+410 CONTEXT_CANDIDATE_FLOW_RETIRED after conversation ownership checks; foreign
+accounts receive 404. They are absent from OpenAPI. Only direct files, whole-package
+return, state and saved revisions remain supported. Queued legacy context_validation
+jobs fail with CONTEXT_VALIDATION_RETIRED without new validation receipts; retry is
+blocked and the task UI points to direct updates. Historical rows/private fixture
+services remain for compatibility, not a reachable user workflow. No data was erased.
+
+Latest input update (2026-10-03): Skill upload/replacement accepts ZIP and Markdown.
+Markdown is automatically stored as a compatibility Bundle, preserving original
+instructions and the Skill display name; downloads use that name with `.zip`.
+System defaults remain the three supplied ZIPs. No Skill viewer is added.
+This supersedes earlier ZIP-only input statements below.
+
+## Skill ZIP write contract (2026-10-03)
+
+Personal Skill creation/replacement and administrator Bundle creation/replacement
+accept `.zip` or `.md`; Markdown becomes a same-name compatibility ZIP. Legacy administrator JSON content
+creation and content PATCH return 422. Metadata operations and legacy content
+reads remain compatible. Replacement retains base-revision conflict protection.
+The settings UI offers ZIP download/replacement without content/history viewing.
+
+## Skill Bundle backend（工作树，2026-10-02；未部署）
+
+- `POST /api/skills` accepts `.zip` Bundles or legacy `.md`; response adds
+  `bundle_revision` and revision-pinned `bundle_url`. Existing text routes remain.
+- `POST /api/skills/{id}/revisions`: multipart `file`, `base_revision`; owner only.
+  Stale base returns 409; identical current content retry is idempotent.
+- `GET /api/skills/{id}/revisions`: owner-only history, offset/limit (50 default,
+  100 maximum). `GET /bundle?revision=N` downloads the complete selected Bundle.
+- `GET /api/skills/{id}/revisions/{N}/members` lists bounded member metadata;
+  `GET /member?path=...` returns a non-executable file response.
+- Root: `POST /api/admin/system-skills/bundle`,
+  `POST /api/admin/system-skills/{id}/revisions`, history GET and
+  `GET /api/admin/system-skills/{id}/revisions/{N}/bundle`.
+- Root member inspection: `GET /api/admin/system-skills/{id}/revisions/{N}/members`
+  and `/member?path=...`. Historical system members are not public.
+- Categories include `CONTEXT_MAINTENANCE`. Disabling/deleting the last active
+  system Skill is refused; legacy text content PATCH returns 422. File replacement
+  uses the revisions endpoint with `base_revision`.
+- `GET /api/skills/system/{id}/bundle?revision=N` serves the active system revision
+  only. Personal files, withdrawn revisions and storage keys are not exposed.
+- Skill DELETE retains its 204 response. Unreferenced member files are reclaimed
+  through owner-scoped `skill_object_cleanup` tasks; existing task GET/retry apply.
+  Task results expose removed/retained counts, never private storage keys.
+- Limits: ZIP upload 16 MiB, 256 members, 32 MiB expanded total, 8 MiB per member,
+  512 KiB SKILL.md. Unsafe paths, links, encrypted/duplicate entries are rejected.
+
+
 ## 邀请、审计与删除后清理（工作树，2026-10-02）
 
 - `GET /api/admin/access/invitations/page`：Root，`state=ALL|PENDING|USED|EXPIRED|REVOKED`、
@@ -388,7 +448,7 @@ PATCH 只处理明确提交的字段，支持清空标题/说明/有效期/密�
 | POST | `/api/system/archive/exports` | 生成系统 `.cr v5`，配置 schema 1；包含无凭据身份、历史附件、格式/规则授权与发布、偏好、既有 Skill 和功能/访问策略，可选择 archived |
 | POST | `/api/system/archive/restore` | v4/v5 空实例恢复，保留旧 v5 无配置扩展兼容；可选 multipart `owner_mapping` JSON 字段指定旧账户归属；非空/配置冲突/缺少必要映射或 SMTP 返回 409 |
 
-对话产品 UI 始终导出完整当前对话，只显示 CanJSON/Markdown 与“包含附件”。无附件分别调用流式 `.canjsonl`/`.md`；含附件排队 `.context.zip`/可移植 Markdown ZIP。API 中旧 selection/context format 暂保兼容，但不在新 UI 暴露。`.context.zip` 只含 `manifest.json`、`conversation.canjsonl` 和内容寻址附件对象；manifest 分开记录 conversation/asset completeness。当前对话投影排除 `status=detached` 的 Attachment；系统 `.cr v4` 仍保留历史版本引用。CanJSON metadata-only 仍保留 active Attachment 和 occurrence；Markdown metadata-only 使用人类可读缺失占位。
+对话产品 UI 默认导出 Context Package，并保留 CanJSON/Markdown；附件独立选择。Context 始终排队生成 `.context.zip`，可携带完整范围的已保存 Current/Index；部分范围导出排除接续文件。manifest 分开记录 conversation/asset completeness，Raw 使用 canonical JSONL v2 并包含批注定位必需的历史版本。其他格式继续提供流式文件或附件 Bundle；metadata-only 保留附件记录。完整合同见本页 Context 节及 [Context Package](system/CONTEXT_PACKAGE_CONTRACT.md)，应用备份见 [Data Archive](system/DATA_ARCHIVE_CONTRACT.md)。
 
 附件：
 
@@ -640,3 +700,68 @@ reads without requiring a nonempty query. Full contract:
 - 两者均 no-store；旧 health 响应和内部 loopback diagnostics 保持原边界。
   30秒可见性刷新、统计预算、隐私白名单及离线缓存语义见
   [Observability Contract](system/OBSERVABILITY_CONTRACT.md)。
+
+
+## Context Continuation files (local migration, 2026-10-03)
+
+Prefix: `/api/conversations/{conversation_id}/continuation`. Every operation
+requires ownership of the target conversation. Foreign accounts receive 404;
+lineage, file digests and revision IDs never grant access.
+Writes refresh and lock the account before the conversation, so a request that
+authenticated before disable/delete cannot commit new files after the account
+became unavailable (401). Worker return application uses the same guard.
+
+| Method | Suffix | Behavior |
+| --- | --- | --- |
+| GET | root | `generation`, selected `adopted_revision_id` and owned `pending_return_task_id` |
+| PUT | `/files` | Multipart `base_generation` and Current and/or Index; returns `revision_id/generation` |
+| GET | `/revisions?limit=30&offset=0` | Immutable saved snapshots with member presence; maximum limit 100 |
+| GET | `/revisions/{revision_id}/members/{current\|index}` | Owner-scoped plain text; no-store and nosniff |
+| POST | `/returns` | Multipart Context ZIP, `base_generation`, `idempotency_key`; returns 202 task ID/status |
+
+Direct saves retain the other member and the latest three snapshots. Current is
+UTF-8 Markdown up to 1 MiB; Index is a JSON object up to 8 MiB. Exact retries do
+not create another snapshot. Stale bases return 409 `CONTEXT_BASE_CHANGED`.
+Member reads return 404 `CONTEXT_MEMBER_NOT_FOUND` for an absent member and 409
+for unavailable/corrupt stored bytes. No semantic validation or adoption is run.
+The historical column name `adopted_revision_id` denotes the selected saved file
+snapshot; it does not imply an adoption workflow.
+
+Whole returns run through `context_return` on the existing worker. Only package
+Continuation members are saved; missing members inherit saved files. Raw and
+attachments are never imported or modified. Successful tasks return revision ID,
+generation, updated members and `next_action=view_files`. Temporary ZIPs are
+removed after success, with failed retry/expiry lifecycle retained. A reused
+idempotency key with different bytes/options conflicts.
+
+Legacy `/candidates` routes and subpaths are ownership-checked 410 tombstones
+(`CONTEXT_CANDIDATE_FLOW_RETIRED`), excluded from OpenAPI. Queued historical
+validation jobs fail with `CONTEXT_VALIDATION_RETIRED` and cannot be retried.
+They are not supported APIs for new clients. Historical designs and their
+superseding implementation evidence remain in the dated execution records.
+
+### Context export options
+
+`ExportRequest` supports `context_attachment_policy=include|metadata_only`
+(default include) and `continuation_policy=auto|raw_only` (default auto).
+Options are persisted in the queued request and included in its idempotency
+identity. Metadata-only retains attachment references/digests without assets;
+Context always produces `.context.zip` independently of attachment inclusion.
+
+Auto includes available saved Continuation bytes with
+`extensions.chat_reader_continuation_export.status=included_without_validation`.
+Source coverage/trust/fingerprint claims are not rewritten or semantically checked.
+Raw-only reports `omitted_by_request`; partial conversation exports omit derived
+files to protect excluded history. Unavailable/corrupt optional objects fall back
+to Raw-only. Publication checks source revision and selected-file generation.
+New dedicated Context Raw uses canonical JSONL v2. Full details:
+[Context Package contract](system/CONTEXT_PACKAGE_CONTRACT.md).
+
+### Reader-local working drafts
+
+Current/Index editor drafts are account-scoped Dexie settings, not server candidates
+and not part of Context or Share exports. Editing retains text, base text and base
+generation. History restoration and conflict resolution use the same direct PUT
+with an explicit base; there is no force-write endpoint. The pending-edits recovery
+ZIP includes these local drafts as actual Markdown/JSON members. That ZIP is a
+manual recovery artifact, separate from `.context.zip` and `.cr`.

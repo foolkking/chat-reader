@@ -227,3 +227,54 @@ disposable database URL. Dated counts and outstanding gates belong to
 - `system-archive-new-instance.spec.ts`: opt-in fresh PostgreSQL restore,
   identities/configuration, repeat receipt, real download and expiry UI.
   `tests/build_system_archive_browser_fixture.py` creates synthetic input.
+
+
+## Skill Bundle archive extension (local Context migration, not deployed)
+
+### Context file extension (2026-10-02, local)
+
+Personal v1 and system v5 archives also declare `context_files_version: 1` and
+include `context_member_objects`, `context_bindings`, `continuation_revisions`
+and `continuation_states`. Member bytes live at `context/objects/<prefix>/<sha256>`;
+private storage keys are excluded. Queries follow the exported conversation scope.
+Candidates, validation/export receipts and uploaded ZIPs are not archived. Older
+archives without this extension retain their prior table set.
+
+Preflight checks sizes/digests/file syntax and reference ownership, not semantic
+correctness. Additive restoration remaps local conversation/version/binding IDs,
+retaining external identity and mapping data as source information. Current/Index
+bytes remain unchanged; historical references inside them are not silently
+rewritten. Restored revisions use direct-files mode without former verification.
+System restoration preserves canonical IDs. Both use rollback-aware member storage,
+archive transactions and heartbeats. Parent relationships restore in a streamed pass.
+
+Tests cover retained snapshots, Pair bytes, source binding, account scope,
+idempotency, corruption, legacy omission, fresh system restore and rollback.
+Migrated PostgreSQL tests pass personal and system restore/rollback; concurrent
+export/cleanup and UI inclusion-list acceptance remain pending.
+
+New personal v1 and system v5 archives declare `skill_bundle_version: 1`.
+They add `skill_bundle_revisions`, `skill_bundle_members` and `skill_file_objects`
+JSONL tables. Private file members are stored once at `skills/objects/<prefix>/<sha>`;
+storage keys are omitted. They do not increase attachment statistics. Personal
+queries include only the account's Skills and their revisions. System queries
+include personal/system history and only referenced member objects.
+
+Preflight checks paths, bytes, checksums, Bundle structure, source kind, owner,
+revision uniqueness, current text projection and complete-Bundle identity. Files
+are bounded by existing Bundle limits; uploaded scripts remain opaque. Missing
+history with nonzero current pointers is rejected. Older archives without this
+extension remain readable; unknown extension versions and undeclared files fail.
+
+Additive restoration deduplicates complete Bundles separately from legacy text.
+Equal instructions with different scripts remain distinct. Existing personal
+current revisions and preferences remain selected while missing archived history
+is merged; conflicting local revision numbers are remapped. Fresh system restore
+rebuilds personal/system history after account mapping. Member writes share the
+archive transaction's nested-rollback/commit/close lifecycle, and existing shared
+objects must pass integrity checks before reuse.
+
+Synthetic SQLite round trips and interrupted restoration are implemented in
+`test_skill_bundle_archives.py`. Corresponding migrated PostgreSQL cases are in
+`test_skill_bundle_archives_postgres.py` and require the existing disposable
+integration database flag; unexecuted PostgreSQL cases are not a passing claim.

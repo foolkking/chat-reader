@@ -96,6 +96,7 @@ class SystemSkill(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     skill_key: Mapped[str] = mapped_column(String(160), nullable=False)
+    bundle_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     category: Mapped[str] = mapped_column(String(32), nullable=False)
     locale: Mapped[str] = mapped_column(String(16), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)

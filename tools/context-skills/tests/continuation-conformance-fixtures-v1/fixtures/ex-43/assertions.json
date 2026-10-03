@@ -1,0 +1,109 @@
+{
+  "fixture": "EX-43",
+  "source_message_count": 140,
+  "continuation_boundary": 100,
+  "raw_tail_start": 101,
+  "direct_mode": {
+    "must_read_range": [
+      1,
+      140
+    ],
+    "must_read_every_sequence": true,
+    "must_not_treat_search_or_endpoint_checks_as_full_acquisition": true
+  },
+  "continuation_mode": {
+    "must_load_current_revision": 1,
+    "must_validate_verified_prefix": true,
+    "must_read_tail_range": [
+      101,
+      140
+    ],
+    "must_read_every_tail_sequence": true,
+    "must_not_replay_verified_prefix": [
+      1,
+      100
+    ],
+    "prefix_replay_exception": [
+      "content_fingerprint_mismatch",
+      "pair_identity_or_coverage_validation_failure",
+      "broken_critical_reference_requiring_raw_revalidation",
+      "other explicit validation failure that invalidates trusted fast restore"
+    ]
+  },
+  "must_preserve": {
+    "origin": "materials-intelligence platform, not a generic chat app",
+    "constraints": [
+      "CON-001 provenance",
+      "CON-002 coherent shared interaction patterns",
+      "CON-003 original scientific inputs immutable"
+    ],
+    "decisions": [
+      "DEC-001 canonical artifact flow remains project-wide default",
+      "scoped legacy CSV export exception only for that module"
+    ],
+    "topic_capsule": "TC-001 Scientific Viewer Architecture remains active",
+    "milestone": "MIL-001 scientific-viewer baseline completed at lower-level validation",
+    "open": "UI/UX consolidation remains open",
+    "verification_debt": "full production-equivalent viewer flow not verified",
+    "unknown": "whether production deployment contains the latest viewer baseline",
+    "next_action": "user reviews two UI consolidation options before coding begins"
+  },
+  "must_not_infer": [
+    "GraphQL rewrite was adopted",
+    "legacy CSV exception changes the project-wide artifact default",
+    "production deployment completed",
+    "full production verification passed",
+    "coding may begin before user review"
+  ],
+  "critical_equivalence_dimensions": [
+    "Origin",
+    "Current Mission",
+    "Evolution",
+    "Goal Tree",
+    "Constraints",
+    "Decisions",
+    "Scoped exceptions",
+    "Topic knowledge",
+    "Operational State",
+    "Milestone",
+    "Open Work",
+    "Verification Debt",
+    "Unknowns",
+    "Next Actions"
+  ],
+  "fingerprint_method": {
+    "profile": "chat-reader-content-v1",
+    "canonical_json": "JCS-compatible canonical JSON; fixture data uses only the safe subset representable by sorted UTF-8 JSON without numeric edge cases",
+    "text_line_endings": "normalize CRLF and CR to LF; preserve all other whitespace",
+    "message_content_projection": [
+      "role",
+      "ordered content parts"
+    ],
+    "message_locator_projection": [
+      "sequence",
+      "message_id if present",
+      "version_id if present",
+      "attachment locators if present"
+    ],
+    "message_digest": "sha256(canonical_json_utf8)",
+    "composition": "sha256(utf8(domain_separator + \"\\n\" + newline_joined_child_digest_hex))",
+    "domains": {
+      "prefix_content": "chat-reader-continuation-prefix-content-v1",
+      "prefix_locators": "chat-reader-continuation-prefix-locators-v1",
+      "segment_content": "chat-reader-continuation-segment-content-v1",
+      "segment_locators": "chat-reader-continuation-segment-locators-v1"
+    }
+  },
+  "expected_prefix_fingerprint": {
+    "profile": "chat-reader-content-v1",
+    "algorithm": "sha256",
+    "content": "b2cf92e5600e12bd4d34e194d11114f9c4c8da474e4562441db18f269ba701f4",
+    "locators": "575eac11c30c222be5bb438e10fbbb72fbe2669f0d9cf5e2c1a305b2124d61fc"
+  },
+  "golden_evidence_anchors": {
+    "CON-001": 11,
+    "CON-002": 13,
+    "CON-003": 15,
+    "DEC-001-adoption": 59
+  }
+}

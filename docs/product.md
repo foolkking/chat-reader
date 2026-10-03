@@ -72,7 +72,7 @@ Chat Reader 是单资料拥有者使用的 AI 对话资料库，不是在线聊�
 ## 分享、导出与离线
 
 - Share 默认是“任何拥有链接的人”可读的 public-by-link capability；创建时可选择独立的 Share 密码。Share 密码与 owner 密码分开哈希，解锁只签发 Share 范围的 HttpOnly credential，不创建 owner session。token、scope、过期、撤销、private include flags 和 `allow_export` 由每个公开接口重新校验。
-- 对话导出只显示 CanJSON、Markdown 和“包含附件”：无附件分别输出 `.canjsonl`/`.md`，含附件分别输出 AI 承接 `.context.zip`/可移植 Markdown ZIP。系统 `.cr v4` 位于设置的数据与备份，保存完整版本与关系并只允许恢复到空实例；旧对话级 `.cr` 只保留导入兼容。
+- 对话导出默认选择“交给 AI”，输出一个 `.context.zip`；附件文件独立选择，已保存 Current/Index 可随整段对话携带。CanJSON、Markdown 仍用于通用交换和阅读。Current/Index 在对话内批注旁的工作区直接查看、编辑或拖入更新，最近三次保存可恢复；`.context.zip` 回传不导入正文。应用恢复仍使用设置内的 `.cr`，个人新增恢复和系统空实例恢复见 [数据归档合同](system/DATA_ARCHIVE_CONTRACT.md)。
 - 需要携带二进制附件时可导出 `Markdown + 附件` 或 `CanJSON + 附件` Bundle；物理对象按 SHA-256 内容寻址。简介、批注、笔记和来源引用作为折叠的二级内容选项，不增加新的顶级格式。
 - 当前单用户部署主动关闭附件恶意软件扫描和内容安全审查；附件以 `scanner_disabled`/`unscanned` 状态正常使用，中文 UI 显示“未扫描”，不显示 clean/safe 或“已通过扫描”。这不代表文件经过安全检测。正文附件只采用 rich、compact、file-card、fallback 四种层级；连续图片/文件会分组。Viewer 的遮罩属于全页面，但实际内容窗口按类型受限：图片/视频为深色舞台，音频为紧凑面板，Markdown/文本/表格/PDF 为文档工作区。SVG 始终通过 `<img>` 显示。
 - 在线 Owner Reader 的 GFM 任务 checkbox 可点击并立即保存；第一次切换从 v1 创建 v2，后续在 v2+ 覆盖当前消息版本。Share、Offline 和附件 Markdown 保持只读。

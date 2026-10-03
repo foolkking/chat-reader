@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { chromium, expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { strToU8, zipSync } from "fflate";
 
 const DATABASE = "chat-reader-offline-library";
@@ -105,7 +105,8 @@ test.describe("Release E PWA negative matrix", () => {
     const active = await waitForActiveRecord(page);
     const criticalChunk = active.assets.find((asset) => asset.includes("/_next/static/") && asset.endsWith(".js"));
     if (!criticalChunk) throw new Error("The production shell has no JavaScript runtime chunk.");
-    const optionalSkill = "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md";
+    const optionalSkill = "/skills/context-acquisition.zip";
+    expect(active.assets).toContain(optionalSkill);
     await context.setOffline(true);
     const deleted = await page.evaluate(async ({ cacheName, criticalChunk, optionalSkill }) => {
       const cache = await caches.open(cacheName);
@@ -137,7 +138,7 @@ test.describe("Release E PWA negative matrix", () => {
     await expect(offlinePage.locator("main")).toContainText(/Offline ready|可离线启动/);
 
     // A non-critical Skill asset may be absent without making Library unusable.
-    const repaired = await waitForCachedShellAssets(offlinePage, [criticalChunk]);
+    const repaired = await waitForCachedShellAssets(offlinePage, [criticalChunk, optionalSkill]);
     const originalCriticalAssets = active.criticalAssets ?? active.assets.filter((asset) => !asset.startsWith("/skills/"));
     const repairedCriticalAssets = new Set(repaired.criticalAssets ?? repaired.assets.filter((asset) => !asset.startsWith("/skills/")));
     expect(originalCriticalAssets.filter((asset) => asset.endsWith(".js") && !repairedCriticalAssets.has(asset))).toEqual([]);
@@ -148,10 +149,10 @@ test.describe("Release E PWA negative matrix", () => {
     }, { cacheName: repaired.cacheName, assets: Array.from(repairedCriticalAssets) })).toBe(true);
     await expect.poll(() => offlinePage.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
     await context.setOffline(true);
-    await offlinePage.evaluate(async ({ cacheName, optionalSkill }) => {
+    expect(await offlinePage.evaluate(async ({ cacheName, optionalSkill }) => {
       const cache = await caches.open(cacheName);
-      await cache.delete(optionalSkill);
-    }, { cacheName: repaired.cacheName, optionalSkill });
+      return cache.delete(optionalSkill);
+    }, { cacheName: repaired.cacheName, optionalSkill })).toBe(true);
     const optionalPage = await context.newPage();
     await optionalPage.goto("/library", { waitUntil: "domcontentloaded" });
     await expect(optionalPage.locator("main")).toContainText(/Offline library|离线资料库/);
@@ -407,18 +408,20 @@ test.describe("Release E PWA negative matrix", () => {
     expect((await readFixtureState(page)).revision).toBe(before.revision);
   });
 
-  test("PWA-NEG-013..014 browser and Service Worker restart preserve the committed package", async () => {
+  test("PWA-NEG-013..014 browser and Service Worker restart preserve the committed package", async ({ playwright }, testInfo) => {
     const profileParent = path.resolve(process.env.RELEASE_E_PROFILE_ROOT ?? path.join(tmpdir(), "chat-reader-release-e"));
     await mkdir(profileParent, { recursive: true });
     const profile = await mkdtemp(path.join(profileParent, "profile-"));
+    const profileOptions = {
+      ...testInfo.project.use.launchOptions,
+      channel: testInfo.project.use.channel,
+      baseURL: testInfo.project.use.baseURL,
+      headless: true,
+      serviceWorkers: "allow" as const,
+    };
     let persistent: BrowserContext | null = null;
     try {
-      persistent = await chromium.launchPersistentContext(profile, {
-        channel: "chromium",
-        baseURL: "http://127.0.0.1:3107",
-        headless: true,
-        serviceWorkers: "allow",
-      });
+      persistent = await playwright.chromium.launchPersistentContext(profile, profileOptions);
       let profilePage = persistent.pages()[0] ?? await persistent.newPage();
       await seedMinimalOfflineFixture(profilePage);
       const before = await readFixtureState(profilePage);
@@ -427,12 +430,7 @@ test.describe("Release E PWA negative matrix", () => {
       await persistent.close();
       persistent = null;
 
-      persistent = await chromium.launchPersistentContext(profile, {
-        channel: "chromium",
-        baseURL: "http://127.0.0.1:3107",
-        headless: true,
-        serviceWorkers: "allow",
-      });
+      persistent = await playwright.chromium.launchPersistentContext(profile, profileOptions);
       await persistent.setOffline(true);
       profilePage = persistent.pages()[0] ?? await persistent.newPage();
       await profilePage.goto("/library?conversationId=offline-negative", { waitUntil: "domcontentloaded" });
@@ -567,8 +565,10 @@ async function seedMinimalOfflineFixture(page: Page, options: { waitForShell?: b
 async function openOfflineFiles(page: Page): Promise<void> {
   await page.goto("/library?conversationId=offline-negative");
   const action = page.getByRole("button", { name: /Conversation files|当前对话文件/ }).first();
-  if (!await action.isVisible().catch(() => false)) await page.getByRole("button", { name: /More|Message actions|更多/ }).first().click();
-  await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).first().click();
+  const overflow = page.getByRole("button", { name: /^(More|Message actions|更多|消息操作)$/ }).first();
+  await expect(action.or(overflow).first()).toBeVisible();
+  if (!await action.isVisible()) await overflow.click();
+  await action.click();
 }
 
 function createReplacementPackage(messageCount = 1): number[] {

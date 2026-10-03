@@ -15,6 +15,7 @@ from app.api.routes.toc import router as toc_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.archive_exports import router as archive_exports_router
 from app.api.routes.annotations import router as annotations_router
+from app.api.routes.context_continuation import router as context_continuation_router
 from app.api.routes.offline import router as offline_router
 from app.api.routes.attachments import router as attachments_router
 from app.api.routes.system_archives import router as system_archives_router
@@ -66,6 +67,7 @@ app.include_router(toc_router)
 app.include_router(tasks_router)
 app.include_router(archive_exports_router)
 app.include_router(annotations_router)
+app.include_router(context_continuation_router)
 app.include_router(offline_router)
 app.include_router(attachments_router)
 app.include_router(system_archives_router)

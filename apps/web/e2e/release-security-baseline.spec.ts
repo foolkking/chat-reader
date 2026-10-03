@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
+import { unzipSync } from "fflate";
 
 const expectedPermissions = [
   "browsing-topics=()",
@@ -40,13 +42,13 @@ test("production responses carry the Release A security baseline", async ({ page
   expect(csp).toContain("frame-ancestors 'none'");
   expect(headers["content-security-policy-report-only"]).toBeUndefined();
 
-  const builtinSkills = [
+  const legacySkillUrls = [
     "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
     "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
     "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md",
     "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md",
   ];
-  for (const path of builtinSkills) {
+  for (const path of legacySkillUrls) {
     const staticResponse = await request.get(path);
     const staticHeaders = staticResponse.headers();
     expect(staticResponse.status(), path).toBe(200);
@@ -73,13 +75,20 @@ test("PDF and Mermaid keep their bounded runtime security settings", () => {
   expect(markdown).toContain('securityLevel: "strict"');
 });
 
-test("Skill previews remain text-only and never execute uploaded content", () => {
-  const root = process.cwd();
-  const source = fs.readFileSync(path.join(root, "components/skill-settings.tsx"), "utf8");
-
-  expect(source).toContain("<pre");
-  expect(source).not.toContain("dangerouslySetInnerHTML");
-  expect(source).not.toMatch(/(marked|remark|rehype|renderToStaticMarkup)/i);
+test("system Skill Bundles download as pinned ZIP attachments", async ({ request }) => {
+  for (const name of ["context-acquisition", "context-continuation-maintainer", "chat-transcript-normalizer-skill"]) {
+    const response = await request.get(`/skills/${name}.zip`);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("application/zip");
+    expect(response.headers()["content-disposition"]).toContain("attachment");
+    expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers()["content-security-policy"]).toBe("default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; sandbox");
+    const bytes = await response.body();
+    const pinned = fs.readFileSync(path.resolve("../../tools/context-skills/default-bundles", `${name}.zip`));
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(createHash("sha256").update(pinned).digest("hex"));
+    const bundleRoot = name === "chat-transcript-normalizer-skill" ? "chat-transcript-normalizer" : name;
+    expect(Object.keys(unzipSync(bytes))).toContain(`${bundleRoot}/SKILL.md`);
+  }
 });
 
 test("long-running import commit keeps its public proxy contract outside the affected App Route build path", () => {

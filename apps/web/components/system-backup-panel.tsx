@@ -98,7 +98,7 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
   }
 
   return <div className="grid min-w-0 gap-5">
-    <p className="text-sm leading-6 text-secondary">{zh ? "保存整个实例的阅读资料与配置，或将系统归档恢复到新实例。" : "Back up the instance’s reading materials and settings, or restore a system archive into a new instance."}</p>
+
     <div role="group" aria-label={zh ? "备份操作" : "Backup action"} className="flex border-b border-ui">{(["backup", "restore"] as const).map((value) => <button key={value} type="button" aria-pressed={mode === value} disabled={busy || mappingBusy} onClick={() => void switchMode(value)} className={`min-h-11 flex-1 border-b-2 px-3 text-sm ${mode === value ? "border-[var(--text)] font-semibold text-primary" : "border-transparent text-secondary hover:bg-subtle"}`}>{value === "backup" ? (zh ? "备份整个系统" : "Back up the system") : (zh ? "恢复归档" : "Restore archive")}</button>)}</div>
     {!online ? <p role="status" className="rounded-lg bg-subtle p-3 text-sm leading-6 text-secondary">{zh ? "系统备份与恢复需要联网。离线时可在资料库导出已保存的快照；服务器上的任务会继续。" : "System backups and restores need a connection. Offline snapshots can be exported from Library. Server tasks continue while you are away."}</p> : null}
     {mode === "restore" && capabilities.data?.empty_instance === false ? <p role="status" className="border-l-2 border-[var(--warning)] pl-3 text-sm leading-6 text-secondary">{zh ? "当前实例已有资料或自定义配置，可以预检归档，但不能执行新的系统恢复。请在空实例恢复；本人资料请使用「数据与备份」。" : "This instance contains materials or custom settings. You can preview an archive, but a new system restore requires an empty instance. Use Data & backup for your own materials."}</p> : null}

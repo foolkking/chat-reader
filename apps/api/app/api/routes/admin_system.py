@@ -1,12 +1,13 @@
 """Root-only system Skill, policy, backup and audit administration."""
 
 from __future__ import annotations
+from app.services.skill_bundles import bundle_disposition
 
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status, File, Form, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -55,7 +56,7 @@ class FeaturePolicyUpdate(BaseModel):
 
 
 class SystemSkillCreate(BaseModel):
-    category: str = Field(pattern="^(EXPORT_CONTEXT|CONVERSATION_RESCUE)$")
+    category: str = Field(pattern="^(EXPORT_CONTEXT|CONVERSATION_RESCUE|CONTEXT_MAINTENANCE)$")
     locale: str = Field(pattern="^(zh-CN|en)$")
     name: str = Field(min_length=1, max_length=200)
     content: str = Field(min_length=1, max_length=512 * 1024)
@@ -63,6 +64,7 @@ class SystemSkillCreate(BaseModel):
 
 
 class SystemSkillUpdate(BaseModel):
+    base_revision: int | None = Field(default=None, ge=0)
     name: str | None = Field(default=None, min_length=1, max_length=200)
     content: str | None = Field(default=None, min_length=1, max_length=512 * 1024)
     status: str | None = Field(default=None, pattern="^(ACTIVE|DISABLED)$")
@@ -109,26 +111,102 @@ def read_system_skills(request: Request, db: Session = Depends(get_db)) -> list[
     return [_system_skill_payload(row) for row in rows]
 
 
-@router.post("/system-skills", status_code=status.HTTP_201_CREATED)
-def add_system_skill(payload: SystemSkillCreate, request: Request, db: Session = Depends(get_db)) -> dict:
+@router.post('/system-skills/bundle', status_code=201)
+async def create_system_bundle(request: Request, category: str = Form(...), locale: str = Form(...),
+                               name: str = Form(...), file: UploadFile = File(...),
+                               default_enabled: bool = Form(False), db: Session = Depends(get_db)):
     actor = require_root_admin(request, db)
+    from app.services.skill_bundles import MAX_UPLOAD, parse_bundle, save_revision
+    if not (file.filename or '').lower().endswith(('.zip', '.md')):
+        raise HTTPException(422, 'Upload a Skill ZIP or Markdown file.')
+    data = await file.read(MAX_UPLOAD + 1)
+    if len(data) > MAX_UPLOAD: raise HTTPException(413, 'Skill Bundle exceeds upload limit.')
     try:
-        row = create_system_skill(db, actor_user_id=actor.id, **payload.model_dump())
-        record_admin_audit(
-            db,
-            actor_user_id=actor.id,
-            action="SYSTEM_SKILL_CREATED",
-            resource_type="system_skill",
-            resource_id=row.id,
-            metadata={"category": row.category, "locale": row.locale},
-            request_id=request_id_from(request),
-        )
-        db.commit()
-        db.refresh(row)
+        bundle = parse_bundle(data, file.filename or '')
+        row = create_system_skill(db, actor_user_id=actor.id, category=category, locale=locale,
+                                  name=name, content=bundle.content, default_enabled=default_enabled)
+        save_revision(db, row, bundle, base_revision=0, preserve_baseline=False)
+        record_admin_audit(db, actor_user_id=actor.id, action='SYSTEM_SKILL_CREATED',
+                           resource_type='system_skill', resource_id=row.id, request_id=request_id_from(request))
+        db.commit(); db.refresh(row)
         return _system_skill_payload(row)
     except ValueError as exc:
-        db.rollback()
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        db.rollback(); raise HTTPException(422, str(exc)) from exc
+
+
+@router.post('/system-skills/{skill_id}/revisions')
+async def replace_system_bundle(skill_id: uuid.UUID, request: Request, file: UploadFile = File(...),
+                                base_revision: int = Form(..., ge=0), db: Session = Depends(get_db)):
+    actor = require_root_admin(request, db)
+    row = _system_skill(db, skill_id)
+    from app.services.skill_bundles import MAX_UPLOAD, parse_bundle, save_revision
+    if not (file.filename or '').lower().endswith(('.zip', '.md')):
+        raise HTTPException(422, 'Upload a Skill ZIP or Markdown file.')
+    data = await file.read(MAX_UPLOAD + 1)
+    if len(data) > MAX_UPLOAD: raise HTTPException(413, 'Skill Bundle exceeds upload limit.')
+    try:
+        save_revision(db, row, parse_bundle(data, file.filename or ''), base_revision=base_revision)
+        row.updated_by_user_id = actor.id
+        record_admin_audit(db, actor_user_id=actor.id, action='SYSTEM_SKILL_UPDATED',
+                           resource_type='system_skill', resource_id=row.id, request_id=request_id_from(request))
+        db.commit(); db.refresh(row)
+        return _system_skill_payload(row)
+    except RuntimeError as exc:
+        db.rollback(); raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        db.rollback(); raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/system-skills/{skill_id}/revisions')
+def system_bundle_revisions(skill_id: uuid.UUID, request: Request, offset: int = Query(0, ge=0),
+                            limit: int = Query(50, ge=1, le=100), db: Session = Depends(get_db)):
+    require_root_admin(request, db)
+    row = _system_skill(db, skill_id)
+    from app.services.skill_bundles import revision_query
+    from app.models.skill_bundle import SkillBundleRevision
+    return [{'revision': r.revision, 'digest': r.digest, 'source_kind': r.source_kind,
+             'byte_size': r.byte_size, 'created_at': r.created_at, 'is_current': r.revision == row.bundle_revision}
+            for r in revision_query(db, row).order_by(SkillBundleRevision.revision.desc()).offset(offset).limit(limit).all()]
+
+
+@router.get('/system-skills/{skill_id}/revisions/{number}/bundle')
+def system_revision_download(skill_id: uuid.UUID, number: int, request: Request, db: Session = Depends(get_db)):
+    require_root_admin(request, db)
+    row = _system_skill(db, skill_id)
+    from app.api.routes.skills import _revision
+    from app.services.skill_bundles import download_revision
+    return Response(download_revision(db, _revision(db, row, number)), media_type='application/zip', headers={
+        'Content-Disposition': bundle_disposition(row.name), 'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff'})
+
+
+@router.get('/system-skills/{skill_id}/revisions/{number}/members')
+def system_revision_members(skill_id: uuid.UUID, number: int, request: Request, db: Session = Depends(get_db)):
+    require_root_admin(request, db)
+    from app.api.routes.skills import _revision
+    from app.services.skill_bundles import member_rows
+    revision = _revision(db, _system_skill(db, skill_id), number)
+    return [{'path': member.path, 'byte_size': obj.byte_size, 'sha256': obj.sha256}
+            for member, obj in member_rows(db, revision)]
+
+
+@router.get('/system-skills/{skill_id}/revisions/{number}/member')
+def system_revision_member(skill_id: uuid.UUID, number: int, request: Request, path: str = Query(...), db: Session = Depends(get_db)):
+    require_root_admin(request, db)
+    from app.api.routes.skills import _revision
+    from app.services.skill_bundles import member_rows, read_member
+    revision = _revision(db, _system_skill(db, skill_id), number)
+    obj = next((obj for member, obj in member_rows(db, revision) if member.path == path), None)
+    if obj is None: raise HTTPException(404, 'Skill member not found.')
+    return Response(read_member(obj), media_type='text/plain', headers={
+        'Content-Disposition': 'attachment; filename="skill-member.txt"', 'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox"})
+
+
+@router.post("/system-skills", status_code=status.HTTP_201_CREATED)
+def add_system_skill(payload: SystemSkillCreate, request: Request, db: Session = Depends(get_db)) -> dict:
+    require_root_admin(request, db)
+    raise HTTPException(422, 'Upload a Skill ZIP Bundle through /system-skills/bundle.')
 
 
 @router.get("/system-skills/{skill_id}")
@@ -147,6 +225,8 @@ def edit_system_skill(
 ) -> dict:
     actor = require_root_admin(request, db)
     row = _system_skill(db, skill_id)
+    if payload.content is not None:
+        raise HTTPException(422, 'Replace the Skill with a ZIP Bundle.')
     previous_status = row.status
     try:
         update_system_skill(db, row, actor_user_id=actor.id, **payload.model_dump(exclude_none=True))
@@ -165,6 +245,9 @@ def edit_system_skill(
         db.commit()
         db.refresh(row)
         return _system_skill_payload(row)
+    except RuntimeError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -176,6 +259,11 @@ def remove_system_skill(skill_id: uuid.UUID, request: Request, db: Session = Dep
     row = _system_skill(db, skill_id)
     if row.source_kind == "BUNDLED":
         raise HTTPException(status_code=409, detail="Bundled Skills cannot be deleted; restore the built-in version instead.")
+    peers = db.query(SystemSkill).filter(
+        SystemSkill.category == row.category, SystemSkill.locale == row.locale,
+    ).order_by(SystemSkill.id).with_for_update().populate_existing().all()
+    if row.status == "ACTIVE" and not any(peer.id != row.id and peer.status == "ACTIVE" for peer in peers):
+        raise HTTPException(status_code=409, detail="Keep at least one active system Skill for this category and language.")
     record_admin_audit(
         db,
         actor_user_id=actor.id,
@@ -185,6 +273,9 @@ def remove_system_skill(skill_id: uuid.UUID, request: Request, db: Session = Dep
         metadata={"category": row.category, "locale": row.locale},
         request_id=request_id_from(request),
     )
+    from app.services.skill_cleanup import detach_skill_history, queue_skill_cleanup
+    keys = detach_skill_history(db, row)
+    queue_skill_cleanup(db, keys, owner_user_id=actor.id)
     db.delete(row)
     db.commit()
 
@@ -424,6 +515,8 @@ def _system_skill_payload(row: SystemSkill) -> dict:
         "default_enabled": row.default_enabled,
         "is_customized": row.source_kind == "BUNDLED" and row.content is not None,
         "byte_size": row.byte_size,
+        "bundle_revision": row.bundle_revision,
+        "bundle_url": f'/api/skills/system/{row.id}/bundle?revision={row.bundle_revision}' if row.bundle_revision or row.content is not None else builtin_by_key(row.bundled_key).bundle_url if row.bundled_key and row.content is None else None,
         "builtin_content_url": builtin_url,
         "updated_at": row.updated_at,
     }

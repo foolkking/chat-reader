@@ -6,6 +6,83 @@ when it has the matching build-time API rewrite, auth mode and optional PWA
 fault seam. Auth-disabled/fault-injection builds are local synthetic fixtures,
 not deployable release artifacts.
 
+## Context direct-file browser gate (2026-10-03)
+
+`python -m pytest tools/context-skills/tests -q` covers reviewed OLD/NEW comparison
+and materialization, actual writer/reader synthetic flows, stale Evidence, history
+repair, bounded asset copying, source/output races and Bundle distribution. The
+Windows symlink case may skip; Linux CI must exercise it. `build.py --check` compares
+the three shared source trees and exact pinned defaults; `build.py --review` emits
+separate review artifacts. Neither command deploys or updates system defaults.
+The authored `semantic-walkthrough-v1.json` and its writer/reader preservation test
+cover qualified adoption, version-specific test claims, corrected history, scoped
+exceptions, unknown evidence and complete Hot Tail delivery. Agent review is
+recorded separately; a passing golden test is not an independent semantic model
+evaluation. Path-safety cases include Unicode-equivalent duplicate names and
+file/directory collisions; accepted Unicode spellings/bytes remain unchanged.
+`test_context_external_roundtrip.py` runs actual export/return worker code around
+external writer subprocesses and checks persistent rows/member bytes after a full
+A → maintain → B → dual maintain → return → C cycle. The external Candidate/Trace
+are test-authored semantic inputs, not the removed application candidate flow.
+
+`library-offline.spec.ts` now checks the cached Acquisition ZIP instead of the
+retired Markdown viewer. Cold reload/export asserts attachment bytes, default ZIP
+hash, English/Chinese usage text, clipboard denial/retry and independent package
+download. `release-security-baseline.spec.ts` checks all three actual ZIP responses
+and legacy Markdown URLs; `pwa-negative.spec.ts` removes the real cached ZIP when
+testing optional resource recovery. This does not assert arbitrary model behavior.
+
+The `context-files` step uses the existing isolated auth-disabled API and worker
+with `E2E_CONTEXT_EXPORT=1`. It runs direct updates, whole-package returns, drag/drop,
+export options, reading tools, durable drafts and actual offline ingestion parity.
+`context-offline-parity.spec.ts` exercises real Normalizer import and worker downloads,
+then disconnects/reloads before exporting. Its legacy case removes only optional
+members from a real download. `tools/testing/inspect_context_export.py` uses the fixed
+app reader plus the canonical graph parser; it never loads uploaded scripts.
+The ordinary PWA baseline
+also covers cached Continuation reading/export. `E2E_LONG_READER=1` is required
+for Reader restoration regressions; skipped cases do not satisfy that gate.
+Draft cases assert real IndexedDB text/base versions, real server conflicts,
+two-tab local fork preservation, direct-save cleanup and downloaded recovery
+member bytes. These do not replace the authenticated account-isolation, expiry,
+quota, signout and scoped deletion gates. `settings-context-drafts.spec.ts` adds
+those scenarios to the existing authenticated `settings-*.spec.ts` selector:
+actual worker downloads, expiry/reload/account switching, 375px IndexedDB put/delete
+faults, real recovery ZIP bytes, two-tab signout fingerprint checks and failed
+logout recovery. Trace is disabled and all content is synthetic. A local gate with
+this suite, `settings-offline-lock.spec.ts` and `settings-pending-signout.spec.ts`
+passed eight cases again after the backend account fence.
+
+`test_continuation_candidates_postgres.py` now checks stale authenticated writes
+after a separately committed account disable for direct save, return admission
+and worker application, alongside same-update concurrency. The disk-full interrupted
+run is retained as a failure in the execution record; its corrected E: rerun passes
+30 cases. `test_context_return_postgres.py` exercises actual file/DB writes followed
+by a separately committed cancellation or an injected failure. It checks rollback
+of generation, offline revision, objects and selected files, then explicit retry
+with exact Current/Index bytes. Cleanup/archive/return PostgreSQL coverage passes
+13 cases. This does not replace the full API/release gate.
+Ordinary API fixtures require `AUTH_ENABLED=false`; the PostgreSQL auth cases
+explicitly enable it themselves. Do not reuse the browser fixture's auth setting
+for the mixed API suite. CI execution remains unproven until run.
+
+CI `context-files` explicitly enables `E2E_CONTEXT_BUNDLES=1` and selects the
+personal Bundle suite. It is also required by `PLAYWRIGHT_EXPECTED_GATES`, so a
+missing Context evidence report fails the release summary. The authenticated settings step enables `E2E_CONTEXT_ADMIN=1`
+and adds the six Root Bundle cases. Neither suite is silently accepted through its
+opt-in skip. Full API runs should also enable `POSTGRES_EXPORT_INTEGRATION=1` when
+the isolated PostgreSQL service is available; report all platform/optional skips.
+The auth-disabled PWA baseline must clear `E2E_AUTH_EMAIL`/`E2E_AUTH_PASSWORD`;
+those variables activate a separate authenticated matrix. The parity suite works
+with both inline and queued import, waiting for real committed status in either
+case. Context's authenticated fixture cleanup uses confirmed account-deletion jobs
+and waits for completion; an ignored DELETE response is not evidence of cleanup.
+The PWA negative restart probe uses the configured browser/channel/executable for
+both launches, preserving its real profile and worker restart. Its Reader helper
+waits for a visible action and recognizes both languages before opening files.
+Fault-injection builds change generated `next-env.d.ts` type paths; restore the
+normal `.next/types` references after those builds before ordinary typechecking.
+
 ## Settings stages 1–4 CI gate (2026-10-01)
 
 Stage-seven help/runtime additions: `test_admin_runtime.py` verifies access,
@@ -898,7 +975,7 @@ Final v4 production evidence is PASS. Read-only Source Preview audits began coll
 
 ## Offline/context delivery regression coverage (2026-08-11)
 
-`apps/web/e2e/library-offline.spec.ts` covers active-shell immediate startup, failed update preservation, deterministic bilingual Skill asset caching, read-only current-conversation files, cached/missing attachment handling, local CanJSON/Markdown/`.context.zip` export, download-plus-copy clipboard rejection, inert Skill viewing/download and exact 360x800, 390x844 and 768x1024 reflow. The Skill check is content/asset based; the UI does not expose a manual checksum confirmation.
+`apps/web/e2e/library-offline.spec.ts` covers active-shell immediate startup, failed update preservation, built-in Acquisition ZIP caching and bilingual usage instructions, read-only current-conversation files, cached/missing attachment handling, local CanJSON/Markdown/`.context.zip` export, clipboard rejection with independent package download, and exact 360x800, 390x844 and 768x1024 reflow. It checks actual ZIP members and bytes; there is no Skill viewer or manual checksum confirmation in the UI.
 
 The full local matrix completed with `41 passed / 27 skipped`. The skips are conditional API/fixture-backed flows (upload/import/online reader/share) because the PWA web server was intentionally run without an API at `127.0.0.1:8000`; they are not counted as PASS. Offline quota exhaustion, interrupted package writes, reconnect synchronization and production network interception remain `NOT_PRODUCTION_VERIFIED`.
 

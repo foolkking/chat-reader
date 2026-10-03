@@ -1,0 +1,3 @@
+interface:
+  display_name: "Context Acquisition"
+  short_description: "Restore Chat Reader context packages with evidence-aware, read-only continuation."

@@ -2,6 +2,8 @@ import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
 const english: Record<string, string> = {
+  "请在设置的数据与备份中恢复 .cr 归档。": "Restore .cr archives from Data & backup in Settings.",
+  "请打开目标对话，在批注旁的上下文面板中更新 Current / Index。": "Open the target conversation and update Current / Index in the Context panel beside annotations.",
   "没有可靠的消息边界": "No reliable message boundaries", "当前内容不足以安全分割为 Conversation 消息。": "This content cannot be safely divided into conversation messages.",
   "这不是对话记录": "This is not a conversation transcript", "当前文件是说明文档或转换指令，不是可直接分段的 Conversation。": "This file contains documentation or conversion instructions, rather than a conversation transcript.",
   "文件没有可导入内容": "No importable content", "文件为空，无法建立 Conversation。": "The file is empty and cannot form a conversation.",

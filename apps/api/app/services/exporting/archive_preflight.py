@@ -54,7 +54,7 @@ def _validate_row(name, model, payload):
     for prop in inspect(model).column_attrs:
         column = prop.columns[0]
         if prop.key not in payload:
-            if name == "asset_objects" and prop.key in {"storage_key", "storage_backend"}:
+            if name in {"asset_objects", "skill_file_objects", "context_member_objects"} and prop.key in {"storage_key", "storage_backend"}:
                 continue
             if not column.nullable and column.default is None and column.server_default is None:
                 raise SystemArchiveError("Archive is missing a required record field.")
@@ -85,7 +85,7 @@ def _validate_row(name, model, payload):
         body = payload["content"].encode("utf-8")
         if (len(body) > MAX_SKILL_BYTES or not body.strip() or len(body) != payload["byte_size"]
                 or hashlib.sha256(body).hexdigest() != payload["content_digest"]
-                or payload["category"] not in {"EXPORT_CONTEXT", "CONVERSATION_RESCUE"}
+                or payload["category"] not in {"EXPORT_CONTEXT", "CONVERSATION_RESCUE", "CONTEXT_MAINTENANCE"}
                 or payload["locale"] not in {"zh-CN", "en"} or payload["status"] not in {"ACTIVE", "DISABLED"}):
             raise SystemArchiveError("Archive contains an invalid personal Skill.")
 
@@ -102,7 +102,11 @@ class PersonalArchive:
                 self.manifest.get("version") != PERSONAL_ARCHIVE_VERSION or
                 self.manifest.get("restore_mode") != "additive"):
             raise SystemArchiveError("Select a personal data archive for additive restore.")
-        _validate_canonical_entries(archive, self.manifest, table_names=PERSONAL_TABLE_MODELS, heartbeat=heartbeat)
+        from app.services.exporting.archive_skill_bundles import bundle_table_models
+        self.table_models = bundle_table_models(PERSONAL_TABLE_MODELS, self.manifest)
+        from app.services.exporting.archive_context import context_table_models
+        self.table_models = context_table_models(self.table_models, self.manifest)
+        _validate_canonical_entries(archive, self.manifest, table_names=self.table_models, heartbeat=heartbeat)
         declared = sorted(self.manifest["canonical_entries"], key=lambda row: row["path"])
         self.content_digest = hashlib.sha256(json.dumps({
             "format": PERSONAL_ARCHIVE_FORMAT, "version": PERSONAL_ARCHIVE_VERSION,
@@ -118,7 +122,7 @@ class PersonalArchive:
             pk = [inspect(model).get_property_by_column(column).key for column in inspect(model).primary_key]
             for row in self.rows(name):
                 _validate_row(name, model, row)
-                key = row["id"] if has_id else tuple(row[field] for field in pk)
+                key = row["id"] if has_id else row[pk[0]] if len(pk) == 1 else tuple(row[field] for field in pk)
                 if key in keys:
                     raise SystemArchiveError("Archive contains duplicate record identities.")
                 keys.add(key)
@@ -135,12 +139,18 @@ class PersonalArchive:
         self._validate_references()
         self._validate_configurations()
         _validate_asset_entries(archive, self.rows("asset_objects"), heartbeat=heartbeat)
-        allowed = {"manifest.json", *(f"data/{name}.jsonl" for name in PERSONAL_TABLE_MODELS)}
+        from app.services.exporting.archive_skill_bundles import validate_bundle_archive
+        skill_paths = validate_bundle_archive(self)
+        from app.services.exporting.archive_context import validate_context_archive
+        skill_paths |= validate_context_archive(self)
+        allowed = {"manifest.json", *skill_paths, *(f"data/{name}.jsonl" for name in self.table_models)}
         allowed.update(row["archive_path"] for row in self.rows("asset_objects") if row.get("archive_path"))
         if set(archive.namelist()) != allowed:
             raise SystemArchiveError("Personal archive contains unexpected or undeclared files.")
 
     def rows(self, name):
+        if name not in self.counts:
+            return ()
         return _ArchiveRows(self.archive, f"data/{name}.jsonl", self.counts[name], self.heartbeat)
 
     def _reference(self, table, value):

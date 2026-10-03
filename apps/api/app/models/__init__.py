@@ -1,3 +1,4 @@
+from app.models.context_continuation import (ContextMemberObject, ContextBinding, ContinuationRevision, ContinuationState, ContinuationCandidate, ContinuationValidation, ContextExportReceipt)
 from app.models.background_job import BackgroundJob
 from app.models.archive_restore import ArchiveRestoreAccount, ArchiveRestoreReceipt
 from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthRateLimit, AuthSession
@@ -45,6 +46,7 @@ from app.models.source_message_ref import SourceMessageRef
 from app.models.user_preference import UserPreference
 from app.models.worker_runtime_state import WorkerRuntimeState
 from app.models.user_skill import UserSkill, UserSkillSelection
+from app.models.skill_bundle import SkillFileObject, SkillBundleRevision, SkillBundleMember
 from app.models.user import User
 from app.models.access import AccountInvitation, EmailVerificationGrant, InstanceAccessSetting, PasswordResetGrant
 from app.models.administration import (
@@ -56,6 +58,11 @@ from app.models.administration import (
 )
 
 __all__ = [
+    "ContextMemberObject", "ContextBinding", "ContinuationRevision", "ContinuationState",
+    "ContinuationCandidate", "ContinuationValidation", "ContextExportReceipt",
+    "SkillFileObject",
+    "SkillBundleRevision",
+    "SkillBundleMember",
     "BackgroundJob",
     "AuthLoginThrottle",
     "AuthPrincipal",

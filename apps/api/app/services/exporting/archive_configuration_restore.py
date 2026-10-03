@@ -175,15 +175,20 @@ def _restore_rules(db, archive, owner):
 
 
 def _restore_skills(db, archive, owner):
-    subject, targets = str(owner), {}
+    subject, targets, preserve_current = str(owner), {}, set()
     for row in archive.rows("skills"):
         digest = hashlib.sha256(row["content"].encode()).hexdigest()
-        existing = db.query(UserSkill).filter_by(subject_key=subject, category=row["category"], locale=row["locale"], content_digest=digest).first()
+        identity = UserSkill.bundle_digest == row["bundle_digest"] if row.get("bundle_digest") else (UserSkill.bundle_digest.is_(None) & (UserSkill.content_digest == digest))
+        existing = db.query(UserSkill).filter_by(subject_key=subject, category=row["category"], locale=row["locale"]).filter(identity).first()
         if existing is None:
             decoded = _decode_payload(UserSkill, row)
             decoded.update(id=uuid.uuid4(), subject_key=subject, content_digest=digest)
             existing = UserSkill(**decoded); db.add(existing); db.flush()
+        else:
+            preserve_current.add(existing.id)
         targets[row["id"]] = existing.id
+    from app.services.exporting.archive_skill_bundles import restore_bundle_history
+    restore_bundle_history(db, archive, targets, preserve_current=preserve_current)
     for row in archive.rows("skill_selections"):
         key = subject, row["category"], row["locale"]
         if db.get(UserSkillSelection, key) is not None: continue

@@ -37,6 +37,7 @@ class ExporterMarkdownSection:
     index: int
     content_hash: str
     is_empty: bool
+    model: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +88,22 @@ def parse_exporter_markdown(
 ) -> ExporterMarkdownParseResult:
     warnings: list[str] = []
     text = content.decode("utf-8", errors="replace") if isinstance(content, bytes) else content
+    transcript = _read_transcript(text)
+    if transcript is not None:
+        sections = [ExporterMarkdownSection(
+            role=item.role, source_heading="Prompt" if item.role == "user" else "Response",
+            time=None if item.timestamp == "Unknown" else item.timestamp,
+            markdown_text=item.body, plain_text=_plain_text(item.body), index=index,
+            content_hash=content_hash(item.body, item.role), is_empty=False, model=item.model,
+        ) for index, item in enumerate(transcript.messages)]
+        metadata = transcript.metadata
+        return ExporterMarkdownParseResult(
+            title=transcript.title, metadata=metadata,
+            created_at=metadata.get("created"), updated_at=metadata.get("updated"),
+            exported_at=metadata.get("exported"), link=metadata.get("link"),
+            external_conversation_id=extract_conversation_id(metadata.get("link")),
+            sections=sections, prompt_count=sum(item.role == "user" for item in sections),
+            response_count=sum(item.role == "assistant" for item in sections), section_count=len(sections))
     title = _extract_title(text)
     metadata = _extract_metadata(text)
     matches = _section_boundaries(text)
@@ -175,6 +192,12 @@ def has_exporter_markdown_structure(
 ) -> bool:
     """Recognize exporter Markdown without requiring both conversation roles."""
     text = content.decode("utf-8", errors="replace") if isinstance(content, bytes) else content
+    try:
+        transcript = _read_transcript(text)
+    except ExporterMarkdownPairingError:
+        return False
+    if transcript is not None:
+        return bool(transcript.messages)
     marker_sections = _marker_message_sections(text)
     if marker_sections:
         return any(normalize_text(section.markdown_text) for section in marker_sections)
@@ -680,3 +703,11 @@ def _remove_generated_message_heading(body: str, role: str, order_key: str | Non
     while remaining and not remaining[0].strip():
         remaining.pop(0)
     return "\n".join(remaining).strip()
+
+
+def _read_transcript(text: str):
+    from app.services.import_pipeline.transcript_markdown import parse_transcript
+    try:
+        return parse_transcript(text)
+    except ValueError as exc:
+        raise ExporterMarkdownPairingError("transcript_invalid", "Transcript header or message structure is incomplete.") from exc

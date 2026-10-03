@@ -12,7 +12,7 @@ export function AdminNoiseRuleSettings({ onDirtyChange }: { onDirtyChange?: (dir
   const [dirtyRows, setDirtyRows] = useState<Set<string>>(new Set());
   const query = useQuery({ queryKey: ["admin-noise-rules", offset], queryFn: () => adminApi.noiseRules(offset) });
   useLayoutEffect(() => { onDirtyChange?.(dirtyRows.size > 0); }, [dirtyRows, onDirtyChange]);
-  return <section className="space-y-4"><p className="text-sm leading-6 text-secondary">{zh ? "选择一个已验证的规则版本，确认匹配范围后向全系统提供。个人修改不自动发布；用户已学习或成功应用的版本在撤回后仍然可用。" : "Review a validated rule version and its matching scope before publishing. Personal edits are not published automatically. Versions learned or successfully applied remain available after withdrawal."}</p>
+  return <section className="space-y-4">
     {query.isLoading ? <p role="status">{zh ? "正在读取候选规则…" : "Loading candidate rules…"}</p> : null}
     {query.error ? <Retry error={query.error} retry={() => void query.refetch()} zh={zh} /> : null}
     {query.data?.total === 0 ? <p className="text-sm text-secondary">{zh ? "尚无已学习的文本规则。" : "No learned text rules yet."}</p> : null}

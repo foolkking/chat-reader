@@ -1,0 +1,140 @@
+{
+  "profile": "chat-reader-content-v1",
+  "note": "Executable property vectors. Implementations compute digests according to Continuation Schema v1 and assert the declared equality/inequality relations.",
+  "cases": [
+    {
+      "id": "FP-CRLF",
+      "purpose": "CRLF normalization",
+      "a": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "line1\r\nline2"
+          }
+        ]
+      },
+      "b": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "line1\nline2"
+          }
+        ]
+      },
+      "expect": "content_digest_equal",
+      "expected_values": {
+        "a_content_digest": "0c68c65603ce1f8157e45e84acfd6af4492aaaee94ade14e3fedc790d87e8a0d",
+        "b_content_digest": "0c68c65603ce1f8157e45e84acfd6af4492aaaee94ade14e3fedc790d87e8a0d"
+      }
+    },
+    {
+      "id": "FP-ROLE",
+      "purpose": "role is part of content digest",
+      "a": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "use B"
+          }
+        ]
+      },
+      "b": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "use B"
+          }
+        ]
+      },
+      "expect": "content_digest_not_equal",
+      "expected_values": {
+        "a_content_digest": "56e2eac56a32544a019e29d966307066480392666303a9da7c5d50c40b1aad79",
+        "b_content_digest": "b5268214919d6bbef236e7d6da00635fff4b64f1e4ba45d216460d0ea45e8e47"
+      }
+    },
+    {
+      "id": "FP-PART-ORDER",
+      "purpose": "structured content-part order is preserved",
+      "a": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "A"
+          },
+          {
+            "type": "text",
+            "text": "B"
+          }
+        ]
+      },
+      "b": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "B"
+          },
+          {
+            "type": "text",
+            "text": "A"
+          }
+        ]
+      },
+      "expect": "content_digest_not_equal",
+      "expected_values": {
+        "a_content_digest": "a2389205e45c268b7fe3c764a30aa620a66e8c05187dac7195e47705d078435e",
+        "b_content_digest": "a48bb6b02ff4907897759215dd31548e6610b6d6a81b653dc0f0e442617c2ebf"
+      }
+    },
+    {
+      "id": "FP-ATTACHMENT",
+      "purpose": "attachment content digest participates in semantic content projection",
+      "a": {
+        "role": "user",
+        "content": [
+          {
+            "type": "attachment",
+            "content_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ]
+      },
+      "b": {
+        "role": "user",
+        "content": [
+          {
+            "type": "attachment",
+            "content_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "expect": "content_digest_not_equal",
+      "expected_values": {
+        "a_content_digest": "18f2c4e20658d5a57a5d7bb129522ee4c75b3367b5da7c5e3f58a944703df48b",
+        "b_content_digest": "c95f1cf51581b9bda4cb6e8623b960393126d628c4881a3d9cd093fe16f8eb2c"
+      }
+    },
+    {
+      "id": "FP-DOMAIN",
+      "purpose": "prefix and segment composition use different domain separators",
+      "child_digests": [
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "expect": "prefix_digest_not_equal_segment_digest",
+      "expected_values": {
+        "prefix_digest": "d4b6f1ee5665c8e0ccca8e9cf724fbec1c64f01c23e2bdfbc4b30c9ec4ed1461",
+        "segment_digest": "added8a609e8f0d71c51fb11fee56368602ec07e64e46ee311a17f6772581a42"
+      }
+    }
+  ],
+  "digest_format": "sha256:<64 lowercase hex> when a digest is embedded as a typed input value; expected_values use bare lowercase hex because the algorithm is declared separately.",
+  "composition_domains": {
+    "prefix_content": "chat-reader-continuation-prefix-content-v1",
+    "segment_content": "chat-reader-continuation-segment-content-v1"
+  }
+}

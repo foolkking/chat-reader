@@ -23,6 +23,8 @@ from app.models.reading_position import ReadingPosition, ReadingPositionSyncRece
 from app.models.user import User
 from app.models.user_preference import UserPreference, PreferenceSyncReceipt
 from app.models.user_skill import UserSkill, UserSkillSelection
+from app.models.context_continuation import ContextMemberObject
+from app.models.skill_bundle import SkillFileObject
 from app.services.administration import record_admin_audit
 from app.services.assets.lifecycle import asset_object_has_live_references
 from app.services.assets.asset_store import get_asset_store
@@ -171,6 +173,18 @@ def execute_user_account_delete(
             db.delete(asset)
             removed_assets += 1
         db.flush()
+    from app.services.context_cleanup import detach_conversation_context
+    last_context_conversation = None
+    while True:
+        context_query = db.query(Conversation).filter(Conversation.owner_user_id == target_user_id)
+        if last_context_conversation is not None:
+            context_query = context_query.filter(Conversation.id > last_context_conversation)
+        context_batch = context_query.order_by(Conversation.id).limit(50).with_for_update().all()
+        if not context_batch:
+            break
+        for conversation in context_batch:
+            removable_keys.extend(detach_conversation_context(db, conversation.id))
+        last_context_conversation = context_batch[-1].id
     if db.get_bind().dialect.name == "postgresql":
         db.query(Conversation).filter(Conversation.owner_user_id == target_user_id).delete(synchronize_session=False)
         db.query(Project).filter(Project.owner_user_id == target_user_id).delete(synchronize_session=False)
@@ -185,7 +199,17 @@ def execute_user_account_delete(
     db.flush()
     subject = str(target_user_id)
     db.query(UserSkillSelection).filter(UserSkillSelection.subject_key == subject).delete(synchronize_session=False)
-    db.query(UserSkill).filter(UserSkill.subject_key == subject).delete(synchronize_session=False)
+    from app.services.skill_cleanup import detach_skill_history
+    while batch := db.query(UserSkill).filter(UserSkill.subject_key == subject).order_by(UserSkill.id).limit(50).all():
+        for skill in batch:
+            removable_keys.extend(detach_skill_history(db, skill))
+            db.delete(skill)
+        db.flush()
+    # Account deletion must not discard already queued cleanup receipts.
+    db.query(BackgroundJob).filter(BackgroundJob.owner_user_id == target_user_id,
+                                  BackgroundJob.job_type.in_(["skill_object_cleanup", "context_object_cleanup"])).update(
+        {BackgroundJob.owner_user_id: job.owner_user_id}, synchronize_session=False)
+
     db.query(PreferenceSyncReceipt).filter(PreferenceSyncReceipt.subject_key == subject).delete(synchronize_session=False)
     db.query(ReadingPositionSyncReceipt).filter(ReadingPositionSyncReceipt.subject_key == subject).delete(synchronize_session=False)
     db.query(UserPreference).filter(UserPreference.subject_key == subject).delete(synchronize_session=False)
@@ -281,7 +305,9 @@ def cleanup_deleted_account_assets(db: Session, job_id: uuid.UUID) -> None:
                 continue
             try:
                 # Preserve keys that an archive restoration now references.
-                if db.query(AssetObject.id).filter_by(storage_key=key).first() is None:
+                if (db.query(AssetObject.id).filter_by(storage_key=key).first() is None
+                        and db.query(SkillFileObject.sha256).filter_by(storage_key=key).first() is None
+                        and db.query(ContextMemberObject.sha256).filter_by(storage_key=key).first() is None):
                     get_asset_store().delete_key(key)
                 done.add(key)
             except Exception:

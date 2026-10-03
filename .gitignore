@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.next-*/
 dist/
 build/
 coverage/
@@ -31,8 +32,10 @@ apps/api/alembic/versions/*.pyc
 
 storage/imports/
 storage/assets/
+storage/offline/
 apps/api/storage/imports/
 apps/api/storage/assets/
 apps/api/storage/offline/
+apps/api/storage/exports/
 apps/web/tsconfig.tsbuildinfo
 apps/api/app/build_metadata.json

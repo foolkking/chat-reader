@@ -16,6 +16,7 @@ const ImportDialogContext = createContext<ImportDialogContextValue | null>(null)
 
 export function ImportDialogProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations();
+  const zh = t("settings") === "设置";
   const { confirm } = useInteractionDialog();
   const [mappingState, setMappingState] = useState({ dirty: false, busy: false });
   const [open, setOpen] = useState(false);
@@ -48,13 +49,12 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
     <ImportDialogContext.Provider value={value}>
       {children}
       {open ? (
-        <div ref={rootRef} tabIndex={-1} className="fixed inset-0 z-[90] flex items-end justify-center bg-[var(--overlay)] outline-none sm:items-center sm:p-[2vw]" role="dialog" aria-modal="true" aria-label={t("importData")}>
+        <div ref={rootRef} tabIndex={-1} className="fixed inset-0 z-[90] flex items-end justify-center bg-[var(--overlay)] outline-none sm:items-center sm:p-[2vw]" role="dialog" aria-modal="true" aria-label={initialMode === "archive" ? (zh ? "恢复对话归档" : "Restore conversation archive") : t("importData")}>
           <div aria-hidden="true" data-dialog-backdrop className="absolute inset-0" onPointerDown={() => void requestClose()} />
           <section className={`relative flex max-h-[94vh] w-full flex-col overflow-hidden rounded-t-2xl border border-ui bg-raised shadow-2xl transition-[max-width,height] sm:rounded-xl ${workspaceOpen ? "sm:h-[min(900px,94vh)] sm:max-w-[min(1480px,96vw)]" : "sm:max-w-2xl"}`}>
             <header className="sticky top-0 z-10 flex items-center justify-between border-b border-ui bg-raised px-5 py-4">
               <div>
-                <h2 className="text-base font-semibold text-primary">{t("importData")}</h2>
-                <p className="mt-0.5 text-sm text-secondary">{t("serverFileNotice")}</p>
+                <h2 className="text-base font-semibold text-primary">{initialMode === "archive" ? (zh ? "恢复对话归档" : "Restore conversation archive") : t("importData")}</h2>
               </div>
               <button type="button" data-testid="import-dialog-close" disabled={mappingState.busy} onClick={() => void requestClose()} className="flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50" aria-label={t("close")} title={t("close")}><X className="h-4 w-4" aria-hidden="true" /></button>
             </header>

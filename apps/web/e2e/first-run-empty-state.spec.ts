@@ -1,12 +1,10 @@
 import { expect, test, type Route } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
 test.use({ serviceWorkers: "block" });
 
 test.describe("first-run empty conversation state", () => {
-  test("offers import and restore actions, with restore opening the archive mode", async ({ page }) => {
-    test.skip(!process.env.E2E_EMPTY_STATE_AUTH, "Requires an authenticated workspace browser fixture; component contract runs by default.");
+  test("offers transcript import without an archive entry", async ({ page }) => {
+    test.skip(!process.env.E2E_EMPTY_STATE_AUTH, "Requires an authenticated workspace browser fixture; real settings restore is tested separately.");
     // The production proxy requires a session cookie before serving the
     // workspace. The API is still fixture-backed below, so this only models
     // the authenticated shell boundary.
@@ -21,33 +19,19 @@ test.describe("first-run empty conversation state", () => {
     const importButton = page.getByRole("button", { name: /Import conversations|导入对话/ });
     const restoreButton = page.getByRole("button", { name: /Restore \.cr archive|恢复 \.cr 归档/ });
     await expect(importButton).toBeVisible();
-    await expect(restoreButton).toBeVisible();
+    await expect(restoreButton).toHaveCount(0);
 
     await importButton.click();
     const importDialog = page.getByRole("dialog", { name: /Import data|导入数据/ });
     await expect(importDialog).toBeVisible();
-    await expect(importDialog.getByRole("button", { name: /JSON \/ Markdown/ })).toHaveAttribute("aria-pressed", "true");
     await expect(importDialog.getByTestId("import-file-input")).toHaveAttribute("accept", /\.json/);
     await page.getByTestId("import-dialog-close").click();
     await expect(importDialog).toHaveCount(0);
 
-    await restoreButton.click();
-    const archiveDialog = page.getByRole("dialog", { name: /Import data|导入数据/ });
-    await expect(archiveDialog).toBeVisible();
-    await expect(archiveDialog.getByRole("button", { name: /\.cr archive|\.cr 归档/ })).toHaveAttribute("aria-pressed", "true");
-    await expect(archiveDialog.getByTestId("import-file-input")).toHaveAttribute("accept", ".cr");
+
   });
 
-  test("keeps the two empty-state actions wired to the existing import dialog modes", () => {
-    const sourceRoot = resolve(process.cwd());
-    const listSource = readFileSync(resolve(sourceRoot, "features/conversations/conversation-list.tsx"), "utf8");
-    const shellSource = readFileSync(resolve(sourceRoot, "components/app-shell.tsx"), "utf8");
-    const providerSource = readFileSync(resolve(sourceRoot, "components/import-dialog-provider.tsx"), "utf8");
-    expect(listSource).toContain("onRestoreArchive");
-    expect(listSource).toContain("Restore .cr archive");
-    expect(shellSource).toContain('openImportDialog({ initialMode: "archive" })');
-    expect(providerSource).toContain("initialMode={initialMode}");
-  });
+
 });
 
 async function mockEmptyWorkspaceApi(route: Route): Promise<void> {

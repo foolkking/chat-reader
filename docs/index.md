@@ -1,5 +1,24 @@
 # 文档导航
 
+2026-10-03：本次授权使用 E 盘测试临时目录。最终 API 867 通过、4 跳过；PWA 基线 180 通过、201 开关跳过；离线故障专项 17 通过；最终认证 Context 专项 14 通过、认证与 Share 专项 4 通过，均无跳过。ZIP 路径歧义修复及外部合成审阅见 [执行记录](execution/CONTEXT_MIGRATION_2026-10-03.md) 与 [语义审阅](evidence/CONTEXT_SEMANTIC_WALKTHROUGH_2026-10-03.md)。设置复查已完成本地验收：9 项阅读同步与 14 项长 Reader/Share/Context 导航复验通过；失败历史和视觉检查见 [设置记录](execution/SETTINGS_REAUDIT_2026-10-03.md)。待提交、CI 和部署。
+
+2026-10-03：外部 Maintainer 双包写出及应用回传循环已有本地证据；改进运行时仍是独立 review Bundle，未替换用户指定默认 ZIP。真实 Skill 清单、旧 Rescue 定位及历史状态文档迁移见 [Context Skill 迁移](system/CONTEXT_SKILL_MIGRATION.md)。完整发布验收仍未完成。
+
+2026-10-03：真实 Normalizer 导入、worker 离线下载入库、断网重载及 Context 再导出链路已验证。
+补齐旧批注版本、项目说明和附件来源；完整发布验收仍未完成。见 [离线合同](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md)。
+
+Latest input update (2026-10-03): Skill upload/replacement accepts ZIP and Markdown.
+Markdown is automatically stored as a compatibility Bundle, preserving original
+instructions and the Skill display name; downloads use that name with `.zip`.
+System defaults remain the three supplied ZIPs. No Skill viewer is added.
+This supersedes earlier ZIP-only input statements below.
+
+Skill 最新约定：接受 ZIP 或 Markdown 上传和替换，Markdown 自动包装为同名 ZIP；系统默认使用用户提供的三个 Bundle，个人首选保留。设置不提供 Skill 内容查看，Current/Index 仍可阅读编辑。
+
+最新调整：用户取消候选、校验与采用流程，改为直接更新 Current / Index，默认保留最近 3 次记录。入口在 Reader 批注旁；已接入易读视图、编辑、本机草稿、文件查找、索引搜索与跳转、单文件历史恢复。完整迁移与发布验收仍未完成；详见 [Context 合同](system/CONTEXT_PACKAGE_CONTRACT.md)。
+
+Context 协议迁移当前状态：[Context Package Contract](system/CONTEXT_PACKAGE_CONTRACT.md)。直接文件保存、整包回传和最近三次记录已接入；旧候选／校验／采用 API 已退役。外部双包维护已有应用循环和合成审阅证据，review Bundle 已单独生成；独立外部模型使用、完整发布检查和后续设置复查仍待完成。
+
 当前管理员账户与内容合同：[Administration Contract](system/ADMINISTRATION_CONTRACT.md)，定义账户搜索分页、真实登录状态、后台删除幂等与共享资源保留，以及完整只读 Reader 和审计附件访问。
 
 当前应用数据归档：[Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)，定义系统 `.cr v5` 的身份/配置恢复、v4 显式映射及旧 v5 兼容、个人归档预检与新增恢复、幂等任务、导出容量自检与事务回滚，以及系统预检任务、持久归属选择和管理员恢复流程。
@@ -29,7 +48,7 @@ automated tests, browser verification and production verification.
 ## 2026-08-11 current implementation notes
 
 - [2026-08-11 Final Release Closure](evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md#final-release-closure-2026-08-11): current production lifecycle evidence, release matrix and remaining verification debt.
-- [Attachment UI](system/FRONTEND_ARCHITECTURE.md#附件-ui): `.cr` restore uses Import data; desktop conversation files use the annotation-style draggable Reader workspace.
+- [Attachment UI](system/FRONTEND_ARCHITECTURE.md#附件-ui): `.cr` restore uses Settings → Data & backup; desktop conversation files use the annotation-style draggable Reader workspace.
 
 - [Backend/API merge and cancellation](system/BACKEND_AND_API.md#conversation-merge-execution-current)
 - [Reader and task user flow](system/USER_FLOWS.md#reader-source-workspace-and-merge-cancellation-current)

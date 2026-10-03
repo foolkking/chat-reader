@@ -2,6 +2,7 @@ import json
 import uuid
 import zipfile
 import hashlib
+from pathlib import Path
 
 import pytest
 
@@ -20,7 +21,8 @@ from app.services.adaptive_import.profiles import create_verified_revision
 from app.services.content_cleanup import ensure_builtin_rules
 from app.services.cleanup_rule_identity import configuration_digest_v1
 from app.services.exporting.personal_archive import PERSONAL_TABLE_MODELS, create_personal_archive
-from app.services.exporting.system_archive import SystemArchiveError, _read_jsonl, _validate_canonical_entries, _model_payload, _decode_payload
+from app.services.exporting.archive_preflight import inspect_personal_archive
+from app.services.exporting.system_archive import SystemArchiveError, _read_jsonl, _model_payload, _decode_payload
 from test_import_profile_postgres import analysis_fixture
 from test_system_archive_integrity import archive_db, seed_archive_source  # noqa: F401
 
@@ -73,7 +75,11 @@ def test_personal_archive_contains_only_owned_data_and_held_versions(archive_db)
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["format"] == "chat-reader-personal-archive"
         assert manifest["restore_mode"] == "additive"
-        _validate_canonical_entries(archive, manifest, table_names=PERSONAL_TABLE_MODELS)
+        # The actual restore preflight validates declared optional Context/Bundle
+        # tables as well as the original personal graph, without permitting extras.
+        preview = inspect_personal_archive(Path(artifact.storage_uri))
+        assert preview["counts"]["conversations"] == 1
+        assert preview["counts"]["continuation_revisions"] == 0
         rows = {name: list(_read_jsonl(archive, f"data/{name}.jsonl")) for name in PERSONAL_TABLE_MODELS}
         assert len(rows["projects"]) == len(rows["conversations"]) == 1
         assert len(rows["message_versions"]) == 2

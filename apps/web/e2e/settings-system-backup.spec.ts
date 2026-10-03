@@ -9,7 +9,7 @@ test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated authentic
 async function openSystem(page: Page) {
   const settings = page.getByRole("button", { name: /^(Settings|设置)$/ });
   const sidebar = page.getByRole("button", { name: /^(Open sidebar|打开侧栏)$/ });
-  const entry = page.getByRole("button", { name: /System Instance backup|系统 实例备份/ });
+  const entry = page.locator('[aria-labelledby="settings-administration-heading"]').getByRole("button", { name: /^(System|系统)$/ });
   if (!await entry.isVisible()) {
     await expect(settings.or(sidebar).first()).toBeVisible();
     if (!await settings.isVisible()) await sidebar.click();

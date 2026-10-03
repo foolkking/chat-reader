@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-SkillCategory = Literal["EXPORT_CONTEXT", "CONVERSATION_RESCUE"]
+SkillCategory = Literal["EXPORT_CONTEXT", "CONVERSATION_RESCUE", "CONTEXT_MAINTENANCE"]
 SkillLocale = Literal["zh-CN", "en"]
 SkillStatus = Literal["ACTIVE", "DISABLED"]
 
@@ -22,6 +22,8 @@ class SkillRead(BaseModel):
     content_url: str | None = None
     is_customized: bool = False
     default_enabled: bool = False
+    bundle_revision: int = 0
+    bundle_url: str | None = None
 
 
 class SkillDetail(SkillRead):

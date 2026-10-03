@@ -2,7 +2,7 @@
 
 import { importErrorMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, FileJson2, LoaderCircle, ScanSearch, UploadCloud, type LucideIcon } from "lucide-react";
+import { LoaderCircle, ScanSearch, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
@@ -144,7 +144,7 @@ export function ImportPanel({
     event.preventDefault();
     setDragging(false);
     const nextFiles = Array.from(event.dataTransfer.files);
-    chooseFiles(nextFiles, nextFiles.length === 1 && fileExtension(nextFiles[0]?.name ?? "") === ".cr" ? "archive" : "adaptive");
+    chooseFiles(nextFiles);
   }
 
   if (session) {
@@ -167,11 +167,7 @@ export function ImportPanel({
 
   return (
     <section className="space-y-5">
-      <p className="text-sm leading-6 text-secondary">{repairProfileId ? tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。") : tr("选择对话源文件。已知格式会直接准备导入；陌生结构只需设置一次，以后会自动识别。")}</p>
-      <div className="grid grid-cols-1 rounded-lg bg-subtle p-1 min-[440px]:grid-cols-2" role="group" aria-label={tr("导入类型")}>
-        <ModeButton active={mode === "adaptive"} icon={FileJson2} label="JSON / Markdown" description={tr("已知与已学习格式")} onClick={() => reset("adaptive")} initialFocus />
-        {!repairProfileId ? <ModeButton active={mode === "archive"} icon={Archive} label={tr(".cr 归档")} description={tr("恢复 Chat Reader 归档")} onClick={() => reset("archive")} /> : <div className="flex min-h-12 items-center px-3 text-xs text-secondary">{tr("修复只接受 JSON / Markdown")}</div>}
-      </div>
+      {repairProfileId ? <p className="text-sm leading-6 text-secondary">{tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。")}</p> : null}
       <div
         onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
         onDragOver={(event) => event.preventDefault()}
@@ -182,12 +178,11 @@ export function ImportPanel({
         <UploadCloud className="mx-auto h-6 w-6 text-secondary" aria-hidden="true" />
         <p className="mt-3 text-sm font-medium text-primary">{tr("拖放文件到这里")}</p>
         <p className="my-2 text-xs text-secondary">{tr("或")}</p>
-        <label className="btn-secondary inline-flex min-h-10 cursor-pointer items-center justify-center px-4 text-sm font-medium">
+        <label className="btn-secondary inline-flex min-h-11 cursor-pointer focus-within:ring-2 focus-within:ring-[var(--focus)] items-center justify-center px-4 text-sm font-medium">
           {mode === "adaptive" ? tr("选择 JSON / Markdown 文件") : tr("选择 .cr 归档")}
-          <input key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
+          <input data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
         </label>
-        <p className="mt-3 break-all text-sm text-secondary">{selectedLabel}</p>
-        <p className="mt-1 text-xs text-secondary">{mode === "adaptive" ? tr("支持单 JSON、单 Markdown、JSON + Markdown 及批量文件") : tr(".cr 使用独立归档恢复流程")}</p>
+        {files.length ? <p className="mt-3 break-all text-sm text-secondary">{selectedLabel}</p> : null}
       </div>
       {validationError ? <ErrorLine message={validationError} /> : null}
       {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
@@ -237,14 +232,12 @@ function ImportCompletionSummary({
   );
 }
 
-function ModeButton({ active, icon: Icon, label, description, onClick, initialFocus = false }: { active: boolean; icon: LucideIcon; label: string; description: string; onClick: () => void; initialFocus?: boolean }) {
-  return <button type="button" data-dialog-initial-focus={initialFocus ? "true" : undefined} aria-pressed={active} onClick={onClick} className={`min-w-0 rounded-md px-3 py-2 text-left transition-colors ${active ? "bg-surface text-primary shadow-sm" : "text-secondary hover:text-primary"}`}><span className="flex items-center gap-2 text-sm font-medium"><Icon className="h-4 w-4 shrink-0" /><span>{label}</span></span><span className="mt-0.5 block text-xs leading-5 text-secondary">{description}</span></button>;
-}
-
 function validateFiles(files: File[], mode: ImportMode, tr: ImportCopy): string | null {
   if (!files.length) return null;
   const extensions = files.map((file) => fileExtension(file.name));
   if (mode === "archive") return files.length === 1 && extensions[0] === ".cr" ? null : tr(".cr 归档必须单独导入。");
+  if (extensions.includes(".cr")) return tr("请在设置的数据与备份中恢复 .cr 归档。");
+  if (files.some((file) => file.name.toLowerCase().endsWith(".context.zip"))) return tr("请打开目标对话，在批注旁的上下文面板中更新 Current / Index。");
   if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"].includes(extension))) return tr("仅支持 JSON、Markdown 或文本源文件。");
   if (files.length > 500) return tr("一次最多分析 500 个文件。");
   return null;

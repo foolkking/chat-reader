@@ -13,6 +13,7 @@ from app.models.conversation import Conversation
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.lifecycle import asset_object_has_live_references
 from app.services.ownership import OwnershipScope, get_owned
+from app.services.context_cleanup import detach_conversation_context, queue_context_cleanup
 
 
 def delete_conversation_record(
@@ -82,6 +83,10 @@ def delete_conversation_record(
     )
     if conversation is None:
         return
+    # Serialize with direct member updates before dropping their reference graph.
+    db.refresh(conversation, with_for_update=True)
+    context_keys = detach_conversation_context(db, conversation.id)
+    queue_context_cleanup(db, context_keys, owner_user_id=conversation.owner_user_id)
     db.delete(conversation)
     db.flush()
     removable_keys: list[str] = []

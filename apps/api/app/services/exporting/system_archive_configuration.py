@@ -31,6 +31,10 @@ ACCOUNT_FIELDS = {"owner_user_id", "user_id", "created_by_user_id", "updated_by_
 
 def configuration_queries(db):
     rows = {name: db.query(model).order_by(*inspect(model).primary_key) for name, model in CONFIGURATION_MODELS.items()}
+    from app.models.skill_bundle import SkillFileObject, SkillBundleMember
+    rows["skill_file_objects"] = db.query(SkillFileObject).filter(
+        SkillFileObject.sha256.in_(db.query(SkillBundleMember.object_sha256))
+    ).order_by(SkillFileObject.sha256)
     # Snapshot effective non-secret policy defaults even before the first admin
     # settings visit, without writing to the read-only export transaction.
     for name, model in (("feature_policy", InstanceFeaturePolicy), ("access_policy", InstanceAccessSetting)):
@@ -64,7 +68,7 @@ def validate_system_configuration(archive):
     defaults, skill_keys, bundled_keys = set(), set(), set()
     for row in archive.rows("system_skills"):
         key = (row["category"], row["locale"])
-        if (key[0] not in {"EXPORT_CONTEXT", "CONVERSATION_RESCUE"} or key[1] not in {"zh-CN", "en"}
+        if (key[0] not in {"EXPORT_CONTEXT", "CONVERSATION_RESCUE", "CONTEXT_MAINTENANCE"} or key[1] not in {"zh-CN", "en"}
                 or row["status"] not in {"ACTIVE", "DISABLED"} or row["source_kind"] not in {"BUNDLED", "ADMIN_CREATED"}):
             raise SystemArchiveError("Archive contains an unsupported system Skill.")
         if row["skill_key"] in skill_keys:
@@ -186,6 +190,9 @@ def restore_system_configuration(db, archive, mapping):
                  "rule_grants", "rule_preferences", "rule_aliases", "rule_exceptions", "rule_publications",
                  "skills", "skill_selections", "system_skills", "feature_policy", "access_policy"):
         _restore_rows(db, CONFIGURATION_MODELS[name], owned(name))
+    from app.services.exporting.archive_skill_bundles import restore_bundle_history
+    restore_bundle_history(db, archive, {row["id"]: uuid.UUID(row["id"]) for row in archive.rows("skills")},
+                           system_targets={row["id"]: uuid.UUID(row["id"]) for row in archive.rows("system_skills")})
     # Preserve live field revisions for the target Root and explicitly mapped users.
     from app.schemas.preferences import UserPreferenceUpdate
     from app.services.preferences import update_preferences

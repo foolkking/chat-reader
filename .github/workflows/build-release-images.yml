@@ -52,6 +52,10 @@ jobs:
           mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
           cd apps/api
           python -m alembic upgrade head
+      - name: Context runtime and distributed Bundle consistency
+        run: |
+          python tools/context-skills/build.py --output apps/web/public/skills --check
+          python -m pytest tools/context-skills/tests -q
       - name: Release C observability and cleanup safety suite
         run: >-
           cd apps/api && pytest -q
@@ -208,6 +212,23 @@ jobs:
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/csp-enforcement.spec.ts
 
+      - name: Context files, export and reader recovery
+        timeout-minutes: 20
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: context-files
+          E2E_CONTEXT_EXPORT: "1"
+          E2E_CONTEXT_BUNDLES: "1"
+        run: >-
+          pnpm --filter web exec playwright test --config=playwright.config.ts
+          e2e/context-continuation.spec.ts
+          e2e/context-continuation-drop.spec.ts
+          e2e/context-reading-tools.spec.ts
+          e2e/context-drafts.spec.ts
+          e2e/context-export-options.spec.ts
+          e2e/context-offline-parity.spec.ts
+          e2e/context-skill-bundles.spec.ts
+
       - name: Focused online browser and security checks
         timeout-minutes: 30
         env:
@@ -359,7 +380,7 @@ jobs:
       - name: Build machine-readable browser gate summary
         if: always()
         env:
-          PLAYWRIGHT_EXPECTED_GATES: adaptive-import-recovery,csp-enforcement,focused-online-security,share-focus,source-editor-mutation,source-editor-cleanup,upload-token-atomicity,markdown-image-viewer,pdfjs-maintained-line,default-pwa,single-owner-auth,pwa-negative
+          PLAYWRIGHT_EXPECTED_GATES: adaptive-import-recovery,csp-enforcement,context-files,focused-online-security,share-focus,source-editor-mutation,source-editor-cleanup,upload-token-atomicity,markdown-image-viewer,pdfjs-maintained-line,default-pwa,single-owner-auth,pwa-negative
         run: >-
           node apps/web/e2e/gate-summary.mjs
           apps/web/test-results
@@ -441,6 +462,8 @@ jobs:
           pnpm --filter web build
           pnpm --filter web exec playwright install --with-deps chromium
       - name: Real settings, SMTP, offline and sync browser matrix
+        env:
+          E2E_CONTEXT_ADMIN: "1"
         run: |
           cd apps/api
           uvicorn settings_browser_fixture:app --app-dir tests --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/settings-api.log" 2>&1 &
@@ -455,7 +478,7 @@ jobs:
           done
           test "$ready" = 1
           cd ../..
-          pnpm --filter web exec playwright test --config=playwright.config.ts 'e2e/settings-.*\.spec\.ts'
+          pnpm --filter web exec playwright test --config=playwright.config.ts 'e2e/settings-.*\.spec\.ts' e2e/context-admin-bundles.spec.ts
           PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4 node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-gate-summary.json
       - name: System archive restore into a fresh PostgreSQL instance
         run: |

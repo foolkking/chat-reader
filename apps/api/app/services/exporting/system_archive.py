@@ -124,12 +124,14 @@ def create_system_archive(
         rows = _canonical_queries(snapshot, include_archived=include_archived)
         rows["users"] = snapshot.query(User).order_by(User.id)
         rows.update(configuration_queries(snapshot))
+        from app.services.exporting.archive_context import context_queries
+        rows.update(context_queries(snapshot, rows['conversations']))
         return _create_data_archive(
             db, rows=rows, job_id=job_id, include_archived=include_archived,
             archive_format=SYSTEM_ARCHIVE_FORMAT, archive_version=SYSTEM_ARCHIVE_VERSION,
             scope_type="system", restore_mode="empty_instance_only", progress_callback=progress_callback,
             payload_transform=lambda name, payload: ({key: value for key, value in payload.items() if key in IDENTITY_FIELDS} if name == "users" else payload),
-            manifest_metadata={"configuration_version": CONFIGURATION_VERSION},
+            manifest_metadata={"configuration_version": CONFIGURATION_VERSION, "skill_bundle_version": 1, "context_files_version": 1},
             archive_validator=inspect_system_archive,
         )
 
@@ -204,7 +206,32 @@ def _create_data_archive(
         asset_entries.setdefault(entry, (asset, path))
         _export_limit(len(asset_entries) > settings.bundle_max_objects, "BUNDLE_MAX_OBJECTS")
 
+    attachment_object_count = len(asset_entries)
+    skill_paths = {}
+    if "skill_file_objects" in rows:
+        for obj in rows["skill_file_objects"].yield_per(250):
+            path = get_asset_store().resolve_key(obj.storage_key)
+            if path.stat().st_size != obj.byte_size:
+                raise SystemArchiveError("A Skill member failed size validation.")
+            _export_limit(obj.byte_size > settings.bundle_max_object_bytes, "BUNDLE_MAX_OBJECT_BYTES")
+            entry = f"skills/objects/{obj.sha256[:2]}/{obj.sha256}"
+            skill_paths[obj.sha256] = entry
+            asset_entries[entry] = (obj, path)
+            _export_limit(len(asset_entries) > settings.bundle_max_objects, "BUNDLE_MAX_OBJECTS")
+
     _export_limit(len(rows) + len(asset_entries) + 1 > settings.bundle_max_entries, "BUNDLE_MAX_ENTRIES")
+    context_paths = {}
+    if 'context_member_objects' in rows:
+        for obj in rows['context_member_objects'].yield_per(250):
+            path = get_asset_store().resolve_key(obj.storage_key)
+            if path.stat().st_size != obj.byte_size:
+                raise SystemArchiveError('A Context member failed size validation.')
+            _export_limit(obj.byte_size > settings.bundle_max_object_bytes, 'BUNDLE_MAX_OBJECT_BYTES')
+            entry = f'context/objects/{obj.sha256[:2]}/{obj.sha256}'
+            context_paths[obj.sha256] = entry
+            asset_entries[entry] = (obj, path)
+            _export_limit(len(asset_entries) > settings.bundle_max_objects, 'BUNDLE_MAX_OBJECTS')
+        _export_limit(len(rows) + len(asset_entries) + 1 > settings.bundle_max_entries, 'BUNDLE_MAX_ENTRIES')
     expanded = 0
 
     files: list[dict[str, Any]] = []
@@ -225,6 +252,12 @@ def _create_data_archive(
                             payload.pop("storage_backend", None)
                             payload.pop("storage_key", None)
                             payload["archive_path"] = asset_paths[row.id]
+                        if name == "skill_file_objects":
+                            payload.pop("storage_key", None)
+                            payload["archive_path"] = skill_paths[row.sha256]
+                        if name == 'context_member_objects':
+                            payload.pop('storage_key', None)
+                            payload['archive_path'] = context_paths[row.sha256]
                         if name == "attachments":
                             payload["import_id"] = None
                             if not asset_paths.get(row.asset_object_id):
@@ -278,7 +311,7 @@ def _create_data_archive(
                 "assets": {
                     "attachment_records": counts["attachments"],
                     "physical_object_records": counts["asset_objects"],
-                    "included_objects": len(asset_entries),
+                    "included_objects": attachment_object_count,
                     "missing_objects": missing_assets,
                     "missing_attachments": missing_attachments,
                     "unbacked_attachments": unbacked_attachments,
@@ -370,6 +403,8 @@ def restore_system_archive(
                 raise SystemArchiveError("Archive changed since preview. Preview it again.", 409)
             if db.get_bind().dialect.name == "postgresql":
                 tables = {model.__tablename__ for model in TABLE_MODELS.values()}
+                from app.services.exporting.archive_context import CONTEXT_TABLES
+                tables.update(model.__tablename__ for model in CONTEXT_TABLES.values())
                 if checked.has_configuration:
                     # Match the preference service's lock order before locking
                     # its table. Otherwise an in-flight preference save can
@@ -477,6 +512,8 @@ def restore_system_archive(
                 if progress_callback:
                     progress_callback("restoring_configuration", 70, 0, 1)
                 restore_system_configuration(db, checked, mapping)
+            from app.services.exporting.archive_context import restore_context
+            restore_context(db, checked, lambda name, source: uuid.UUID(source) if source is not None else None)
             db.flush()
 
             for index, payload in enumerate(records["conversations"], start=1):

@@ -599,9 +599,21 @@ def _source_refs_by_message(db: Session, message_ids: list[uuid.UUID]) -> dict[u
             "source_conversation_id": ref.source_conversation_id,
             "source_message_id": ref.source_message_id,
             "source_index": ref.source_json_index if ref.source_json_index is not None else ref.source_markdown_index,
-            "source_metadata": {},
+            "source_metadata": _exportable_source_metadata(ref.raw_metadata),
         })
     return grouped
+
+
+def _exportable_source_metadata(raw: dict | None) -> dict:
+    # Export only source display fields, never arbitrary provider payloads.
+    if not isinstance(raw, dict):
+        return {}
+    result = {key: raw[key] for key in ("timestamp_display", "model") if isinstance(raw.get(key), str)}
+    conversation = raw.get("conversation")
+    if isinstance(conversation, dict):
+        result["conversation"] = {key: conversation[key] for key in ("user", "created", "updated", "exported", "link")
+                                  if isinstance(conversation.get(key), str)}
+    return result
 
 
 def _canjson_version(row: dict, *, include_based_on: bool) -> dict:

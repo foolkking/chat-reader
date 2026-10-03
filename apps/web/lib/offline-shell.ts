@@ -467,8 +467,7 @@ function collectLibraryShellAssets(runtimeAssets: string[] = []): string[] {
     "/icons/icon-512.png",
     "/icons/icon-maskable-512.png",
     "/icons/apple-touch-icon.png",
-    "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
-    "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
+    "/skills/context-acquisition.zip",
   ]);
   document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>("script[src], link[href]").forEach((element) => {
     const value = element instanceof HTMLScriptElement ? element.src : element.href;

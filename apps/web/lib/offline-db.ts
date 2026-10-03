@@ -3,6 +3,7 @@ import { unzipSync, strFromU8 } from "fflate";
 import { assertOfflineAccess, captureOfflineAccess, lockOfflineAccess } from "./offline-access";
 import { assertOfflineWritable } from "./offline-write-guard";
 import { ingestReadingPosition } from "./reading-position-sync";
+import { readOfflineContinuation, type OfflineContinuation } from "./offline-continuation";
 import type {
   AnnotationRead,
   AnnotationSyncOperation,
@@ -19,9 +20,26 @@ export type OfflineConversationRecord = ConversationDetail & {
   downloaded_at: string;
   last_read_at: string | null;
   offline_asset_mode?: "none" | "small" | "all";
+  continuation?: OfflineContinuation;
+  project_context?: { record_type: "project_context"; project_id: string; name: string; description: string | null; conversation_role: "member" } | null;
 };
 
-export type OfflineMessageRecord = Omit<MessageListItem, "render_blocks"> & { conversation_id: string };
+export type OfflineSourceRef = {
+  record_type: "source_ref";
+  message_id: string;
+  source_type: string;
+  source_profile: string;
+  source_conversation_id: string | null;
+  source_message_id: string | null;
+  source_index: number | null;
+  source_metadata: { timestamp_display?: string; model?: string; conversation?: Record<string, string> };
+};
+export type OfflineMessageRecord = Omit<MessageListItem, "render_blocks"> & {
+  conversation_id: string;
+  source_refs?: OfflineSourceRef[];
+  author_label?: string | null;
+  annotation_versions?: NonNullable<MessageListItem["current_version"]>[];
+};
 type OfflineBlockRecord = RenderBlockRead & { key: string; conversation_id: string; message_id: string };
 type OfflineHeadingRecord = TocItem & { conversation_id: string };
 export type OfflineSearchDocument = {
@@ -66,6 +84,8 @@ export type OfflineAttachmentRecord = {
   status?: string;
   scan_status?: string;
   resolution_status?: string;
+  source_type?: string;
+  source_attachment_id?: string | null;
   occurrences?: Array<{
     message_id: string;
     message_version_id: string;
@@ -351,7 +371,7 @@ async function resolveOfflineStorageContext(
 
 type PackageConversation = Record<string, unknown> & {
   id: string;
-  messages: MessageListItem[];
+  messages: Array<MessageListItem & Pick<OfflineMessageRecord, "source_refs" | "annotation_versions" | "author_label">>;
   headings: TocItem[];
   search_documents: OfflineSearchDocument[];
   annotations: AnnotationRead[];
@@ -517,6 +537,10 @@ export async function importOfflinePackage(packageId: string, response: Response
   }
   if (!Array.isArray(payload.conversations)) throw new OfflinePackageImportError("MALFORMED", "Offline package does not contain a valid conversation list.");
   validateOfflinePackageStoreShape(payload);
+  for (const conversation of payload.conversations) {
+    try { conversation.continuation = await readOfflineContinuation(conversation.continuation); }
+    catch (cause) { throw new OfflinePackageImportError("MALFORMED", "Offline Context files could not be read.", { cause }); }
+  }
   validateOfflinePackageMessageCounts(payload);
   const now = new Date().toISOString();
   const conversationIds = payload.conversations.map((conversation) => conversation.id);
@@ -639,6 +663,7 @@ export async function importOfflinePackage(packageId: string, response: Response
             current_version: message.current_version
               ? { ...message.current_version, id: String(message.current_version.id) }
               : null,
+            annotation_versions: message.annotation_versions?.map((version) => ({ ...version, id: String(version.id) })),
           });
           for (const block of renderBlocks) {
             blocks.push({
@@ -805,7 +830,7 @@ async function removeOfflineConversationsUnlocked(conversationIds: string[], rev
         db.readingPositions.bulkDelete(conversationIds),
         db.attachments.where("conversation_id").anyOf(conversationIds).delete(),
         db.outbox.where("conversation_id").anyOf(conversationIds).delete(),
-        db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("reading-sync:"))
+        db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("continuation-draft:") || row.key.startsWith("reading-sync:"))
           && conversationIds.includes((row.value as { conversation_id: string }).conversation_id)).delete(),
       ]);
       const packages = await db.packages.toArray();
@@ -1017,7 +1042,7 @@ export async function countOfflinePendingChanges(conversationIds: string[], db =
   const operations = await db.outbox.where("conversation_id").anyOf(conversationIds).count();
   const conflicts = await db.settings.where("key").startsWith("sync-conflict:")
     .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
-  const drafts = await db.settings.where("key").startsWith("notebook-draft:")
+  const drafts = await db.settings.filter((item) => item.key.startsWith("notebook-draft:") || item.key.startsWith("continuation-draft:"))
     .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
   return operations + conflicts + drafts;
 }
@@ -1061,6 +1086,8 @@ export async function clearOfflineAnnotationSearch(conversationId: string, db = 
 }
 
 function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: string): OfflineConversationRecord {
+  const project = raw.project_context && typeof raw.project_context === "object"
+    ? raw.project_context as Record<string, unknown> : null;
   const messageCount = Array.isArray(raw.messages) ? raw.messages.length : 0;
   return {
     id: String(raw.id),
@@ -1092,5 +1119,10 @@ function normalizeOfflineConversation(raw: PackageConversation, downloadedAt: st
     content_hash: typeof raw.content_hash === "string" ? raw.content_hash : null,
     sort_time: typeof raw.updated_at === "string" ? raw.updated_at : null,
     downloaded_at: downloadedAt,
+    continuation: raw.continuation as OfflineContinuation | undefined,
+    project_context: project && typeof project.project_id === "string" && typeof project.name === "string"
+      ? { record_type: "project_context", project_id: project.project_id, name: project.name,
+        description: typeof project.description === "string" ? project.description : null, conversation_role: "member" }
+      : raw.project_context === null ? null : undefined,
   };
 }

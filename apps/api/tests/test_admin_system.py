@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import uuid
+from io import BytesIO
+from zipfile import ZipFile
 
 import pytest
 from fastapi.testclient import TestClient
@@ -104,35 +106,52 @@ def test_system_skill_override_default_and_restore(auth_client: TestClient) -> N
         row for row in listed.json()
         if row["category"] == "EXPORT_CONTEXT" and row["locale"] == "en" and row["source_kind"] == "BUNDLED"
     )
-    overridden = auth_client.patch(
+    original = auth_client.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en").json()
+    retired_write = auth_client.patch(
         f"/api/admin/system-skills/{bundled['id']}",
         json={"content": "# administrator override"},
+    )
+    assert retired_write.status_code == 422
+    assert auth_client.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en").json() == original
+    overridden = auth_client.post(
+        f"/api/admin/system-skills/{bundled['id']}/revisions",
+        data={"base_revision": bundled["bundle_revision"]},
+        files={"file": ("override.md", b"# administrator override", "text/markdown")},
     )
     assert overridden.status_code == 200, overridden.text
     assert overridden.json()["is_customized"] is True
     resolved = auth_client.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en").json()
     assert resolved["source"] == "BUILTIN"
     assert resolved["content"] == "# administrator override"
+    downloaded = auth_client.get(resolved["bundle_url"])
+    assert downloaded.status_code == 200
+    with ZipFile(BytesIO(downloaded.content)) as archive:
+        assert archive.read("personal-skill/references/legacy-instructions.md") == b"# administrator override"
 
     custom = auth_client.post(
-        "/api/admin/system-skills",
-        json={
+        "/api/admin/system-skills/bundle",
+        data={
             "category": "EXPORT_CONTEXT",
             "locale": "en",
             "name": "Instance Export",
-            "content": "# instance export",
-            "default_enabled": True,
+            "default_enabled": "true",
         },
+        files={"file": ("instance.md", b"# instance export", "text/markdown")},
     )
     assert custom.status_code == 201, custom.text
     resolved = auth_client.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en").json()
     assert resolved["source"] == "SYSTEM"
     assert resolved["content"] == "# instance export"
+    with ZipFile(BytesIO(auth_client.get(resolved["bundle_url"]).content)) as archive:
+        assert archive.read("personal-skill/references/legacy-instructions.md") == b"# instance export"
     assert auth_client.delete(f"/api/admin/system-skills/{custom.json()['id']}").status_code == 204
 
     restored = auth_client.post(f"/api/admin/system-skills/{bundled['id']}/restore")
     assert restored.status_code == 200
     assert restored.json()["is_customized"] is False
+    resolved = auth_client.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en").json()
+    assert resolved["bundle_url"] == original["bundle_url"]
+    assert resolved["content"] == original["content"]
 
 
 def test_system_backup_queue_has_record_and_audit(auth_client: TestClient) -> None:

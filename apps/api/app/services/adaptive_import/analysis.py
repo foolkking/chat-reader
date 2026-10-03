@@ -68,6 +68,15 @@ def analyze_documents(documents: list[SourceDocument]) -> AnalysisResult:
             )
         return analyze_json(json_docs[0].content)
     if markdown_docs:
+        from app.services.import_pipeline.transcript_markdown import parse_transcript
+        try:
+            transcript = parse_transcript(markdown_docs[0].content)
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise AdaptiveImportError("TRANSCRIPT_INVALID", "Transcript header or message structure is incomplete.", layer="file") from exc
+        if transcript is not None:
+            signature = {"version": ANALYZER_VERSION, "mode": "MARKDOWN", "builtin": "chatgpt-markdown-transcript-v1"}
+            return AnalysisResult(mode="MARKDOWN", signature=signature, signature_digest=signature_digest(signature),
+                mapping_candidates={"boundaries": [], "suggested": {"title": "FIRST_H1_OR_FILENAME", "boundary": {"kind": "NATIVE_MARKER", "level": None}, "role_mapping": {}, "preamble": "IGNORE"}}, semantic={}, handling_class="SUPPORTED")
         native = _analyze_native_markdown(markdown_docs[0].content)
         if native is not None:
             return native

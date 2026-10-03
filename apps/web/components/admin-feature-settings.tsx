@@ -45,7 +45,7 @@ export function AdminFeaturesPanel({ onDirtyChange }: { onDirtyChange?: (dirty: 
   ] as const;
   const valid = policy && Number.isInteger(policy.maximum_import_size_mb) && policy.maximum_import_size_mb >= 1 && policy.maximum_import_size_mb <= 10240 && Number.isInteger(policy.maximum_merge_message_count) && policy.maximum_merge_message_count >= 2 && policy.maximum_merge_message_count <= 100000;
   return <section className="space-y-4" aria-label={zh ? "功能与默认值" : "Features & defaults"}>
-    <p className="text-sm text-secondary">{zh ? "实例级分享、导入与处理上限；实际导入上限还受部署配置限制。" : "Instance sharing, import and processing limits. The deployment limit can further restrict import size."}</p>
+
     {!policy && busy ? <p role="status">{zh ? "正在读取…" : "Loading…"}</p> : null}
     {policy ? <fieldset disabled={busy} className="space-y-4">
       {fields.map(([key, cn, en]) => <label key={key} className="flex min-h-11 items-center justify-between gap-3 border-b border-ui py-2 text-sm text-primary"><span>{zh ? cn : en}</span><input type="checkbox" checked={policy[key]} onChange={(event) => { setNotice(""); setPolicy({ ...policy, [key]: event.target.checked }); }} /></label>)}

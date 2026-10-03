@@ -567,7 +567,10 @@ def test_login_backoff_is_bounded_and_generic(auth_client: TestClient) -> None:
     assert "Retry-After" in throttled.headers
 
 
-def test_registration_mode_closed_is_explicit(auth_client: TestClient) -> None:
+def test_registration_mode_closed_is_explicit(auth_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Exercise CLOSED independently of the surrounding browser/deployment fixture.
+    monkeypatch.setenv("AUTH_REGISTRATION_MODE", "CLOSED")
+    get_settings.cache_clear()
     response = auth_client.post(
         "/api/auth/register",
         json={

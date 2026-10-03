@@ -31,14 +31,23 @@ markers, instruction sections and line-reference records are classified as
 `用户:` or `Assistant:`. They remain eligible for replacement, exclusion and
 Conversation Rescue, but never enter Mapping.
 
-Conversation Rescue is a user-operated external conversion aid. Chat Reader
-does not call an LLM or upload source content. The bilingual 25k skill files
-are static resources at `/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md`
-and `/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md`; the export
-Skill picker uses the same source at its existing
-`/skills/chat-reader-conversation-context-acquisition-skill.v1*.md` URLs. A
-converted Native Markdown Export v2 file returns through the existing
-artifact-replace and re-analysis path.
+The current external conversion default is `chat-transcript-normalizer-skill.zip`.
+It produces ChatGPT Markdown Transcript Profile v1, a project-defined interchange
+format, not an official OpenAI export schema. Personal Skill selection still wins.
+Chat Reader does not execute the uploaded scripts or call an external model.
+
+The adaptive import entry recognizes its ordered bold header and complete message
+signatures before generic mapping. Unknown timestamps and assistant model labels
+are metadata, not body text. Same-role adjacency is retained; fenced/HTML literal
+headings remain body. Model/timestamp displays and historical header values persist
+in private SourceMessageRef metadata, separate from canonical message content.
+Generated `transcript:N` locators represent file order, not original provider IDs.
+
+The compatibility parser/detector uses the same boundaries. The old
+`/api/imports/preview` still requires standardized JSON; standalone transcripts use
+`/api/adaptive-import/sessions`. Historical Markdown Skill URLs remain compatibility
+resources but are not the current default delivery. Full external serializer and
+Context/Offline source-metadata roundtrip acceptance is still pending.
 
 最后核验：2026-08-22。
 

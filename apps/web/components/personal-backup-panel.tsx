@@ -13,7 +13,7 @@ const active = (task?: BackgroundTaskRead) => !!task && ["queued", "processing",
 const bytes = (size: number) => `${(size / 1024 / 1024).toFixed(size >= 1024 * 1024 ? 1 : 2)} MB`;
 const button = "btn-secondary min-h-11 px-3 text-sm";
 
-export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId }: { focused?: boolean; onDirtyChange?: (dirty: boolean) => void; initialTaskId?: string }) {
+export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId, onRestoreConversation }: { focused?: boolean; onDirtyChange?: (dirty: boolean) => void; initialTaskId?: string; onRestoreConversation?: () => void }) {
   const { resolvedLocale, retryPreferenceSync } = usePreferences(), zh = resolvedLocale === "zh-CN";
   const client = useQueryClient(), { confirm } = useInteractionDialog();
   const [mode, setMode] = useState<"backup" | "restore">(initialTaskId ? "restore" : "backup");
@@ -95,7 +95,6 @@ export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId 
   }
 
   return <div className={focused ? "grid min-w-0 gap-5" : "grid min-w-0 gap-5 border-t border-ui pt-4"}>
-    <p className="text-sm leading-6 text-secondary">{zh ? "保存属于你的完整阅读资料，或从个人归档中找回它们。" : "Keep a portable copy of your reading materials, or bring them back from a personal archive."}</p>
     <div role="group" aria-label={zh ? "备份操作" : "Backup action"} className="flex border-b border-ui">{(["backup", "restore"] as const).map((value) => <button key={value} type="button" aria-pressed={mode === value} disabled={busy} onClick={() => void switchMode(value)} className={`min-h-11 flex-1 border-b-2 px-3 text-sm ${mode === value ? "border-[var(--text)] font-semibold text-primary" : "border-transparent text-secondary hover:bg-subtle"}`}>{value === "backup" ? (zh ? "备份我的数据" : "Back up my data") : (zh ? "恢复归档" : "Restore archive")}</button>)}</div>
     {!online ? <p role="status" className="rounded-lg bg-subtle p-3 text-sm leading-6 text-secondary">{zh ? "个人备份与恢复需要联网。离线时可在资料库导出已保存的快照；服务器上的任务会继续。" : "Personal backups and restores need a connection. Offline snapshots can be exported from Library. Server tasks continue while you are away."}</p> : null}
     <section className="grid min-w-0 gap-4" aria-labelledby="personal-backup-heading">
@@ -107,6 +106,7 @@ export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId 
         <button type="button" disabled={busy || !online} onClick={() => void backup()} className="btn-primary flex min-h-11 items-center justify-center gap-2 px-4 text-sm"><Download aria-hidden="true" className="h-4 w-4" />{busy ? (zh ? "正在创建任务…" : "Creating task…") : (zh ? "生成个人归档 (.cr)" : "Create personal archive (.cr)")}</button>
       </> : null}
       {!selectedId && mode === "restore" ? <>
+        {onRestoreConversation ? <button type="button" disabled={busy || !online} className="btn-secondary min-h-11 px-3 text-sm" onClick={onRestoreConversation}>{zh ? "恢复单个对话归档 (.cr)" : "Restore a conversation archive (.cr)"}</button> : null}
         <p className="text-sm leading-6 text-secondary">{zh ? "上传后先核对内容。确认恢复会新增项目和对话，不覆盖当前资料。" : "Review the contents after uploading. Confirming restore adds projects and conversations while preserving your current materials."}</p>
         <div className="grid gap-3 rounded-lg border border-dashed border-ui bg-surface p-4"><label htmlFor="personal-archive-file" className="text-sm font-medium text-primary">{zh ? "个人归档文件 (.cr)" : "Personal archive file (.cr)"}</label><input id="personal-archive-file" type="file" accept=".cr" disabled={busy || !online} className="min-h-11 max-w-full text-sm text-secondary file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:px-3" onChange={(event) => { setFile(event.target.files?.[0] ?? null); requestKeys.current.upload = ""; setError(""); }} /><p className="text-xs leading-5 text-secondary">{limit ? (zh ? `上传上限 ${bytes(limit)}。预检结果保留 24 小时。` : `Upload limit ${bytes(limit)}. The preview remains available for 24 hours.`) : (zh ? "正在读取上传限制…" : "Loading upload limits…")}</p></div>
         {uploadProgress !== null ? <div role="status" className="grid gap-2 text-sm text-secondary"><p>{uploadProgress === 100 ? (zh ? "上传完成，正在登记预检任务…" : "Upload complete. Registering preview task…") : (zh ? `正在上传 ${uploadProgress}%` : `Uploading ${uploadProgress}%`)}</p><progress max={100} value={uploadProgress} className="h-2 w-full accent-[var(--accent)]" /><button type="button" className={button} onClick={() => uploadHandle.current?.cancel()}>{zh ? "取消上传" : "Cancel upload"}</button></div> : <button type="button" disabled={busy || !online || !file || !limit} onClick={() => void upload()} className="btn-primary flex min-h-11 items-center justify-center gap-2 px-4 text-sm"><Upload aria-hidden="true" className="h-4 w-4" />{zh ? "上传并预检" : "Upload & preview"}</button>}

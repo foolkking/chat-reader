@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Any
 
@@ -33,6 +33,7 @@ class BuiltinProfile:
 
 
 BUILTINS = (
+    BuiltinProfile("builtin:chatgpt-markdown-transcript-v1", "ChatGPT Markdown Transcript Profile v1", "MARKDOWN", "Normalizer transcript interchange."),
     BuiltinProfile("builtin:chat-reader-exporter", "Chat Reader Native JSON / Markdown", "JSON_MARKDOWN", "Chat Reader exporter JSON with optional Markdown body."),
     BuiltinProfile("builtin:chat-reader-markdown-v2", "Chat Reader Native Markdown Export v2", "MARKDOWN", "Chat Reader canonical Markdown export, version 2."),
     BuiltinProfile("builtin:canjson-v1", "CanJSON v1", "JSON", "CanJSON compatibility document, version 1."),
@@ -91,6 +92,8 @@ def match_profile(
 
 
 def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> BuiltinProfile | None:
+    if analysis.signature.get("builtin") == "chatgpt-markdown-transcript-v1":
+        return _builtin("builtin:chatgpt-markdown-transcript-v1")
     if analysis.signature.get("builtin") == "chat-reader-markdown-v2":
         return _builtin("builtin:chat-reader-markdown-v2")
     json_doc = next((item for item in documents if item.extension in {".json", ".jsonl", ".gz"}), None)
@@ -122,6 +125,24 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
 def normalize_builtin(key: str, documents: list[SourceDocument]):
     json_doc = next((item for item in documents if item.extension in {".json", ".jsonl", ".gz"}), None)
     markdown_doc = next((item for item in documents if item.extension in {".md", ".markdown"}), None)
+    if key == "builtin:chatgpt-markdown-transcript-v1" and markdown_doc:
+        from app.services.import_pipeline.transcript_markdown import parse_transcript
+        from app.services.import_pipeline.exporter_json_parser import extract_conversation_id
+        parsed = parse_transcript(markdown_doc.content)
+        if parsed is None:
+            raise ValueError("Transcript profile no longer matches.")
+        messages = [_draft_message(item.role, item.body, index,
+            None if item.timestamp == "Unknown" else item.timestamp, f"transcript:{index + 1}", source_markdown_index=index)
+            for index, item in enumerate(parsed.messages)]
+        draft = _draft_conversation(parsed.title, messages, "ChatGPT Markdown Transcript Profile v1", source_type="adaptive_markdown")
+        refs = [{"message_id": f"transcript:{index + 1}", "source_message_id": f"transcript:{index + 1}",
+                 "source_index": index, "source_type": "adaptive_markdown",
+                 "source_profile": "chatgpt-markdown-transcript-v1",
+                 "source_metadata": {"timestamp_display": item.timestamp, "model": item.model,
+                     "locator_kind": "transcript_order", **({"conversation": parsed.metadata} if index == 0 else {})}}
+                for index, item in enumerate(parsed.messages)]
+        return [replace(draft, created_at=parsed.metadata.get("created"), updated_at=parsed.metadata.get("updated"),
+                        external_source_id=extract_conversation_id(parsed.metadata.get("link")), source_refs=refs)]
     if key == "builtin:canjson-v1" and json_doc:
         try: return [parse_canjson_v1(json_doc.content).conversation]
         except CanJsonParseError as exc: raise ValueError(str(exc)) from exc

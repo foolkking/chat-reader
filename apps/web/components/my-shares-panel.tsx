@@ -2,9 +2,10 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
-import { Copy, Link2, LockKeyhole, Pencil, RefreshCw, Search } from "lucide-react";
+import { Copy, Link2, Pencil, RefreshCw, Search } from "lucide-react";
 import { getMyShares, revokeShares } from "../lib/api";
 import type { OwnedShareRead, ShareBatchResult } from "../lib/types";
+import { ShareStatusDetails } from "../features/sharing/share-status-details";
 import { ShareEditor } from "../features/sharing/share-editor";
 import { ShareActionsMenu } from "../features/sharing/share-actions-menu";
 import { usePreferences } from "./preferences-provider";
@@ -57,7 +58,6 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
   const failed = results.filter((item) => item.status !== "revoked");
   if (editing) return <div ref={root}><ShareEditor key={editing.id} share={editing} onDirtyChange={onDirtyChange} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setNotice(zh ? "分享设置已保存，原链接保持不变。" : "Share settings saved. The existing link is unchanged."); }} /></div>;
   return <div ref={root} className="grid min-w-0 gap-4" aria-busy={busy}>
-    <p className="text-sm leading-6 text-secondary">{zh ? "找到已分享的内容，随时调整访问权限。" : "Find what you’ve shared and control who can access it."}</p>
     {!online ? <p role="status" className="rounded-lg bg-subtle p-3 text-sm text-secondary">{zh ? "分享管理需要联网。请连接后刷新。" : "Share management requires a connection. Reconnect and refresh."}</p> : null}
     <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); setQuery(search); resetSelection(); }}>
       <label className="relative min-w-0 flex-1"><span className="sr-only">{zh ? "按对话或分享标题搜索" : "Search conversation or share title"}</span><Search aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-secondary" /><input className="min-h-11 w-full rounded-lg border border-ui bg-surface pl-9 pr-3 text-base text-primary sm:text-sm" placeholder={zh ? "搜索对话或分享标题" : "Search by conversation or title"} value={search} onChange={(e) => setSearch(e.target.value)} maxLength={200} disabled={busy} /></label>
@@ -93,9 +93,7 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
       <div className="flex min-w-0 items-start gap-2">
         {selecting ? <label className="flex min-h-11 min-w-11 shrink-0 items-center justify-center"><input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" aria-label={zh ? `选择 ${share.title || share.conversation_title}` : `Select ${share.title || share.conversation_title}`} checked={share.id in selected} disabled={busy || !online || share.status === "revoked" || (!selected[share.id] && ids.length >= 100)} onChange={(e) => setSelected((value) => { const next = { ...value }; if (e.target.checked) next[share.id] = share.title || share.conversation_title; else delete next[share.id]; return next; })} /></label> : null}
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-semibold leading-6 text-primary">{share.title || share.conversation_title}</h3><span className="shrink-0 rounded-md bg-subtle px-2 py-1 text-xs text-secondary">{share.status === "active" ? (zh ? "有效" : "Active") : share.status === "expired" ? (zh ? "已过期" : "Expired") : (zh ? "已撤销" : "Revoked")}</span></div>
-          <p className="mt-1 truncate text-xs text-secondary" title={share.conversation_title}>{zh ? "来自 " : "From "}{share.conversation_title}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-secondary"><span className="inline-flex items-center gap-1">{share.password_required ? <LockKeyhole aria-hidden="true" className="h-3.5 w-3.5" /> : <Link2 aria-hidden="true" className="h-3.5 w-3.5" />}{share.password_required ? (zh ? "密码保护" : "Password protected") : (zh ? "公开链接" : "Public link")}</span><span>{share.scope === "conversation" ? (zh ? "整个对话" : "Entire conversation") : (zh ? `${share.selected_message_ids?.length ?? 0} 条消息` : `${share.selected_message_ids?.length ?? 0} messages`)}</span><span>{share.expires_at ? (zh ? "到期 " : "Expires ") + new Date(share.expires_at).toLocaleString(resolvedLocale) : (zh ? "永久有效" : "No expiry")}</span></div>
+          <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-semibold leading-6 text-primary">{share.title || share.conversation_title}</h3><ShareStatusDetails share={share} locale={resolvedLocale} /></div>
         </div>
       </div>
       {!selecting ? <div className="flex items-center gap-1">

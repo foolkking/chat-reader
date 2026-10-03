@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { diagnosticReport } from "../lib/help-diagnostics";
-import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { removeSyntheticAccount, settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated authenticated PostgreSQL settings fixture");
@@ -80,7 +80,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
       await openSettings(page, /Help & diagnostics|帮助与诊断/);
       await expect(help.getByText(/Currently offline|当前离线/, { exact: true })).toBeVisible();
-      await expect(help.getByText(/Last known:|上次已知：/)).toBeVisible();
+      await expect(help.getByText(/Last known|上次已知/)).toBeVisible();
       await expect(help.getByText(new RegExp(`${actualCaps.maximum_import_size_mb} MiB`))).toBeVisible();
       await expect(help.getByText(/Startup resources complete|启动资源完整/, { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -147,11 +147,14 @@ test("help cache stays account-scoped and disappears behind expired authorizatio
     await page.route("**/api/auth/capabilities", (route) => route.abort("failed"));
     await page.goto(base); await openSettings(page, /Help & diagnostics|帮助与诊断/);
     await expect(help.getByText("Server unavailable or unverified", { exact: true })).toBeVisible();
-    await expect(help.getByText(/Connect and check to read/)).toBeVisible();
+    await expect(help.locator("dl").getByText("Unknown", { exact: true }).first()).toBeVisible();
+    await help.getByRole("button", { name: "Generate & copy diagnostics" }).click();
+    const report = JSON.parse(await help.getByRole("textbox", { name: "Diagnostic text" }).inputValue());
+    expect(report.capabilities.maximum_import_size_mb).toBeNull();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: /Runtime status|运行状态/ })).toHaveCount(0);
   } finally {
-    for (const id of userIds) await admin.delete(`/api/admin/access/users/${id}`);
+    for (const id of userIds) await removeSyntheticAccount(admin, id);
     await context.close(); await admin.dispose();
   }
 });

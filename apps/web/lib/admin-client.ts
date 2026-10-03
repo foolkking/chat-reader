@@ -18,7 +18,7 @@ export type AdminInvitation = { id: string; status: "PENDING" | "USED" | "EXPIRE
 export type UserConversation = { id: string; title: string; status: string; message_count: number; turn_count: number; summary: string; created_at: string; updated_at: string };
 export type UserAttachment = { id: string; display_name: string; detected_mime_type: string | null; asset_object: { byte_size: number } | null; content_url: string | null; download_url: string | null };
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
-export type SystemSkill = { id: string; skill_key: string; category: "EXPORT_CONTEXT" | "CONVERSATION_RESCUE"; locale: "zh-CN" | "en"; name: string; source_kind: "BUNDLED" | "ADMIN_CREATED"; status: "ACTIVE" | "DISABLED"; default_enabled: boolean; is_customized: boolean; byte_size: number; builtin_content_url: string | null; updated_at: string };
+export type SystemSkill = { bundle_revision?: number; bundle_url?: string | null; id: string; skill_key: string; category: "EXPORT_CONTEXT" | "CONVERSATION_RESCUE" | "CONTEXT_MAINTENANCE"; locale: "zh-CN" | "en"; name: string; source_kind: "BUNDLED" | "ADMIN_CREATED"; status: "ACTIVE" | "DISABLED"; default_enabled: boolean; is_customized: boolean; byte_size: number; builtin_content_url: string | null; updated_at: string };
 export type FeaturePolicy = { allow_share_links: boolean; allow_public_share: boolean; allow_share_password: boolean; allow_user_skills: boolean; allow_skill_import: boolean; allow_user_import: boolean; maximum_import_size_mb: number; maximum_merge_message_count: number; updated_at: string };
 export type BackgroundTask = { job_id: string; job_type: string; status: string; phase: string; progress: number };
 export type BackupRecord = { id: string; operation: "BACKUP" | "RESTORE"; status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED"; artifact_name: string | null; byte_size: number | null; summary: Record<string, unknown>; created_at: string; completed_at: string | null };
@@ -68,6 +68,12 @@ export const adminApi = {
   invitationPage: (state = "ALL", offset = 0) => request<Page<AdminInvitation>>(`/api/admin/access/invitations/page?state=${encodeURIComponent(state)}&offset=${offset}&limit=20`),
   createInvitation: (hours: number) => request<{ id: string; invite_url: string; expires_at: string }>("/api/admin/access/invitations", json("POST", { expires_in_hours: hours })),
   revokeInvitation: (id: string) => request<void>(`/api/admin/access/invitations/${id}`, { method: "DELETE" }),
+  createSystemBundle: (value: { category: string; locale: string; name: string; file: File }) => {
+    const body = new FormData();
+    body.append("category", value.category); body.append("locale", value.locale);
+    body.append("name", value.name); body.append("file", value.file, value.file.name);
+    return request<SystemSkill>("/api/admin/system-skills/bundle", { method: "POST", body });
+  },
   systemSkills: () => request<SystemSkill[]>("/api/admin/system-skills"),
   systemSkill: (id: string) => request<SystemSkill & { content: string | null }>(`/api/admin/system-skills/${id}`),
   createSystemSkill: (value: { category: string; locale: string; name: string; content: string; default_enabled: boolean }) => request<SystemSkill>("/api/admin/system-skills", json("POST", value)),

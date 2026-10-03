@@ -88,14 +88,22 @@ view the imported set in Library, open the first conversation, or close and
 return to the opener. A single import keeps a direct `Open conversation`
 action, but no import silently navigates to the first item.
 
-## Owner Skill management (deployed 2026-09-02)
+## Personal/system Skill management (local migration, 2026-10-03)
 
-Settings includes a focused Skill management dialog for Export Context and
-Conversation Rescue Skills. System defaults are immutable; owner-uploaded UTF-8
-Markdown files (512 KiB max) are saved without auto-activation and require an
-explicit per-language preferred selection. Disabled or deleted selections fall
-back to the system default. Offline and public Share surfaces never access this
-owner registry.
+Settings offers Acquisition, Maintenance and Format conversion. Users upload ZIP
+Bundles or UTF-8 Markdown (automatically packaged as a same-name ZIP), replace
+files and download the selected revision. Personal preferences require explicit
+selection and survive system updates; disabling/deleting a preference falls back
+to the available system default. Root manages system replacements independently.
+No Skill content/history viewer or multi-file editor is exposed. Offline delivers
+the cached built-in Acquisition Bundle; Share never includes personal Skills.
+See [Context contract](CONTEXT_PACKAGE_CONTRACT.md) for limits and compatibility.
+
+Each conversation has its own Current/Index workspace beside annotations. Users
+read, edit or drop the corresponding file on a tab; dropping a `.context.zip`
+updates its members without importing Raw. Updates save directly and retain the
+latest three snapshots. Local drafts remain separate from saved files. Context
+return is not part of ordinary transcript import or a global Context page.
 
 ## Offline Reader and Context Package (2026-08-11)
 
@@ -103,27 +111,28 @@ When the user opens `/library`, an existing complete offline shell is immediatel
 
 Inside an offline conversation, `More -> Current conversation files` is available in the same location as the online Reader. The panel is read-only. A cached attachment can be viewed/downloaded through the unified Viewer; a missing original says `offline-unavailable` and does not spin forever. No server file list or management action is requested.
 
-Offline `Export` creates CanJSON/Markdown locally from the downloaded snapshot. When a local `.context.zip` is ready, the two-step handoff is: (1) upload the Context Package to the new AI, (2) paste the selected parsing Skill. The result offers download, copy and inert text viewing in Chinese or English. Download also attempts copy in the same gesture; a browser clipboard denial is visible and retryable.
+Offline `Export` defaults to `.context.zip`, independently of attachment inclusion; CanJSON/Markdown remain available. It uses the downloaded snapshot and optional cached Current/Index. The result offers the built-in Acquisition ZIP and copies usage instructions in the selected language, without displaying Skill contents. Package download remains available if clipboard access fails. Current/Index can be read offline; updating them requires a connection.
 
 ## Reader source workspace and merge cancellation (current)
 
-1. Desktop Reader keeps `Edit`, `Search`, `Annotations`, `Focus`, and `More` in that order. Search/annotations/source are mutually exclusive; clicking an open source or annotation action closes it. Share, export, merge, and split remain in `More`.
+1. Desktop Reader keeps `Edit`, `Search`, `Annotations`, `Current / Index`, `Focus`, and `More` in that order. Search/annotations/source are mutually exclusive; clicking an open source or annotation action closes it. Share, export, merge, and split remain in `More`.
 2. Markdown source opens as a fixed left workspace at 1024px+, covering sidebars while retaining their state. The Reader captures its original main-column edge before opening and yields exactly enough space to keep the main column beyond the workspace. Only the right edge resizes; closing restores the original layout and reading anchor.
 3. Smaller widths use a full-width panel. Light/dark CodeMirror themes reconfigure without replacing document, cursor, undo history, or unsaved content. Clean reader scrolling follows through RAF; dirty content locks its message until save/discard/return.
 4. A merge copies canonical data in bounded batches. The monitor exposes `取消合并` and `正在取消`; cancellation rolls the target transaction back. Successful publication happens once and leaves sources unchanged.
 
-最后核验：2026-08-05
+以下导入与交付入口更新：2026-10-03。
 
 ## 1. 导入资料
 
 ```text
-选择兼容 JSON（可选 Markdown 校验）或 .cr
--> preview/格式识别/warnings/ImportDraft -> 显式 commit
+选择 JSON / JSONL / gzip 或 Markdown
+-> Adaptive Import 分析、分组与格式识别 -> 显式确认导入
 -> durable job -> worker canonicalize -> 发布 conversation
 ```
 
-- preview 不写 canonical；JSON 决定 metadata/role/time 与配对有效性，有效配对的 Markdown 决定显示正文。Markdown 配对冲突时必须修复或移除后才能 commit。
-- CanJSON v1/v2 由 JSON 控件自动识别；官方 OpenAI 图/ZIP、CSV、TXT 和 Markdown 单文件不是普通导入入口。
+- 分析不写 canonical。使用内置或已学习格式解析；未知结构进入映射学习。具体字段与全 Family 校验遵循 [导入合同](ADAPTIVE_IMPORT_CONTRACT.md)。
+- CanJSON v1/v2、受支持的导出 JSON 及 Markdown 可自动识别。任意 ZIP、CSV/TXT 不作为普通对话直接导入；格式不支持时可下载 Normalizer Skill。
+- `.cr` 在设置「数据与备份」恢复；旧单对话归档有独立恢复窗口。系统归档从管理员「系统」恢复，仍要求空实例。`.context.zip` 在对应对话的 Current/Index 工作区回传，不导入或替换正文。
 - preview 使用 `first_user_message_markdown` 通过系统 Markdown renderer 展示结构；commit 成功后清除旧预览并进入 Reader，队列导入轮询到 committed 后执行同一跳转。Reader 不直接读取 raw artifact。
 
 ## 2. 组织与批量管理
@@ -144,7 +153,7 @@ Project/未归类/归档列表 -> checkbox/Shift/键盘/移动长按
 2. 当前部署扫描器关闭时显示 `scanner_disabled`；策略允许继续使用不代表文件安全。
 3. 文件抽屉提交后成为当前对话 Attachment，可保持未放置，也可从编辑器在光标处或消息末尾插入。
 4. 上传完成后先显式提升为当前对话 Attachment；保存消息时以 base version 做并发校验，并在同一事务创建 MessageVersion、Occurrence、RenderBlock。搜索、TOC、统计和摘要在提交后异步重建。删除正文引用不会删除对话级 Attachment。
-5. 对话导出只选择 CanJSON/Markdown 与“包含附件”：分别得到 `.canjsonl`/`.context.zip` 或 `.md`/可移植 Markdown ZIP。系统 `.cr v4` 从设置的数据与备份导出，恢复文件统一从“导入数据”选择，服务端只允许恢复到空实例。
+5. 对话导出可选 Context Package、CanJSON 或 Markdown；Context 始终生成 `.context.zip`，附件独立选择。系统 `.cr v5` 从管理员「系统」备份和恢复，服务端只允许恢复到空实例；个人与旧单对话归档从设置「数据与备份」恢复。
 - 源码模式可把真实文件拖到具体文本位置，或粘贴剪贴板图片/文件；文件选择、拖放和粘贴共用上传 session、逐文件进度、取消与重试。上传中/失败项必须处理后才能保存。
 - 拖到 fenced code block 时先选择放到代码块之后、仍按普通文本插入或取消；拖到现有 Markdown 链接内部时移到完整链接之后。多文件保持原始顺序并分别生成 occurrence。
 - 关闭尚未保存的源码时，已完成上传可保留为“当前对话文件”的未放置附件，也可删除；正在上传的项会取消。源码中手动删除附件语法只影响当前新版本 occurrence，不删除对话级 Attachment。
@@ -220,9 +229,9 @@ Owner Reader 右上角“更多”提供“更新目录”：
 - 编辑详情按“分享内容／访问权限／链接外观”逐项展开，默认仅展开内容，每组显示当前选择摘要。附加内容默认收起；批注、笔记说明其私人性质。访问方式用“持有链接的人／需要密码”及简短说明呈现，已有密码默认保留，可显式更换；有效期支持永久、从现在起 7/30 天或自定义，未修改的到期时间保留精度。固定底部显示未保存状态和保存操作；错误会展开并聚焦相应字段，修改输入后清除旧错误。手机纵向选择项与桌面并排选择项沿用同一行为。
 - 访客只读取 `/api/shared/{token}/*` 授权范围。
 - Markdown v2/CanJSON v2 可流式导出；`.cr` 通过后台 job 生成临时 artifact。CanJSON v1 只保留 Legacy 兼容。
-- `format=context_package` 通过同一后台 job 生成 `<title>.context.zip`；只包含 manifest、当前版本 `conversation.canjsonl` 和 content-addressed available assets，支持完整对话/当前阅读范围两种 scope。历史版本、blocks、TOC 和 search 仍仅属于 `.cr`。
+- `format=context_package` 通过同一后台 job 生成 `<title>.context.zip`；包含 manifest、canonical JSONL、可选附件对象及已保存的 Current/Index。附件独立选择；完整对话可携带接续文件，部分阅读范围排除它们。Raw 包含批注定位必需的旧版本，完整应用历史和恢复关系仍由 `.cr` 承担。见 [Context 合同](CONTEXT_PACKAGE_CONTRACT.md)。
 - `.crbundle` 已从产品导入流程移除；附件通过对话内普通上传或 `.cr` 完整归档恢复进入系统。图片、文本、Markdown、JSON、CSV、代码、原生媒体和 PDF 可在线预览，Office/ZIP 下载降级，Share 再做 token 与消息范围校验。当前不执行附件内容秘密扫描；未扫描状态会保留到 Reader、Share 和导出。
-- 对话导出一级选项为 CanJSON/Markdown 和“包含附件”；二级选项可包含简介、批注、笔记和来源引用，ZIP manifest 记录实际选择。
+- 对话导出一级选项为 Context Package / CanJSON / Markdown，附件独立选择；二级选项可包含简介、批注、笔记和来源引用，ZIP manifest 记录实际选择。
 - 当前对话导出只投影 active Attachment；从文件面板 detach 的业务文件不会再次出现在当前 `.canjsonl`、`.context.zip`、`.md` 或 Markdown ZIP 中，历史引用只在系统 `.cr v4` 中保留。隐藏文件名、Unicode、空格、大小写和复合扩展名在可移植 ZIP 中保持。
 
 ## 7.1 Markdown 任务清单

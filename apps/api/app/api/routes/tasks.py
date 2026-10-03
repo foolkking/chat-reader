@@ -117,6 +117,8 @@ def retry_task(
 ) -> BackgroundTaskRead:
     job = db.query(BackgroundJob).filter(BackgroundJob.id == job_id, ownership_scope.predicate(BackgroundJob)).with_for_update().populate_existing().one_or_none()
     if job is not None:
+        if job.job_type == 'context_validation':
+            raise HTTPException(410, detail={'code': 'CONTEXT_VALIDATION_RETIRED', 'next_action': 'update_files'})
         retry_background_job(job)
         db.commit()
         return _job_task(job)
@@ -201,6 +203,8 @@ def _job_label(job_type: str) -> str:
         "system_archive_preflight": "预检系统归档",
         "system_archive_restore": "恢复系统归档",
         "user_account_delete": "删除用户账户",
+        "context_object_cleanup": "清理接续文件",
+        "skill_object_cleanup": "清理 Skill 文件",
     }.get(job_type, "后台任务")
 
 

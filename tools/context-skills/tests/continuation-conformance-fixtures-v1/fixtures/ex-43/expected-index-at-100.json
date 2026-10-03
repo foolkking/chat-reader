@@ -1,0 +1,467 @@
+{
+  "schema": "chat-reader-continuation-index",
+  "schema_version": "1.0.0",
+  "conversation_id": "ex43-materials-platform",
+  "continuation_revision": 1,
+  "coverage": {
+    "seq_start": 1,
+    "seq_end": 100,
+    "message_count": 100,
+    "source_fingerprint": {
+      "profile": "chat-reader-content-v1",
+      "algorithm": "sha256",
+      "content": "b2cf92e5600e12bd4d34e194d11114f9c4c8da474e4562441db18f269ba701f4",
+      "locators": "575eac11c30c222be5bb438e10fbbb72fbe2669f0d9cf5e2c1a305b2124d61fc"
+    }
+  },
+  "chapters": [
+    {
+      "id": "CH-001",
+      "seq_start": 1,
+      "seq_end": 30,
+      "title": "Platform orientation and durable constraints",
+      "about": "Defines the product identity, platform scope, and durable constraints that govern later design.",
+      "segment_ids": [
+        "SEG-001",
+        "SEG-002",
+        "SEG-003"
+      ]
+    },
+    {
+      "id": "CH-002",
+      "seq_start": 31,
+      "seq_end": 70,
+      "title": "Viewer architecture exploration and adoption",
+      "about": "Explores alternatives, rejects automatic GraphQL adoption, and adopts canonical artifact flow as the viewer architecture default.",
+      "segment_ids": [
+        "SEG-004",
+        "SEG-005",
+        "SEG-006",
+        "SEG-007"
+      ]
+    },
+    {
+      "id": "CH-003",
+      "seq_start": 71,
+      "seq_end": 100,
+      "title": "Viewer knowledge, implementation, and baseline closure",
+      "about": "Consolidates reusable viewer knowledge, implements the structure/XRD/RDF baseline, and closes with a transition to UI/UX consolidation.",
+      "segment_ids": [
+        "SEG-008",
+        "SEG-009",
+        "SEG-010"
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "id": "SEG-001",
+      "seq_start": 1,
+      "seq_end": 10,
+      "message_count": 10,
+      "kind": "orientation",
+      "title": "Initial platform framing",
+      "about": "Defines the materials-intelligence platform identity and integrated product direction.",
+      "topics": [
+        "materials-platform",
+        "project-scope"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 1,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 3,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 7,
+          "purpose": "anchor"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "ed03407ad7c2b49c998beda3068e1b082634ac45e59204c1fa1b67623cb9e0dd",
+        "locators": "53fd9fc296f007994f6167d324c1b92a13aea2f5c8947b1994df2473de905a11"
+      }
+    },
+    {
+      "id": "SEG-002",
+      "seq_start": 11,
+      "seq_end": 20,
+      "message_count": 10,
+      "kind": "planning",
+      "title": "Durable platform constraints",
+      "about": "Establishes provenance, shared interaction, raw-data immutability, and anti-fragmentation constraints.",
+      "topics": [
+        "constraints",
+        "provenance",
+        "ui"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 11,
+          "purpose": "constraint"
+        },
+        {
+          "type": "message",
+          "sequence": 13,
+          "purpose": "constraint"
+        },
+        {
+          "type": "message",
+          "sequence": 15,
+          "purpose": "constraint"
+        },
+        {
+          "type": "message",
+          "sequence": 17,
+          "purpose": "constraint"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "3c6c0f881515d3964783b6b1b22356bbb47e429da5daa18fbe416ea5aa3df34b",
+        "locators": "0e20e215a22e5ce844b66975efb6376bc54d73def75a2d882ad3b580b4e62bff"
+      }
+    },
+    {
+      "id": "SEG-003",
+      "seq_start": 21,
+      "seq_end": 30,
+      "message_count": 10,
+      "kind": "design",
+      "title": "Viewer scope and reusable scientific-presentation knowledge",
+      "about": "Defines viewer scope, edge adapters, canonical scientific identity, and the need to retain reusable viewer knowledge.",
+      "topics": [
+        "scientific-viewer",
+        "artifact-model"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 22,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 24,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 28,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 30,
+          "purpose": "anchor"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "e28aadaadc599451cfa5b18fd953dc198648455d197d3410ac097482e4540f7c",
+        "locators": "f85b10d0e011b83c31b3ae70eaf9dc6ca228c567b428fc3ee165c7478ac16ef4"
+      }
+    },
+    {
+      "id": "SEG-004",
+      "seq_start": 31,
+      "seq_end": 42,
+      "message_count": 12,
+      "kind": "exploration",
+      "title": "GraphQL proposal explored but not adopted",
+      "about": "Explores a GraphQL-first alternative, establishes that it is orthogonal to the immediate viewer problem, and records the user-explicit choice to keep it historical but unadopted.",
+      "topics": [
+        "graphql",
+        "architecture"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 31,
+          "purpose": "proposal"
+        },
+        {
+          "type": "message",
+          "sequence": 34,
+          "purpose": "proposal"
+        },
+        {
+          "type": "message",
+          "sequence": 41,
+          "purpose": "rejection"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "dc28c8a5b2d70e618d8a7043b07094e17a307db38dbc47fd12573bc1aba3083c",
+        "locators": "66ea53e753729e8e8afd8fc1398a2f9ca88035411788c4ca61967f4ae0490522"
+      }
+    },
+    {
+      "id": "SEG-005",
+      "seq_start": 43,
+      "seq_end": 50,
+      "message_count": 8,
+      "kind": "design",
+      "title": "Artifact architecture alternatives",
+      "about": "Refocuses on viewer-output movement through the platform and compares viewer-specific outputs with a shared artifact model and edge adapters.",
+      "topics": [
+        "artifact-flow",
+        "viewer",
+        "architecture"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 43,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 47,
+          "purpose": "requirement"
+        },
+        {
+          "type": "message",
+          "sequence": 50,
+          "purpose": "result"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "e15978881f7c4f496683fbc5109b66824d0c66f2db7fac1112cd252f25dde7a2",
+        "locators": "0a73a827bdea8f6dd62a9009369bec6560b2a9776f0f319b89fbeac15e36b2fc"
+      }
+    },
+    {
+      "id": "SEG-006",
+      "seq_start": 51,
+      "seq_end": 60,
+      "message_count": 10,
+      "kind": "decision",
+      "title": "Canonical artifact flow adopted",
+      "about": "Clarifies consequences and records the user-explicit adoption of canonical artifact flow as the project-wide viewer default.",
+      "topics": [
+        "artifact-flow",
+        "decision"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 52,
+          "purpose": "proposal"
+        },
+        {
+          "type": "message",
+          "sequence": 58,
+          "purpose": "context"
+        },
+        {
+          "type": "message",
+          "sequence": 59,
+          "purpose": "acceptance"
+        },
+        {
+          "type": "message",
+          "sequence": 60,
+          "purpose": "decision"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "c56ca53c7a46ec74c1518c24d40bc53fd2e7218c8e797fc29325930d53771297",
+        "locators": "103dc7bb5c8e97231ee5971f25f9ad3277a66e8396199aa52e80033fcd08636a"
+      }
+    },
+    {
+      "id": "SEG-007",
+      "seq_start": 61,
+      "seq_end": 70,
+      "message_count": 10,
+      "kind": "design",
+      "title": "Artifact-flow consequences and invariants",
+      "about": "Clarifies that GraphQL is not adopted and defines provenance, source-of-truth, shared-interaction, and adapter boundaries.",
+      "topics": [
+        "artifact-flow",
+        "provenance",
+        "viewer"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 61,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 64,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 66,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 70,
+          "purpose": "anchor"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "a4fbdfc1166d317437b21d5eb902a36b139239fb3d6d7c8595019a14c58f5bc2",
+        "locators": "48c9e6f614eab6189e00a065f3769ddab4795437eccbd56fb9d351873dceb825"
+      }
+    },
+    {
+      "id": "SEG-008",
+      "seq_start": 71,
+      "seq_end": 80,
+      "message_count": 10,
+      "kind": "synthesis",
+      "title": "Scientific Viewer Topic Capsule knowledge",
+      "about": "Consolidates reusable viewer architecture knowledge: immutable raw input, edge adapters, canonical artifacts, shared interactions, and derived rendering/export.",
+      "topics": [
+        "scientific-viewer",
+        "topic-knowledge"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 72,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 74,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 76,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 80,
+          "purpose": "anchor"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "c6a2b6e04b186541719eb09a3f15127b99453d18e5b534a96850175e35f4c639",
+        "locators": "ec83460bcc1d0950d2702e13217de1e3d2b392ce3535e98bfc82029259f270a1"
+      }
+    },
+    {
+      "id": "SEG-009",
+      "seq_start": 81,
+      "seq_end": 90,
+      "message_count": 10,
+      "kind": "implementation",
+      "title": "Structure/XRD/RDF baseline implementation",
+      "about": "Implements the viewer baseline through the canonical artifact path and reports lower-level checks.",
+      "topics": [
+        "scientific-viewer",
+        "implementation"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 82,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 84,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 86,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 90,
+          "purpose": "anchor"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "f7f393ad01ae06aa9cd81c878fc84c2183146b221d2bd0603df9f4173a9b595b",
+        "locators": "64e8621bb520af051ff5e83751ac5255fa103d6ded8958e28ca18ce9d873eead"
+      }
+    },
+    {
+      "id": "SEG-010",
+      "seq_start": 91,
+      "seq_end": 100,
+      "message_count": 10,
+      "kind": "transition",
+      "title": "Baseline milestone and shift to UI/UX consolidation",
+      "about": "Marks the covered viewer baseline complete at lower-level validation, preserves production verification as separate, and transitions to interaction-consistency work.",
+      "topics": [
+        "milestone",
+        "verification",
+        "ui"
+      ],
+      "key_refs": [
+        {
+          "type": "message",
+          "sequence": 91,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 92,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 94,
+          "purpose": "anchor"
+        },
+        {
+          "type": "message",
+          "sequence": 100,
+          "purpose": "anchor"
+        }
+      ],
+      "attachment_refs": [],
+      "fingerprint": {
+        "profile": "chat-reader-content-v1",
+        "algorithm": "sha256",
+        "content": "91e5a67ec653232cec1339f0ed53b4dbd217d1d6787f76265f2be6b92de555cd",
+        "locators": "5a1fc4abe3e75ac4c13e7f50a0840964e21f76fd4d3721ef3f1b707dbe134a23"
+      }
+    }
+  ]
+}

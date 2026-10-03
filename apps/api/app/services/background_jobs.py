@@ -46,7 +46,7 @@ from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_o
 logger = logging.getLogger(__name__)
 
 ACTIVE_JOB_STATUSES = ("queued", "processing", "cancelling")
-CANCELLABLE_JOB_TYPES = {"conversation_merge", "conversation_batch_delete", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
+CANCELLABLE_JOB_TYPES = {"context_return", "context_validation", "conversation_merge", "conversation_batch_delete", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
 ProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -148,6 +148,8 @@ def queue_conversation_export(
     include_source_refs: bool = True,
     export_format: str = "cr_v2",
     context_scope: str = "full_conversation",
+    context_attachment_policy: str = "include",
+    continuation_policy: str = "auto",
     start_message_id: uuid.UUID | None = None,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
@@ -167,6 +169,13 @@ def queue_conversation_export(
             .first()
         )
         if existing is not None:
+            if export_format == "context_package" or existing.payload.get("export_format") == "context_package":
+                expected = {"conversation_id": str(conversation_id), "export_format": export_format,
+                            "context_scope": context_scope, "start_message_id": str(start_message_id) if start_message_id else None,
+                            "context_attachment_policy": context_attachment_policy, "continuation_policy": continuation_policy}
+                defaults = {"context_attachment_policy": "include", "continuation_policy": "auto"}
+                if any(existing.payload.get(key, defaults.get(key)) != value for key, value in expected.items()):
+                    raise MessageEditError("This request key was already used for different Context export options.", 409)
             return existing
     job = BackgroundJob(
         id=uuid.uuid4(),
@@ -187,6 +196,8 @@ def queue_conversation_export(
             "include_source_refs": include_source_refs,
             "export_format": export_format,
             "context_scope": context_scope,
+            "context_attachment_policy": context_attachment_policy,
+            "continuation_policy": continuation_policy,
             "start_message_id": str(start_message_id) if start_message_id else None,
         },
         result={},
@@ -871,6 +882,8 @@ def process_background_job(
                         conversation_id=conversation_id,
                         job_id=job.id,
                         scope_kind=str(payload.get("context_scope") or "full_conversation"),
+                        include_attachments=payload.get("context_attachment_policy", "include") == "include",
+                        include_continuation=payload.get("continuation_policy", "auto") == "auto",
                         start_message_id=(
                             uuid.UUID(str(payload["start_message_id"]))
                             if payload.get("start_message_id")
@@ -1158,6 +1171,27 @@ def process_background_job(
                     "derivative_type": derivative.derivative_type,
                 }
                 processed_items = 1
+            elif job.job_type == "context_return":
+                from app.services.context_return_jobs import process_context_return
+                from app.services.continuation_candidates import ContinuationError
+                try:
+                    job_result, return_upload_path = process_context_return(db, job, job_scope, report)
+                except (ContinuationError, BackgroundJobCancelled):
+                    raise
+                except Exception:
+                    raise ValueError("CONTEXT_RETURN_FAILED") from None
+                processed_items = 1
+            elif job.job_type == "context_validation":
+                # Queued jobs from the superseded workflow must not create receipts.
+                raise ValueError("CONTEXT_VALIDATION_RETIRED")
+            elif job.job_type == "context_object_cleanup":
+                from app.services.context_cleanup import cleanup_context_objects
+                job_result = cleanup_context_objects(db, payload.get("keys", []), progress=report)
+                processed_items = job.total_items
+            elif job.job_type == "skill_object_cleanup":
+                from app.services.skill_cleanup import cleanup_skill_objects
+                job_result = cleanup_skill_objects(db, payload.get("keys", []), progress=report)
+                processed_items = job.total_items
             elif job.job_type == "user_account_delete":
                 target_user_id = uuid.UUID(str(payload["target_user_id"]))
                 deletion_request_id = uuid.UUID(str(payload["deletion_request_id"]))
@@ -1183,6 +1217,8 @@ def process_background_job(
                 "error_message": None,
             }
             post_commit_cleanup: list[tuple[str, list[Path], Path]] = []
+            if job.job_type == "context_return":
+                post_commit_cleanup.append(("export", [return_upload_path], Path(get_settings().export_storage_dir)))
             if job.job_type == "offline_package":
                 cleanup_paths = list(getattr(package, "_cleanup_paths", []))
                 if cleanup_paths:

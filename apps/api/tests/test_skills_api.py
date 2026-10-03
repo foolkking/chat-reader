@@ -11,19 +11,29 @@ from test_import_preview_api import client  # noqa: F401
 from test_message_editing_api import commit_edit_sample
 
 
+FRONTMATTER = b"---\nname: sample\ndescription: Synthetic test Skill.\n---\n"
+
+
+def skill_zip(content: bytes, *, raw=False):
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr("sample/SKILL.md", content if raw else FRONTMATTER + content)
+    return output.getvalue()
+
+
 def test_builtin_skills_are_listed(client: TestClient) -> None:
     response = client.get("/api/skills")
     assert response.status_code == 200
     payload = response.json()
     assert {item["source"] for item in payload} == {"BUILTIN"}
-    assert {item["category"] for item in payload} == {"EXPORT_CONTEXT", "CONVERSATION_RESCUE"}
+    assert {item["category"] for item in payload} == {"EXPORT_CONTEXT", "CONVERSATION_RESCUE", "CONTEXT_MAINTENANCE"}
 
 
 def test_uploaded_skill_is_saved_without_auto_selection_and_can_resolve(client: TestClient) -> None:
     response = client.post(
         "/api/skills",
         data={"category": "EXPORT_CONTEXT", "locale": "zh-CN", "name": "我的导出 Skill"},
-        files={"file": ("custom.md", b"# custom\nkeep this", "text/markdown")},
+        files={"file": ("custom.zip", skill_zip(b"# custom\nkeep this"), "application/zip")},
     )
     assert response.status_code == 201
     skill = response.json()
@@ -38,7 +48,7 @@ def test_uploaded_skill_is_saved_without_auto_selection_and_can_resolve(client: 
     assert selected.status_code == 204
     resolved = client.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=zh-CN")
     assert resolved.json()["source"] == "USER"
-    assert resolved.json()["content"] == "# custom\nkeep this"
+    assert resolved.json()["content"] == FRONTMATTER.decode() + "# custom\nkeep this"
     disabled = client.patch(f"/api/skills/{skill['id']}", json={"status": "DISABLED"})
     assert disabled.status_code == 200
     assert client.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=zh-CN").json()["source"] == "BUILTIN"
@@ -46,28 +56,28 @@ def test_uploaded_skill_is_saved_without_auto_selection_and_can_resolve(client: 
 
 def test_duplicate_and_invalid_skill_files_are_rejected(client: TestClient) -> None:
     body = {"category": "CONVERSATION_RESCUE", "locale": "en", "name": "Custom"}
-    assert client.post("/api/skills", data=body, files={"file": ("a.md", b"same", "text/markdown")}).status_code == 201
-    assert client.post("/api/skills", data=body, files={"file": ("b.md", b"same", "text/markdown")}).status_code == 409
+    assert client.post("/api/skills", data=body, files={"file": ("a.zip", skill_zip(b"same"), "application/zip")}).status_code == 201
+    assert client.post("/api/skills", data=body, files={"file": ("b.zip", skill_zip(b"same"), "application/zip")}).status_code == 409
     assert client.post("/api/skills", data=body, files={"file": ("a.txt", b"text", "text/plain")}).status_code == 422
 
 
 def test_skill_upload_rejects_empty_binary_and_oversized_payloads(client: TestClient) -> None:
     body = {"category": "EXPORT_CONTEXT", "locale": "en", "name": "Boundary checks"}
 
-    empty = client.post("/api/skills", data=body, files={"file": ("empty.md", b"", "text/markdown")})
+    empty = client.post("/api/skills", data=body, files={"file": ("empty.zip", skill_zip(b"", raw=True), "application/zip")})
     assert empty.status_code == 422
     assert "empty" in empty.json()["detail"].lower()
 
     for payload in (b"# valid\x00payload", b"# valid\x01payload"):
-        binary = client.post("/api/skills", data=body, files={"file": ("binary.md", payload, "text/markdown")})
+        binary = client.post("/api/skills", data=body, files={"file": ("binary.zip", skill_zip(payload), "application/zip")})
         assert binary.status_code == 422
         assert "plain" in binary.json()["detail"].lower()
 
-    invalid_utf8 = client.post("/api/skills", data=body, files={"file": ("invalid.md", b"# invalid\xff", "text/markdown")})
+    invalid_utf8 = client.post("/api/skills", data=body, files={"file": ("invalid.zip", skill_zip(b"# invalid\xff"), "application/zip")})
     assert invalid_utf8.status_code == 422
     assert "utf-8" in invalid_utf8.json()["detail"].lower()
 
-    oversized = client.post("/api/skills", data=body, files={"file": ("large.md", b"x" * (512 * 1024 + 1), "text/markdown")})
+    oversized = client.post("/api/skills", data=body, files={"file": ("large.zip", b"x" * (16 * 1024 * 1024 + 1), "application/zip")})
     assert oversized.status_code == 413
 
 
@@ -79,7 +89,7 @@ def test_skill_name_and_content_are_not_written_to_request_logs(client: TestClie
     response = client.post(
         "/api/skills",
         data={"category": "EXPORT_CONTEXT", "locale": "en", "name": private_name},
-        files={"file": ("private.md", private_content.encode("utf-8"), "text/markdown")},
+        files={"file": ("private.zip", skill_zip(private_content.encode("utf-8")), "application/zip")},
     )
 
     assert response.status_code == 201
@@ -99,7 +109,7 @@ def test_user_skill_does_not_cross_share_or_offline_data_boundaries(
     uploaded = client.post(
         "/api/skills",
         data={"category": "CONVERSATION_RESCUE", "locale": "en", "name": private_name},
-        files={"file": ("private.md", private_content.encode("utf-8"), "text/markdown")},
+        files={"file": ("private.zip", skill_zip(private_content.encode("utf-8")), "application/zip")},
     )
     assert uploaded.status_code == 201
 

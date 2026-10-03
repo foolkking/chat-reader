@@ -1,0 +1,12 @@
+# Bundled source bytes must match the installable artifacts on every CI host.
+tools/context-skills/**/*.py text eol=lf
+tools/context-skills/**/*.md text eol=lf
+tools/context-skills/**/*.yaml text eol=lf
+tools/context-skills/**/*.json text eol=lf
+apps/web/public/skills/*.md text eol=lf
+*.zip binary
+apps/api/app/services/context_protocol/*.py text eol=lf
+# Fingerprint fixtures are byte evidence, including their original newlines.
+tools/context-skills/tests/continuation-conformance-fixtures-v1/** -text
+# Supplied Markdown references use intentional two-space hard line breaks.
+tools/context-skills/**/references/*.md whitespace=-blank-at-eol

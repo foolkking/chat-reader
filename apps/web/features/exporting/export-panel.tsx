@@ -1,38 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, ChevronDown, Copy, Download, Eye, FileArchive, FileJson2, FileText, X } from "lucide-react";
-import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
-import { useDialogFocus } from "../../components/use-dialog-focus";
+import { ChevronDown, Download, FileArchive, FileJson2, FileText } from "lucide-react";
+import { useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import {
   getConversationAttachments,
   getConversationExportUrl,
   getTask,
   queueConversationAttachmentBundleExport,
+  queueConversationContextPackageExport,
   resolveSkill,
 } from "../../lib/api";
 
-type ConversationExportFormat = "canjson" | "markdown";
-type SkillLocale = "zh-CN" | "en";
 
-const CONTEXT_SKILLS: Record<SkillLocale, {
-  url: string;
-  filename: string;
-  label: string;
-}> = {
-  "zh-CN": {
-    url: "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
-    filename: "Chat-Reader-Conversation-Context-Acquisition-Skill.v1.md",
-    label: "中文",
-  },
-  en: {
-    url: "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
-    filename: "Chat-Reader-Conversation-Context-Acquisition-Skill.v1-en.md",
-    label: "English",
-  },
-};
+type ConversationExportFormat = "context" | "canjson" | "markdown";
+type SkillLocale = "zh-CN" | "en";
 
 export function ExportPanel({
   conversationId,
@@ -45,7 +28,9 @@ export function ExportPanel({
 }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [format, setFormat] = useState<ConversationExportFormat>("canjson");
+  const [format, setFormat] = useState<ConversationExportFormat>("context");
+  const [includeContinuation, setIncludeContinuation] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [includeAttachments, setIncludeAttachments] = useState(false);
   const [includeDescription, setIncludeDescription] = useState(false);
   const [includeAnnotations, setIncludeAnnotations] = useState(false);
@@ -72,7 +57,7 @@ export function ExportPanel({
   const attachments = attachmentsQuery.data ?? [];
   const unavailableCount = attachments.filter((item) => item.resolution_status !== "resolved" || !item.asset_object).length;
   const exportOptions = { includeDescription, includeAnnotations, includeNotebook, includeSourceRefs };
-  const currentKey = JSON.stringify({ format, includeAttachments, ...exportOptions });
+  const currentKey = JSON.stringify({ conversationId, format, includeAttachments, includeContinuation, ...exportOptions });
   const downloadUrl = jobKey === currentKey ? taskQuery.data?.result.download_url : null;
   const plainHref = getConversationExportUrl(conversationId, {
     format: format === "canjson" ? "canjson_v2" : "markdown_v2",
@@ -82,7 +67,7 @@ export function ExportPanel({
     includeNotebook,
     includeSourceRefs,
   });
-  const output = format === "canjson"
+  const output = format === "context" ? ".context.zip" : format === "canjson"
     ? includeAttachments ? ".context.zip" : ".canjsonl"
     : includeAttachments ? "-markdown.zip" : ".md";
 
@@ -90,7 +75,8 @@ export function ExportPanel({
 
   return (
     <section className="min-w-0 space-y-5">
-      <div className="grid grid-cols-2 rounded-lg bg-subtle p-1" role="group" aria-label={zh ? "导出格式" : "Export format"}>
+      <div className="grid grid-cols-3 rounded-lg bg-subtle p-1" role="group" aria-label={zh ? "导出格式" : "Export format"}>
+        <FormatButton active={format === "context"} onClick={() => { setFormat("context"); resetQueuedResult(); }} icon={<FileArchive className="h-4 w-4 shrink-0" />} label={zh ? "交给 AI" : "For AI"} />
         <FormatButton active={format === "canjson"} onClick={() => { setFormat("canjson"); resetQueuedResult(); }} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />
         <FormatButton active={format === "markdown"} onClick={() => { setFormat("markdown"); resetQueuedResult(); }} icon={<FileText className="h-4 w-4" />} label="Markdown" />
       </div>
@@ -106,7 +92,12 @@ export function ExportPanel({
             : `${attachments.length} files, ${unavailableCount} missing or unavailable`}
       />
 
-      <details className="group rounded-lg border border-ui bg-surface">
+      {format === "context" ? <OptionRow
+        checked={includeContinuation}
+        onChange={setIncludeContinuation}
+        label={zh ? "包含接续文件" : "Include continuation files"}
+        description={zh ? "包含最近保存的 Current / Index；关闭后只导出原始对话。" : "Include the latest saved Current / Index. Turn off for Raw-only."}
+      /> : <details className="group rounded-lg border border-ui bg-surface">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-medium text-primary">
           <span>{zh ? "更多内容选项" : "More content options"}</span>
           <ChevronDown className="h-4 w-4 text-secondary transition-transform group-open:rotate-180" />
@@ -117,17 +108,19 @@ export function ExportPanel({
           <CompactOption checked={includeNotebook} onChange={setIncludeNotebook} label={zh ? "包含笔记" : "Include notebook"} />
           {format === "canjson" ? <CompactOption checked={includeSourceRefs} onChange={setIncludeSourceRefs} label={zh ? "包含来源引用" : "Include source references"} /> : null}
         </div>
-      </details>
+      </details>}
 
       <div className="rounded-lg bg-subtle px-3 py-3 text-sm leading-6 text-secondary">
         <div className="mb-1 flex items-center gap-2 font-medium text-primary">
-          {includeAttachments ? <FileArchive className="h-4 w-4" /> : format === "canjson" ? <FileJson2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+          {format === "context" || includeAttachments ? <FileArchive className="h-4 w-4" /> : format === "canjson" ? <FileJson2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
           <span>{zh ? `输出 ${output}` : `Output ${output}`}</span>
         </div>
         <p>
-          {format === "canjson"
+          {format === "context"
+            ? (zh ? "一个供 AI 继续工作的 Context 文件，包含当前对话、简介、批注、笔记和附件记录；附件文件可选。" : "One Context file for continuing with AI: current conversation, description, annotations, notebook, and attachment records. File binaries are optional.")
+            : format === "canjson"
             ? includeAttachments
-              ? (zh ? "AI 承接包包含完整当前对话、所选附加内容、附件元数据和可用文件；缺失文件会保留记录。" : "The AI context package contains the complete current conversation, selected secondary content, attachment metadata, and available files. Missing files remain recorded.")
+              ? (zh ? "结构化附件包包含当前对话、所选附加内容、附件元数据和可用文件；缺失文件保留记录。" : "The structured bundle contains the current conversation, selected secondary content, attachment metadata, and available files. Missing files remain recorded.")
               : (zh ? "结构化对话文件保留附件元数据和引用，但不包含文件二进制。" : "The structured conversation keeps attachment metadata and references without file binaries.")
             : includeAttachments
               ? (zh ? "解压后可直接在 Obsidian、Typora 或 VS Code 中打开，附件使用相对路径。" : "The extracted folder opens directly in Obsidian, Typora, or VS Code with relative attachment paths.")
@@ -135,9 +128,9 @@ export function ExportPanel({
         </p>
       </div>
 
-      {includeAttachments ? (
+      {format === "context" || includeAttachments ? (
         downloadUrl && taskQuery.data?.status === "committed" ? (
-          format === "canjson" ? (
+          format === "context" ? (
             <ContextPackageDelivery downloadUrl={String(downloadUrl)} defaultSkillLocale={zh ? "zh-CN" : "en"} />
           ) : (
             <a href={String(downloadUrl)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
@@ -147,11 +140,15 @@ export function ExportPanel({
         ) : (
           <button
             type="button"
-            disabled={jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled"].includes(taskQuery.data?.status ?? "queued")}
+            disabled={submitting || (jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled"].includes(taskQuery.data?.status ?? "queued"))}
             onClick={() => void (async () => {
               setQueueError(null);
+              setSubmitting(true);
               try {
-                const task = await queueConversationAttachmentBundleExport(
+                const task = format === "context" ? await queueConversationContextPackageExport(conversationId, {
+                  scope: "full_conversation", attachmentPolicy: includeAttachments ? "include" : "metadata_only",
+                  continuationPolicy: includeContinuation ? "auto" : "raw_only",
+                }) : await queueConversationAttachmentBundleExport(
                   conversationId,
                   format === "canjson" ? "canjson_bundle" : "markdown_bundle",
                   exportOptions,
@@ -160,12 +157,14 @@ export function ExportPanel({
                 setJobKey(currentKey);
               } catch (error) {
                 setQueueError(error instanceof Error ? error.message : (zh ? "无法创建导出任务" : "Unable to create export"));
+              } finally {
+                setSubmitting(false);
               }
             })()}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"
           >
             <FileArchive className="h-4 w-4" />
-            {jobKey === currentKey && jobId && taskQuery.data?.status !== "failed"
+            {submitting ? (zh ? "正在创建任务…" : "Creating task…") : jobKey === currentKey && jobId && !["failed", "cancelled", "committed"].includes(taskQuery.data?.status ?? "queued")
               ? (zh ? `正在生成 ${taskQuery.data?.progress ?? 0}%` : `Generating ${taskQuery.data?.progress ?? 0}%`)
               : (zh ? "生成导出包" : "Generate export")}
           </button>
@@ -176,6 +175,7 @@ export function ExportPanel({
         </a>
       )}
 
+      {jobKey === currentKey && taskQuery.data?.status === "cancelled" ? <p className="text-sm text-secondary">{zh ? "生成已取消，可以重新生成。" : "Export cancelled. You can generate it again."}</p> : null}
       {queueError ? <p className="text-sm text-[var(--danger)]">{queueError}</p> : null}
       {jobKey === currentKey && taskQuery.data?.status === "failed" ? <p className="text-sm text-[var(--danger)]">{taskQuery.data.error_message || (zh ? "导出失败，请重试。" : "Export failed. Try again.")}</p> : null}
       {!compact && unavailableCount > 0 ? <p className="text-xs leading-5 text-secondary">{zh ? "缺失文件仍保留在元数据中，附件完整性会标记为 partial。" : "Missing files remain in metadata and make asset completeness partial."}</p> : null}
@@ -187,134 +187,21 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [skillLocale, setSkillLocale] = useState<SkillLocale>(defaultSkillLocale);
-  const [skillText, setSkillText] = useState<string | null>(null);
-  const [skillError, setSkillError] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ kind: "success" | "error"; message: string } | null>(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const skill = CONTEXT_SKILLS[skillLocale];
-  const resolvedSkillQuery = useQuery({ queryKey: ["resolved-skill", "EXPORT_CONTEXT", skillLocale], queryFn: () => resolveSkill("EXPORT_CONTEXT", skillLocale), staleTime: 60_000, enabled: !offline });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setSkillText(resolvedSkillQuery.data?.content ?? null);
-    setSkillError(null);
-    setStatus(null);
-    const sourceUrl = resolvedSkillQuery.data?.content ? null : (resolvedSkillQuery.data?.content_url ?? skill.url);
-    if (!sourceUrl) return () => controller.abort();
-    void fetch(sourceUrl, { signal: controller.signal, credentials: "same-origin" })
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.text();
-      })
-      .then(setSkillText)
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setSkillError(zh ? "解析 Skill 加载失败，请重试。" : "The parsing Skill could not be loaded. Try again.");
-        console.error("context-skill-load-failed", error);
-      });
-    return () => controller.abort();
-  }, [skill.url, zh, resolvedSkillQuery.data?.content, resolvedSkillQuery.data?.content_url]);
-
-  async function copySkill(successMessage?: string) {
-    if (!skillText) {
-      setStatus({ kind: "error", message: skillError ?? (zh ? "解析 Skill 尚未加载完成。" : "The parsing Skill is not loaded yet.") });
-      return false;
-    }
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error("clipboard-unavailable");
-      await navigator.clipboard.writeText(skillText);
-      setStatus({ kind: "success", message: successMessage ?? (zh ? "解析 Skill 已复制。" : "Parsing Skill copied.") });
-      return true;
-    } catch {
-      setStatus({ kind: "error", message: zh ? "解析 Skill 复制失败，请允许剪贴板访问后重试。" : "Copy failed. Allow clipboard access and try again." });
-      return false;
-    }
-  }
-
-  function downloadPackageAndCopySkill() {
-    const copyAttempt = skillText && navigator.clipboard?.writeText
-      ? navigator.clipboard.writeText(skillText)
-      : Promise.reject(new Error("skill-unavailable"));
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = downloadFilename ?? "";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    void copyAttempt.then(() => {
-      setStatus({ kind: "success", message: zh ? "下载已开始，解析 Skill 已复制。" : "Download started and the parsing Skill was copied." });
-    }).catch(() => {
-      setStatus({ kind: "error", message: zh ? "下载已开始，但 Skill 复制失败。请点击“复制解析 Skill”重试。" : "Download started, but the Skill could not be copied. Use Copy parsing Skill to retry." });
-    });
-  }
-
-  return (
-    <section className="space-y-3 rounded-lg border border-ui bg-surface p-3" aria-label={zh ? "AI 上下文" : "AI context"} data-testid="context-package-delivery">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-primary">{zh ? "AI 上下文" : "AI context"}</h3>
-          <p className="mt-1 text-xs leading-5 text-secondary">{zh ? "在新 AI 中上传 Context Package，然后粘贴解析 Skill。" : "Upload the Context Package to a new AI, then paste the parsing Skill."}</p>
-        </div>
-        <div className="grid grid-cols-2 rounded-md bg-subtle p-1" role="group" aria-label={zh ? "Skill 语言" : "Skill language"}>
-          {(Object.keys(CONTEXT_SKILLS) as SkillLocale[]).map((locale) => (
-            <button key={locale} type="button" onClick={() => setSkillLocale(locale)} aria-pressed={skillLocale === locale} className={`min-h-9 rounded px-3 text-xs ${skillLocale === locale ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary"}`}>
-              {CONTEXT_SKILLS[locale].label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <p className="text-xs text-secondary">{zh ? "当前使用：" : "Using: "}{resolvedSkillQuery.data?.name ?? (zh ? "系统默认" : "System default")}</p>
-      <button type="button" onClick={downloadPackageAndCopySkill} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
-        <Download className="h-4 w-4" />{zh ? "下载 Context Package" : "Download Context Package"}
-      </button>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <button type="button" disabled={!skillText} onClick={() => void copySkill()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-ui px-3 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">
-          <Copy className="h-4 w-4" />{zh ? "复制解析 Skill" : "Copy parsing Skill"}
-        </button>
-        <button type="button" disabled={!skillText} onClick={() => setViewerOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-ui px-3 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">
-          <Eye className="h-4 w-4" />{zh ? "查看 Skill" : "View Skill"}
-        </button>
-      </div>
-      {skillError ? <p className="text-xs text-[var(--danger)]" role="alert">{skillError}</p> : null}
-      {status ? <p className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs ${status.kind === "success" ? "bg-[var(--callout-tip-bg)] text-[var(--callout-tip-text)]" : "bg-[var(--danger-soft)] text-[var(--danger)]"}`} role={status.kind === "success" ? "status" : "alert"}>{status.kind === "success" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : null}<span>{status.message}</span></p> : null}
-      <ContextSkillDialog open={viewerOpen} onClose={() => setViewerOpen(false)} skill={skill} text={skillText ?? ""} onCopy={() => void copySkill()} downloadText={skillText} />
-    </section>
-  );
-}
-
-function ContextSkillDialog({ open, onClose, skill, text, onCopy, downloadText }: {
-  open: boolean;
-  onClose: () => void;
-  skill: (typeof CONTEXT_SKILLS)[SkillLocale];
-  text: string;
-  onCopy: () => void;
-  downloadText?: string | null;
-}) {
-  const { resolvedLocale } = usePreferences();
-  const zh = resolvedLocale === "zh-CN";
-  const rootRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  useDialogFocus({ open, rootRef, onClose, initialFocusRef: titleRef });
-  if (!open || typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[360] flex items-end justify-center bg-[var(--overlay)] sm:items-center sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={rootRef} role="dialog" aria-modal="true" aria-labelledby="context-skill-title" tabIndex={-1} className="flex h-[100dvh] w-full flex-col overflow-hidden bg-page shadow-2xl sm:h-[min(86vh,900px)] sm:max-w-4xl sm:rounded-lg sm:border sm:border-ui">
-        <header className="flex min-h-14 shrink-0 items-center gap-3 border-b border-ui bg-surface px-4">
-          <div className="min-w-0 flex-1">
-            <h2 ref={titleRef} id="context-skill-title" tabIndex={-1} className="truncate text-sm font-semibold text-primary" title={skill.filename}>{zh ? "解析 Skill" : "Parsing Skill"}</h2>
-            <p className="truncate text-[11px] text-secondary">Chat Reader Context Acquisition Skill</p>
-          </div>
-          <button type="button" onClick={onCopy} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Copy className="h-4 w-4" />{zh ? "复制" : "Copy"}</button>
-          <button type="button" onClick={() => { if (!downloadText) return; const href = URL.createObjectURL(new Blob([downloadText], { type: "text/markdown;charset=utf-8" })); const link = document.createElement("a"); link.href = href; link.download = skill.filename; link.click(); URL.revokeObjectURL(href); }} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-primary hover:bg-subtle"><Download className="h-4 w-4" />{zh ? "下载" : "Download"}</button>
-          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-5 w-5" /></button>
-        </header>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-          <pre className="mx-auto max-w-3xl whitespace-pre-wrap break-words font-mono text-xs leading-6 text-primary">{text}</pre>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
+  const [status, setStatus] = useState("");
+  const resolved = useQuery({ queryKey: ["resolved-skill", "EXPORT_CONTEXT", skillLocale], queryFn: () => resolveSkill("EXPORT_CONTEXT", skillLocale), enabled: !offline });
+  const bundleUrl = offline ? "/skills/context-acquisition.zip" : resolved.data?.bundle_url;
+  return <section className="space-y-3 rounded-lg border border-ui bg-surface p-3" data-testid="context-package-delivery">
+    <h3 className="text-sm font-semibold">{zh ? "AI 上下文" : "AI context"}</h3>
+    <div className="flex gap-2">{(["zh-CN", "en"] as const).map(locale => <button key={locale} type="button" aria-pressed={locale === skillLocale} className="min-h-9 rounded border border-ui px-3 text-xs" onClick={() => setSkillLocale(locale)}>{locale === "zh-CN" ? "中文" : "English"}</button>)}</div>
+    <p className="text-xs text-secondary">{offline ? (zh ? "使用缓存的系统默认 Skill ZIP。" : "Uses the cached system-default Skill ZIP.") : resolved.data?.name}</p>
+    <button type="button" className="btn-primary min-h-11 w-full px-3" onClick={() => { const link = document.createElement("a"); link.href = downloadUrl; link.download = downloadFilename ?? ""; link.click(); }}>{zh ? "下载 Context Package" : "Download Context Package"}</button>
+    <div className="flex flex-wrap gap-3 text-sm">
+      {bundleUrl ? <a href={bundleUrl} download className="min-h-11 py-3 text-accent">{zh ? "下载 Skill ZIP" : "Download Skill ZIP"}</a> : null}
+      <button type="button" className="min-h-11 text-secondary" onClick={() => { void navigator.clipboard.writeText(skillLocale === "zh-CN" ? "请使用我提供的 Skill ZIP 读取这个 .context.zip 并继续任务。" : "Use the supplied Skill ZIP to read this .context.zip and continue the task.").then(() => setStatus(zh ? "使用说明已复制" : "Usage instructions copied"), () => setStatus(zh ? "复制失败，请重试" : "Copy failed; retry")); }}>{zh ? "复制使用说明" : "Copy usage instructions"}</button>
+    </div>
+    {resolved.isError ? <button type="button" onClick={() => void resolved.refetch()} className="text-sm text-[var(--danger)]">{zh ? "Skill 读取失败，重试" : "Skill unavailable; retry"}</button> : null}
+    {status ? <p role="status" className="text-xs text-secondary">{status}</p> : null}
+  </section>;
 }
 
 function OptionRow({ checked, onChange, label, description }: { checked: boolean; onChange: (checked: boolean) => void; label: string; description: string }) {
@@ -337,7 +224,7 @@ function CompactOption({ checked, onChange, label }: { checked: boolean; onChang
 
 function FormatButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
-    <button type="button" onClick={onClick} className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-3 text-sm ${active ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary"}`}>
+    <button type="button" onClick={onClick} aria-pressed={active} className={`flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-md px-2 text-sm ${active ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary"}`}>
       {icon}{label}
     </button>
   );

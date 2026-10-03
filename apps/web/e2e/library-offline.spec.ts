@@ -2,6 +2,17 @@ import { expect, test, type Page } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
+import { readOfflineContinuation } from "../lib/offline-continuation";
+
+test('checks optional offline continuation bytes and legacy absence', async () => {
+  expect(await readOfflineContinuation(undefined)).toBeUndefined();
+  const text = '# Synthetic context';
+  const value = { version: 1, generation: 2, revision_id: 'synthetic', updated_at: '2026-10-02', system_validation: 'not_performed',
+    members: { current: { text, sha256: createHash('sha256').update(text).digest('hex'), byte_size: Buffer.byteLength(text) } } };
+  expect((await readOfflineContinuation(value))?.members.current?.text).toBe(text);
+  await expect(readOfflineContinuation({ ...value, members: { current: { ...value.members.current, text: '# altered' } } })).rejects.toThrow();
+  await expect(readOfflineContinuation({ ...value, members: { script: value.members.current } })).rejects.toThrow();
+});
 
 const OFFLINE_READY_TEXT = /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/;
 
@@ -15,6 +26,82 @@ function offlineIdleStatus(page: Page) {
     .filter({ hasNotText: /正在后台更新|Updating resources/ })
     .first();
 }
+
+test("reads cached continuation without edit or upload controls", async ({ page, context }, testInfo) => {
+  await page.goto('/library');
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await seedOfflineFixture(page);
+  await page.evaluate(async () => {
+    const file = async (text: string) => ({ text, byte_size: new TextEncoder().encode(text).length,
+      sha256: Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))), b => b.toString(16).padStart(2, '0')).join('') });
+    const members = { current: await file('# Offline continuation\n\nKeep the next action readable.'),
+      index: await file('{"chapters":[{"title":"Synthetic history","key_refs":[{"message_id":"offline-message-40"}]}]}') };
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('chat-reader-offline-library');
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('conversations', 'readwrite');
+      const store = tx.objectStore('conversations');
+      const request = store.get('offline-fixture');
+      request.onsuccess = () => store.put({ ...request.result, continuation: { version: 1, generation: 1,
+        revision_id: 'synthetic', updated_at: '2026-10-02T00:00:00Z', system_validation: 'not_performed',
+        members } });
+      tx.oncomplete = () => { db.close(); resolve(); }; tx.onerror = () => reject(tx.error);
+    });
+  });
+  await page.goto('/library?conversationId=offline-fixture');
+  await expect(page.locator('#block-offline-message-20-1')).toBeVisible();
+  await context.setOffline(true);
+  await openReaderHeaderAction(page, /接续|Continuation/);
+  const dialog = page.getByRole('dialog', { name: /上下文接续|Context continuation/ });
+  await expect(dialog.getByRole('heading', { name: 'Offline continuation' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /编辑|Edit|更新文件|Update files/ })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Index', exact: true }).click();
+  await expect(dialog.getByText('Synthetic history', { exact: true })).toBeVisible();
+  await dialog.getByText('Synthetic history', { exact: true }).click();
+  await dialog.getByRole('button', { name: /查看引用消息|View referenced message/ }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('#message-offline-message-40')).toBeVisible();
+  await openReaderHeaderAction(page, /接续|Continuation/);
+  await expect(dialog.getByRole('button', { name: 'Index', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.screenshot({ path: testInfo.outputPath('offline-continuation.png') });
+  await dialog.getByRole('button', { name: /关闭接续|Close continuation/ }).click();
+  await openReaderHeaderAction(page, /^(导出|Export)$/);
+  const exportPanel = page.getByTestId('offline-export-panel');
+  await expect(exportPanel.getByLabel(/包含已缓存附件|Include cached attachments/)).not.toBeChecked();
+  await exportPanel.getByRole('button', { name: /生成离线导出|Generate offline export/ }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await exportPanel.getByRole('button', { name: /下载 Context Package|Download Context Package/ }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.context\.zip$/);
+  const archive = unzipSync(await readFile((await download.path())!));
+  expect(strFromU8(archive['continuation/current.md'])).toContain('Keep the next action readable.');
+  expect(strFromU8(archive['continuation/index.json'])).toContain('Synthetic history');
+  expect(Object.keys(archive).some(name => name.startsWith('assets/'))).toBe(false);
+  const manifest = JSON.parse(strFromU8(archive['manifest.json']));
+  expect(manifest.extensions.chat_reader_continuation_export.status).toBe('included_without_validation');
+  expect(manifest.attachments.requested).toBe(false);
+  expect(manifest.included_content.source_refs).toBe(true);
+  const records = strFromU8(archive['conversation.canjsonl']).trim().split('\n').map(line => JSON.parse(line));
+  expect(records[0].format).toBe('chat-reader-canonical-jsonl');
+  expect(records[0].version).toBe(2);
+  expect(records.find(record => record.record_type === 'source_ref').source_metadata).toEqual({
+    timestamp_display: 'Unknown', model: 'synthetic-model', conversation: { exported: '9/29/2026 15:29:29' },
+  });
+  for (const [path, value] of Object.entries(manifest.files)) {
+    expect(createHash('sha256').update(archive[path]).digest('hex')).toBe((value as { sha256: string }).sha256);
+  }
+  await exportPanel.locator('summary').filter({ hasText: /更多内容选项|More content options/ }).click();
+  await exportPanel.getByLabel(/携带已缓存的接续文件|Include cached continuation files/).uncheck();
+  await exportPanel.getByRole('button', { name: /生成离线导出|Generate offline export/ }).click();
+  const rawDownloadPromise = page.waitForEvent('download');
+  await exportPanel.getByRole('button', { name: /下载 Context Package|Download Context Package/ }).click();
+  const rawDownload = await rawDownloadPromise;
+  const raw = unzipSync(await readFile((await rawDownload.path())!));
+  expect(Object.keys(raw).some(name => name.startsWith('continuation/'))).toBe(false);
+  expect(strFromU8(raw['conversation.canjsonl']).split('\n').slice(1)).toEqual(strFromU8(archive['conversation.canjsonl']).split('\n').slice(1));
+});
 
 test("only the library advertises the installable PWA", async ({ browser }) => {
   const context = await browser.newContext();
@@ -89,8 +176,7 @@ test("keeps the active revision after a failed update and cold-starts offline", 
 
   await expect.poll(async () => {
     const record = await readActiveRecord(page);
-    return record.assets.includes("/skills/chat-reader-conversation-context-acquisition-skill.v1.md")
-      && record.assets.includes("/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md");
+    return record.assets.includes("/skills/context-acquisition.zip");
   }).toBe(true);
   await expect(offlineIdleStatus(page)).toBeVisible();
   let stableRevision = (await readActiveRecord(page)).revision;
@@ -109,8 +195,7 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   const activeBefore = await readActiveRecord(page);
   expect(activeBefore.revision).toBeTruthy();
   expect(activeBefore.assets).toContain("/library");
-  expect(activeBefore.assets).toContain("/skills/chat-reader-conversation-context-acquisition-skill.v1.md");
-  expect(activeBefore.assets).toContain("/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md");
+  expect(activeBefore.assets).toContain("/skills/context-acquisition.zip");
   expect(activeBefore.assets.some((asset) => asset.startsWith("/_next/static/media/KaTeX_Main-Regular."))).toBe(true);
   expect(activeBefore.assets.some((asset) => asset.startsWith("/_next/static/media/KaTeX_Math-Italic."))).toBe(true);
   const searchWorker = page.workers().find((item) => item.url().includes("/_next/static/chunks/"));
@@ -290,11 +375,17 @@ test("mirrors the unified sidebar and keeps preferences compact in library mode"
   await expect(page.getByRole("link", { name: /离线资料库|Offline library/ })).toHaveAttribute("href", "/library");
 });
 
-test("opens read-only offline files and exports the downloaded snapshot with both Skill languages", async ({ page, context }) => {
+test("exports cached files and the pinned Skill ZIP offline with bilingual usage instructions", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3107" });
   await page.goto("/library");
+  await expect(offlineReadyStatus(page)).toBeVisible();
   await seedOfflineFixture(page);
   await page.goto("/library?conversationId=offline-fixture");
+  await expect(page.locator("#block-offline-message-20-1")).toBeVisible();
+  await expect(offlineIdleStatus(page)).toBeVisible();
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator("#block-offline-message-20-1")).toBeVisible();
 
   await openReaderHeaderAction(page, /当前对话文件|Conversation files/);
   const filesPanel = page.getByTestId("offline-conversation-files-panel");
@@ -315,41 +406,62 @@ test("opens read-only offline files and exports the downloaded snapshot with bot
   const delivery = exportPanel.getByTestId("context-package-delivery");
   await expect(delivery).toBeVisible();
   await expect(delivery.getByRole("button", { name: /下载 Context Package|Download Context Package/ })).toBeVisible();
-  await expect(delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ })).toBeEnabled();
+  const copyInstructions = delivery.getByRole("button", { name: /复制使用说明|Copy usage instructions/ });
+  await expect(copyInstructions).toBeEnabled();
+  await expect(delivery.getByRole("button", { name: /查看 Skill|View Skill/ })).toHaveCount(0);
   await expect(exportPanel.getByText(/1 个附件未缓存|1 uncached attachment/)).toBeVisible();
 
   await delivery.getByRole("button", { name: "English" }).click();
-  await expect(delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ })).toBeEnabled();
-  await delivery.getByRole("button", { name: /查看 Skill|View Skill/ }).click();
-  const skillDialog = page.getByRole("dialog", { name: /解析 Skill|Parsing Skill/ });
-  await expect(skillDialog).toBeVisible();
-  await expect(skillDialog.locator("pre")).toContainText("You are receiving a Conversation Context Package exported by Chat Reader.");
-  await expect(skillDialog.getByText("Chat Reader Context Acquisition Skill")).toBeVisible();
+  await expect(delivery.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+  await copyInstructions.click();
+  await expect(delivery.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Use the supplied Skill ZIP to read this .context.zip and continue the task.");
   const skillDownloadPromise = page.waitForEvent("download");
-  await skillDialog.getByRole("button", { name: /下载|Download/ }).click();
+  await delivery.getByRole("link", { name: /下载 Skill ZIP|Download Skill ZIP/ }).click();
   const skillDownload = await skillDownloadPromise;
-  expect(skillDownload.suggestedFilename()).toBe("Chat-Reader-Conversation-Context-Acquisition-Skill.v1-en.md");
-  await skillDialog.getByRole("button", { name: /关闭|Close/ }).click();
-  await expect(delivery.getByRole("button", { name: /查看 Skill|View Skill/ })).toBeFocused();
+  expect(skillDownload.suggestedFilename()).toBe("context-acquisition.zip");
+  expect(await skillDownload.failure()).toBeNull();
+  const skillBytes = await readFile((await skillDownload.path())!);
+  const pinnedBytes = await readFile("../../tools/context-skills/default-bundles/context-acquisition.zip");
+  expect(createHash("sha256").update(skillBytes).digest("hex")).toBe(createHash("sha256").update(pinnedBytes).digest("hex"));
+  const skillEntries = unzipSync(skillBytes);
+  expect(Object.keys(skillEntries)).toEqual(expect.arrayContaining([
+    "context-acquisition/SKILL.md",
+    "context-acquisition/scripts/inspect_context_package.py",
+    "context-acquisition/references/continuation-schema-v1.md",
+  ]));
 
   await delivery.getByRole("button", { name: "中文" }).click();
-  await expect(delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ })).toBeEnabled();
-  await delivery.getByRole("button", { name: /复制解析 Skill|Copy parsing Skill/ }).click();
-  await expect(delivery.getByRole("status")).toContainText(/解析 Skill 已复制|Parsing Skill copied/);
+  await copyInstructions.click();
+  await expect(delivery.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
   const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard).toContain("Chat Reader");
+  expect(clipboard).toBe("请使用我提供的 Skill ZIP 读取这个 .context.zip 并继续任务。");
 
   await page.evaluate(() => {
+    const writeText = navigator.clipboard.writeText.bind(navigator.clipboard);
+    let denyNextCopy = true;
     Object.defineProperty(navigator.clipboard, "writeText", {
       configurable: true,
-      value: () => Promise.reject(new DOMException("Denied", "NotAllowedError")),
+      value: (text: string) => {
+        if (denyNextCopy) {
+          denyNextCopy = false;
+          return Promise.reject(new DOMException("Denied", "NotAllowedError"));
+        }
+        return writeText(text);
+      },
     });
   });
+  await copyInstructions.click();
+  await expect(delivery.getByRole("status")).toContainText(/复制失败，请重试|Copy failed; retry/);
   const packageDownloadPromise = page.waitForEvent("download");
   await delivery.getByRole("button", { name: /下载 Context Package|Download Context Package/ }).click();
   const packageDownload = await packageDownloadPromise;
   expect(packageDownload.suggestedFilename()).toMatch(/\.context\.zip$/);
-  await expect(delivery.getByRole("alert")).toContainText(/下载已开始，但 Skill 复制失败|Download started, but the Skill could not be copied/);
+  expect(await packageDownload.failure()).toBeNull();
+  await expect(delivery.getByRole("status")).toContainText(/复制失败，请重试|Copy failed; retry/);
+  await copyInstructions.click();
+  await expect(delivery.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(clipboard);
   const packagePath = await packageDownload.path();
   if (!packagePath) throw new Error("Context Package download has no local path.");
   const packageEntries = unzipSync(new Uint8Array(await readFile(packagePath)));
@@ -367,22 +479,9 @@ test("opens read-only offline files and exports the downloaded snapshot with bot
   expect(records.find((record) => record.id === "11111111-1111-4111-8111-111111111111")?.resolution_status).toBe("available");
   expect(records.find((record) => record.id === "22222222-2222-4222-8222-222222222222")?.resolution_status).toBe("missing");
 
-  const hashes = await page.evaluate(async () => {
-    const urls = [
-      "/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
-      "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
-    ];
-    return Promise.all(urls.map(async (url) => {
-      const bytes = await fetch(url).then((response) => response.arrayBuffer());
-      const digest = await crypto.subtle.digest("SHA-256", bytes);
-      return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
-    }));
-  });
-  const expectedHashes = await Promise.all([
-    "public/skills/chat-reader-conversation-context-acquisition-skill.v1.md",
-    "public/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md",
-  ].map(async (filePath) => createHash("sha256").update(await readFile(filePath)).digest("hex").toUpperCase()));
-  expect(hashes).toEqual(expectedHashes);
+  const assetPath = Object.keys(packageEntries).find((name) => name.startsWith("assets/"));
+  expect(assetPath).toBeTruthy();
+  expect(strFromU8(packageEntries[assetPath!])).toBe("Offline cached attachment fixture.\n");
 });
 
 test("keeps offline file browsing reflow-safe at exact narrow and tablet viewports", async ({ browser }) => {
@@ -634,6 +733,11 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
           is_heavy: index === 40,
           ordinal: index,
           content_preview: contentPreview,
+          ...(index === 1 ? { source_refs: [{ record_type: 'source_ref', message_id: messageId,
+            source_type: 'adaptive_markdown', source_profile: 'chatgpt-markdown-transcript-v1',
+            source_conversation_id: null, source_message_id: 'transcript:1', source_index: 0,
+            source_metadata: { timestamp_display: 'Unknown', model: 'synthetic-model', conversation: { exported: '9/29/2026 15:29:29' } },
+          }] } : {}),
         });
         transaction.objectStore("blocks").put({
           key: `${messageId}:0`,

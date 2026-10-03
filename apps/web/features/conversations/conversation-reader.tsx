@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   deleteMessage,
   getTask,
@@ -12,6 +12,8 @@ import {
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
 import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
+import { ContinuationWorkspace } from "../exporting/continuation-workspace";
+import type { ContinuationViewState } from "../exporting/continuation-index";
 import { ExportPanel } from "../exporting/export-panel";
 import { OfflineExportPanel } from "../exporting/offline-export-panel";
 import { MobileSidebarTrigger, ProjectSidebar } from "../projects/project-sidebar";
@@ -102,6 +104,10 @@ export function ConversationReader({
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const requestedContinuation = searchParams?.get("continuation");
+  const [continuationOpen, setContinuationOpen] = useState(requestedContinuation === "current" || requestedContinuation === "index");
+  // Ephemeral Reader navigation state, never persisted as user content or a draft.
+  const continuationView = useMemo<ContinuationViewState>(() => ({ member: requestedContinuation === "index" ? "index" : "current", indexQuery: "" }), [conversationId, requestedContinuation]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchPanelState, setSearchPanelState] = useState<ConversationSearchPanelState>({ query: "", documentType: "message", role: "all", activeIndex: 0 });
   const [searchNavigation, setSearchNavigation] = useState<SearchNavigationContext | null>(null);
@@ -296,6 +302,7 @@ export function ConversationReader({
     onFocusModeChange?.(focusMode);
     if (focusMode) {
       setUtilityPanel(null);
+      setContinuationOpen(false);
       setShowShare(false);
       setShowExport(false);
       setShowSearch(false);
@@ -575,7 +582,7 @@ export function ConversationReader({
     };
     const markKeyboardIntent = (event: KeyboardEvent) => {
       const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest("[data-testid='floating-source-workspace'], input, textarea, select, [contenteditable='true'], [role='textbox']")) return;
+      if (target?.closest("[role='dialog'], [data-testid='floating-source-workspace'], input, textarea, select, [contenteditable='true'], [role='textbox']")) return;
       const key = event.key.toLowerCase();
       if (!["arrowup", "arrowdown", "pageup", "pagedown", "home", "end", " ", "j", "k"].includes(key)) return;
       markReaderScrollIntent(["arrowup", "pageup", "home", "k"].includes(key) ? "up" : "down");
@@ -855,7 +862,7 @@ export function ConversationReader({
   loadNextActionRef.current = () => { void loadNextWindow(); };
 
   const navigateToTarget = useCallback(
-    async (target: NavigateTarget): Promise<NavigationResult> => {
+    async (target: NavigateTarget, options?: { restorePosition?: boolean }): Promise<NavigationResult> => {
       const navigationStartedAt = window.performance.now();
       let resolutionReported = false;
       let mountStartedAt: number | null = null;
@@ -869,9 +876,10 @@ export function ConversationReader({
       navigationTokenRef.current = token;
       lastNavigationTargetRef.current = target;
       navigationInProgressRef.current = true;
-      if (targetFirst) {
+      if (targetFirst && !options?.restorePosition) {
         restoreAttemptedRef.current = true;
         readingRestoreTokenRef.current += 1;
+        restoreInProgressRef.current = false;
       }
       setNavigationStatus("loading");
       setNavigationFailureReason(null);
@@ -880,7 +888,10 @@ export function ConversationReader({
       applyLoadedWindow({ ...loadedWindowRef.current, generation });
       userScrollIntentRef.current = false;
       scrollDirectionRef.current = null;
-      scrollIntentSequenceRef.current += 1;
+      // Restoring an already saved anchor must not enqueue a new position.
+      // Real wheel/touch/key input still increments its own intent and cancels
+      // restoration, so a user taking over is never swallowed by this guard.
+      if (!options?.restorePosition) scrollIntentSequenceRef.current += 1;
       const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
       const messageIdDom = `message-${messageId}`;
       setActiveMessageId(messageId);
@@ -1356,7 +1367,7 @@ export function ConversationReader({
           characterOffset: useCharacterAnchor ? savedCharacterOffset : undefined,
           alignmentOffset,
           source: "message-action",
-        });
+        }, { restorePosition: true });
         if (readingRestoreTokenRef.current !== restoreToken) return;
         if (result.ok) {
           return;
@@ -2192,6 +2203,12 @@ export function ConversationReader({
       icon: MessageSquareText,
       onSelect: () => { void openAnnotationsWorkspace(); },
     },
+    ...(canManageCanonical || dataSource.mode === "offline" ? [{
+      id: "continuation",
+      label: resolvedLocale === "zh-CN" ? "接续" : "Continuation",
+      icon: BookOpen,
+      onSelect: () => { setContinuationOpen(true); },
+    } as ReaderHeaderAction] : []),
     {
       id: "focus-mode",
       label: focusMode ? t("exitFocusMode") : t("focusMode"),
@@ -2237,7 +2254,7 @@ export function ConversationReader({
       onSelect: () => { void openSplitWorkspace(); },
     }] : []),
   ];
-  const desktopPrimaryActionIds = new Set(["edit-source", "search", "annotations", "focus-mode"]);
+  const desktopPrimaryActionIds = new Set(["edit-source", "search", "annotations", "continuation", "focus-mode"]);
   const desktopPrimaryActions = headerActions.filter((action) => desktopPrimaryActionIds.has(action.id));
   const desktopSecondaryActions = headerActions.filter((action) => !desktopPrimaryActionIds.has(action.id));
   const mobileHeaderActions: ReaderHeaderAction[] = headerActions.filter((action) => action.id !== "edit-source");
@@ -2301,7 +2318,7 @@ export function ConversationReader({
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
                 {desktopPrimaryActions.map((action) => {
                   const Icon = action.icon;
-                  return <button key={action.id} type="button" onClick={action.onSelect} disabled={action.disabled} aria-pressed={action.id === "edit-source" ? Boolean(sourceEditorTarget) : undefined} className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ui hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 ${action.id === "edit-source" && sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={action.label} title={action.label}><Icon className="h-[1.125rem] w-[1.125rem]" /></button>;
+                  return <button key={action.id} type="button" onClick={action.onSelect} disabled={action.disabled} data-reader-header-action={action.id} aria-pressed={action.id === "continuation" ? continuationOpen : action.id === "edit-source" ? Boolean(sourceEditorTarget) : undefined} className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ui hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 ${action.id === "edit-source" && sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={action.label} title={action.label}><Icon className="h-[1.125rem] w-[1.125rem]" /></button>;
                 })}
               </div>
               <ReaderHeaderActionRail
@@ -2369,6 +2386,8 @@ export function ConversationReader({
           setReadingSaveError(false);
         }} onUseServer={async (position) => {
           // Explicit navigation supersedes any pre-choice idle/pagehide save.
+          readingRestoreTokenRef.current += 1;
+          restoreInProgressRef.current = false;
           lastPersistedIntentRef.current = scrollIntentSequenceRef.current;
           latestStablePositionRef.current = null;
           lastSavedSignatureRef.current = "";
@@ -2379,7 +2398,7 @@ export function ConversationReader({
             messageVersionId: typeof anchor.version_id === "string" ? anchor.version_id : undefined,
             renderBlockId: typeof anchor.block_id === "string" ? anchor.block_id : undefined,
             characterOffset: typeof anchor.character_offset === "number" ? anchor.character_offset : undefined,
-            source: "message-action" });
+            source: "message-action" }, { restorePosition: true });
           if (!result.ok) throw new Error("Unable to locate the saved reading position.");
         }} />
         <div ref={scrollContainerRef} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
@@ -2581,6 +2600,18 @@ export function ConversationReader({
             /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setShowFiles(false); await navigateToTarget(target); }} />}
         </FloatingWorkspacePanel>
       ) : null}
+      {continuationOpen && (canManageCanonical || dataSource.mode === "offline") ? <ContinuationWorkspace key={conversationId} conversationId={conversationId} viewState={continuationView} offline={dataSource.mode === "offline"} onClose={() => setContinuationOpen(false)} onNavigate={async reference => {
+        let messageId = reference.messageId;
+        if (!messageId && reference.sequence) {
+          const page = await dataSource.getDialogueIndex(conversationId, { offset: reference.sequence - 1, limit: 1 });
+          messageId = page.items.find(item => item.ordinal === reference.sequence)?.message_id;
+        }
+        if (!messageId) return false;
+        // Index navigation is an explicit destination. Cancel any startup
+        // restoration before it can retry its old anchor over this jump.
+        return (await navigateToTarget({ messageId, messageVersionId: reference.messageVersionId,
+          blockIndex: reference.blockIndex, source: "dialogue-index", preferTocPipeline: true })).ok;
+      }} restoreFocus={() => window.innerWidth < 768 ? document.querySelector<HTMLElement>("[data-reader-mobile-more-actions='true']") : document.querySelector<HTMLElement>("[data-reader-header-action='continuation']")} /> : null}
       <AnnotationWorkspace
         conversationId={conversation.id}
         messages={messages}
@@ -2678,7 +2709,7 @@ function normalizeHeadingLevel(value: unknown): number {
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, button, [contenteditable='true']"));
+  return target instanceof HTMLElement && Boolean(target.closest("[role='dialog'], input, textarea, select, button, [contenteditable='true']"));
 }
 
 async function waitForMountedMessage(

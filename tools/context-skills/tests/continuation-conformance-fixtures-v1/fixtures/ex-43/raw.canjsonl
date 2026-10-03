@@ -1,0 +1,140 @@
+{"sequence":1,"role":"user","content":[{"type":"text","text":"I want this Conversation to build a materials-intelligence platform, not a generic chat app."}]}
+{"sequence":2,"role":"assistant","content":[{"type":"text","text":"Understood: the product identity is a materials-intelligence platform with scientific workflows."}]}
+{"sequence":3,"role":"user","content":[{"type":"text","text":"The platform should combine materials data, scientific visualization, and AI-assisted research work."}]}
+{"sequence":4,"role":"assistant","content":[{"type":"text","text":"I will treat those three as one integrated product direction rather than isolated demos."}]}
+{"sequence":5,"role":"user","content":[{"type":"text","text":"I care about a reusable framework because the project will keep growing."}]}
+{"sequence":6,"role":"assistant","content":[{"type":"text","text":"Then shared contracts and reusable interaction patterns should be favored over page-specific implementations."}]}
+{"sequence":7,"role":"user","content":[{"type":"text","text":"The first concrete surface can be a scientific viewer, but it must fit the larger platform."}]}
+{"sequence":8,"role":"assistant","content":[{"type":"text","text":"The viewer will be treated as an entry point into the platform architecture, not the final product boundary."}]}
+{"sequence":9,"role":"user","content":[{"type":"text","text":"Please keep the project understandable to a human reviewer as well as an agent."}]}
+{"sequence":10,"role":"assistant","content":[{"type":"text","text":"I will preserve explicit purpose, decisions, constraints, evidence, and handoff state."}]}
+{"sequence":11,"role":"user","content":[{"type":"text","text":"The system may derive plots and artifacts, but raw scientific provenance must always be preserved."}]}
+{"sequence":12,"role":"assistant","content":[{"type":"text","text":"I will treat preservation of scientific provenance as a durable project-wide constraint."}]}
+{"sequence":13,"role":"user","content":[{"type":"text","text":"Related pages should reuse interaction patterns instead of inventing separate chat boxes everywhere."}]}
+{"sequence":14,"role":"assistant","content":[{"type":"text","text":"I will treat coherent shared interaction patterns as another durable UI constraint."}]}
+{"sequence":15,"role":"user","content":[{"type":"text","text":"Also, do not silently modify the original imported scientific data."}]}
+{"sequence":16,"role":"assistant","content":[{"type":"text","text":"I will treat original scientific input as immutable; derived artifacts must remain separate."}]}
+{"sequence":17,"role":"user","content":[{"type":"text","text":"Those constraints should survive later implementation changes unless I explicitly change them."}]}
+{"sequence":18,"role":"assistant","content":[{"type":"text","text":"Agreed; recency alone will not supersede these constraints."}]}
+{"sequence":19,"role":"user","content":[{"type":"text","text":"The platform can evolve, but it should not drift back into a set of disconnected tools."}]}
+{"sequence":20,"role":"assistant","content":[{"type":"text","text":"I will keep integrated platform behavior as the current mission and a regression guard."}]}
+{"sequence":21,"role":"user","content":[{"type":"text","text":"For the viewer, I am considering structure, XRD, and RDF outputs."}]}
+{"sequence":22,"role":"assistant","content":[{"type":"text","text":"Those can share one scientific-presentation layer while retaining domain-specific rendering."}]}
+{"sequence":23,"role":"user","content":[{"type":"text","text":"I do not want each viewer to create its own storage model."}]}
+{"sequence":24,"role":"assistant","content":[{"type":"text","text":"A shared artifact contract would reduce duplicated state and make provenance easier to preserve."}]}
+{"sequence":25,"role":"user","content":[{"type":"text","text":"The raw structure or spectrum should stay traceable through any conversion."}]}
+{"sequence":26,"role":"assistant","content":[{"type":"text","text":"That fits the provenance constraint and should become a viewer invariant."}]}
+{"sequence":27,"role":"user","content":[{"type":"text","text":"The viewer may need adapters for source-specific formats."}]}
+{"sequence":28,"role":"assistant","content":[{"type":"text","text":"Adapters can live at the edge while the internal artifact model stays canonical."}]}
+{"sequence":29,"role":"user","content":[{"type":"text","text":"Keep this knowledge because later viewer work will depend on it."}]}
+{"sequence":30,"role":"assistant","content":[{"type":"text","text":"I will treat the viewer architecture as reusable topic knowledge rather than a one-off implementation note."}]}
+{"sequence":31,"role":"user","content":[{"type":"text","text":"One possible idea is rewriting the backend around GraphQL before we continue."}]}
+{"sequence":32,"role":"assistant","content":[{"type":"text","text":"GraphQL could unify some queries, but it would be a major infrastructure change with migration cost."}]}
+{"sequence":33,"role":"user","content":[{"type":"text","text":"Compare it with keeping the current API and adding an artifact layer."}]}
+{"sequence":34,"role":"assistant","content":[{"type":"text","text":"Option A is GraphQL-first; option B keeps the current API and adds a canonical artifact layer."}]}
+{"sequence":35,"role":"user","content":[{"type":"text","text":"Do not decide GraphQL for me yet."}]}
+{"sequence":36,"role":"assistant","content":[{"type":"text","text":"Understood; GraphQL remains only a proposal, not an adopted decision."}]}
+{"sequence":37,"role":"user","content":[{"type":"text","text":"What would GraphQL actually solve here?"}]}
+{"sequence":38,"role":"assistant","content":[{"type":"text","text":"Mostly API shape and query flexibility; it does not itself solve viewer provenance or interaction duplication."}]}
+{"sequence":39,"role":"user","content":[{"type":"text","text":"Then it sounds orthogonal to the current viewer problem."}]}
+{"sequence":40,"role":"assistant","content":[{"type":"text","text":"Yes; the artifact and interaction issues can be solved without committing to a backend rewrite."}]}
+{"sequence":41,"role":"user","content":[{"type":"text","text":"Keep GraphQL in the history, but do not adopt it now."}]}
+{"sequence":42,"role":"assistant","content":[{"type":"text","text":"I will leave it as an explored but unadopted alternative."}]}
+{"sequence":43,"role":"user","content":[{"type":"text","text":"Let us focus on how viewer outputs should move through the platform."}]}
+{"sequence":44,"role":"assistant","content":[{"type":"text","text":"We can compare viewer-specific outputs, a shared artifact model, and a hybrid adapter approach."}]}
+{"sequence":45,"role":"user","content":[{"type":"text","text":"Viewer-specific outputs feel easy now but risky later."}]}
+{"sequence":46,"role":"assistant","content":[{"type":"text","text":"They are simple locally but create multiple downstream contracts and duplicated UI behavior."}]}
+{"sequence":47,"role":"user","content":[{"type":"text","text":"A shared artifact model sounds better, provided adapters can isolate source-specific formats."}]}
+{"sequence":48,"role":"assistant","content":[{"type":"text","text":"That creates a stable core while allowing format-specific translation at the edges."}]}
+{"sequence":49,"role":"user","content":[{"type":"text","text":"I also need exports to remain possible."}]}
+{"sequence":50,"role":"assistant","content":[{"type":"text","text":"Exports can be generated from canonical artifacts while preserving provenance."}]}
+{"sequence":51,"role":"user","content":[{"type":"text","text":"Give me a concise decision proposal."}]}
+{"sequence":52,"role":"assistant","content":[{"type":"text","text":"Proposal: use a canonical artifact flow as the default for scientific viewers; keep source-specific adapters at the edge; do not rewrite the backend merely for this change."}]}
+{"sequence":53,"role":"user","content":[{"type":"text","text":"What are the main consequences?"}]}
+{"sequence":54,"role":"assistant","content":[{"type":"text","text":"Viewers share one artifact contract, legacy outputs may need adapters, and provenance can be enforced centrally."}]}
+{"sequence":55,"role":"user","content":[{"type":"text","text":"Would this force every existing page to change immediately?"}]}
+{"sequence":56,"role":"assistant","content":[{"type":"text","text":"No; migration can be incremental while the new contract becomes the default for new viewer work."}]}
+{"sequence":57,"role":"user","content":[{"type":"text","text":"That is acceptable."}]}
+{"sequence":58,"role":"assistant","content":[{"type":"text","text":"I understand this as acceptance of the proposed shared artifact direction, subject to your next explicit confirmation."}]}
+{"sequence":59,"role":"user","content":[{"type":"text","text":"Yes. Adopt the canonical artifact flow as the project-wide default for scientific viewers."}]}
+{"sequence":60,"role":"assistant","content":[{"type":"text","text":"Recorded as the explicit governing viewer-architecture decision."}]}
+{"sequence":61,"role":"user","content":[{"type":"text","text":"Keep the current REST API for now; do not infer a GraphQL migration from this decision."}]}
+{"sequence":62,"role":"assistant","content":[{"type":"text","text":"Understood: canonical artifact flow is adopted, GraphQL migration is not."}]}
+{"sequence":63,"role":"user","content":[{"type":"text","text":"The artifact must include source identity and provenance."}]}
+{"sequence":64,"role":"assistant","content":[{"type":"text","text":"That becomes part of the viewer Topic Capsule and follows the provenance constraint."}]}
+{"sequence":65,"role":"user","content":[{"type":"text","text":"Rendering should not become the second source of truth."}]}
+{"sequence":66,"role":"assistant","content":[{"type":"text","text":"Renderer state will be derived from the canonical artifact, never authoritative scientific state."}]}
+{"sequence":67,"role":"user","content":[{"type":"text","text":"Shared viewer interactions belong in common infrastructure."}]}
+{"sequence":68,"role":"assistant","content":[{"type":"text","text":"That will reduce duplicated controls and interaction drift across structure, XRD, and RDF surfaces."}]}
+{"sequence":69,"role":"user","content":[{"type":"text","text":"Source-specific conversion belongs at adapters."}]}
+{"sequence":70,"role":"assistant","content":[{"type":"text","text":"Agreed; adapters translate at the boundary while canonical semantics remain stable."}]}
+{"sequence":71,"role":"user","content":[{"type":"text","text":"Document the durable viewer approach we will need later."}]}
+{"sequence":72,"role":"assistant","content":[{"type":"text","text":"The durable model is: immutable raw source, edge adapters, canonical artifact, shared viewer infrastructure, derived rendering/export."}]}
+{"sequence":73,"role":"user","content":[{"type":"text","text":"What invariant matters most for structure identity?"}]}
+{"sequence":74,"role":"assistant","content":[{"type":"text","text":"Canonical structure identity must survive conversion so later viewers and exports refer to the same scientific object."}]}
+{"sequence":75,"role":"user","content":[{"type":"text","text":"And provenance?"}]}
+{"sequence":76,"role":"assistant","content":[{"type":"text","text":"Provenance must survive transformation, rendering, and export."}]}
+{"sequence":77,"role":"user","content":[{"type":"text","text":"And UI reuse?"}]}
+{"sequence":78,"role":"assistant","content":[{"type":"text","text":"Reusable interaction logic should live in shared viewer/workbench infrastructure instead of each page."}]}
+{"sequence":79,"role":"user","content":[{"type":"text","text":"Good. This should remain active topic knowledge."}]}
+{"sequence":80,"role":"assistant","content":[{"type":"text","text":"I will keep it as an active Scientific Viewer Topic Capsule."}]}
+{"sequence":81,"role":"user","content":[{"type":"text","text":"Now implement a baseline using the canonical artifact model for structure rendering."}]}
+{"sequence":82,"role":"assistant","content":[{"type":"text","text":"Baseline implementation plan: adapt structure input at the edge, build canonical artifact, render through shared viewer infrastructure."}]}
+{"sequence":83,"role":"user","content":[{"type":"text","text":"The first implementation is done in the development branch."}]}
+{"sequence":84,"role":"assistant","content":[{"type":"text","text":"I will record implementation as reported, not yet fully verified."}]}
+{"sequence":85,"role":"user","content":[{"type":"text","text":"Run lower-level checks for structure loading and rendering."}]}
+{"sequence":86,"role":"assistant","content":[{"type":"text","text":"The lower-level structure loading/rendering checks are reported as passing."}]}
+{"sequence":87,"role":"user","content":[{"type":"text","text":"Add XRD and RDF through the same artifact pattern."}]}
+{"sequence":88,"role":"assistant","content":[{"type":"text","text":"XRD and RDF have been integrated through the shared artifact path in the reported implementation."}]}
+{"sequence":89,"role":"user","content":[{"type":"text","text":"Run the same lower-level checks for them."}]}
+{"sequence":90,"role":"assistant","content":[{"type":"text","text":"Reported checks for the covered structure/XRD/RDF baseline pass at the lower level."}]}
+{"sequence":91,"role":"user","content":[{"type":"text","text":"Can we call the scientific-viewer baseline completed at this level?"}]}
+{"sequence":92,"role":"assistant","content":[{"type":"text","text":"Yes, as a milestone for the covered baseline, while keeping full production-flow verification separate."}]}
+{"sequence":93,"role":"user","content":[{"type":"text","text":"Then mark the baseline milestone complete, not production verified."}]}
+{"sequence":94,"role":"assistant","content":[{"type":"text","text":"Recorded: baseline milestone completed; production-equivalent end-to-end verification remains distinct."}]}
+{"sequence":95,"role":"user","content":[{"type":"text","text":"What changed in the project direction because of this?"}]}
+{"sequence":96,"role":"assistant","content":[{"type":"text","text":"The work has evolved from a standalone-viewer prototype toward an integrated scientific-presentation layer inside the platform."}]}
+{"sequence":97,"role":"user","content":[{"type":"text","text":"That evolution matters because we should not later rebuild isolated viewer flows."}]}
+{"sequence":98,"role":"assistant","content":[{"type":"text","text":"Agreed; the evolution rationale should remain durable to prevent regression."}]}
+{"sequence":99,"role":"user","content":[{"type":"text","text":"Next we should shift attention from basic viewer construction to interaction consistency."}]}
+{"sequence":100,"role":"assistant","content":[{"type":"text","text":"That creates a clean transition into a UI/UX consolidation workstream."}]}
+{"sequence":101,"role":"user","content":[{"type":"text","text":"There is one legacy CSV export path that teams already use. Does the artifact decision force us to delete it?"}]}
+{"sequence":102,"role":"assistant","content":[{"type":"text","text":"Not necessarily; we can define a scoped compatibility exception without changing the project-wide default."}]}
+{"sequence":103,"role":"user","content":[{"type":"text","text":"I want CSV export to remain temporarily, but it must not become a second scientific source of truth."}]}
+{"sequence":104,"role":"assistant","content":[{"type":"text","text":"Then the exception can preserve the legacy export adapter while keeping canonical artifacts authoritative."}]}
+{"sequence":105,"role":"user","content":[{"type":"text","text":"The exception is only for the legacy CSV export module."}]}
+{"sequence":106,"role":"assistant","content":[{"type":"text","text":"Understood; it is module-scoped, not a global rollback of the artifact decision."}]}
+{"sequence":107,"role":"user","content":[{"type":"text","text":"Keep provenance metadata in that CSV export too."}]}
+{"sequence":108,"role":"assistant","content":[{"type":"text","text":"The scoped adapter will preserve provenance metadata and derive output from canonical artifacts."}]}
+{"sequence":109,"role":"user","content":[{"type":"text","text":"Yes, adopt that scoped exception."}]}
+{"sequence":110,"role":"assistant","content":[{"type":"text","text":"Recorded: the legacy CSV export module may remain as an adapter, while the project-wide canonical artifact decision remains unchanged."}]}
+{"sequence":111,"role":"user","content":[{"type":"text","text":"Now I see duplicated chat/interaction boxes on several pages."}]}
+{"sequence":112,"role":"assistant","content":[{"type":"text","text":"That is an open UI/UX consolidation issue rather than a reason to change the artifact architecture."}]}
+{"sequence":113,"role":"user","content":[{"type":"text","text":"I want one coherent interaction model, but domain-specific viewer controls can still differ."}]}
+{"sequence":114,"role":"assistant","content":[{"type":"text","text":"The open work should unify repeated interaction surfaces while preserving domain-specific controls."}]}
+{"sequence":115,"role":"user","content":[{"type":"text","text":"Do not start a large UI rewrite before we agree on the layout direction."}]}
+{"sequence":116,"role":"assistant","content":[{"type":"text","text":"I will keep implementation blocked on a user review/approval step."}]}
+{"sequence":117,"role":"user","content":[{"type":"text","text":"Please record this as open work."}]}
+{"sequence":118,"role":"assistant","content":[{"type":"text","text":"Open item recorded: consolidate redundant interaction surfaces under one coherent model."}]}
+{"sequence":119,"role":"user","content":[{"type":"text","text":"The current pages are usable, so this is not a production outage."}]}
+{"sequence":120,"role":"assistant","content":[{"type":"text","text":"Agreed; it is open consolidation work, not a catastrophic defect."}]}
+{"sequence":121,"role":"user","content":[{"type":"text","text":"Have we actually run the entire viewer workflow in a production-equivalent environment?"}]}
+{"sequence":122,"role":"assistant","content":[{"type":"text","text":"No such complete production-equivalent result is present in this fixture."}]}
+{"sequence":123,"role":"user","content":[{"type":"text","text":"Then do not call the viewer production verified."}]}
+{"sequence":124,"role":"assistant","content":[{"type":"text","text":"I will record full production-flow verification as Verification Debt."}]}
+{"sequence":125,"role":"user","content":[{"type":"text","text":"We do have lower-level passing checks, correct?"}]}
+{"sequence":126,"role":"assistant","content":[{"type":"text","text":"Yes; lower-level checks are reported as passing for the covered baseline."}]}
+{"sequence":127,"role":"user","content":[{"type":"text","text":"Do we know whether the current production deployment already contains the latest viewer baseline?"}]}
+{"sequence":128,"role":"assistant","content":[{"type":"text","text":"The fixture does not establish that deployment fact."}]}
+{"sequence":129,"role":"user","content":[{"type":"text","text":"Then keep that deployment status as Unknown."}]}
+{"sequence":130,"role":"assistant","content":[{"type":"text","text":"Recorded as an Unknown; no production deployment completion will be inferred."}]}
+{"sequence":131,"role":"user","content":[{"type":"text","text":"Before coding the UI changes, I want two consolidation options with tradeoffs."}]}
+{"sequence":132,"role":"assistant","content":[{"type":"text","text":"I can prepare two layout/interaction options that both preserve the shared interaction requirement."}]}
+{"sequence":133,"role":"user","content":[{"type":"text","text":"The next action belongs to me: I will review those options and choose or revise one."}]}
+{"sequence":134,"role":"assistant","content":[{"type":"text","text":"Then the next action actor is the user, not the coding agent."}]}
+{"sequence":135,"role":"user","content":[{"type":"text","text":"Until I approve one, coding should not begin."}]}
+{"sequence":136,"role":"assistant","content":[{"type":"text","text":"I will preserve that dependency explicitly."}]}
+{"sequence":137,"role":"user","content":[{"type":"text","text":"After approval, the coding agent may implement the chosen direction."}]}
+{"sequence":138,"role":"assistant","content":[{"type":"text","text":"That becomes the follow-on action after the user review is complete."}]}
+{"sequence":139,"role":"user","content":[{"type":"text","text":"Yes. That is the final handoff state for this fixture."}]}
+{"sequence":140,"role":"assistant","content":[{"type":"text","text":"Final fixture state: scoped CSV exception adopted, UI consolidation open, production verification debt and deployment unknown remain, next action is user review before coding."}]}

@@ -10,9 +10,6 @@ from app.models.import_record import utc_now
 
 class UserSkill(Base):
     __tablename__ = "user_skills"
-    __table_args__ = (
-        UniqueConstraint("subject_key", "category", "locale", "content_digest", name="uq_user_skill_content"),
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     subject_key: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -22,6 +19,8 @@ class UserSkill(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
     content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    bundle_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    bundle_digest: Mapped[str | None] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="ACTIVE")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
@@ -30,6 +29,10 @@ class UserSkill(Base):
 
 Index("idx_user_skills_subject_category_locale", UserSkill.subject_key, UserSkill.category, UserSkill.locale)
 Index("idx_user_skills_status", UserSkill.status)
+Index("uq_user_skill_legacy_content", UserSkill.subject_key, UserSkill.category, UserSkill.locale, UserSkill.content_digest,
+      unique=True, postgresql_where=UserSkill.bundle_digest.is_(None), sqlite_where=UserSkill.bundle_digest.is_(None))
+Index("uq_user_skill_bundle", UserSkill.subject_key, UserSkill.category, UserSkill.locale, UserSkill.bundle_digest,
+      unique=True, postgresql_where=UserSkill.bundle_digest.isnot(None), sqlite_where=UserSkill.bundle_digest.isnot(None))
 
 
 class UserSkillSelection(Base):
@@ -41,4 +44,3 @@ class UserSkillSelection(Base):
     locale: Mapped[str] = mapped_column(String(16), primary_key=True)
     skill_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("user_skills.id", ondelete="SET NULL"), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
-

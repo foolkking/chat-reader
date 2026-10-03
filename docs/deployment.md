@@ -1,5 +1,40 @@
 # 生产部署
 
+Latest input update (2026-10-03): Skill upload/replacement accepts ZIP and Markdown.
+Markdown is automatically stored as a compatibility Bundle, preserving original
+instructions and the Skill display name; downloads use that name with `.zip`.
+System defaults remain the three supplied ZIPs. No Skill viewer is added.
+This supersedes earlier ZIP-only input statements below.
+
+## ZIP default migration 0046 (not deployed)
+
+Source head `20261003_0046` resets the three categories' system defaults and
+bundled overrides to the pinned user ZIPs. Personal Skill selections and content
+are unaffected; old system revision records remain retained. Downgrade does not
+restore previous defaults automatically. Back up application data before release.
+`python tools/context-skills/build.py --output apps/web/public/skills --check` checks shipped ZIP bytes against
+pinned sources. This source checkpoint is not a production deployment.
+
+## Context migration source checkpoint (not deployed)
+
+Local source adds Alembic `20261002_0043` after `20261002_0042`: immutable Skill
+revisions, member-object references, active revision pointers and Bundle-specific
+deduplication. Migrations 0044/0045 add Context storage/direct partial snapshots;
+0046 selects the pinned defaults. Historical Markdown rows remain valid at revision
+zero. Empty-to-head PostgreSQL migrations, archive recovery and shared-object
+cleanup have local evidence; full release acceptance remains incomplete. Do not
+deploy this checkpoint alone or treat synthetic fixture builds as release images.
+Downgrade to the old unique Markdown-content constraint can fail when distinct
+Bundles share instructions; never discard one automatically to force downgrade.
+Release CI also verifies checked-in built-in Bundle members and previews against
+source using `python tools/context-skills/build.py --output apps/web/public/skills --check`.
+Run the same command after rebuilding the distributions; it does not execute
+uploaded Skill scripts. Bundle archive/restore code now includes history and transactional member writes;
+Resource cleanup is wired to the existing worker and retry queue; PostgreSQL
+concurrency validation and remaining runtime acceptance remain release gates.
+The fixed `app/services/context_protocol` runtime ships through the existing API
+Docker COPY; Bundle consistency CI checks it against both external Skills.
+
 ## 2026-10-02 settings, sharing and offline release
 
 Source `ad223cd4bcbbad7a4ff0c5ea5f33ed2846f3a3ca` from successful Actions
@@ -1481,3 +1516,14 @@ perform Web verification separately.
 当前未部署的帮助/运行状态与构建来源说明见
 [Deployment And Environment](system/DEPLOYMENT_AND_ENVIRONMENT.md)：`BUILD_REVISION`
 只用于镜像构建，省略显示未知；发布镜像检查验证实际嵌入的 revision。
+
+
+### Local Context migration 0044 (not released)
+
+`20261002_0044` follows `20261002_0043` as the single local head, adding Context
+binding/receipt, candidate, revision, adopted-state and private member tables.
+No canonical conversation or message columns are rewritten. SQLite upgrade and
+downgrade/schema parity pass; disposable PostgreSQL concurrency/FK acceptance is
+added but remains unexecuted locally. Context return/adoption, lifecycle cleanup
+and archive integration are unfinished, so this checkpoint is not deployable.
+Production remains on 0042. Do not deploy merely because the local migration exists.

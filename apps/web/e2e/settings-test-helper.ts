@@ -21,3 +21,15 @@ export async function settingsAdmin(request: APIRequest, baseURL: string): Promi
   expect((await context.put("/api/admin/access/registration", { data: { mode: "OPEN", require_admin_approval: false, email_verification_enabled: false } })).status()).toBe(200);
   return context;
 }
+
+export async function removeSyntheticAccount(admin: APIRequestContext, userId: string): Promise<void> {
+  const queued = await admin.post(`/api/admin/access/users/${userId}/delete`, {
+    headers: { "Idempotency-Key": `context-fixture-cleanup-${userId}` },
+    data: { confirm_user_id: userId },
+  });
+  expect(queued.status(), "Queue synthetic test account removal").toBe(202);
+  const { job_id: jobId } = await queued.json();
+  await expect.poll(async () => (await (await admin.get(`/api/tasks/${jobId}`)).json()).status,
+    { message: "Synthetic test account deletion must commit", timeout: 30_000 }).toBe("committed");
+  expect((await admin.get(`/api/admin/access/users/${userId}`)).status()).toBe(404);
+}

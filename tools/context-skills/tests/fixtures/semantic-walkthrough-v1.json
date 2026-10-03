@@ -1,0 +1,64 @@
+{
+  "case": "proposal-correction-scope-unknown-hot-tail",
+  "review_kind": "agent-authored synthetic walkthrough, not independent model evaluation",
+  "covered_through": 12,
+  "messages": [
+    {"role": "user", "text": "Build a local offline report. Do not publish it."},
+    {"role": "assistant", "text": "I propose automatic publication after unit tests pass, and CSV for every project."},
+    {"role": "user", "text": "Use the offline report approach, except no automatic publication. CSV is for the pilot project only; other projects keep JSON."},
+    {"role": "assistant", "text": "Plan: implement revision 7, then run unit and browser tests. Deployment would be a later step."},
+    {"role": "assistant", "text": "Revision 7 implementation is complete and unit tests pass. Browser tests have not run."},
+    {"role": "user", "text": "Correction: that unit-test result came from revision 6. Revision 7 unit tests are still unverified."},
+    {"role": "assistant", "text": "An approval PDF was mentioned, but its contents are not in this export. Perhaps production was already approved."},
+    {"role": "user", "text": "There is no production or approval evidence here. Keep both unknown; do not infer approval from the filename or missing history."},
+    {"role": "user", "text": "Tomorrow we may reconsider CSV for all projects. That is not a decision yet."},
+    {"role": "assistant", "text": "Recap: CSV is now global and browser tests passed."},
+    {"role": "user", "text": "That recap is wrong: CSV is still pilot-only, browser tests have not run, and revision 7 unit tests remain unverified."},
+    {"role": "assistant", "text": "Revision 7 is saved locally. I will run the missing checks next; I have not run them yet."},
+    {"role": "user", "text": "New browser run failed on the pilot report. Fix that failure before any further release work. Do not publish."},
+    {"role": "assistant", "text": "I suggest bypassing that failure and publishing now."}
+  ],
+  "current": {
+    "continuation_brief": "Continue the local offline report. Publication is prohibited. CSV is pilot-only; other projects use JSON. Revision 7 is reported implemented, but its unit and browser checks are unverified at this boundary.",
+    "state_at_boundary": "As of message 12: local implementation was reported, revision 6 unit-test evidence does not verify revision 7, and no browser execution is established. The later Raw tail must be read before choosing the next action.",
+    "goals": [
+      {"id": "NEW-G-001", "title": "Local offline report", "fields": {"Evidence": ["NEW-E-001"]}, "body": "Produce the requested local report."}
+    ],
+    "constraints": [
+      {"id": "NEW-CON-001", "title": "No publication", "fields": {"Scope": "this report", "Evidence": ["NEW-E-001", "NEW-E-003"]}, "body": "Automatic publication was proposed by the assistant and rejected by the user. Implementation does not lift this constraint."}
+    ],
+    "decisions": [
+      {"id": "NEW-DEC-001", "title": "Pilot-only CSV", "fields": {"Scope": "pilot project only", "Adoption": "explicit user acceptance with exclusions", "Evidence": ["NEW-E-003", "NEW-E-011"]}, "body": "CSV applies to the pilot; all other projects retain JSON. The possible future reconsideration is not adopted."}
+    ],
+    "workstreams": [
+      {"id": "NEW-WS-001", "title": "Revision 7 local implementation", "fields": {"State": "reported implemented; verification pending", "Actor": "historical assistant report", "As-of": "message 12", "Evidence": ["NEW-E-005", "NEW-E-012"]}, "body": "No current-session execution or deployed result is implied."}
+    ],
+    "verification_debt": [
+      {"id": "NEW-VD-001", "title": "Revision 7 checks", "fields": {"Evidence": ["NEW-E-006", "NEW-E-011", "NEW-E-012"]}, "body": "Run revision 7 unit and browser checks. The earlier pass was revision 6; the plan and later recap do not establish a run. Unverified is not a known failure at message 12."}
+    ],
+    "unknowns": [
+      {"id": "NEW-UNK-001", "title": "Unavailable approval and production history", "fields": {"Evidence": ["NEW-E-007", "NEW-E-008"]}, "body": "The mentioned approval attachment is absent. Neither approval nor production deployment is established. Absence here does not prove neither ever occurred."}
+    ],
+    "retired_stubs": [
+      {"id": "NEW-RET-001", "title": "Corrected assistant recap", "fields": {"Evidence": ["NEW-E-010", "NEW-E-011"]}, "body": "The claims of global CSV and passed browser tests were explicitly corrected. Keep their history reachable, not active."}
+    ],
+    "next_actions": [
+      {"id": "NEW-NEXT-001", "title": "Acquire the tail before acting", "fields": {"Evidence": ["NEW-E-012"]}, "body": "Read every Raw message after this boundary, then reconcile the outstanding checks. Do not assume the saved boundary is the latest state."}
+    ]
+  },
+  "index_segments": [
+    {"seq_start": 1, "seq_end": 3, "kind": "decision", "title": "Proposal and qualified adoption", "key_sequences": [1, 2, 3]},
+    {"seq_start": 4, "seq_end": 6, "kind": "verification", "title": "Plan, implementation report and revision correction", "key_sequences": [4, 5, 6]},
+    {"seq_start": 7, "seq_end": 9, "kind": "exploration", "title": "Missing evidence and unadopted future option", "key_sequences": [7, 8, 9]},
+    {"seq_start": 10, "seq_end": 12, "kind": "synthesis", "title": "Corrected recap and pending verification", "key_sequences": [10, 11, 12]}
+  ],
+  "effective_context_after_tail_review": {
+    "publication": "still prohibited; message 14 is an unadopted assistant proposal",
+    "format_scope": "pilot CSV, other projects JSON",
+    "implementation": "revision 7 locally implemented according to historical assistant report",
+    "unit_checks": "revision 7 remains unverified; earlier pass belongs to revision 6",
+    "browser_checks": "user now reports a failed pilot browser run at message 13; this supersedes boundary-time unverified status",
+    "next_action": "investigate and fix the reported browser failure before release work",
+    "approval_and_production": "unknown from available evidence; no inference from missing attachment or history"
+  }
+}

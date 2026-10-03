@@ -1,0 +1,42 @@
+{
+  "schema": "chat-reader-continuation-conformance-fixtures",
+  "schema_version": "1.0.0",
+  "fixtures": [
+    "EX-43",
+    "EX-49"
+  ],
+  "files": [
+    {
+      "path": "fixtures/ex-43/assertions.json",
+      "sha256": "cc30d734aa408917f5b43fdb6652d2dec91b8f1b1503f6f5d0cdffad8eb2c125",
+      "bytes": 3729
+    },
+    {
+      "path": "fixtures/ex-43/expected-current-at-100.md",
+      "sha256": "3bb8e116fe82b7318f91438f2629f394961555ba16b84a443aefe27b1111bba6",
+      "bytes": 3940
+    },
+    {
+      "path": "fixtures/ex-43/expected-index-at-100.json",
+      "sha256": "4d02ad3779a8fbae41adaf2ebd4245ecfcb84301d5ff7939023f52c14b72442f",
+      "bytes": 13249
+    },
+    {
+      "path": "fixtures/ex-43/raw.canjsonl",
+      "sha256": "65f0278e7519d49a186dd7f83a29979b63b61fd9ca66659409ab76f35040f06c",
+      "bytes": 20729
+    },
+    {
+      "path": "fixtures/ex-49/canonicalization-vectors.json",
+      "sha256": "5f4a2ff700c859be7c93a9a909e175dccf1d1e6a9278b101e138c83e8754eb19",
+      "bytes": 4237
+    }
+  ],
+  "notes": [
+    "EX-43 uses a semantically closed GraphQL Segment at 31-42 and artifact-alternative Segment at 43-50.",
+    "EX-43 golden Evidence anchors use user source messages for durable constraints and explicit adoption.",
+    "EX-43 acquisition assertions require DIRECT to read every sequence 1-140 and CONTINUATION to avoid replaying verified 1-100 unless validation fallback is triggered.",
+    "EX-43 freezes literal prefix and Segment fingerprints under the fingerprint_method declared in assertions.json.",
+    "EX-49 typed digest inputs are valid sha256:<64 lowercase hex> values and vectors include concrete expected digest outputs."
+  ]
+}

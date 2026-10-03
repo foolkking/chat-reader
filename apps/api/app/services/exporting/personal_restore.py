@@ -127,6 +127,8 @@ def restore_personal_archive(db: Session, path: Path, *, owner_user_id: uuid.UUI
             db.flush()
             _report(progress_callback, "restoring_configuration", 72, 0, 1)
             restore_configurations(db, archive, owner_user_id)
+            from app.services.exporting.archive_context import restore_context
+            restore_context(db, archive, target)
             if include_preferences:
                 for row in archive.rows("preferences"):
                     update_preferences(db, UserPreferenceUpdate.model_validate({key: row[key] for key in UserPreferenceUpdate.model_fields if key in row}), str(owner_user_id))

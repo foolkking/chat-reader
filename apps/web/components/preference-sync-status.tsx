@@ -10,6 +10,7 @@ export function PreferenceSyncStatus() {
   if (!state && !preferences.preferenceStorageError) return null;
   const count = Object.keys(state?.changes ?? {}).length;
   const conflicts = Object.keys(state?.conflicts ?? {}) as PreferenceField[];
+  if (!count && !conflicts.length && !state?.error && !preferences.preferenceStorageError) return null;
   const work = async (action: () => Promise<void>) => {
     setBusy(true); setError("");
     try { await action(); } catch { setError(zh ? "设置已变化，请重新核对后选择。" : "Settings changed. Review the values again."); }

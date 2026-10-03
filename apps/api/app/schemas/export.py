@@ -34,6 +34,8 @@ class ExportRequest(BaseModel):
     toc_mode: Literal["none", "message_index", "bounded_headings"] = "none"
     compression: Literal["none", "gzip"] = "none"
     context_scope: Literal["full_conversation", "reading_scope"] = "full_conversation"
+    context_attachment_policy: Literal["include", "metadata_only"] = "include"
+    continuation_policy: Literal["auto", "raw_only"] = "auto"
     start_message_id: UUID | None = None
 
     @field_validator("message_ids")

@@ -61,7 +61,7 @@ export function SettingsFocusedDialog({ category, onClose, restoreFocus, initial
           {category === "help" ? <HelpPanel /> : null}
           {category === "admin-runtime" ? <AdminRuntimePanel /> : null}
           {category === "offline" ? <OfflineSyncCenter onDirtyChange={setDirty} initialConflictKey={initialConflictKey} /> : null}
-          {category === "data" ? <DataBackupPanel focused onDirtyChange={setDirty} initialTaskId={initialArchiveTaskId} /> : null}
+          {category === "data" ? <DataBackupPanel focused onDirtyChange={setDirty} initialTaskId={initialArchiveTaskId} onRestoreConversation={() => { void requestClose().then((closed) => { if (closed) openImportDialog({ initialMode: "archive" }); }); }} /> : null}
           {category === "shares" ? <MySharesPanel onDirtyChange={setDirty} onOpenConversation={(id) => { void requestClose().then((closed) => { if (closed) { onNavigate?.(); router.push(`/conversations/${encodeURIComponent(id)}`); } }); }} /> : null}
           {category === "formats" ? <ImportFormatSettings focused onDirtyChange={setDirty} onOpenImport={(options) => { void requestClose().then((closed) => { if (closed) openImportDialog(options); }); }} /> : null}
           {category === "cleanup" ? <ContentCleanupRuleSettings embedded onDirtyChange={setDirty} /> : null}

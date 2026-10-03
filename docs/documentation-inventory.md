@@ -1,5 +1,81 @@
 # Markdown 文档台账
 
+2026-10-03 设置复查：`execution/SETTINGS_REAUDIT_2026-10-03.md` 记录本批用户/管理员/
+离线设置对照、界面变更及真实验收，属于发布前历史证据。当前入口和交互合同在
+`system/FRONTEND_ARCHITECTURE.md`；部署后的至少十五项全站改进另行记录。
+
+2026-10-03 closeout: PROJECT_STATE's Context preface is consolidated into current
+decisions, verification and next steps; previous notes are preserved in the dated
+execution log. `evidence/CONTEXT_SEMANTIC_WALKTHROUGH_2026-10-03.md` owns the synthetic
+agent review and its limits. Context/Skill contracts and testing distinguish this
+review from deterministic preservation tests and unverified external model trials.
+
+2026-10-03 authenticated draft recovery: PROJECT_STATE, Context/Offline contracts,
+testing and index now distinguish the eight-pass browser gate from the later
+account-transaction fence and disk-full interrupted API run. The dated execution
+record owns failures, incomplete reruns and the rejected scoped cleanup; no new
+documentation entry point or production claim is introduced.
+
+Subsequent E: test exception: focused API/browser/PostgreSQL reruns now supersede
+the interrupted gates. The full API rerun retained one allocation setup error;
+the corrected PWA baseline passed its enabled cases with opt-in skips. Product,
+USER_FLOWS, FRONTEND_ARCHITECTURE, BACKEND_AND_API, API reference and offline/testing
+sections now point to current Bundle delivery/direct Context workflows instead of
+the former Markdown viewer, text mutation or attachment-dependent Context export.
+CI now includes both opt-in personal/Root Bundle browser suites. Historical release
+entries retain their dates; legacy asset URLs remain readable, not current defaults.
+
+2026-10-03 external maintenance and ecosystem audit: Context contract, testing and
+index distinguish reviewed dual-source materialization from unchanged pinned
+default ZIPs. `system/CONTEXT_SKILL_MIGRATION.md` owns the actual Skill input/output
+matrix, legacy Rescue/acquisition duplicates and standalone-state migration guide.
+The external `package-update-workflow.md` owns inventory bindings, semantic-review
+responsibility and out-of-place transaction rules; maintenance runtime reference
+links that optional CLI mode. The dated execution record owns evidence and gaps.
+
+2026-10-03 actual-ingestion parity: PROJECT_STATE, Context/Offline contracts,
+API reference, docs/index and testing now describe owner-scoped annotation history,
+project-context snapshots/revision invalidation, explicit legacy degradation and
+real worker-download/browser-export evidence. Execution history distinguishes
+the failing baseline, overlapping runs and remaining migration/release work.
+
+2026-10-03 Reader continuation tools: Context/Offline contracts and docs/index
+now cover file Find, complete Index search, scoped online/offline navigation,
+single-member history restoration and durable account-scoped editor drafts.
+API reference replaces obsolete candidate/validation/adoption instructions with
+current direct-file routes and retirement tombstones. The dated execution record
+owns failed/skipped runs and current browser evidence; release gates remain open.
+
+2026-10-03 canonical Context interoperability: Context contract reconciled against
+direct-file code, removing superseded candidate/adoption descriptions from current
+instructions. PROJECT_STATE, API reference and Offline contract now document v2 Raw,
+allowlisted source metadata and actual default-reader compatibility; the execution
+record owns focused evidence, skipped symlink coverage and remaining release work.
+
+Latest input update (2026-10-03): Skill upload/replacement accepts ZIP and Markdown.
+Markdown is automatically stored as a compatibility Bundle, preserving original
+instructions and the Skill display name; downloads use that name with `.zip`.
+System defaults remain the three supplied ZIPs. No Skill viewer is added.
+This supersedes earlier ZIP-only input statements below.
+
+2026-10-03：同步 ZIP-only Skill 写入、三个固定默认 Bundle 与 migration 0046；涉及 PROJECT_STATE、Context 合同、API、部署和当日执行记录。
+
+2026-10-03: `docs/execution/CONTEXT_MIGRATION_2026-10-03.md` records external
+Maintainer package-comparison evidence and the incomplete dual-input writer.
+
+2026-10-02 offline export checkpoint: PROJECT_STATE, PWA_OFFLINE_RESILIENCE_CONTRACT
+and Context execution history now describe attachment-independent Context ZIPs,
+cached Pair inclusion and actual downloaded-ZIP evidence.
+
+2026-10-02 offline Context checkpoint: PWA_OFFLINE_RESILIENCE_CONTRACT,
+PROJECT_STATE and the Context execution record document optional v3 member
+caching and read-only viewing, with incomplete cold-start/export gates explicit.
+
+2026-10-02 Context archive update: DATA_ARCHIVE_CONTRACT and
+CONTEXT_PACKAGE_CONTRACT describe context_files_version=1; PROJECT_STATE and
+the dated Context execution record track SQLite/PostgreSQL restore evidence
+and remaining offline/maintenance integration.
+
 2026-10-02 production rollout: `PROJECT_STATE.md`, `deployment.md` and
 `system/DEPLOYMENT_AND_ENVIRONMENT.md` own deployed source `ad223cd`, migration
 0042, exact archive gateway routes and the unchanged environment/database
@@ -559,8 +635,8 @@ are current in `docs/system/PERFORMANCE_CAPACITY_CONTRACT.md`,
 | `apps/web/features/attachments/offline-conversation-files-panel.tsx` | Current | Read-only offline current-conversation attachments and cached/unavailable states. |
 | `apps/web/lib/offline-export.ts` | Current | Bounded browser-local CanJSON/Markdown/context package projection from the downloaded snapshot. |
 | `apps/web/features/exporting/offline-export-panel.tsx` | Current | Offline export controls and local result delivery. |
-| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1.md` | Current static asset | Supplied bilingual v2 Chinese inert parsing Skill; stable public filename retained, no manual checksum confirmation in the UI. |
-| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md` | Current static asset | Supplied bilingual v2 English inert parsing Skill; stable public filename retained, no manual checksum confirmation in the UI. |
+| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1.md` | Legacy compatibility asset | Chinese text remains at its stable URL; current UI downloads the pinned Acquisition ZIP. |
+| `apps/web/public/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md` | Legacy compatibility asset | English text remains at its stable URL; current UI downloads the pinned Acquisition ZIP. |
 
 2026-08-10 synchronization: Reader scrollbar-jump coordinate recovery and pointer-held edge-loading rules are current in `PROJECT_STATE.md`, `docs/system/FRONTEND_ARCHITECTURE.md`, `docs/testing.md`, and `results.md`.
 
@@ -683,7 +759,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 | 路径 | 分类 | 长期职责 |
 | --- | --- | --- |
 | `README.md` | 压缩并更新 / 入口 | 人类入口、快速开始、常用命令 |
-| `AGENTS.md` | 新建 / 现行 | 最小开发和智能体约束 |
+| `AGENTS.md` | 新建 / 现行 | 最小开发和智能体约束；本机临时目录统一为 `C:\Users\86182\Desktop\wkkk`，按任务分隔 |
 | `PROJECT_STATE.md` | 更新 / 现行 | 当前 AI 可读项目快照 |
 | `docs/index.md` | 更新 / 入口 | 文档导航和生命周期说明 |
 | `docs/documentation-inventory.md` | 新建 / 现行 | 全部 Markdown 所有权与分类 |
@@ -825,3 +901,58 @@ acceptance remains `NOT_VERIFIED` pending operator-run browser verification.
 `system/DEPLOYMENT_AND_ENVIRONMENT.md`（`deployment.md`链接），专项入口归`testing.md`。
 阶段验收、失败与未执行项仅记录于 `execution/SETTINGS_COMPLETION_2026-09-30.md`，
 不将工作树结果当作生产或GitHub CI事实。新增功能没有新migration/包版本。
+# Context migration additions (2026-10-02)
+
+- `docs/system/CONTEXT_PACKAGE_CONTRACT.md`: current Context exporter/runtime contract, resource/integrity boundaries, private Continuation draft persistence/API, temporary canonical snapshots, validation worker, source binding, explicit adoption and private whole-package return lifecycle and dedicated online prefix reuse and implementation limits.
+- `docs/execution/CONTEXT_MIGRATION_2026-10-02.md`: dated accepted scope, stage sequence, verification evidence and resume checkpoint.
+- Bundle distribution follow-up: Context contract, API reference and deployment
+  checkpoint now describe maintenance category, Root member inspection, default
+  safety and source/distribution CI checks. Archive integration and browser/PG
+  acceptance remain explicitly pending in the execution record and Project State.
+
+- Bundle archive follow-up: `system/DATA_ARCHIVE_CONTRACT.md` owns the optional
+  Skill archive extension, graph validation, complete-Bundle deduplication and
+  transactional history restore; Context contract and deployment checkpoint link
+  its scope and retain pending PostgreSQL/cleanup acceptance.
+
+- Skill cleanup follow-up: Context contract and API reference now describe
+  transactional history removal, private cleanup tasks, replay-safe physical
+  deletion and account-deletion transfer; execution log records tested scope.
+
+- Personal Bundle UI follow-up: Context contract records guarded replacement and
+  post-write refetch; execution checkpoint owns the seven real-browser scenarios,
+  screenshot review and explicit authenticated/PostgreSQL verification limits.
+
+- Authenticated Bundle follow-up: Context contract and deployment checkpoint own
+  the API-packaged fixed runtime and three-copy distribution check; execution
+  record captures six real authenticated administrator/personal-preference flows.
+
+
+- Context export options follow-up: Context contract and API reference own
+  attachment/continuation policy semantics and validation freshness. Project State
+  and the dated Context execution record distinguish focused browser/backend
+  evidence from unfinished Reader, PostgreSQL and seven-stage acceptance.
+
+- Direct-file correction: Project State and Context contract record the latest user
+  decision superseding candidates/validation/adoption with three saved snapshots;
+  API reference documents direct PUT; dated execution record separates obsolete
+  browser evidence from acceptance of the revised workflow.
+
+- Reader workspace/direct-return follow-up: Context contract owns the separate
+  annotation-adjacent entry and member-only direct return; API reference records
+  new task result semantics. Execution record separates passing scoped browser
+  evidence from pending readable/editable views and full integration acceptance.
+
+- Reader-first redesign: Context contract owns reading/source/edit behavior and
+  in-memory conflict protection; execution record captures the user layout
+  correction, design rationale and focused browser evidence with limitations.
+
+- `planning/CONTEXT_MAINTENANCE_GUIDANCE_2026-10-03.md`: proposed threshold, nonblocking maintenance handoff and responsive/offline state contract; user review pending, not current implementation.
+
+2026-10-03: Adaptive Import Contract now documents Normalizer Profile v1 recognition, private provenance retention and the unchanged JSON-required legacy preview boundary; 86-pass/1-skip evidence in the dated Context execution record.
+
+2026-10-03: Context export direct-file alignment and partial-member read errors synchronized in PROJECT_STATE, Context Package contract and API reference; see the dated execution record for acceptance.
+
+- `planning/SETTINGS_AND_SITE_UX_FOLLOWUP_2026-10-03.md`: user-approved settings cleanup scope, ordered deployment authorization and subsequent whole-site audit/fix requirements; pending implementation, not current product behavior.
+
+2026-10-03: candidate API retirement/current supported endpoints and old-job retry behavior updated in PROJECT_STATE, Context contract, API reference and index; dated execution record includes service-test migration and PostgreSQL direct-save race evidence.

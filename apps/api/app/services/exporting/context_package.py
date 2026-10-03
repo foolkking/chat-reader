@@ -24,6 +24,7 @@ from app.models.project_conversation import ProjectConversation
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import scan_status_allows_use
 from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
+from app.services.exporting.export_service import _source_refs_by_message
 
 
 CONTEXT_PACKAGE_FORMAT = "chat-reader-context-package"
@@ -44,12 +45,21 @@ def create_context_package(
     start_message_id: uuid.UUID | None,
     progress_callback: ProgressCallback | None = None,
     subject_key: str = "local:default",
+    output_directory: Path | None = None,
+    record_artifact: bool = True,
+    include_continuation: bool = True,
+    include_attachments: bool = True,
 ) -> ExportArtifact:
     if scope_kind not in {"full_conversation", "reading_scope"}:
         raise ContextPackageError("Unsupported context package scope.")
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
         raise ContextPackageError("Conversation not found.")
+    from app.models.context_continuation import ContinuationState
+    from app.services.context_dependencies import context_dependency_digest
+    source_revision = conversation.offline_revision
+    source_dependencies = context_dependency_digest(db, conversation.id, subject_key)
+    source_generation = db.query(ContinuationState.generation).filter_by(conversation_id=conversation.id).scalar()
 
     messages = (
         db.query(Message, MessageVersion)
@@ -75,7 +85,9 @@ def create_context_package(
     package_id = uuid.uuid4()
     exported_at = datetime.now(timezone.utc)
 
-    export_root = Path(get_settings().export_storage_dir).resolve()
+    if not record_artifact and output_directory is None:
+        raise ContextPackageError("Temporary exports require a private output directory.")
+    export_root = (output_directory or Path(get_settings().export_storage_dir)).resolve()
     export_dir = (export_root / str(job_id)).resolve()
     if not export_dir.is_relative_to(export_root):
         raise ContextPackageError("Invalid export storage path.")
@@ -94,33 +106,41 @@ def create_context_package(
     links_by_version: dict[uuid.UUID, list[MessageVersionAttachment]] = {}
     for link in links:
         links_by_version.setdefault(link.message_version_id, []).append(link)
-    attachments = {
-        row.id: row
-        for row in db.query(Attachment).filter(
-            Attachment.conversation_id == conversation.id,
-            Attachment.deleted_at.is_(None),
-            Attachment.status != "detached",
-        ).all()
-    }
+    attachment_query = db.query(Attachment).filter(
+        Attachment.conversation_id == conversation.id,
+        Attachment.deleted_at.is_(None),
+        Attachment.status != "detached",
+    )
+    if scope_kind == "reading_scope":
+        attachment_query = attachment_query.filter(Attachment.id.in_({link.attachment_id for link in links}))
+    attachments = {row.id: row for row in attachment_query.all()}
     message_seq = {message.id: all_sequence[message.id] for message, _ in messages}
 
     records: list[dict[str, Any]] = [
         {
-            "record_type": "header",
-            "schema": "chat-reader-canjson",
-            "version": "2.1",
+            "record_type": "manifest",
+            "format": "chat-reader-canonical-jsonl",
+            "version": 2,
             "package_id": str(package_id),
             "conversation_revision": conversation.offline_revision,
-        },
-        {
-            "record_type": "conversation",
-            "id": str(conversation.id),
-            "title": conversation.title,
-            "display_title": conversation.display_title,
-            "description": conversation.description_markdown,
-            "created_at": _dt(conversation.created_at),
-            "updated_at": _dt(conversation.updated_at),
-            "message_count": len(messages),
+            "exported_at": _dt(exported_at),
+            "conversation": {
+                "id": str(conversation.id),
+                "title": conversation.title,
+                "display_title": conversation.display_title,
+                "description_markdown": conversation.description_markdown,
+                "source_type": conversation.source_type,
+                "source_profile": conversation.source_profile,
+                "created_at": _dt(conversation.created_at),
+                "updated_at": _dt(conversation.updated_at),
+            },
+            "selection": {
+                "scope": "all_current_messages" if scope_kind == "full_conversation" else "selected_messages",
+                "message_count": len(messages),
+                "first_message_seq": first_sequence,
+                "last_message_seq": last_sequence,
+            },
+            "content": {"format": "markdown", "versions": "current_only", "attachments": "metadata_and_objects" if include_attachments else "metadata_only"},
         },
     ]
     project_context = _project_context(db, conversation.id)
@@ -134,36 +154,40 @@ def create_context_package(
             "seq": all_sequence[message.id],
             "order_key": message.order_key,
             "role": message.role,
+            "turn_index": message.turn_index,
             "author_label": message.author_label,
             "created_at": _dt(message.created_at),
-            "current_version": {
-                "id": str(version.id),
-                "version_number": version.version_number,
-                "content_hash": version.content_hash,
-                "plain_text": version.plain_text,
-                "display_text": version.display_text,
-            },
-            "attachment_refs": [
-                {
-                    "attachment_id": str(link.attachment_id),
-                    "occurrence_key": link.occurrence_key,
-                    "placement": link.placement,
-                    "relation_type": link.relation_type,
-                    "display_order": link.display_order,
-                    "display_mode": link.display_mode,
-                    "alt": link.alt_text,
-                    "caption": link.caption,
-                }
-                for link in links_by_version.get(version.id, [])
-                if link.attachment_id in attachments
-            ],
+            "current_version": _version_payload(version),
         })
+        for link in links_by_version.get(version.id, []):
+            if link.attachment_id not in attachments:
+                continue
+            records.append({
+                "record_type": "attachment_ref",
+                "message_id": str(message.id),
+                "message_version_id": str(version.id),
+                "attachment_id": str(link.attachment_id),
+                "occurrence_key": link.occurrence_key,
+                "placement": link.placement,
+                "relation_type": link.relation_type,
+                "display_order": link.display_order,
+                "block_index": link.block_index,
+                "display_mode": link.display_mode,
+                "alt_text": link.alt_text,
+                "caption": link.caption,
+            })
         _report(progress_callback, "serializing", min(55, round(processed * 55 / total)), processed, total)
+
+    for offset in range(0, len(selected_message_ids), 100):
+        source_refs = _source_refs_by_message(db, selected_message_ids[offset:offset + 100])
+        for refs in source_refs.values():
+            records.extend(refs)
 
     asset_entries: dict[str, tuple[AssetObject, Path]] = {}
     available_objects: set[uuid.UUID] = set()
     missing_objects: set[str] = set()
     excluded_objects: set[uuid.UUID] = set()
+    omitted_objects: set[uuid.UUID] = set()
     available_attachments = 0
     for attachment in sorted(attachments.values(), key=lambda item: str(item.id)):
         asset = attachment.asset_object
@@ -187,7 +211,10 @@ def create_context_package(
                     "sha256": asset.sha256,
                     "byte_size": asset.byte_size,
                 }
-                asset_entries.setdefault(object_path, (asset, source_path))
+                if include_attachments:
+                    asset_entries.setdefault(object_path, (asset, source_path))
+                else:
+                    omitted_objects.add(asset.id)
                 available_objects.add(asset.id)
                 available_attachments += 1
         records.append({
@@ -199,6 +226,7 @@ def create_context_package(
             "detected_mime_type": asset.detected_mime_type if asset is not None else None,
             "scan_status": attachment.scan_status,
             "relation_status": "active",
+            "status": attachment.status,
             "resolution_status": resolution_status,
             "object": object_payload,
             "source": {
@@ -218,15 +246,29 @@ def create_context_package(
         .order_by(ConversationAnnotation.created_at.asc())
         .all()
     )
+    anchor_version_ids = {item.message_version_id for item in annotations if item.message_version_id} - set(selected_version_ids)
+    if anchor_version_ids:
+        records[0]["content"]["versions"] = "current_plus_annotation_anchors"
+        for version in db.query(MessageVersion).filter(
+            MessageVersion.id.in_(anchor_version_ids), MessageVersion.message_id.in_(selected_message_ids),
+        ).order_by(MessageVersion.message_id, MessageVersion.version_number):
+            records.append({"record_type": "message_version", "message_id": str(version.message_id), **_version_payload(version)})
     for annotation in annotations:
         records.append({
             "record_type": "annotation",
             "id": str(annotation.id),
             "message_id": str(annotation.message_id) if annotation.message_id else None,
             "message_seq": message_seq.get(annotation.message_id),
-            "quote": annotation.quote,
-            "comment": annotation.comment_markdown,
-            "status": annotation.anchor_status,
+            "version_id": str(annotation.message_version_id) if annotation.message_version_id else None,
+            "start_block_index": annotation.start_block_index,
+            "start_offset": annotation.start_offset,
+            "end_block_index": annotation.end_block_index,
+            "end_offset": annotation.end_offset,
+            "quoted_text": annotation.quote,
+            "annotation_type": annotation.annotation_type,
+            "color": annotation.color,
+            "comment_markdown": annotation.comment_markdown,
+            "anchor_status": annotation.anchor_status,
         })
     notebook = (
         db.query(ConversationNotebook)
@@ -239,19 +281,27 @@ def create_context_package(
         .first()
     )
     if notebook is not None:
+        annotation_ids = {str(item.id) for item in annotations}
+        blocks = [block for block in notebook.blocks if isinstance(block, dict) and (
+            block.get("type") == "markdown" or (
+                block.get("type") == "annotation_reference" and str(block.get("annotation_id")) in annotation_ids
+            )
+        )]
         markdown = "\n\n".join(
             str(block.get("markdown") or "")
-            for block in notebook.blocks
+            for block in blocks
             if isinstance(block, dict) and block.get("type") == "markdown" and block.get("markdown")
         )
         records.append({
-            "record_type": "notebook_entry",
+            "record_type": "notebook",
             "id": str(notebook.id),
             "title": notebook.title,
             "content_markdown": markdown,
+            "blocks": blocks,
             "created_at": _dt(notebook.created_at),
         })
 
+    records.append({"record_type": "end", "record_count": len(records) + 1, "message_count": len(messages)})
     with jsonl_path.open("wb") as output:
         for record in records:
             output.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
@@ -262,8 +312,15 @@ def create_context_package(
         "format_version": CONTEXT_PACKAGE_VERSION,
         "package_id": str(package_id),
         "exported_at": _dt(exported_at),
-        "producer": {"name": "chat-reader", "version": "1.0.0", "canjson_version": "2.1"},
+        "producer": {"name": "chat-reader", "version": "1.0.0", "canjson_version": 2},
         "entrypoint": "conversation.canjsonl",
+        "conversation": {
+            "id": str(conversation.id),
+            "title": conversation.display_title,
+            "conversation_revision": conversation.offline_revision,
+            "current_versions_only": True,
+            "message_count": len(messages),
+        },
         "scope": {
             "kind": scope_kind,
             "conversation_id": str(conversation.id),
@@ -280,8 +337,13 @@ def create_context_package(
             "notebook": True,
             "attachment_metadata": True,
             "attachment_binary_objects": bool(asset_entries),
+            "source_refs": True,
         },
-        "files": [{"path": "conversation.canjsonl", "sha256": jsonl_sha, "byte_size": jsonl_size}],
+        "files": {
+            "conversation.canjsonl": {"sha256": jsonl_sha, "byte_size": jsonl_size},
+            **{path: {"sha256": asset.sha256, "byte_size": asset.byte_size}
+               for path, (asset, _) in asset_entries.items()},
+        },
         "assets": {
             "attachment_records": len(attachments),
             "physical_objects": len({item.asset_object_id for item in attachments.values() if item.asset_object_id}),
@@ -297,11 +359,13 @@ def create_context_package(
             "none"
             if not attachments
             else "partial"
-            if missing_objects or excluded_objects
+            if missing_objects or excluded_objects or omitted_objects
             else "complete"
         ),
         "attachments": {
-            "requested": True,
+            "requested": include_attachments,
+            "policy": "include" if include_attachments else "metadata_only",
+            "omitted_object_count": len(omitted_objects),
             "metadata_included": True,
             "binary_objects_included": bool(asset_entries),
             "record_count": len(attachments),
@@ -315,15 +379,30 @@ def create_context_package(
                 "none"
                 if not attachments
                 else "partial"
-                if missing_objects or excluded_objects
+                if missing_objects or excluded_objects or omitted_objects
                 else "complete"
             ),
         },
     }
+    continuation_members = {}
+    if not include_continuation:
+        manifest["extensions"] = {"chat_reader_continuation_export": {"version": 1, "status": "omitted_by_request"}}
+    if include_continuation:
+        from app.services.exporting.context_continuation import carry_continuation
+        continuation_members, continuation_metadata, continuation_status = carry_continuation(
+            db, conversation.id, jsonl_path, subject_key=subject_key, full_scope=scope_kind == "full_conversation",
+        )
+        manifest["extensions"] = {"chat_reader_continuation_export": {"version": 1, "status": continuation_status}}
+        if continuation_metadata is not None:
+            manifest["continuation"] = continuation_metadata
+            for name, data in continuation_members.items():
+                manifest["files"][name] = {"sha256": hashlib.sha256(data).hexdigest(), "byte_size": len(data)}
     try:
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
             archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"))
             archive.write(jsonl_path, "conversation.canjsonl")
+            for member_name, member_bytes in continuation_members.items():
+                archive.writestr(member_name, member_bytes)
             for index, (object_path, (_, source_path)) in enumerate(asset_entries.items(), start=1):
                 archive.write(source_path, object_path)
                 _report(progress_callback, "packaging_assets", 55 + round(index * 40 / max(len(asset_entries), 1)), len(messages), total)
@@ -332,6 +411,13 @@ def create_context_package(
 
     artifact_id = uuid.uuid4()
     try:
+        latest_revision = db.query(Conversation.offline_revision).filter(
+            Conversation.id == conversation.id, Conversation.deleted_at.is_(None)).scalar()
+        latest_generation = db.query(ContinuationState.generation).filter_by(conversation_id=conversation.id).scalar()
+        if (latest_revision != source_revision
+                or context_dependency_digest(db, conversation.id, subject_key) != source_dependencies
+                or (include_continuation and latest_generation != source_generation)):
+            raise ContextPackageError("Context source changed during export; retry with the current version.")
         published = publish_zip_artifact(
             temporary,
             destination,
@@ -352,6 +438,9 @@ def create_context_package(
         byte_size=published.byte_size,
         expires_at=exported_at + timedelta(hours=24),
     )
+    if not record_artifact:
+        _report(progress_callback, "publishing", 99, total, total)
+        return artifact
     db.add(artifact)
     db.add(ConversationEvent(
         id=uuid.uuid4(),
@@ -385,6 +474,19 @@ def _project_context(db: Session, conversation_id: uuid.UUID) -> dict[str, Any] 
         "name": row.name,
         "description": row.description,
         "conversation_role": "member",
+    }
+
+
+def _version_payload(version: MessageVersion) -> dict[str, Any]:
+    return {
+        "id": str(version.id), "number": version.version_number,
+        "content_markdown": version.display_text, "content_hash": version.content_hash,
+        "edit_type": version.edit_type, "edit_reason": version.edit_reason,
+        "created_at": _dt(version.created_at), "based_on_version_id": None,
+        "normalizer_version": version.normalizer_version,
+        "markdown_parser_version": version.markdown_parser_version,
+        "block_builder_version": version.block_builder_version,
+        "search_document_version": version.search_document_version,
     }
 
 

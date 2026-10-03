@@ -1,5 +1,81 @@
 # Project State
 
+## Context migration — current local state (2026-10-03)
+
+Local source head is **`20261003_0046`**, a single Alembic head. The production
+snapshot below remains on 0042; this Context work is not committed, pushed or
+deployed. Preserve the existing dirty worktree and unrelated tsconfig build info.
+Current product authority: [Context contract](docs/system/CONTEXT_PACKAGE_CONTRACT.md).
+Dated results and superseded designs: [execution record](docs/execution/CONTEXT_MIGRATION_2026-10-03.md).
+
+- Current/Index save directly in the conversation workspace beside annotations.
+  Dropped Context ZIP updates members only; Markdown/JSON updates one member and
+  preserves the other. Keep three snapshots. No global Context page, ordinary
+  transcript-import route, semantic validation, candidate or adoption flow.
+- Current/Index support reading/editing, file search, Index navigation, history
+  restoration and account-scoped durable drafts. Conflicts preserve drafts; expiry
+  locks data; the original UUID must reauthenticate. Pending cleanup/signout sees
+  drafts. Legacy candidate routes are retired, ownership checks remain.
+- Skill uploads/replacements accept ZIP or Markdown; Markdown becomes a same-name
+  compatibility ZIP without rewriting instructions. No Skill viewer/editor/history
+  UI. Personal choices survive system changes. The only defaults are the three
+  byte-identical supplied Acquisition, Maintainer and Normalizer ZIPs.
+- Context exports always deliver ZIP independently of attachments. Canonical JSONL
+  v2 is readable by the pinned Skills. Full exports may include saved files without
+  endorsing their claims; partial-scope exports exclude private Continuation.
+  Offline v3 retains optional files/source refs/anchor versions/project context;
+  existing Dexie v2 and v1/v2/v3 readers remain compatible. Share excludes them.
+- Personal/system archives preserve saved member/Bundle versions and bindings,
+  exclude temporary return ZIPs, remap restored ownership and retain shared objects
+  during deletion. Returns and cleanup use the existing single worker and tasks.
+- Reviewed external runtime supports OLD Continuation + NEW Raw comparison and
+  out-of-place materialization, with unchanged NEW Raw/assets. Review Bundles are
+  separate deliverables, not installed defaults. [Skill inventory](docs/system/CONTEXT_SKILL_MIGRATION.md)
+  and [synthetic semantic walkthrough](docs/evidence/CONTEXT_SEMANTIC_WALKTHROUGH_2026-10-03.md)
+  distinguish tested structure, agent review and unverified independent model use.
+- ZIP safety now rejects Unicode-equivalent member collisions and Skill
+  file/directory conflicts while preserving unique original names and bytes.
+
+Current verification: PWA baseline **180 passed / 201 opt-in skips**; full offline
+negative matrix **17 passed / 0 skipped**. Authenticated account-fence gate passed
+8 cases; Root/draft lifecycle cleanup passed 9 overlapping cases with actual account
+deletion. PostgreSQL return/cleanup/archive gates passed 13 cases. Latest path/runtime
+suite: **69 passed / 1 Windows symlink skip**; Skill/return/default compatibility:
+**36 passed**. Final lint/typecheck pass. Full API after the ZIP fix: **867 passed /
+4 skipped / 0 failures**. The skips are Windows symlink permission and absent
+optional external input fixtures. The earlier Argon2 allocation-error and deliberately
+interrupted runs remain historical failures/incomplete evidence. Final authenticated
+Context/Bundle/draft/offline gates passed **14 cases**, and authentication/Share
+passed **4 cases**, both with zero skips against current-source services.
+
+This test run has explicit permission to use
+`E:/1project/chat-reader/.tmp/context-tests` instead of the AGENTS default C: wkkk
+root. Use process-local TEMP/TMP only. Prior rejected C: cleanup was not retried;
+no unrelated user/cache files were touched. Detailed attempts are in the log.
+
+Remaining sequence: complete the user's
+[settings cleanup and functional re-audit](docs/planning/SETTINGS_AND_SITE_UX_FOLLOWUP_2026-10-03.md),
+then test/commit/CI/deploy that completed work. Only after that deployment perform
+the requested whole-site audit and implement at least 15 useful improvements.
+Do not deploy this incomplete tree. Maintenance-threshold guidance remains a
+[proposal](docs/planning/CONTEXT_MAINTENANCE_GUIDANCE_2026-10-03.md), not implementation.
+Independent external model trials, CI and production verification are unproven.
+
+Settings UI re-audit has removed redundant descriptions, moved diagnostic metadata
+to the footer, grouped identity fields, exposed share details only on interaction,
+and moved old conversation `.cr` restoration to Settings. All settings ran: 123
+passed / 11 failed initially; the corrected focused suites now cover Bundle,
+registration, system backup and preferences. Reader restoration was incorrectly
+creating a new saved-position revision; it now preserves saved intent while real
+scroll input still persists. All 9 reading-sync scenarios and all 14 long Reader /
+Share / Context navigation regressions pass. Local settings acceptance is complete;
+commit, CI and production release are next. See the
+[settings execution log](docs/execution/SETTINGS_REAUDIT_2026-10-03.md) for failed
+attempts, skips and current evidence. Nothing has been committed or deployed yet.
+
+The remaining sections are dated deployment/settings checkpoints; earlier local
+head numbers and feature descriptions retain their checkpoint scope.
+
 ## Current deployment (2026-10-02)
 
 Production at `https://chat.king.2bd.net` now runs verified source

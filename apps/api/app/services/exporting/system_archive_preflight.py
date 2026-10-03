@@ -33,6 +33,10 @@ class SystemArchive(PersonalArchive):
         self.has_configuration = extension is not None
         self.table_models = {**TABLE_MODELS, **({"users": User} if self.version == 5 else {}),
                              **(CONFIGURATION_MODELS if self.has_configuration else {})}
+        from app.services.exporting.archive_skill_bundles import bundle_table_models
+        self.table_models = bundle_table_models(self.table_models, self.manifest)
+        from app.services.exporting.archive_context import context_table_models
+        self.table_models = context_table_models(self.table_models, self.manifest)
         _validate_canonical_entries(archive, self.manifest, table_names=self.table_models, heartbeat=heartbeat)
         declared = sorted(self.manifest["canonical_entries"], key=lambda item: item["path"])
         self.counts = {item["path"][5:-6]: item["record_count"] for item in declared}
@@ -48,7 +52,7 @@ class SystemArchive(PersonalArchive):
             pk = [inspect(model).get_property_by_column(column).key for column in inspect(model).primary_key]
             for row in self.rows(name):
                 _validate_row(name, model, row)
-                key = row["id"] if hasattr(model, "id") else tuple(row[field] for field in pk)
+                key = row["id"] if hasattr(model, "id") else row[pk[0]] if len(pk) == 1 else tuple(row[field] for field in pk)
                 if key in keys:
                     raise SystemArchiveError("Archive contains duplicate record identities.")
                 keys.add(key)
@@ -79,12 +83,18 @@ class SystemArchive(PersonalArchive):
         if self.has_configuration:
             validate_system_configuration(self)
         _validate_asset_entries(archive, self.rows("asset_objects"), heartbeat=heartbeat)
-        allowed = {"manifest.json", *(f"data/{name}.jsonl" for name in self.table_models)}
+        from app.services.exporting.archive_skill_bundles import validate_bundle_archive
+        skill_paths = validate_bundle_archive(self)
+        from app.services.exporting.archive_context import validate_context_archive
+        skill_paths |= validate_context_archive(self)
+        allowed = {"manifest.json", *skill_paths, *(f"data/{name}.jsonl" for name in self.table_models)}
         allowed.update(row["archive_path"] for row in self.rows("asset_objects") if row.get("archive_path"))
         if set(archive.namelist()) != allowed:
             raise SystemArchiveError("System archive contains unexpected or undeclared files.")
 
     def rows(self, name):
+        if name not in self.counts:
+            return ()
         return _ArchiveRows(self.archive, f"data/{name}.jsonl", self.counts[name], self.heartbeat)
 
     def preview(self):

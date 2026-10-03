@@ -22,13 +22,16 @@ class BuiltinSkill:
     locale: str
     name: str
     content_url: str
+    bundle_url: str | None = None
 
 
 BUILTIN_SKILLS = (
-    BuiltinSkill("builtin:export:zh-CN", "EXPORT_CONTEXT", "zh-CN", "Chat Reader 导出 Skill（系统默认）", "/skills/chat-reader-conversation-context-acquisition-skill.v1.md"),
-    BuiltinSkill("builtin:export:en", "EXPORT_CONTEXT", "en", "Chat Reader Export Skill (System default)", "/skills/chat-reader-conversation-context-acquisition-skill.v1-en.md"),
-    BuiltinSkill("builtin:rescue:zh-CN", "CONVERSATION_RESCUE", "zh-CN", "Conversation Rescue（系统默认）", "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md"),
-    BuiltinSkill("builtin:rescue:en", "CONVERSATION_RESCUE", "en", "Conversation Rescue (System default)", "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md"),
+    BuiltinSkill("builtin:export:zh-CN", "EXPORT_CONTEXT", "zh-CN", "Context Acquisition（系统默认）", "/skills/context-acquisition.md", "/skills/context-acquisition.zip"),
+    BuiltinSkill("builtin:export:en", "EXPORT_CONTEXT", "en", "Context Acquisition (System default)", "/skills/context-acquisition.md", "/skills/context-acquisition.zip"),
+    BuiltinSkill("builtin:rescue:zh-CN", "CONVERSATION_RESCUE", "zh-CN", "Chat Transcript Normalizer（系统默认）", "/skills/chat-transcript-normalizer-skill.md", "/skills/chat-transcript-normalizer-skill.zip"),
+    BuiltinSkill("builtin:rescue:en", "CONVERSATION_RESCUE", "en", "Chat Transcript Normalizer (System default)", "/skills/chat-transcript-normalizer-skill.md", "/skills/chat-transcript-normalizer-skill.zip"),
+    BuiltinSkill("builtin:maintenance:zh-CN", "CONTEXT_MAINTENANCE", "zh-CN", "Context Continuation Maintainer（系统默认）", "/skills/context-continuation-maintainer.md", "/skills/context-continuation-maintainer.zip"),
+    BuiltinSkill("builtin:maintenance:en", "CONTEXT_MAINTENANCE", "en", "Context Continuation Maintainer (System default)", "/skills/context-continuation-maintainer.md", "/skills/context-continuation-maintainer.zip"),
 )
 
 
@@ -50,16 +53,27 @@ def selected_id(db: Session, category: str, locale: str, subject_key: str | None
 
 def list_skills(db: Session, category: str | None = None, locale: str | None = None, subject_key: str | None = None) -> list[dict]:
     from app.services.feature_policies import get_feature_policy
-    from app.services.system_skills import list_system_skills
+    from app.services.system_skills import list_system_skills, system_default_for
 
     subject = _subject(subject_key)
-    selected = {(category, locale): selected_id(db, category, locale, subject) for category in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE") for locale in ("zh-CN", "en")}
-    selected_active = {(cat, loc): False for cat in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE") for loc in ("zh-CN", "en")}
+    selected = {(category, locale): selected_id(db, category, locale, subject) for category in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE", "CONTEXT_MAINTENANCE") for locale in ("zh-CN", "en")}
+    selected_active = {(cat, loc): False for cat in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE", "CONTEXT_MAINTENANCE") for loc in ("zh-CN", "en")}
     rows: list[dict] = []
-    for item in list_system_skills(db):
+    system_items = list_system_skills(db)
+    effective = {}
+    for cat, loc in {(item.category, item.locale) for item in system_items}:
+        try:
+            effective[(cat, loc)] = system_default_for(db, cat, loc)[0].id
+        except ValueError:
+            effective[(cat, loc)] = None
+    effective_ids = set()
+    for item in system_items:
         if (category is not None and item.category != category) or (locale is not None and item.locale != locale):
             continue
         builtin = builtin_for(item.category, item.locale) if item.source_kind == "BUNDLED" else None
+        public_id = item.bundled_key if item.source_kind == "BUNDLED" else f"system:{item.id}"
+        if effective.get((item.category, item.locale)) == item.id:
+            effective_ids.add(public_id)
         rows.append({
             "id": item.bundled_key if item.source_kind == "BUNDLED" else f"system:{item.id}",
             "source": "BUILTIN" if item.source_kind == "BUNDLED" else "SYSTEM",
@@ -67,7 +81,7 @@ def list_skills(db: Session, category: str | None = None, locale: str | None = N
             "locale": item.locale,
             "name": item.name,
             "status": item.status,
-            "is_selected": selected[(item.category, item.locale)] is None and item.default_enabled and item.status == "ACTIVE",
+            "is_selected": public_id in effective_ids,
             "updated_at": item.updated_at,
             "byte_size": item.byte_size,
             "content_url": (
@@ -79,6 +93,8 @@ def list_skills(db: Session, category: str | None = None, locale: str | None = N
             ),
             "is_customized": item.source_kind == "BUNDLED" and item.content is not None,
             "default_enabled": item.default_enabled,
+            "bundle_revision": item.bundle_revision,
+            "bundle_url": f"/api/skills/system/{item.id}/bundle?revision={item.bundle_revision}" if item.bundle_revision or item.content is not None else builtin.bundle_url if builtin and item.content is None else None,
         })
     if not get_feature_policy(db).allow_user_skills:
         return rows
@@ -88,15 +104,15 @@ def list_skills(db: Session, category: str | None = None, locale: str | None = N
     for item in db.scalars(query.order_by(UserSkill.updated_at.desc())).all():
         active_selected = selected[(item.category, item.locale)] == item.id and item.status == "ACTIVE"
         selected_active[(item.category, item.locale)] = selected_active[(item.category, item.locale)] or active_selected
-        rows.append({"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": active_selected, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "is_customized": False, "default_enabled": False})
+        rows.append({"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": active_selected, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "is_customized": False, "default_enabled": False, "bundle_revision": item.bundle_revision, "bundle_url": f"/api/skills/{item.id}/bundle?revision={item.bundle_revision}"})
     for row in rows:
         if row["source"] in {"BUILTIN", "SYSTEM"}:
-            row["is_selected"] = bool(row["default_enabled"]) and not selected_active[(row["category"], row["locale"])]
+            row["is_selected"] = row["id"] in effective_ids and not selected_active[(row["category"], row["locale"])]
     return rows
 
 
-def create_skill(db: Session, *, category: str, locale: str, name: str, content: str, subject_key: str | None = None) -> UserSkill:
-    if category not in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE") or locale not in ("zh-CN", "en"):
+def create_skill(db: Session, *, category: str, locale: str, name: str, content: str, subject_key: str | None = None, bundle_digest: str | None = None) -> UserSkill:
+    if category not in ("EXPORT_CONTEXT", "CONVERSATION_RESCUE", "CONTEXT_MAINTENANCE") or locale not in ("zh-CN", "en"):
         raise ValueError("Unsupported skill category or locale.")
     clean_name = name.strip()
     if not clean_name: raise ValueError("Skill name is required.")
@@ -106,9 +122,10 @@ def create_skill(db: Session, *, category: str, locale: str, name: str, content:
     digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
     subject = _subject(subject_key)
     lock_subject_account(db, subject)
-    existing = db.scalar(select(UserSkill).where(UserSkill.subject_key == subject, UserSkill.category == category, UserSkill.locale == locale, UserSkill.content_digest == digest))
+    identity = UserSkill.bundle_digest == bundle_digest if bundle_digest else (UserSkill.bundle_digest.is_(None) & (UserSkill.content_digest == digest))
+    existing = db.scalar(select(UserSkill).where(UserSkill.subject_key == subject, UserSkill.category == category, UserSkill.locale == locale, identity))
     if existing is not None: raise KeyError(str(existing.id))
-    item = UserSkill(subject_key=subject, category=category, locale=locale, name=clean_name, content=content, byte_size=size, content_digest=digest)
+    item = UserSkill(subject_key=subject, category=category, locale=locale, name=clean_name, content=content, byte_size=size, content_digest=digest, bundle_digest=bundle_digest)
     db.add(item); db.flush()
     return item
 
@@ -139,10 +156,10 @@ def resolve_skill(db: Session, *, category: str, locale: str, subject_key: str |
     from app.services.system_skills import system_default_for
 
     lock_subject_account(db, _subject(subject_key))
-    system_item, builtin = system_default_for(db, category, locale)
     chosen = selected_id(db, category, locale, subject_key)
     item = get_user_skill(db, chosen, subject_key) if chosen and get_feature_policy(db).allow_user_skills else None
     if item is None or item.status != "ACTIVE":
+        system_item, builtin = system_default_for(db, category, locale)
         return {
             "id": system_item.bundled_key if system_item.source_kind == "BUNDLED" else f"system:{system_item.id}",
             "source": "BUILTIN" if system_item.source_kind == "BUNDLED" else "SYSTEM",
@@ -161,6 +178,8 @@ def resolve_skill(db: Session, *, category: str, locale: str, subject_key: str |
             "content": system_item.content,
             "is_customized": system_item.source_kind == "BUNDLED" and system_item.content is not None,
             "default_enabled": system_item.default_enabled,
+            "bundle_revision": system_item.bundle_revision,
+            "bundle_url": f"/api/skills/system/{system_item.id}/bundle?revision={system_item.bundle_revision}" if system_item.bundle_revision or system_item.content is not None else builtin.bundle_url if builtin and system_item.content is None else None,
         }
     item.last_used_at = datetime.now(timezone.utc)
-    return {"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": True, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "content": item.content, "is_customized": False, "default_enabled": False}
+    return {"id": str(item.id), "source": "USER", "category": item.category, "locale": item.locale, "name": item.name, "status": item.status, "is_selected": True, "updated_at": item.updated_at, "byte_size": item.byte_size, "content_url": f"/api/skills/{item.id}/content", "content": item.content, "is_customized": False, "default_enabled": False, "bundle_revision": item.bundle_revision, "bundle_url": f"/api/skills/{item.id}/bundle?revision={item.bundle_revision}"}

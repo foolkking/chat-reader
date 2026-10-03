@@ -1,5 +1,24 @@
 # 前端架构
 
+## Settings presentation (2026-10-03, local)
+
+Settings entry rows display names without duplicated descriptions. Preference sync
+success stays quiet; pending changes, conflicts and failed saves remain actionable.
+Help places environment/version/offline facts in a small footer. Account identity
+shows the role beside its heading and uses two field columns when space allows.
+My shares exposes access/scope/expiry from the status through hover, focus or tap;
+the disclosure stays inside the modal focus boundary, supports Escape and outside
+dismissal, and avoids covering the row actions. Source navigation stays in More.
+Import-format details carry version/verification information rather than default
+row prose. Skill selectors retain ZIP/Markdown upload and replacement without a
+viewer; native file inputs are operated by labeled buttons.
+
+Ordinary transcript import and the initial empty state no longer offer `.cr`.
+Settings Data & backup owns personal restore and the existing single-conversation
+archive entry. Both use existing services; the latter opens the shared import
+component in archive-only mode with an explicit restore title. Context returns
+remain beside Reader annotations. Wrong files receive a correct-entry message.
+
 ## IA Round 2 shell ownership (2026-08-25, local)
 
 `SidebarPreferences` is a lightweight, non-modal region that expands upward
@@ -48,9 +67,9 @@ results route is introduced.
 ## Skill registry (2026-08-29, local)
 
 `SkillSettings` is rendered inside `SettingsFocusedDialog` and consumes the
-owner-authenticated `/api/skills` registry. Metadata loads first; content is
-fetched on demand and shown as inert plain text. Export and Rescue resolve the
-selected user Skill, while Offline keeps static defaults.
+owner-authenticated `/api/skills` registry. Metadata and revision-bound Bundle
+downloads use the selected user Skill; Offline keeps cached built-in defaults.
+No Skill viewer/editor is exposed. See the current [Context contract](CONTEXT_PACKAGE_CONTRACT.md).
 
 ## Reader semantic Markdown copy (current)
 
@@ -74,7 +93,7 @@ Release E keeps the existing /library Service Worker architecture but makes
 offline negative states explicit. A cached Library navigation is served only
 when the active shell's critical resources are still present; missing critical
 JavaScript or stylesheet resources return a standalone offline-incomplete page
-with retry guidance. Optional Skill markdown files do not block Library or
+with retry guidance. Optional built-in Skill ZIP assets do not block Library or
 Reader startup.
 
 Offline package updates preserve the last committed conversation package.
@@ -85,11 +104,11 @@ browser/SW restarts and corrupted bytes cannot mark partial data ready.
 
 ## Offline shell and offline Reader attachments (2026-08-11)
 
-`offline-shell.ts` separates shell availability from background update phase. A complete active service-worker shell is usable immediately; dynamic viewer warming and deterministic shell reconciliation never gate Library interaction or conversation-package downloads. The inventory contains document scripts/styles/icons, the offline search worker, declared viewer runtime chunks and the two inert Skill files. It deliberately excludes API responses, images and historical `performance` resource entries. If reconciliation fails, the previous active shell remains ready and the UI exposes a retryable background-update state.
+`offline-shell.ts` separates shell availability from background update phase. A complete active service-worker shell is usable immediately; dynamic viewer warming and deterministic shell reconciliation never gate Library interaction or conversation-package downloads. The inventory contains document scripts/styles/icons, the offline search worker, declared viewer runtime chunks and the optional built-in Acquisition ZIP. It deliberately excludes API responses, images and historical `performance` resource entries. If reconciliation fails, the previous active shell remains ready and the UI exposes a retryable background-update state.
 
 Offline Reader uses `ReaderDataSource.capabilities.attachments = "read-only"`. The same `current conversation files` action opens the existing `reader-floating` workspace (or mobile sheet), but the panel reads only `offlineDb.attachments`, displays occurrence locations and offers cached Viewer/download actions. It cannot upload, insert, rename, detach or delete and never enumerates server attachments. Missing cached originals resolve to `offline-unavailable`; Object URLs are released after consumption. Viewer opening still follows the single `AttachmentViewerProvider -> AttachmentViewerShell` path.
 
-Offline export is a browser-local projection of the downloaded snapshot. It does not call export APIs, workers, search, derivatives or batch ZIP. The local `.context.zip` keeps the established manifest/JSONL shape and includes only cached assets; missing assets stay explicit records. The Context Package result links the two static Skill resources and handles clipboard denial as a visible retryable state. The English and Chinese Skill files are inert text and are never parsed as Markdown by the viewer.
+Offline export is a browser-local projection of the downloaded snapshot. It does not call export APIs, workers, search, derivatives or batch ZIP. The local `.context.zip` follows the [Context contract](CONTEXT_PACKAGE_CONTRACT.md), includes optional cached saved members and only cached assets; missing assets stay explicit records. Delivery downloads the built-in Acquisition ZIP and copies usage instructions in the selected language. Clipboard denial is retryable and does not block package download. No Skill viewer or uploaded script execution is involved; legacy Markdown URLs remain compatible.
 
 ## Reader wheel and virtual-layout contract (2026-08-10)
 

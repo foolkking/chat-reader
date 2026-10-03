@@ -240,7 +240,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { 
   return (
     <div className="min-w-0 text-xs text-[#475569]" data-testid={`task-${task.job_type}-${task.status}`}>
       <div className="flex items-center justify-between gap-3">
-        <p className="truncate font-medium text-[#111827]">{accountDelete ? (zh ? "删除用户账户" : "Delete user account") : task.label || taskTypeLabel(task)}</p>
+        <p className="truncate font-medium text-[#111827]">{accountDelete ? (zh ? "删除用户账户" : "Delete user account") : task.job_type === "context_return" ? (zh ? "接收上下文接续" : "Receive context continuation") : task.job_type === "context_validation" ? (zh ? "旧接续校验（已停用）" : "Legacy continuation validation (retired)") : task.job_type === "context_object_cleanup" ? (zh ? "清理接续文件" : "Clean up continuation files") : task.job_type === "skill_object_cleanup" ? (zh ? "清理 Skill 文件" : "Clean up Skill files") : task.label || taskTypeLabel(task)}</p>
         <div className="flex shrink-0 items-center gap-1">
           <span>{committed ? "100%" : `${task.progress}%`}</span>
           {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#f1f5f9]" aria-label="关闭任务提示" title="关闭任务提示"><X className="h-4 w-4" /></button> : null}
@@ -258,8 +258,8 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { 
       </div>
       {failed ? (
         <div className="mt-2">
-          <p className="line-clamp-2 text-red-700">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.error_message || "任务失败"}</p>
-          {onRetry ? (
+          <p className="line-clamp-2 text-red-700">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : task.error_message || "任务失败"}</p>
+          {onRetry && task.job_type !== "context_validation" ? (
             <button type="button" onClick={onRetry} className="mt-1 inline-flex items-center gap-1 font-medium text-red-800 underline">
               <RefreshCw className="h-3.5 w-3.5" /> 重试
             </button>
@@ -326,6 +326,7 @@ function phaseLabel(task: BackgroundTaskRead): string {
     publishing: "发布会话",
     exporting: "生成 .cr 归档",
     cleaning_messages: "清理消息内容",
+    cleaning_skill_files: "清理未使用的 Skill 文件",
     rebuilding_index: "重建目录与搜索",
     packaging_messages: "整理对话消息",
     packaging_headings: "整理章节目录",

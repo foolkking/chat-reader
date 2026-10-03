@@ -152,19 +152,17 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     finishSignout();
   }} />;
   return <section className={focused ? "space-y-6" : "space-y-3 border-t border-ui pt-3"} aria-label={copy.title}>
-    <SettingsSection icon={UserRound} title={copy.identity} description={copy.identityDescription}>
+    <SettingsSection icon={UserRound} title={copy.identity} badge={profile ? (profile.role === "ADMIN" ? (resolvedLocale === "zh-CN" ? "系统管理员" : "Administrator") : (resolvedLocale === "zh-CN" ? "用户" : "User")) : undefined}>
       {loading ? <p className="text-sm text-secondary" role="status">{copy.loading}</p> : profile ? <form onSubmit={saveProfile} className="space-y-3">
-        <label className="block text-xs font-medium text-secondary">{copy.email}<input value={profile.email ?? ""} readOnly aria-readonly="true" className="input-base mt-1 min-h-10 w-full bg-subtle px-3 text-secondary" /></label>
-        {profile.role === "ADMIN" ? <div className="flex min-h-10 items-center justify-between rounded-lg border border-ui bg-subtle px-3"><span className="text-xs text-secondary">{resolvedLocale === "zh-CN" ? "账户状态" : "Account status"}</span><span className="rounded-sm bg-[var(--accent-soft)] px-2 py-1 text-xs font-medium text-accent">{resolvedLocale === "zh-CN" ? "系统管理员" : "System Administrator"}</span></div> : null}
-        <label className="block text-xs font-medium text-secondary">{resolvedLocale === "zh-CN" ? "用户名" : "Username"}<input aria-label={copy.displayName} value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={200} className="input-base mt-1 min-h-10 w-full px-3 text-primary" placeholder={copy.displayNamePlaceholder} /></label>
+        <div className="grid gap-3 sm:grid-cols-2"><label className="block min-w-0 text-xs font-medium text-secondary">{copy.email}<input value={profile.email ?? ""} readOnly aria-readonly="true" className="input-base mt-1 min-h-10 w-full bg-subtle px-3 text-secondary" /></label>
+        <label className="block text-xs font-medium text-secondary">{resolvedLocale === "zh-CN" ? "用户名" : "Username"}<input aria-label={copy.displayName} value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={200} className="input-base mt-1 min-h-10 w-full px-3 text-primary" placeholder={copy.displayNamePlaceholder} /></label></div>
         <div className="flex justify-end"><button type="submit" disabled={!profileDirty || profileBusy} className="btn-primary min-h-9 px-4 text-xs font-medium disabled:opacity-45">{profileBusy ? copy.saving : copy.saveProfile}</button></div>
       </form> : null}
     </SettingsSection>
 
     {profile?.role === "USER" ? <EmailChangePanel onDirtyChange={setEmailDirty} onRefreshProfile={refreshIdentity} /> : null}
-    {profile?.role === "ADMIN" ? <p className="text-xs text-secondary">{resolvedLocale === "zh-CN" ? "管理员邮箱由部署配置管理。" : "Administrator email is managed by deployment configuration."}</p> : null}
 
-    <SettingsSection icon={Laptop} title={copy.devices} description={copy.devicesDescription}>
+    <SettingsSection icon={Laptop} title={copy.devices}>
       <div className="divide-y divide-[var(--border)] border-y border-ui">
         {sessions.map((session) => <div key={session.id} className="flex min-h-14 items-center gap-3 py-3">
           <Laptop className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />
@@ -178,9 +176,10 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
       </div>
     </SettingsSection>
 
-    <SettingsSection icon={KeyRound} title={copy.password} description={copy.passwordDescription}>
+    <SettingsSection icon={KeyRound} title={copy.password}>
       <button type="button" onClick={() => setPasswordOpen((value) => !value)} aria-expanded={passwordOpen} className="btn-secondary min-h-9 px-3 text-xs font-medium">{passwordOpen ? copy.cancelPassword : copy.changePassword}</button>
       {passwordOpen ? <form onSubmit={changePassword} className="mt-3 space-y-3 bg-subtle p-3">
+        <p className="text-xs text-secondary">{copy.passwordDescription}</p>
         <PasswordInput label={copy.currentPassword} autoComplete="current-password" value={passwords.current} onChange={(value) => setPasswords((state) => ({ ...state, current: value }))} />
         <PasswordInput label={copy.newPassword} autoComplete="new-password" value={passwords.next} onChange={(value) => setPasswords((state) => ({ ...state, next: value }))} minLength={12} />
         <PasswordInput label={copy.confirmPassword} autoComplete="new-password" value={passwords.confirm} onChange={(value) => setPasswords((state) => ({ ...state, confirm: value }))} minLength={12} />
@@ -195,8 +194,8 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
   </section>;
 }
 
-function SettingsSection({ icon: Icon, title, description, children }: { icon: typeof UserRound; title: string; description: string; children: React.ReactNode }) {
-  return <section className="space-y-3"><div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent"><Icon className="h-4 w-4" aria-hidden="true" /></span><div><h3 className="text-sm font-semibold text-primary">{title}</h3><p className="mt-0.5 text-xs leading-5 text-secondary">{description}</p></div></div><div className="pl-0 sm:pl-11">{children}</div></section>;
+function SettingsSection({ icon: Icon, title, badge, children }: { icon: typeof UserRound; title: string; badge?: string; children: React.ReactNode }) {
+  return <section className="space-y-3"><div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent"><Icon className="h-4 w-4" aria-hidden="true" /></span><div className="flex min-h-8 flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-primary">{title}</h3>{badge ? <span className="rounded-md bg-subtle px-2 py-1 text-xs text-secondary">{badge}</span> : null}</div></div><div className="pl-0 sm:pl-11">{children}</div></section>;
 }
 
 function PasswordInput({ label, value, onChange, autoComplete, minLength }: { label: string; value: string; onChange: (value: string) => void; autoComplete: string; minLength?: number }) {

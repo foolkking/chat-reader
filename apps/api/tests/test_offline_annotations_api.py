@@ -22,6 +22,33 @@ def _message_context(client: TestClient) -> tuple[str, dict, dict]:
     return conversation_id, message, current["current_version"]
 
 
+def test_direct_context_update_refreshes_offline_package(client: TestClient):
+    import hashlib
+    conversation_id, _, _ = _message_context(client)
+    before = next(row for row in client.get('/api/offline/catalog').json()['conversations'] if row['id'] == conversation_id)
+    response = client.put(f'/api/conversations/{conversation_id}/continuation/files',
+        data={'base_generation': '0'}, files={'current': ('current.md', b'# Offline context', 'text/plain'),
+                                           'index': ('index.json', b'{"chapters": []}', 'application/json')})
+    assert response.status_code == 200, response.text
+    after = next(row for row in client.get('/api/offline/catalog').json()['conversations'] if row['id'] == conversation_id)
+    assert after['revision'] > before['revision']
+    queued = client.post('/api/offline/packages', json={'scope': 'conversation', 'conversation_id': conversation_id,
+        'known_revisions': {conversation_id: before['revision']}}, headers={'Idempotency-Key': 'context-offline'})
+    assert queued.status_code == 202
+    _run_job(queued.json()['job_id'])
+    result = client.get(f"/api/offline/packages/{queued.json()['package_id']}/download")
+    assert result.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(result.content)) as archive:
+        payload = json.loads(archive.read('package.json'))
+    assert payload['version'] == 3
+    saved = payload['conversations'][0]['continuation']
+    assert saved['generation'] == 1
+    assert saved['members']['current']['text'] == '# Offline context'
+    assert saved['members']['current']['sha256'] == hashlib.sha256(b'# Offline context').hexdigest()
+    assert saved['members']['index']['text'] == '{"chapters": []}'
+    assert 'storage_key' not in json.dumps(saved)
+
+
 def test_annotations_revision_conflict_sync_idempotency_and_notebook(client: TestClient) -> None:
     conversation_id, message, version = _message_context(client)
     create = client.post(

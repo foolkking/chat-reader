@@ -34,6 +34,8 @@ from app.services.annotations import annotation_read, notebook_read
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import allowed_scan_statuses
 from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
+from app.services.exporting.export_service import _source_refs_by_message
+from app.services.exporting.context_package import _project_context
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
 ProgressCallback = Callable[[str, int, int, int], None]
@@ -152,7 +154,15 @@ def estimate_conversation_bytes(db: Session, conversation: Conversation) -> int:
             .all()
         )
     )
-    return max(2_048, int((body * 1.25) + blocks + headings + annotations + attachment_bytes + 1_500))
+    from app.models.context_continuation import ContinuationState, ContinuationRevision, ContextMemberObject
+    state = db.get(ContinuationState, conversation.id)
+    revision = db.get(ContinuationRevision, state.adopted_revision_id) if state and state.adopted_revision_id else None
+    context_bytes = 0
+    if revision:
+        for digest in {revision.current_sha256, revision.index_sha256} - {None}:
+            obj = db.get(ContextMemberObject, digest)
+            context_bytes += obj.byte_size if obj else 0
+    return max(2_048, int((body * 1.25) + blocks + headings + annotations + attachment_bytes + context_bytes + 1_500))
 
 
 def select_conversations(
@@ -388,6 +398,7 @@ def _write_conversation_payload(
         ReadingPosition.subject_key == subject_key,
     ).first()
     project_id, project_name = _conversation_project(conversation)
+    from app.services.offline_continuation import offline_continuation
     metadata = {
         "id": conversation.id,
         "title": conversation.title,
@@ -410,6 +421,8 @@ def _write_conversation_payload(
         "content_hash": conversation.content_hash,
         "project_id": project_id,
         "project_name": project_name,
+        "project_context": _project_context(db, conversation.id),
+        "continuation": offline_continuation(db, conversation.id),
     }
 
     output.write(b"{")
@@ -424,6 +437,7 @@ def _write_conversation_payload(
         progress_callback("packaging_messages", 0, len(message_rows))
     for batch_start in range(0, len(message_rows), _MESSAGE_BATCH_SIZE):
         batch = message_rows[batch_start : batch_start + _MESSAGE_BATCH_SIZE]
+        source_refs = _source_refs_by_message(db, [message.id for message in batch])
         version_ids = [message.current_version_id for message in batch if message.current_version_id]
         versions = (
             db.query(MessageVersion).filter(MessageVersion.id.in_(version_ids)).all()
@@ -431,6 +445,22 @@ def _write_conversation_payload(
             else []
         )
         versions_by_id = {version.id: version for version in versions}
+        # An orphaned annotation may still point to an earlier body. Include only
+        # the requesting owner's live anchors, bounded by this message batch.
+        anchor_versions = db.query(MessageVersion).join(
+            ConversationAnnotation,
+            (ConversationAnnotation.message_version_id == MessageVersion.id)
+            & (ConversationAnnotation.message_id == MessageVersion.message_id),
+        ).filter(
+            MessageVersion.message_id.in_([message.id for message in batch]),
+            MessageVersion.id.notin_(version_ids),
+            ConversationAnnotation.conversation_id == conversation.id,
+            ConversationAnnotation.subject_key == subject_key,
+            ConversationAnnotation.is_deleted.is_(False),
+        ).distinct().order_by(MessageVersion.message_id, MessageVersion.version_number).all()
+        anchors_by_message: dict[uuid.UUID, list[MessageVersion]] = defaultdict(list)
+        for anchor in anchor_versions:
+            anchors_by_message[anchor.message_id].append(anchor)
         block_rows = (
             db.query(RenderBlock)
             .filter(RenderBlock.message_version_id.in_(version_ids))
@@ -471,6 +501,7 @@ def _write_conversation_payload(
                     "id": message.id,
                     "conversation_id": message.conversation_id,
                     "role": message.role,
+                    "author_label": message.author_label,
                     "order_key": message.order_key,
                     "turn_index": message.turn_index,
                     "created_at": message.created_at,
@@ -478,6 +509,8 @@ def _write_conversation_payload(
                     "char_count": message.char_count,
                     "is_heavy": message.is_heavy,
                     "current_version": _version_payload(version),
+                    "annotation_versions": [_version_payload(anchor) for anchor in anchors_by_message.get(message.id, [])],
+                    "source_refs": source_refs.get(message.id, []),
                     "render_blocks": [
                         _block_payload(
                             block,
@@ -588,6 +621,8 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
             "status": attachment.status,
             "scan_status": attachment.scan_status,
             "resolution_status": attachment.resolution_status,
+            "source_type": attachment.source_type,
+            "source_attachment_id": attachment.source_attachment_id,
             "occurrences": [{
                 "message_id": str(message.id),
                 "message_version_id": str(link.message_version_id),

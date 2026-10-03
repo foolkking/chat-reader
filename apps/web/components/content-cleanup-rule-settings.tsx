@@ -36,7 +36,7 @@ export function ContentCleanupRuleSettings({ embedded = false, onBack, onDirtyCh
   return <section aria-label={zh ? "噪声规则库" : "Noise rule library"} className={embedded ? "min-h-0 space-y-4" : "space-y-4 rounded-xl border border-ui bg-surface p-4"}>
     <header className="space-y-3 border-b border-ui pb-4">
       {!embedded ? <h3 className="text-base font-semibold">{zh ? "噪声规则库" : "Noise rule library"}</h3> : null}
-      <p className="text-xs leading-5 text-secondary">{zh ? "个人启停和例外只影响你。规则修改创建新版本，不追溯修改正文；所有候选仍需审查确认。" : "Personal switches and exceptions affect only you. Edits create new rule versions and never rewrite content. Every candidate still requires confirmation."}</p>
+
       <div className="flex flex-wrap gap-2">{onBack ? <button type="button" className="btn-secondary min-h-11 px-3 text-xs" onClick={() => void back()}>{zh ? "返回清理审查" : "Back to cleanup review"}</button> : null}{!editor ? <><button type="button" className="btn-secondary min-h-11 px-3 text-xs" onClick={() => setEditor("new")}>{zh ? "学习文本规则" : "Learn a text rule"}</button><button type="button" className="btn-secondary min-h-11 px-3 text-xs" disabled={scan.isPending} onClick={() => void startScan()}>{scan.isPending ? (zh ? "正在排队…" : "Queuing…") : (zh ? "扫描现有对话" : "Scan existing conversations")}</button></> : null}</div>
     </header>
     {editor ? <CleanupRuleEditor key={editor === "new" ? "new" : editor.id} rule={editor === "new" ? undefined : editor} onDirtyChange={setDirty} onDone={() => { setEditor(null); setDirty(false); }} /> : <>

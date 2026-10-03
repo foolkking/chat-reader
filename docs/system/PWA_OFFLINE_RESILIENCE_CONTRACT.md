@@ -1,5 +1,100 @@
 # PWA and Offline Resilience Contract
 
+## Context export after actual ingestion (2026-10-03)
+
+Offline v3 optionally stores per-message `annotation_versions`, conversation
+`project_context` and attachment source metadata in existing Dexie v2 records.
+Only the requesting subject's live annotation anchors are packaged; current
+Reader data is unchanged. Project-description changes increment offline revisions.
+Offline Context/CanJSON export includes anchor versions only when their annotations
+are exported and filters notebook references accordingly. Legacy missing history
+preserves quotes and original unavailable locators without linking to a newer body,
+with an actionable post-export notice. The Raw manifest extension
+`chat_reader_offline_snapshot` reports missing anchors and project-context availability.
+Project context follows the description option and is supplementary to message hashes.
+
+Metadata-only export preserves attachment digests and locators, independently of
+binary inclusion. Actual-ingestion browser tests start with a Normalizer transcript,
+then use online Context export, real worker packaging/download and app ingestion,
+disconnect and reload before exporting again. Body/locator fingerprints, complete
+canonical references, old anchor text, attachments, source metadata, descriptions,
+notebook and saved Current/Index bytes pass. A separately identified legacy test
+removes optional members from the downloaded package; it proves absence handling,
+not an actual old deployment or the entire v1/v2 compatibility matrix.
+
+## Continuation reading and local drafts (2026-10-03)
+
+Cached Index references navigate through the offline complete-turn Reader; an
+explicit destination cancels any startup reading-position restore. Disconnected
+browser coverage now includes an unloaded 220-block message, followed by reopening
+Index with its selected tab retained and exporting actual cached Context bytes.
+
+Online Current/Index editors persist working drafts in the existing account-scoped
+settings store. They do not add a Dexie version/store or enter a downloaded
+conversation package. Drafts count as pending local work for signout and cleanup;
+scoped deletion includes only the selected conversation's drafts. The sync center
+lists them separately and opens the corresponding online member. The recovery ZIP
+includes `continuation_drafts` metadata and actual `continuation-drafts/N/current.md`
+or `index.json` files. No outbox operation is created and drafts are never silently
+published. Storage guards/identity epochs protect queued writes. Authenticated
+browser tests cover real worker copies, expiry/reload retaining locked bytes,
+different-account isolation and explicit same-owner draft recovery. At 375px,
+injected IndexedDB write/delete failures preserve durable or in-memory text;
+server-save success followed by failed local cleanup exposes the retained draft.
+Scoped removal exports only that conversation's draft. Signout rejects an outdated
+export after another tab changes a draft; failed logout retains local data, and a
+successful retry clears the account's database. These are fault-injection tests,
+not a claim that physical disk exhaustion was reproduced in the browser. Counts
+and full release limits are in the dated execution record.
+
+## Source display metadata (2026-10-03)
+
+New v3 offline messages optionally include `source_refs`: source identity plus
+allowlisted model/timestamp and conversation header display fields. The existing
+Dexie v2 message records retain them; legacy v1/v2/v3 records without this field
+remain valid. Offline CanJSON/Context export emits these as canonical `source_ref`
+records and declares their presence in the outer manifest. No raw provider payload,
+new database store, or personal Skill is added. API tests verify Normalizer import
+through real offline package creation; disconnected browser tests verify cached
+metadata in downloaded Context bytes. Actual-ingestion parity now also covers
+Normalizer metadata as described above.
+
+## Context files (local migration, 2026-10-02)
+
+Offline export defaults to `context`; CanJSON and Markdown remain selectable.
+The Context ZIP is independent of the attachment checkbox. Cached Current/Index
+can be included or omitted; digests/limits are checked before inclusion. Unreadable
+derived files fall back to Raw-only. The manifest uses
+`extensions.chat_reader_continuation_export` with explicit unverified inclusion
+or omission status; protocol claims, when supplied in cached metadata, remain
+source claims. Content is not semantically assessed. Metadata-only attachment
+policy is explicit. Canonical rows are read in one Dexie transaction; available
+attachment bytes must match their declared digest. The aggregate bundle size
+limit includes Raw and derived members.
+
+Disconnected browser evidence verifies actual ZIP member bytes/checksums and
+Raw-only choice; actual-ingestion parity evidence is described above.
+
+Offline package v3 conversation metadata optionally contains `continuation`:
+version 1, generation, revision ID, timestamp and current/index member text,
+SHA-256 and byte sizes. Only selected saved files are included, never personal
+Skills, returned ZIPs or candidate history. Direct file updates increment the
+conversation offline revision; catalog estimates include selected member bytes.
+Missing or corrupt server files fail package construction rather than silently
+publish an incomplete update.
+
+The importer checks optional member shape, limits and digests before its existing
+transaction, then stores the result on the conversation record. No new Dexie
+version or store is introduced; absent fields in legacy v1/v2/v3 remain valid.
+Existing account-scoped storage and protected transactions cover these bytes.
+The Reader entry beside annotations opens a read-only cached view. Local queries
+run without network availability; upload/edit remain online operations.
+
+Current evidence covers backend packaging/revision changes, disconnected desktop
+view, parser contracts and actual-ingestion Context parity with cold reload.
+The complete import negative matrix, mobile and authenticated lease acceptance
+remain part of the full release gates.
+
 ## Settings completion: lock and sync (working tree, 2026-10-01)
 
 Reading positions use server revisions and account/operation-scoped receipts
@@ -14,8 +109,11 @@ client timestamps do not choose a winner.
 
 Reader restoration freezes the initial saved anchor for that mounted source.
 Remote progress refreshes do not scroll or replace the active window. Only
-real user scroll intent creates progress; layout, restoration and navigation
-do not. Explicit use-server choice goes through the existing real-DOM locator
+real user scroll or explicit destination intent creates progress; layout and
+saved-position restoration do not. Restoration shares the real-DOM locator but
+does not increment the persistence intent or cancel its own restore token.
+Wheel/touch/key input still cancels restoration and records the new intent.
+Explicit use-server choice goes through the existing real-DOM locator
 and clears older captured idle/pagehide intent. Conflict choices recheck both
 the displayed local anchor and server revision, including a strict online
 refresh; unavailable or changed comparisons remain unresolved. Local storage
@@ -307,8 +405,8 @@ offline navigation with query parameters.
 
 Critical resources are current document scripts/styles, Library navigation,
 the offline search worker, icons, bundled KaTeX assets, and warmed Viewer
-runtime chunks required by the active shell. The two parsing Skill Markdown
-files are optional. A missing optional Skill does not make Library or Reader
+runtime chunks required by the active shell. The cached built-in Acquisition
+Skill ZIP is optional. A missing optional Skill does not make Library or Reader
 unavailable.
 
 The inventory comes from the current document and explicit runtime warming. It

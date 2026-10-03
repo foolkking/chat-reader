@@ -187,6 +187,9 @@ def test_worker_iteration_returns_to_idle_when_processing_fails(client: TestClie
             return None
 
     monkeypatch.setattr(task_worker, "SessionLocal", _SessionProbe)
+    # This test isolates the reporter's finally/idle behavior, not database cleanup.
+    # Expiring Context uploads is exercised against real storage in test_context_return.
+    monkeypatch.setattr("app.services.context_return_jobs.expire_context_returns", lambda db: [])
     monkeypatch.setattr(task_worker, "recover_stale_imports", lambda db, seconds: 0)
     monkeypatch.setattr(task_worker, "recover_stale_jobs", lambda db, seconds: 0)
     monkeypatch.setattr(task_worker, "_oldest_task_kind", lambda db: "job")

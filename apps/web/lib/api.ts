@@ -349,6 +349,23 @@ export async function updateSkill(skillId: string, input: { name?: string; statu
   return fetchJson<SkillRead>(`/api/skills/${skillId}`, jsonRequest("PATCH", input));
 }
 
+export type SkillBundleRevision = { revision: number; digest: string; source_kind: string; byte_size: number; created_at: string; is_current: boolean };
+export type SkillBundleMember = { path: string; sha256: string; byte_size: number };
+
+export function getSkillRevisions(skillId: string, offset = 0, system = false): Promise<SkillBundleRevision[]> {
+  return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions?offset=${offset}&limit=50`);
+}
+
+export function getSkillMembers(skillId: string, revision: number, system = false): Promise<SkillBundleMember[]> {
+  return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions/${revision}/members`);
+}
+
+export async function replaceSkillBundle(skillId: string, baseRevision: number, file: File, system = false): Promise<SkillRead> {
+  const body = new FormData();
+  body.append("base_revision", String(baseRevision)); body.append("file", file, file.name);
+  return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions`, { method: "POST", body });
+}
+
 export async function deleteSkill(skillId: string): Promise<void> {
   await fetchJson<void>(`/api/skills/${skillId}`, { method: "DELETE" });
 }
@@ -944,7 +961,7 @@ export async function queueConversationArchiveExport(
 
 export async function queueConversationContextPackageExport(
   conversationId: string,
-  options: { scope: "full_conversation" | "reading_scope"; startMessageId?: string | null },
+  options: { scope: "full_conversation" | "reading_scope"; startMessageId?: string | null; attachmentPolicy?: "include" | "metadata_only"; continuationPolicy?: "auto" | "raw_only" },
 ): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports`, {
     method: "POST",
@@ -955,6 +972,8 @@ export async function queueConversationContextPackageExport(
     body: JSON.stringify({
       format: "context_package",
       context_scope: options.scope,
+      context_attachment_policy: options.attachmentPolicy ?? "include",
+      continuation_policy: options.continuationPolicy ?? "auto",
       start_message_id: options.scope === "reading_scope" ? options.startMessageId : null,
     }),
   });
@@ -1560,6 +1579,7 @@ async function getErrorMessage(response: Response, path: string): Promise<string
       if (typeof detail.code === "string") {
         const localized = localizedImportError(detail.code);
         if (localized) return localized;
+        if (detail.code.startsWith("CONTEXT_")) return detail.code;
       }
       if (typeof detail.message === "string") return detail.message;
     }
@@ -1625,3 +1645,25 @@ function normalizeShareUrl<T extends ShareRead>(share: T): T {
   }
   return share;
 }
+
+
+export type ContinuationRevisionRead = {
+  id: string; protocol_revision: string; declared_trust: string; created_at: string; members: Record<string, boolean>;
+};
+const continuationPath = (id: string) => `/api/conversations/${encodeURIComponent(id)}/continuation`;
+export const continuationApi = {
+  updateFiles: (id: string, form: FormData) => fetchJson<{ generation: number; revision_id: string }>(`${continuationPath(id)}/files`, { method: "PUT", body: form }),
+  state: (id: string) => fetchJson<{ generation: number; adopted_revision_id: string | null; pending_return_task_id?: string | null }>(continuationPath(id)),
+  revisions: (id: string, offset = 0) => fetchJson<ContinuationRevisionRead[]>(`${continuationPath(id)}/revisions?limit=30&offset=${offset}`),
+  returnPackage: (id: string, form: FormData) => fetchJson<{ task_id: string }>(`${continuationPath(id)}/returns`, { method: 'POST', body: form }),
+  member: async (id: string, kind: 'revisions', itemId: string, member: string) => {
+    const generation = authenticationGeneration();
+    const path = `${continuationPath(id)}/${kind}/${encodeURIComponent(itemId)}/members/${encodeURIComponent(member)}`;
+    const response = await fetch(path, { cache: 'no-store' });
+    if (response.status === 401) notifyAuthenticationFailure(generation);
+    if (!response.ok) throw new ApiRequestError(await getErrorMessage(response, path), response.status, path);
+    const text = await response.text();
+    if (generation !== authenticationGeneration()) throw new Error('Account changed');
+    return text;
+  },
+};

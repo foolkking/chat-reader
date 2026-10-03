@@ -83,6 +83,8 @@ def queue_archive_export(
             include_source_refs=payload.include_source_refs if payload is not None else True,
             export_format=payload.format if payload is not None else "cr_v2",
             context_scope=payload.context_scope if payload is not None else "full_conversation",
+            context_attachment_policy=payload.context_attachment_policy if payload is not None else "include",
+            continuation_policy=payload.continuation_policy if payload is not None else "auto",
             start_message_id=payload.start_message_id if payload is not None else None,
             ownership_scope=ownership_scope,
         )

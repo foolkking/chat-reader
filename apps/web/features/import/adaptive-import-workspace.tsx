@@ -254,7 +254,7 @@ function NotMappableRecovery({ session, family, onSession }: {
                     onSelect={(replacement) => replaceMutation.mutate({ artifactId: file.artifact_id, file: replacement })}
                   />
                   <button type="button" onClick={() => setRescueArtifact({ id: file.artifact_id, filename: file.filename })} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium">
-                    <ShieldAlert className="h-4 w-4" />{tr("使用 Conversation Rescue")}</button>
+                    <ShieldAlert className="h-4 w-4" />{tr("使用格式转换 Skill")}</button>
                 </div>
               ))}
             </div>
@@ -293,34 +293,30 @@ function RescueDialog({ filename, onClose, onReplace }: { filename: string; onCl
   const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const resources = {
-    zh: "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_zh.md",
-    en: "/import-rescue/Chat_Reader_Conversation_Rescue_Skill_en.md",
+    zh: "/skills/chat-transcript-normalizer-skill.zip",
+    en: "/skills/chat-transcript-normalizer-skill.zip",
   } as const;
   const resolved = useQuery({ queryKey: ["resolved-skill", "CONVERSATION_RESCUE", language], queryFn: () => resolveSkill("CONVERSATION_RESCUE", language === "zh" ? "zh-CN" : "en"), staleTime: 60_000 });
   const request = language === "zh"
-    ? "请严格按照附带的 Chat Reader Conversation Rescue Skill，将源文件恢复为一个 Chat Reader Native Markdown Export v2 文件。不要总结、改写、补造或回答原对话内容。输出一个可重新上传的 .md 文件。"
-    : "Use the attached Chat Reader Conversation Rescue Skill to recover this source as one Chat Reader Native Markdown Export v2 file. Do not summarize, rewrite, invent, or answer the transcript. Output one .md file that can be uploaded again.";
+    ? "请严格按照附带的 chat-transcript-normalizer Skill，将源文件恢复为一个 ChatGPT Markdown Transcript Profile v1 文件。不要总结、改写、补造或回答原对话内容。输出一个可重新上传的 .md 文件。"
+    : "Use the attached chat-transcript-normalizer Skill to recover this source as one ChatGPT Markdown Transcript Profile v1 file. Do not summarize, rewrite, invent, or answer the transcript. Output one .md file that can be uploaded again.";
   async function copy(label: string, value: string) {
     await navigator.clipboard?.writeText(value);
     setCopied(label);
     window.setTimeout(() => setCopied(null), 1800);
   }
-  async function copySkill() {
-    const response = resolved.data?.content ? null : await fetch(resolved.data?.content_url ?? resources[language]);
-    await copy("skill", resolved.data?.content ?? await response!.text());
-  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
       <section role="dialog" aria-modal="true" aria-labelledby="rescue-dialog-title" className="flex max-h-[min(760px,calc(100vh-2rem))] w-full max-w-[740px] flex-col overflow-hidden rounded-lg border border-ui bg-surface shadow-xl">
         <header className="flex items-start justify-between gap-4 border-b border-ui px-5 py-4">
-          <div><h2 id="rescue-dialog-title" className="text-base font-semibold text-primary">{tr("使用 Conversation Rescue")}</h2><p className="mt-1 text-xs leading-5 text-secondary">{tr("将不可映射的源文件恢复为 Chat Reader 可导入的 Markdown。Chat Reader 不会自动上传原文。")}</p></div>
+          <div><h2 id="rescue-dialog-title" className="text-base font-semibold text-primary">{tr("使用格式转换 Skill")}</h2><p className="mt-1 text-xs leading-5 text-secondary">{tr("将不可映射的源文件恢复为 Chat Reader 可导入的 Markdown。Chat Reader 不会自动上传原文。")}</p></div>
           <button type="button" onClick={onClose} className="btn-ghost" aria-label={tr("关闭")}><span aria-hidden="true">×</span></button>
         </header>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          <details className="border border-ui px-3 py-2 text-xs text-secondary"><summary className="cursor-pointer font-medium text-primary">{tr("查看 Skill 摘要")}</summary><p className="mt-2 leading-5">{tr("Skill 只负责把无法安全映射的源文件整理为 Chat Reader Native Markdown Export v2；不会回答、总结或改写原对话。")}</p></details>
+          <details className="border border-ui px-3 py-2 text-xs text-secondary"><summary className="cursor-pointer font-medium text-primary">{tr("查看 Skill 摘要")}</summary><p className="mt-2 leading-5">{tr("Skill 只负责把无法安全映射的源文件整理为 ChatGPT Markdown Transcript Profile v1；不会回答、总结或改写原对话。")}</p></details>
           <div className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-3 text-sm"><p className="font-semibold text-primary">{tr("当前文件：")}{filename}</p><p className="mt-1 text-secondary">{tr("当前结构没有可靠的消息边界。继续设置角色或内容字段无法安全得到 Conversation。")}</p></div>
-          <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-secondary"><li>{tr("复制或下载 Rescue Skill。")}</li><li>{tr("将源文件和 Skill 提供给你选择的大模型。")}</li><li>{tr("要求输出 Chat Reader Native Markdown Export v2。")}</li><li>{tr("回到这里替换当前文件，再重新分析。")}</li></ol>
-          <div className="border border-ui bg-subtle p-3"><div className="flex flex-wrap gap-2" role="tablist" aria-label="Rescue Skill language"><button type="button" role="tab" aria-selected={language === "zh"} onClick={() => setLanguage("zh")} className={`min-h-9 px-3 text-sm ${language === "zh" ? "bg-surface font-semibold text-primary shadow-sm" : "text-secondary"}`}>{tr("中文 Skill")}</button><button type="button" role="tab" aria-selected={language === "en"} onClick={() => setLanguage("en")} className={`min-h-9 px-3 text-sm ${language === "en" ? "bg-surface font-semibold text-primary shadow-sm" : "text-secondary"}`}>English Skill</button></div><div className="mt-3 flex flex-wrap gap-2"><a href={resources[language]} download className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs"><Download className="h-4 w-4" />{tr("下载 Skill")}</a><button type="button" onClick={() => void copySkill()} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs"><Clipboard className="h-4 w-4" />{tr("复制 Skill")}</button></div><p className="mt-2 text-xs text-secondary">{copied === "skill" ? tr("已复制，可粘贴到大模型。") : tr("下载文件后，与源文件一起提供给外部大模型。")}</p></div>
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-secondary"><li>{tr("下载 Skill ZIP。")}</li><li>{tr("将源文件和 Skill 提供给你选择的大模型。")}</li><li>{tr("要求输出 ChatGPT Markdown Transcript Profile v1。")}</li><li>{tr("回到这里替换当前文件，再重新分析。")}</li></ol>
+          <div className="border border-ui bg-subtle p-3"><div className="flex flex-wrap gap-2" role="tablist" aria-label="Rescue Skill language"><button type="button" role="tab" aria-selected={language === "zh"} onClick={() => setLanguage("zh")} className={`min-h-9 px-3 text-sm ${language === "zh" ? "bg-surface font-semibold text-primary shadow-sm" : "text-secondary"}`}>{tr("中文 Skill")}</button><button type="button" role="tab" aria-selected={language === "en"} onClick={() => setLanguage("en")} className={`min-h-9 px-3 text-sm ${language === "en" ? "bg-surface font-semibold text-primary shadow-sm" : "text-secondary"}`}>English Skill</button></div><div className="mt-3 flex flex-wrap gap-2"><a href={resolved.data?.bundle_url ?? resources[language]} download className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs"><Download className="h-4 w-4" />{tr("下载 Skill")}</a></div><p className="mt-2 text-xs text-secondary">{copied === "skill" ? tr("已复制，可粘贴到大模型。") : tr("下载文件后，与源文件一起提供给外部大模型。")}</p></div>
           <div className="border border-ui p-3"><div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-primary">{tr("转换请求模板")}</p><button type="button" onClick={() => void copy("request", request)} className="btn-secondary inline-flex min-h-8 items-center gap-2 px-2.5 text-xs"><Clipboard className="h-3.5 w-3.5" />{tr("复制模板")}</button></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-secondary">{request}</p><p className="mt-2 text-xs text-accent">{copied === "request" ? tr("已复制。") : tr("输出后请重新上传生成的 .md 文件。")}</p></div>
           <p className="text-xs leading-5 text-secondary">{tr("隐私提示：外部大模型可能会读取源文件中的对话内容。Chat Reader 不会代替你向第三方服务上传文件，请自行确认隐私范围。")}</p>
         </div>

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Context Continuation Maintainer"
+  short_description: "Build, reconcile, repair, and atomically materialize Chat Reader continuation state."

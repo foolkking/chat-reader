@@ -13,6 +13,7 @@ from app.models.content_cleanup import (
 from app.models.import_profile import (
     ImportProfile, ImportProfileAlias, ImportProfileGrant, ImportProfilePreference, ImportProfileRevision,
 )
+from app.models.skill_bundle import SkillBundleRevision, SkillBundleMember, SkillFileObject
 from app.models.user import User
 from app.models.user_preference import UserPreference
 from app.models.user_skill import UserSkill, UserSkillSelection
@@ -42,6 +43,9 @@ PERSONAL_TABLE_MODELS = {
     "rule_exceptions": ContentCleanupException,
     "skills": UserSkill,
     "skill_selections": UserSkillSelection,
+    "skill_bundle_revisions": SkillBundleRevision,
+    "skill_bundle_members": SkillBundleMember,
+    "skill_file_objects": SkillFileObject,
 }
 
 
@@ -97,6 +101,13 @@ def _personal_queries(db: Session, owner_user_id: uuid.UUID, *, include_archived
         "skills": db.query(UserSkill).filter(UserSkill.subject_key == subject).order_by(UserSkill.id),
         "skill_selections": db.query(UserSkillSelection).filter(UserSkillSelection.subject_key == subject).order_by(UserSkillSelection.category, UserSkillSelection.locale),
     })
+    revisions = db.query(SkillBundleRevision).filter(SkillBundleRevision.user_skill_id.in_(rows["skills"].with_entities(UserSkill.id)))
+    members = db.query(SkillBundleMember).filter(SkillBundleMember.revision_id.in_(revisions.with_entities(SkillBundleRevision.id)))
+    rows.update(skill_bundle_revisions=revisions.order_by(SkillBundleRevision.id),
+                skill_bundle_members=members.order_by(SkillBundleMember.revision_id, SkillBundleMember.path),
+                skill_file_objects=db.query(SkillFileObject).filter(SkillFileObject.sha256.in_(members.with_entities(SkillBundleMember.object_sha256))).order_by(SkillFileObject.sha256))
+    from app.services.exporting.archive_context import context_queries
+    rows.update(context_queries(db, rows['conversations']))
     return rows
 
 
@@ -147,6 +158,6 @@ def _create_personal_archive(db: Session, *, snapshot: Session, job_id: uuid.UUI
         db, rows=rows, job_id=job_id, include_archived=include_archived,
         archive_format=PERSONAL_ARCHIVE_FORMAT, archive_version=PERSONAL_ARCHIVE_VERSION,
         scope_type="personal", restore_mode="additive", progress_callback=progress_callback,
-        payload_transform=payload_transform,
+        payload_transform=payload_transform, manifest_metadata={"skill_bundle_version": 1, "context_files_version": 1},
         archive_validator=inspect_personal_archive,
     )

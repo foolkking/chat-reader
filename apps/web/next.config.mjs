@@ -88,6 +88,11 @@ const nextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders },
       { source: "/skills/:path*", headers: staticSkillHeaders },
+      { source: "/skills/:file*.zip", headers: [
+        ...staticSkillHeaders.filter((header) => header.key !== "Content-Type"),
+        { key: "Content-Type", value: "application/zip" },
+        { key: "Content-Disposition", value: "attachment" },
+      ] },
       { source: "/import-rescue/:path*", headers: staticSkillHeaders },
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
       { source: "/library-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },

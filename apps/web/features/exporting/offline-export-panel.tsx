@@ -13,12 +13,14 @@ type ExportResultState = {
   filename: string;
   contextPackage: boolean;
   missingAttachmentCount: number;
+  unavailableAnnotationAnchorCount: number;
 };
 
 export function OfflineExportPanel({ conversationId }: { conversationId: string }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [format, setFormat] = useState<OfflineExportFormat>("canjson");
+  const [format, setFormat] = useState<OfflineExportFormat>("context");
+  const [includeContinuation, setIncludeContinuation] = useState(true);
   const [includeAttachments, setIncludeAttachments] = useState(false);
   const [includeDescription, setIncludeDescription] = useState(false);
   const [includeAnnotations, setIncludeAnnotations] = useState(false);
@@ -30,6 +32,7 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
     queryKey: ["offline-export-attachment-count", conversationId],
     queryFn: () => offlineDb.attachments.where("conversation_id").equals(conversationId).count(),
     staleTime: 10_000,
+    networkMode: "always",
   });
 
   useEffect(() => () => {
@@ -51,12 +54,14 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
         includeDescription,
         includeAnnotations,
         includeNotebook,
+        includeContinuation,
       });
       setResult({
         url: URL.createObjectURL(exported.blob),
         filename: exported.filename,
         contextPackage: exported.contextPackage,
         missingAttachmentCount: exported.missingAttachmentCount,
+        unavailableAnnotationAnchorCount: exported.unavailableAnnotationAnchorCount,
       });
     } catch (reason) {
       setError(reason instanceof Error ? localizeOfflineExportError(reason.message, zh) : (zh ? "无法生成离线导出。" : "Unable to create the offline export."));
@@ -70,7 +75,8 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
       <div className="rounded-lg bg-subtle px-3 py-2 text-xs leading-5 text-secondary">
         {zh ? "离线导出使用当前已下载快照，不连接服务器。未缓存的附件只保留元数据。" : "Offline export uses the downloaded snapshot and never contacts the server. Uncached files remain as metadata only."}
       </div>
-      <div className="grid grid-cols-2 rounded-lg bg-subtle p-1" role="group" aria-label={zh ? "导出格式" : "Export format"}>
+      <div className="grid grid-cols-1 gap-1 rounded-lg bg-subtle p-1 sm:grid-cols-3" role="group" aria-label={zh ? "导出格式" : "Export format"}>
+        <FormatButton active={format === "context"} onClick={() => { setFormat("context"); resetResult(); }} icon={<FileArchive className="h-4 w-4" />} label={zh ? "交给 AI" : "For AI"} />
         <FormatButton active={format === "canjson"} onClick={() => { setFormat("canjson"); resetResult(); }} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />
         <FormatButton active={format === "markdown"} onClick={() => { setFormat("markdown"); resetResult(); }} icon={<FileText className="h-4 w-4" />} label="Markdown" />
       </div>
@@ -81,13 +87,14 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
       <details className="group rounded-lg border border-ui bg-surface">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-medium text-primary"><span>{zh ? "更多内容选项" : "More content options"}</span><ChevronDown className="h-4 w-4 text-secondary transition-transform group-open:rotate-180" /></summary>
         <div className="space-y-1 border-t border-ui p-2">
+          {format === "context" || (format === "canjson" && includeAttachments) ? <CompactOption checked={includeContinuation} onChange={(value) => { setIncludeContinuation(value); resetResult(); }} label={zh ? "携带已缓存的接续文件" : "Include cached continuation files"} /> : null}
           <CompactOption checked={includeDescription} onChange={(value) => { setIncludeDescription(value); resetResult(); }} label={zh ? "包含对话简介" : "Include conversation description"} />
           <CompactOption checked={includeAnnotations} onChange={(value) => { setIncludeAnnotations(value); resetResult(); }} label={zh ? "包含批注" : "Include annotations"} />
           <CompactOption checked={includeNotebook} onChange={(value) => { setIncludeNotebook(value); resetResult(); }} label={zh ? "包含笔记" : "Include notebook"} />
         </div>
       </details>
       <div className="rounded-lg bg-subtle px-3 py-3 text-sm leading-6 text-secondary">
-        <div className="mb-1 flex items-center gap-2 font-medium text-primary">{includeAttachments ? <FileArchive className="h-4 w-4" /> : format === "canjson" ? <FileJson2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}<span>{format === "canjson" ? includeAttachments ? ".context.zip" : ".canonical.jsonl" : includeAttachments ? "-markdown.zip" : ".md"}</span></div>
+        <div className="mb-1 flex items-center gap-2 font-medium text-primary">{includeAttachments || format === "context" ? <FileArchive className="h-4 w-4" /> : format === "canjson" ? <FileJson2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}<span>{format === "context" ? ".context.zip" : format === "canjson" ? includeAttachments ? ".context.zip" : ".canonical.jsonl" : includeAttachments ? "-markdown.zip" : ".md"}</span></div>
         <p>{zh ? "导出只包含该离线副本中已有的当前版本数据。" : "The export contains the current-version data available in this offline copy."}</p>
       </div>
       {result ? result.contextPackage ? (
@@ -98,6 +105,7 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
         <button type="button" disabled={generating} onClick={() => void generate()} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"><FileArchive className="h-4 w-4" />{generating ? (zh ? "正在本地生成…" : "Generating locally…") : (zh ? "生成离线导出" : "Generate offline export")}</button>
       )}
       {result?.missingAttachmentCount ? <p className="text-xs leading-5 text-secondary">{zh ? `${result.missingAttachmentCount} 个附件未缓存，已保留元数据但未写入文件。` : `${result.missingAttachmentCount} uncached attachments remain as metadata and were not written as files.`}</p> : null}
+      {result?.unavailableAnnotationAnchorCount ? <p role="status" className="text-xs leading-5 text-secondary">{zh ? `${result.unavailableAnnotationAnchorCount} 条批注已保留引用文字，但原消息版本未缓存。联网更新离线副本后可补齐。` : `${result.unavailableAnnotationAnchorCount} annotations retain their quotes, but their original message versions are not cached. Update the offline copy online to include them.`}</p> : null}
       {error ? <p role="alert" className="rounded-md bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{error}</p> : null}
     </section>
   );

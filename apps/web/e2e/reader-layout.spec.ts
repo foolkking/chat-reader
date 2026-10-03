@@ -38,10 +38,12 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   await page.getByRole("button", { name: /Import data|导入数据/ }).click();
   const importInput = page.getByTestId("import-file-input");
   await expect(importInput).toHaveAttribute("accept", ".json,.jsonl,.gz,.md,.markdown");
-  await expect(page.getByRole("button", { name: /\.cr 归档/ })).toBeVisible();
-  await importInput.setInputFiles("../api/storage/imports/6c7f6ce8-2c20-4e3c-be14-475e58f65009/lan-proxy-qa.json");
+  await expect(page.getByRole("button", { name: /\.cr 归档/ })).toHaveCount(0);
+  await importInput.setInputFiles({ name: "synthetic-layout.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({
+    title: "Synthetic layout import", messages: [{ role: "user", content: "Synthetic question" }, { role: "assistant", content: "Synthetic answer" }],
+  })) });
   await page.getByTestId("preview-import-button").click();
-  await expect(page.getByText("LAN Proxy QA").last()).toBeVisible();
+  await expect(page.getByText("Synthetic layout import").last()).toBeVisible();
   await page.getByRole("button", { name: /Close|关闭/ }).last().click();
 
   await page.goto("/search?q=argparse");

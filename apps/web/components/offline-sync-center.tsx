@@ -13,6 +13,7 @@ import { useInteractionDialog } from "./interaction-dialog-provider";
 import { OfflineConflictReview } from "./offline-conflict-review";
 import { exportOfflinePending, readOfflinePending, type OfflinePendingSnapshot } from "../lib/offline-pending";
 import type { NotebookDraft } from "../lib/notebook-drafts";
+import type { SavedContinuationDraft } from "../lib/continuation-drafts";
 import { PendingChangesPanel } from "./pending-changes-panel";
 import { PreferenceSyncStatus } from "./preference-sync-status";
 import { ReadingPositionSyncStatus } from "./reading-position-sync-status";
@@ -35,6 +36,7 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey }: { onDir
   const [pending, setPending] = useState<OfflineOutboxRecord[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [drafts, setDrafts] = useState<Array<{ key: string; value: NotebookDraft }>>([]), [draftCount, setDraftCount] = useState(0);
+  const [contextDrafts, setContextDrafts] = useState<SavedContinuationDraft[]>([]), [contextDraftCount, setContextDraftCount] = useState(0);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [syncFailures, setSyncFailures] = useState<OfflineOutboxRecord[]>([]), [syncFailureCount, setSyncFailureCount] = useState(0);
   const [page, setPage] = useState(0), [total, setTotal] = useState(0);
@@ -57,18 +59,20 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey }: { onDir
     const subscription = liveQuery(async () => {
       const db = offlineDb;
       const failed = () => db.outbox.filter((item) => Boolean(item.last_error) && item.last_error !== "CONFLICT");
-      const [count, rows, tasks, operations, operationCount, markers, failedRows, failedCount, draftRows, draftsTotal] = await Promise.all([
+      const [count, rows, tasks, operations, operationCount, markers, failedRows, failedCount, draftRows, draftsTotal, contextRows, contextTotal] = await Promise.all([
         db.conversations.count(), db.conversations.orderBy("downloaded_at").reverse().offset(page * 20).limit(20).toArray(),
         listOfflineDownloads(db), db.outbox.orderBy("queued_at").offset(tab === "pending" ? page * 20 : 0).limit(20).toArray(), db.outbox.count(),
         db.settings.where("key").startsWith("sync-conflict:").toArray(),
         failed().offset(page * 20).limit(20).toArray(), failed().count(),
         db.settings.where("key").startsWith("notebook-draft:").offset(page * 20).limit(20).toArray(), db.settings.where("key").startsWith("notebook-draft:").count(),
+        db.settings.where("key").startsWith("continuation-draft:").offset(page * 20).limit(20).toArray(), db.settings.where("key").startsWith("continuation-draft:").count(),
       ]);
-      return { count, rows, tasks, operations, operationCount, markers, failedRows, failedCount, draftRows, draftsTotal };
+      return { count, rows, tasks, operations, operationCount, markers, failedRows, failedCount, draftRows, draftsTotal, contextRows, contextTotal };
     }).subscribe({ next: (data) => {
       if (!active) return;
       setTotal(data.count); setDownloads(data.tasks); setPending(data.operations); setPendingCount(data.operationCount);
       setDrafts(data.draftRows as Array<{ key: string; value: NotebookDraft }>); setDraftCount(data.draftsTotal);
+      setContextDrafts(data.contextRows as SavedContinuationDraft[]); setContextDraftCount(data.contextTotal);
       setSyncFailures(data.failedRows); setSyncFailureCount(data.failedCount);
       setConflicts(data.markers.map((row) => ({ key: row.key, conversationId: (row.value as { conversation_id: string }).conversation_id })));
       void Promise.all(data.rows.map(async (conversation) => ({ conversation, assets: await inspectOfflineCopyAssets(conversation.id, mode) })))
@@ -104,7 +108,7 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey }: { onDir
   });
   const expiry = offlineLeaseExpiresAt();
   const failures = downloads.filter((item) => item.state === "failed" || item.state === "cancelled");
-  const pages = Math.ceil((tab === "copies" ? total : tab === "pending" ? Math.max(pendingCount, draftCount) : Math.max(failures.length, conflicts.length, syncFailureCount)) / 20);
+  const pages = Math.ceil((tab === "copies" ? total : tab === "pending" ? Math.max(pendingCount, draftCount, contextDraftCount) : Math.max(failures.length, conflicts.length, syncFailureCount)) / 20);
   const stateLabel = (state: OfflineDownload["state"]) => (zh ? { queued: "排队中", generating: "生成中", downloading: "下载中", writing: "写入中", completed: "已完成", failed: "失败", cancelled: "已取消" } : { queued: "Queued", generating: "Generating", downloading: "Downloading", writing: "Writing", completed: "Completed", failed: "Failed", cancelled: "Cancelled" })[state];
 
   if (selectedConflict?.startsWith("sync-conflict:reading_position:")) return <section className="space-y-3"><button className="btn-secondary min-h-9 px-3 text-sm" onClick={() => setSelectedConflict(null)}>{zh ? "返回同步中心" : "Back to sync center"}</button><ReadingPositionSyncStatus conversationId={selectedConflict.slice("sync-conflict:reading_position:".length)} showIdle /></section>;
@@ -129,7 +133,7 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey }: { onDir
     {error ? <p role="alert" className="border-l-2 border-[var(--danger)] pl-3 text-sm text-[var(--danger)]">{error}</p> : null}
     <div role="tabpanel" id={`offline-${tab}`} aria-labelledby={`offline-tab-${tab}`} className="space-y-4">
       {tab === "copies" ? <>
-        <p className="text-xs leading-5 text-secondary">{zh ? "下载后可阅读正文、搜索、查看目录及已缓存附件。降低附件档位不会清除已下载的文件。" : "Downloaded copies support reading, search, contents and cached attachments. Lowering the attachment tier keeps existing files."}</p>
+
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-40 flex-1 text-xs text-secondary">{zh ? "下载附件" : "Download attachments"}<select className="mt-1 min-h-11 w-full rounded-md border border-ui bg-surface px-3 text-sm text-primary" value={mode} onChange={(event) => setMode(event.target.value as OfflineAssetMode)}><option value="none">{zh ? "仅附件信息" : "Metadata only"}</option><option value="small">{zh ? "小附件（≤10 MiB）" : "Small files (≤10 MiB)"}</option><option value="all">{zh ? "全部附件" : "All attachments"}</option></select></label>
           <button className="btn-primary inline-flex min-h-11 items-center gap-2 px-3 text-sm" disabled={!online || busy} onClick={() => void download("all")}><Download className="h-4 w-4" />{zh ? "下载／更新全部" : "Download / update all"}</button>
@@ -147,10 +151,11 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey }: { onDir
       </> : tab === "pending" ? <>
         <PreferenceSyncStatus />
         <div className="flex items-center justify-between gap-3"><p className="text-sm text-secondary">{pendingCount} {zh ? "项待同步修改" : "pending edits"}</p><button className="btn-primary min-h-11 px-3 text-sm" disabled={!online || busy || !pendingCount} onClick={() => void retrySync()}>{zh ? "同步／重试" : "Sync / retry"}</button></div>
-        <button className="btn-secondary min-h-9 px-3 text-sm" disabled={busy || !(pendingCount || draftCount || conflicts.length || preferenceCount)} onClick={() => void exportChanges()}>{zh ? "导出本机修改与草稿" : "Export local edits and drafts"}</button>
+        <button className="btn-secondary min-h-9 px-3 text-sm" disabled={busy || !(pendingCount || draftCount || contextDraftCount || conflicts.length || preferenceCount)} onClick={() => void exportChanges()}>{zh ? "导出本机修改与草稿" : "Export local edits and drafts"}</button>
+        {contextDraftCount ? <section className="space-y-2 border-y border-ui py-3"><h3 className="text-sm font-semibold">Current / Index · {contextDraftCount}</h3>{contextDrafts.map(row => <a key={row.key} className="block min-h-11 py-3 text-sm text-accent hover:underline" aria-disabled={!online} onClick={event => { if (!online) event.preventDefault(); }} href={`/conversations/${encodeURIComponent(row.value.conversation_id)}?continuation=${row.value.member}`}>{row.value.member === "current" ? "Current" : "Index"} · {new Date(row.value.updated_at).toLocaleString(resolvedLocale)} · {online ? (zh ? "继续编辑" : "Resume draft") : (zh ? "联网后继续" : "Connect to resume")}</a>)}</section> : null}
         {draftCount ? <section className="space-y-2 border-y border-ui py-3"><h3 className="text-sm font-semibold">{zh ? "本机笔记草稿" : "Local notebook drafts"} · {draftCount}</h3>{drafts.map((row) => <a key={row.key} className="block min-h-9 break-words py-2 text-sm text-accent hover:underline" href={`${row.value.mode === "offline" ? `/library?conversationId=${row.value.conversation_id}&` : `/conversations/${row.value.conversation_id}?`}annotations=open&notebookDraft=${encodeURIComponent(row.key)}`}>{row.value.title || (zh ? "恢复无标题草稿" : "Restore untitled draft")}</a>)}</section> : null}
         <ul className="divide-y divide-[var(--border)]">{pending.map((item) => <li key={item.operation_id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><a href={item.entity_type === "reading_position" && online ? `/conversations/${item.conversation_id}` : `/library?conversationId=${item.conversation_id}${item.entity_type === "reading_position" ? "" : "&annotations=open"}`} className="font-medium hover:text-accent">{item.entity_type === "reading_position" ? (zh ? "阅读进度" : "Reading progress") : item.entity_type === "notebook" ? (zh ? "笔记修改" : "Notebook edit") : (zh ? "批注修改" : "Annotation edit")}</a><span className="text-xs text-secondary">{item.last_error === "CONFLICT" ? (zh ? "冲突，等待处理" : "Conflict, awaiting review") : item.last_error ? (zh ? `同步失败 · 已尝试 ${item.attempts} 次` : `Sync failed · ${item.attempts} attempts`) : (zh ? "等待同步" : "Waiting to sync")}</span></li>)}</ul>
-        {!pendingCount && !draftCount && !preferenceCount ? <p className="py-6 text-center text-sm text-secondary">{zh ? "没有待同步修改。" : "No pending edits."}</p> : null}
+        {!pendingCount && !draftCount && !contextDraftCount && !preferenceCount ? <p className="py-6 text-center text-sm text-secondary">{zh ? "没有待同步修改。" : "No pending edits."}</p> : null}
       </> : <>
         <ul className="divide-y divide-[var(--border)]">{failures.slice(page * 20, page * 20 + 20).map((item) => <li key={item.id} className="space-y-2 py-3"><p className="text-sm font-medium">{item.label || (zh ? "全部对话" : "All conversations")} · {stateLabel(item.state)}</p><p className="text-xs text-secondary">{item.error === "GONE" ? (zh ? "服务器包已被替换，重试将重新生成。" : "The server package was replaced. Retry to rebuild.") : item.error === "QUOTA" ? (zh ? "浏览器空间不足，请先释放空间。" : "Browser storage is full. Free space before retrying.") : (zh ? "现有本地副本已保留。" : "Existing local copies are retained.")}</p><button disabled={!online || busy} className="btn-secondary min-h-9 px-3 text-xs" onClick={() => void action(() => retryOfflineDownload(item.id))}>{zh ? "重试下载" : "Retry download"}</button></li>)}{conflicts.slice(page * 20, page * 20 + 20).map((item) => <li key={item.key} className="space-y-2 py-3"><p className="text-sm font-medium">{item.key.startsWith("sync-conflict:reading_position:") ? (zh ? "阅读位置存在冲突" : "Reading position conflict") : (zh ? "批注／笔记存在冲突" : "Annotation / notebook conflict")}</p><button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => setSelectedConflict(item.key)}>{zh ? "比较并解决" : "Compare and resolve"}</button><a className="ml-3 inline-flex min-h-9 items-center text-sm text-accent hover:underline" href={`/library?conversationId=${item.conversationId}&annotations=open`}>{zh ? "打开对话" : "Open conversation"}</a></li>)}</ul>
         {syncFailures.length ? <section className="space-y-2 border-t border-ui pt-3"><h3 className="text-sm font-semibold">{zh ? "同步失败" : "Sync failures"}</h3><p className="text-xs text-secondary">{syncFailureCount} {zh ? "项修改仍保留在本机" : "edits retained on this device"}</p>{syncFailures.map((item) => <a key={item.operation_id} className="block min-h-9 py-2 text-sm text-accent hover:underline" href={item.entity_type === "reading_position" && online ? `/conversations/${item.conversation_id}` : `/library?conversationId=${item.conversation_id}${item.entity_type === "reading_position" ? "" : "&annotations=open"}`}>{item.entity_type === "reading_position" ? (zh ? "查看未同步进度" : "View unsynced progress") : item.entity_type === "notebook" ? (zh ? "查看未同步笔记" : "View unsynced notebook") : (zh ? "查看未同步批注" : "View unsynced annotation")}</a>)}<button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => void retrySync()}>{zh ? "重试同步" : "Retry sync"}</button></section> : null}

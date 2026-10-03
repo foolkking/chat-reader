@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { settingsAdmin } from "./settings-test-helper";
 
 // The fixture is an isolated PostgreSQL API with a loopback SMTP sink. This
 // test endpoint is provided by the fixture harness, never by the application.
@@ -39,8 +40,7 @@ test.describe("registration verification with SMTP and persistence", () => {
   for (const width of [375, 768, 1440]) {
     for (const locale of ["zh-CN", "en-US"]) {
       test(`${width}px ${locale}: email confirmation and approval gate`, async ({ browser, playwright, baseURL }) => {
-        const admin = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
-        expect((await admin.post("/api/auth/login", { data: { email: process.env.E2E_AUTH_EMAIL, password: process.env.E2E_AUTH_PASSWORD } })).ok()).toBeTruthy();
+        const admin = await settingsAdmin(playwright.request, baseURL!);
         expect((await admin.put("/api/admin/access/registration", { data: { mode: "OPEN", require_admin_approval: true, email_verification_enabled: true } })).ok()).toBeTruthy();
         const context = await browser.newContext({ viewport: { width, height: 900 }, locale, colorScheme: locale === "en-US" ? "dark" : "light" });
         const page = await context.newPage();
