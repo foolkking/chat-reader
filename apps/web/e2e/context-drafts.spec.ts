@@ -8,9 +8,12 @@ test.skip(process.env.E2E_CONTEXT_EXPORT !== "1", "Requires isolated API");
 
 async function drafts(page: Page, conversationId: string) {
   return page.evaluate(async id => {
-    const userId = localStorage.getItem('chat-reader:offline-active-user-v1') ?? 'local:default';
-    const namespace = Array.from(new TextEncoder().encode(userId), byte => byte.toString(16).padStart(2, '0')).join('');
-    const name = localStorage.getItem('chat-reader:offline-legacy-owner-v1') === userId
+    // The auth-disabled fixture never activates an account namespace. Its
+    // real drafts stay in the legacy database; authenticated runs select only
+    // the verified active account, never an arbitrary database on the device.
+    const userId = localStorage.getItem('chat-reader:offline-active-user-v1');
+    const namespace = Array.from(new TextEncoder().encode(userId ?? ''), byte => byte.toString(16).padStart(2, '0')).join('');
+    const name = !userId || localStorage.getItem('chat-reader:offline-legacy-owner-v1') === userId
       ? 'chat-reader-offline-library' : `chat-reader-offline-library--user-${namespace}`;
     if (!(await indexedDB.databases()).some(database => database.name === name)) return [];
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

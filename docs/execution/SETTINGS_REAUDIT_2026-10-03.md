@@ -113,3 +113,14 @@ API 与设置门槛成功（126 通过），空实例恢复也通过（1 通过�
 读取当前账户的独立命名空间，不修改应用存储或放宽账户隔离。
 `context-drafts-auth-final`：3 通过、0 跳过，验证实际草稿字节、并发分支、恢复文件、
 保存/取消清理与刷新。新翻译的生产构建通过，等待下一轮完整 CI。
+
+第三轮源码 `a5a8136ed9cfb341e558f973d6d38bd16c560623`，
+[Actions 37133732714](https://github.com/foolkking/chat-reader/actions/runs/37133732714)：
+API、设置通过，Web 的 Context 门槛 27 通过、3 失败；镜像未构建。
+草稿测试适配账户命名空间后遗漏了无认证 fixture：该环境不激活账户，仍使用旧库。
+现根据是否存在 active user 明确选择旧库或该账户库，不扫描或认领其他账户数据。
+本地 `context-drafts-legacy-final`、`context-drafts-account-final` 各 3 通过、0 跳过，
+分别运行无认证 Web shell 和账户 Web shell，后端均为真实认证 PostgreSQL fixture。
+覆盖相同的实际保存、两窗口冲突、刷新恢复、下载恢复内容及清理断言。
+最初两次本地启动因缺少 Origin、误用未设置的凭据变量失败，未运行测试；未计通过。
+生产未变更，等待修正测试后的完整 CI。
