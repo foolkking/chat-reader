@@ -6,7 +6,7 @@ test.skip(!process.env.E2E_SYSTEM_ARCHIVE_SOURCE, "Requires a fresh disposable P
 
 async function openSystem(page: Page) {
   await page.getByRole("button", { name: /^(Settings|设置)$/ }).click();
-  await page.getByRole("button", { name: /System Instance backup|系统 实例备份/ }).click();
+  await page.locator('[aria-labelledby="settings-administration-heading"]').getByRole("button", { name: /^(System|系统)$/ }).click();
   return page.getByRole("dialog", { name: /^(System|系统)$/ });
 }
 

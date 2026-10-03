@@ -10,3 +10,4 @@ apps/api/app/services/context_protocol/*.py text eol=lf
 tools/context-skills/tests/continuation-conformance-fixtures-v1/** -text
 # Supplied Markdown references use intentional two-space hard line breaks.
 tools/context-skills/**/references/*.md whitespace=-blank-at-eol
+patches/*.patch -text

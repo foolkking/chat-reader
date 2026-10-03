@@ -83,3 +83,19 @@
 临时截图与运行文件使用本次获准的 `.tmp/context-tests/settings-ui-20261003`；
 默认 AGENTS 临时路径仍为 C: wkkk，未修改全局环境变量或再次尝试拒绝的清理。
 尚未提交、push、CI 或部署；完成本批后依既有备份/发布流程执行。
+
+## 首次 GitHub 发布检查
+
+源码 `4240080d94bc593abe0bcf7cf20308af4fc082ec` 已提交并推送。
+[Actions 37128686750](https://github.com/foolkking/chat-reader/actions/runs/37128686750)
+API 全量 868 通过、3 跳过；共享 Runtime 64 通过、Context 专项 53 通过，
+唯一迁移 head/current 为 0046。126 项设置测试全部通过。空实例恢复的独立测试仍引用旧菜单说明，
+因此在点击入口时失败，未执行恢复；已修正为管理员分组中的实际 System 入口。
+Web lint/typecheck/build 通过，但官方 npm 审计发现 `GHSA-vfj7-8cjw-p6xm`，
+镜像构建未执行，没有产生可部署产物。
+
+上游 braces 当前最新仍是 3.0.3，暂无修复版。本地锁定补丁在解析与 AST 遍历中
+限制嵌套深度；4 项实际依赖回归通过，覆盖漏洞输入、直接 AST 与正常 glob 结果。
+冻结安装与 Web 生产构建通过。审计仍报告 1 项 high；精确 FIXED 记录及
+2026-11-02 复查期限遵循现有安全策略，CI 必须先运行补丁回归，不声称“零漏洞”。
+详见发布安全合同。

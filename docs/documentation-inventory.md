@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-03 release follow-up: the local braces nesting patch, exact advisory
+accounting and removal deadline are owned by `docs/system/RELEASE_SAFETY_BASELINE.md`.
+Its regression is listed in `docs/testing.md`; first-run CI failures and replacement
+verification belong to `docs/execution/SETTINGS_REAUDIT_2026-10-03.md`.
+
 2026-10-03 设置复查：`execution/SETTINGS_REAUDIT_2026-10-03.md` 记录本批用户/管理员/
 离线设置对照、界面变更及真实验收，属于发布前历史证据。当前入口和交互合同在
 `system/FRONTEND_ARCHITECTURE.md`；部署后的至少十五项全站改进另行记录。

@@ -1,5 +1,17 @@
 # Release Safety Baseline
 
+2026-10-03: registry advisory `GHSA-vfj7-8cjw-p6xm` affects `braces` 3.0.3,
+the latest upstream version at review. Tailwind's build/watch dependencies use it.
+The locked pnpm patch `patches/braces@3.0.3.patch` bounds parser nesting and all
+three AST walkers at 128 before recursion, including direct AST callers. The
+Docker dependency stage copies patches before frozen installation. CI executes
+`node --test scripts/security/braces-depth.test.mjs` against both actual dependency
+paths; hostile deep inputs must return the bounded syntax error, and ordinary
+nested alternatives/ranges/escaping must retain their results. It is a local fix,
+not an upstream version upgrade. The registry still reports one high advisory;
+the exact `FIXED` entry expires on 2026-11-02 and must be removed together with the
+patch once an upstream fix is adopted. Unknown/expired advisories still block CI.
+
 2026-10-01 CI prerequisite: Next is pinned to `16.3.6` for
 GHSA-vcvr-r3jv-pc5j and DOMPurify resolves to `3.4.16` for
 GHSA-p98j-92pf-mc4p. The official audit after updating the lockfile returns

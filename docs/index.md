@@ -1,5 +1,9 @@
 # 文档导航
 
+2026-10-03 发布检查：`4240080` 已推送；首次 CI API 868 通过/3 跳过、设置126通过，
+但依赖新公告与空实例测试旧入口定位失败，尚未部署。锁定 braces 深度补丁、
+复验与发布状态见 [设置执行记录](execution/SETTINGS_REAUDIT_2026-10-03.md)。
+
 2026-10-03：本次授权使用 E 盘测试临时目录。最终 API 867 通过、4 跳过；PWA 基线 180 通过、201 开关跳过；离线故障专项 17 通过；最终认证 Context 专项 14 通过、认证与 Share 专项 4 通过，均无跳过。ZIP 路径歧义修复及外部合成审阅见 [执行记录](execution/CONTEXT_MIGRATION_2026-10-03.md) 与 [语义审阅](evidence/CONTEXT_SEMANTIC_WALKTHROUGH_2026-10-03.md)。设置复查已完成本地验收：9 项阅读同步与 14 项长 Reader/Share/Context 导航复验通过；失败历史和视觉检查见 [设置记录](execution/SETTINGS_REAUDIT_2026-10-03.md)。待提交、CI 和部署。
 
 2026-10-03：外部 Maintainer 双包写出及应用回传循环已有本地证据；改进运行时仍是独立 review Bundle，未替换用户指定默认 ZIP。真实 Skill 清单、旧 Rescue 定位及历史状态文档迁移见 [Context Skill 迁移](system/CONTEXT_SKILL_MIGRATION.md)。完整发布验收仍未完成。

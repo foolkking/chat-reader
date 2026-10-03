@@ -3,7 +3,19 @@
   "policy": {
     "audit_source": "https://registry.npmjs.org",
     "blocked_severities": ["critical", "high"],
-    "review_date": "2026-10-01"
+    "review_date": "2026-10-03"
   },
-  "exceptions": []
+  "exceptions": [
+    {
+      "advisory_id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "severity": "high",
+      "disposition": "FIXED",
+      "scope": "Tailwind 3 build/watch glob parsing through micromatch and chokidar; braces 3.0.3 with locked pnpm patch",
+      "reason": "The registry has no patched release as of 2026-10-03. Version-only audit cannot recognize the locally patched parser and AST walkers.",
+      "mitigation": "patches/braces@3.0.3.patch enforces a nesting limit before parser descent and in compile/expand/stringify, including direct AST inputs. Frozen pnpm installs bind the patch hash; Docker copies the patch before installation. CI runs scripts/security/braces-depth.test.mjs against the actual Tailwind dependency paths before evaluating this entry.",
+      "track": "BRACES_NESTING_PATCH: replace the local patch with an upstream fixed release when available; remove this exact advisory entry at the same time",
+      "review_by": "2026-11-02"
+    }
+  ]
 }

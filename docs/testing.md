@@ -1,5 +1,12 @@
 # Testing Addendum 2026-08-24
 
+2026-10-03 dependency regression: `node --test scripts/security/braces-depth.test.mjs`
+checks the installed Tailwind/micromatch/chokidar paths, deep braces/parentheses,
+unterminated patterns, direct AST calls and valid glob outputs. It is required
+before the official audit gate. Frozen installation and the Web Docker build must
+apply the checked-in pnpm patch. The exact advisory accounting is in the
+[release safety contract](system/RELEASE_SAFETY_BASELINE.md).
+
 The Playwright-managed Web server binds to `127.0.0.1`; it is started for the
 selected test run and stopped by Playwright. Reuse an existing server only
 when it has the matching build-time API rewrite, auth mode and optional PWA

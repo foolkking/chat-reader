@@ -3,8 +3,11 @@
 ## Context migration — current local state (2026-10-03)
 
 Local source head is **`20261003_0046`**, a single Alembic head. The production
-snapshot below remains on 0042; this Context work is not committed, pushed or
-deployed. Preserve the existing dirty worktree and unrelated tsconfig build info.
+snapshot below remains on 0042. Context/settings source `4240080` is pushed;
+its CI passed API and 126 settings cases but failed a new dependency advisory
+and an obsolete selector in the separate fresh-instance restore test. The fixes
+are being prepared for a replacement run. Nothing has been deployed. Preserve
+the unrelated tsconfig build info.
 Current product authority: [Context contract](docs/system/CONTEXT_PACKAGE_CONTRACT.md).
 Dated results and superseded designs: [execution record](docs/execution/CONTEXT_MIGRATION_2026-10-03.md).
 
@@ -55,7 +58,7 @@ no unrelated user/cache files were touched. Detailed attempts are in the log.
 
 Remaining sequence: complete the user's
 [settings cleanup and functional re-audit](docs/planning/SETTINGS_AND_SITE_UX_FOLLOWUP_2026-10-03.md),
-then test/commit/CI/deploy that completed work. Only after that deployment perform
+then pass CI and deploy that completed work. Only after that deployment perform
 the requested whole-site audit and implement at least 15 useful improvements.
 Do not deploy this incomplete tree. Maintenance-threshold guidance remains a
 [proposal](docs/planning/CONTEXT_MAINTENANCE_GUIDANCE_2026-10-03.md), not implementation.
@@ -69,9 +72,9 @@ registration, system backup and preferences. Reader restoration was incorrectly
 creating a new saved-position revision; it now preserves saved intent while real
 scroll input still persists. All 9 reading-sync scenarios and all 14 long Reader /
 Share / Context navigation regressions pass. Local settings acceptance is complete;
-commit, CI and production release are next. See the
+CI correction and production release are next. See the
 [settings execution log](docs/execution/SETTINGS_REAUDIT_2026-10-03.md) for failed
-attempts, skips and current evidence. Nothing has been committed or deployed yet.
+attempts, skips and current evidence. Production remains unchanged.
 
 The remaining sections are dated deployment/settings checkpoints; earlier local
 head numbers and feature descriptions retain their checkpoint scope.

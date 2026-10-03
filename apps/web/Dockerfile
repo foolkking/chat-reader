@@ -11,6 +11,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
+COPY patches ./patches
 # Browser PDF rendering does not require pdfjs-dist's optional native canvas.
 # Release installs keep lifecycle scripts disabled as a supply-chain boundary.
 RUN pnpm install --frozen-lockfile --ignore-scripts
