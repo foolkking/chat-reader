@@ -2,6 +2,10 @@ import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
 const english: Record<string, string> = {
+  "使用格式转换 Skill": "Use format conversion Skill",
+  "下载 Skill ZIP。": "Download the Skill ZIP.",
+  "要求输出 ChatGPT Markdown Transcript Profile v1。": "Request ChatGPT Markdown Transcript Profile v1.",
+  "Skill 只负责把无法安全映射的源文件整理为 ChatGPT Markdown Transcript Profile v1；不会回答、总结或改写原对话。": "The Skill converts sources without reliable mappings into ChatGPT Markdown Transcript Profile v1; it does not answer, summarize or rewrite the conversation.",
   "请在设置的数据与备份中恢复 .cr 归档。": "Restore .cr archives from Data & backup in Settings.",
   "请打开目标对话，在批注旁的上下文面板中更新 Current / Index。": "Open the target conversation and update Current / Index in the Context panel beside annotations.",
   "没有可靠的消息边界": "No reliable message boundaries", "当前内容不足以安全分割为 Conversation 消息。": "This content cannot be safely divided into conversation messages.",

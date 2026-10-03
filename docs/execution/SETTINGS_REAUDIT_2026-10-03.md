@@ -99,3 +99,17 @@ Web lint/typecheck/build 通过，但官方 npm 审计发现 `GHSA-vfj7-8cjw-p6x
 冻结安装与 Web 生产构建通过。审计仍报告 1 项 high；精确 FIXED 记录及
 2026-11-02 复查期限遵循现有安全策略，CI 必须先运行补丁回归，不声称“零漏洞”。
 详见发布安全合同。
+
+第二轮源码 `90c8fda2592483c219deb647af26b73bdb56eed4`，
+[Actions 37130648722](https://github.com/foolkking/chat-reader/actions/runs/37130648722)：
+API 与设置门槛成功（126 通过），空实例恢复也通过（1 通过）；补丁回归及安全审计通过。Web 后续导入
+恢复测试仍查找旧 Conversation Rescue 按钮，迁移后实际为格式转换 Skill。
+修正为当前入口并补齐四条遗漏的英文翻译；用实际 ZIP 内容检查下载的是 Normalizer。
+没有降低任何解析或恢复断言。
+
+本地 `import-context-interop-final`：33 通过、3 失败、1 外部文件用例跳过。
+导入映射/替换/Normalizer 下载、整包回传、三个历史快照、导出、真实离线和 Skill
+替换均通过。三项草稿检查硬编码了匿名数据库，在认证 fixture 下读错库；更新测试
+读取当前账户的独立命名空间，不修改应用存储或放宽账户隔离。
+`context-drafts-auth-final`：3 通过、0 跳过，验证实际草稿字节、并发分支、恢复文件、
+保存/取消清理与刷新。新翻译的生产构建通过，等待下一轮完整 CI。

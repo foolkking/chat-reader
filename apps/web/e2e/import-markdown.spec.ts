@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "node:path";
+import { unzipSync, strFromU8 } from "fflate";
 
 const runImportFlow = process.env.E2E_IMPORT_FLOW === "1";
 
@@ -174,7 +175,17 @@ test("keeps valid mapping work while invalid groups are excluded or replaced", a
     const replaceButton = page.getByRole("button", { name: /(?:替换|Replace) broken-/ }).first();
     await replaceButton.focus();
     await expect(replaceButton).toBeFocused();
-    await expect(page.getByRole("button", { name: /使用 Conversation Rescue|Use Conversation Rescue/ })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: /使用格式转换 Skill|Use format conversion Skill/ })).toHaveCount(2);
+    await page.getByRole("button", { name: /使用格式转换 Skill|Use format conversion Skill/ }).first().click();
+    const converter = page.getByRole("dialog", { name: /使用格式转换 Skill|Use format conversion Skill/ });
+    const bundleUrl = await converter.getByRole("link", { name: /下载 Skill|Download skill/ }).getAttribute("href");
+    const bundle = await page.request.get(bundleUrl!);
+    expect(bundle.status()).toBe(200);
+    const members = unzipSync(await bundle.body());
+    const instructions = Object.entries(members).find(([name]) => name.endsWith("/SKILL.md"));
+    expect(instructions).toBeTruthy();
+    expect(strFromU8(instructions![1])).toContain("chat-transcript-normalizer");
+    await converter.getByRole("button", { name: /稍后处理|Do this later/ }).click();
 
     await page.getByRole("button", { name: /设置格式|Map format/ }).click();
     await page.getByLabel(/保存为导入格式|Format name/).fill(profileName);
