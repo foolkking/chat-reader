@@ -1,5 +1,12 @@
 # Testing Addendum 2026-08-24
 
+2026-10-04 upload gateway: required Web CI runs
+`python scripts/verify-context-upload-proxy.py` with nginx-light. It starts isolated
+listeners from the shipped Context/Skill locations and verifies five 12 MiB body
+hashes, Origin/Cookie forwarding, two 413 limits and four unchanged non-upload
+routes. It fails if Nginx is unavailable. Application ZIP/authorization/persistence
+tests remain separate; this transport probe does not modify production config.
+
 2026-10-03 dependency regression: `node --test scripts/security/braces-depth.test.mjs`
 checks the installed Tailwind/micromatch/chokidar paths, deep braces/parentheses,
 unterminated patterns, direct AST calls and valid glob outputs. It is required

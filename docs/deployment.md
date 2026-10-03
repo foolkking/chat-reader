@@ -1,5 +1,11 @@
 # 生产部署
 
+2026-10-03 发布前补齐 Context/Skill 上传网关：从模板的
+`BEGIN CONTEXT BUNDLE UPLOADS` 块提取独立 snippet 加入现有 TLS server，
+执行 `nginx -t` 后 reload。Context 回传 520 MiB、Skill 新建/替换 20 MiB，
+应用继续分别限制 512/16 MiB。只修改对应路由，保留 TLS 与所有其他站点。
+隔离 Nginx 的真实大请求传输检查已通过；生产尚未应用。
+
 Latest input update (2026-10-03): Skill upload/replacement accepts ZIP and Markdown.
 Markdown is automatically stored as a compatibility Bundle, preserving original
 instructions and the Skill display name; downloads use that name with `.zip`.

@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-04 Context/Skill gateway follow-up: deployment docs and
+`system/DEPLOYMENT_AND_ENVIRONMENT.md` own exact upload routing/size boundaries;
+`testing.md` owns the real isolated Nginx transport gate. The existing dated
+settings execution record preserves CI failures and corrected draft tests.
+
 2026-10-03 release follow-up: the local braces nesting patch, exact advisory
 accounting and removal deadline are owned by `docs/system/RELEASE_SAFETY_BASELINE.md`.
 Its regression is listed in `docs/testing.md`; first-run CI failures and replacement

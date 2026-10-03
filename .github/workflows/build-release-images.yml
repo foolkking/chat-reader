@@ -196,6 +196,12 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
 
+      - name: Context and Skill upload proxy transport
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx-light
+          python scripts/verify-context-upload-proxy.py
+
       - name: Adaptive Import recovery browser flow
         timeout-minutes: 20
         env:

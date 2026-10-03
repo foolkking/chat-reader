@@ -166,7 +166,7 @@ The application and proxy limits in this section are 500/520 MiB respectively.
 
 The application limit defaults to 500 MiB per user-uploaded file and Preview
 accepts at most one JSON plus one Markdown file. Nginx keeps a 60 MiB global
-boundary and uses 520 MiB only for the three exact large-upload locations.
+boundary and larger allowances only for the documented upload locations.
 Those locations stream directly to the API's loopback-only port with
 `proxy_request_buffering off`; they do not traverse the Next.js rewrite, whose
 proxy request clone is intentionally unsuitable for hundreds of MiB. The API
@@ -182,6 +182,23 @@ default), independently of the import parser limit. The exact
 overhead. Large attachment staging is a bounded disk copy using its own
 admission slot; parser-backed imports retain the memory reserve check and return
 a retryable 429 when memory is low.
+
+## Context and Skill upload boundary
+
+Context returns at `/api/conversations/{uuid}/continuation/returns` stream directly
+to loopback FastAPI with a 520 MiB gateway allowance and the existing 512 MiB
+compressed-package application limit. Personal `/api/skills` creation/revisions
+and `/api/admin/system-skills/bundle` creation/revisions use a separate 20 MiB
+gateway allowance for the 16 MiB Skill limit. Anchored locations preserve ordinary
+routes. Direct Current/Index updates remain below 10 MiB combined and use the
+normal API path. No gateway rule bypasses application authentication/ownership.
+
+The marked Context/Bundle block in `deploy/nginx-chat-reader.conf` must be installed
+in the existing TLS server during release without replacing other configuration.
+`python scripts/verify-context-upload-proxy.py` starts isolated Nginx/upstream
+listeners and checks actual 12 MiB body hashes, forwarded auth headers, over-limit
+rejection and unrelated paths. CI runs it with nginx-light; this is transport
+evidence, separate from the authenticated application and production smoke gates.
 
 ## Worker memory boundary
 
