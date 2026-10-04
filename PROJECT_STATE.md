@@ -23,7 +23,9 @@ Do not treat the earlier release's CI as proof for the new changes.
 The first UX CI passed API/Web but failed Settings due to obsolete inline task
 selectors and cascading fixture-login throttling. Follow-up fixes also protect
 nested review drafts from parent-modal Escape; 18 noise flows and 23 registration,
-Share/UX cases pass locally. The corrected revision awaits its full CI result.
+Share/UX cases pass locally. Corrected implementation `5ef984af86d6b36b7cfac8f1a82d8118d6434d51`
+passed [complete CI 37208932974](https://github.com/foolkking/chat-reader/actions/runs/37208932974):
+API, Settings, Web, image build and release artifact inspection are all successful.
 
 ## System and boundaries
 
@@ -78,8 +80,10 @@ The current UX round passes build/lint/typecheck, API 867/4 skipped and focused
 UX 14/14; related offline/Share/source/Task Center/DnD checks pass as recorded
 in its execution record. CI for the committed revision owns the full PWA gate.
 
-The UX implementation is complete; its committed source must pass the complete
-GitHub release workflow before release. A second
+The UX implementation is complete and its corrected source `5ef984a` passed the
+complete GitHub release workflow. Settings: 126 plus 1 isolated restore passed;
+API: 868 passed/3 skipped; default PWA: 134 passed/264 mode-specific skips;
+offline negatives: 17 passed. Skips are not passes. A second
 production deployment is a separate step; it has not been performed or authorized
 for this UX round. No new migration is introduced by its presentation changes.
 

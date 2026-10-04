@@ -159,3 +159,21 @@ Build, lint and typecheck pass after the modal fix. The corrected source require
 a fresh complete workflow; the previous source's green jobs do not certify it.
 Final follow-up browser run: **23 passed, no skips** (registration 7, Share focus 2,
 whole-site UX 14), with real API/worker and PostgreSQL persistence.
+
+### Verified implementation and delivery
+
+Implementation `5ef984af86d6b36b7cfac8f1a82d8118d6434d51` is pushed to GitHub and
+passed [workflow 37208932974](https://github.com/foolkking/chat-reader/actions/runs/37208932974).
+All five jobs succeeded: API, Settings, Web, image build and artifact inspection.
+The final evidence-only documentation commit does not change executable source.
+
+- API: 868 passed / 3 skipped; Context runtime: 64 passed; safety: 53 passed.
+- Settings: 126 passed; isolated empty-instance archive restore: 1 passed.
+- Context browser: 30 passed; focused online: 45 passed; source/mutation and
+  whole-site UX gate: 18 passed; authentication: 18 passed; PDF: 5 passed.
+- Default PWA: 134 passed / 264 mode-specific skips; offline negatives: 17 passed.
+- Build, lint, typecheck, single-head/current migration and artifact inspection pass.
+
+Overlapping gates are not summed. Three API optional-fixture skips and mode-specific
+browser skips remain unexecuted in those gates. This UX batch is **not deployed**;
+production remains `0219fd5`. This record supersedes the earlier pending-CI notes.

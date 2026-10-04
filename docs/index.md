@@ -4,6 +4,7 @@
 [Project State](../PROJECT_STATE.md) 是当前快照；[部署记录](execution/DEPLOYMENT_CONTEXT_2026-10-04.md) 记录生产证据。
 
 部署后的全站 UX 轮次见 [18 项审查](evidence/ux-audit-whole-site-2026-10-04.md) 与 [执行记录](execution/WHOLE_SITE_UX_2026-10-04.md)，尚未再次部署。
+实现 `5ef984a` 已通过 [完整 CI 37208932974](https://github.com/foolkking/chat-reader/actions/runs/37208932974)，包括设置、Web、API 与镜像检查。
 
 ## 开始这里
 
