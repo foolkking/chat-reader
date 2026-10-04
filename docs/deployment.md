@@ -1,5 +1,18 @@
 # 生产部署
 
+## Current release — 2026-10-04
+
+Production source is `0219fd5c5facfd6c57a5d651e74e7e58ff6b62eb`, successful
+Actions `37143028696`, Alembic `20261003_0046`. Verified backup:
+`/opt/chat-reader/backups/chat-reader-20261003T183717Z`. Prior `ad223cd` images
+remain the direct rollback pair. PostgreSQL and production configuration were
+preserved. Exact Context/Skill upload routes are installed through the dedicated
+Nginx snippet; the internal diagnostics gateway remains private. Authenticated
+HTTP and 375/768/1440px read-only settings browser checks pass. Detailed provenance,
+scope, skipped cases and failed attempts are in the
+[deployment record](execution/DEPLOYMENT_CONTEXT_2026-10-04.md).
+Earlier source/deployment checkpoints below retain their historical meaning.
+
 2026-10-03 发布前补齐 Context/Skill 上传网关：从模板的
 `BEGIN CONTEXT BUNDLE UPLOADS` 块提取独立 snippet 加入现有 TLS server，
 执行 `nginx -t` 后 reload。Context 回传 520 MiB、Skill 新建/替换 20 MiB，

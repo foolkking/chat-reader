@@ -153,7 +153,7 @@ test("open project page accepts a conversation from the sidebar without leaving 
 
     await expect.poll(() => conversationProject(page.request, conversationId)).toBe(projectId);
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}$`));
-    await expect(page.getByRole("article").getByRole("link", { name: `Current project drop ${suffix}`, exact: true })).toBeVisible();
+    await expect(page.getByRole("article").getByRole("heading", { name: `Current project drop ${suffix}`, exact: true })).toBeVisible();
     await expect(page.getByTestId("current-project-drop-zone")).toHaveCount(1);
     await expect(page.getByText(/Move failed|移动失败/)).toHaveCount(0);
   } finally {

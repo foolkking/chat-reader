@@ -1,5 +1,27 @@
 # 前端架构
 
+## Whole-site interaction contracts (2026-10-04)
+
+New/inserted-message and project-setting forms share dirty-close confirmation and
+in-flight write guards. Project settings use bounded scrolling inside fixed
+header/footer; disabled fieldsets sit inside the scroll container. Modal keyboard
+ownership follows the highest visible dialog layer, with DOM order breaking ties.
+Project menus are body-level, touch-visible and keyboard-operable; activation
+must not reach an ancestor DnD sensor. Named project symbols and validated colors
+fall back for unknown legacy values. Phone project creation uses the existing API.
+
+Search scope and accumulated pages are keyed together without remounting filter
+controls. All status is a non-default scope. Button submit searches; Enter opens
+a result after deliberate keyboard selection on the current query. Stale debounced
+results and IME confirmation cannot navigate. Visual/keyboard order agrees;
+load/error/empty states are distinct and retry preserves the query.
+
+Attachment/export counts stay unknown on failure. File operations retain failed
+names/selections; copying waits for clipboard completion. Export status retry
+reuses the existing job. Task Center keeps detailed progress/actions; sidebar and
+mobile show one bounded launcher. Zero-hit ready scans are not review prompts.
+Reads/actions report errors and both languages retain offline packaging phases.
+
 ## Settings presentation (2026-10-03, local)
 
 Settings entry rows display names without duplicated descriptions. Preference sync

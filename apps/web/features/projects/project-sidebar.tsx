@@ -39,6 +39,7 @@ import type { ConversationCreateResponse, ConversationListItem, ProjectConversat
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
 import { NewConversationDialog } from "../conversations/new-conversation-dialog";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
+import { ProjectSymbol } from "./project-symbol";
 import { TaskCenterDialog } from "../import/task-center-dialog";
 import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
 import { SidebarPreferences } from "../../components/sidebar-preferences";
@@ -146,6 +147,11 @@ export function ProjectSidebar({
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showTaskCenter, setShowTaskCenter] = useState(false);
+  useEffect(() => {
+    const openTasks = () => { setShowMobileDrawer(false); setShowTaskCenter(true); };
+    window.addEventListener("chat-reader:open-task-center", openTasks);
+    return () => window.removeEventListener("chat-reader:open-task-center", openTasks);
+  }, []);
   const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | DragProject | null>(null);
@@ -568,7 +574,7 @@ function CurrentProjectDropPortal({ projectId, projectName, zh }: { projectId: s
 
 function SidebarDragPreview({ drag, size, dropIntent, project, locale }: { drag: DragConversation | DragProject; size: { width: number; height: number } | null; dropIntent: DropIntent | null; project?: ProjectRead; locale: "zh-CN" | "en-US" }) {
   if (drag.activeType === "project") {
-    return <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay flex items-center gap-2 px-3 text-sm text-primary" style={size ? { width: size.width, height: size.height } : undefined} aria-hidden="true"><Folder className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate font-medium">{project?.name ?? (locale === "zh-CN" ? "项目" : "Project")}</span><span className="shrink-0 text-[11px] text-secondary">{project?.conversation_count ?? 0}</span></div>;
+    return <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay flex items-center gap-2 px-3 text-sm text-primary" style={size ? { width: size.width, height: size.height } : undefined} aria-hidden="true"><ProjectSymbol project={project} /><span className="min-w-0 flex-1 truncate font-medium">{project?.name ?? (locale === "zh-CN" ? "项目" : "Project")}</span><span className="shrink-0 text-[11px] text-secondary">{project?.conversation_count ?? 0}</span></div>;
   }
   return <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay px-3 py-2 text-sm text-primary" style={size ? { width: size.width, height: size.height } : undefined} aria-hidden="true"><p className="truncate font-medium">{drag.title}</p>{drag.description ? <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{drag.description}</p> : null}{drag.projectName ? <p className="mt-0.5 truncate text-[10px] text-accent">{drag.projectName}</p> : null}</div>;
 }
@@ -610,6 +616,7 @@ type SidebarContentProps = {
 
 function SidebarContent(props: SidebarContentProps) {
   const t = useTranslations();
+  const zh = usePreferences().resolvedLocale === "zh-CN";
   const projectCreateTriggerRef = useRef<HTMLButtonElement | null>(null);
   const closeProjectCreateForm = () => {
     props.setShowProjectForm(false);
@@ -639,7 +646,7 @@ function SidebarContent(props: SidebarContentProps) {
         <div className="mt-5">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-semibold text-secondary">{t("projects")}</h2>
-            <div className="hidden items-center gap-1 md:flex"><button ref={projectCreateTriggerRef} type="button" aria-label="新建项目" title="新建项目" onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button></div>
+            <button ref={projectCreateTriggerRef} type="button" aria-label={zh ? "新建项目" : "New project"} title={zh ? "新建项目" : "New project"} aria-expanded={props.showProjectForm} onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button>
           </div>
           {props.showProjectForm ? <ProjectCreateForm {...props} onCancel={closeProjectCreateForm} /> : null}
           <SortableContext items={props.projects.map((project) => `project-order:${project.id}`)} strategy={verticalListSortingStrategy}><div className="mt-2 space-y-1">
@@ -671,10 +678,11 @@ function SidebarContent(props: SidebarContentProps) {
 }
 
 function ProjectCreateForm(props: SidebarContentProps & { onCancel: () => void }) {
+  const zh = usePreferences().resolvedLocale === "zh-CN";
   return (
-    <form className="mt-2 hidden rounded-xl border border-ui bg-surface p-2 md:block" onSubmit={(event) => { event.preventDefault(); props.onCreateProject(); }} onKeyDown={(event) => { if (event.key === "Escape" && !props.createPending) { event.preventDefault(); props.onCancel(); } }}>
-      <input autoFocus value={props.name} onChange={(event) => props.setName(event.target.value)} className="min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary outline-none focus:border-[var(--accent)]" placeholder="项目名称" aria-label="项目名称" />
-      <button type="submit" disabled={!props.name.trim() || props.createPending} className="mt-2 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50">创建项目</button>
+    <form className="mt-2 rounded-xl border border-ui bg-surface p-2" onSubmit={(event) => { event.preventDefault(); if (!props.createPending) props.onCreateProject(); }} onKeyDown={(event) => { if (event.key === "Escape" && !props.createPending) { event.preventDefault(); event.stopPropagation(); props.onCancel(); } }}>
+      <input autoFocus disabled={props.createPending} value={props.name} onChange={(event) => props.setName(event.target.value)} className="min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary outline-none focus:border-[var(--accent)]" placeholder={zh ? "项目名称" : "Project name"} aria-label={zh ? "项目名称" : "Project name"} />
+      <div className="mt-2 flex gap-2"><button type="button" disabled={props.createPending} onClick={props.onCancel} className="min-h-10 rounded-lg border border-ui px-3 text-sm text-primary">{zh ? "取消" : "Cancel"}</button><button type="submit" disabled={!props.name.trim() || props.createPending} className="min-h-10 flex-1 rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50">{props.createPending ? (zh ? "正在创建…" : "Creating…") : (zh ? "创建项目" : "Create project")}</button></div>
       {props.createError ? <p className="mt-2 text-xs text-[var(--danger)]">{props.createError}</p> : null}
     </form>
   );
@@ -696,7 +704,7 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
     <div data-testid={`project-order-slot-${project.id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}><div ref={setNodeRef} data-testid={`project-conversation-container-${project.id}`} className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
       <div ref={sortable.setNodeRef} {...sortable.attributes} {...sortable.listeners} data-state={sortable.isDragging ? "dragging" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} className={`reader-interactive-row group flex min-h-9 items-center rounded-lg text-primary outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>
         <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`} data-no-dnd onPointerDown={(event) => event.stopPropagation()} onClick={toggle} className="flex h-9 w-8 shrink-0 items-center justify-center text-secondary">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
-        <Link href={`/projects/${project.id}`} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm text-primary" title={`${fullActivityTime(projectActivityTime, resolvedLocale)} · ${project.conversation_count}`}><Folder className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate font-medium">{project.name}</span><span className="shrink-0 text-[11px] text-secondary">{formatActivityTime(projectActivityTime, resolvedLocale)}</span></Link>
+        <Link href={`/projects/${project.id}`} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm text-primary" title={`${fullActivityTime(projectActivityTime, resolvedLocale)} · ${project.conversation_count}`}><ProjectSymbol project={project} /><span className="min-w-0 flex-1 truncate font-medium">{project.name}</span><span className="shrink-0 text-[11px] text-secondary">{formatActivityTime(projectActivityTime, resolvedLocale)}</span></Link>
         <ProjectActionMenu project={project} onChanged={onProjectChanged} />
       </div>
       {expanded ? (

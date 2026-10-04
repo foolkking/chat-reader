@@ -244,7 +244,7 @@ test("Task Center exposes the current offline packaging store and progress", asy
   await page.getByTestId("sidebar-tasks-button").click();
 
   const task = page.getByTestId("task-center-panel").getByTestId("task-offline_package-processing");
-  await expect(task).toContainText("整理离线搜索索引");
+  await expect(task).toContainText(/整理离线搜索索引|Preparing offline search index/);
   await expect(task).toContainText("2 / 5");
   await expect(task).toContainText("64%");
 });

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Download, FileArchive, FileJson2, FileText } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import {
   getConversationAttachments,
@@ -30,6 +30,7 @@ export function ExportPanel({
   const zh = resolvedLocale === "zh-CN";
   const [format, setFormat] = useState<ConversationExportFormat>("context");
   const [includeContinuation, setIncludeContinuation] = useState(true);
+  const submitLock = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [includeAttachments, setIncludeAttachments] = useState(false);
   const [includeDescription, setIncludeDescription] = useState(false);
@@ -87,11 +88,12 @@ export function ExportPanel({
         label={zh ? "包含附件" : "Include attachments"}
         description={attachmentsQuery.isLoading
           ? (zh ? "正在检查当前对话文件" : "Checking conversation files")
-          : zh
+          : attachmentsQuery.isError ? (zh ? "文件数量暂不可用" : "File count unavailable") : zh
             ? `${attachments.length} 个文件，${unavailableCount} 个缺失或不可用`
             : `${attachments.length} files, ${unavailableCount} missing or unavailable`}
       />
 
+      {attachmentsQuery.isError ? <button type="button" disabled={attachmentsQuery.isFetching} onClick={() => void attachmentsQuery.refetch()} className="min-h-10 text-sm text-accent">{zh ? "重试读取附件" : "Retry loading attachments"}</button> : null}
       {format === "context" ? <OptionRow
         checked={includeContinuation}
         onChange={setIncludeContinuation}
@@ -128,6 +130,7 @@ export function ExportPanel({
         </p>
       </div>
 
+      {jobKey === currentKey && taskQuery.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{zh ? "暂时无法获取导出进度，任务可能仍在运行。" : "Export status is unavailable. The task may still be running."}</p><button type="button" disabled={taskQuery.isFetching} onClick={() => void taskQuery.refetch()} className="min-h-10 underline">{zh ? "重新获取进度" : "Retry status"}</button></div> : null}
       {format === "context" || includeAttachments ? (
         downloadUrl && taskQuery.data?.status === "committed" ? (
           format === "context" ? (
@@ -142,6 +145,8 @@ export function ExportPanel({
             type="button"
             disabled={submitting || (jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled"].includes(taskQuery.data?.status ?? "queued"))}
             onClick={() => void (async () => {
+              if (submitLock.current) return;
+              submitLock.current = true;
               setQueueError(null);
               setSubmitting(true);
               try {
@@ -158,13 +163,14 @@ export function ExportPanel({
               } catch (error) {
                 setQueueError(error instanceof Error ? error.message : (zh ? "无法创建导出任务" : "Unable to create export"));
               } finally {
+                submitLock.current = false;
                 setSubmitting(false);
               }
             })()}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"
           >
             <FileArchive className="h-4 w-4" />
-            {submitting ? (zh ? "正在创建任务…" : "Creating task…") : jobKey === currentKey && jobId && !["failed", "cancelled", "committed"].includes(taskQuery.data?.status ?? "queued")
+            {submitting ? (zh ? "正在创建任务…" : "Creating task…") : jobKey === currentKey && taskQuery.isError ? (zh ? "等待获取任务状态" : "Waiting for task status") : jobKey === currentKey && jobId && !["failed", "cancelled", "committed"].includes(taskQuery.data?.status ?? "queued")
               ? (zh ? `正在生成 ${taskQuery.data?.progress ?? 0}%` : `Generating ${taskQuery.data?.progress ?? 0}%`)
               : (zh ? "生成导出包" : "Generate export")}
           </button>

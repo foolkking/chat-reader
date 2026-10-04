@@ -1,5 +1,16 @@
 # 部署与运行环境
 
+## Current deployment (2026-10-04)
+
+Source `0219fd5c5facfd6c57a5d651e74e7e58ff6b62eb` from successful CI
+`37143028696` is live, with Alembic `20261003_0046`. The scoped Context/Skill
+upload gateway below is installed. API, worker and Web use verified prebuilt
+images; PostgreSQL/environment remain unchanged. The verified backup and previous
+`ad223cd` images are retained. Authenticated HTTP, pinned Bundle downloads and
+three-width read-only settings browser checks pass; see the
+[deployment evidence](../execution/DEPLOYMENT_CONTEXT_2026-10-04.md).
+Subsequent snapshots below are historical, not the current production revision.
+
 2026-10-02 已部署的版本与诊断扩展：生产镜像构建参数 `BUILD_REVISION` 为完整40位
 小写 Git commit；省略则帮助页显示未知，非法非空值拒绝构建。GitHub workflow
 将当前 `GITHUB_SHA` 注入 API/Web，production Compose 本机构建也传递该可选参数。

@@ -118,6 +118,7 @@ for (const legacy of [false, true]) test(`${legacy ? "legacy optional-member com
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator(`[data-message-id="${message.id}"]`).first()).toBeVisible();
+  await page.screenshot({ path: info.outputPath("offline-reader-after-reload.png") });
   await page.getByRole("button", { name: "Message actions", exact: true }).click();
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const panel = page.getByTestId("offline-export-panel");
@@ -130,7 +131,11 @@ for (const legacy of [false, true]) test(`${legacy ? "legacy optional-member com
   expect(offline.inspection).toEqual(online.inspection);
   expect(offline.inspection.attachment_refs).toBe(1);
   expect(offline.inspection.message_count).toBe(2);
-  expect(offline.records.filter(record => record.record_type === "source_ref")).toEqual(online.records.filter(record => record.record_type === "source_ref"));
+  // References bind to explicit message IDs; their inter-message emission order
+  // differs between the database stream and the offline message-order traversal.
+  const refs = (records: typeof offline.records) => records.filter(record => record.record_type === "source_ref")
+    .sort((a, b) => a.message_id.localeCompare(b.message_id) || a.source_index - b.source_index);
+  expect(refs(offline.records)).toEqual(refs(online.records));
   for (const saved of [online, offline]) {
     expect(saved.records.filter(record => record.record_type === "message").map(record => record.current_version.content_markdown)[1]).toBe(newBody);
     const missingHistory = legacy && saved === offline;

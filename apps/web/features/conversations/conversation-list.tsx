@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -48,6 +48,8 @@ export function ConversationList({
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const sortBusy = useRef(false);
+  const [sortError, setSortError] = useState(false);
   const [activeSortId, setActiveSortId] = useState<string | null>(null);
   const [activeSortSize, setActiveSortSize] = useState<{ width: number; height: number } | null>(null);
   const sortSensors = useSensors(
@@ -129,13 +131,17 @@ export function ConversationList({
   }
 
   async function handleSortEnd(event: DragEndEvent) {
-    if (conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
+    if (sortBusy.current || conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
     const rows = conversationsQuery.data ?? [];
     const oldIndex = rows.findIndex((item) => item.id === event.active.id);
     const newIndex = rows.findIndex((item) => item.id === event.over?.id);
     if (oldIndex < 0 || newIndex < 0) return;
+    sortBusy.current = true; setSortError(false);
+    try {
     await updateConversationOrder(arrayMove(rows, oldIndex, newIndex).map((item) => item.id));
     await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    } catch { setSortError(true); }
+    finally { sortBusy.current = false; }
   }
 
   function handleSortStart(event: DragStartEvent) {
@@ -268,6 +274,7 @@ export function ConversationList({
           <SelectionModeButton active={selectionMode} locale={resolvedLocale} onClick={selectionMode ? exitSelectionMode : () => setSelectionMode(true)} />
         </div>
       </div>
+      {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
       {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
       {selectionMode ? <SelectionToolbar
         selectedCount={selectedConversationIds.size}

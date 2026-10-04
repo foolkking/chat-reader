@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderArchive, RotateCcw, Trash2 } from "lucide-react";
+import { RotateCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
 import { usePreferences } from "../../components/preferences-provider";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { deleteProject, getProjects, updateProject } from "../../lib/api";
+import { ProjectSymbol } from "./project-symbol";
 import { runBatchSelection } from "../../lib/batch-selection";
 
 export function ArchivedProjectList() {
@@ -24,6 +25,8 @@ export function ArchivedProjectList() {
     queryFn: () => getProjects({ includeArchived: true, sort: "custom", direction: "asc" }),
   });
   const restoreMutation = useMutation({
+    onMutate: () => setBatchNotice(null),
+    onError: () => setBatchNotice(zh ? "恢复失败，项目仍在归档中，请重试。" : "Restore failed. The project is still archived; try again."),
     mutationFn: (projectId: string) => updateProject(projectId, { is_archived: false }),
     onSuccess: async () => {
       await Promise.all([
@@ -116,7 +119,7 @@ export function ArchivedProjectList() {
     return <p className="text-sm text-secondary">{zh ? "正在加载已归档项目…" : "Loading archived projects…"}</p>;
   }
   if (projectsQuery.isError) {
-    return <p className="text-sm text-red-700">{projectsQuery.error.message}</p>;
+    return <div role="alert" className="text-sm text-[var(--danger)]"><p>{zh ? "已归档项目加载失败" : "Could not load archived projects"}</p><button type="button" disabled={projectsQuery.isFetching} className="min-h-10 underline" onClick={() => void projectsQuery.refetch()}>{zh ? "重试" : "Retry"}</button></div>;
   }
   if (archivedProjects.length === 0) {
     return null;
@@ -150,7 +153,7 @@ export function ArchivedProjectList() {
         {archivedProjects.map((project) => (
           <div key={project.id} {...linearSelection.itemHandlers(project.id)} data-state={selectedProjectIds.has(project.id) ? "selected" : undefined} aria-selected={selectionMode ? selectedProjectIds.has(project.id) : undefined} className="reader-interactive-row group flex min-h-14 items-center gap-3 border-b border-ui px-4 py-2.5 last:border-b-0">
             <label className={`h-7 w-7 shrink-0 items-center justify-center rounded-md border border-ui bg-surface transition-opacity ${linearSelection.checkboxClass(project.id)}`}><input type="checkbox" checked={selectedProjectIds.has(project.id)} onClick={(event) => linearSelection.toggle(project.id, { selected: !selectedProjectIds.has(project.id), range: event.shiftKey })} onChange={() => undefined} aria-label={`${zh ? "选择" : "Select"} ${project.name}`} className="h-4 w-4 accent-[var(--accent)]" /></label>
-            <FolderArchive className="h-4 w-4 shrink-0 text-secondary" />
+            <ProjectSymbol project={project} />
             <div className="min-w-0 flex-1">
               {selectionMode ? <button type="button" onClick={() => {
                 const next = new Set(selectedProjectIds);

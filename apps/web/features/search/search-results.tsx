@@ -4,6 +4,11 @@ import Link from "next/link";
 import type { SearchResultItem } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 
+const groupOrder = ["annotation", "conversation", "message", "heading", "code"];
+export function orderSearchResults(items: SearchResultItem[]) {
+  return [...items].sort((a, b) => groupOrder.indexOf(a.document_type) - groupOrder.indexOf(b.document_type));
+}
+
 export function SearchResults({ items, query, activeIndex = -1, onActiveIndexChange }: { items: SearchResultItem[]; query: string; activeIndex?: number; onActiveIndexChange?: (index: number) => void }) {
   const { resolvedLocale } = usePreferences();
   const groups = ["annotation", "conversation", "message", "heading", "code"].map((type) => ({ type, items: items.map((item, index) => ({ item, index })).filter(({ item }) => item.document_type === type) })).filter((group) => group.items.length > 0);
@@ -16,7 +21,7 @@ export function SearchResults({ items, query, activeIndex = -1, onActiveIndexCha
       params.set("annotations", "open");
       if (item.annotation_id) params.set("annotationId", item.annotation_id);
     }
-    return <Link key={item.document_id} onMouseEnter={() => onActiveIndexChange?.(index)} href={`/conversations/${item.conversation_id}${params.size ? `?${params}` : ""}`} className={`block border-b border-ui px-5 py-4 last:border-0 hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--focus)] ${activeIndex === index ? "bg-subtle" : ""}`}><div className="flex gap-4"><div className="min-w-0 flex-1"><h2 className="truncate text-base font-semibold text-primary">{item.conversation_title}</h2><p className="mt-1 text-sm leading-6 text-secondary"><Highlight text={clean(item.snippet)} query={query} /></p>{item.document_type === "annotation" ? <p className="mt-1 text-xs text-accent">{item.annotation_type ?? "annotation"}{item.annotation_color ? ` · ${item.annotation_color}` : ""}</p> : null}{item.occurrence_count > 1 ? <p className="mt-1 text-xs text-secondary">{resolvedLocale === "zh-CN" ? `同时存在于 ${item.occurrence_count} 个对话` : `Also found in ${item.occurrence_count} conversations`}</p> : null}</div><div className="shrink-0 text-xs text-secondary">{documentLabel(item.document_type, resolvedLocale)}{item.role ? ` · ${roleLabel(item.role, resolvedLocale)}` : ""}</div></div></Link>;
+    return <Link key={item.document_id} data-search-index={index} aria-current={activeIndex === index ? "true" : undefined} onMouseEnter={() => onActiveIndexChange?.(index)} href={`/conversations/${item.conversation_id}${params.size ? `?${params}` : ""}`} className={`block border-b border-ui px-5 py-4 last:border-0 hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--focus)] ${activeIndex === index ? "bg-subtle" : ""}`}><div className="flex gap-4"><div className="min-w-0 flex-1"><h2 className="truncate text-base font-semibold text-primary">{item.conversation_title}</h2><p className="mt-1 text-sm leading-6 text-secondary"><Highlight text={clean(item.snippet)} query={query} /></p>{item.document_type === "annotation" ? <p className="mt-1 text-xs text-accent">{item.annotation_type ?? "annotation"}{item.annotation_color ? ` · ${item.annotation_color}` : ""}</p> : null}{item.occurrence_count > 1 ? <p className="mt-1 text-xs text-secondary">{resolvedLocale === "zh-CN" ? `同时存在于 ${item.occurrence_count} 个对话` : `Also found in ${item.occurrence_count} conversations`}</p> : null}</div><div className="shrink-0 text-xs text-secondary">{documentLabel(item.document_type, resolvedLocale)}{item.role ? ` · ${roleLabel(item.role, resolvedLocale)}` : ""}</div></div></Link>;
   })}</div></section>)}</div>;
 }
 

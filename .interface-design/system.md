@@ -1,6 +1,6 @@
 # Chat Reader Interface System
 
-Last synchronized: 2026-08-25.
+Last synchronized: 2026-10-04.
 
 ## Direction
 
@@ -75,7 +75,7 @@ Import Format revision ledger.
 
 ## Adaptive Import Rules
 
-- Keep the first screen light: only `JSON / Markdown` and `.cr`.
+- Ordinary import shows JSON / Markdown. `.cr` restoration belongs to Settings → Data & backup; `.context.zip` returns belong beside conversation annotations.
 - Overview names matched profiles; internal Family A/B labels are not primary
   user-facing identity.
 - Group Resolver appears only when pairing cannot be proven.
@@ -105,3 +105,7 @@ Import Format revision ledger.
   deletable.
 - A completed or explicitly ignored review disappears. Do not add cleanup-only
   undo UI; existing MessageVersion history is the recovery authority.
+
+## Usability recovery surfaces
+
+Dirty composition uses the shared confirmation; short dialogs keep title/actions fixed and scroll only their fields. Touch project menus remain visible; nested menu keys must not start drag sorting. Search filters disclose on demand without remounting focused inputs. Retry states preserve the query, failed draft or selected items. One bounded task launcher opens the existing Task Center; detailed phases remain bilingual. Keep these changes in the paper/graphite/sea-green token system.

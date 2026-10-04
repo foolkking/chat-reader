@@ -41,9 +41,12 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
     (preferred?.isConnected ? preferred : first ?? root)?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       const dialog = rootRef.current?.closest('[role="dialog"][aria-modal="true"]');
-      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
+        .filter((item) => item.getClientRects().length > 0)
+        .sort((a, b) => (Number.parseInt(getComputedStyle(a).zIndex) || 0) - (Number.parseInt(getComputedStyle(b).zIndex) || 0));
       // Nested confirmations own Escape/Tab until they close. The underlying
-      // settings dialog must not also close or steal their focus.
+      // settings dialog must not also close or steal their focus. Portals can
+      // appear later in the DOM while a confirmation has a higher modal layer.
       if (dialog && dialogs.length && dialogs[dialogs.length - 1] !== dialog) return;
       if (event.key === "Escape") {
         event.preventDefault();

@@ -33,7 +33,8 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
     enabled: debounced.length > 0,
     staleTime: 15_000,
   });
-  const items = result.data?.items ?? [];
+  const currentResults = query.trim() === debounced;
+  const items = currentResults ? result.data?.items ?? [] : [];
   const openResult = (index: number) => {
     const item = items[index];
     if (!item) return;
@@ -57,12 +58,13 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
         value={query}
         onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
         onKeyDown={(event) => {
-          if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((value) => Math.min(value + 1, items.length - 1)); }
+          if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+          if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((value) => Math.max(0, Math.min(value + 1, items.length - 1))); }
           if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((value) => Math.max(value - 1, 0)); }
           if (event.key === "Enter") {
             event.preventDefault();
             if (items.length) openResult(activeIndex);
-            else router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+            else { onNavigate?.(); router.push(`/search?q=${encodeURIComponent(query.trim())}`); }
           }
           if (event.key === "Escape") { setQuery(""); inputRef.current?.blur(); }
         }}
@@ -71,8 +73,8 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
         aria-label={labels.placeholder}
         data-testid="sidebar-global-search"
       />
-      {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label="Clear"><X className="h-3.5 w-3.5" /></button> : null}
-      {debounced ? (
+      {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={resolvedLocale === "zh-CN" ? "清除搜索" : "Clear search"}><X className="h-3.5 w-3.5" /></button> : null}
+      {query.trim() ? (
         <div className="absolute inset-x-0 top-11 z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
           {items.map((item, index) => (
             <button key={item.document_id} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
@@ -80,8 +82,10 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
               <span className="mt-0.5 block truncate text-xs text-secondary">{item.snippet}</span>
             </button>
           ))}
-          {!result.isFetching && items.length === 0 ? <p className="px-3 py-3 text-sm text-secondary">{labels.empty}</p> : null}
-          <button type="button" onClick={() => { onNavigate?.(); router.push(`/search?q=${encodeURIComponent(debounced)}`); }} className="flex min-h-10 w-full items-center justify-center border-t border-ui px-3 text-sm font-medium text-accent hover:bg-subtle">{labels.all}</button>
+          {currentResults && !result.isError && !result.isFetching && items.length === 0 ? <p className="px-3 py-3 text-sm text-secondary">{labels.empty}</p> : null}
+          {(!currentResults || result.isFetching) ? <p role="status" className="p-3 text-sm text-secondary">{resolvedLocale === "zh-CN" ? "正在搜索…" : "Searching…"}</p> : null}
+          {currentResults && result.isError ? <div role="alert" className="px-3 py-2 text-sm text-[var(--danger)]"><p>{resolvedLocale === "zh-CN" ? "搜索暂不可用" : "Search unavailable"}</p><button type="button" disabled={result.isFetching} className="min-h-10 underline" onClick={() => void result.refetch()}>{resolvedLocale === "zh-CN" ? "重试" : "Retry"}</button></div> : null}
+          <button type="button" onClick={() => { onNavigate?.(); router.push(`/search?q=${encodeURIComponent(query.trim())}`); }} className="flex min-h-10 w-full items-center justify-center border-t border-ui px-3 text-sm font-medium text-accent hover:bg-subtle">{labels.all}</button>
         </div>
       ) : null}
     </div>

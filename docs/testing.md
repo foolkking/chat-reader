@@ -1,5 +1,23 @@
 # Testing Addendum 2026-08-24
 
+## Whole-site UX gate (2026-10-04)
+
+`e2e/ux-whole-site.spec.ts` runs under `E2E_MUTATION_FLOW=1` in the required
+source-editor mutation CI gate. It uses real isolated API/worker writes for draft
+recovery, 60-result pagination, filtering/history/focus, file rename/removal, same-job
+export recovery, IME/stale search, phone projects and bounded noise-task summaries.
+375/768/1440px cover Chinese-light and English-dark. Failure injection is followed
+by actual persistence checks; it is not a mock-success gate.
+
+Related regressions are DnD, Task Center, Share modal focus, Source Editor atomic
+uploads, Context offline parity and authenticated offline identity locking. The
+legacy/mock shell and auth-enabled shell are separate modes. Source references
+are compared by explicit identity, not incidental inter-message emission order.
+See [execution](execution/WHOLE_SITE_UX_2026-10-04.md) for successful, failed,
+interrupted and skipped runs. Screenshots require loaded content; hydration/loading
+frames do not count as a reviewed final layout.
+
+
 2026-10-04 upload gateway: required Web CI runs
 `python scripts/verify-context-upload-proxy.py` with nginx-light. It starts isolated
 listeners from the shipped Context/Skill locations and verifies five 12 MiB body

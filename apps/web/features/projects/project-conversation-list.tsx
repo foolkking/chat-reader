@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -22,6 +22,7 @@ import type { BackgroundTaskRead, ProjectConversationRead, ProjectRead } from ".
 import { ConversationActionMenu, type UndoAction } from "../conversations/conversation-action-menu";
 import { MergeConversationsDialog } from "../conversations/merge-conversations-dialog";
 import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
+import { ProjectSymbol } from "./project-symbol";
 import { ProjectSidebar } from "./project-sidebar";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
@@ -47,6 +48,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const sortBusy = useRef(false);
+  const [sortError, setSortError] = useState(false);
   const [activeSortId, setActiveSortId] = useState<string | null>(null);
   const [activeSortSize, setActiveSortSize] = useState<{ width: number; height: number } | null>(null);
   const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
@@ -113,12 +116,16 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   }
 
   async function handleSortEnd(event: DragEndEvent) {
-    if (conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id || !conversationsQuery.data) return;
+    if (sortBusy.current || conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id || !conversationsQuery.data) return;
     const oldIndex = conversationsQuery.data.findIndex((item) => item.id === event.active.id);
     const newIndex = conversationsQuery.data.findIndex((item) => item.id === event.over?.id);
     if (oldIndex < 0 || newIndex < 0) return;
+    sortBusy.current = true; setSortError(false);
+    try {
     await updateProjectConversationOrder(projectId, arrayMove(conversationsQuery.data, oldIndex, newIndex).map((item) => item.id));
     await queryClient.invalidateQueries({ queryKey: ["project-conversations", projectId] });
+    } catch { setSortError(true); }
+    finally { sortBusy.current = false; }
   }
 
   function handleSortStart(event: DragStartEvent) {
@@ -192,7 +199,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               {conversationsQuery.isFetching || projectsQuery.isFetching ? <span role="status" className="sr-only">{zh ? "正在更新" : "Updating"}</span> : null}
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.1em] text-accent">{zh ? "项目工作区" : "Project workspace"}</p>
-                <h1 className="mt-2 truncate text-2xl font-semibold text-primary">{project?.name ?? (zh ? "项目" : "Project")}</h1>
+                <h1 className="mt-2 flex items-center gap-2 truncate text-2xl font-semibold text-primary"><ProjectSymbol project={project} className="h-6 w-6 shrink-0" />{project?.name ?? (zh ? "项目" : "Project")}</h1>
                 <p className="mt-2 text-sm text-secondary">{zh ? `${project?.conversation_count ?? 0} 个对话，${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -208,7 +215,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 }}
               />
             ) : null}
-            {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
+            {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
+      {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
 
             {selectionMode ? <SelectionToolbar
               selectedCount={selectedConversationIds.size}

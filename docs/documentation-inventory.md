@@ -1,5 +1,21 @@
 # Markdown 文档台账
 
+2026-10-04 whole-site UX closeout: `evidence/ux-audit-whole-site-2026-10-04.md`
+owns the 18 ranked findings and reviewed synthetic visual evidence;
+`execution/WHOLE_SITE_UX_2026-10-04.md` owns implementation, attempted checks and
+release limits. Frontend, user-flow and testing contracts own ongoing behavior.
+`.interface-design/system.md` reflects current import/Context locations and recovery
+patterns. PROJECT_STATE and index are condensed current entry points; the replaced
+checkpoint text is preserved under `archive/PROJECT_STATE-history-2026-10-04.md`.
+This UX round remains separate from the verified `0219fd5` deployment.
+
+
+2026-10-04 Context deployment: `execution/DEPLOYMENT_CONTEXT_2026-10-04.md` owns
+source/CI/artifact provenance, backup/migration, scoped production acceptance,
+failed attempts and rollback evidence. PROJECT_STATE, index and deployment
+contracts now record live source `0219fd5` and migration 0046. The subsequent
+whole-site UX audit is separate from this completed release.
+
 2026-10-04 offline cleanup: `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` records
 bounded idle-lock handoff and unchanged active-download/pending-edit guards.
 The settings execution log preserves the CI-discovered race and browser evidence.

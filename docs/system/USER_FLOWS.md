@@ -1,5 +1,19 @@
 # 当前用户流程
 
+## Whole-site recovery and mobile flows (2026-10-04)
+
+New conversation, message insertion and project settings retain unsaved input
+when closing is cancelled or submission fails. In-flight writes lock editing and
+repeat submissions. Project creation, settings, archive and restore work on phones;
+saved project symbols/colors appear in navigation and project lists.
+
+Search → optionally expand filters → inspect ordered results → open an explicit
+selection. All includes archives; clearing filters keeps the query. Scope changes
+reset paging without stealing focus. Failed searches offer retry, and input-method
+confirmation/stale matches cannot navigate. Files retain failed rename/removal
+input for retry. Export checks resume the same job. One bounded task shortcut opens
+all relevant work in Task Center; closing it never cancels a task.
+
 设置中的未保存状态在界面提交阶段同步传到外层退出保护；修改后立即按 Esc
 仍须确认放弃。取消确认保留输入并恢复焦点，不依赖下一次后台 effect 或延时。
 

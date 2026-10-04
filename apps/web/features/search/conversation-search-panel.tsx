@@ -87,9 +87,10 @@ export function ConversationSearchPanel({
     }),
     enabled: debounced.length > 0,
   });
+  const currentResults = query.trim() === debounced;
   const occurrences = useMemo(
-    () => (results.data?.items ?? []).flatMap((item) => toOccurrences(item)),
-    [results.data?.items],
+    () => (currentResults ? results.data?.items ?? [] : []).flatMap((item) => toOccurrences(item)),
+    [currentResults, results.data?.items],
   );
   const selectedIndex = Math.min(activeIndex, Math.max(0, occurrences.length - 1));
 
@@ -111,21 +112,23 @@ export function ConversationSearchPanel({
       <div className="border-b border-ui p-4">
         <label className="sr-only" htmlFor="conversation-search-input">{zh ? "搜索当前对话" : "Search this conversation"}</label>
         <input id="conversation-search-input" ref={inputRef} value={query} onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }} onKeyDown={(event) => {
-          if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((value) => Math.min(value + 1, occurrences.length - 1)); }
+          if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+          if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((value) => Math.max(0, Math.min(value + 1, occurrences.length - 1))); }
           if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((value) => Math.max(0, value - 1)); }
           if (event.key === "Enter") { event.preventDefault(); void activate(selectedIndex); }
           if (event.key === "Escape") { event.preventDefault(); onClose(); }
         }} className="h-11 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none placeholder:text-secondary focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" placeholder={zh ? "搜索当前对话" : "Search this conversation"} />
         <div className="mt-3 flex flex-wrap items-end gap-2">
-          <span className="mr-auto text-xs text-secondary" role="status">{debounced && !results.isFetching ? (zh ? `${occurrences.length} 个结果` : `${occurrences.length} results`) : ""}</span>
+          <span className="mr-auto text-xs text-secondary" role="status">{debounced && currentResults && !results.isError && !results.isFetching ? (zh ? `${occurrences.length} 个结果` : `${occurrences.length} results`) : ""}</span>
           <label className="text-xs font-medium text-secondary">{zh ? "我 / ChatGPT" : "Role"}<select value={role} onChange={(event) => { setRole(event.target.value); setActiveIndex(0); }} className="ml-1 h-8 rounded-md border border-ui bg-surface px-2 text-sm text-primary"><option value="all">{zh ? "全部" : "All"}</option><option value="user">{zh ? "我" : "You"}</option><option value="assistant">ChatGPT</option></select></label>
           <label className="text-xs font-medium text-secondary">{zh ? "筛选" : "Filter"}<select value={documentType} onChange={(event) => { setDocumentType(event.target.value); setActiveIndex(0); }} className="ml-1 h-8 rounded-md border border-ui bg-surface px-2 text-sm text-primary"><option value="all">{zh ? "全部" : "All"}</option><option value="message">{zh ? "正文" : "Messages"}</option><option value="heading">{zh ? "章节" : "Sections"}</option><option value="code">{zh ? "代码" : "Code"}</option><option value="annotation">{zh ? "批注" : "Annotations"}</option></select></label>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {!debounced ? <p className="p-4 text-sm text-secondary">{zh ? "输入关键词以搜索当前对话。" : "Enter a keyword to search this conversation."}</p> : null}
-        {results.isFetching ? <p role="status" className="p-4 text-sm text-secondary">{zh ? "正在搜索..." : "Searching..."}</p> : null}
-        {!results.isFetching && debounced && occurrences.length === 0 ? <div className="p-4 text-sm text-secondary"><p className="font-medium text-primary">{zh ? `没有找到“${debounced}”` : `No results for “${debounced}”`}</p><p className="mt-2">{zh ? "尝试使用更短的关键词或更改角色筛选。" : "Try a shorter keyword or a different role filter."}</p></div> : null}
+        {query.trim() && (!currentResults || results.isFetching) ? <p role="status" className="p-4 text-sm text-secondary">{zh ? "正在搜索..." : "Searching..."}</p> : null}
+        {currentResults && !results.isError && !results.isFetching && debounced && occurrences.length === 0 ? <div className="p-4 text-sm text-secondary"><p className="font-medium text-primary">{zh ? `没有找到“${debounced}”` : `No results for “${debounced}”`}</p><p className="mt-2">{zh ? "尝试使用更短的关键词或更改角色筛选。" : "Try a shorter keyword or a different role filter."}</p></div> : null}
+        {currentResults && results.isError ? <div role="alert" className="p-4 text-sm text-[var(--danger)]"><p>{zh ? "搜索暂不可用" : "Search unavailable"}</p><button type="button" disabled={results.isFetching} className="min-h-10 underline" onClick={() => void results.refetch()}>{zh ? "重试" : "Retry"}</button></div> : null}
         {occurrences.map((occurrence, index) => <button key={`${occurrence.item.document_id}-${index}`} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => void activate(index)} className={`block w-full border-b border-ui px-4 py-3 text-left ${selectedIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
           <span className="block text-xs font-medium text-secondary">{roleLabel(occurrence.item.role, zh)}</span>
           <span className="mt-1 block text-sm leading-6 text-primary"><ContextSnippet before={occurrence.before} match={occurrence.match} after={occurrence.after} /></span>

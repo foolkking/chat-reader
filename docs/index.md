@@ -1,79 +1,9 @@
 # 文档导航
 
-2026-10-04 发布检查：`e1e1007` 的 API、设置、30 项 Context 与后续 Reader/Share 门槛通过。
-PDF 门槛因遗漏中文菜单名称而在打开查看器前超时；修正后中英文及 Share 共 5 项本地通过。
-离线故障专项 17 项通过；等待替换 CI，尚未部署。
-详细失败历史和证据见 [设置执行记录](execution/SETTINGS_REAUDIT_2026-10-03.md)。
+当前线上：2026-10-04 Context 与设置发布，源码 `0219fd5`，CI `37143028696`，唯一 migration head/current `20261003_0046`。
+[Project State](../PROJECT_STATE.md) 是当前快照；[部署记录](execution/DEPLOYMENT_CONTEXT_2026-10-04.md) 记录生产证据。
 
-2026-10-03：本次授权使用 E 盘测试临时目录。最终 API 867 通过、4 跳过；PWA 基线 180 通过、201 开关跳过；离线故障专项 17 通过；最终认证 Context 专项 14 通过、认证与 Share 专项 4 通过，均无跳过。ZIP 路径歧义修复及外部合成审阅见 [执行记录](execution/CONTEXT_MIGRATION_2026-10-03.md) 与 [语义审阅](evidence/CONTEXT_SEMANTIC_WALKTHROUGH_2026-10-03.md)。设置复查已完成本地验收：9 项阅读同步与 14 项长 Reader/Share/Context 导航复验通过；失败历史和视觉检查见 [设置记录](execution/SETTINGS_REAUDIT_2026-10-03.md)。待提交、CI 和部署。
-
-2026-10-03：外部 Maintainer 双包写出及应用回传循环已有本地证据；改进运行时仍是独立 review Bundle，未替换用户指定默认 ZIP。真实 Skill 清单、旧 Rescue 定位及历史状态文档迁移见 [Context Skill 迁移](system/CONTEXT_SKILL_MIGRATION.md)。完整发布验收仍未完成。
-
-2026-10-03：真实 Normalizer 导入、worker 离线下载入库、断网重载及 Context 再导出链路已验证。
-补齐旧批注版本、项目说明和附件来源；完整发布验收仍未完成。见 [离线合同](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md)。
-
-Latest input update (2026-10-03): Skill upload/replacement accepts ZIP and Markdown.
-Markdown is automatically stored as a compatibility Bundle, preserving original
-instructions and the Skill display name; downloads use that name with `.zip`.
-System defaults remain the three supplied ZIPs. No Skill viewer is added.
-This supersedes earlier ZIP-only input statements below.
-
-Skill 最新约定：接受 ZIP 或 Markdown 上传和替换，Markdown 自动包装为同名 ZIP；系统默认使用用户提供的三个 Bundle，个人首选保留。设置不提供 Skill 内容查看，Current/Index 仍可阅读编辑。
-
-最新调整：用户取消候选、校验与采用流程，改为直接更新 Current / Index，默认保留最近 3 次记录。入口在 Reader 批注旁；已接入易读视图、编辑、本机草稿、文件查找、索引搜索与跳转、单文件历史恢复。完整迁移与发布验收仍未完成；详见 [Context 合同](system/CONTEXT_PACKAGE_CONTRACT.md)。
-
-Context 协议迁移当前状态：[Context Package Contract](system/CONTEXT_PACKAGE_CONTRACT.md)。直接文件保存、整包回传和最近三次记录已接入；旧候选／校验／采用 API 已退役。外部双包维护已有应用循环和合成审阅证据，review Bundle 已单独生成；独立外部模型使用、完整发布检查和后续设置复查仍待完成。
-
-当前管理员账户与内容合同：[Administration Contract](system/ADMINISTRATION_CONTRACT.md)，定义账户搜索分页、真实登录状态、后台删除幂等与共享资源保留，以及完整只读 Reader 和审计附件访问。
-
-当前应用数据归档：[Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)，定义系统 `.cr v5` 的身份/配置恢复、v4 显式映射及旧 v5 兼容、个人归档预检与新增恢复、幂等任务、导出容量自检与事务回滚，以及系统预检任务、持久归属选择和管理员恢复流程。
-
-当前渲染合同：[AI Rich Markdown Renderer](system/AI_RICH_MARKDOWN_CONTRACT.md)，定义 Reader、源码预览和 Markdown 附件共享的 Math/GFM/Footnote、安全、无障碍、溢出与离线资源行为。
-
-当前 Adaptive Import 合同：[Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)，定义 JSON/Markdown 的 session、group、family、profile revision、Mapping、canonical draft、直接导入和 `.cr` 独立恢复边界。
-
-当前内容清理合同：[Content Cleanup Contract](system/CONTENT_CLEANUP_CONTRACT.md)，定义规则 revision 与版本授权、系统发布／撤回、位置存储、导入后低优先级扫描、显式审查、个人忽略例外、规则试运行和 MessageVersion 应用边界。
-
-The deployed snapshot provides one deployment-provisioned administrator,
-isolated user accounts and UUID-based owner scoping, while preserving
-public-by-link Share/search behavior. Current facts are in
-[Project State](../PROJECT_STATE.md), [testing](testing.md),
-[Authentication Contract](system/AUTHENTICATION_CONTRACT.md), and
-[known issues](system/KNOWN_ISSUES_AND_UNCERTAINTIES.md). Historical release
-rows retain their checkpoint meaning; later Release K/M/N evidence supersedes
-their earlier incomplete verification records.
-
-The living improvement register is [Continuous Improvement Backlog](system/CONTINUOUS_IMPROVEMENT_BACKLOG.md).
-It is a candidate queue, not a replacement for current implementation facts.
-
-Release command-to-evidence mapping is maintained in
-[Release Evidence Index](system/RELEASE_EVIDENCE_INDEX.md). It distinguishes
-automated tests, browser verification and production verification.
-
-## 2026-08-11 current implementation notes
-
-- [2026-08-11 Final Release Closure](evidence/UX_RELEASE_READINESS_AUDIT_2026-08-10.md#final-release-closure-2026-08-11): current production lifecycle evidence, release matrix and remaining verification debt.
-- [Attachment UI](system/FRONTEND_ARCHITECTURE.md#附件-ui): `.cr` restore uses Settings → Data & backup; desktop conversation files use the annotation-style draggable Reader workspace.
-
-- [Backend/API merge and cancellation](system/BACKEND_AND_API.md#conversation-merge-execution-current)
-- [Reader and task user flow](system/USER_FLOWS.md#reader-source-workspace-and-merge-cancellation-current)
-- [API task additions](api-reference.md#current-task-additions-2026-08-04)
-- [Attachment data and storage](system/DATA_AND_STORAGE.md)
-- [Attachment UI and task-list rendering](system/FRONTEND_ARCHITECTURE.md#附件-ui)
-- [Attachment Renderer contract](system/ATTACHMENT_RENDERER_CONTRACT.md)
-- [Task toggle and attachment export API](api-reference.md)
-- [Current verification results](../results.md)
-- [Release D performance contract](system/PERFORMANCE_CAPACITY_CONTRACT.md)
-- [Release D characterization evidence](evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md)
-- [Release E PWA/offline resilience contract](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md)
-- [Release F Next LTS migration contract](system/NEXT_LTS_MIGRATION_CONTRACT.md)
-- [Release G PDF.js maintained-line migration contract](system/PDFJS_MIGRATION_CONTRACT.md)
-- [Release H CSP enforcement contract](system/CSP_ENFORCEMENT_CONTRACT.md)
-- [Release I Source Editor upload atomicity contract](system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md)
-- [Release N single-owner authentication contract](system/AUTHENTICATION_CONTRACT.md)
-- [Conversation/import/viewer test addendum](testing.md)
-
-当前事实以代码、配置、migration 和测试为准，最近部署核验日期为 2026-10-02（ad223cd，具体范围见 Project State）。阅读顺序建议：先看 [Project State](../PROJECT_STATE.md)，再进入对应专题；带日期的计划、执行和证据目录只用于历史追溯。
+部署后的全站 UX 轮次见 [18 项审查](evidence/ux-audit-whole-site-2026-10-04.md) 与 [执行记录](execution/WHOLE_SITE_UX_2026-10-04.md)，尚未再次部署。
 
 ## 开始这里
 

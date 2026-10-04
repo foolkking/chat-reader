@@ -29,6 +29,7 @@ import {
   type DragEvent,
   type ReactElement,
 } from "react";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import {
   createAttachmentUploadSession,
@@ -63,6 +64,11 @@ export function ConversationFilesPanel({
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const queryClient = useQueryClient();
+  const dialog = useInteractionDialog();
+  const [actionBusy, setActionBusy] = useState(false);
+  const actionLock = useRef(false);
+  const renameDrafts = useRef<Record<string, string>>({});
+  const [notice, setNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FileFilter>("all");
@@ -173,15 +179,51 @@ export function ConversationFilesPanel({
     }
   }
 
-  function detachSelection() {
+  async function detachSelection() {
     const removable = selectedFiles().filter((item) => !item.is_used);
     if (removable.length !== selected.size) {
       setError(zh ? "仍在当前正文中引用的文件不能移除。" : "Files still used by current messages cannot be detached.");
       return;
     }
     const promptText = zh ? `从当前对话文件中移除 ${removable.length} 个文件？` : `Detach ${removable.length} files from this conversation?`;
-    if (!window.confirm(promptText)) return;
-    for (const attachment of removable) detachMutation.mutate(attachment.id);
+    await detachFiles(removable, promptText);
+  }
+
+  async function renameFile(attachment: AttachmentRead) {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    try {
+      const name = await dialog.prompt({ title: zh ? "重命名显示名称" : "Rename display name", label: zh ? "显示名称" : "Display name", initialValue: renameDrafts.current[attachment.id] ?? attachment.display_name, confirmLabel: zh ? "保存" : "Save" });
+      if (!name) return;
+      renameDrafts.current[attachment.id] = name;
+      setActionBusy(true); setError(null); setNotice(null);
+      await renameMutation.mutateAsync({ attachmentId: attachment.id, displayName: name });
+      delete renameDrafts.current[attachment.id];
+      setNotice(zh ? "名称已保存" : "Name saved");
+    } catch { setError(zh ? "改名失败，请重试；已保留输入的名称。" : "Rename failed. Retry with your entered name preserved."); }
+    finally { actionLock.current = false; setActionBusy(false); }
+  }
+
+  async function detachFiles(removable: AttachmentRead[], title: string) {
+    if (actionLock.current || !removable.length) return;
+    actionLock.current = true;
+    try {
+      if (!await dialog.confirm({ title, confirmLabel: zh ? "移除" : "Detach", danger: true })) return;
+      setActionBusy(true); setError(null); setNotice(null);
+      let failed = 0;
+      for (const attachment of removable) {
+        try { await detachMutation.mutateAsync(attachment.id); }
+        catch { failed++; setSelected((current) => new Set([...current, attachment.id])); }
+      }
+      if (failed) setError(zh ? `已移除 ${removable.length - failed} 项，${failed} 项失败；失败项已保留选择，可重试。` : `${removable.length - failed} detached, ${failed} failed. Failed items remain selected; retry.`);
+      else setNotice(zh ? `已移除 ${removable.length} 个文件` : `${removable.length} files detached`);
+    } finally { actionLock.current = false; setActionBusy(false); }
+  }
+
+  async function copyReference(id: string) {
+    setError(null); setNotice(null);
+    try { await navigator.clipboard.writeText(`cr-asset://${id}`); setNotice(zh ? "附件引用已复制" : "Attachment reference copied"); }
+    catch { setError(zh ? "复制失败，请允许剪贴板访问后重试。" : "Copy failed. Allow clipboard access and retry."); }
   }
 
   return (
@@ -190,10 +232,10 @@ export function ConversationFilesPanel({
       aria-label={zh ? "当前对话文件" : "Conversation files"}
       data-testid="conversation-files-panel"
     >
-      <div className="shrink-0 space-y-2 border-b border-ui p-3">
+      <fieldset disabled={actionBusy} className="shrink-0 space-y-2 border-b border-ui p-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold">
-            {zh ? "当前对话文件" : "Conversation files"} · {filesQuery.data?.length ?? 0}
+            {zh ? "当前对话文件" : "Conversation files"} · {filesQuery.data?.length ?? "—"}
           </p>
           <input
             ref={inputRef}
@@ -258,7 +300,7 @@ export function ConversationFilesPanel({
             <span className="mr-auto">{zh ? `已选择 ${selected.size} 项` : `${selected.size} selected`}</span>
             <IconButton label={zh ? "下载所选" : "Download selected"} onClick={downloadSelection}><Download /></IconButton>
             <IconButton label={zh ? "插入到消息末尾" : "Insert at message end"} onClick={() => selectedFiles().forEach((item) => onInsert(item, "after_message"))}><Link2 /></IconButton>
-            <IconButton label={zh ? "移除所选" : "Detach selected"} onClick={detachSelection}><Trash2 /></IconButton>
+            <IconButton label={zh ? "移除所选" : "Detach selected"} onClick={() => void detachSelection()}><Trash2 /></IconButton>
           </div>
         ) : null}
         {capabilitiesQuery.data?.attachments.scanner_provider === "disabled" ? (
@@ -269,9 +311,11 @@ export function ConversationFilesPanel({
         ) : null}
         {Object.entries(progress).map(([name, value]) => <UploadProgress key={name} name={name} value={value} />)}
         {error ? <p role="alert" className="rounded bg-[var(--danger-soft)] p-2 text-xs text-[var(--danger)]">{error}</p> : null}
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        {actionBusy ? <p role="status" className="text-xs text-secondary">{zh ? "正在保存…" : "Saving…"}</p> : notice ? <p role="status" className="text-xs text-secondary">{notice}</p> : null}
+      </fieldset>
+      <div className="min-h-0 flex-1 overflow-y-auto"><fieldset disabled={actionBusy} className="min-w-0 p-3">
         {filesQuery.isLoading ? <p className="text-sm text-secondary">{zh ? "正在加载文件..." : "Loading files..."}</p> : null}
+        {filesQuery.isError ? <div role="alert" className="mb-3 text-sm text-[var(--danger)]"><p>{zh ? "文件列表加载失败" : "Could not load files"}</p><button type="button" disabled={filesQuery.isFetching} className="min-h-10 underline" onClick={() => void filesQuery.refetch()}>{zh ? "重试" : "Retry"}</button></div> : null}
         {visibleGroups.map((group) => group.items.length ? (
           <section key={group.id} className="mb-4" data-testid={`conversation-files-group-${group.id}`}>
             <h3 className="mb-1 text-[11px] font-semibold text-secondary">{group.title} · {group.items.length}</h3>
@@ -286,7 +330,7 @@ export function ConversationFilesPanel({
                   onPreview={() => setPreview(attachment)}
                   onShowDetails={() => setDetails(attachment)}
                   onLocate={(occurrence) => void onLocate(attachmentOccurrenceTarget(attachment, occurrence))}
-                  onCopyReference={() => void navigator.clipboard.writeText(`cr-asset://${attachment.id}`)}
+                  onCopyReference={() => void copyReference(attachment.id)}
                   onInsert={(placement) => onInsert(attachment, placement)}
                   onDragStart={(event) => {
                     event.dataTransfer.effectAllowed = "copy";
@@ -297,23 +341,20 @@ export function ConversationFilesPanel({
                     }));
                     event.dataTransfer.setData("text/plain", attachment.display_name);
                   }}
-                  onRename={() => {
-                    const displayName = window.prompt(zh ? "显示名称" : "Display name", attachment.display_name)?.trim();
-                    if (displayName) renameMutation.mutate({ attachmentId: attachment.id, displayName });
-                  }}
+                  onRename={() => void renameFile(attachment)}
                   onDelete={() => {
                     const promptText = zh
                       ? `从当前对话文件中移除“${attachment.display_name}”？`
                       : `Detach "${attachment.display_name}" from this conversation?`;
-                    if (window.confirm(promptText)) detachMutation.mutate(attachment.id);
+                    void detachFiles([attachment], promptText);
                   }}
                 />
               ))}
             </div>
           </section>
         ) : null)}
-        {!filesQuery.isLoading && files.length === 0 ? <EmptyFiles filtered={Boolean(search || filter !== "all")} zh={zh} /> : null}
-      </div>
+        {!filesQuery.isLoading && !filesQuery.isError && files.length === 0 ? <EmptyFiles filtered={Boolean(search || filter !== "all")} zh={zh} /> : null}
+      </fieldset></div>
       {preview ? <AttachmentPreviewDialog attachment={preview} onClose={() => setPreview(null)} /> : null}
       {details ? <AttachmentDetailsDialog attachment={details} zh={zh} onClose={() => setDetails(null)} onLocate={onLocate} /> : null}
     </section>

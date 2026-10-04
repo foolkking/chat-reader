@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, CheckCircle2, RefreshCw, X, Eraser } from "lucide-react";
+import { Ban, RefreshCw, X, Eraser } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cancelTask, dismissCleanupScan, getActiveTasks, getPendingCleanupScans, getTask, retryTask } from "../../lib/api";
@@ -17,6 +17,8 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const queryClient = useQueryClient();
   const previousTasks = useRef<BackgroundTaskRead[]>([]);
   const handledTerminalTaskIds = useRef<Set<string>>(new Set());
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [trackingError, setTrackingError] = useState(false);
   const [completedTask, setCompletedTask] = useState<BackgroundTaskRead | null>(null);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<Set<string>>(new Set());
   const [reviewScanId, setReviewScanId] = useState<string | null>(null);
@@ -59,6 +61,8 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   }, [tasksQuery.data]);
   const retryMutation = useMutation({
     mutationFn: retryTask,
+    onMutate: () => setActionError(null),
+    onError: () => setActionError(zh ? "重试未成功，请再次重试。" : "Could not retry the task. Try again."),
     onSuccess: (task) => {
       queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
         task,
@@ -68,6 +72,8 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   });
   const cancelMutation = useMutation({
     mutationFn: cancelTask,
+    onMutate: () => setActionError(null),
+    onError: () => setActionError(zh ? "取消未成功，任务可能仍在运行，请重试。" : "Cancellation failed. The task may still be running; retry."),
     onSuccess: (task) => {
       if (task.status === "cancelled") {
         setCompletedTask(task);
@@ -82,8 +88,15 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     },
   });
 
+  const dismissMutation = useMutation({
+    mutationFn: dismissCleanupScan,
+    onMutate: () => setActionError(null),
+    onError: () => setActionError(zh ? "忽略失败，请重试。" : "Could not dismiss this result. Retry."),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }),
+  });
   useEffect(() => {
-    const current = tasksQuery.data ?? [];
+    if (tasksQuery.isError || !tasksQuery.data) return;
+    const current = tasksQuery.data;
     const previousById = new Map(previousTasks.current.map((task) => [task.job_id, task]));
     const currentIds = new Set(current.map((task) => task.job_id));
     const disappeared = previousTasks.current.filter(
@@ -117,12 +130,12 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
       if (previous && !isTerminalTask(previous) && isTerminalTask(task)) handleTerminal(task);
     }
     for (const task of disappeared) {
-      void getTask(task.job_id).then(handleTerminal);
+      void getTask(task.job_id).then(handleTerminal).catch(() => { previousTasks.current.push(task); setTrackingError(true); });
     }
-  }, [queryClient, tasksQuery.data]);
+  }, [queryClient, tasksQuery.data, tasksQuery.isError]);
 
   const allTasks = (tasksQuery.data ?? []).filter((task) => !dismissedTaskIds.has(task.job_id) || (placement === "center" && needsAccountCleanup(task)));
-  const noiseTasks = allTasks.filter((task) => task.job_type === "content_noise_scan");
+  const noiseTasks = allTasks.filter((task) => task.job_type === "content_noise_scan" && !["committed", "cancelled"].includes(task.status));
   const tasks = allTasks.filter((task) => task.job_type !== "content_noise_scan");
   const taskRows = completedTask && !tasks.some((task) => task.job_id === completedTask.job_id)
     ? [...tasks, completedTask]
@@ -134,48 +147,29 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const visibleTask = processingTasks.find((task) => task.status === "processing")
     ?? processingTasks[0]
     ?? (placement === "mobile" ? completedTask : null);
-  const scans = scansQuery.data ?? [];
-  if (!visibleTask && !noiseTasks.length && !scans.length && !forceVisible) return null;
+  const scans = (scansQuery.data ?? []).filter((scan) => scan.status !== "READY" || scan.occurrence_count > 0);
+  const loadFailed = tasksQuery.isError || scansQuery.isError || trackingError;
+  const loading = tasksQuery.isLoading || scansQuery.isLoading;
+  const retryLoading = () => { setTrackingError(false); void tasksQuery.refetch(); void scansQuery.refetch(); };
+  const count = taskRows.length + Math.max(scans.length, noiseTasks.length);
+  const pending = retryMutation.isPending || cancelMutation.isPending || dismissMutation.isPending;
+  if (!visibleTask && !noiseTasks.length && !scans.length && !loadFailed && !forceVisible) return null;
 
-  if (placement === "mobile") {
-    return <><div className="fixed inset-x-3 bottom-3 z-40 divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface shadow-xl md:hidden">{visibleTask ? <div className="p-3"><TaskContent task={visibleTask} compact onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={isTerminalTask(visibleTask) ? () => dismissTask(visibleTask.job_id) : undefined} /></div> : null}<NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></div>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</>;
+  if (placement !== "center") {
+    return <div className={placement === "mobile" ? "fixed bottom-[max(.75rem,env(safe-area-inset-bottom))] right-3 z-40 max-w-[calc(100vw-1.5rem)] md:hidden" : "mb-3"}>
+      <button type="button" onClick={() => window.dispatchEvent(new Event("chat-reader:open-task-center"))} data-testid="task-summary-button" className="flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-ui bg-raised px-3 py-2 text-left text-xs text-primary shadow-sm">
+        <RefreshCw className={`h-4 w-4 shrink-0 text-accent ${processingTasks.length ? "animate-spin" : ""}`} aria-hidden="true" />
+        <span className="min-w-0 truncate">{loadFailed ? (zh ? "任务状态暂不可用" : "Task status unavailable") : visibleTask ? `${taskTypeLabel(visibleTask, zh)} · ${visibleTask.progress}%` : (zh ? `${count} 项任务待查看` : `${count} tasks to review`)}</span>
+      </button>
+    </div>;
   }
 
   if (placement === "center") {
-    const taskRow = (task: BackgroundTaskRead) => <div key={task.job_id} data-task-row={task.job_type} className="px-4 py-4"><TaskContent task={task} onRetry={() => retryMutation.mutate(task.job_id)} onCancel={() => cancelMutation.mutate(task.job_id)} onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) ? () => dismissTask(task.job_id) : undefined} /></div>;
-    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-primary">{t("backgroundTasks")}</p><p className="mt-1 text-xs text-secondary">{t("backgroundTasksHint")}</p></div><span className="text-xs text-secondary">{taskRows.length + Math.max(scans.length, noiseTasks.length)} {zh ? "项" : "items"}</span></div>{!taskRows.length && !noiseTasks.length && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}<TaskSection title={zh ? "处理中" : "In progress"} count={processingTasks.length}>{processingTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "需要处理" : "Needs attention"} count={Math.max(scans.length, noiseTasks.length) + cleanupTasks.length}>{cleanupTasks.map(taskRow)}<NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} /></TaskSection><TaskSection title={zh ? "已完成" : "Completed"} count={completedTasks.length}>{completedTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "失败" : "Failed"} count={failedTasks.length}>{failedTasks.map(taskRow)}</TaskSection>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
+    const taskRow = (task: BackgroundTaskRead) => <div key={task.job_id} data-task-row={task.job_type} className="px-4 py-4"><TaskContent task={task} busy={pending} onRetry={() => { if (!pending) retryMutation.mutate(task.job_id); }} onCancel={() => { if (!pending) cancelMutation.mutate(task.job_id); }} onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) ? () => dismissTask(task.job_id) : undefined} /></div>;
+    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><span className="text-sm text-secondary">{zh ? "任务进度与结果" : "Progress and results"}</span><span className="text-xs text-secondary">{taskRows.length + Math.max(scans.length, noiseTasks.length)} {zh ? "项" : "items"}</span></div>{loading ? <p role="status" className="text-sm text-secondary">{zh ? "正在加载任务…" : "Loading tasks…"}</p> : null}{loadFailed ? <div role="alert" className="border-l-2 border-[var(--danger)] pl-3 text-sm text-[var(--danger)]"><p>{zh ? "任务状态加载失败，已有任务可能仍在运行。" : "Could not load task status. Existing tasks may still be running."}</p><button type="button" disabled={tasksQuery.isFetching || scansQuery.isFetching} onClick={retryLoading} className="min-h-10 underline">{zh ? "重试" : "Retry"}</button></div> : null}{actionError ? <p role="alert" className="text-sm text-[var(--danger)]">{actionError}</p> : null}{!loading && !loadFailed && !taskRows.length && !noiseTasks.length && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}<TaskSection title={zh ? "处理中" : "In progress"} count={processingTasks.length}>{processingTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "需要处理" : "Needs attention"} count={Math.max(scans.length, noiseTasks.length) + cleanupTasks.length}>{cleanupTasks.map(taskRow)}<NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} busy={pending} onDismiss={(id) => { if (!pending) dismissMutation.mutate(id); }} /></TaskSection><TaskSection title={zh ? "已完成" : "Completed"} count={completedTasks.length}>{completedTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "失败" : "Failed"} count={failedTasks.length}>{failedTasks.map(taskRow)}</TaskSection>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
   }
 
-  return (
-    <div className="mb-3 space-y-2">
-      {visibleTask ? (
-        <div key={visibleTask.job_id} className="rounded-xl border border-[#d8dee9] bg-white p-3 shadow-sm">
-          {/* The compact sidebar is a status indicator only. Retry belongs to
-              the expanded global Tasks surface so contextual retry controls
-              cannot be mistaken for an editor upload retry. */}
-          <TaskContent task={visibleTask} onCancel={() => cancelMutation.mutate(visibleTask.job_id)} onDismiss={isTerminalTask(visibleTask) ? () => dismissTask(visibleTask.job_id) : undefined} />
-        </div>
-      ) : null}
-      {completedTask ? (
-        <div className={`rounded-xl border p-3 text-xs ${completedTask.status === "cancelled" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
-          <p className="flex items-center gap-1.5 font-medium">
-            {completedTask.status === "cancelled" ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-            {completedTask.status === "cancelled"
-              ? (completedTask.job_type === "conversation_batch_delete" ? "后续删除已停止" : "合并已取消")
-              : completedLabel(completedTask.job_type)}
-          </p>
-          {taskConversationId(completedTask) ? (
-            <Link className="mt-1 inline-block underline" href={`/conversations/${taskConversationId(completedTask)}`}>
-              打开会话
-            </Link>
-          ) : null}
-          {completedTask.result.download_url ? <a className="mt-1 inline-block underline" href={String(completedTask.result.download_url)}>下载归档</a> : null}
-        </div>
-      ) : null}
-      <NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} onDismiss={(id) => void dismissCleanupScan(id).then(() => void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }))} />
-      {reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}
-    </div>
-  );
+  return null;
 }
 
 function TaskSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
@@ -183,7 +177,7 @@ function TaskSection({ title, count, children }: { title: string; count: number;
   return <section aria-label={title}><div className="mb-2 flex items-center justify-between px-1"><h3 className="text-xs font-semibold text-primary">{title}</h3><span className="text-[11px] tabular-nums text-secondary">{count}</span></div><div className="divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">{children}</div></section>;
 }
 
-function NoiseReviewSummary({ scans, tasks, onReview, onDismiss }: { scans: CleanupScanRead[]; tasks: BackgroundTaskRead[]; onReview: (id: string) => void; onDismiss: (id: string) => void }) {
+function NoiseReviewSummary({ scans, tasks, onReview, onDismiss, busy = false }: { busy?: boolean; scans: CleanupScanRead[]; tasks: BackgroundTaskRead[]; onReview: (id: string) => void; onDismiss: (id: string) => void }) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
   const visible = scans;
   const scanIds = new Set(visible.map((scan) => scan.id));
@@ -195,7 +189,7 @@ function NoiseReviewSummary({ scans, tasks, onReview, onDismiss }: { scans: Clea
       {visible.map((scan) => {
         const task = tasks.find((item) => item.result.scan_id === scan.id);
         return (
-          <div key={scan.id} className="px-4 py-3 text-xs text-primary">
+          <div key={scan.id} data-cleanup-scan-id={scan.id} className="px-4 py-3 text-xs text-primary">
             <p className="flex items-center gap-1.5 font-medium">
               <Eraser className="h-3.5 w-3.5 text-accent" />
               {scan.status === "READY" ? (zh ? `${scan.occurrence_count} 个噪声候选待审查` : `${scan.occurrence_count} noise candidates ready for review`) : ["FAILED", "STALE"].includes(scan.status) ? (zh ? "噪声扫描需要重试" : "Noise scan needs retry") : (zh ? `噪声审查 ${scan.progress}%` : `Noise review ${scan.progress}%`)}
@@ -205,8 +199,8 @@ function NoiseReviewSummary({ scans, tasks, onReview, onDismiss }: { scans: Clea
             </p>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${Math.max(scan.progress, 2)}%` }} /></div>
             <div className="mt-2 flex items-center gap-3">
-              <button type="button" onClick={() => onReview(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 font-medium text-accent underline disabled:opacity-50">{zh ? "打开审查" : "Open review"}</button>
-              <button type="button" onClick={() => onDismiss(scan.id)} disabled={!['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 text-secondary underline disabled:opacity-50">{zh ? "忽略本次结果" : "Ignore this result"}</button>
+              <button type="button" onClick={() => onReview(scan.id)} disabled={busy || !['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 font-medium text-accent underline disabled:opacity-50">{zh ? "打开审查" : "Open review"}</button>
+              <button type="button" onClick={() => onDismiss(scan.id)} disabled={busy || !['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 text-secondary underline disabled:opacity-50">{zh ? "忽略本次结果" : "Ignore this result"}</button>
             </div>
           </div>
         );
@@ -223,7 +217,7 @@ function needsAccountCleanup(task: BackgroundTaskRead): boolean {
   return task.job_type === "user_account_delete" && task.result.account_deleted === true && Number(task.result.asset_cleanup_pending) > 0;
 }
 
-function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {
+function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy = false }: { busy?: boolean; task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [userOpen, setUserOpen] = useState(false);
@@ -238,40 +232,40 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss }: { 
   const completedItems = taskCompletedItems(task);
   const partial = committed && itemFailures > 0;
   return (
-    <div className="min-w-0 text-xs text-[#475569]" data-testid={`task-${task.job_type}-${task.status}`}>
+    <div className="min-w-0 text-xs text-secondary" data-testid={`task-${task.job_type}-${task.status}`}>
       <div className="flex items-center justify-between gap-3">
-        <p className="truncate font-medium text-[#111827]">{accountDelete ? (zh ? "删除用户账户" : "Delete user account") : task.job_type === "context_return" ? (zh ? "接收上下文接续" : "Receive context continuation") : task.job_type === "context_validation" ? (zh ? "旧接续校验（已停用）" : "Legacy continuation validation (retired)") : task.job_type === "context_object_cleanup" ? (zh ? "清理接续文件" : "Clean up continuation files") : task.job_type === "skill_object_cleanup" ? (zh ? "清理 Skill 文件" : "Clean up Skill files") : task.label || taskTypeLabel(task)}</p>
+        <p className="truncate font-medium text-primary">{accountDelete ? (zh ? "删除用户账户" : "Delete user account") : task.job_type === "context_return" ? (zh ? "接收上下文接续" : "Receive context continuation") : task.job_type === "context_validation" ? (zh ? "旧接续校验（已停用）" : "Legacy continuation validation (retired)") : task.job_type === "context_object_cleanup" ? (zh ? "清理接续文件" : "Clean up continuation files") : task.job_type === "skill_object_cleanup" ? (zh ? "清理 Skill 文件" : "Clean up Skill files") : task.label || taskTypeLabel(task, zh)}</p>
         <div className="flex shrink-0 items-center gap-1">
           <span>{committed ? "100%" : `${task.progress}%`}</span>
-          {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-[#f1f5f9]" aria-label="关闭任务提示" title="关闭任务提示"><X className="h-4 w-4" /></button> : null}
+          {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-subtle" aria-label={zh ? "关闭任务提示" : "Dismiss task"} title={zh ? "关闭任务提示" : "Dismiss task"}><X className="h-4 w-4" /></button> : null}
         </div>
       </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e5e7eb]">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-subtle">
         <div
-          className={`h-full rounded-full transition-[width] ${failed ? "bg-red-500" : "bg-[#10a37f]"}`}
+          className={`h-full rounded-full transition-[width] ${failed ? "bg-[var(--danger)]" : "bg-accent"}`}
           style={{ width: `${committed ? 100 : Math.max(task.progress, 2)}%` }}
         />
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span>{partial ? (zh ? "\u90e8\u5206\u5b8c\u6210" : "Partially completed") : phaseLabel(task)}</span>
+        <span>{partial ? (zh ? "\u90e8\u5206\u5b8c\u6210" : "Partially completed") : phaseLabel(task, zh)}</span>
         {task.total_items > 0 ? <span>{task.processed_items} / {task.total_items}</span> : null}
       </div>
       {failed ? (
         <div className="mt-2">
-          <p className="line-clamp-2 text-red-700">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : task.error_message || "任务失败"}</p>
+          <p className="line-clamp-2 text-[var(--danger)]">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : task.error_message || (zh ? "任务失败" : "Task failed")}</p>
           {onRetry && task.job_type !== "context_validation" ? (
-            <button type="button" onClick={onRetry} className="mt-1 inline-flex items-center gap-1 font-medium text-red-800 underline">
-              <RefreshCw className="h-3.5 w-3.5" /> 重试
+            <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex items-center gap-1 font-medium text-[var(--danger)] underline">
+              <RefreshCw className="h-3.5 w-3.5" /> {zh ? "重试" : "Retry"}
             </button>
           ) : null}
         </div>
       ) : null}
-      {cleanupPending && !failed ? <div className="mt-2 text-[var(--warning)]" role="status"><p>{zh ? `账户已删除，仍有 ${Number(task.result.asset_cleanup_pending)} 个文件待清理。` : `Account deleted. ${Number(task.result.asset_cleanup_pending)} files still need cleanup.`}</p>{committed && onRetry ? <button type="button" onClick={onRetry} className="min-h-11 font-medium underline">{zh ? "重试文件清理" : "Retry file cleanup"}</button> : null}</div> : null}
-      {partial ? <p className="mt-2 text-amber-700" role="status">{zh ? `${completedItems} \u9879\u5b8c\u6210 \u00b7 ${itemFailures} \u9879\u5931\u8d25` : `${completedItems} completed \u00b7 ${itemFailures} failed`}</p> : null}
-      {task.status === "cancelling" ? <p className="mt-2 font-medium text-amber-700">{task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在取消并回滚…"}</p> : null}
+      {cleanupPending && !failed ? <div className="mt-2 text-[var(--warning)]" role="status"><p>{zh ? `账户已删除，仍有 ${Number(task.result.asset_cleanup_pending)} 个文件待清理。` : `Account deleted. ${Number(task.result.asset_cleanup_pending)} files still need cleanup.`}</p>{committed && onRetry ? <button type="button" disabled={busy} onClick={onRetry} className="min-h-11 font-medium underline">{zh ? "重试文件清理" : "Retry file cleanup"}</button> : null}</div> : null}
+      {partial ? <p className="mt-2 text-[var(--warning)]" role="status">{zh ? `${completedItems} \u9879\u5b8c\u6210 \u00b7 ${itemFailures} \u9879\u5931\u8d25` : `${completedItems} completed \u00b7 ${itemFailures} failed`}</p> : null}
+      {task.status === "cancelling" ? <p className="mt-2 font-medium text-[var(--warning)]">{zh ? (task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在取消…") : "Cancelling…"}</p> : null}
       {task.cancellable && task.status !== "cancelling" && onCancel ? (
-        <button type="button" onClick={onCancel} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
-          <Ban className="h-3.5 w-3.5" />{(task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? (zh ? "取消归档任务" : "Cancel archive task") : task.job_type === "conversation_batch_delete" ? "停止后续删除" : "取消合并"}
+        <button type="button" disabled={busy} onClick={onCancel} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
+          <Ban className="h-3.5 w-3.5" />{(task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? (zh ? "取消归档任务" : "Cancel archive task") : task.job_type === "conversation_batch_delete" ? (zh ? "停止后续删除" : "Stop remaining deletions") : task.job_type === "conversation_merge" ? (zh ? "取消合并" : "Cancel merge") : (zh ? "取消任务" : "Cancel task")}
         </button>
       ) : null}
       {accountDelete && !accountDeleted && !committed && typeof task.result.target_user_id === "string" ? <button ref={userTrigger} className="min-h-11 font-medium text-accent underline" onClick={() => setUserOpen(true)}>{zh ? "查看账户与删除状态" : "Review account deletion"}</button> : null}
@@ -303,7 +297,25 @@ function taskCompletedItems(task: BackgroundTaskRead): number {
   return Math.max(0, task.processed_items - (Array.isArray(task.result.failed) ? task.result.failed.length : 0));
 }
 
-function phaseLabel(task: BackgroundTaskRead): string {
+function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
+  if (!zh) {
+    const terminal = { queued: "Queued", cancelling: "Cancelling", cancelled: "Cancelled", failed: "Failed", committed: "Completed" }[task.status];
+    if (terminal) return terminal;
+    const phases: Record<string, string> = {
+      deleting: "Deleting conversations", messages: "Copying messages", source_refs: "Copying source references",
+      versions: "Copying version history", blocks: "Preparing message content", annotations: "Copying annotations",
+      parsing: "Parsing conversations", persisting: "Saving messages", validating: "Checking source and order",
+      creating: "Creating conversation", copying: "Copying messages", headings: "Building table of contents",
+      search: "Building search index", publishing: "Publishing conversation", exporting: "Creating archive",
+      cleaning_messages: "Cleaning message content", cleaning_skill_files: "Removing unused Skill files",
+      rebuilding_index: "Rebuilding contents and search", packaging_messages: "Preparing conversation messages",
+      packaging_headings: "Preparing table of contents", packaging_search: "Preparing offline search index",
+      packaging_annotations: "Preparing annotations", packaging_metadata: "Preparing reading state and notes",
+      packaging_attachments: "Preparing attachment index", packaging_conversations: "Preparing offline conversations",
+      packaging_assets: "Writing offline attachments", validating_package: "Checking offline copy",
+    };
+    return phases[task.phase] ?? "Processing";
+  }
   if (task.status === "cancelling") return "正在取消";
   if (task.status === "cancelled") return "已取消";
   if (task.status === "queued") return "等待处理";
@@ -341,8 +353,13 @@ function phaseLabel(task: BackgroundTaskRead): string {
   return labels[task.phase] ?? "正在处理";
 }
 
-function taskTypeLabel(task: BackgroundTaskRead): string {
+function taskTypeLabel(task: BackgroundTaskRead, zh: boolean): string {
+  if (!zh) return ({ offline_package: "Prepare offline copy", conversation_batch_delete: "Delete archived conversations", conversation_merge: "Merge conversations", conversation_export: "Export conversation", context_package_export: "Export Context Package", context_return: "Update continuation", content_noise_scan: "Scan for noise", import: "Import conversations", conversation_auto_clean: "Clean conversation", personal_archive_export: "Back up my data", personal_archive_preflight: "Preview personal archive", personal_archive_restore: "Restore personal archive", system_archive_export: "Back up system data", system_archive_preflight: "Preview system archive", system_archive_restore: "Restore system archive" }[task.job_type] ?? "Background task");
   return {
+    offline_package: "准备离线副本",
+    context_package_export: "导出上下文包",
+    context_return: "更新上下文接续",
+    content_noise_scan: "扫描噪声",
     conversation_batch_delete: "删除归档对话",
     conversation_merge: "合并会话",
     conversation_export: "导出归档",
@@ -355,10 +372,6 @@ function taskTypeLabel(task: BackgroundTaskRead): string {
     personal_archive_preflight: "预检个人归档",
     personal_archive_restore: "恢复个人归档",
   }[task.job_type] ?? "后台任务";
-}
-
-function completedLabel(jobType: string): string {
-  return `${taskTypeLabel({ job_type: jobType } as BackgroundTaskRead)}完成`;
 }
 
 function taskConversationId(task: BackgroundTaskRead): string | null {

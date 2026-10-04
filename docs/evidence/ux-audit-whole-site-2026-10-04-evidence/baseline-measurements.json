@@ -1,0 +1,21 @@
+{
+  "englishComposerHeading": "新建对话",
+  "newDraftClosedWithoutConfirmation": true,
+  "newDraftAfterReopen": "",
+  "projectTabEscapes": true,
+  "projectDialogBounds": {
+    "x": 0,
+    "y": -85,
+    "width": 375,
+    "height": 485
+  },
+  "allSearchScopeReverts": true,
+  "mobileSearchFilterCount": 4,
+  "searchButtonOpensResult": true,
+  "searchShowsErrorAndEmpty": true,
+  "searchRetryButtons": 0,
+  "failedTasksShownAsEmpty": true,
+  "failedFilesAlertCount": 0,
+  "failedFilesRetryCount": 0,
+  "touchProjectActionOpacity": "0"
+}
