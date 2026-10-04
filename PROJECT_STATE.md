@@ -3,29 +3,26 @@
 ## Current release and active work — 2026-10-04
 
 Production `https://chat.king.2bd.net` runs source
-**0219fd5c5facfd6c57a5d651e74e7e58ff6b62eb**, built by successful
-[CI 37143028696](https://github.com/foolkking/chat-reader/actions/runs/37143028696).
-Alembic is **20261003_0046**, the single repository head and verified production current.
-The Context migration and settings cleanup are deployed. Production checks cover
-backup, immutable image provenance, unchanged database identity/environment,
-canonical counts, all 301 attachment checksums, the three pinned Skill ZIPs,
-authentication/logout and settings at 375/768/1440px.
-[Deployment record](docs/execution/DEPLOYMENT_CONTEXT_2026-10-04.md) records attempts,
-limits and retained rollback `ad223cd`.
+**5ef984af86d6b36b7cfac8f1a82d8118d6434d51**, built by successful
+[CI 37208932974](https://github.com/foolkking/chat-reader/actions/runs/37208932974).
+Alembic remains **20261003_0046**, the single head/current. The Context/settings
+migration and subsequent **18 whole-site UX improvements are deployed**.
+Nested noise-review dialogs also preserve drafts when Escape is pressed.
+[UX deployment](docs/execution/DEPLOYMENT_UX_2026-10-04.md) owns provenance,
+production checks, gateway correction, backup and old-image cleanup.
 
-The **subsequent whole-site UX round** implements 18 separate usability improvements.
-Input protection, project settings/menu/appearance, phone project creation, search,
-attachment recovery and bounded task summaries are implemented and locally verified (14 final focused browser cases; API
-867 passed/4 skipped). Complete CI is the separate release gate for this commit. This round is **not deployed**.
-[Audit](docs/evidence/ux-audit-whole-site-2026-10-04.md) owns findings and evidence;
-[execution](docs/execution/WHOLE_SITE_UX_2026-10-04.md) owns verification and failures.
-Do not treat the earlier release's CI as proof for the new changes.
-The first UX CI passed API/Web but failed Settings due to obsolete inline task
-selectors and cascading fixture-login throttling. Follow-up fixes also protect
-nested review drafts from parent-modal Escape; 18 noise flows and 23 registration,
-Share/UX cases pass locally. Corrected implementation `5ef984af86d6b36b7cfac8f1a82d8118d6434d51`
-passed [complete CI 37208932974](https://github.com/foolkking/chat-reader/actions/runs/37208932974):
-API, Settings, Web, image build and release artifact inspection are all successful.
+Backup `/opt/chat-reader/backups/chat-reader-20261004T151827Z` is verified.
+PostgreSQL identity/start time, production environment, canonical counts and all
+301 attachment checksums are unchanged. Read-only browser checks at 375/768/1440px
+cover settings, Task Center keyboard handling and search filters. Exact Context/
+Skill upload locations clear the upstream Connection header; repeated anonymous
+large requests return 401 after the documented 502 correction.
+
+At user request, 12 superseded Chat Reader image tags were removed after acceptance,
+freeing about 803 MiB. The verified previous `0219fd5` image archive and all backups
+remain; rollback requires loading that archive before selecting rollback-images.env.
+Local workstation residues are left for the user. [Audit](docs/evidence/ux-audit-whole-site-2026-10-04.md)
+and [execution](docs/execution/WHOLE_SITE_UX_2026-10-04.md) retain findings and test history.
 
 ## System and boundaries
 
@@ -71,21 +68,15 @@ editing stage was superseded by the confirmed replacement-only Bundle design.
 SMTP is unconfigured in the verified production snapshot; email delivery remains
 unavailable until the operator configures it. Administrator reset links remain.
 
-## Verification and next action
+## Verification and release status
 
-The deployed source passed API 868/3 skipped, Context browser 30, authenticated
-browser 18, settings 126 plus fresh restore, PDF 5 and offline negatives 17.
-Default PWA: 134 passed/250 mode-specific skips. Suites overlap; do not sum them.
-The current UX round passes build/lint/typecheck, API 867/4 skipped and focused
-UX 14/14; related offline/Share/source/Task Center/DnD checks pass as recorded
-in its execution record. CI for the committed revision owns the full PWA gate.
-
-The UX implementation is complete and its corrected source `5ef984a` passed the
-complete GitHub release workflow. Settings: 126 plus 1 isolated restore passed;
-API: 868 passed/3 skipped; default PWA: 134 passed/264 mode-specific skips;
-offline negatives: 17 passed. Skips are not passes. A second
-production deployment is a separate step; it has not been performed or authorized
-for this UX round. No new migration is introduced by its presentation changes.
+Deployed implementation `5ef984a` passed the complete GitHub workflow: API 868
+passed/3 skipped, Settings 126 plus 1 isolated restore, Context browser 30,
+authentication 18, PDF 5, default PWA 134 passed/264 mode-specific skips and offline
+negatives 17. Build/lint/typecheck, migration, image build and artifact inspection
+passed. Gates overlap and skips are not passes. The gateway-only deployment
+correction passed real Nginx validation and repeated live transport checks.
+Production verification and cleanup are complete; no further deployment is pending.
 
 ## Work rules and navigation
 

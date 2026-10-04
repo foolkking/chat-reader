@@ -177,3 +177,5 @@ The final evidence-only documentation commit does not change executable source.
 Overlapping gates are not summed. Three API optional-fixture skips and mode-specific
 browser skips remain unexecuted in those gates. This UX batch is **not deployed**;
 production remains `0219fd5`. This record supersedes the earlier pending-CI notes.
+
+Subsequent user authorization: this batch is now deployed. See [UX deployment](DEPLOYMENT_UX_2026-10-04.md) for live acceptance, gateway correction and old-image cleanup; the earlier non-deployed statements describe the initial delivery.

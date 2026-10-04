@@ -1,10 +1,8 @@
 # 文档导航
 
-当前线上：2026-10-04 Context 与设置发布，源码 `0219fd5`，CI `37143028696`，唯一 migration head/current `20261003_0046`。
-[Project State](../PROJECT_STATE.md) 是当前快照；[部署记录](execution/DEPLOYMENT_CONTEXT_2026-10-04.md) 记录生产证据。
-
-部署后的全站 UX 轮次见 [18 项审查](evidence/ux-audit-whole-site-2026-10-04.md) 与 [执行记录](execution/WHOLE_SITE_UX_2026-10-04.md)，尚未再次部署。
-实现 `5ef984a` 已通过 [完整 CI 37208932974](https://github.com/foolkking/chat-reader/actions/runs/37208932974)，包括设置、Web、API 与镜像检查。
+当前线上：2026-10-04 全站 UX 发布，源码 `5ef984a`，CI `37208932974`，唯一 migration head/current `20261003_0046`。
+[Project State](../PROJECT_STATE.md) 是当前快照；[UX 部署记录](execution/DEPLOYMENT_UX_2026-10-04.md) 记录备份、线上验收、上传网关修正和旧镜像清理。
+[18 项审查](evidence/ux-audit-whole-site-2026-10-04.md) 与 [执行记录](execution/WHOLE_SITE_UX_2026-10-04.md) 保存实施和 CI 证据；本轮已部署。
 
 ## 开始这里
 

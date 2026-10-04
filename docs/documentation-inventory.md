@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-04 UX deployment: `execution/DEPLOYMENT_UX_2026-10-04.md` owns source/CI
+provenance, live checks, gateway correction and exact old-image cleanup. Current
+state/index/deployment contracts now record live `5ef984a`, verified backup and
+archive-based rollback after removal of old tags. Earlier entries are historical.
+
 2026-10-04 whole-site UX closeout: `evidence/ux-audit-whole-site-2026-10-04.md`
 owns the 18 ranked findings and reviewed synthetic visual evidence;
 `execution/WHOLE_SITE_UX_2026-10-04.md` owns implementation, attempted checks and

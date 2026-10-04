@@ -2,16 +2,21 @@
 
 ## Current release — 2026-10-04
 
-Production source is `0219fd5c5facfd6c57a5d651e74e7e58ff6b62eb`, successful
-Actions `37143028696`, Alembic `20261003_0046`. Verified backup:
-`/opt/chat-reader/backups/chat-reader-20261003T183717Z`. Prior `ad223cd` images
-remain the direct rollback pair. PostgreSQL and production configuration were
-preserved. Exact Context/Skill upload routes are installed through the dedicated
-Nginx snippet; the internal diagnostics gateway remains private. Authenticated
-HTTP and 375/768/1440px read-only settings browser checks pass. Detailed provenance,
-scope, skipped cases and failed attempts are in the
-[deployment record](execution/DEPLOYMENT_CONTEXT_2026-10-04.md).
-Earlier source/deployment checkpoints below retain their historical meaning.
+Production source `5ef984af86d6b36b7cfac8f1a82d8118d6434d51` from CI
+`37208932974` is deployed; Alembic remains `20261003_0046`. Verified backup:
+`/opt/chat-reader/backups/chat-reader-20261004T151827Z`. API/Web/PostgreSQL are
+healthy and worker is idle. Three-width read-only settings, Task Center and search
+checks pass. PostgreSQL/environment and 301 attachment checksums are unchanged.
+
+Context/Skill streaming upload locations clear the upstream Connection header
+(`proxy_set_header Connection ""`) so early authorization responses stay 401;
+Nginx validation/reload and repeated 1 KiB/12 MiB live probes pass.
+User-requested cleanup removed 12 superseded Chat Reader tags, freeing about
+803 MiB. Backups and the verified previous `0219fd5` image archive remain.
+**Rollback requires docker load of the archived images before selecting the old
+release state.** See `/etc/chat-reader/release-state/rollback-requires-load.txt`.
+Detailed provenance, failed probes and cleanup boundaries: [deployment record](execution/DEPLOYMENT_UX_2026-10-04.md).
+Earlier checkpoints below are historical and do not override this live snapshot.
 
 2026-10-03 发布前补齐 Context/Skill 上传网关：从模板的
 `BEGIN CONTEXT BUNDLE UPLOADS` 块提取独立 snippet 加入现有 TLS server，
