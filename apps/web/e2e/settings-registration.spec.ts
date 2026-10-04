@@ -4,12 +4,15 @@ import { settingsAdmin } from "./settings-test-helper";
 // The fixture is an isolated PostgreSQL API with a loopback SMTP sink. This
 // test endpoint is provided by the fixture harness, never by the application.
 test.describe("registration verification with SMTP and persistence", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
   test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated SMTP/PostgreSQL settings fixture");
   test("settings preserves policy drafts, menu scroll and keyboard focus", async ({ page, baseURL }) => {
     await page.goto("/login");
     await page.locator("#login-email").fill(process.env.E2E_AUTH_EMAIL!);
     await page.locator("#login-password").fill(process.env.E2E_AUTH_PASSWORD!);
+    const login = page.waitForResponse((response) => response.url().endsWith("/api/auth/login") && response.request().method() === "POST");
     await page.getByRole("button", { name: /登录|Sign in/, exact: true }).click();
+    expect((await login).status()).toBe(200);
     await expect(page).toHaveURL(`${baseURL}/`);
     await page.getByRole("button", { name: /设置|Settings/, exact: true }).click();
     const menu = page.getByRole("region", { name: /设置|Settings/, exact: true }).and(page.locator("div"));

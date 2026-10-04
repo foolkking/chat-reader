@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { openSettingsNoiseReview, settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated settings PostgreSQL fixture and worker");
@@ -60,7 +60,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await root.getByRole("dialog", { name: /撤回系统提供|Withdraw system availability/ }).getByRole("button", { name: /确认撤回|^Withdraw$/, exact: true }).click();
       await expect.poll(async () => (await readerRules()).some((item) => item.id === rule.id)).toBe(false);
       await b.goto(baseURL!);
-      await b.locator("button:visible").filter({ hasText: /^Open review$|^打开审查$/ }).first().click();
+      await openSettingsNoiseReview(b, scanId);
       const review = b.getByTestId("content-cleanup-dialog");
       if (width < 1024) await review.getByRole("button", { name: /全部候选|All candidates/, exact: true }).click();
       await review.getByRole("checkbox", { name: /处理|Process/ }).check();

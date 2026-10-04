@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { openSettingsNoiseReview, settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires disposable PostgreSQL settings fixture and worker");
@@ -25,7 +25,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     const scan = async () => (await (await context.request.get(`${baseURL}/api/content-cleanup/scans/${scanId}`)).json());
     const open = async () => {
       await page.goto(baseURL!);
-      await page.locator("button:visible").filter({ hasText: /^Open review$|^打开审查$/ }).first().click();
+      await openSettingsNoiseReview(page, scanId);
       return page.getByTestId("content-cleanup-dialog");
     };
     try {
@@ -40,6 +40,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await expect(dialog.getByRole("checkbox", { name: /处理|Process/ }).first()).toBeChecked();
       await page.keyboard.press("Escape");
       await expect(dialog).not.toBeVisible();
+      await expect(page.getByTestId("task-center-panel")).toBeVisible();
       dialog = await open();
       await expect(dialog.getByRole("status").filter({ hasText: /已选 125 项|125 selected/ })).toBeVisible();
       if (width < 1024) await dialog.getByRole("button", { name: /全部候选|All candidates/, exact: true }).click();

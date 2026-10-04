@@ -20,6 +20,10 @@ attachment recovery and bounded task summaries are implemented and locally verif
 [Audit](docs/evidence/ux-audit-whole-site-2026-10-04.md) owns findings and evidence;
 [execution](docs/execution/WHOLE_SITE_UX_2026-10-04.md) owns verification and failures.
 Do not treat the earlier release's CI as proof for the new changes.
+The first UX CI passed API/Web but failed Settings due to obsolete inline task
+selectors and cascading fixture-login throttling. Follow-up fixes also protect
+nested review drafts from parent-modal Escape; 18 noise flows and 23 registration,
+Share/UX cases pass locally. The corrected revision awaits its full CI result.
 
 ## System and boundaries
 

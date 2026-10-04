@@ -25,6 +25,28 @@ function focusFallback() {
   fallback?.focus();
 }
 
+function modalLayers(element: HTMLElement): HTMLElement[] {
+  const layers = [element];
+  let parent = element.parentElement?.closest<HTMLElement>('[role="dialog"][aria-modal="true"]');
+  while (parent) {
+    layers.unshift(parent);
+    parent = parent.parentElement?.closest<HTMLElement>('[role="dialog"][aria-modal="true"]');
+  }
+  return layers;
+}
+
+function compareModalLayers(a: HTMLElement, b: HTMLElement): number {
+  const left = modalLayers(a), right = modalLayers(b);
+  for (let index = 0; index < Math.min(left.length, right.length); index++) {
+    if (left[index] === right[index]) continue;
+    const order = (Number.parseInt(getComputedStyle(left[index]).zIndex) || 0)
+      - (Number.parseInt(getComputedStyle(right[index]).zIndex) || 0);
+    if (order) return order;
+    return left[index].compareDocumentPosition(right[index]) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+  }
+  return left.length - right.length;
+}
+
 /** Shared modal lifecycle: initial focus, trap, Escape and logical restoration. */
 export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restoreFocus }: DialogFocusOptions) {
   const closeRef = useRef(onClose);
@@ -43,10 +65,12 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
       const dialog = rootRef.current?.closest('[role="dialog"][aria-modal="true"]');
       const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
         .filter((item) => item.getClientRects().length > 0)
-        .sort((a, b) => (Number.parseInt(getComputedStyle(a).zIndex) || 0) - (Number.parseInt(getComputedStyle(b).zIndex) || 0));
+        .sort(compareModalLayers);
       // Nested confirmations own Escape/Tab until they close. The underlying
       // settings dialog must not also close or steal their focus. Portals can
       // appear later in the DOM while a confirmation has a higher modal layer.
+      // A nested review's local z-index is relative to its parent's layer;
+      // comparing that number directly with the parent's closes both dialogs.
       if (dialog && dialogs.length && dialogs[dialogs.length - 1] !== dialog) return;
       if (event.key === "Escape") {
         event.preventDefault();

@@ -130,3 +130,32 @@ on E:. Both contained named test outputs and no reparse-point members. Automatic
 approval rejected the narrowly scoped PowerShell deletion with “blocked by policy”.
 The directories were retained and no workaround deletion was attempted. C: was
 not touched and no space-recovery claim is made.
+
+## CI follow-up
+
+The first UX workflow for `23a1727`,
+[37206328354](https://github.com/foolkking/chat-reader/actions/runs/37206328354),
+passed API (868 passed/3 skipped, plus 64 Context runtime and 53 safety tests)
+and Web, including the new UX gate, default PWA (134 passed/264 mode-specific
+skips), authentication and offline negatives. Settings finished 94 passed/32
+failed, so image jobs were skipped; this run is not a successful release gate.
+
+Eighteen settings tests still looked for inline noise-review buttons instead of
+opening the new Task Center. Repeated failed-test worker restarts then exhausted
+the synthetic administrator login limit, causing the remaining failures.
+The tests now use the visible task launcher and their own scan ID, preserving
+all real data and persistence assertions. Production rate limits are unchanged.
+
+Local recovery exposed an actual nested-modal bug: comparing a review's local
+z-index directly with its parent let Task Center own Escape and discard the
+rule draft. Modal ordering now compares ancestor layers first; review closure
+leaves Task Center open and rule editing requires the existing discard confirmation.
+All 18 cleanup/learning/publication cases pass after that fix. The first local
+registration run inherited the runner's signed-in storage state and was interrupted;
+registration explicitly starts anonymous so login/approval tests are independent
+of surrounding runner configuration. Earlier partial runs are not full passes.
+
+Build, lint and typecheck pass after the modal fix. The corrected source requires
+a fresh complete workflow; the previous source's green jobs do not certify it.
+Final follow-up browser run: **23 passed, no skips** (registration 7, Share focus 2,
+whole-site UX 14), with real API/worker and PostgreSQL persistence.

@@ -1,8 +1,17 @@
-import { expect, type APIRequest, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequest, type APIRequestContext, type Page } from "@playwright/test";
 
 // Only a synthetic fixture session, held in this test worker's memory. Reuse it
 // across viewport cases rather than repeatedly exercising the login rate limit.
 let adminState: Awaited<ReturnType<APIRequestContext["storageState"]>> | undefined;
+
+export async function openSettingsNoiseReview(page: Page, scanId: string): Promise<void> {
+  await page.locator('[data-testid="task-summary-button"]:visible').click();
+  const center = page.getByTestId("task-center-panel");
+  await expect(center).toBeVisible();
+  await center.locator(`[data-cleanup-scan-id="${scanId}"]`)
+    .getByRole("button", { name: /^(Open review|打开审查)$/ }).click();
+  await expect(page.getByTestId("content-cleanup-dialog")).toBeVisible();
+}
 
 export async function settingsAppearance(request: APIRequestContext, baseURL: string, locale: string): Promise<void> {
   const expected = { theme_mode: locale === "en-US" ? "dark" : "light", locale_mode: locale };

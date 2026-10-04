@@ -5,7 +5,10 @@
 New/inserted-message and project-setting forms share dirty-close confirmation and
 in-flight write guards. Project settings use bounded scrolling inside fixed
 header/footer; disabled fieldsets sit inside the scroll container. Modal keyboard
-ownership follows the highest visible dialog layer, with DOM order breaking ties.
+ownership follows the highest visible dialog layer, comparing ancestor modal
+layers before each nested dialog's local z-index, with DOM order breaking ties.
+An inner noise review owns Escape while its Task Center stays open; unsaved rule
+confirmation keeps both layers and the draft intact until explicitly discarded.
 Project menus are body-level, touch-visible and keyboard-operable; activation
 must not reach an ancestor DnD sensor. Named project symbols and validated colors
 fall back for unknown legacy values. Phone project creation uses the existing API.

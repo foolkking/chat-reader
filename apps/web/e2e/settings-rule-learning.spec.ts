@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { openSettingsNoiseReview, settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated settings PostgreSQL fixture and worker");
@@ -37,7 +37,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     try {
       await expect.poll(async () => (await scan()).status).toBe("READY");
       await page.goto(baseURL!);
-      await page.locator("button:visible").filter({ hasText: /^Open review$|^打开审查$/ }).first().click();
+      await openSettingsNoiseReview(page, scanId);
       const dialog = page.getByTestId("content-cleanup-dialog");
       if (width < 1024) await dialog.getByRole("button", { name: /全部候选|All candidates/, exact: true }).click();
       await dialog.getByRole("button", { name: /以后忽略这种情况|Ignore this case in future/ }).click();
@@ -55,6 +55,8 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await page.keyboard.press("Escape");
       const discard = page.getByRole("dialog").filter({ has: page.getByText(/放弃未保存的规则？|Discard unsaved rule\?/, { exact: true }) });
       await expect(discard).toBeVisible();
+      await expect(page.getByTestId("task-center-panel")).toBeVisible();
+      await expect(editor.getByLabel(/匹配文本|Match text/, { exact: true })).toHaveValue(trailer);
       await discard.getByRole("button", { name: /取消|Cancel/, exact: true }).click();
       await expect(editor.getByLabel(/匹配文本|Match text/, { exact: true })).toHaveValue(trailer);
       await editor.getByRole("button", { name: /预览并试运行|Preview and test/ }).click();
