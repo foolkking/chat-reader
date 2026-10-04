@@ -1,11 +1,12 @@
 # Context Package contract
 
-Current local implementation, 2026-10-03; source migration head `20261003_0046`.
-Local Context/API/offline acceptance is recorded; settings re-audit, CI and
-production release are still in progress. Independent external model trials
-remain unverified. See the
-[execution record](../execution/CONTEXT_MIGRATION_2026-10-03.md) for historical
-designs, test counts and outstanding work. Candidate/adoption designs are superseded.
+Current deployed implementation, 2026-10-04; migration head `20261003_0046`.
+Source `5ef984a` passed full CI and production acceptance. See the
+[completion audit](../execution/CONTEXT_GOAL_COMPLETION_2026-10-04.md) for the
+final approved scope and requirement evidence, and the
+[deployment record](../execution/DEPLOYMENT_UX_2026-10-04.md) for live verification.
+Independent external model trials remain unverified; synthetic external Skill
+walkthroughs are separately recorded. Earlier candidate/adoption designs are superseded.
 
 ## Product boundaries
 

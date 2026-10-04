@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-04 Context goal closure: `execution/CONTEXT_GOAL_COMPLETION_2026-10-04.md`
+maps the seven stages and later user overrides to implementation/CI/deployment
+evidence. `system/CONTEXT_PACKAGE_CONTRACT.md` now reflects the deployed state;
+independent model trials and optional skipped fixtures remain explicitly unverified.
+
 2026-10-04 UX deployment: `execution/DEPLOYMENT_UX_2026-10-04.md` owns source/CI
 provenance, live checks, gateway correction and exact old-image cleanup. Current
 state/index/deployment contracts now record live `5ef984a`, verified backup and
