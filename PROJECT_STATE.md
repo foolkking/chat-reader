@@ -35,9 +35,12 @@ Latest code is **6b4ee0aec8bf399d2bd5eefabfb9c538f2933632**. Final CI
 and settings **147** plus fresh PostgreSQL restore **1** passed. Attempt 2 built
 the images, but independent inspection never started and was cancelled with
 "The job was not acquired by Runner of type hosted even after multiple attempts".
-Attempt 3 preserves successful quality gates and reruns build plus dependent
-inspection so their artifact attempt identifiers match. GitHub's public status
-reports **Actions major outage**, with Hosted Runner failures (2026-10-05 UTC).
+Attempt 3 preserves successful quality gates; its image build passed and the
+artifact is downloaded under `artifact-3/`. Independent inspection job
+**111982188289** is still queued as of **2026-10-05 21:30 UTC**. It has not been
+cancelled or restarted while live. GitHub's public status still reports
+**Actions major outage**, with Hosted Runner failures. This external blocker
+has persisted across three goal turns; release work must wait for that gate.
 Do not rebuild locally/on King or deploy an unverified candidate. Final release
 helpers and detailed continuation notes are in
 `C:/Users/86182/Desktop/wkkk/chat-reader-export-final-20261006/CONTINUE.md`.
