@@ -1,6 +1,8 @@
 # Normalizer discovery and import recovery — 2026-10-05
 
-Status: implementation after `0d228d4`, local acceptance passed. The inspected
+Status: source `ea5622719abba16433f03fd221cbb44b096ab64d` is committed and pushed;
+local acceptance passed; CI `37304576688` failed one settings fixture readiness
+check. The correction below passed ten local repeats and needs new exact-source CI. The inspected
 support release `ad82cf4` remains a separate, undeployed artifact. Server capacity
 and the pending backup-deduplication decision are unchanged by this work.
 
@@ -92,9 +94,64 @@ fixtures and evidence remain; no local residue or production resource was delete
 
 ## Next work
 
-Commit this change and run its exact-source CI.
+Complete exact-source CI and inspect its deployable artifact.
 Deployment remains separate from local checks and the already inspected support
 artifact. Acquisition/Maintainer delivery still needs a review of Clipboard failure
 handling: its direct `navigator.clipboard.writeText` call lacks the Normalizer's
 manual fallback when Clipboard support is absent. Do not claim all three handoffs
 have identical recovery behavior yet.
+
+## Release preparation
+
+Run [37304576688](https://github.com/foolkking/chat-reader/actions/runs/37304576688)
+was explicitly dispatched after pushing `ea56227`; the returned head SHA matches.
+GitHub access uses the existing local Git credential only in the `gh` child
+process environment, without interactive login or printing/persisting its token.
+
+Thirteen release helpers are prepared under this task's `release/` directory,
+pinned to this source/run. Python and shell syntax passed. The Compose transform
+was checked against deployed `3f1d539` and this source for both LF and CRLF inputs:
+exactly two quota environment declarations are added, with `.env.production`
+preserved. All 17 deployment archive entries match the pinned source after fixing
+the local archive generation described below. No helper has run on production.
+
+The preparation script first assumed the older support archive had a `support/`
+prefix; inspection established it is extracted into that directory, so the new
+archive preserves its actual unprefixed membership. A subsequent exact-byte check
+caught `git archive` applying the workstation's CRLF conversion. Generating with
+command-local `core.autocrlf=false` fixed it; the complete archive now matches Git
+blob bytes, not just normalized text. These local failures did not touch production.
+
+Read-only capacity/health inspection found **3,262,764 KiB** available and healthy
+API/Web/PostgreSQL plus public HTTPS health. This remains below the prior measured
+**5,278,167 KiB** release requirement; the new artifact still needs its own capacity
+preflight. No new artifact was staged, no service was stopped, and no backup/image
+was removed. The proposed 15-file backup deduplication remains unapproved.
+
+The completed API job passed **902 tests / 3 skips** with 14 dependency warnings;
+reviewed Context runtime **64** and worker/cleanup safety **53** also passed.
+Alembic reports the single **20261005_0047 (head/current)**. These results are from
+this source's CI, not inherited from the support release. The completed API log
+is retained as `ci-api.log` in the task root.
+
+## First CI failure and correction
+
+Run `37304576688` finished with API and Web PASS, settings **135 passed / 1 failed**;
+image build and inspection were skipped. This source has no deployable artifact.
+The failing request-reply conflict/account-boundary test called `fill` immediately
+after reopening the reply form. CodeMirror was still `contenteditable=false` while
+`useSupportDraft.reload()` read the account-scoped persisted draft; Playwright
+rejected the element type before waiting for it to become editable.
+
+The test now asserts `contenteditable=true` after both reply-form openings before
+typing. It does not unlock the editor, add arbitrary sleeps, skip assertions or
+change application behavior. Existing real reply persistence, revision-conflict,
+expiry locking, retained local draft and cross-account denial checks remain intact.
+
+A fresh `ci_reply_readiness` PostgreSQL database migrated through `0047` in the
+task's disposable cluster. With the existing production Web build and real fixture
+API/worker, the complete affected scenario passed **10/10** repetitions. Lint and
+typecheck also passed. Logs are in the `ci-reply-readiness/` task subdirectory.
+Initial cluster startup omitted its nondefault port and failed to bind; restarting
+with the recorded `55948` loopback address succeeded. No other cluster was stopped.
+The original CI failure and local startup failure remain recorded.

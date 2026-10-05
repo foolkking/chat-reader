@@ -219,7 +219,10 @@ test("request reply conflict preserves input; notification links cannot cross ac
     const created = await context.request.post("/api/me/requests", { headers: { "Idempotency-Key": crypto.randomUUID() }, data: { kind: "QUESTION", title: "Synthetic private boundary", body: "Synthetic first body" } });
     expect(created.status()).toBe(201); const original = await created.json();
     const page = await context.newPage(); await page.clock.install(); await page.goto(`${base}/#support-request=${original.id}`);
-    await page.getByRole("button", { name: "Reply or withdraw" }).click(); await body(page).fill("Synthetic local reply remains"); await saved(page);
+    await page.getByRole("button", { name: "Reply or withdraw" }).click();
+    // The persisted draft is read before CodeMirror unlocks editing.
+    await expect(body(page)).toHaveAttribute("contenteditable", "true");
+    await body(page).fill("Synthetic local reply remains"); await saved(page);
     const remote = await admin.post(`/api/admin/requests/${original.id}/messages`, { headers: { "Idempotency-Key": crypto.randomUUID() }, data: { base_revision: original.revision, body: "Synthetic newer admin reply" } }); expect(remote.status()).toBe(200);
     await page.getByRole("button", { name: "Reply", exact: true }).click();
     await expect(page.getByRole("button", { name: "Reviewed; keep my input" })).toBeVisible();
@@ -227,7 +230,9 @@ test("request reply conflict preserves input; notification links cannot cross ac
     await page.getByRole("button", { name: "Reviewed; keep my input" }).click(); await saved(page);
     await page.getByRole("button", { name: "Reply", exact: true }).click();
     await expect.poll(async () => (await (await context.request.get(`/api/me/requests/${original.id}`)).json()).message_total).toBe(3);
-    await page.getByRole("button", { name: "Reply or withdraw" }).click(); await body(page).fill("Synthetic locked draft"); await saved(page);
+    await page.getByRole("button", { name: "Reply or withdraw" }).click();
+    await expect(body(page)).toHaveAttribute("contenteditable", "true");
+    await body(page).fill("Synthetic locked draft"); await saved(page);
     await context.setOffline(true); await page.clock.fastForward(49 * 60 * 60 * 1000);
     await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible(); await expect(body(page)).toHaveCount(0);
     expect((await readLocal(page, ids[0])).settings.some(row => row.key.startsWith("support-draft:"))).toBe(true);
