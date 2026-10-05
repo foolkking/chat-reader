@@ -1,9 +1,16 @@
 # Markdown 文档台账
 
+2026-10-05 guidance deployment: `execution/DEPLOYMENT_GUIDANCE_2026-10-05.md`
+owns source `3f1d539`, successful CI `37259074167` attempt 2, retained failures,
+capacity preflight/cleanup, verified backup, live acceptance and archive-based
+rollback after exact old-image removal. PROJECT_STATE, index, deployment, API
+and Context contracts now reflect the deployed guidance. Local residues remain
+for the user; pending Skill/help requests are not claimed as implemented.
+
 2026-10-05 guidance implementation: `execution/CORE_GUIDANCE_2026-10-05.md`
 records option B, first-use explanations, uncovered Index-range counts and local
-test evidence. PROJECT_STATE, Context contract and API reference distinguish this
-unreleased behavior from the deployed version. Earlier UX requests remain tracked
+test evidence. The deployment record above adds complete CI and live checks.
+Earlier UX requests remain tracked
 separately; this does not claim their implementation.
 
 2026-10-05 guidance options: `planning/CORE_GUIDANCE_OPTIONS_2026-10-05.md`

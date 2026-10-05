@@ -1,8 +1,8 @@
 # 文档导航
 
-当前线上：2026-10-04 全站 UX 发布，源码 `5ef984a`，CI `37208932974`，唯一 migration head/current `20261003_0046`。
-[Project State](../PROJECT_STATE.md) 是当前快照；[UX 部署记录](execution/DEPLOYMENT_UX_2026-10-04.md) 记录备份、线上验收、上传网关修正和旧镜像清理。
-[18 项审查](evidence/ux-audit-whole-site-2026-10-04.md) 与 [执行记录](execution/WHOLE_SITE_UX_2026-10-04.md) 保存实施和 CI 证据；本轮已部署。
+当前线上：2026-10-05 核心引导发布，源码 `3f1d539`，CI `37259074167`（attempt 2），唯一 migration head/current `20261003_0046`。
+[Project State](../PROJECT_STATE.md) 是当前快照；[引导部署记录](execution/DEPLOYMENT_GUIDANCE_2026-10-05.md) 记录完整 CI、容量预检、备份、线上验收与旧镜像清理。
+[引导实施](execution/CORE_GUIDANCE_2026-10-05.md) 保存方案 B 和未纳入 Index 范围的提示行为。之前的 [18 项审查](evidence/ux-audit-whole-site-2026-10-04.md) 与 [UX 发布](execution/DEPLOYMENT_UX_2026-10-04.md) 保留历史证据；后续 Skill/管理员求助事项仍独立跟踪。
 
 ## 开始这里
 

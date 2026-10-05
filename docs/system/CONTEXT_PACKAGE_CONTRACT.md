@@ -1,10 +1,10 @@
 # Context Package contract
 
-Current deployed implementation, 2026-10-04; migration head `20261003_0046`.
-Source `5ef984a` passed full CI and production acceptance. See the
+Current deployed implementation, 2026-10-05; migration head `20261003_0046`.
+Source `3f1d539` passed full CI and production acceptance. See the
 [completion audit](../execution/CONTEXT_GOAL_COMPLETION_2026-10-04.md) for the
 final approved scope and requirement evidence, and the
-[deployment record](../execution/DEPLOYMENT_UX_2026-10-04.md) for live verification.
+[deployment record](../execution/DEPLOYMENT_GUIDANCE_2026-10-05.md) for live verification.
 Independent external model trials remain unverified; synthetic external Skill
 walkthroughs are separately recorded. Earlier candidate/adoption designs are superseded.
 
@@ -107,7 +107,7 @@ export uses the same projection when source refs are requested.
 
 ## Reader workspace
 
-Local implementation, 2026-10-05 (not yet deployed): the first visit to Current/
+Deployed implementation, 2026-10-05: the first visit to Current/
 Index shows a short inline guide. The account-scoped browser settings remember
 the visit; the guide can always be closed/reopened. Optional preparation uses
 the actual selected maintenance Skill and a normal Context export, without model
@@ -268,5 +268,5 @@ Share excludes private Context files and personal Skill objects.
 
 The deployed migration and whole-site UX acceptance are recorded in the completion
 and deployment records linked above. Independent external semantic use remains
-unverified. Local guidance checks and any skips are tracked separately in
+unverified. Guidance checks, failed attempts and skips are tracked separately in
 [the guidance execution record](../execution/CORE_GUIDANCE_2026-10-05.md).

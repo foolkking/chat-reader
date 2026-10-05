@@ -1,43 +1,39 @@
 # Project State
 
-## Local guidance work — 2026-10-05 (not deployed)
-
-Option B is implemented locally: an opt-in three-step quick start, a dismissible
-first Current/Index guide, maintenance-package/Skill preparation and a quiet
-export-time link to the continuation workspace. Thresholds count only messages
-outside the Index's declared ranges (100 messages or 60,000 Unicode characters),
-not the total history. Unknown/foreign/reordered ranges suppress numeric advice.
-Dismissal is account/device scoped; users can mute and restore a conversation's
-suggestions. The [execution record](docs/execution/CORE_GUIDANCE_2026-10-05.md)
-owns checks and remaining verification. No new migration or production changes.
-Local checks: API 809 passed/70 skipped; final Context guidance/export/reading
-browser gate 13 passed; offline maintenance/worker recheck 2 passed. Lint,
-typecheck and build pass. The execution record retains the earlier browser
-timeout and separates skipped PostgreSQL/full-PWA gates from verified scope.
-
-## Current release and active work — 2026-10-04
+## Current release and active work — 2026-10-05
 
 Production `https://chat.king.2bd.net` runs source
-**5ef984af86d6b36b7cfac8f1a82d8118d6434d51**, built by successful
-[CI 37208932974](https://github.com/foolkking/chat-reader/actions/runs/37208932974).
-Alembic remains **20261003_0046**, the single head/current. The Context/settings
-migration and subsequent **18 whole-site UX improvements are deployed**.
-Nested noise-review dialogs also preserve drafts when Escape is pressed.
-[UX deployment](docs/execution/DEPLOYMENT_UX_2026-10-04.md) owns provenance,
-production checks, gateway correction, backup and old-image cleanup.
+**3f1d539d82fdbaa5d4f7f0b7f8857870c13c1926**, built by successful
+[CI 37259074167, attempt 2](https://github.com/foolkking/chat-reader/actions/runs/37259074167).
+Alembic remains **20261003_0046**, the single head/current. Option B guidance is
+deployed: optional three-step quick start, dismissible first Current/Index guide,
+maintenance-package/Skill preparation and a quiet export-time link. Thresholds
+count only messages outside Index ranges (100 nonblank messages or 60,000 Unicode
+characters). Unknown/foreign/reordered ranges suppress numeric advice. Dismissal
+is account/browser scoped; per-conversation suggestions can be muted and restored.
 
-Backup `/opt/chat-reader/backups/chat-reader-20261004T151827Z` is verified.
+Backup `/opt/chat-reader/backups/chat-reader-20261005T042224Z` is verified.
 PostgreSQL identity/start time, production environment, canonical counts and all
-301 attachment checksums are unchanged. Read-only browser checks at 375/768/1440px
-cover settings, Task Center keyboard handling and search filters. Exact Context/
-Skill upload locations clear the upstream Connection header; repeated anonymous
-large requests return 401 after the documented 502 correction.
+301 attachment checksums are unchanged. API/Web are healthy and the worker
+heartbeat is alive. Real login, 12 read-only settings endpoints, two owned guidance
+requests, three system Bundle downloads, logout/private 401 and public HTTPS pass.
+The in-app browser reaches the live login form; this release's full authenticated
+browser coverage is CI evidence, not a new live interactive acceptance claim.
 
-At user request, 12 superseded Chat Reader image tags were removed after acceptance,
-freeing about 803 MiB. The verified previous `0219fd5` image archive and all backups
-remain; rollback requires loading that archive before selecting rollback-images.env.
-Local workstation residues are left for the user. [Audit](docs/evidence/ux-audit-whole-site-2026-10-04.md)
-and [execution](docs/execution/WHOLE_SITE_UX_2026-10-04.md) retain findings and test history.
+Four superseded `5ef984a` image tags were removed after acceptance, freeing about
+271 MiB. All backups and the verified `5ef984a` recovery archive remain; rollback
+requires loading it before selecting rollback-images.env. Capacity preflight first
+failed, then passed after bounded duplicate-transfer/build-cache cleanup.
+Local workstation residues remain for the user.
+[Deployment record](docs/execution/DEPLOYMENT_GUIDANCE_2026-10-05.md) owns provenance,
+failed attempts, capacity cleanup, live checks and recovery details;
+[implementation record](docs/execution/CORE_GUIDANCE_2026-10-05.md) owns behavior.
+
+The earlier Context/settings migration and 18 whole-site UX improvements remain
+deployed; [previous release](docs/execution/DEPLOYMENT_UX_2026-10-04.md) retains
+their evidence. Skill locale/clone cleanup and administrator quota/support-request
+work from the later [usability review](docs/evidence/ux-audit-skills-help-2026-10-05.md)
+remain separate pending scope; the guidance release does not complete them.
 
 ## System and boundaries
 
@@ -76,21 +72,23 @@ and [execution](docs/execution/WHOLE_SITE_UX_2026-10-04.md) retain findings and 
 | Synchronization | Account preference field revisions, real reading anchors, outbox confirmation/retries/conflicts and offline account fences. Remote position changes do not force the active Reader to jump. |
 | Admin | Search/paginated users, approval/status/session/reset/delete, invitations/audit, read-only cross-user Reader and bounded runtime state. Shared objects survive when others still reference them. |
 
-Production does not yet include the local guidance described above. The original
+Production includes the guidance described above. The original
 [threshold proposal](docs/planning/CONTEXT_MAINTENANCE_GUIDANCE_2026-10-03.md) is
-superseded by the user's uncovered-Index-range rule for this local work. Skill inline-version
+superseded by the user's uncovered-Index-range rule. Skill inline-version
 editing stage was superseded by the confirmed replacement-only Bundle design.
 SMTP is unconfigured in the verified production snapshot; email delivery remains
 unavailable until the operator configures it. Administrator reset links remain.
 
 ## Verification and release status
 
-Deployed implementation `5ef984a` passed the complete GitHub workflow: API 868
-passed/3 skipped, Settings 126 plus 1 isolated restore, Context browser 30,
-authentication 18, PDF 5, default PWA 134 passed/264 mode-specific skips and offline
+Deployed implementation `3f1d539` passed the complete GitHub workflow: API 876
+passed/3 skipped, Settings 126 plus 1 isolated PostgreSQL restore, Context browser
+34, authentication 18, default PWA 134 passed/268 mode-specific skips and offline
 negatives 17. Build/lint/typecheck, migration, image build and artifact inspection
-passed. Gates overlap and skips are not passes. The gateway-only deployment
-correction passed real Nginx validation and repeated live transport checks.
+passed. Gates overlap and skips are not passes. The first source's queued-import
+fixture failure was corrected; a subsequent settings proxy reset passed the full
+unchanged settings rerun. Both failures remain in the release record. Local
+SQLite worker-lock failures remain separate from successful PostgreSQL CI evidence.
 Production verification and cleanup are complete; no further deployment is pending.
 
 ## Work rules and navigation

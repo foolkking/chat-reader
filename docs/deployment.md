@@ -1,6 +1,38 @@
 # 生产部署
 
-## Current release — 2026-10-04
+## Current release — 2026-10-05
+
+Production source `3f1d539d82fdbaa5d4f7f0b7f8857870c13c1926` from CI
+`37259074167` attempt 2 is deployed. All quality/image gates passed; Alembic
+remains `20261003_0046`. The optional quick start and Current/Index first-use
+guide are live; export advice counts only history outside declared Index ranges.
+No database schema change was added by this release.
+
+Verified five-component backup:
+`/opt/chat-reader/backups/chat-reader-20261005T042224Z`. API/Web are healthy,
+worker heartbeat is alive, and PostgreSQL was not restarted. Production
+environment, canonical counts, personal Skill aggregates and 301 attachment
+checksums are unchanged. Real login, 12 read-only settings endpoints, two owned
+guidance requests, three exact system ZIP downloads, logout/private 401, large
+anonymous uploads and HTTPS/redirect checks passed. The public login form was
+opened in the in-app browser; full authenticated UI coverage comes from CI.
+
+The first capacity preflight refused replacement. Verified duplicate transfers
+and two exact Chat Reader build-cache records were removed before repeating the
+unchanged check successfully. All backups, business data, unrelated applications
+and current/rollback recovery archives were retained.
+
+After acceptance, four superseded `5ef984a` application image tags were removed,
+reclaiming 283,901,952 bytes (about 271 MiB); about 3.3 GiB remains free.
+**Rollback requires loading the retained `5ef984a` image archive before selecting
+rollback-images.env.** The exact archive/digest is in
+`/etc/chat-reader/release-state/rollback-requires-load.txt`. Source/configuration
+changes already on the server were preserved. Local residues remain for the user.
+See [deployment record](execution/DEPLOYMENT_GUIDANCE_2026-10-05.md) for provenance,
+failed tests, backup, cleanup and verification limits. The documentation-only
+closeout commit does not replace the deployed application source above.
+
+## Previous release — 2026-10-04
 
 Production source `5ef984af86d6b36b7cfac8f1a82d8118d6434d51` from CI
 `37208932974` is deployed; Alembic remains `20261003_0046`. Verified backup:
