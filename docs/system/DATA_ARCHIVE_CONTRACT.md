@@ -5,6 +5,13 @@ final integrated release acceptance remains. Not deployed.
 
 ## Container and scope
 
+2026-10-05 local Skill selection follow-up: configuration preflight permits a
+legacy locale slot to reference a Skill originally uploaded under another locale.
+Account ownership, category and existence checks remain mandatory. Explicit new
+choices fill both compatibility slots; archives preserve divergent legacy choices
+until the user unifies them. PostgreSQL personal/system roundtrip coverage includes
+these preferences and immutable Bundle history. Archive versions are unchanged.
+
 `.cr` uses a format discriminator in `manifest.json`; its version is unrelated
 to the offline `.crpkg` version. Offline package v1/v2/v3 and Dexie v2 are
 unchanged. Legacy conversation `.cr` reading is unchanged.

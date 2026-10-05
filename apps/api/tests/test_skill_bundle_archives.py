@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.user_skill import UserSkill
 from app.models.skill_bundle import SkillBundleRevision, SkillFileObject
 from app.models.administration import SystemSkill
-from app.services.skills import create_skill
+from app.services.skills import create_skill, update_selection, resolve_skill
 from app.services.skill_bundles import parse_bundle, save_revision, revision_query, download_revision
 from app.services.exporting.personal_archive import create_personal_archive
 from app.services.exporting.personal_restore import restore_personal_archive
@@ -44,6 +44,7 @@ def test_personal_archive_keeps_distinct_scripts_all_versions_and_idempotency(ar
     first = add_skill(db, users[0].id, b'old-script')
     save_revision(db, first, parse_bundle(bundle(b'new-script'), 'demo.zip'), base_revision=1)
     second = add_skill(db, users[0].id, b'different-script')
+    update_selection(db, category='EXPORT_CONTEXT', skill_id=first.id, subject_key=str(users[0].id))
     add_skill(db, users[1].id, b'private-other-user')
     db.commit()
     artifact = create_personal_archive(db, job_id=job.id, owner_user_id=users[0].id)
@@ -63,6 +64,8 @@ def test_personal_archive_keeps_distinct_scripts_all_versions_and_idempotency(ar
     assert script_bytes(db, by_digest[first.bundle_digest], 1) == b'old-script'
     assert script_bytes(db, by_digest[first.bundle_digest], 2) == b'new-script'
     assert script_bytes(db, by_digest[second.bundle_digest], 1) == b'different-script'
+    for locale in ('en', 'zh-CN'):
+        assert resolve_skill(db, category='EXPORT_CONTEXT', locale=locale, subject_key=str(target.id))['id'] == str(by_digest[first.bundle_digest].id)
     count = db.query(SkillBundleRevision).count()
     restore_personal_archive(db, Path(artifact.storage_uri), owner_user_id=target.id, expected_digest=inspect_personal_archive(Path(artifact.storage_uri))["content_digest"])
     db.commit()
@@ -92,6 +95,7 @@ def test_system_restore_keeps_bundle_history_in_fresh_instance(archive_db, confi
     users, _, job, _ = seed_archive_source(db)
     users[1].role = 'ADMIN'
     personal = add_skill(db, users[0].id, b'personal-v1')
+    update_selection(db, category='EXPORT_CONTEXT', skill_id=personal.id, subject_key=str(users[0].id))
     system = create_system_skill(db, actor_user_id=users[1].id, category='EXPORT_CONTEXT', locale='en',
                                  name='System Bundle', content='legacy system instructions', default_enabled=True)
     save_revision(db, system, parse_bundle(bundle(b'system-v2'), 'demo.zip'), base_revision=0)
@@ -121,6 +125,8 @@ def test_system_restore_keeps_bundle_history_in_fresh_instance(archive_db, confi
     restored = configuration_target.get(UserSkill, personal.id)
     assert restored.subject_key != personal.subject_key
     assert script_bytes(configuration_target, restored, 1) == b'personal-v1'
+    for locale in ('en', 'zh-CN'):
+        assert resolve_skill(configuration_target, category='EXPORT_CONTEXT', locale=locale, subject_key=restored.subject_key)['id'] == str(restored.id)
     restored_system = configuration_target.get(SystemSkill, system.id)
     assert restored_system.bundle_revision == 2
     assert script_bytes(configuration_target, restored_system, 2) == b'system-v2'

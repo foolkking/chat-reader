@@ -1298,6 +1298,9 @@ export type SkillRead = {
   content_url: string | null;
   bundle_revision?: number;
   bundle_url?: string | null;
+  legacy_selection_conflict?: boolean;
+  is_legacy_preferred?: boolean;
+  is_customized?: boolean;
 };
 export type SkillDetail = SkillRead & { content: string };
 export type SkillResolve = SkillDetail & { content_url: string | null };

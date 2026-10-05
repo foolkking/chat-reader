@@ -74,7 +74,7 @@ export const adminApi = {
     body.append("name", value.name); body.append("file", value.file, value.file.name);
     return request<SystemSkill>("/api/admin/system-skills/bundle", { method: "POST", body });
   },
-  systemSkills: () => request<SystemSkill[]>("/api/admin/system-skills"),
+  systemSkills: () => request<Array<SystemSkill & { legacy_default_conflict?: boolean }>>("/api/admin/system-skills?effective=true"),
   systemSkill: (id: string) => request<SystemSkill & { content: string | null }>(`/api/admin/system-skills/${id}`),
   createSystemSkill: (value: { category: string; locale: string; name: string; content: string; default_enabled: boolean }) => request<SystemSkill>("/api/admin/system-skills", json("POST", value)),
   updateSystemSkill: (id: string, value: Record<string, unknown>) => request<SystemSkill>(`/api/admin/system-skills/${id}`, json("PATCH", value)),

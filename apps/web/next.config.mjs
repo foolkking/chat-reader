@@ -62,11 +62,15 @@ const nextConfig = {
   ...(standaloneBuild
     ? {
         output: "standalone",
-        experimental: {
-          outputFileTracingRoot: workspaceRoot,
-          cpus: standaloneBuildCpus,
-        },
       }
+    : {}),
+  // A bounded build is also useful on local machines. Previously this option
+  // only affected standalone images; ordinary builds could still spawn 15 workers.
+  ...(standaloneBuild || process.env.NEXT_BUILD_CPUS
+    ? { experimental: {
+        ...(standaloneBuild ? { outputFileTracingRoot: workspaceRoot } : {}),
+        cpus: standaloneBuildCpus,
+      } }
     : {}),
   async rewrites() {
     return {

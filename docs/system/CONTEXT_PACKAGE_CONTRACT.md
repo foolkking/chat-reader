@@ -45,6 +45,21 @@ idempotent. Downloads pin revisions. Personal preferences survive system-default
 resets and use existing fallback behavior on disable/delete. Root-only writes stay
 separate from personal operations; legacy text reads remain compatible.
 
+Local follow-up, 2026-10-05 (release tracked in PROJECT_STATE): selection is by
+purpose, independent of interface language. New explicit choices mirror into both
+existing locale slots under a per-account/purpose PostgreSQL transaction lock;
+single legacy choices are reused, divergent legacy choices stay available until
+the user explicitly selects a unified preference. Disabling/deleting only clears
+references to that file. Upload deduplication compares the full Bundle within the
+account/purpose, not the old locale. No schema migration or personal-file deletion
+is needed. System defaults collapse equivalent legacy aliases using full Bundle
+digests; distinct historical defaults remain explicit administrator choices.
+Replacing/selecting/restoring a system default applies across both compatibility
+locales. These operations do not change personal preferences. Management offers
+three purpose tabs/rows with download and replacement, without cloning or a Skill
+language picker. Normalizer follows the same resolved Bundle; failed online
+resolution offers retry, never a silent built-in substitution.
+
 `python tools/context-skills/build.py --output apps/web/public/skills --check`
 verifies public artifacts. Editable runtime trees are experimental sources, not
 the bytes shipped as defaults.

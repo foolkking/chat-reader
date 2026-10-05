@@ -241,7 +241,7 @@ def test_cannot_delete_last_active_system_skill(auth_client):
     own = created.json()
     rows = auth_client.get('/api/admin/system-skills').json()
     for row in rows:
-        if row['category'] == 'EXPORT_CONTEXT' and row['locale'] == 'en' and row['id'] != own['id']:
+        if row['category'] == 'EXPORT_CONTEXT' and row['id'] != own['id']:
             assert auth_client.patch(f"/api/admin/system-skills/{row['id']}", json={'status': 'DISABLED'}).status_code == 200
     assert auth_client.delete(f"/api/admin/system-skills/{own['id']}").status_code == 409
     resolved = auth_client.get('/api/skills/resolve?category=EXPORT_CONTEXT&locale=en').json()

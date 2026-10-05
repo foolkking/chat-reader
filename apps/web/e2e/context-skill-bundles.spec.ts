@@ -33,7 +33,8 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     let id: string | undefined;
     try {
       const dialog = await openSkills(page, width);
-      await dialog.getByRole("button", { name: "English", exact: true }).click();
+      await expect(dialog.getByRole("button", { name: "English", exact: true })).toHaveCount(0);
+      await dialog.getByRole("button", { name: /上传我的 Skill|Upload my Skill/, exact: true }).click();
       await dialog.getByLabel(/Skill 名称|Skill name/, { exact: true }).fill(name);
       await dialog.getByLabel(/选择 Skill ZIP|Choose a Skill ZIP/).setInputFiles({ name: "browser-skill.zip", mimeType: "application/zip", buffer: bundle(script) });
       await dialog.getByRole("button", { name: /保存 Skill|Save Skill/, exact: true }).click();
@@ -43,6 +44,8 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       id = listing.find((item: { name: string }) => item.name === name).id;
       await row.getByRole("button", { name: /设为首选|Set as preferred/, exact: true }).click();
       await expect.poll(async () => (await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en")).json()).id).toBe(id);
+      expect((await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=zh-CN")).json()).id).toBe(id);
+      await expect(dialog.getByRole("button", { name: /克隆|Clone/ })).toHaveCount(0);
       await row.getByRole("button", { name: /改名|Rename/, exact: true }).click();
       const prompt = page.getByRole("dialog").last();
       await prompt.getByRole("textbox").fill(name + " renamed");
@@ -57,13 +60,16 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       expect(new TextDecoder().decode(unzipSync(bytes)["browser-skill/scripts/action.py"])).toBe(script + " updated");
       const oldBytes = await (await page.request.get(`/api/skills/${id}/bundle?revision=1`)).body();
       expect(new TextDecoder().decode(unzipSync(oldBytes)["browser-skill/scripts/action.py"])).toBe(script);
+      const switchedLocale = locale === "zh-CN" ? "en-US" : "zh-CN";
+      await settingsAppearance(page.request, baseURL!, switchedLocale);
       await page.reload();
       const reopened = await openSkills(page, width);
-      await reopened.getByRole("button", { name: "English", exact: true }).click();
+      await expect(reopened.getByRole("button", { name: switchedLocale === "zh-CN" ? "上传我的 Skill" : "Upload my Skill", exact: true })).toBeVisible();
+      await expect(reopened.getByRole("button", { name: "English", exact: true })).toHaveCount(0);
       await expect(reopened.locator("article").filter({ hasText: name + " renamed" })).toContainText(/首选|Preferred/);
       await expect(reopened.getByRole("button", { name: /查看|View/, exact: true })).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      if (process.env.SETTINGS_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/skill-${width}-${locale}.png` });
+      if (process.env.SETTINGS_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/skill-${width}-${switchedLocale}.png` });
     } finally { if (id) await page.request.delete(`/api/skills/${id}`, { headers: { Origin: baseURL! } }); }
   });
 }
@@ -78,24 +84,59 @@ test("unsaved replacement survives cancelled navigation and a real version confl
   const skill = await created.json();
   try {
     const dialog = await openSkills(page, 1280);
-    await dialog.getByRole("button", { name: "English", exact: true }).click();
+    await expect(dialog.getByRole("button", { name: "English", exact: true })).toHaveCount(0);
     const row = dialog.locator("article").filter({ hasText: name });
-    await row.getByLabel("Replace Skill ZIP").setInputFiles({ name: "browser-skill.zip", mimeType: "application/zip", buffer: bundle(name + " local draft") });
+    await row.getByLabel("Replace Skill ZIP / Markdown").setInputFiles({ name: "browser-skill.zip", mimeType: "application/zip", buffer: bundle(name + " local draft") });
     await dialog.getByRole("button", { name: "Maintenance", exact: true }).click();
     await page.getByRole("dialog", { name: "Discard unsaved changes?" }).getByRole("button", { name: "Cancel", exact: true }).click();
-    expect(await row.getByLabel("Replace Skill ZIP").evaluate((input: HTMLInputElement) => input.files?.length)).toBe(1);
+    expect(await row.getByLabel("Replace Skill ZIP / Markdown").evaluate((input: HTMLInputElement) => input.files?.length)).toBe(1);
     const concurrent = await page.request.post(`/api/skills/${skill.id}/revisions`, { headers: { Origin: baseURL! }, multipart: { base_revision: 1,
       file: { name: "browser-skill.zip", mimeType: "application/zip", buffer: bundle(name + " remote update") } } });
     expect(concurrent.status()).toBe(200);
     await row.getByRole("button", { name: "Replace", exact: true }).click();
     await expect(row.getByRole("alert")).toContainText(/changed|reload/i);
-    expect(await row.getByLabel("Replace Skill ZIP").evaluate((input: HTMLInputElement) => input.files?.length)).toBe(1);
+    expect(await row.getByLabel("Replace Skill ZIP / Markdown").evaluate((input: HTMLInputElement) => input.files?.length)).toBe(1);
     const saved = await (await page.request.get(`/api/skills/${skill.id}`)).json();
     expect(saved.bundle_revision).toBe(2);
     await row.getByRole("button", { name: "Discard replacement", exact: true }).click();
     await dialog.getByRole("button", { name: "Maintenance", exact: true }).click();
     await expect(dialog.getByRole("button", { name: "Maintenance", exact: true })).toHaveAttribute("aria-pressed", "true");
   } finally { await page.request.delete(`/api/skills/${skill.id}`, { headers: { Origin: baseURL! } }); }
+});
+
+test("format conversion respects the selected Bundle and exposes loading failure without a silent fallback", async ({ page, baseURL }) => {
+  await settingsAppearance(page.request, baseURL!, "en-US");
+  const original = "# Synthetic personal normalizer\nPreserve this exact file.";
+  const created = await page.request.post("/api/skills", { headers: { Origin: baseURL! }, multipart: { category: "CONVERSATION_RESCUE", name: "My selected normalizer", file: { name: "normalizer.md", mimeType: "text/markdown", buffer: Buffer.from(original) } } });
+  expect(created.status()).toBe(201);
+  const skill = await created.json();
+  try {
+    expect((await page.request.put("/api/skills/selections", { headers: { Origin: baseURL! }, data: { category: "CONVERSATION_RESCUE", skill_id: skill.id } })).status()).toBe(204);
+    await page.goto("/");
+    await page.getByRole("button", { name: /Import data|导入数据/, exact: true }).click();
+    await page.getByTestId("import-file-input").setInputFiles({ name: "synthetic-broken.json", mimeType: "application/json", buffer: Buffer.from("not-json") });
+    await page.getByTestId("preview-import-button").click();
+    await expect(page.getByRole("button", { name: /使用格式转换 Skill|Use format conversion Skill/ })).toBeVisible();
+    await page.route("**/api/skills/resolve?**", route => route.abort("failed"));
+    await page.getByRole("button", { name: /使用格式转换 Skill|Use format conversion Skill/ }).click();
+    const dialog = page.getByRole("dialog", { name: /使用格式转换 Skill|Use format conversion Skill/ });
+    await expect(dialog.getByRole("alert")).toContainText("could not be loaded");
+    await expect(dialog.getByRole("link", { name: /Download skill|下载 Skill/ })).toHaveCount(0);
+    await expect(dialog.getByRole("tab")).toHaveCount(0);
+    await page.unroute("**/api/skills/resolve?**");
+    await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+    const link = dialog.getByRole("link", { name: /Download skill|下载 Skill/ });
+    await expect(link).toHaveAttribute("href", skill.bundle_url);
+    const bytes = unzipSync(await (await page.request.get((await link.getAttribute("href"))!)).body());
+    expect(new TextDecoder().decode(bytes["personal-skill/references/legacy-instructions.md"])).toBe(original);
+    await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: () => Promise.reject(new Error("Synthetic denied clipboard")) } }));
+    await dialog.getByRole("button", { name: /Copy template|复制模板/ }).click();
+    await expect(dialog.getByRole("alert")).toContainText("copy it manually");
+    await expect(dialog).not.toContainText("Copied.");
+  } finally {
+    await page.unroute("**/api/skills/resolve?**");
+    await page.request.delete(`/api/skills/${skill.id}`, { headers: { Origin: baseURL! } });
+  }
 });
 
 
@@ -106,6 +147,7 @@ test("Markdown upload becomes a same-name ZIP and replacement keeps the name", a
   const original = "# Synthetic Markdown\nKeep original wording.\n";
   let id: string | undefined;
   try {
+    await dialog.getByRole("button", { name: "上传我的 Skill", exact: true }).click();
     await dialog.getByLabel(/选择 Skill ZIP/).setInputFiles({ name: `${name}.md`, mimeType: "text/markdown", buffer: Buffer.from(original) });
     await dialog.getByRole("button", { name: "保存 Skill", exact: true }).click();
     const row = dialog.locator("article").filter({ hasText: name });

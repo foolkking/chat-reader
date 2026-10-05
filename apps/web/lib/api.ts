@@ -339,9 +339,9 @@ export async function getSkillContent(skillId: string): Promise<string> {
   return response.text();
 }
 
-export async function createSkill(input: { category: SkillCategory; locale: SkillLocale; name: string; file: File }): Promise<SkillRead> {
+export async function createSkill(input: { category: SkillCategory; locale?: SkillLocale; name: string; file: File }): Promise<SkillRead> {
   const body = new FormData();
-  body.append("category", input.category); body.append("locale", input.locale); body.append("name", input.name); body.append("file", input.file, input.file.name);
+  body.append("category", input.category); if (input.locale) body.append("locale", input.locale); body.append("name", input.name); body.append("file", input.file, input.file.name);
   return fetchJson<SkillRead>("/api/skills", { method: "POST", body });
 }
 
@@ -370,7 +370,7 @@ export async function deleteSkill(skillId: string): Promise<void> {
   await fetchJson<void>(`/api/skills/${skillId}`, { method: "DELETE" });
 }
 
-export async function setSkillSelection(input: { category: SkillCategory; locale: SkillLocale; skill_id: string | null }): Promise<void> {
+export async function setSkillSelection(input: { category: SkillCategory; locale?: SkillLocale; skill_id: string | null }): Promise<void> {
   await fetchJson<void>("/api/skills/selections", jsonRequest("PUT", input));
 }
 

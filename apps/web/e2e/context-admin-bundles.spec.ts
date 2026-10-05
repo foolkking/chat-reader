@@ -36,15 +36,15 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await page.getByRole("button", { name: /设置|Settings/, exact: true }).click();
       await page.getByRole("region", { name: /设置|Settings/, exact: true }).getByRole("button", { name: /系统 Skill|System skills/ }).click();
       const dialog = page.getByRole("dialog", { name: /系统 Skill|System skills/, exact: true });
-      await dialog.getByRole("button", { name: "English", exact: true }).click();
+      await expect(dialog.getByRole("button", { name: /^(中文|English)$/ })).toHaveCount(0);
       await expect(dialog.locator("article")).toHaveCount(3);
       if (process.env.E2E_SETTINGS_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SETTINGS_SCREENSHOTS}/system-skills-${width}-${locale}.png` });
       await expect(dialog.getByRole("button", { name: /查看|View/, exact: true })).toHaveCount(0);
-      const rows = await (await page.request.get("/api/admin/system-skills")).json();
-      const builtin = rows.find((item: { category: string; locale: string; source_kind: string }) => item.category === "EXPORT_CONTEXT" && item.locale === "en" && item.source_kind === "BUNDLED");
+      const rows = await (await page.request.get("/api/admin/system-skills?effective=true")).json();
+      const builtin = rows.find((item: { category: string; source_kind: string }) => item.category === "EXPORT_CONTEXT" && item.source_kind === "BUNDLED");
       builtinId = builtin.id;
       systemId = builtin.id;
-      const row = dialog.locator("article").filter({ has: page.getByRole("heading", { name: builtin.name, exact: true }) });
+      const row = dialog.locator("article").filter({ has: page.getByRole("heading", { name: /^(接续上下文|Context acquisition)$/ }) });
       await row.getByLabel(/替换 Skill ZIP|Replace Skill ZIP/).setInputFiles({ name: "skill.zip", mimeType: "application/zip", buffer: zip(marker + " replacement") });
       await row.getByRole("button", { name: /^(确认替换|Replace)$/ }).click();
       await expect(row).toContainText(/已替换|Replaced/);
@@ -52,9 +52,16 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       expect(resolved.bundle_revision).toBeGreaterThan(0);
       const bytes = await (await page.request.get(resolved.bundle_url)).body();
       expect(new TextDecoder().decode(unzipSync(bytes)["system-example/references/example.md"])).toBe(marker + " replacement");
+      expect((await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=zh-CN")).json()).bundle_url).toBe(resolved.bundle_url);
       const personalNow = await (await user.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en")).json();
       expect(personalNow.id).toBe(personal.id); expect(personalNow.bundle_revision).toBe(1);
+      expect((await (await user.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=zh-CN")).json()).id).toBe(personal.id);
       expect((await user.request.get(`/api/admin/system-skills/${systemId}/revisions`)).status()).toBe(404);
+      await row.getByRole("button", { name: /^(恢复内置|Restore built-in)$/ }).click();
+      await page.getByRole("dialog").last().getByRole("button", { name: /^(确认|Confirm)$/ }).click();
+      await expect(row.getByRole("button", { name: /^(恢复内置|Restore built-in)$/ })).toHaveCount(0);
+      expect((await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en")).json()).bundle_url).toBe("/skills/context-acquisition.zip");
+      expect((await (await user.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en")).json()).id).toBe(personal.id);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     } finally {
       if (builtinId) await admin.post(`/api/admin/system-skills/${builtinId}/restore`);

@@ -104,8 +104,14 @@ def write_features(payload: FeaturePolicyUpdate, request: Request, db: Session =
 
 
 @router.get("/system-skills")
-def read_system_skills(request: Request, db: Session = Depends(get_db)) -> list[dict]:
+def read_system_skills(request: Request, effective: bool = False, db: Session = Depends(get_db)) -> list[dict]:
     require_root_admin(request, db)
+    if effective:
+        from app.services.system_skills import effective_system_skills
+        result = [{**_system_skill_payload(row), "legacy_default_conflict": conflict}
+                  for row, conflict in effective_system_skills(db)]
+        db.commit()
+        return result
     rows = list_system_skills(db)
     db.commit()
     return [_system_skill_payload(row) for row in rows]
@@ -145,8 +151,10 @@ async def replace_system_bundle(skill_id: uuid.UUID, request: Request, file: Upl
     data = await file.read(MAX_UPLOAD + 1)
     if len(data) > MAX_UPLOAD: raise HTTPException(413, 'Skill Bundle exceeds upload limit.')
     try:
+        from app.services.system_skills import lock_system_category
+        lock_system_category(db, row.category)
         save_revision(db, row, parse_bundle(data, file.filename or ''), base_revision=base_revision)
-        row.updated_by_user_id = actor.id
+        update_system_skill(db, row, actor_user_id=actor.id, default_enabled=True)
         record_admin_audit(db, actor_user_id=actor.id, action='SYSTEM_SKILL_UPDATED',
                            resource_type='system_skill', resource_id=row.id, request_id=request_id_from(request))
         db.commit(); db.refresh(row)
@@ -260,10 +268,10 @@ def remove_system_skill(skill_id: uuid.UUID, request: Request, db: Session = Dep
     if row.source_kind == "BUNDLED":
         raise HTTPException(status_code=409, detail="Bundled Skills cannot be deleted; restore the built-in version instead.")
     peers = db.query(SystemSkill).filter(
-        SystemSkill.category == row.category, SystemSkill.locale == row.locale,
+        SystemSkill.category == row.category,
     ).order_by(SystemSkill.id).with_for_update().populate_existing().all()
     if row.status == "ACTIVE" and not any(peer.id != row.id and peer.status == "ACTIVE" for peer in peers):
-        raise HTTPException(status_code=409, detail="Keep at least one active system Skill for this category and language.")
+        raise HTTPException(status_code=409, detail="Keep at least one active system Skill for this purpose.")
     record_admin_audit(
         db,
         actor_user_id=actor.id,

@@ -24,6 +24,8 @@ class SkillRead(BaseModel):
     default_enabled: bool = False
     bundle_revision: int = 0
     bundle_url: str | None = None
+    legacy_selection_conflict: bool = False
+    is_legacy_preferred: bool = False
 
 
 class SkillDetail(SkillRead):
@@ -36,7 +38,7 @@ class SkillResolve(SkillDetail):
 
 class SkillSelectionUpdate(BaseModel):
     category: SkillCategory
-    locale: SkillLocale
+    locale: SkillLocale | None = None
     skill_id: UUID | None = None
 
 

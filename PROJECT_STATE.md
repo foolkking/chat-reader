@@ -29,11 +29,21 @@ Local workstation residues remain for the user.
 failed attempts, capacity cleanup, live checks and recovery details;
 [implementation record](docs/execution/CORE_GUIDANCE_2026-10-05.md) owns behavior.
 
+Local follow-up (not deployed): Skill management now presents one system Bundle
+per purpose, no cloning or language picker, and preserves personal files. Explicit
+preferences apply across interface languages; divergent legacy choices remain
+until the user selects one. System replacement/default selection applies to the
+whole purpose and personal preference survives. Normalizer loading failures expose
+retry without silently downloading another file. See
+[Skill unification execution](docs/execution/SKILL_UNIFICATION_2026-10-05.md)
+for verification, remaining work and release status.
+
 The earlier Context/settings migration and 18 whole-site UX improvements remain
 deployed; [previous release](docs/execution/DEPLOYMENT_UX_2026-10-04.md) retains
 their evidence. Skill locale/clone cleanup and administrator quota/support-request
 work from the later [usability review](docs/evidence/ux-audit-skills-help-2026-10-05.md)
-remain separate pending scope; the guidance release does not complete them.
+are tracked separately; the guidance release does not complete them. Skill
+unification is the current local batch; administrator quota/support requests remain pending.
 
 ## System and boundaries
 

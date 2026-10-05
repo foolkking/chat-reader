@@ -1,5 +1,15 @@
 # API 参考
 
+2026-10-05 本地 Skill 首选统一（发布状态见 PROJECT_STATE）：
+`GET /api/skills` 返回每用途一个有效系统项与本人全部语言来源的文件；`locale` 只作为
+尚未解决的旧首选分歧读取提示。`POST /api/skills` 和 `/resolve` 的 locale 可省略；
+`PUT /api/skills/selections` 的 locale 可省略或为 null，显式选择原子写入两个兼容槽。
+响应增加 `legacy_selection_conflict`、`is_legacy_preferred`，保留旧个人选择供明确统一。
+`GET /api/admin/system-skills?effective=true` 合并等价旧默认项，非等价默认项返回
+`legacy_default_conflict`；不带参数的历史清单保留。管理员默认/替换/恢复按用途生效，
+个人选择不变。禁止禁用或删除同用途最后一个可用系统文件。完整 Bundle 摘要用于去重，
+不能只比较主指令。无 migration 增量。
+
 2026-10-05 已部署 `GET /api/conversations/{id}/continuation/guidance`：本人范围的
 只读引导统计，返回 Index 声明范围外的消息/字符数、阈值、来源 revision 和是否建议维护。
 范围不能对应时返回 unknown/null，不阻断文件保存。它不是语义校验接口；见

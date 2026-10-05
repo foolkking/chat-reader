@@ -121,7 +121,7 @@ def validate_system_configuration(archive):
     for row in archive.rows("skill_selections"):
         if row.get("skill_id"):
             skill = skills[row["skill_id"]]
-            if any(skill[key] != row[key] for key in ("subject_key", "category", "locale")):
+            if any(skill[key] != row[key] for key in ("subject_key", "category")):
                 raise SystemArchiveError("Archive Skill selection crosses account or category boundaries.")
 
 

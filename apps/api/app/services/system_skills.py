@@ -47,6 +47,48 @@ def list_system_skills(db: Session) -> list[SystemSkill]:
     return db.query(SystemSkill).order_by(SystemSkill.category, SystemSkill.locale, SystemSkill.created_at, SystemSkill.id).all()
 
 
+def lock_system_category(db: Session, category: str) -> None:
+    db.query(SystemSkill).filter(SystemSkill.category == category).order_by(
+        SystemSkill.id).with_for_update().populate_existing().all()
+
+
+def default_candidates(db: Session, category: str) -> list[SystemSkill]:
+    """Collapse equivalent legacy aliases without copying or deleting history.
+
+    Divergent old defaults remain available for an explicit administrator choice.
+    Comparing the full Bundle digest matters: matching instructions alone can
+    hide different scripts or references.
+    """
+    from app.models.skill_bundle import SkillBundleRevision
+    rows = db.query(SystemSkill).filter(
+        SystemSkill.category == category, SystemSkill.status == "ACTIVE",
+    ).order_by(SystemSkill.locale.desc(), SystemSkill.created_at, SystemSkill.id).all()
+    defaults = [row for row in rows if row.default_enabled]
+    candidates = defaults or [row for row in rows if row.source_kind == "BUNDLED"] or rows[:1]
+    unique = {}
+    for row in candidates:
+        if row.bundle_revision:
+            digest = db.query(SkillBundleRevision.digest).filter_by(
+                system_skill_id=row.id, revision=row.bundle_revision).scalar()
+            key = ("bundle", digest) if digest else ("unavailable", row.id)
+        elif row.content is not None:
+            key = ("markdown", row.content_digest)
+        else:
+            key = ("builtin", row.category)
+        unique.setdefault(key, row)
+    return list(unique.values())
+
+
+def effective_system_skills(db: Session):
+    from app.services.skills import SKILL_CATEGORIES
+    ensure_bundled_system_skills(db)
+    result = []
+    for category in SKILL_CATEGORIES:
+        candidates = default_candidates(db, category)
+        result.extend((row, len(candidates) > 1) for row in candidates)
+    return result
+
+
 def create_system_skill(
     db: Session,
     *,
@@ -61,7 +103,7 @@ def create_system_skill(
     # Seed before choosing a default; later lazy reads must not introduce a
     # competing built-in default after an administrator has selected one.
     ensure_bundled_system_skills(db)
-    db.query(SystemSkill).filter(SystemSkill.category == category, SystemSkill.locale == locale).order_by(SystemSkill.id).with_for_update().populate_existing().all()
+    lock_system_category(db, category)
     clean_name, clean_content, digest, byte_size = _content_values(name, content)
     key = f"admin:{category.casefold()}:{locale.casefold()}:{uuid.uuid4()}"
     row = SystemSkill(
@@ -96,7 +138,7 @@ def update_system_skill(
     default_enabled: bool | None = None,
     base_revision: int | None = None,
 ) -> SystemSkill:
-    db.query(SystemSkill).filter(SystemSkill.category == row.category, SystemSkill.locale == row.locale).order_by(SystemSkill.id).with_for_update().populate_existing().all()
+    lock_system_category(db, row.category)
     if content is not None and row.bundle_revision and base_revision != row.bundle_revision:
         raise RuntimeError('Skill changed; reload before replacing its content.')
     if name is not None:
@@ -113,11 +155,11 @@ def update_system_skill(
             raise ValueError("Unsupported Skill status.")
         if status == "DISABLED":
             alternatives = db.query(SystemSkill).filter(
-                SystemSkill.category == row.category, SystemSkill.locale == row.locale,
+                SystemSkill.category == row.category,
                 SystemSkill.status == "ACTIVE", SystemSkill.id != row.id,
             ).with_for_update().all()
             if not alternatives:
-                raise ValueError("Keep at least one active system Skill for this category and language.")
+                raise ValueError("Keep at least one active system Skill for this purpose.")
         row.status = status
         if status == "DISABLED":
             row.default_enabled = False
@@ -133,7 +175,7 @@ def update_system_skill(
 
 
 def restore_bundled_system_skill(db: Session, row: SystemSkill, *, actor_user_id: uuid.UUID) -> SystemSkill:
-    db.query(SystemSkill).filter(SystemSkill.category == row.category, SystemSkill.locale == row.locale).order_by(SystemSkill.id).with_for_update().populate_existing().all()
+    lock_system_category(db, row.category)
     if row.source_kind != "BUNDLED" or row.bundled_key is None:
         raise ValueError("Only bundled Skills can be restored.")
     builtin = builtin_by_key(row.bundled_key)
@@ -143,6 +185,8 @@ def restore_bundled_system_skill(db: Session, row: SystemSkill, *, actor_user_id
     row.content_digest = None
     row.byte_size = None
     row.status = "ACTIVE"
+    row.default_enabled = True
+    _make_only_default(db, row)
     row.updated_by_user_id = actor_user_id
     db.flush()
     return row
@@ -151,16 +195,9 @@ def restore_bundled_system_skill(db: Session, row: SystemSkill, *, actor_user_id
 def system_default_for(db: Session, category: str, locale: str) -> tuple[SystemSkill, BuiltinSkill | None]:
     _validate_identity(category, locale)
     ensure_bundled_system_skills(db)
-    rows = db.query(SystemSkill).filter(
-        SystemSkill.category == category,
-        SystemSkill.locale == locale,
-        SystemSkill.status == "ACTIVE",
-    ).order_by(SystemSkill.default_enabled.desc(), SystemSkill.source_kind.desc(), SystemSkill.created_at).all()
-    row = next((item for item in rows if item.default_enabled), None)
-    if row is None:
-        row = next((item for item in rows if item.source_kind == "BUNDLED"), None)
-    if row is None:
-        row = next(iter(rows), None)
+    rows = default_candidates(db, category)
+    # Locale only distinguishes unresolved, non-equivalent historical choices.
+    row = next((item for item in rows if item.locale == locale), rows[0] if rows else None) if len(rows) > 1 else next(iter(rows), None)
     if row is None:
         raise ValueError("No active system Skill is available.")
     return row, builtin_by_key(row.bundled_key) if row.bundled_key else None
@@ -176,7 +213,6 @@ def builtin_by_key(key: str) -> BuiltinSkill:
 def _make_only_default(db: Session, selected: SystemSkill) -> None:
     for row in db.query(SystemSkill).filter(
         SystemSkill.category == selected.category,
-        SystemSkill.locale == selected.locale,
         SystemSkill.id != selected.id,
     ):
         row.default_enabled = False

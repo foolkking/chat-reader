@@ -113,6 +113,11 @@ corepack pnpm run dev:web
 
 Playwright 默认从 `http://127.0.0.1:3107` 启动 production server，需要已有 Web build 和对应测试 API/fixture。设置 `PLAYWRIGHT_REUSE_EXISTING_SERVER=1` 可复用已经启动的隔离服务；长 Reader fixture 应覆盖 1000+ blocks、远距离目标和刷新恢复。不要把生产私密会话作为可提交 fixture。
 
+内存受限时，可在当前进程设置 `NEXT_BUILD_CPUS=1` 后运行普通 Web build；该参数现同时
+适用于普通与 standalone 构建。普通构建未设置时仍沿用 Next 默认，standalone 仍默认
+单 worker。必要时在当前进程设置 `NODE_OPTIONS=--max-old-space-size=2048`，不修改全局环境。
+Windows 构建不能只依赖外层 shell 退出码；还须确认日志包含完整路由表且没有 OOM/致命错误。
+
 ## 数据与 migration 规则
 
 - 生产和本地业务数据都应使用 PostgreSQL；测试数据库必须隔离。

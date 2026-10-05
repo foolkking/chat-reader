@@ -22,7 +22,7 @@ export function SkillBundleFiles({ skill, onDirtyChange, system = false, onSaved
   } });
   useEffect(() => { onDirtyChange?.(Boolean(file)); }, [file, onDirtyChange]);
   useEffect(() => { onBusyChange?.(replace.isPending); }, [replace.isPending, onBusyChange]);
-  return <div className="mt-3 space-y-2 border-t border-ui pt-3">
+  return <div className="mt-2 space-y-2">
     <button type="button" disabled={replace.isPending} className="btn-secondary min-h-11 px-3 text-xs" onClick={() => input.current?.click()}>{zh ? "替换文件" : "Replace file"}</button>
     <input ref={input} type="file" accept=".zip,.md" aria-label={zh ? "替换 Skill ZIP / Markdown" : "Replace Skill ZIP / Markdown"} disabled={replace.isPending} hidden onChange={event => { setFile(event.target.files?.[0] ?? null); setBase(skill.bundle_revision ?? 0); replace.reset(); }} />
     {file ? <p className="break-all text-xs text-secondary">{file.name}</p> : null}

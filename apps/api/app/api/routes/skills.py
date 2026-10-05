@@ -4,6 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import PlainTextResponse, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -11,7 +12,7 @@ from app.core.database import get_db
 from app.models.user_skill import UserSkill
 from app.models.administration import SystemSkill
 from app.schemas.skills import SkillDetail, SkillRead, SkillResolve, SkillSelectionUpdate, SkillUpdate
-from app.services.skills import create_skill, get_user_skill, list_skills, resolve_skill, selected_id, update_selection
+from app.services.skills import clear_skill_selection, create_skill, get_user_skill, list_skills, lock_skill_scope, resolve_skill, selected_id, update_selection
 from app.services.ownership import subject_key_from_request
 from app.services.feature_policies import get_feature_policy
 from app.services.skill_bundles import (MAX_UPLOAD, parse_bundle, save_revision, revision_query,
@@ -41,13 +42,13 @@ def get_skills(request: Request, category: str | None = Query(default=None), loc
 
 
 @router.get("/resolve", response_model=SkillResolve)
-def resolve(request: Request, category: str, locale: str, db: Session = Depends(get_db)):
+def resolve(request: Request, category: str, locale: str = "zh-CN", db: Session = Depends(get_db)):
     try: result = resolve_skill(db, category=category, locale=locale, subject_key=subject(request)); db.commit(); return result
     except ValueError as exc: raise HTTPException(422, str(exc)) from exc
 
 
 @router.post("", response_model=SkillRead, status_code=status.HTTP_201_CREATED)
-async def upload_skill(request: Request, category: str = Form(...), locale: str = Form(...), name: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_skill(request: Request, category: str = Form(...), locale: str = Form("zh-CN"), name: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
     policy = get_feature_policy(db)
     if not policy.allow_user_skills or not policy.allow_skill_import:
         raise HTTPException(403, "User Skill import is disabled by the system administrator.")
@@ -63,7 +64,7 @@ async def upload_skill(request: Request, category: str = Form(...), locale: str 
         save_revision(db, item, bundle, base_revision=0, preserve_baseline=False)
         db.commit(); db.refresh(item)
         return read_item(item)
-    except KeyError as exc: db.rollback(); raise HTTPException(409, "An identical Skill already exists for this category and language.") from exc
+    except KeyError as exc: db.rollback(); raise HTTPException(409, "An identical Skill already exists for this purpose.") from exc
     except IntegrityError as exc: db.rollback(); raise HTTPException(409, 'An identical Skill already exists.') from exc
     except ValueError as exc: db.rollback(); raise HTTPException(422, str(exc)) from exc
 
@@ -203,12 +204,14 @@ def get_skill_content(skill_id: uuid.UUID, request: Request, db: Session = Depen
 def patch_skill(skill_id: uuid.UUID, payload: SkillUpdate, request: Request, db: Session = Depends(get_db)):
     item = get_user_skill(db, skill_id, subject(request))
     if item is None: raise HTTPException(404, "Skill not found.")
+    lock_skill_scope(db, subject(request), item.category)
+    item = db.scalar(select(UserSkill).where(UserSkill.id == skill_id, UserSkill.subject_key == subject(request)).execution_options(populate_existing=True))
+    if item is None: raise HTTPException(404, "Skill not found.")
     if payload.name is not None: item.name = payload.name.strip()
     if payload.status is not None:
         item.status = payload.status
         if payload.status == "DISABLED":
-            if selected_id(db, item.category, item.locale, subject(request)) == item.id:
-                update_selection(db, category=item.category, locale=item.locale, skill_id=None, subject_key=subject(request))
+            clear_skill_selection(db, item)
     db.commit(); db.refresh(item)
     selected = False
     selected = selected_id(db, item.category, item.locale, subject(request)) == item.id
@@ -219,8 +222,10 @@ def patch_skill(skill_id: uuid.UUID, payload: SkillUpdate, request: Request, db:
 def delete_skill(skill_id: uuid.UUID, request: Request, db: Session = Depends(get_db)):
     item = get_user_skill(db, skill_id, subject(request))
     if item is None: raise HTTPException(404, "Skill not found.")
-    if selected_id(db, item.category, item.locale, subject(request)) == item.id:
-        update_selection(db, category=item.category, locale=item.locale, skill_id=None, subject_key=subject(request))
+    lock_skill_scope(db, subject(request), item.category)
+    item = db.scalar(select(UserSkill).where(UserSkill.id == skill_id, UserSkill.subject_key == subject(request)).execution_options(populate_existing=True))
+    if item is None: raise HTTPException(404, "Skill not found.")
+    clear_skill_selection(db, item)
     from app.services.skill_cleanup import detach_skill_history, queue_skill_cleanup
     from app.services.ownership import ownership_scope_from_request
     keys = detach_skill_history(db, item)
