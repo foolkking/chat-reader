@@ -30,10 +30,14 @@ Local residues remain for the user; no production volume or user import was dele
 ## Active work
 
 Latest code is **6b4ee0aec8bf399d2bd5eefabfb9c538f2933632**. Final CI
-**37366294097**, attempt 2, is waiting for hosted runners. Its Web gate passed;
-attempt 1 API/settings never started and were cancelled with "The job was not
-acquired by Runner of type hosted even after multiple attempts". GitHub's public
-status reports an **Actions incident / degraded performance** (2026-10-05 UTC).
+**37366294097**, attempt 3, is waiting for hosted runners. Exact-source API
+**929 passed / 3 skipped**, Web (including Context **35**, PWA **134 / 295 skipped**)
+and settings **147** plus fresh PostgreSQL restore **1** passed. Attempt 2 built
+the images, but independent inspection never started and was cancelled with
+"The job was not acquired by Runner of type hosted even after multiple attempts".
+Attempt 3 preserves successful quality gates and reruns build plus dependent
+inspection so their artifact attempt identifiers match. GitHub's public status
+reports **Actions major outage**, with Hosted Runner failures (2026-10-05 UTC).
 Do not rebuild locally/on King or deploy an unverified candidate. Final release
 helpers and detailed continuation notes are in
 `C:/Users/86182/Desktop/wkkk/chat-reader-export-final-20261006/CONTINUE.md`.
@@ -45,11 +49,13 @@ is authorized and unfinished. Server backups have been reduced to two manually.
 policy inputs, download/usage fences, recoverable physical reclamation, task status
 and regeneration APIs; local single migration head is **20261006_0048**.
 Client downloads/close/regeneration and verified two-backup retention with byte-identical
-component reuse are implemented locally. Browser retention **10**, related backup/help
-**11**, PostgreSQL/backup **11**, final API core **35 / 1 skipped** passed. Full API
-**846 / 78 skipped** predates the final targeted additions. **First CI 37354343891 found a historical-schema test setup and ambiguous copy-status
-selectors; fixes retain the underlying migration and clipboard assertions. Full CI and production
-acceptance remain unfinished; none of this follow-up is deployed.** The user deferred off-site backups; do not ask
+component reuse are implemented and have passed the exact-source quality gates above.
+Browser retention **10**, related backup/help **11**, PostgreSQL/backup **11**, final
+API core **35 / 1 skipped** are earlier local evidence. First CI 37354343891 found a
+historical-schema test setup and ambiguous copy-status selectors; subsequent fixes
+retain the underlying migration and clipboard assertions. **Final artifact inspection
+and production acceptance remain unfinished; none of this follow-up is deployed.**
+The user deferred off-site backups; do not ask
 for a destination or upload recovery copies. Existing expired exports remain
 protected by DB references until the new lifecycle safely reclaims them.
 

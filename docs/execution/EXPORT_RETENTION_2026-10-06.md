@@ -108,14 +108,24 @@ Web Context gate **26 passed / 9 failed**；新增临时导出状态使旧复制
 最终功能/测试源码为 `6b4ee0aec8bf399d2bd5eefabfb9c538f2933632`，CI `37366294097`。
 attempt 1 Web 全部通过；API/设置没有获得 runner、没有执行步骤，15 分钟后被平台取消。
 官方 annotation：`The job was not acquired by Runner of type hosted even after multiple attempts`。
-仅重跑未成功任务，attempt 2 当前排队；已通过 Web 结果保留，不能将未启动任务计通过。
+仅重跑未成功任务，attempt 2 的 API **929 passed / 3 skipped**、设置 **147 passed**、
+独立 PostgreSQL 空实例恢复 **1 passed**，并保留已通过 Web。Web 精确源码结果包括 Context **35**、
+PWA **134 passed / 295 skipped**、认证 **18**、离线负面 **17**；Markdown 导入 **8 / 1 skipped**。
+API 三项与 Markdown 导入一项跳过均因未配置可选外部 JSON/Markdown 样本，不能计为通过。
+
+attempt 2 镜像构建成功，但独立检查再次未获 runner、步骤为空，于 21:06 UTC 被平台取消，
+annotation 同上。重跑 build-images 及其依赖的独立检查，产生 attempt 3，保留已通过质量门禁。
+工作流按 run attempt 命名 artifact，因此不能仅重跑独立检查而引用不存在的新 attempt 产物。
+此重试仍全部由 GitHub 构建，不在本机或 King 构建，不改变应用源码。
 
 GitHub 官方 `https://www.githubstatus.com/api/v2/summary.json` 同时报告
 `Incident with Actions` / `investigating`，Actions 为 `degraded_performance`，
-事件更新时间 2026-10-05 19:50:50 UTC。此处是服务商故障，不再修改产品代码尝试绕过。
+事件更新时间 2026-10-05 19:50:50 UTC；后续升级为 `major_outage`，21:09 UTC 通告确认
+Hosted Runners 故障持续。此处是服务商故障，不修改产品代码尝试绕过。
 
 生产仍是 `5d48b68` / `0047`。本轮仅上传了未部署的 `79109a2` 已核验传输产物；
 未 docker load、未停写、未迁移、未删除备份/导出/镜像。本机专项服务全部停止，证据保留。
 服务器两份备份再次核验通过；历史导出只读基线为 57 个、1,118,258,860 bytes。
 最终源码通过 CI 后，从 `chat-reader-export-final-20261006/CONTINUE.md` 继续；
-最终 artifact 后缀应使用实际 attempt（当前为 2），不能复用旧源码镜像。
+最终 artifact 后缀应使用实际 attempt（当前为 3，下载到 `artifact-3/`），不能复用旧源码镜像，
+也不能把本机 `artifact/` 内未通过独立检查的 attempt 2 产物当作发布版本。
