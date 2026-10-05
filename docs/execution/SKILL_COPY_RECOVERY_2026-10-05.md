@@ -3,7 +3,8 @@
 Status: application source `5d48b68` passed complete CI; image verified, deployment
 blocked by capacity. Later changes affect test fixtures/documentation only. The inspected release
 `daf759d` and its CI are unchanged and do not contain this follow-up. Production
-capacity recovery and backup deduplication authorization remain pending.
+capacity recovery remains pending. The latest boundary below preserves server
+backups as well as business data.
 
 ## Evidence and change
 
@@ -152,3 +153,30 @@ API/worker PID plus creation-time/command identities were rechecked before stopp
 the dedicated PostgreSQL data directory was stopped with `pg_ctl`. Ports
 8015/55949/3107 have no remaining test listeners. Local task files remain for the
 user; original repository residue and user imports were neither staged nor removed.
+
+## Local cleanup and server preservation follow-up
+
+The user authorized retaining only the latest local intermediate backup/artifact,
+then specified that server data must stay unchanged. This is applied conservatively
+to server backup archives too: no hard-link deduplication or backup deletion.
+
+A bounded local inventory found four superseded release-image archives for
+`3f1d539`, `2863a00`, `ad82cf4` and `daf759d`, totaling **786,238,351 bytes**
+(about 750 MiB). Their adjacent release manifests identify the source. The latest
+`5d48b68` archive was rehashed and matches the recorded SHA-256. Small test archives
+are not treated as real system backups; user imports and other projects are excluded.
+
+The exact-file deletion command was rejected before execution by automatic approval
+with **`blocked by policy`**, without a more specific reason. No files were deleted;
+a subsequent read confirmed all four archives still exist. The manual file list and
+read-only inventory are in
+`C:/Users/86182/Desktop/wkkk/chat-reader-local-cleanup-20261005/`.
+No alternate deletion mechanism was attempted.
+
+The server was only inspected: public API health passes, root free space is
+**3,237,236 KiB**, and the only Chat Reader images are the running `3f1d539` set.
+All containers are active; unrelated images, volumes and build caches are excluded.
+Local deletion cannot address the server shortfall against the existing approximately
+**5.03 GiB** preflight. There was no new upload, image load, migration, service
+replacement, backup change or server image removal. Resume deployment only after
+server capacity is sufficient; do not reduce or bypass the existing preflight.

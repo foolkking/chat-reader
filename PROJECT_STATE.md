@@ -10,9 +10,15 @@ blobs are independently verified locally. A subsequent test/documentation-only
 follow-up corrects bilingual selectors and isolates legacy worker installation;
 the final local baseline passed **138 / 284 skipped**, including four CSP cases.
 The release source above remains the application/image identity. Production is
-still `3f1d539`/`0046`, healthy, with **3,326,108 KiB** free at the latest read-only
-check. Capacity recovery and backup deduplication authorization remain pending;
-no production replacement, backup change or old-image removal occurred.
+still `3f1d539`/`0046`, healthy, with **3,236,964 KiB** free at the latest read-only
+check. The user's latest boundary is applied conservatively: server data and
+server backups stay unchanged. Deployment still needs about **5.03 GiB** free.
+Four local old image archives (786,238,351 bytes) were identified, but automatic
+approval rejected deletion with `blocked by policy`; all four still exist.
+No production replacement, backup change or old-image removal occurred.
+[Server storage review](docs/execution/SERVER_STORAGE_REVIEW_2026-10-05.md)
+records bounded cache/old-artifact/log candidates and preserved rollback/data.
+No local image builds; deployment continues to use the inspected CI artifact.
 [Copy recovery execution](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md) records
 all failed/rerun checks, artifact identity and the prepared release directory.
 

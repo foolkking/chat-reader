@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-10-05 server storage: `execution/SERVER_STORAGE_REVIEW_2026-10-05.md`
+records read-only server measurements, exact old-artifact/editor candidates,
+optional log retention and preserved data/rollback resources. It is a historical
+review, not approval or proof of deletion. Project State and deployment retain
+the capacity block and CI-only image provenance.
+
 2026-10-05 Skill copy recovery: `execution/SKILL_COPY_RECOVERY_2026-10-05.md`
 records the missing-Clipboard recovery, shared text-bound feedback and real
 Clipboard/export browser acceptance. The Context Skill contract, frontend
@@ -9,6 +15,9 @@ Application source `5d48b68` passed CI `37323431809`; the execution record now
 includes bilingual fixture repairs, final local baseline, image verification and
 stopped test services. Project State, docs index and deployment identify this
 pending release separately from production and older image batches.
+The same record now includes the user's server-data preservation boundary,
+read-only capacity recheck and blocked local cleanup. No cleanup/deployment
+success is claimed; the local file list is outside the repository.
 
 2026-10-05 Normalizer discovery: `execution/NORMALIZER_DISCOVERY_2026-10-05.md`
 tracks FLOW-03, actual import/Bundle tests and retained fixture failures. Context
