@@ -25,9 +25,18 @@ for (const width of [375, 768, 1440]) {
     const payload = { metadata: { title: "Synthetic guidance", powered_by: "ChatGPT Exporter" }, messages: Array.from({ length: 105 }, (_, i) => ({ role: i % 2 ? "Response" : "Prompt", say: `Synthetic turn ${i + 1}` })) };
     const preview = await page.request.post("/api/imports/preview", { multipart: { files: { name: "synthetic-guidance.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(payload)) } } });
     expect(preview.status()).toBe(200);
-    const commit = await page.request.post(`/api/imports/${(await preview.json()).import_id}/commit`);
-    expect(commit.status()).toBe(200);
-    const id = (await commit.json()).conversation_ids[0];
+    const importId = (await preview.json()).import_id;
+    const commit = await page.request.post(`/api/imports/${importId}/commit`);
+    expect([200, 202]).toContain(commit.status());
+    const statusURL = `/api/imports/${importId}/status`;
+    await expect.poll(async () => {
+      const response = await page.request.get(statusURL);
+      expect(response.status()).toBe(200);
+      return (await response.json()).status;
+    }, { message: "The real import worker must finish before guidance is tested" }).toBe("committed");
+    const persisted = await (await page.request.get(statusURL)).json();
+    expect(persisted.conversation_ids).toHaveLength(1);
+    const id = persisted.conversation_ids[0];
     const endpoint = `/api/conversations/${id}/continuation`;
     await page.goto(`/conversations/${id}`);
     await openAction(page, width, /^(接续|Continuation)$/);
