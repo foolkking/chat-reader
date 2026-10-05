@@ -102,3 +102,20 @@ Web Context gate **26 passed / 9 failed**；新增临时导出状态使旧复制
 补充等待恢复操作退出、文件上传入口恢复可操作，再关闭；保留原始焦点断言和未保存退出保护。
 第一次补写误以为移除后仍停留预检提示，本机 2 次失败后停止，取消 `2ab1e40` / CI `37365456772`。
 改为实际上传入口状态后，本机连续 **3 passed**；不把已取消 CI 计为通过。
+
+## 最终源码与外部 CI 故障断点
+
+最终功能/测试源码为 `6b4ee0aec8bf399d2bd5eefabfb9c538f2933632`，CI `37366294097`。
+attempt 1 Web 全部通过；API/设置没有获得 runner、没有执行步骤，15 分钟后被平台取消。
+官方 annotation：`The job was not acquired by Runner of type hosted even after multiple attempts`。
+仅重跑未成功任务，attempt 2 当前排队；已通过 Web 结果保留，不能将未启动任务计通过。
+
+GitHub 官方 `https://www.githubstatus.com/api/v2/summary.json` 同时报告
+`Incident with Actions` / `investigating`，Actions 为 `degraded_performance`，
+事件更新时间 2026-10-05 19:50:50 UTC。此处是服务商故障，不再修改产品代码尝试绕过。
+
+生产仍是 `5d48b68` / `0047`。本轮仅上传了未部署的 `79109a2` 已核验传输产物；
+未 docker load、未停写、未迁移、未删除备份/导出/镜像。本机专项服务全部停止，证据保留。
+服务器两份备份再次核验通过；历史导出只读基线为 57 个、1,118,258,860 bytes。
+最终源码通过 CI 后，从 `chat-reader-export-final-20261006/CONTINUE.md` 继续；
+最终 artifact 后缀应使用实际 attempt（当前为 2），不能复用旧源码镜像。

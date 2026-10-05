@@ -29,6 +29,16 @@ Local residues remain for the user; no production volume or user import was dele
 
 ## Active work
 
+Latest code is **6b4ee0aec8bf399d2bd5eefabfb9c538f2933632**. Final CI
+**37366294097**, attempt 2, is waiting for hosted runners. Its Web gate passed;
+attempt 1 API/settings never started and were cancelled with "The job was not
+acquired by Runner of type hosted even after multiple attempts". GitHub's public
+status reports an **Actions incident / degraded performance** (2026-10-05 UTC).
+Do not rebuild locally/on King or deploy an unverified candidate. Final release
+helpers and detailed continuation notes are in
+`C:/Users/86182/Desktop/wkkk/chat-reader-export-final-20261006/CONTINUE.md`.
+No production replacement, migration or cleanup from this follow-up has run yet.
+
 [Export retention and backup plan](docs/planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md)
 is authorized and unfinished. Server backups have been reduced to two manually.
 [Local export implementation](docs/execution/EXPORT_RETENTION_2026-10-06.md) adds
