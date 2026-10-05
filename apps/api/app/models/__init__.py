@@ -28,7 +28,7 @@ from app.models.content_cleanup import (
     ContentCleanupScanRule,
     ContentCleanupScanTarget,
 )
-from app.models.export_artifact import ExportArtifact
+from app.models.export_artifact import ExportArtifact, ExportArtifactLease
 from app.models.heading import Heading
 from app.models.import_record import ImportRecord
 from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileAlias, ImportProfileGrant, ImportProfilePreference, ImportProfilePublication, ImportProfileRevision, ImportStructureFamily
@@ -87,6 +87,7 @@ __all__ = [
     "ContentCleanupScanRule",
     "ContentCleanupScanTarget",
     "ExportArtifact",
+    "ExportArtifactLease",
     "Heading",
     "ImportRecord",
     "ImportInputGroup",

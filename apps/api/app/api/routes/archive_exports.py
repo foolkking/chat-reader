@@ -1,15 +1,14 @@
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
+from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.export_artifact import ExportArtifact
-from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.schemas.task import BackgroundTaskRead
 from app.schemas.export import ExportRequest
@@ -20,6 +19,8 @@ from app.services.exporting.cr_archive import ARCHIVE_MIME
 from app.services.exporting.attachment_bundle import BUNDLE_MIME, CANJSON_BUNDLE_FORMAT, MARKDOWN_BUNDLE_FORMAT
 from app.services.exporting.context_package import CONTEXT_PACKAGE_FORMAT, CONTEXT_PACKAGE_MIME
 from app.services.artifact_lifecycle import validate_final_artifact
+from app.services.export_retention import owned_export, require_available, artifact_status, acquire_viewer, release_viewer, acquire_download, claim_download, regenerate_export
+from app.services.export_download import ExportFileResponse
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 from app.services.exporting.export_service import (
     ExportError,
@@ -149,27 +150,18 @@ def queue_derived_rebuild(
 def download_archive(
     artifact_id: uuid.UUID,
     request: Request,
+    claim: uuid.UUID | None = None,
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> FileResponse:
-    artifact = db.get(ExportArtifact, artifact_id)
-    if artifact is None or artifact.scope_type == "archive_upload":
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export not found.")
-    job = db.get(BackgroundJob, artifact.job_id)
-    if job is None or get_owned(db, BackgroundJob, job.id, ownership_scope) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export not found.")
-    if job.status != "committed":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Export artifact is not ready.")
-    expires_at = artifact.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if expires_at <= datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Export has expired.")
+    artifact = owned_export(db, artifact_id, ownership_scope, lock=True)
+    require_available(artifact)
     export_root = Path(get_settings().export_storage_dir).resolve()
     path = Path(artifact.storage_uri).resolve()
     if not path.is_relative_to(export_root) or not validate_final_artifact(path, expected_size=artifact.byte_size):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export file is missing.")
-    artifact.download_count += 1
+    lease_id = acquire_download(db, artifact, claim_id=claim)
+    factory = sessionmaker(bind=db.get_bind(), autoflush=False)
     db.commit()
     media_type = (
         CONTEXT_PACKAGE_MIME
@@ -178,4 +170,66 @@ def download_archive(
         if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT, "attachment-batch-zip"}
         else ARCHIVE_MIME
     )
-    return FileResponse(path, media_type=media_type, filename=artifact.filename)
+    return ExportFileResponse(path, media_type=media_type, filename=artifact.filename,
+                              headers={"Cache-Control": "private, no-store"},
+                              session_factory=factory, artifact_id=artifact.id, lease_id=lease_id)
+
+
+class ExportUsage(BaseModel):
+    session_id: uuid.UUID
+
+
+@router.post("/api/exports/{artifact_id}/download-claims")
+def reserve_download(artifact_id: uuid.UUID, payload: ExportUsage, db: Session = Depends(get_db),
+                     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request)):
+    artifact = owned_export(db, artifact_id, ownership_scope, lock=True)
+    lease_id = claim_download(db, artifact, payload.session_id)
+    db.commit()
+    return {"download_url": f"/api/exports/{artifact.id}/download?claim={lease_id}"}
+
+
+@router.get("/api/exports/{artifact_id}")
+def read_export_status(artifact_id: uuid.UUID, response: Response, db: Session = Depends(get_db),
+                       ownership_scope: OwnershipScope = Depends(ownership_scope_from_request)):
+    response.headers["Cache-Control"] = "private, no-store"
+    return artifact_status(owned_export(db, artifact_id, ownership_scope))
+
+
+@router.post("/api/exports/{artifact_id}/usage")
+def use_export(artifact_id: uuid.UUID, payload: ExportUsage, db: Session = Depends(get_db),
+               ownership_scope: OwnershipScope = Depends(ownership_scope_from_request)):
+    artifact = owned_export(db, artifact_id, ownership_scope, lock=True)
+    acquire_viewer(db, artifact, payload.session_id)
+    result = artifact_status(artifact)
+    db.commit()
+    return result
+
+
+@router.post("/api/exports/{artifact_id}/release")
+def close_export(artifact_id: uuid.UUID, payload: ExportUsage, db: Session = Depends(get_db),
+                 ownership_scope: OwnershipScope = Depends(ownership_scope_from_request)):
+    artifact = owned_export(db, artifact_id, ownership_scope, lock=True)
+    release_viewer(db, artifact, payload.session_id)
+    result = artifact_status(artifact)
+    db.commit()
+    return result
+
+
+@router.post("/api/exports/{artifact_id}/regenerate", response_model=BackgroundTaskRead, status_code=202)
+def regenerate_archive(artifact_id: uuid.UUID, request: Request, db: Session = Depends(get_db),
+                       key: str = Header(alias="Idempotency-Key", min_length=1, max_length=100),
+                       ownership_scope: OwnershipScope = Depends(ownership_scope_from_request)):
+    if not key.isascii():
+        raise HTTPException(422, "Invalid request key.")
+    artifact = owned_export(db, artifact_id, ownership_scope, lock=True)
+    from app.models.background_job import BackgroundJob
+    if db.get(BackgroundJob, artifact.job_id).job_type == "system_archive_export":
+        from app.services.administration import require_root_admin
+        require_root_admin(request, db)
+    try:
+        job = regenerate_export(db, artifact, ownership_scope, key)
+        db.commit()
+    except (MessageEditError, ValueError) as exc:
+        db.rollback()
+        raise HTTPException(getattr(exc, "status_code", 422), "Export sources changed or are unavailable. Review the original selection.") from exc
+    return background_job_read(job)

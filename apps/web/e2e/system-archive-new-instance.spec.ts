@@ -1,3 +1,4 @@
+import { exportFixture } from "./export-retention-helper";
 import { expect, test, type Page } from "@playwright/test";
 import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 
@@ -50,19 +51,21 @@ test("new instance restores identities and configuration, downloads a new archiv
     await panel.getByRole("button", { name: /Back to options|返回操作选择/ }).click();
     await panel.getByRole("button", { name: /Back up the system|备份整个系统/, exact: true }).click();
     await panel.getByRole("button", { name: /Create system archive|生成系统归档/ }).click();
-    const link = panel.getByRole("link", { name: /Download system archive|下载系统归档/ });
+    const link = panel.getByRole("button", { name: /Download system archive|下载系统归档/ });
     await expect(link).toBeVisible();
     const downloaded = page.waitForEvent("download"); await link.click();
     const archive = await downloaded;
     expect(await archive.failure()).toBeNull();
     expect(await archive.path()).toBeTruthy();
-    await page.clock.setFixedTime(new Date(Date.now() + 25 * 60 * 60 * 1000));
+    const exportTasks = await (await context.request.get(`${base}/api/system/archive/tasks`)).json();
+    const exported = exportTasks.find((task: { job_type: string; status: string }) => task.job_type === "system_archive_export" && task.status === "committed");
+    exportFixture(exported.result.artifact_id, true);
     await panel.getByRole("button", { name: /Refresh archive records|刷新归档记录/ }).click();
-    await expect(panel.getByText(/download expired or was removed|下载已过期或文件已移除/)).toBeVisible();
-    await expect(panel.getByRole("link", { name: /Download system archive|下载系统归档/ })).toHaveCount(0);
+    await expect(panel.getByText(/temporary file is no longer available|临时文件已失效/)).toBeVisible();
+    await expect(panel.getByRole("button", { name: /Download system archive|下载系统归档/ })).toHaveCount(0);
     await page.clock.setFixedTime(new Date());
-    await panel.getByRole("button", { name: /Create a fresh archive|重新生成归档/ }).click();
-    await expect(panel.getByRole("link", { name: /Download system archive|下载系统归档/ })).toBeVisible();
+    await panel.getByRole("button", { name: /^(Generate again|重新生成)$/ }).click();
+    await expect(panel.getByRole("button", { name: /Download system archive|下载系统归档/ })).toBeVisible();
     const records = await (await context.request.get(`${base}/api/admin/backups`)).json();
     expect(records.some((record: { operation: string; status: string }) => record.operation === "BACKUP" && record.status === "COMPLETED")).toBe(true);
   } finally { await context.close(); await admin.dispose(); }

@@ -43,7 +43,7 @@ export function AdminFeaturesPanel({ onDirtyChange }: { onDirtyChange?: (dirty: 
     ["allow_skill_import", "允许导入 Skill", "Allow Skill import"],
     ["allow_user_import", "允许用户导入", "Allow user import"],
   ] as const;
-  const valid = policy && Number.isInteger(policy.maximum_import_size_mb) && policy.maximum_import_size_mb >= 1 && policy.maximum_import_size_mb <= 10240 && Number.isInteger(policy.maximum_merge_message_count) && policy.maximum_merge_message_count >= 2 && policy.maximum_merge_message_count <= 100000;
+  const valid = policy && Number.isInteger(policy.maximum_import_size_mb) && policy.maximum_import_size_mb >= 1 && policy.maximum_import_size_mb <= 10240 && Number.isInteger(policy.maximum_merge_message_count) && policy.maximum_merge_message_count >= 2 && policy.maximum_merge_message_count <= 100000 && Number.isInteger(policy.export_retention_minutes) && policy.export_retention_minutes >= 1 && policy.export_retention_minutes <= 60;
   return <section className="space-y-4" aria-label={zh ? "功能与默认值" : "Features & defaults"}>
 
     {!policy && busy ? <p role="status">{zh ? "正在读取…" : "Loading…"}</p> : null}
@@ -52,6 +52,18 @@ export function AdminFeaturesPanel({ onDirtyChange }: { onDirtyChange?: (dirty: 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm text-secondary">{zh ? "单文件导入上限（MiB，1–10240）" : "Import limit per file (MiB, 1–10240)"}<input type="number" min={1} max={10240} value={policy.maximum_import_size_mb} onChange={(event) => { setNotice(""); setPolicy({ ...policy, maximum_import_size_mb: Number(event.target.value) }); }} className="input-base mt-2 min-h-11 w-full px-3 text-base" /></label>
         <label className="text-sm text-secondary">{zh ? "合并消息上限（2–100000）" : "Merge message limit (2–100000)"}<input type="number" min={2} max={100000} value={policy.maximum_merge_message_count} onChange={(event) => { setNotice(""); setPolicy({ ...policy, maximum_merge_message_count: Number(event.target.value) }); }} className="input-base mt-2 min-h-11 w-full px-3 text-base" /></label>
+      </div>
+      <div className="space-y-3 border-t border-ui pt-4">
+        <h3 className="text-sm font-medium text-primary">{zh ? "临时导出文件" : "Temporary exports"}</h3>
+        <label className="flex min-h-11 flex-wrap items-center justify-between gap-3 text-sm text-secondary">
+          <span>{zh ? "保留时间（分钟，1–60）" : "Keep for (minutes, 1–60)"}</span>
+          <input type="number" min={1} max={60} step={1} value={policy.export_retention_minutes} onChange={(event) => { setNotice(""); setPolicy({ ...policy, export_retention_minutes: Number(event.target.value) }); }} className="input-base min-h-11 w-24 px-3 text-base" />
+        </label>
+        <label className="flex min-h-11 items-center justify-between gap-3 text-sm text-primary">
+          <span>{zh ? "关闭导出面板后提前清理" : "Release when the export panel closes"}</span>
+          <input type="checkbox" checked={policy.export_release_on_close} onChange={(event) => { setNotice(""); setPolicy({ ...policy, export_release_on_close: event.target.checked }); }} />
+        </label>
+        <p className="text-xs leading-5 text-secondary">{zh ? "适用于新生成的文件；正在下载的文件会保留到传输结束。" : "Applies to new exports. Downloads already in progress can finish."}</p>
       </div>
       {!valid ? <p role="alert" className="text-sm text-[var(--danger)]">{zh ? "请输入范围内的整数。" : "Enter whole numbers within the stated ranges."}</p> : null}
       <button type="button" disabled={!dirty || !valid || busy} onClick={() => void save()} className="btn-primary min-h-11 px-4 text-sm">{busy ? (zh ? "保存中…" : "Saving…") : (zh ? "保存功能策略" : "Save feature policy")}</button>

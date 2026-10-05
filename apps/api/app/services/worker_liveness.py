@@ -121,12 +121,14 @@ class WorkerHeartbeatReporter:
         session_factory: sessionmaker = SessionLocal,
         instance_id: uuid.UUID | None = None,
         wait: Callable[[float], bool] | None = None,
+        maintenance: Callable[[], None] | None = None,
     ) -> None:
         self.interval_seconds = interval_seconds
         self.instance_id = instance_id or uuid.uuid4()
         self._session_factory = session_factory
         self._stop_event = threading.Event()
         self._wait = wait or self._stop_event.wait
+        self._maintenance = maintenance
         self._state_lock = threading.Lock()
         self._publish_lock = threading.Lock()
         self._state = "idle"
@@ -251,3 +253,9 @@ class WorkerHeartbeatReporter:
             if not self.pulse():
                 if self._superseded:
                     return
+                continue
+            if self._maintenance is not None:
+                try:
+                    self._maintenance()
+                except Exception as exc:
+                    structured_event(logger, logging.WARNING, "worker_export_maintenance_failed", error_class=type(exc).__name__)

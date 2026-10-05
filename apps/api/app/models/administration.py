@@ -129,6 +129,7 @@ class InstanceFeaturePolicy(Base):
     __table_args__ = (
         CheckConstraint("id = 1", name="ck_instance_feature_policies_singleton"),
         CheckConstraint("maximum_import_size_mb > 0", name="ck_instance_feature_policies_import_size"),
+        CheckConstraint("export_retention_minutes BETWEEN 1 AND 60", name="ck_feature_export_retention"),
         CheckConstraint(
             "maximum_merge_message_count >= 2",
             name="ck_instance_feature_policies_merge_message_count",
@@ -144,6 +145,8 @@ class InstanceFeaturePolicy(Base):
     allow_user_import: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     maximum_import_size_mb: Mapped[int] = mapped_column(Integer, nullable=False, default=512)
     maximum_merge_message_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
+    export_retention_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    export_release_on_close: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

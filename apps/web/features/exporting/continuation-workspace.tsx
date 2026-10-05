@@ -1,4 +1,5 @@
 "use client";
+import { releaseExportScope } from "../../lib/export-usage";
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Maximize2, Minimize2, X } from "lucide-react";
@@ -35,13 +36,14 @@ export function ContinuationWorkspace({ conversationId, onClose, restoreFocus, o
       catch { setCloseError(true); return; }
       finally { setBusy(false); }
     }
+    releaseExportScope(`maintenance:${conversationId}`);
     onClose();
   };
   useDialogFocus({ open: true, rootRef, initialFocusRef: titleRef, onClose: close, restoreFocus });
   const navigate: ContinuationNavigate | undefined = onNavigate ? async target => {
     if (busy || dirty) return false;
     setBusy(true);
-    try { const found = await onNavigate(target); if (found) onClose(); return found; }
+    try { const found = await onNavigate(target); if (found) { releaseExportScope(`maintenance:${conversationId}`); onClose(); } return found; }
     finally { setBusy(false); }
   } : undefined;
   return createPortal(<div className="fixed inset-0 z-[320] flex justify-end bg-[var(--overlay)]">

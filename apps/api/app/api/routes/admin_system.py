@@ -53,6 +53,8 @@ class FeaturePolicyUpdate(BaseModel):
     allow_user_import: bool | None = None
     maximum_import_size_mb: int | None = Field(default=None, ge=1, le=10_240)
     maximum_merge_message_count: int | None = Field(default=None, ge=2, le=100_000)
+    export_retention_minutes: int | None = Field(default=None, ge=1, le=60)
+    export_release_on_close: bool | None = None
 
 
 class SystemSkillCreate(BaseModel):

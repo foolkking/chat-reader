@@ -4,7 +4,7 @@
 [2026-10-06 发布记录](execution/DEPLOYMENT_SUPPORT_2026-10-06.md) 包含失败恢复、真实验收、
 两份备份收敛及旧镜像清理。[Project State](../PROJECT_STATE.md) 是当前快照。
 [导出回收与备份计划](planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md) 仍在实施；
-管理员三分钟导出回收、自动两份保留和去重尚未上线。异地副本暂不设置。
+管理员三分钟导出回收、两份保留和去重已本机实现并通过专项，尚未上线。异地副本暂不设置。
 
 ## 开始这里
 

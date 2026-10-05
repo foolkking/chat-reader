@@ -1,4 +1,6 @@
 "use client";
+import { ExportArtifactDelivery } from "../features/exporting/export-artifact-delivery";
+import { releaseExportScope } from "../lib/export-usage";
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Download, FileArchive, RefreshCw, Upload } from "lucide-react";
@@ -54,6 +56,7 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
 
   async function refresh() { await Promise.all([client.invalidateQueries({ queryKey: ["system-archive-accounts"] }), client.invalidateQueries({ queryKey: ["system-archive-capabilities"] }), client.invalidateQueries({ queryKey: ["system-archive-tasks"] }), client.invalidateQueries({ queryKey: ["active-tasks"] }), client.invalidateQueries({ queryKey: ["task"] })]); }
   function openTask(task: BackgroundTaskRead) {
+    releaseExportScope("backup:system");
     setFile(null); setSelectedId(task.job_id); setError("");
     setMode(task.job_type === "system_archive_export" ? "backup" : "restore");
     requestAnimationFrame(() => { heading.current?.focus(); heading.current?.scrollIntoView({ block: "nearest" }); });
@@ -94,6 +97,7 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
   }
   async function switchMode(next: "backup" | "restore") {
     if ((file) && !await confirm({ title: zh ? "放弃当前未提交的选择？" : "Discard the current unsent selection?", confirmLabel: zh ? "切换" : "Switch" })) return;
+    releaseExportScope("backup:system");
     setMode(next); setSelectedId(null); setFile(null); setError("");
   }
 
@@ -125,9 +129,8 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
         {selected.status === "failed" && selected.job_type === "system_archive_restore" && typeof selected.result.parent_task_id === "string" ? <button type="button" disabled={busy || !online} className={button} onClick={() => setSelectedId(String(selected.result.parent_task_id))}>{zh ? "返回预检，调整账户归属" : "Review preview and account ownership"}</button> : null}
         {selected.status === "committed" && selected.job_type === "system_archive_export" ? <>
           {Number(selected.result.missing_attachments) > 0 ? <p role="status" className="text-sm text-[var(--warning)]">{zh ? `有 ${selected.result.missing_attachments} 个附件缺少文件，这份归档不完整。` : `${selected.result.missing_attachments} attachments have no file. This archive is incomplete.`}</p> : null}
-          <p className="text-sm text-secondary">{bytes(Number(selected.result.byte_size))} · {zh ? "下载有效至 " : "Download available until "}{new Date(String(selected.result.expires_at)).toLocaleString(resolvedLocale)}</p>
-          {available(selected) ? <a href={String(selected.result.download_url)} className="btn-primary flex min-h-11 items-center justify-center gap-2 px-4 text-sm"><Download aria-hidden="true" className="h-4 w-4" />{zh ? "下载系统归档 (.cr)" : "Download system archive (.cr)"}</a> : <p role="status" className="text-sm text-secondary">{zh ? "下载已过期或文件已移除，请重新生成。" : "The download expired or was removed. Create a new archive."}</p>}
-          <button type="button" disabled={busy || !online} className={button} onClick={() => void backup()}>{zh ? "重新生成归档" : "Create a fresh archive"}</button>
+          <p className="text-xs text-secondary">{bytes(Number(selected.result.byte_size))}</p>
+          {selected.result.artifact_id ? <ExportArtifactDelivery artifactId={selected.result.artifact_id} scope="backup:system" label={zh ? "下载系统归档 (.cr)" : "Download system archive (.cr)"} onRegenerated={task => { openTask(task); void refresh(); }} /> : null}
         </> : null}
         {preview ? <>
           <ArchivePreview task={preview} zh={zh} />

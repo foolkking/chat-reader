@@ -97,6 +97,10 @@ def validate_system_configuration(archive):
         if archive.counts[name] > 1 or any(row["id"] != 1 for row in archive.rows(name)):
             raise SystemArchiveError("Archive contains conflicting instance policies.")
     for row in archive.rows("feature_policy"):
+        if (type(row.get("export_retention_minutes", 3)) is not int
+                or not 1 <= row.get("export_retention_minutes", 3) <= 60
+                or type(row.get("export_release_on_close", True)) is not bool):
+            raise SystemArchiveError("Archive contains invalid export retention policy.")
         if not 1 <= row["maximum_import_size_mb"] <= 10_240 or not 2 <= row["maximum_merge_message_count"] <= 100_000:
             raise SystemArchiveError("Archive contains invalid feature limits.")
     for row in archive.rows("access_policy"):

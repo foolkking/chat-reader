@@ -12,6 +12,7 @@ from app.models.attachment import AssetObject
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from app.models.worker_runtime_state import WorkerRuntimeState
+from app.models.export_artifact import ExportArtifact
 from app.services.diagnostics import storage_usage, worker_status
 
 STATUSES = ("queued", "processing", "cancelling", "committed", "failed", "cancelled")
@@ -57,6 +58,19 @@ def _local_storage(root: str) -> dict:
         return {"available": False, "complete": False}
 
 
+def _export_cleanup(db: Session, now: datetime) -> dict:
+    from app.services.export_retention import EXPORT_JOB_TYPES
+    rows = db.query(ExportArtifact.lifecycle_state, func.count(ExportArtifact.id), func.sum(ExportArtifact.byte_size)).join(
+        BackgroundJob, BackgroundJob.id == ExportArtifact.job_id,
+    ).filter(ExportArtifact.scope_type != "archive_upload", ExportArtifact.lifecycle_state != "reclaimed",
+             BackgroundJob.job_type.in_(EXPORT_JOB_TYPES), BackgroundJob.status == "committed",
+             (ExportArtifact.expires_at <= now) | ExportArtifact.release_requested_at.is_not(None),
+    ).group_by(ExportArtifact.lifecycle_state).all()
+    return {"pending_count": sum(int(count) for _, count, _ in rows),
+            "pending_bytes": sum(int(size or 0) for _, _, size in rows),
+            "failed_count": sum(int(count) for state, count, _ in rows if state == "retry")}
+
+
 def runtime_snapshot(db: Session, settings: Settings, *, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     queue = _metric(db, lambda: {"jobs": _counts(db, BackgroundJob), "imports": _counts(db, ImportRecord)})
@@ -86,10 +100,11 @@ def runtime_snapshot(db: Session, settings: Settings, *, now: datetime | None = 
         storage["assets"] = {"kind": "object_records", **_metric(db, logical_assets)}
     backup = _metric(db, lambda: _backup(db, "BACKUP"))
     restore = _metric(db, lambda: _backup(db, "RESTORE"))
+    export_cleanup = _metric(db, lambda: _export_cleanup(db, now))
     return {"generated_at": now.isoformat(), "worker": worker, "queue": queue,
-        "storage": storage, "backup": backup, "restore": restore,
+        "storage": storage, "backup": backup, "restore": restore, "export_cleanup": export_cleanup,
         "mail": {"configured": bool(settings.smtp_host and settings.smtp_from_address)},
-        "complete": all(metric["available"] for metric in (worker, queue, backup, restore))
+        "complete": all(metric["available"] for metric in (worker, queue, backup, restore, export_cleanup))
                     and worker.get("status") not in {None, "unavailable"}
                     and all(metric.get("available") and metric.get("complete") for metric in storage.values())}
 

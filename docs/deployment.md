@@ -1354,27 +1354,44 @@ backups or application volumes.
 all five checksums, four tar archives, and the PostgreSQL custom dump through an
 isolated `postgres:16-alpine` container with no network and no mounted volume.
 
-Before considering removal of historical backup directories, generate a bounded
-retention inventory:
+### Two verified backups and component reuse (0048 follow-up; not deployed)
+
+The accepted policy retains the latest **two verified** server backups. There is
+no additional 30-day retention and no off-site copy configured. Image upload/load
+retries do not trigger another data backup; every actual stop-write/migrate cycle
+still requires a fresh consistent backup.
+
+Deploy `backup.sh` together with `backup_housekeeping.py`. The latter supports
+host Python **3.6+**, avoiding the former report's modern typing requirement.
+`backup.sh` defaults `BACKUP_DEDUPLICATE=1`: it verifies the previous snapshots and
+reuses only byte-identical component archives by hardlink, then re-verifies the
+new staging directory before a single rename publishes it. It keeps the v1
+five-component layout and existing recovery commands. Unchanged bytes are shared:
+these are two logical snapshots, **not independent physical recovery copies**.
+`BACKUP_DEDUPLICATE=0` disables reuse without changing the restore format.
+
+After application release acceptance succeeds, execute the checked-in finalizer:
 
 ```bash
-python deploy/backup_retention_report.py \
-  --backup-dir /opt/chat-reader/backups \
-  --keep-latest 3 \
-  --minimum-age-days 30 \
-  --protect-name <known-baseline-backup>
+python3 deploy/backup_housekeeping.py report --backup-dir /opt/chat-reader/backups
+python3 deploy/backup_housekeeping.py prune --backup-dir /opt/chat-reader/backups --release-verified
 ```
 
-The default JSON is aggregate-only and read-only. It separates explicitly
-protected backups, the newest structurally complete backups, backups inside the
-minimum-age window, older structurally complete `REVIEW_OLDER_COMPLETE` items,
-and incomplete/unknown entries that must be held. The script never follows
-top-level symlinks, never modifies a backup, and exits 2 if entry/file bounds
-make the scan incomplete. Use `--include-identities` only for the operator's
-short-lived review and `--fail-on-review-candidates` only as an optional
-reporting gate. A review candidate is not deletion approval: independently run
-`verify_backup.sh`, confirm current/rollback/baseline recovery ownership, and
-obtain explicit operator approval before any separate removal command.
+Both commands verify five SHA-256 values, four tar streams and PostgreSQL TOC via
+an existing `postgres:16-alpine` image (`--pull=never`, network disabled). Set
+`--postgres-image` to the actual installed matching server image, or `--pg-restore`
+to a local matching tool. No image is built. The prune command requires two
+verified points before unlinking exact older members; unknown/incomplete/corrupt
+or linked directories are held. Reports distinguish released bytes from shared
+references and do not claim shared inode bytes twice.
+
+Backup creation and pruning share `.backup-operation.lock`. An interrupted process
+may leave this lock; establish that its operation has ended before removing the
+empty lock directory. Do not delete old recovery points just to make space for an
+unverified new backup. Failed releases keep their existing points. A temporary
+third snapshot is expected while acceptance is pending. The older read-only
+`backup_retention_report.py` remains available under Python 3.10+; its defaults are
+now two/latest and zero age days, but its structural report is not full verification.
 
 ## 低内存 King 发布
 

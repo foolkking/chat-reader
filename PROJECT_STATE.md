@@ -30,10 +30,15 @@ Local residues remain for the user; no production volume or user import was dele
 ## Active work
 
 [Export retention and backup plan](docs/planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md)
-is authorized and unfinished. Server backups have been reduced to two manually;
-**automatic retention, administrator-controlled three-minute export expiry with
-physical reclamation, download protection, renewal UI and backup deduplication
-are not implemented or deployed**. The user deferred off-site backups; do not ask
+is authorized and unfinished. Server backups have been reduced to two manually.
+[Local export implementation](docs/execution/EXPORT_RETENTION_2026-10-06.md) adds
+policy inputs, download/usage fences, recoverable physical reclamation, task status
+and regeneration APIs; local single migration head is **20261006_0048**.
+Client downloads/close/regeneration and verified two-backup retention with byte-identical
+component reuse are implemented locally. Browser retention **9**, related backup/help
+**11**, PostgreSQL/backup **11**, final API core **35 / 1 skipped** passed. Full API
+**846 / 78 skipped** predates the final targeted additions. **Full CI and production
+acceptance remain unfinished; none of this follow-up is deployed.** The user deferred off-site backups; do not ask
 for a destination or upload recovery copies. Existing expired exports remain
 protected by DB references until the new lifecycle safely reclaims them.
 

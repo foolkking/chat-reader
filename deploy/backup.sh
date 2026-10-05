@@ -7,12 +7,26 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env.production}"
 SOURCE_SHA="${SOURCE_SHA:-$(git rev-parse HEAD 2>/dev/null || printf 'unknown')}"
 BACKUP_HEADROOM_KB="${BACKUP_HEADROOM_KB:-262144}"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+PYTHON="${PYTHON:-python3}"
+BACKUP_DEDUPLICATE="${BACKUP_DEDUPLICATE:-1}"
 
 compose() {
   docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
 mkdir -p "$BACKUP_DIR"
+BACKUP_DIR="$(CDPATH= cd -- "$BACKUP_DIR" && pwd -P)"
+operation_lock="$BACKUP_DIR/.backup-operation.lock"
+mkdir "$operation_lock" || { echo 'Another backup operation or unfinished operation lock exists.' >&2; exit 1; }
+work_dir=""
+cleanup() {
+  case "$work_dir" in "$BACKUP_DIR"/.chat-reader-backup.*) rm -rf -- "$work_dir" ;; esac
+  rmdir "$operation_lock"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 database_bytes="$(compose exec -T postgres \
   sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select pg_database_size(current_database())"')"
@@ -30,11 +44,6 @@ fi
 
 work_dir="$(mktemp -d "$BACKUP_DIR/.chat-reader-backup.XXXXXX")"
 final_dir="$BACKUP_DIR/chat-reader-$STAMP"
-cleanup() {
-  rm -rf "$work_dir"
-}
-trap cleanup EXIT INT TERM
-
 dump_path="$work_dir/postgres.dump"
 postgres_tool_version="$(compose exec -T postgres pg_dump --version | tr -d '\r')"
 compose exec -T postgres \
@@ -64,14 +73,15 @@ done
   cat "$work_dir/SHA256SUMS"
 } > "$work_dir/MANIFEST"
 
-mkdir "$final_dir"
-mv "$dump_path" "$final_dir/postgres.dump"
-mv "$work_dir/postgres.toc" "$final_dir/postgres.toc"
-mv "$work_dir/imports.tar.gz" "$final_dir/imports.tar.gz"
-mv "$work_dir/exports.tar.gz" "$final_dir/exports.tar.gz"
-mv "$work_dir/offline.tar.gz" "$final_dir/offline.tar.gz"
-mv "$work_dir/assets.tar.gz" "$final_dir/assets.tar.gz"
-mv "$work_dir/SHA256SUMS" "$final_dir/SHA256SUMS"
-mv "$work_dir/MANIFEST" "$final_dir/MANIFEST"
+if [ "$BACKUP_DEDUPLICATE" = 1 ]; then
+  "$PYTHON" "$SCRIPT_DIR/backup_housekeeping.py" deduplicate --backup-dir "$BACKUP_DIR" \
+    --staging "$work_dir" --postgres-image "${POSTGRES_IMAGE:-postgres:16-alpine}"
+fi
+# Publish the verified directory in one filesystem operation. Never expose a
+# timestamped directory with only some of the five recovery components.
+test ! -e "$final_dir"
+mv -T -n "$work_dir" "$final_dir"
+test ! -d "$work_dir"
+work_dir=""
 
 echo "Verified five-component backup written to $final_dir"

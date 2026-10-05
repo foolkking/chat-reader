@@ -1,5 +1,17 @@
 # API 参考
 
+## Local export lifecycle extension (not deployed)
+
+Migration `20261006_0048` adds owner-scoped `/api/exports/{id}` GET status,
+POST `/usage`, `/release`, `/download-claims` (JSON `session_id` UUID), and POST
+`/regenerate` (Idempotency-Key). The original GET `/download` accepts an optional
+single-use `claim`; legacy requests still work. Status exposes original expiry,
+availability, cleanup failure code and a regeneration action without storage paths.
+Root `/api/admin/features` accepts `export_retention_minutes` (1–60, default 3)
+and `export_release_on_close` (default true), preserving omitted fields.
+See [artifact contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md) and
+[execution](execution/EXPORT_RETENTION_2026-10-06.md); client integration is pending.
+
 ## Support requests (deployed 2026-10-06)
 
 The [support contract](system/SUPPORT_REQUEST_CONTRACT.md) owns lifecycle, limits,

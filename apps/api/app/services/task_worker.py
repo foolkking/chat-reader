@@ -23,7 +23,14 @@ from app.services.worker_liveness import WorkerHeartbeatReporter
 
 def run_task_worker_forever() -> None:
     settings = get_settings()
-    reporter = WorkerHeartbeatReporter(interval_seconds=settings.worker_heartbeat_interval_seconds)
+    from pathlib import Path
+    from app.services.export_retention import reclaim_exports
+    # Same worker's bounded maintenance callback runs even during a long import.
+    # It never claims/processes a second user job.
+    reporter = WorkerHeartbeatReporter(
+        interval_seconds=settings.worker_heartbeat_interval_seconds,
+        maintenance=lambda: reclaim_exports(SessionLocal, Path(settings.export_storage_dir)),
+    )
     reporter.start()
     try:
         while not reporter.superseded:

@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-06 local export lifecycle: `execution/EXPORT_RETENTION_2026-10-06.md`
+tracks migration 0048, leases/reclamation/regeneration, policy inputs, actual
+file/HTTP/PostgreSQL tests and remaining client/backup/release work. The Artifact
+Lifecycle contract and Project State separate this local code from deployed 0047.
+
 2026-10-06 deployment: `execution/DEPLOYMENT_SUPPORT_2026-10-06.md` owns the
 5d48b68/0047 release, mixed-newline helper failure/retry, retained two backups,
 old-image cleanup and production HTTP evidence. Project State/index/deployment,
@@ -1083,3 +1088,8 @@ acceptance remains `NOT_VERIFIED` pending operator-run browser verification.
 - `planning/SETTINGS_AND_SITE_UX_FOLLOWUP_2026-10-03.md`: user-approved settings cleanup scope, ordered deployment authorization and subsequent whole-site audit/fix requirements; pending implementation, not current product behavior.
 
 2026-10-03: candidate API retirement/current supported endpoints and old-job retry behavior updated in PROJECT_STATE, Context contract, API reference and index; dated execution record includes service-test migration and PostgreSQL direct-save race evidence.
+
+2026-10-06: Export lifecycle client closure, real browser/ZIP/file evidence and backup
+component reuse/two-point retention documented in ARTIFACT_LIFECYCLE_CONTRACT,
+deployment.md, PROJECT_STATE and EXPORT_RETENTION execution; production remains
+5d48b68/0047 until a separately verified release. Off-site copies remain deferred.

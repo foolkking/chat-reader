@@ -19,7 +19,7 @@ export type UserConversation = { id: string; title: string; status: string; mess
 export type UserAttachment = { id: string; display_name: string; detected_mime_type: string | null; asset_object: { byte_size: number } | null; content_url: string | null; download_url: string | null };
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 export type SystemSkill = { bundle_revision?: number; bundle_url?: string | null; id: string; skill_key: string; category: "EXPORT_CONTEXT" | "CONVERSATION_RESCUE" | "CONTEXT_MAINTENANCE"; locale: "zh-CN" | "en"; name: string; source_kind: "BUNDLED" | "ADMIN_CREATED"; status: "ACTIVE" | "DISABLED"; default_enabled: boolean; is_customized: boolean; byte_size: number; builtin_content_url: string | null; updated_at: string };
-export type FeaturePolicy = { allow_share_links: boolean; allow_public_share: boolean; allow_share_password: boolean; allow_user_skills: boolean; allow_skill_import: boolean; allow_user_import: boolean; maximum_import_size_mb: number; maximum_merge_message_count: number; updated_at: string };
+export type FeaturePolicy = { allow_share_links: boolean; allow_public_share: boolean; allow_share_password: boolean; allow_user_skills: boolean; allow_skill_import: boolean; allow_user_import: boolean; maximum_import_size_mb: number; maximum_merge_message_count: number; export_retention_minutes: number; export_release_on_close: boolean; updated_at: string };
 export type BackgroundTask = { job_id: string; job_type: string; status: string; phase: string; progress: number };
 export type BackupRecord = { id: string; operation: "BACKUP" | "RESTORE"; status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED"; artifact_name: string | null; byte_size: number | null; summary: Record<string, unknown>; created_at: string; completed_at: string | null };
 export type AuditEntry = { id: string; actor_user_id: string; action: string; target_user_id: string | null; resource_type: string | null; resource_id: string | null; result: string; metadata: Record<string, unknown>; request_id: string | null; created_at: string };
@@ -35,6 +35,7 @@ export type AdminRuntimeStatus = {
   worker: RuntimeMetric<{ status: "alive_idle" | "alive_busy" | "stale" | "unavailable"; heartbeat_at: string | null; heartbeat_age_seconds: number | null; processing_task_count: number | null; active_task_kind: "job" | "import" | null }>;
   queue: RuntimeMetric<{ jobs: TaskCounts; imports: TaskCounts }>;
   storage: Record<"imports" | "exports" | "offline" | "assets", RuntimeMetric<{ file_count: number; bytes: number; complete: boolean }> & { kind?: "local" | "object_records" }>;
+  export_cleanup?: RuntimeMetric<{ pending_count: number; pending_bytes: number; failed_count: number }>;
   backup: RuntimeArchive; restore: RuntimeArchive; mail: { configured: boolean };
 };
 

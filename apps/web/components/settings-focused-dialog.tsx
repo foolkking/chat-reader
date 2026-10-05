@@ -1,4 +1,5 @@
 "use client";
+import { releaseExportScope } from "../lib/export-usage";
 
 import { OfflineSyncCenter } from "./offline-sync-center";
 import { AdminRuntimePanel } from "./admin-runtime-panel";
@@ -42,9 +43,11 @@ export function SettingsFocusedDialog({ category: initialCategory, onClose, rest
   const title = category === "help" ? (zh ? "帮助与诊断" : "Help & diagnostics") : category === "admin-runtime" ? (zh ? "运行状态" : "Runtime status") : category === "shares" ? (zh ? "我的分享" : "My shares") : category === "offline" ? (zh ? "离线与同步" : "Offline & sync") : category === "admin-noise" ? (zh ? "系统噪声规则" : "System noise rules") : category === "admin-formats" ? (zh ? "系统导入格式" : "System import formats") : adminTitles[category] ?? (category === "data" ? t("dataArchive") : category === "security" ? t("accountSecurity") : category === "cleanup" ? t("noiseRuleLibrary") : category === "skills" ? t("skillManagement") : category === "access" ? (zh ? "\u7528\u6237\u4e0e\u8bbf\u95ee" : "Users & access") : t("importFormats"));
   const requestClose = useCallback(async (): Promise<boolean> => {
     if (dirty && !(await confirm({ title: zh ? "放弃未保存的更改？" : "Discard unsaved changes?", description: zh ? "当前输入尚未提交，关闭后这些更改会丢失。" : "Your changes have not been saved and will be lost when closing.", confirmLabel: zh ? "放弃更改" : "Discard changes", danger: true }))) return false;
+    if (category === "data") releaseExportScope("backup:personal");
+    if (category === "admin-system") releaseExportScope("backup:system");
     onClose();
     return true;
-  }, [confirm, dirty, onClose, zh]);
+  }, [category, confirm, dirty, onClose, zh]);
   useEffect(() => {
     if (!dirty) return;
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Download, FileArchive, FileJson2, FileText } from "lucide-react";
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { MaintenanceHint } from "./maintenance-hint";
+import { ExportArtifactDelivery } from "./export-artifact-delivery";
 import { captureOfflineAccess, assertOfflineAccess } from "../../lib/offline-access";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
@@ -83,7 +84,8 @@ export function ExportPanel({
   const unavailableCount = attachments.filter((item) => item.resolution_status !== "resolved" || !item.asset_object).length;
   const exportOptions = { includeDescription, includeAnnotations, includeNotebook, includeSourceRefs };
   const currentKey = JSON.stringify({ conversationId, sourceRevision, continuationGeneration: needsContinuationState ? continuationState.data?.generation : null, format, includeAttachments, includeContinuation, ...exportOptions });
-  const downloadUrl = jobKey === currentKey && !continuationUnavailable && !(needsContinuationState && continuationState.isFetching) ? taskQuery.data?.result.download_url : null;
+  const artifactId = jobKey === currentKey && !continuationUnavailable && !(needsContinuationState && continuationState.isFetching) ? taskQuery.data?.result.artifact_id : null;
+  const exportScope = `${maintenance ? "maintenance" : "export"}:${conversationId}`;
   const plainHref = getConversationExportUrl(conversationId, {
     format: format === "canjson" ? "canjson_v2" : "markdown_v2",
     includeMetadata: true,
@@ -159,18 +161,16 @@ export function ExportPanel({
       {jobKey === currentKey && taskQuery.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{zh ? "暂时无法获取导出进度，任务可能仍在运行。" : "Export status is unavailable. The task may still be running."}</p><button type="button" disabled={taskQuery.isFetching} onClick={() => void taskQuery.refetch()} className="min-h-10 underline">{zh ? "重新获取进度" : "Retry status"}</button></div> : null}
       {needsContinuationState && continuationState.isError ? <button type="button" className="min-h-11 text-sm text-[var(--danger)]" onClick={() => void continuationState.refetch()}>{zh ? "接续文件状态读取失败，重试" : "Could not read continuation status; retry"}</button> : null}
       {format === "context" || includeAttachments ? (
-        downloadUrl && taskQuery.data?.status === "committed" ? (
+        artifactId && taskQuery.data?.status === "committed" ? (
           format === "context" ? (
-            <ContextPackageDelivery downloadUrl={String(downloadUrl)} defaultSkillLocale={zh ? "zh-CN" : "en"} purpose={maintenance ? "maintenance" : "acquisition"} />
+            <ContextPackageDelivery downloadUrl="" downloadControl={<ExportArtifactDelivery artifactId={artifactId} scope={exportScope} label={zh ? "下载上下文包" : "Download Context Package"} onRegenerated={task => { setJobId(task.job_id); setJobKey(currentKey); }} />} defaultSkillLocale={zh ? "zh-CN" : "en"} purpose={maintenance ? "maintenance" : "acquisition"} />
           ) : (
-            <a href={String(downloadUrl)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
-              <Download className="h-4 w-4" />{zh ? "下载导出包" : "Download export"}
-            </a>
+            <ExportArtifactDelivery artifactId={artifactId} scope={exportScope} label={zh ? "下载导出包" : "Download export"} onRegenerated={task => { setJobId(task.job_id); setJobKey(currentKey); }} />
           )
         ) : (
           <button
             type="button"
-            disabled={submitting || continuationUnavailable || (needsContinuationState && continuationState.isFetching) || (jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled"].includes(taskQuery.data?.status ?? "queued"))}
+            disabled={submitting || continuationUnavailable || (needsContinuationState && continuationState.isFetching) || (jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled", "committed"].includes(taskQuery.data?.status ?? "queued"))}
             onClick={() => void (async () => {
               if (submitLock.current) return;
               submitLock.current = true;
@@ -216,7 +216,7 @@ export function ExportPanel({
   );
 }
 
-export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultSkillLocale, offline = false, purpose = "acquisition" }: { downloadUrl: string; downloadFilename?: string; defaultSkillLocale: SkillLocale; offline?: boolean; purpose?: "acquisition" | "maintenance" }) {
+export function ContextPackageDelivery({ downloadUrl, downloadFilename, downloadControl, defaultSkillLocale, offline = false, purpose = "acquisition" }: { downloadUrl: string; downloadFilename?: string; downloadControl?: React.ReactNode; defaultSkillLocale: SkillLocale; offline?: boolean; purpose?: "acquisition" | "maintenance" }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const skillLocale = defaultSkillLocale;
@@ -236,7 +236,7 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
   const { copy, state: copyState, manualRef } = useClipboardCopy(request);
   return <section className="space-y-3 border-t border-ui pt-3" data-testid="context-package-delivery">
     <p className="text-xs text-secondary">{offline ? (zh ? "使用缓存的系统默认 Skill ZIP。" : "Uses the cached system-default Skill ZIP.") : resolved.data?.name}</p>
-    <button type="button" className="btn-primary min-h-11 w-full px-3" onClick={() => { const link = document.createElement("a"); link.href = downloadUrl; link.download = downloadFilename ?? ""; link.click(); }}>{zh ? "下载上下文包" : "Download Context Package"}</button>
+    {downloadControl ?? <button type="button" className="btn-primary min-h-11 w-full px-3" onClick={() => { const link = document.createElement("a"); link.href = downloadUrl; link.download = downloadFilename ?? ""; link.click(); }}>{zh ? "下载上下文包" : "Download Context Package"}</button>}
     <div className="flex flex-wrap gap-3 text-sm">
       {bundleUrl ? <a href={bundleUrl} download className="min-h-11 py-3 text-accent">{purpose === "maintenance" ? (zh ? "下载维护 Skill" : "Download maintenance Skill") : (zh ? "下载接续 Skill" : "Download acquisition Skill")}</a> : null}
       <button type="button" disabled={copyState === "copying"} className="min-h-11 text-secondary disabled:opacity-50" onClick={() => void copy()}>{copyState === "copying" ? (zh ? "正在复制…" : "Copying…") : (zh ? "复制使用说明" : "Copy usage instructions")}</button>

@@ -1,5 +1,39 @@
 # Artifact Lifecycle Contract
 
+## Local export extension — 2026-10-06 (not deployed)
+
+Migration `20261006_0048` adds per-artifact lifecycle state and short usage/claim/
+download leases. `export_retention.py` is the shared row-lock boundary for these
+transitions; `export_download.py` renews leases only while the actual ASGI response
+is sending. Range downloads retain FileResponse behavior. Root policy defaults
+to three minutes and release-on-close; successful job publication pins the policy
+and deadline. Existing artifacts retain their original deadline.
+
+`GET /api/exports/{id}` reports actual expiry/state, not a renewed lifetime.
+`POST .../usage` renews only a short view before the original deadline;
+`POST .../release` signals explicit close of that view. `POST .../download-claims`
+reserves a 15-second claim (bounded by expiry), then the original download route
+accepts its optional `claim` parameter and upgrades it to an active transfer.
+Without a claim, the old authenticated download route still acquires a real
+transfer lease. No status request can keep an expired artifact alive.
+
+The existing worker's heartbeat runs bounded reclamation while its one user job
+may be busy. Rows transition active → reclaiming → reclaimed, or retry after an
+unlink failure. Physical deletion only targets the checked job-owned export file;
+restore uploads and canonical/offline data are excluded. Task rows persist for
+regeneration. `POST .../regenerate` accepts Idempotency-Key and re-admits original
+options against current owned sources; system archives additionally require Root.
+Runtime status exposes aggregate pending count/bytes and failure count.
+
+Client close signals, serialized claims, server-time expiry and regeneration are
+connected to export, maintenance, backup and Task Center controls. Explicit scope/route
+closure releases usage; blur, hiding, resizing and ordinary React disposal do not.
+A refresh relies on bounded leases. The server and client both fence account changes.
+Missing or size-mismatched files return unavailable rather than a misleading download URL.
+Local real-browser acceptance passes; full CI/production acceptance remains pending. [Execution evidence](../execution/EXPORT_RETENTION_2026-10-06.md)
+records the implemented boundary and failures/reruns. The historical contract
+below continues to govern offline artifacts and archive-upload inputs.
+
 2026-10-02 personal/system archive extension: uploads are internal ExportArtifact
 references with `scope_type=archive_upload`, never downloadable via the export
 route. They expire for new confirmation after 24 hours and remain referenced

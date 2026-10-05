@@ -108,7 +108,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       let panel = await openBackup(page);
       await expect(panel.getByText(/Only this account|仅包含当前账户/)).toBeVisible();
       await panel.getByRole("button", { name: /Create personal archive|生成个人归档/ }).click();
-      const downloadLink = panel.getByRole("link", { name: /Download personal archive|下载个人归档/ });
+      const downloadLink = panel.getByRole("button", { name: /Download personal archive|下载个人归档/ });
       await expect(downloadLink).toBeVisible();
       const downloadPromise = page.waitForEvent("download"); await downloadLink.click();
       const download = await downloadPromise, filePath = await download.path();

@@ -1224,6 +1224,8 @@ def process_background_job(
             else:
                 raise ValueError(f"Unsupported background job type: {job.job_type}")
             now = datetime.now(timezone.utc)
+            from app.services.export_retention import finalize_export_lifetime
+            finalize_export_lifetime(db, job, job_result, now=now)
             committed_values = {
                 "status": "committed",
                 "phase": "completed",

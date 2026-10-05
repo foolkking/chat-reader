@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { releaseExportRoute } from "../lib/export-usage";
 import { ProjectSidebar } from "../features/projects/project-sidebar";
 
 type WorkspaceShellContextValue = {
@@ -14,6 +15,11 @@ const WorkspaceShellContext = createContext<WorkspaceShellContextValue>({ embedd
 export function WorkspaceShellBoundary({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
   const searchParams = useSearchParams();
+  const previousPath = useRef(pathname);
+  useEffect(() => {
+    if (previousPath.current !== pathname) releaseExportRoute(previousPath.current);
+    previousPath.current = pathname;
+  }, [pathname]);
   const [mobileOpenSignal, setMobileOpenSignal] = useState(0);
   const ownerSurface = pathname === "/"
     || pathname === "/archived"

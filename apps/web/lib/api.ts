@@ -721,6 +721,18 @@ export async function getTask(jobId: string): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`);
 }
 
+export type ExportArtifactStatus = {
+  artifact_id: string; status: string; expires_at: string; server_now: string;
+  retention_seconds: number; release_on_close: boolean; download_url: string | null;
+};
+export const exportArtifactApi = {
+  status: (id: string) => fetchJson<ExportArtifactStatus>(`/api/exports/${id}`, { cache: "no-store" }),
+  usage: (id: string, sessionId: string) => fetchJson<ExportArtifactStatus>(`/api/exports/${id}/usage`, jsonRequest("POST", { session_id: sessionId })),
+  release: (id: string, sessionId: string) => fetchJson<ExportArtifactStatus>(`/api/exports/${id}/release`, { ...jsonRequest("POST", { session_id: sessionId }), keepalive: true }),
+  claim: (id: string, sessionId: string) => fetchJson<{ download_url: string }>(`/api/exports/${id}/download-claims`, jsonRequest("POST", { session_id: sessionId })),
+  regenerate: (id: string, key: string) => fetchJson<BackgroundTaskRead>(`/api/exports/${id}/regenerate`, { method: "POST", headers: { "Idempotency-Key": key }, body: "{}" }),
+};
+
 export async function retryTask(jobId: string): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST" });
 }

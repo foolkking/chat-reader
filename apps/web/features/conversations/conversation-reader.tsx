@@ -1,4 +1,5 @@
 "use client";
+import { releaseExportScope } from "../../lib/export-usage";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -1623,6 +1624,7 @@ export function ConversationReader({
       window.dispatchEvent(new Event("chat-reader:reader-layout-will-change"));
       sourceEditorBaseLeftRef.current = readerMainSectionRef.current?.getBoundingClientRect().left ?? 0;
     }
+    releaseExportScope(`export:${conversationId}`);
     setSourceEditorTarget(nextTarget);
     setSourceRequestedCursorOffset(nextTarget.cursorOffset);
     setPendingSourceEditorTarget(null);
@@ -1950,6 +1952,7 @@ export function ConversationReader({
     }
     const alreadyOpen = panel === "search" ? showSearch : panel === "share" ? showShare : panel === "export" ? showExport : showFiles;
     if (alreadyOpen) {
+      releaseExportScope(`export:${conversationId}`);
       setShowSearch(false);
       setShowShare(false);
       setShowExport(false);
@@ -1958,6 +1961,7 @@ export function ConversationReader({
       return;
     }
     if (panel !== "files" && !(await closeSourceEditorForWorkspace())) return;
+    if (panel !== "export") releaseExportScope(`export:${conversationId}`);
     setDesktopActionsExpanded(false);
     setMobileActionsExpanded(false);
     if (panel !== "files") setAnnotationsOpen(false);
@@ -1974,7 +1978,7 @@ export function ConversationReader({
     setShowExport(panel === "export");
     setShowSearch(panel === "search");
     setShowFiles(panel === "files");
-  }, [closeSourceEditorForWorkspace, showExport, showFiles, showSearch, showShare]);
+  }, [conversationId, closeSourceEditorForWorkspace, showExport, showFiles, showSearch, showShare]);
 
   const refreshAttachmentReferences = useCallback(async () => {
     setNavigationStatus("idle");
@@ -1983,11 +1987,12 @@ export function ConversationReader({
   }, [conversationId, openUtilityPanel, queryClient]);
 
   const closeDesktopUtilityPanels = useCallback(() => {
+    releaseExportScope(`export:${conversationId}`);
     setShowShare(false);
     setShowExport(false);
     setShowSearch(false);
     setShowFiles(false);
-  }, []);
+  }, [conversationId]);
 
   const restoreDesktopUtilityFocus = useCallback(() => {
     const opener = desktopUtilityOpenerRef.current;
@@ -2077,8 +2082,9 @@ export function ConversationReader({
     setShowShare(false);
     setShowExport(false);
     setShowSearch(false);
+    releaseExportScope(`export:${conversationId}`);
     setAnnotationsOpenPreservingAnchor(true);
-  }, [annotationsOpen, closeSourceEditorForWorkspace, setAnnotationsOpenPreservingAnchor]);
+  }, [conversationId, annotationsOpen, closeSourceEditorForWorkspace, setAnnotationsOpenPreservingAnchor]);
 
   const openSplitWorkspace = useCallback(async () => {
     if (!(await closeSourceEditorForWorkspace())) return;
@@ -2114,13 +2120,13 @@ export function ConversationReader({
   useEffect(() => {
     const closeTopSurface = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (utilityPanel !== null) { setUtilityPanel(null); event.preventDefault(); return; }
+      if (utilityPanel !== null) { if (utilityPanel === "export") releaseExportScope(`export:${conversationId}`); setUtilityPanel(null); event.preventDefault(); return; }
       if (showFiles) { setShowFiles(false); event.preventDefault(); return; }
       if (mobileActionsExpanded || desktopActionsExpanded) { setMobileActionsExpanded(false); setDesktopActionsExpanded(false); event.preventDefault(); }
     };
     window.addEventListener("keydown", closeTopSurface);
     return () => window.removeEventListener("keydown", closeTopSurface);
-  }, [desktopActionsExpanded, mobileActionsExpanded, showExport, showFiles, showSearch, showShare, utilityPanel]);
+  }, [conversationId, desktopActionsExpanded, mobileActionsExpanded, showExport, showFiles, showSearch, showShare, utilityPanel]);
 
   async function openNavigation(tab: "dialogue" | "sections", opener?: HTMLElement | null) {
     if (!(await closeSourceEditorForWorkspace())) return;
@@ -2569,8 +2575,8 @@ export function ConversationReader({
       <MobileReaderSheet open={utilityPanel === "share" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("shareConversation")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("shareConversation")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact /></div>
       </MobileReaderSheet>
-      <MobileReaderSheet open={utilityPanel === "export" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("export")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("export")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3">{dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} compact readingStartMessageId={activeMessageId} onOpenContinuation={() => { setUtilityPanel(null); setShowExport(false); setContinuationGuideRequested(true); setContinuationOpen(true); }} />}</div>
+      <MobileReaderSheet open={utilityPanel === "export" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) { releaseExportScope(`export:${conversationId}`); setUtilityPanel(null); } }} title={t("export")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("export")}</h2><button type="button" onClick={() => { releaseExportScope(`export:${conversationId}`); setUtilityPanel(null); }} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
+        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3">{dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} compact readingStartMessageId={activeMessageId} onOpenContinuation={() => { releaseExportScope(`export:${conversationId}`); setUtilityPanel(null); setShowExport(false); setContinuationGuideRequested(true); setContinuationOpen(true); }} />}</div>
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "files" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} />}
@@ -2580,7 +2586,7 @@ export function ConversationReader({
             <div className="flex h-full min-w-0 w-full overflow-hidden">
               {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-                {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} onOpenContinuation={() => { setShowExport(false); setUtilityPanel(null); setContinuationGuideRequested(true); setContinuationOpen(true); }} /> : null}
+                {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} onOpenContinuation={() => { releaseExportScope(`export:${conversationId}`); setShowExport(false); setUtilityPanel(null); setContinuationGuideRequested(true); setContinuationOpen(true); }} /> : null}
               </ReaderPanelShell>}
             </div>
         </ReaderUtilityDrawer>

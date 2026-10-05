@@ -189,10 +189,16 @@ def archive_task_result(db, job):
     if job.job_type in {"personal_archive_export", "personal_archive_preflight", "system_archive_export", "system_archive_preflight"}:
         result["expires_at"] = _utc(artifact.expires_at).isoformat() if artifact else None
         result["artifact_available"] = False
-        if artifact and _utc(artifact.expires_at) > datetime.now(timezone.utc):
+        if artifact and artifact.lifecycle_state == "active" and _utc(artifact.expires_at) > datetime.now(timezone.utc):
             path = Path(artifact.storage_uri).resolve()
             root = Path(get_settings().export_storage_dir).resolve()
             result["artifact_available"] = path.is_relative_to(root) and path.is_file() and path.stat().st_size == artifact.byte_size
+        if artifact and artifact.scope_type != UPLOAD_SCOPE:
+            from app.services.export_retention import artifact_status
+            current = artifact_status(artifact)
+            result.update(artifact_status=current["status"], retention_seconds=current["retention_seconds"],
+                          release_on_close=current["release_on_close"], download_url=current["download_url"],
+                          can_regenerate=current["status"] != "available")
     return result
 
 

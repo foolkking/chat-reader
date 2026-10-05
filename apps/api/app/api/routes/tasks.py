@@ -167,6 +167,16 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
     payload = job.payload or {}
     result = dict(job.result or {})
+    from sqlalchemy.orm import object_session
+    from app.models.export_artifact import ExportArtifact
+    from app.services.export_retention import EXPORT_JOB_TYPES, artifact_status
+    if job.job_type in EXPORT_JOB_TYPES and job.status == "committed" and (db := object_session(job)) is not None:
+        artifact = db.query(ExportArtifact).filter_by(job_id=job.id).one_or_none()
+        if artifact is not None and artifact.scope_type != "archive_upload":
+            current = artifact_status(artifact)
+            result.update(artifact_status=current["status"], expires_at=current["expires_at"],
+                          download_url=current["download_url"], retention_seconds=current["retention_seconds"],
+                          release_on_close=current["release_on_close"], can_regenerate=current["status"] != "available")
     if job.job_type == "user_account_delete" and payload.get("target_user_id"):
         result["target_user_id"] = payload["target_user_id"]
     if payload.get("parent_task_id") and not result.get("parent_task_id"):

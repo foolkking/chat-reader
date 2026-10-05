@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,8 @@ POLICY_FIELDS = (
     "allow_user_import",
     "maximum_import_size_mb",
     "maximum_merge_message_count",
+    "export_retention_minutes",
+    "export_release_on_close",
 )
 
 
@@ -51,6 +54,8 @@ def update_feature_policy(
             setattr(row, field, current)
             changes[field] = {"from": previous, "to": current}
     row.updated_by_user_id = actor_user_id
+    if changes:
+        row.updated_at = datetime.now(timezone.utc)
     db.flush()
     return row, changes
 

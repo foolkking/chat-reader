@@ -48,6 +48,13 @@ def test_root_feature_policies_are_audited_and_enforced(auth_client: TestClient)
     assert updated.status_code == 200, updated.text
     assert updated.json()["maximum_import_size_mb"] == 4
     assert updated.json()["maximum_merge_message_count"] == 1200
+    retention = auth_client.put("/api/admin/features", json={"export_retention_minutes": 5, "export_release_on_close": False})
+    assert retention.status_code == 200
+    legacy = auth_client.put("/api/admin/features", json={"maximum_merge_message_count": 1200})
+    assert legacy.json()["export_retention_minutes"] == 5
+    assert legacy.json()["export_release_on_close"] is False
+    assert auth_client.put("/api/admin/features", json={"export_retention_minutes": 0}).status_code == 422
+    assert auth_client.put("/api/admin/features", json={"export_retention_minutes": 61}).status_code == 422
 
     skill = auth_client.post(
         "/api/skills",
@@ -72,6 +79,7 @@ def test_normal_user_cannot_reach_root_system_apis(auth_client: TestClient) -> N
     auth_client.cookies.set("chat_reader_session_present", "1")
     for path in ("/api/admin/features", "/api/admin/system-skills", "/api/admin/backups", "/api/admin/audit"):
         assert auth_client.get(path).status_code == 404
+    assert auth_client.put("/api/admin/features", json={"export_retention_minutes": 1}).status_code == 404
     assert normal_user_id != ROOT_ADMIN_USER_ID
 
 
