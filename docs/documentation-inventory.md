@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-10-06 retention decisions: `planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md`
+owns the user-authorized two-backup policy, completed eight-backup cleanup evidence,
+and proposed administrator-controlled short-lived export UX/lifecycle. Application
+changes and automatic retention remain pending. Project State, index and deployment
+now distinguish reclaimed capacity from a completed release.
+
 2026-10-05 backup storage: `execution/BACKUP_STORAGE_REVIEW_2026-10-05.md`
 records aggregate backup contents, verified duplicate-file hashes, expiry versus
 artifact retention and the host Python report failure. Proposed retention changes

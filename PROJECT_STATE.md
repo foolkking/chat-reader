@@ -10,19 +10,23 @@ blobs are independently verified locally. A subsequent test/documentation-only
 follow-up corrects bilingual selectors and isolates legacy worker installation;
 the final local baseline passed **138 / 284 skipped**, including four CSP cases.
 The release source above remains the application/image identity. Production is
-still `3f1d539`/`0046`, healthy, with **3,236,964 KiB** free at the latest read-only
-check. The user's latest boundary is applied conservatively: server data and
-server backups stay unchanged. Deployment still needs about **5.03 GiB** free.
-Four local old image archives (786,238,351 bytes) were identified, but automatic
-approval rejected deletion with `blocked by policy`; all four still exist.
-No production replacement, backup change or old-image removal occurred.
+still `3f1d539`/`0046`, healthy. The user subsequently authorized retaining only
+the latest two server backups. Both retained snapshots passed checksums, tar
+readability and PostgreSQL TOC checks; eight older backups were deleted, freeing
+about **9.25 GiB**. Available space is now **12,938,848 KiB** (about **12.34 GiB**).
+Business data and running services were not modified. Deployment must rerun its
+existing preflight; it is not yet performed. Local cleanup remains stopped and
+no old Docker images were removed in this follow-up.
 [Server storage review](docs/execution/SERVER_STORAGE_REVIEW_2026-10-05.md)
 records bounded cache/old-artifact/log candidates and preserved rollback/data.
 No local image builds; deployment continues to use the inspected CI artifact.
 [Backup storage review](docs/execution/BACKUP_STORAGE_REVIEW_2026-10-05.md)
-identifies ten full snapshots (12.95 GiB), verified duplicate components and
-55 expired retained exports (1.04 GiB). Retention changes are recommendations;
-no backup or export cleanup has been applied.
+records the pre-cleanup ten snapshots and 55 expired retained exports (1.04 GiB).
+[Retention implementation plan](docs/planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md)
+captures the latest user decisions, completed backup cleanup and pending
+administrator-controlled three-minute export lifecycle. Export cleanup and
+automatic two-backup retention are not implemented. The user explicitly deferred
+off-site backups; no external destination is required for this delivery.
 [Copy recovery execution](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md) records
 all failed/rerun checks, artifact identity and the prepared release directory.
 
