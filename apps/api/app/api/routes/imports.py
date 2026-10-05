@@ -48,7 +48,7 @@ from app.services.storage.local_storage import save_import_file
 from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
-from app.services.feature_policies import effective_import_size_mb, get_feature_policy
+from app.services.feature_policies import effective_import_size_mb, effective_import_total_mb, get_feature_policy
 from app.services.uploads import UploadLimitError, bounded_upload_analysis, read_upload_bounded
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
@@ -93,8 +93,10 @@ async def preview_import(
     policy = get_feature_policy(db)
     if not policy.allow_user_import:
         raise HTTPException(status_code=403, detail="User import is disabled by the system administrator.")
-    max_size_mb = effective_import_size_mb(db)
+    max_size_mb = effective_import_size_mb(db, ownership_scope.owner_user_id)
     max_bytes = max_size_mb * 1024 * 1024
+    total_limit = effective_import_total_mb() * 1024 * 1024
+    read_bytes = 0
     import_id = uuid.uuid4()
     preview_files: list[ImportPreviewFile] = []
     import_warnings: list[str] = []
@@ -129,6 +131,9 @@ async def preview_import(
                     status_code=exc.status_code,
                     detail={"code": exc.code, "message": str(exc)},
                 ) from exc
+            read_bytes += len(content)
+            if read_bytes > total_limit:
+                raise HTTPException(413, detail={"code": "IMPORT_TOTAL_SIZE_LIMIT", "message": "The combined files exceed this deployment's import limit."})
             filename = upload.filename or "upload"
             extension = _extension(filename)
 

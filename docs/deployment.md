@@ -1,5 +1,11 @@
 # 生产部署
 
+Local support backend/UI is a separate unfinished batch: migration `20261005_0047`
+and `IMPORT_GATEWAY_FILE_LIMIT_MB` have not been released. Continue deploying only
+the pinned, inspected `2863a00` artifact below once capacity permits. Do not build
+or deploy the uncommitted support worktree. Its remaining full-integration gates
+remain in [support execution](execution/SUPPORT_REQUESTS_2026-10-05.md).
+
 ## Pending Skill follow-up — 2026-10-05
 
 Source `2863a00` passed complete CI `37269234174` and its verified image artifact

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
 const english: Record<string, string> = {
+  "本批文件合计不能超过 {0} MiB，请分批导入。": "This batch must be within {0} MiB. Import it in smaller batches.",
   "使用格式转换 Skill": "Use format conversion Skill",
   "下载 Skill ZIP。": "Download the Skill ZIP.",
   "要求输出 ChatGPT Markdown Transcript Profile v1。": "Request ChatGPT Markdown Transcript Profile v1.",

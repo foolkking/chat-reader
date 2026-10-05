@@ -17,6 +17,7 @@ from app.models.skill_bundle import SkillBundleRevision, SkillBundleMember, Skil
 from app.models.user import User
 from app.models.user_preference import UserPreference
 from app.models.user_skill import UserSkill, UserSkillSelection
+from app.models.support_request import SupportRequest, SupportMessage
 from app.services.adaptive_import.profile_access import canonical_profile_id, personal_name
 from app.services.adaptive_import.profile_identity import verification_summary_v1
 from app.services.cleanup_rule_access import personal_name as personal_rule_name
@@ -46,6 +47,8 @@ PERSONAL_TABLE_MODELS = {
     "skill_bundle_revisions": SkillBundleRevision,
     "skill_bundle_members": SkillBundleMember,
     "skill_file_objects": SkillFileObject,
+    "support_requests": SupportRequest,
+    "support_messages": SupportMessage,
 }
 
 
@@ -83,6 +86,9 @@ def _personal_queries(db: Session, owner_user_id: uuid.UUID, *, include_archived
         ContentCleanupRule.id.in_(rule_aliases.with_entities(ContentCleanupRuleAlias.canonical_rule_id)),
     ))
     rows.update({
+        "support_requests": db.query(SupportRequest).filter(SupportRequest.owner_user_id == owner_user_id).order_by(SupportRequest.id),
+        "support_messages": db.query(SupportMessage).join(SupportRequest, SupportRequest.id == SupportMessage.request_id).filter(
+            SupportRequest.owner_user_id == owner_user_id).order_by(SupportMessage.id),
         "preferences": db.query(UserPreference).filter(UserPreference.subject_key == subject),
         "profiles": profiles.order_by(ImportProfile.id),
         "profile_revisions": profile_revisions.order_by(ImportProfileRevision.profile_id, ImportProfileRevision.revision),
@@ -131,6 +137,10 @@ def _create_personal_archive(db: Session, *, snapshot: Session, job_id: uuid.UUI
     skill_ids = {str(row[0]) for row in rows["skills"].with_entities(UserSkill.id)}
 
     def payload_transform(name, payload):
+        from app.services.exporting.archive_support import portable_support_payload
+        payload = portable_support_payload(name, payload)
+        if name == "support_messages" and payload.get("author_user_id") != str(owner_user_id):
+            payload["author_user_id"] = None
         # A held public configuration does not disclose its original author's account.
         for key in ("owner_user_id", "created_by_user_id"):
             if key in payload and payload[key] != str(owner_user_id):
@@ -158,6 +168,6 @@ def _create_personal_archive(db: Session, *, snapshot: Session, job_id: uuid.UUI
         db, rows=rows, job_id=job_id, include_archived=include_archived,
         archive_format=PERSONAL_ARCHIVE_FORMAT, archive_version=PERSONAL_ARCHIVE_VERSION,
         scope_type="personal", restore_mode="additive", progress_callback=progress_callback,
-        payload_transform=payload_transform, manifest_metadata={"skill_bundle_version": 1, "context_files_version": 1},
+        payload_transform=payload_transform, manifest_metadata={"skill_bundle_version": 1, "context_files_version": 1, "support_requests_version": 1},
         archive_validator=inspect_personal_archive,
     )

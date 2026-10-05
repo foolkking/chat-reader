@@ -25,8 +25,12 @@ import { AdminRegistrationSettings } from "./admin-registration-settings";
 import { AdminAuditPanel, AdminSystemPanel } from "./admin-settings-panels";
 import { AdminFeaturesPanel } from "./admin-feature-settings";
 import { AdminSkillsPanelEnhanced, AdminUsersPanelEnhanced } from "./admin-settings-enhanced";
+import { SupportRequestsPanel } from "./support-requests-panel";
+import type { SupportKind, SupportLimits } from "../lib/support-client";
 
-export function SettingsFocusedDialog({ category, onClose, restoreFocus, initialConflictKey, initialArchiveTaskId, initialAdminUserId, onNavigate }: { category: SettingsCategory; onClose: () => void; restoreFocus: () => HTMLElement | null; initialConflictKey?: string; initialArchiveTaskId?: string; initialAdminUserId?: string; onNavigate?: () => void }) {
+export function SettingsFocusedDialog({ category: initialCategory, onClose, restoreFocus, initialConflictKey, initialArchiveTaskId, initialAdminUserId, initialSupportRequestId, initialSupportKind, initialSupportLimits, onNavigate }: { category: SettingsCategory; onClose: () => void; restoreFocus: () => HTMLElement | null; initialConflictKey?: string; initialArchiveTaskId?: string; initialAdminUserId?: string; initialSupportRequestId?: string; initialSupportKind?: SupportKind; initialSupportLimits?: SupportLimits; onNavigate?: () => void }) {
+  const [category, setCategory] = useState(initialCategory);
+  const [selectedAdminUser, setSelectedAdminUser] = useState(initialAdminUserId);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
   const { confirm } = useInteractionDialog();
@@ -54,11 +58,12 @@ export function SettingsFocusedDialog({ category, onClose, restoreFocus, initial
     <div className="settings-dialog fixed inset-0 z-[320] flex items-end justify-center bg-[var(--overlay)] p-0 sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="settings-focused-title" onPointerDown={(event) => { if (event.target === event.currentTarget) void requestClose(); }}>
       <div ref={rootRef} tabIndex={-1} className={`relative flex max-h-[min(92dvh,56rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-ui bg-raised shadow-2xl outline-none sm:rounded-xl ${category === "offline" || category === "access" || category.startsWith("admin-") ? "sm:max-w-4xl" : "sm:max-w-2xl"}`}>
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-ui px-5 py-4">
-          <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-accent">{t("settings")}</p><h2 id="settings-focused-title" className="mt-1 text-lg font-semibold text-primary">{title}</h2></div>
+          <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-accent">{t("settings")}</p><h2 id="settings-focused-title" className="mt-1 text-lg font-semibold text-primary">{category === "requests" ? (zh ? "请求与帮助" : "Requests and help") : title}</h2></div>
           <button type="button" onClick={() => void requestClose()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary" aria-label={t("close")} title={t("close")}><X className="h-5 w-5" aria-hidden="true" /></button>
         </header>
         <div data-settings-scroll-root="true" className="min-h-0 overflow-y-auto px-5 py-5">
-          {category === "help" ? <HelpPanel onImport={() => { void requestClose().then(closed => { if (closed) openImportDialog(); }); }} /> : null}
+          {category === "help" ? <HelpPanel onDirtyChange={setDirty} onOpenSettings={setCategory} onImport={() => { void requestClose().then(closed => { if (closed) openImportDialog(); }); }} /> : null}
+          {category === "requests" ? <SupportRequestsPanel initialRequestId={initialSupportRequestId} initialKind={initialSupportKind} initialLimits={initialSupportLimits} onDirtyChange={setDirty} onOpenUser={id => { setSelectedAdminUser(id); setCategory("admin-users"); }} /> : null}
           {category === "admin-runtime" ? <AdminRuntimePanel /> : null}
           {category === "offline" ? <OfflineSyncCenter onDirtyChange={setDirty} initialConflictKey={initialConflictKey} /> : null}
           {category === "data" ? <DataBackupPanel focused onDirtyChange={setDirty} initialTaskId={initialArchiveTaskId} onRestoreConversation={() => { void requestClose().then((closed) => { if (closed) openImportDialog({ initialMode: "archive" }); }); }} /> : null}
@@ -68,7 +73,7 @@ export function SettingsFocusedDialog({ category, onClose, restoreFocus, initial
           {category === "security" ? <AccountSecurityPanel focused onDirtyChange={setDirty} /> : null}
           {category === "skills" ? <SkillSettings focused onDirtyChange={setDirty} /> : null}
           {category === "access" ? <AdminAccessSettings onDirtyChange={setDirty} /> : null}
-          {category === "admin-users" ? <AdminUsersPanelEnhanced initialUserId={initialAdminUserId} /> : null}
+          {category === "admin-users" ? <AdminUsersPanelEnhanced initialUserId={selectedAdminUser} /> : null}
           {category === "admin-formats" ? <AdminImportFormatSettings onDirtyChange={setDirty} /> : null}
           {category === "admin-noise" ? <AdminNoiseRuleSettings onDirtyChange={setDirty} /> : null}
           {category === "admin-access" ? <AdminRegistrationSettings onDirtyChange={setDirty} /> : null}

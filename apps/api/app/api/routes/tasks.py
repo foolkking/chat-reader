@@ -55,6 +55,7 @@ def list_active_tasks(
         .filter(
             ownership_scope.predicate(BackgroundJob),
             BackgroundJob.status.in_(ACTIVE_JOB_STATUSES),
+            BackgroundJob.job_type != "support_notification",
         )
         .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
         .limit(20)
@@ -73,6 +74,7 @@ def list_active_tasks(
         .filter(
             ownership_scope.predicate(BackgroundJob),
             BackgroundJob.status.in_(TERMINAL_JOB_STATUSES),
+            BackgroundJob.job_type != "support_notification",
             BackgroundJob.completed_at.is_not(None),
             BackgroundJob.completed_at >= cutoff,
             BackgroundJob.id.not_in([job.id for job in pending_cleanup_jobs]),
@@ -102,6 +104,8 @@ def get_task(
 ) -> BackgroundTaskRead:
     job = get_owned(db, BackgroundJob, job_id, ownership_scope)
     if job is not None:
+        if job.job_type == "support_notification":
+            raise HTTPException(404, detail="Task not found.")
         return _job_task(job)
     record = get_owned(db, ImportRecord, job_id, ownership_scope)
     if record is not None:
@@ -117,6 +121,8 @@ def retry_task(
 ) -> BackgroundTaskRead:
     job = db.query(BackgroundJob).filter(BackgroundJob.id == job_id, ownership_scope.predicate(BackgroundJob)).with_for_update().populate_existing().one_or_none()
     if job is not None:
+        if job.job_type == "support_notification":
+            raise HTTPException(404, detail="Task not found.")
         if job.job_type == 'context_validation':
             raise HTTPException(410, detail={'code': 'CONTEXT_VALIDATION_RETIRED', 'next_action': 'update_files'})
         retry_background_job(job)

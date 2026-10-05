@@ -11,6 +11,7 @@ from app.models.access import InstanceAccessSetting
 from app.models.administration import InstanceFeaturePolicy, SystemSkill
 from app.models.content_cleanup import ContentCleanupRulePublication
 from app.models.import_profile import ImportProfilePublication
+from app.models.support_request import UserLimitOverride
 from app.core.config import get_settings
 from app.services.exporting.personal_archive import PERSONAL_TABLE_MODELS
 from app.services.exporting.system_archive import TABLE_MODELS, SystemArchiveError, _restore_rows, _restore_self_referencing_rows
@@ -25,8 +26,9 @@ CONFIGURATION_MODELS.update({
     "system_skills": SystemSkill,
     "feature_policy": InstanceFeaturePolicy,
     "access_policy": InstanceAccessSetting,
+    "user_limit_overrides": UserLimitOverride,
 })
-ACCOUNT_FIELDS = {"owner_user_id", "user_id", "created_by_user_id", "updated_by_user_id", "published_by_user_id"}
+ACCOUNT_FIELDS = {"owner_user_id", "user_id", "created_by_user_id", "updated_by_user_id", "published_by_user_id", "author_user_id"}
 
 
 def configuration_queries(db):
@@ -190,6 +192,8 @@ def restore_system_configuration(db, archive, mapping):
                  "rule_grants", "rule_preferences", "rule_aliases", "rule_exceptions", "rule_publications",
                  "skills", "skill_selections", "system_skills", "feature_policy", "access_policy"):
         _restore_rows(db, CONFIGURATION_MODELS[name], owned(name))
+    from app.services.exporting.archive_support import restore_system_support
+    restore_system_support(db, archive, owned)
     from app.services.exporting.archive_skill_bundles import restore_bundle_history
     restore_bundle_history(db, archive, {row["id"]: uuid.UUID(row["id"]) for row in archive.rows("skills")},
                            system_targets={row["id"]: uuid.UUID(row["id"]) for row in archive.rows("system_skills")})

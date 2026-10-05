@@ -37,6 +37,8 @@ class SystemArchive(PersonalArchive):
         self.table_models = bundle_table_models(self.table_models, self.manifest)
         from app.services.exporting.archive_context import context_table_models
         self.table_models = context_table_models(self.table_models, self.manifest)
+        from app.services.exporting.archive_support import support_table_models
+        self.table_models = support_table_models(self.table_models, self.manifest)
         _validate_canonical_entries(archive, self.manifest, table_names=self.table_models, heartbeat=heartbeat)
         declared = sorted(self.manifest["canonical_entries"], key=lambda item: item["path"])
         self.counts = {item["path"][5:-6]: item["record_count"] for item in declared}

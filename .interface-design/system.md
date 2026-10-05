@@ -114,3 +114,10 @@ Import Format revision ledger.
 ## Usability recovery surfaces
 
 Dirty composition uses the shared confirmation; short dialogs keep title/actions fixed and scroll only their fields. Touch project menus remain visible; nested menu keys must not start drag sorting. Search filters disclose on demand without remounting focused inputs. Retry states preserve the query, failed draft or selected items. One bounded task launcher opens the existing Task Center; detailed phases remain bilingual. Keep these changes in the paper/graphite/sea-green token system.
+
+Limit requests open a focused Settings dialog above the existing import/merge,
+retaining files, title and order. Returning refreshes limits without automatically
+submitting work. Bulk-toolbar groups wrap according to available space; scrollable
+actions start at the leading edge so narrow project columns cannot hide them under
+the selection summary. Merge order offers 44px handles and up/down buttons with
+quiet border-ui rows; keyboard users can reorder without a drag gesture.

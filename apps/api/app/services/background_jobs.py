@@ -39,7 +39,7 @@ from app.services.content_cleanup import process_scan_chunk
 from app.services.conversations.conversation_deletion import delete_conversation_record
 from app.services.user_deletion import cleanup_deleted_account_assets, execute_user_account_delete, mark_user_deletion_failed, mark_user_deletion_queued
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
-from app.services.feature_policies import get_feature_policy
+from app.services.feature_policies import effective_limits
 from app.core.observability import structured_event
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
@@ -108,11 +108,12 @@ def queue_conversation_merge(
         .scalar()
         or 0
     )
-    maximum_message_count = get_feature_policy(db).maximum_merge_message_count
+    maximum_message_count = effective_limits(db, ownership_scope.owner_user_id)["merge_message_count"]
     if total_items > maximum_message_count:
         raise MessageEditError(
             f"Merge contains {total_items} messages; the administrator limit is {maximum_message_count}.",
             422,
+            code="MERGE_MESSAGE_LIMIT",
         )
     job = BackgroundJob(
         id=uuid.uuid4(),
@@ -127,6 +128,7 @@ def queue_conversation_merge(
             "conversation_ids": [str(item) for item in conversation_ids],
             "title": title,
             "project_id": str(project_id) if project_id else None,
+            "accepted_message_limit": maximum_message_count,
         },
         result={},
         idempotency_key=idempotency_key,
@@ -643,6 +645,10 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
     )
     now = datetime.now(timezone.utc)
     for job in jobs:
+        if job.job_type == "support_notification":
+            from app.services.support_notifications import recover_notification
+            recover_notification(db, job)
+            continue
         if job.status == "cancelling":
             job.status = "cancelled"
             job.phase = "cancelled"
@@ -834,6 +840,12 @@ def process_background_job(
                 conversation_ids = [uuid.UUID(value) for value in payload.get("conversation_ids", [])]
                 project_value = payload.get("project_id")
                 project_id = uuid.UUID(project_value) if project_value else None
+                accepted_limit = payload.get("accepted_message_limit")
+                if accepted_limit is not None:
+                    current_count = db.query(func.count(Message.id)).filter(
+                        Message.conversation_id.in_(conversation_ids), Message.is_deleted.is_(False)).scalar() or 0
+                    if current_count > accepted_limit:
+                        raise MessageEditError("Merge sources grew beyond the limit accepted at submission; submit again.", 422)
                 result = merge_conversations(
                     db=db,
                     conversation_ids=conversation_ids,
@@ -841,6 +853,8 @@ def process_background_job(
                     project_id=project_id,
                     progress_callback=report,
                 )
+                if accepted_limit is not None and result.message_count > accepted_limit:
+                    raise MessageEditError("Merge sources grew beyond the accepted limit; submit again.", 422)
                 job_result = {
                     "conversation_ids": [str(result.conversation.id)],
                     "conversation_id": str(result.conversation.id),
@@ -1171,6 +1185,10 @@ def process_background_job(
                     "derivative_type": derivative.derivative_type,
                 }
                 processed_items = 1
+            elif job.job_type == "support_notification":
+                from app.services.support_notifications import process_notification
+                job_result = process_notification(db, job)
+                processed_items = 1
             elif job.job_type == "context_return":
                 from app.services.context_return_jobs import process_context_return
                 from app.services.continuation_candidates import ContinuationError
@@ -1278,6 +1296,11 @@ def process_background_job(
         with session_factory() as db:
             job = db.get(BackgroundJob, job_id)
             if job is not None:
+                if job.job_type == "support_notification":
+                    from app.services.support_notifications import recover_notification
+                    recover_notification(db, job)
+                    db.commit()
+                    return
                 if job.job_type == "user_account_delete":
                     if job.status == "committed":
                         # Canonical deletion succeeded; durable cleanup remains
@@ -1297,6 +1320,8 @@ def process_background_job(
 
 
 def retry_background_job(job: BackgroundJob) -> BackgroundJob:
+    if job.job_type == "support_notification":
+        raise MessageEditError("Retry notification from its support request.", 409)
     cleanup_only = (job.job_type == "user_account_delete" and job.status in {"committed", "failed"}
                     and bool((job.payload or {}).get("account_cleanup_keys")))
     if job.status != "failed" and not cleanup_only:

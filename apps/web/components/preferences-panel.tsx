@@ -7,7 +7,7 @@ import { ACCOUNT_CAPABILITIES_CHANGED_EVENT, readAccountCapabilities } from "../
 import { usePreferences, useTranslations } from "./preferences-provider";
 import { PreferenceSyncStatus } from "./preference-sync-status";
 
-export type SettingsCategory = "help" | "admin-runtime" | "offline" | "shares" | "data" | "security" | "formats" | "cleanup" | "skills" | "access" | "admin-users" | "admin-access" | "admin-skills" | "admin-formats" | "admin-noise" | "admin-features" | "admin-system" | "admin-audit";
+export type SettingsCategory = "requests" | "help" | "admin-runtime" | "offline" | "shares" | "data" | "security" | "formats" | "cleanup" | "skills" | "access" | "admin-users" | "admin-access" | "admin-skills" | "admin-formats" | "admin-noise" | "admin-features" | "admin-system" | "admin-audit";
 
 export function PreferencesPanel({ compact = false, libraryMode = false, onlineHref = "/", onOpenCategory }: { compact?: boolean; libraryMode?: boolean; onlineHref?: string; onOpenCategory?: (category: SettingsCategory) => void }) {
   const preferences = usePreferences();
@@ -119,6 +119,7 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         {accessRole === "ADMIN" ? <div className="space-y-2 border-t border-ui pt-3" aria-labelledby="settings-administration-heading">
           <div className="px-1"><h3 id="settings-administration-heading" className="text-xs font-semibold uppercase tracking-[0.08em] text-secondary">{preferences.resolvedLocale === "zh-CN" ? "\u7ba1\u7406" : "Administration"}</h3></div>
           <SettingsCategoryButton icon={Activity} label={preferences.resolvedLocale === "zh-CN" ? "运行状态" : "Runtime status"} onClick={() => onOpenCategory?.("admin-runtime")} />
+          <SettingsCategoryButton icon={CircleHelp} label={preferences.resolvedLocale === "zh-CN" ? "用户请求" : "User requests"} onClick={() => onOpenCategory?.("requests")} />
           <SettingsCategoryButton icon={LockKeyhole} label={preferences.resolvedLocale === "zh-CN" ? "用户与访问" : "Users & access"} onClick={() => onOpenCategory?.("access")} />
           <SettingsCategoryButton icon={Eraser} label={preferences.resolvedLocale === "zh-CN" ? "系统噪声规则" : "System noise rules"} onClick={() => onOpenCategory?.("admin-noise")} />
           <SettingsCategoryButton icon={SlidersHorizontal} label={preferences.resolvedLocale === "zh-CN" ? "系统导入格式" : "System import formats"} onClick={() => onOpenCategory?.("admin-formats")} />

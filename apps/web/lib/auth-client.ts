@@ -161,6 +161,9 @@ export type AccountCapabilities = {
   allow_user_import: boolean;
   maximum_import_size_mb: number;
   maximum_merge_message_count: number;
+  maximum_import_total_mb?: number;
+  limit_hard_bounds?: { import_size_mb: number; merge_message_count: number };
+  support_mail_available?: boolean;
   email_delivery_available: boolean;
 };
 

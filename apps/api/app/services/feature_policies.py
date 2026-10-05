@@ -55,6 +55,27 @@ def update_feature_policy(
     return row, changes
 
 
-def effective_import_size_mb(db: Session) -> int:
-    policy_limit = get_feature_policy(db).maximum_import_size_mb
-    return min(policy_limit, get_settings().max_import_file_size_mb)
+def limit_bounds() -> dict[str, int]:
+    settings = get_settings()
+    return {"import_size_mb": min(settings.max_import_file_size_mb, effective_import_total_mb()),
+            "merge_message_count": 100_000}
+
+
+def effective_import_total_mb() -> int:
+    settings = get_settings()
+    return min(settings.max_adaptive_import_total_mb, settings.import_gateway_file_limit_mb)
+
+
+def effective_limits(db: Session, user_id: uuid.UUID | None = None) -> dict[str, int]:
+    from app.models.support_request import UserLimitOverride
+    policy = get_feature_policy(db)
+    override = db.get(UserLimitOverride, user_id) if user_id else None
+    bounds = limit_bounds()
+    return {
+        "import_size_mb": min(bounds["import_size_mb"], max(policy.maximum_import_size_mb, (override.import_size_mb or 0) if override else 0)),
+        "merge_message_count": min(bounds["merge_message_count"], max(policy.maximum_merge_message_count, (override.merge_message_count or 0) if override else 0)),
+    }
+
+
+def effective_import_size_mb(db: Session, user_id: uuid.UUID | None = None) -> int:
+    return effective_limits(db, user_id)["import_size_mb"]

@@ -196,6 +196,7 @@ def test_older_v5_without_configuration_remains_readable(archive_db, configurati
         manifest = json.loads(source.read("manifest.json"))
         manifest.pop("configuration_version")
         manifest.pop("skill_bundle_version", None)
+        manifest.pop("support_requests_version", None)
         removed = {f"data/{name}.jsonl" for name in CONFIGURATION_MODELS}
         manifest["canonical_entries"] = [row for row in manifest["canonical_entries"] if row["path"] not in removed]
         for name in source.namelist():

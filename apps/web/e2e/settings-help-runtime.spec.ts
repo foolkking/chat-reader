@@ -35,18 +35,10 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await openSettings(page, /Help & diagnostics|帮助与诊断/);
       const help = page.getByRole("region", { name: /Help & diagnostics|帮助与诊断/ });
       await expect(help.getByText(/Connected to server|已连接服务器/, { exact: true })).toBeVisible();
-      await help.getByRole("button", { name: /Generate & copy diagnostics|生成并复制诊断/ }).scrollIntoViewIfNeeded();
-      await page.evaluate(() => { Object.defineProperty(navigator.clipboard, "writeText", { configurable: true, value: () => Promise.reject(new Error("Synthetic denied clipboard")) }); });
-      await help.getByRole("button", { name: /Generate & copy diagnostics|生成并复制诊断/ }).click();
-      await expect(help.getByRole("alert")).toContainText(/Copy failed|复制失败/);
-      const text = help.getByRole("textbox", { name: /Diagnostic text|诊断文本/ });
-      await expect(text).toBeFocused();
-      const report = JSON.parse(await text.inputValue());
-      expect(report.capabilities.maximum_import_size_mb).toBe(actualCaps.maximum_import_size_mb);
-      expect(report.capabilities.allow_share_links).toBe(actualCaps.allow_share_links);
-      expect(report.connection).toBe("online");
-      expect(JSON.stringify(report).includes(process.env.E2E_AUTH_EMAIL!)).toBe(false);
-      expect(Object.keys(report)).toEqual(["schema", "app", "generated_at", "web_revision", "api", "connection", "capabilities_source", "capabilities_checked_at", "capabilities", "offline", "display"]);
+      await expect(help.getByRole("button", { name: /Generate & copy diagnostics|生成并复制诊断/ })).toHaveCount(0);
+      await expect(help.getByText(/^(Allowed|允许)$/)).toHaveCount(0);
+      await expect(help.getByText(`${actualCaps.maximum_import_size_mb} MiB`, { exact: true })).toBeVisible();
+      await expect(help.getByRole("button", { name: /Handle user requests|处理用户请求/ })).toBeVisible();
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /Runtime status|运行状态/ }).click();
       const runtime = page.getByRole("region", { name: /Runtime status|运行状态/ });
@@ -85,13 +77,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await expect(help.getByText(/Startup resources complete|启动资源完整/, { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.E2E_SETTINGS_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SETTINGS_SCREENSHOTS}/help-offline-${width}.png` });
-      await help.getByRole("button", { name: /Generate & copy diagnostics|生成并复制诊断/ }).click();
-      await expect(help.getByRole("status")).toContainText(/Diagnostics copied|诊断已复制/);
-      const offlineReport = JSON.parse(await text.inputValue());
-      expect(offlineReport.connection).toBe("offline");
-      expect(offlineReport.capabilities_source).toBe("last_known");
-      // Windows clipboard normalizes multiline text to CRLF.
-      expect(await page.evaluate(async (expected) => (await navigator.clipboard.readText()).replace(/\r\n/g, "\n") === expected, await text.inputValue())).toBe(true);
+      await expect(help.getByRole("button", { name: /Generate & copy diagnostics|生成并复制诊断/ })).toHaveCount(0);
       await network.detach();
     } finally { await context.close(); await admin.dispose(); }
   });
@@ -140,7 +126,10 @@ test("help cache stays account-scoped and disappears behind expired authorizatio
     await context.setOffline(true); await page.clock.fastForward(49 * 60 * 60 * 1000);
     await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible();
     await expect(help).toHaveCount(0);
-    await page.clock.setFixedTime(new Date()); await context.setOffline(false); await context.clearCookies();
+    await page.clock.setFixedTime(new Date()); await context.setOffline(false);
+    // Leave A's private boundary before switching cookies, as the sign-in link does.
+    // Otherwise its reconnect check races B's out-of-band fixture registration.
+    await page.goto(`${base}/login?reauth=1`); await context.clearCookies();
     await register("b");
     await settingsAppearance(context.request, base, "en-US");
     // Force this new account's first capabilities request to fail; it cannot inherit A's snapshot.
@@ -148,9 +137,7 @@ test("help cache stays account-scoped and disappears behind expired authorizatio
     await page.goto(base); await openSettings(page, /Help & diagnostics|帮助与诊断/);
     await expect(help.getByText("Server unavailable or unverified", { exact: true })).toBeVisible();
     await expect(help.locator("dl").getByText("Unknown", { exact: true }).first()).toBeVisible();
-    await help.getByRole("button", { name: "Generate & copy diagnostics" }).click();
-    const report = JSON.parse(await help.getByRole("textbox", { name: "Diagnostic text" }).inputValue());
-    expect(report.capabilities.maximum_import_size_mb).toBeNull();
+    await expect(help.getByRole("button", { name: "Generate & copy diagnostics" })).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: /Runtime status|运行状态/ })).toHaveCount(0);
   } finally {

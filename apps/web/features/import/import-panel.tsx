@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import { cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, previewImport } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
 import { readAccountCapabilities } from "../../lib/auth-client";
+import { SupportLimitAction } from "../../components/support-limit-action";
 import { ImportPreviewCard } from "./import-preview-card";
 import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
 
@@ -34,7 +35,7 @@ export function ImportPanel({
 } = {}) {
   const tr = useImportCopy();
   const queryClient = useQueryClient();
-  const capabilities = useQuery({ queryKey: ["account-capabilities"], queryFn: ({ signal }) => readAccountCapabilities(signal), staleTime: 0 });
+  const capabilities = useQuery({ queryKey: ["account-capabilities"], queryFn: ({ signal }) => readAccountCapabilities(signal), staleTime: 0, refetchOnWindowFocus: true });
   const router = useRouter();
   const [mode, setMode] = useState<ImportMode>(initialMode);
   const [files, setFiles] = useState<File[]>([]);
@@ -45,7 +46,10 @@ export function ImportPanel({
   const [dragging, setDragging] = useState(false);
   const [duplicatePolicy, setDuplicatePolicy] = useState<ImportDuplicatePolicy>("clone");
   const completedImportRef = useRef<string | null>(null);
+  const previewButtonRef = useRef<HTMLButtonElement>(null);
   const activeSessionKey = sessionStorageKey(repairProfileId);
+  const largestFileMiB = Math.ceil(files.reduce((largest, file) => Math.max(largest, file.size), 0) / (1024 * 1024));
+  const fileOverLimit = capabilities.data && largestFileMiB > capabilities.data.maximum_import_size_mb;
 
   useEffect(() => onWorkspaceChange?.(Boolean(session)), [onWorkspaceChange, session]);
   useEffect(() => {
@@ -118,6 +122,8 @@ export function ImportPanel({
   const validationError = useMemo(() => {
     if (capabilities.data && !capabilities.data.allow_user_import) return tr("管理员已关闭导入功能。");
     if (capabilities.data && files.some((file) => file.size > capabilities.data.maximum_import_size_mb * 1024 * 1024)) return tr("单个文件不能超过当前上限 {0} MiB。", capabilities.data.maximum_import_size_mb);
+    const totalLimit = capabilities.data?.maximum_import_total_mb;
+    if (totalLimit != null && files.reduce((bytes, file) => bytes + file.size, 0) > totalLimit * 1024 * 1024) return tr("本批文件合计不能超过 {0} MiB，请分批导入。", totalLimit);
     return validateFiles(files, mode, tr);
   }, [files, mode, capabilities.data, tr]);
 
@@ -185,12 +191,13 @@ export function ImportPanel({
         {files.length ? <p className="mt-3 break-all text-sm text-secondary">{selectedLabel}</p> : null}
       </div>
       {validationError ? <ErrorLine message={validationError} /> : null}
+      {capabilities.data ? <SupportLimitAction capabilities={capabilities.data} limit="import_size_mb" active={Boolean(fileOverLimit || !capabilities.data.allow_user_import)} requestedValue={largestFileMiB} returnFocus={() => previewButtonRef.current} onReturn={() => { void capabilities.refetch(); }} /> : null}
       {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
       {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error.message} /> : null}
       {archiveMutation.isError ? <ErrorLine message={archiveMutation.error.message} /> : null}
       {commitMutation.isError ? <ErrorLine message={commitMutation.error.message} /> : null}
       <div className="flex flex-wrap gap-3">
-        <button type="button" disabled={!files.length || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={() => mode === "archive" ? archiveMutation.mutate(files) : adaptiveMutation.mutate(files)} className="btn-primary min-h-10 px-4 text-sm font-medium">
+        <button ref={previewButtonRef} type="button" disabled={!files.length || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={() => mode === "archive" ? archiveMutation.mutate(files) : adaptiveMutation.mutate(files)} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
           {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
         </button>
         {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? tr("正在导入") : tr("恢复归档")}</button> : null}

@@ -77,9 +77,9 @@ export function SelectionToolbar({
       data-testid="selection-toolbar"
       data-state="selection"
       aria-label={zh ? `${context === "project" ? "项目" : "对话"}批量选择工具` : `${context === "project" ? "Project" : "Conversation"} bulk selection tools`}
-      className={`selection-toolbar sticky top-0 z-20 flex w-full flex-col gap-2.5 rounded-xl border border-ui bg-raised/95 p-3 shadow-lg backdrop-blur md:flex-row md:items-center md:gap-3 ${className}`}
+      className={`selection-toolbar sticky top-0 z-20 flex w-full flex-wrap items-center gap-3 rounded-xl border border-ui bg-raised/95 p-3 shadow-lg backdrop-blur ${className}`}
     >
-      <div className="selection-toolbar-summary flex w-full min-w-0 items-center gap-2 md:w-auto md:min-w-[14rem]">
+      <div className="selection-toolbar-summary flex min-w-0 flex-1 basis-[14rem] items-center gap-2">
         <span className="selection-toolbar-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-[var(--surface)]" aria-hidden="true">
           <ListChecks className="h-4 w-4" />
         </span>
@@ -91,7 +91,7 @@ export function SelectionToolbar({
           <X className="h-4 w-4" /> {zh ? "完成" : "Done"}
         </button>
       </div>
-      <div className="selection-toolbar-actions relative flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5 md:justify-end">
+      <div className="selection-toolbar-actions relative flex min-w-0 max-w-full flex-1 basis-[44rem] items-center gap-1.5 overflow-x-auto pb-0.5">
         <div className="selection-toolbar-group flex shrink-0 items-center gap-1 rounded-lg border border-ui bg-surface p-0.5">
           <button type="button" disabled={busy || allSelected || totalCount === 0} onClick={onSelectAll} className={buttonClass} title={zh ? "选择当前列表中的全部项目" : "Select every item in this list"}>
             <CheckSquare2 className="h-4 w-4" /> {zh ? "全选" : "Select all"}

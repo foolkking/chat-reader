@@ -1,5 +1,31 @@
 # API 参考
 
+## Local support backend (2026-10-05, not deployed)
+
+The [support contract](system/SUPPORT_REQUEST_CONTRACT.md) owns lifecycle, limits,
+notification and archive semantics. User/admin UI and contextual import/merge
+entries are implemented locally; full integration/release gates remain.
+
+| Path | Methods / purpose |
+|---|---|
+| `/api/me/requests` | GET filtered page; POST create (Idempotency-Key) |
+| `/api/me/requests/{id}` | GET detail with message offset/limit |
+| `/api/me/requests/{id}/messages` | POST reply with base_revision/key |
+| `/api/me/requests/{id}/decision` | POST WITHDRAW only |
+| `/api/admin/requests` | GET Root-only filtered page, audited |
+| `/api/admin/requests/{id}` | GET Root-only detail, audited |
+| `/api/admin/requests/{id}/messages` | POST Root reply |
+| `/api/admin/requests/{id}/decision` | POST APPROVE/REJECT/RESOLVE/REQUEST_INFO |
+| `{inbox}/{id}/messages/{message_id}/retry-mail` | POST own failed/unavailable notification retry with key |
+| `/api/admin/users/{id}/limit-overrides` | GET effective/granted bounds; PUT revisioned explicit reset/change |
+
+`/api/auth/capabilities` adds actual user limits, `limit_hard_bounds`, separate
+`maximum_import_total_mb` and configured `support_mail_available`. New batch size
+failures return `IMPORT_TOTAL_SIZE_LIMIT`; all values still obey global feature gates.
+`POST /api/conversations/merge` returns 422 with `detail.code=MERGE_MESSAGE_LIMIT`
+and the existing human-readable `detail.message` when the effective count is
+exceeded. Rejected admission creates no merge job.
+
 2026-10-05 本地 Skill 首选统一（发布状态见 PROJECT_STATE）：
 `GET /api/skills` 返回每用途一个有效系统项与本人全部语言来源的文件；`locale` 只作为
 尚未解决的旧首选分歧读取提示。`POST /api/skills` 和 `/resolve` 的 locale 可省略；

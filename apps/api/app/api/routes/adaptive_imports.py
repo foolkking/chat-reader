@@ -85,7 +85,11 @@ async def create_adaptive_import_session(
         raise HTTPException(status_code=422, detail={"code": "FILE_COUNT_LIMIT", "message": f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once."})
     if not get_feature_policy(db).allow_user_import:
         raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
-    max_bytes = effective_import_size_mb(db) * 1024 * 1024
+    max_bytes = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
+    # Keep the existing SESSION_TOO_LARGE contract for the session budget;
+    # this additional guard represents only the upload gateway's request ceiling.
+    total_limit = get_settings().import_gateway_file_limit_mb * 1024 * 1024
+    read_bytes = 0
     record: ImportRecord | None = None
     try:
         async with bounded_upload_analysis(files):
@@ -97,6 +101,9 @@ async def create_adaptive_import_session(
             )
             for item in files:
                 content = await read_upload_bounded(item, max_bytes)
+                read_bytes += len(content)
+                if read_bytes > total_limit:
+                    raise UploadLimitError("IMPORT_TOTAL_SIZE_LIMIT", "The combined files exceed this deployment's import limit.", status_code=413)
                 add_session_source(db, record, item.filename or "upload", content)
             record = finalize_session(db, record)
         return session_payload(record)
@@ -200,9 +207,11 @@ async def replace_adaptive_import_artifact(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     artifact = _artifact(import_id, artifact_id, db)
+    if not get_feature_policy(db).allow_user_import:
+        raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
     new_path = None
     try:
-        max_bytes = effective_import_size_mb(db) * 1024 * 1024
+        max_bytes = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
         async with bounded_upload_analysis([file]):
             content = await read_upload_bounded(file, max_bytes)
             old_path, new_path = replace_session_artifact(

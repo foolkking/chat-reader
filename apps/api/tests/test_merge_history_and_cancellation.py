@@ -88,6 +88,9 @@ def test_merge_rejects_message_count_above_administrator_limit(client: TestClien
     )
     assert response.status_code == 422
     assert "administrator limit is 3" in response.text
+    assert response.json()["detail"]["code"] == "MERGE_MESSAGE_LIMIT"
+    with _database_session() as db:
+        assert db.query(BackgroundJob).filter(BackgroundJob.job_type == "conversation_merge").count() == 0
 
 
 def test_merge_validation_batches_large_render_block_graph(client: TestClient) -> None:

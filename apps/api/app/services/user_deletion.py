@@ -25,6 +25,7 @@ from app.models.user_preference import UserPreference, PreferenceSyncReceipt
 from app.models.user_skill import UserSkill, UserSkillSelection
 from app.models.context_continuation import ContextMemberObject
 from app.models.skill_bundle import SkillFileObject
+from app.models.support_request import SupportRequest
 from app.services.administration import record_admin_audit
 from app.services.assets.lifecycle import asset_object_has_live_references
 from app.services.assets.asset_store import get_asset_store
@@ -45,6 +46,7 @@ def account_deletion_impact(db: Session, target_user_id: uuid.UUID) -> dict[str,
         "format_grants": db.query(ImportProfileGrant.user_id).filter(ImportProfileGrant.user_id == target_user_id).count(),
         "rule_grants": db.query(ContentCleanupRuleGrant.user_id).filter(ContentCleanupRuleGrant.user_id == target_user_id).count(),
         "skills": db.query(UserSkill.id).filter(UserSkill.subject_key == str(target_user_id)).count(),
+        "support_requests": db.query(SupportRequest.id).filter(SupportRequest.owner_user_id == target_user_id).count(),
     }
 
 

@@ -47,7 +47,14 @@ deployed; [previous release](docs/execution/DEPLOYMENT_UX_2026-10-04.md) retains
 their evidence. Skill locale/clone cleanup and administrator quota/support-request
 work from the later [usability review](docs/evidence/ux-audit-skills-help-2026-10-05.md)
 are tracked separately; the guidance release does not complete them. Skill
-unification is the current local batch; administrator quota/support requests remain pending.
+unification awaits deployment capacity; administrator quota/support requests are
+the current local batch. Their backend, account limit enforcement, worker mail
+lifecycle and archive extension are implemented locally and awaiting release CI/deployment.
+Local migration head is **20261005_0047**; production and staged Skill source stay
+on **20261003_0046**. Core Help/admin request UI, protected drafts and the notification-
+link destination are now implemented locally. Contextual import/merge limit links
+retain selections and drafts; full integration/release gates remain. See [support execution](docs/execution/SUPPORT_REQUESTS_2026-10-05.md)
+and [local support contract](docs/system/SUPPORT_REQUEST_CONTRACT.md).
 
 ## System and boundaries
 
@@ -109,6 +116,16 @@ passed API (883 passed/3 skipped), Context (35), authenticated settings (126 plu
 offline negatives (17) and both image gates. Deployment awaits capacity recovery;
 no new production replacement or backup cleanup has occurred.
 
+The support checkpoint passed a fresh Web build, lint/typecheck, full API
+**901 passed / 4 skipped**, the final **16/16** Help/request/contextual scenarios,
+and baseline PWA **134 passed / 279 mode-specific skips**. The complete settings
+matrix first returned **135 passed / 1 failed**; the accessible filter label was
+fixed and the affected case passed the final focused rerun. Suites overlap; skips
+are not passes. Single local migration head/current is `0047`. Earlier test and
+environment failures remain in the support execution record. Exact-source CI,
+additional optional browser failure probes and deployment remain. All task-owned
+support API/worker/SMTP/Web/PostgreSQL processes are now stopped.
+
 ## Work rules and navigation
 
 Read [AGENTS.md](AGENTS.md). Default temporary root is
@@ -117,6 +134,9 @@ The earlier auth-resume test batch had a one-time exception for
 `E:/1project/chat-reader/.tmp/context-tests`; current guidance tests use the
 default `wkkk/chat-reader-guidance-20261005` task directory. Current Skill work uses
 `wkkk/chat-reader-skill-unification-20261005`; its isolated test processes are stopped.
+Support backend/UI tests use `wkkk/chat-reader-support-20261005`; its execution
+record tracks isolated process lifecycle. The current support worktree is intentionally not
+included in the staged Skill artifact; complete its integration gates first.
 Do not touch user imports, delete production volumes, overwrite server environment,
 clean unrelated caches or include credentials/private content in evidence.
 

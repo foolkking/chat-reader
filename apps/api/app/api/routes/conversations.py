@@ -246,7 +246,7 @@ def merge_conversations_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return background_job_read(job)
 
 

@@ -1,5 +1,9 @@
 # 文档导航
 
+当前本机进行 [管理员请求与限额](execution/SUPPORT_REQUESTS_2026-10-05.md)，
+新增未发布 migration `20261005_0047`；核心界面、离线草稿、邮件链接及导入／合并中的申请入口已接入，完整集成验收仍待完成。
+[请求合同](system/SUPPORT_REQUEST_CONTRACT.md) 标明本机实现及未交付边界。
+
 当前线上：2026-10-05 核心引导发布，源码 `3f1d539`，CI `37259074167`（attempt 2），唯一 migration head/current `20261003_0046`。
 [Project State](../PROJECT_STATE.md) 是当前快照；[引导部署记录](execution/DEPLOYMENT_GUIDANCE_2026-10-05.md) 记录完整 CI、容量预检、备份、线上验收与旧镜像清理。
 [Skill 首选与管理清理](execution/SKILL_UNIFICATION_2026-10-05.md) 已提交 `2863a00` 并通过 CI；部署等待容量处理，尚未替换线上服务。

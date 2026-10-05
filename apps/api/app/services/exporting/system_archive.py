@@ -120,6 +120,7 @@ def create_system_archive(
 ) -> ExportArtifact:
     from app.services.exporting.system_archive_configuration import CONFIGURATION_VERSION, configuration_queries
     from app.services.exporting.system_archive_preflight import inspect_system_archive
+    from app.services.exporting.archive_support import portable_support_payload
     with archive_read_snapshot(db) as snapshot:
         rows = _canonical_queries(snapshot, include_archived=include_archived)
         rows["users"] = snapshot.query(User).order_by(User.id)
@@ -130,8 +131,8 @@ def create_system_archive(
             db, rows=rows, job_id=job_id, include_archived=include_archived,
             archive_format=SYSTEM_ARCHIVE_FORMAT, archive_version=SYSTEM_ARCHIVE_VERSION,
             scope_type="system", restore_mode="empty_instance_only", progress_callback=progress_callback,
-            payload_transform=lambda name, payload: ({key: value for key, value in payload.items() if key in IDENTITY_FIELDS} if name == "users" else payload),
-            manifest_metadata={"configuration_version": CONFIGURATION_VERSION, "skill_bundle_version": 1, "context_files_version": 1},
+            payload_transform=lambda name, payload: ({key: value for key, value in payload.items() if key in IDENTITY_FIELDS} if name == "users" else portable_support_payload(name, payload)),
+            manifest_metadata={"configuration_version": CONFIGURATION_VERSION, "skill_bundle_version": 1, "context_files_version": 1, "support_requests_version": 1},
             archive_validator=inspect_system_archive,
         )
 

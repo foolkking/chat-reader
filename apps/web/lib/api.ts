@@ -94,12 +94,14 @@ export const API_BASE_URL = "";
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly path: string;
+  readonly code?: string;
 
-  constructor(message: string, status: number, path: string) {
+  constructor(message: string, status: number, path: string, code?: string) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
     this.path = path;
+    this.code = code;
   }
 }
 
@@ -1550,7 +1552,7 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
     ) {
       notifyAuthenticationFailure(requestGeneration);
     }
-    throw new ApiRequestError(await getErrorMessage(response, path), response.status, path);
+    throw await getApiRequestError(response, path);
   }
   if (response.status === 204) {
     return undefined as T;
@@ -1559,35 +1561,36 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function getErrorMessage(response: Response, path: string): Promise<string> {
+async function getApiRequestError(response: Response, path: string): Promise<ApiRequestError> {
+  const error = (message: string, code?: string) => new ApiRequestError(message, response.status, path, code);
   if (response.status >= 500) {
-    return "服务暂时不可用，请稍后重试。";
+    return error("服务暂时不可用，请稍后重试。");
   }
   try {
     const payload = (await response.json()) as { detail?: unknown; error?: { message?: string } };
     if (typeof payload.error?.message === "string") {
-      return payload.error.message;
+      return error(payload.error.message);
     }
     if (typeof payload.detail === "string") {
       if (response.status === 409 && /conversation changed|base version|revision|stale/i.test(payload.detail)) {
-        return "对话已在其他操作中更新。你的内容仍然保留，请加载最新状态后重试。";
+        return error("对话已在其他操作中更新。你的内容仍然保留，请加载最新状态后重试。");
       }
-      return payload.detail;
+      return error(payload.detail);
     }
     if (payload.detail && typeof payload.detail === "object") {
       const detail = payload.detail as { code?: unknown; message?: unknown };
       if (typeof detail.code === "string") {
         const localized = localizedImportError(detail.code);
-        if (localized) return localized;
-        if (detail.code.startsWith("CONTEXT_")) return detail.code;
+        if (localized) return error(localized, detail.code);
+        if (detail.code.startsWith("CONTEXT_")) return error(detail.code, detail.code);
       }
-      if (typeof detail.message === "string") return detail.message;
+      if (typeof detail.message === "string") return error(detail.message, typeof detail.code === "string" ? detail.code : undefined);
     }
   } catch {
     // The response body is not guaranteed to be JSON.
   }
 
-  return `${path} returned ${response.status}`;
+  return error(`${path} returned ${response.status}`);
 }
 
 function localizedImportError(code: string): string | null {
@@ -1662,7 +1665,7 @@ export const continuationApi = {
     const path = `${continuationPath(id)}/${kind}/${encodeURIComponent(itemId)}/members/${encodeURIComponent(member)}`;
     const response = await fetch(path, { cache: 'no-store' });
     if (response.status === 401) notifyAuthenticationFailure(generation);
-    if (!response.ok) throw new ApiRequestError(await getErrorMessage(response, path), response.status, path);
+    if (!response.ok) throw await getApiRequestError(response, path);
     const text = await response.text();
     if (generation !== authenticationGeneration()) throw new Error('Account changed');
     return text;

@@ -106,6 +106,8 @@ class PersonalArchive:
         self.table_models = bundle_table_models(PERSONAL_TABLE_MODELS, self.manifest)
         from app.services.exporting.archive_context import context_table_models
         self.table_models = context_table_models(self.table_models, self.manifest)
+        from app.services.exporting.archive_support import support_table_models
+        self.table_models = support_table_models(self.table_models, self.manifest)
         _validate_canonical_entries(archive, self.manifest, table_names=self.table_models, heartbeat=heartbeat)
         declared = sorted(self.manifest["canonical_entries"], key=lambda row: row["path"])
         self.content_digest = hashlib.sha256(json.dumps({
@@ -193,6 +195,8 @@ class PersonalArchive:
                         raise SystemArchiveError("Archive annotation belongs to another message version.")
 
     def _validate_configurations(self):
+        from app.services.exporting.archive_support import validate_support_archive
+        validate_support_archive(self)
         from app.services.adaptive_import.profile_identity import configuration_digest_v1 as profile_digest
         from app.services.cleanup_rule_identity import MATCH_FIELDS, configuration_digest_v1 as rule_digest
         from app.services.content_cleanup import BUILTIN_RULES, validate_literal_rule

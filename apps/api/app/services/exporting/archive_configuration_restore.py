@@ -37,8 +37,10 @@ def restore_configurations(db: Session, archive, owner_user_id: uuid.UUID):
     profile_ids, profile_revisions = _restore_profiles(db, archive, owner_user_id)
     rule_ids, rule_revisions = _restore_rules(db, archive, owner_user_id)
     skill_ids = _restore_skills(db, archive, owner_user_id)
+    from app.services.exporting.archive_support import restore_personal_support
+    support_ids = restore_personal_support(db, archive, owner_user_id)
     return {"profiles": profile_ids, "profile_revisions": profile_revisions,
-            "rules": rule_ids, "rule_revisions": rule_revisions, "skills": skill_ids}
+            "rules": rule_ids, "rule_revisions": rule_revisions, "skills": skill_ids, "support_requests": support_ids}
 
 
 def _restore_profiles(db, archive, owner):

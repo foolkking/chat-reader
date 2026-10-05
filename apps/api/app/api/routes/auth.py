@@ -23,7 +23,7 @@ from app.services.email_change import (
     request_email_change as create_email_change, validate_email_change,
 )
 from app.models.access import EmailVerificationGrant
-from app.services.feature_policies import POLICY_FIELDS, effective_import_size_mb, get_feature_policy
+from app.services.feature_policies import POLICY_FIELDS, get_feature_policy
 from app.services.auth import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
@@ -377,10 +377,17 @@ def _deliver_verification(settings: Settings, user: User, token: str) -> str:
 
 @router.get("/capabilities")
 def read_capabilities(request: Request, db: Session = Depends(get_db)) -> dict:
+    from app.services.feature_policies import effective_limits, effective_import_total_mb, limit_bounds
+    from app.services.support_requests import mail_available
     policy = get_feature_policy(db)
     context = getattr(request.state, "auth", None)
     result = {field: getattr(policy, field) for field in POLICY_FIELDS}
-    result["maximum_import_size_mb"] = effective_import_size_mb(db)
+    limits = effective_limits(db, getattr(context, "user_id", None))
+    result["maximum_import_size_mb"] = limits["import_size_mb"]
+    result["maximum_merge_message_count"] = limits["merge_message_count"]
+    result["limit_hard_bounds"] = limit_bounds()
+    result["maximum_import_total_mb"] = effective_import_total_mb()
+    result["support_mail_available"] = mail_available(db)
     result["role"] = getattr(context, "role", "ADMIN")
     result["email_delivery_available"] = bool(get_settings().smtp_host and get_settings().smtp_from_address)
     db.commit()

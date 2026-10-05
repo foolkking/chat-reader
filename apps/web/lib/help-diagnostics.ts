@@ -9,6 +9,7 @@ const timestamp = (value: unknown): string | null => typeof value === "string" &
 export function safeHelpInfo(value: unknown) {
   const input = record(value), capabilities = record(input.capabilities), app = record(input.app);
   return { checked_at: timestamp(input.checked_at), app: { api_version: version(app.api_version), revision: buildRevision(app.revision) }, capabilities: {
+    role: capabilities.role === "ADMIN" || capabilities.role === "USER" ? capabilities.role as "ADMIN" | "USER" : null,
     allow_share_links: bool(capabilities.allow_share_links), allow_public_share: bool(capabilities.allow_public_share), allow_share_password: bool(capabilities.allow_share_password),
     allow_user_import: bool(capabilities.allow_user_import), allow_user_skills: bool(capabilities.allow_user_skills), allow_skill_import: bool(capabilities.allow_skill_import),
     maximum_import_size_mb: number(capabilities.maximum_import_size_mb), maximum_merge_message_count: number(capabilities.maximum_merge_message_count),
