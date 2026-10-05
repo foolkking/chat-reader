@@ -74,7 +74,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     await page.evaluate(() => Reflect.deleteProperty(navigator, "clipboard"));
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(instructions);
     await delivery.getByRole("button", { name: /复制使用说明|Copy usage instructions/ }).click();
-    await expect(delivery.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
+    await expect(delivery.getByRole("status").filter({ hasText: /使用说明已复制|Usage instructions copied/ })).toContainText(/使用说明已复制|Usage instructions copied/);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(instructions);
     await expect(manual).toHaveCount(0);
     expect(errors).toEqual([]);

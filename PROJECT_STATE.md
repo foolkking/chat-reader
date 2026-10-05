@@ -35,9 +35,10 @@ is authorized and unfinished. Server backups have been reduced to two manually.
 policy inputs, download/usage fences, recoverable physical reclamation, task status
 and regeneration APIs; local single migration head is **20261006_0048**.
 Client downloads/close/regeneration and verified two-backup retention with byte-identical
-component reuse are implemented locally. Browser retention **9**, related backup/help
+component reuse are implemented locally. Browser retention **10**, related backup/help
 **11**, PostgreSQL/backup **11**, final API core **35 / 1 skipped** passed. Full API
-**846 / 78 skipped** predates the final targeted additions. **Full CI and production
+**846 / 78 skipped** predates the final targeted additions. **First CI 37354343891 found a historical-schema test setup and ambiguous copy-status
+selectors; fixes retain the underlying migration and clipboard assertions. Full CI and production
 acceptance remain unfinished; none of this follow-up is deployed.** The user deferred off-site backups; do not ask
 for a destination or upload recovery copies. Existing expired exports remain
 protected by DB references until the new lifecycle safely reclaims them.

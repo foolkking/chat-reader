@@ -47,7 +47,7 @@ function Delivery({ artifactId, scope, label, onRegenerated }: { artifactId: str
         client.setQueryData(["task", task.job_id], task);
         await Promise.all(["active-tasks", "personal-archive-tasks", "system-archive-tasks"].map(key => client.invalidateQueries({ queryKey: [key] })));
         if (mounted.current) onRegenerated?.(task);
-        if (!onRegenerated) window.dispatchEvent(new Event("chat-reader:open-task-center"));
+        if (mounted.current && !onRegenerated) window.dispatchEvent(new Event("chat-reader:open-task-center"));
       }
     } catch {
       if (mounted.current && generation === authenticationGeneration()) {

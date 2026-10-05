@@ -88,7 +88,7 @@ for (const width of [375, 768, 1440]) {
     await page.evaluate(() => Reflect.deleteProperty(navigator, "clipboard"));
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(instructions);
     await preparation.getByRole("button", { name: /复制使用说明|Copy usage instructions/ }).click();
-    await expect(preparation.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
+    await expect(preparation.getByRole("status").filter({ hasText: /使用说明已复制|Usage instructions copied/ })).toContainText(/使用说明已复制|Usage instructions copied/);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(instructions);
     await expect(manual).toHaveCount(0);
     await page.getByRole("button", { name: /关闭接续|Close continuation$/ }).click();

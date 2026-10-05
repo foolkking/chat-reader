@@ -146,3 +146,30 @@ for (const width of [375, 1440]) test(`${width}px: closing the regular export pa
     expect((await admin.get(`/api/conversations/${id}`)).status()).toBe(200);
   } finally { await context.close(); await admin.dispose(); }
 });
+
+test("closing Tasks while regeneration is pending leaves the accepted job running without reopening", async ({ browser, playwright, baseURL }) => {
+  const admin = await settingsAdmin(playwright.request, baseURL!);
+  const context = await browser.newContext({ storageState: await admin.storageState(), viewport: { width: 1440, height: 900 } });
+  try {
+    const queued = await (await admin.post("/api/me/archive/exports", { data: {}, headers: { "Idempotency-Key": crypto.randomUUID() } })).json();
+    await expect.poll(async () => (await (await admin.get(`/api/tasks/${queued.job_id}`)).json()).status).toBe("committed");
+    const task = await (await admin.get(`/api/tasks/${queued.job_id}`)).json();
+    const artifact = task.result.artifact_id;
+    exportFixture(artifact, true);
+    const page = await context.newPage(); await page.goto(baseURL!);
+    await page.getByTestId("sidebar-tasks-button").click();
+    const row = page.locator("[data-task-row]").filter({ has: page.getByTestId(`task-dismiss-${queued.job_id}`) });
+    let unblock!: () => void, arrived!: () => void;
+    const gate = new Promise<void>(resolve => { unblock = resolve; });
+    const pending = new Promise<void>(resolve => { arrived = resolve; });
+    await page.route(`**/api/exports/${artifact}/regenerate`, async route => { arrived(); await gate; await route.continue(); });
+    const result = page.waitForResponse(response => response.url().endsWith(`/exports/${artifact}/regenerate`));
+    await row.getByRole("button", { name: /^(重新生成|Generate again)$/ }).click();
+    await pending;
+    await page.getByTestId("task-center-panel").getByRole("button", { name: /^(关闭|Close)$/ }).click();
+    unblock();
+    const next = await (await result).json();
+    await expect.poll(async () => (await (await admin.get(`/api/tasks/${next.job_id}`)).json()).status).toBe("committed");
+    await expect(page.getByTestId("task-center-panel")).toHaveCount(0);
+  } finally { await context.close(); await admin.dispose(); }
+});

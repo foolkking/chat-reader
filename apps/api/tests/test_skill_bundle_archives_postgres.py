@@ -34,12 +34,45 @@ def test_system_bundle_archive_postgres(archive_db, isolated_schema, tmp_path, m
 
 
 def test_zip_default_reset_preserves_personal_selection_postgres(isolated_schema):
-    from test_skill_zip_defaults import test_default_migration_preserves_personal_selection as reset_defaults
+    import hashlib
+    from app.models.user import User
+    from app.models.user_skill import UserSkill, UserSkillSelection
+    from app.models.administration import SystemSkill
+    from app.services.skills import resolve_skill
     engine, migrate = isolated_schema
     migrate('20261002_0045')
+    # Seed the old contract directly. Current services legitimately select newer
+    # policy columns and must not be executed against a historical schema.
     with Session(engine) as db:
-        reset_defaults(db)
+        user = User(normalized_email='legacy-skill-owner@example.test')
+        db.add(user); db.flush()
+        subject = str(user.id)
+        content = 'existing personal'
+        personal = UserSkill(subject_key=subject, category='EXPORT_CONTEXT', locale='en', name='Keep personal',
+            content=content, byte_size=len(content), content_digest=hashlib.sha256(content.encode()).hexdigest())
+        db.add(personal); db.flush()
+        personal_id = personal.id
+        db.add(UserSkillSelection(subject_key=subject, category='EXPORT_CONTEXT', locale='en', skill_id=personal_id))
+        override = 'old override'
+        bundled = SystemSkill(skill_key='builtin:export:en', bundled_key='builtin:export:en', source_kind='BUNDLED',
+            category='EXPORT_CONTEXT', locale='en', name='Legacy built-in', content=override,
+            content_digest=hashlib.sha256(override.encode()).hexdigest(), byte_size=len(override), default_enabled=True)
+        custom = SystemSkill(skill_key='legacy-default', source_kind='ADMIN_CREATED',
+            category='EXPORT_CONTEXT', locale='en', name='Old default', content=override,
+            content_digest=hashlib.sha256(override.encode()).hexdigest(), byte_size=len(override), default_enabled=True)
+        db.add_all([bundled, custom]); db.flush()
+        bundled_id, custom_id = bundled.id, custom.id
+        db.commit()
+    migrate('20261003_0046')
+    with Session(engine) as db:
+        assert db.get(SystemSkill, bundled_id).content is None
+        assert db.get(SystemSkill, bundled_id).default_enabled
+        assert not db.get(SystemSkill, custom_id).default_enabled
+        assert db.get(UserSkill, personal_id).content == content
+        assert db.get(UserSkillSelection, (subject, 'EXPORT_CONTEXT', 'en')).skill_id == personal_id
     migrate('head')
+    with Session(engine) as db:
+        assert resolve_skill(db, category='EXPORT_CONTEXT', locale='en', subject_key=subject)['id'] == str(personal_id)
 
 
 @pytest.mark.parametrize('legacy_conflict', [False, True])

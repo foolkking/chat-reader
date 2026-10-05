@@ -70,3 +70,20 @@ PostgreSQL 17 使用独立目录 `postgres/` 和 loopback 55948，测试只创�
 4. 删除精确旧镜像标签，保留核验过的回滚归档，记录最终磁盘差额。镜像只使用 CI 产物。
 
 异地副本按用户决定暂不设置。长期目标保持进行中，不能把本机专项通过等同生产交付。
+
+## 首轮 CI 与补改
+
+已推送实现 `585d61f`，首轮 CI `37354343891` 发现：API **928 passed / 3 skipped / 1 failed**；
+旧 Skill migration 测试在 0045 schema 上调用当前 feature-policy service，读取了 0048 列。
+修正为直接建立旧 Skill/首选数据，先升 0046 验证重置与个人内容保留，再升 head 验证真实解析。
+本机 PostgreSQL 全部 Skill archive/concurrency/migration 专项 **6 passed**。
+
+Web Context gate **26 passed / 9 failed**；新增临时导出状态使旧复制提示选择器匹配两条 status。
+选择器改为定位复制状态，保留真实剪贴板内容断言，不删除导出状态或屏蔽可访问提示。
+其他后续 gate 在失败后未执行，不能记通过。
+
+最终复查补上任务中心关闭后的异步重生成回调保护；真实请求延迟、关闭后任务仍完成且面板不重开，
+独立浏览器用例 **1 passed**。补改后 Web build 再次通过。此时生产仍是 5d48b68/0047。
+
+修正后的 Context 导出/指引浏览器专项 **10 passed**，覆盖三种宽度和中英文；首轮 CI 的
+认证设置矩阵实际 **145 passed**，独立空实例 PostgreSQL 恢复 **1 passed**。新提交仍需完整 CI。
