@@ -2,6 +2,21 @@
 
 ## Current release and active work — 2026-10-05
 
+Latest verified application source is **5d48b686893d44f98092dfffbfa32a4464e8ede1**.
+[CI 37323431809](https://github.com/foolkking/chat-reader/actions/runs/37323431809)
+passed all five jobs. Skill copying now has visible manual recovery, and mobile
+sheets keep scrolling inside their active snap height. The image archive and 50
+blobs are independently verified locally. A subsequent test/documentation-only
+follow-up corrects bilingual selectors and isolates legacy worker installation;
+the final local baseline passed **138 / 284 skipped**, including four CSP cases.
+The release source above remains the application/image identity. Production is
+still `3f1d539`/`0046`, healthy, with **3,326,108 KiB** free at the latest read-only
+check. Capacity recovery and backup deduplication authorization remain pending;
+no production replacement, backup change or old-image removal occurred.
+[Copy recovery execution](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md) records
+all failed/rerun checks, artifact identity and the prepared release directory.
+
+Previous pending release:
 Latest pending release source is **daf759db2979449ba34e7e8295c56da96fd3f509**,
 including Skill unification, private support/limit requests and Normalizer discovery.
 [CI 37307115329](https://github.com/foolkking/chat-reader/actions/runs/37307115329)
@@ -74,9 +89,9 @@ Local follow-up after `5ed981c` adds recoverable Skill-instruction copying for
 Acquisition, Maintainer and Normalizer, including offline delivery, plus visible
 mobile snap sizing. Local build/lint/typecheck and 42 browser scenarios passed
 (1 external-fixture skip); final short-screen/drag/export regression passed 12.
-Baseline PWA and exact-source CI remain pending. This is separate from inspected
-`daf759d`; production remains unchanged, with 3,326,108 KiB free at the latest
-read-only check. See [copy recovery](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md).
+Exact application-source CI and the final baseline are complete, as recorded at
+the top. All task-owned test services are stopped; local artifacts remain for the
+user. See [copy recovery](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md).
 
 Follow-up Normalizer discovery work after `0d228d4` closes the early-import Skill
 entry gap and shares the concise conversion guide with failed-analysis recovery.

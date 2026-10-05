@@ -50,7 +50,7 @@ test("regular users see their account and devices but not instance maintenance",
   await expect(page.getByRole("button", { name: /Noise rule library|\u566a\u58f0\u89c4\u5219\u5e93/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /System import formats|System noise rules|系统导入格式|系统噪声规则/ })).toHaveCount(0);
   await page.getByRole("button", { name: /Account & security|\u8d26\u6237\u4e0e\u5b89\u5168/ }).click();
-  await expect(page.getByLabel(/Email|\u90ae\u7bb1/)).toHaveValue("reader@example.test");
+  await expect(page.getByRole("textbox", { name: /^(Email|邮箱)$/ })).toHaveValue("reader@example.test");
   await expect(page.getByText("Chrome on Windows")).toBeVisible();
   await page.getByLabel(/Display name|\u663e\u793a\u540d\u79f0/).fill("Archive reader");
   await page.getByRole("button", { name: /Save account details|\u4fdd\u5b58\u8d26\u6237\u4fe1\u606f/ }).click();

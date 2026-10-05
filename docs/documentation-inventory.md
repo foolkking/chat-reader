@@ -5,6 +5,10 @@ records the missing-Clipboard recovery, shared text-bound feedback and real
 Clipboard/export browser acceptance. The Context Skill contract, frontend
 architecture and interface patterns own copying and visible mobile snap height;
 this follow-up is not in `daf759d` images.
+Application source `5d48b68` passed CI `37323431809`; the execution record now
+includes bilingual fixture repairs, final local baseline, image verification and
+stopped test services. Project State, docs index and deployment identify this
+pending release separately from production and older image batches.
 
 2026-10-05 Normalizer discovery: `execution/NORMALIZER_DISCOVERY_2026-10-05.md`
 tracks FLOW-03, actual import/Bundle tests and retained fixture failures. Context

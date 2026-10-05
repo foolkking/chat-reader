@@ -1,5 +1,14 @@
 # 生产部署
 
+最新已验证应用源码：`5d48b686893d44f98092dfffbfa32a4464e8ede1`，CI `37323431809`
+五项全过。其镜像、13 个部署辅助脚本及精确源码 `support.tar` 已在本机
+`C:/Users/86182/Desktop/wkkk/chat-reader-skill-copy-20261005/release/` 准备并校验，未上传／执行。
+后续测试与文档提交不改变该应用镜像来源。生产仍为 `3f1d539`/`0046`，健康，
+可用空间 3,326,108 KiB；仍低于现有约 5.03 GiB 预检需求，备份去重尚未获准。
+恢复容量后仅使用这批产物，重新执行预检、备份、迁移、验收，再清理旧镜像。
+完整结果、摘要及失败记录：[copy recovery execution](execution/SKILL_COPY_RECOVERY_2026-10-05.md)。
+
+以下保留前一待发布批次记录：
 最新待发布源码是 `daf759db2979449ba34e7e8295c56da96fd3f509`，包含下方支持请求与 Skill
 改动，以及 Normalizer 入口恢复。CI `37307115329` 五项任务全部通过，发布产物已本地核对；发布准备及首轮设置测试失败
 记录见 [Normalizer execution](execution/NORMALIZER_DISCOVERY_2026-10-05.md)。

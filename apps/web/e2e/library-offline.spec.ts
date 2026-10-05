@@ -127,6 +127,11 @@ test("only the library advertises the installable PWA", async ({ browser }) => {
 });
 
 test("upgrades an active legacy library worker before preparing the shell", async ({ page, context }) => {
+  // Install the historical worker before mounting the app. The app's root
+  // page registers today's worker and would race this legacy setup.
+  await context.route("**/legacy-library-fixture.html", route => route.fulfill({
+    contentType: "text/html", body: "<!doctype html><title>Legacy worker fixture</title>",
+  }));
   await context.route("**/legacy-library-sw.js", async (route) => {
     await route.fulfill({
       contentType: "application/javascript",
@@ -136,7 +141,7 @@ test("upgrades an active legacy library worker before preparing the shell", asyn
       `,
     });
   });
-  await page.goto("/");
+  await page.goto("/legacy-library-fixture.html");
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.register("/legacy-library-sw.js", { scope: "/library" });
     const worker = registration.installing ?? registration.waiting ?? registration.active;
@@ -151,6 +156,9 @@ test("upgrades an active legacy library worker before preparing the shell", asyn
           }
         });
       });
+    }
+    if (!registration.active?.scriptURL.endsWith("/legacy-library-sw.js")) {
+      throw new Error("The legacy worker must own the scope before the upgrade.");
     }
   });
 
@@ -403,8 +411,8 @@ test("exports cached files and the pinned Skill ZIP offline with bilingual usage
   await expect(filesPanel).toBeVisible();
   await expect(filesPanel.getByText("cached-note.txt", { exact: true })).toBeVisible();
   await expect(filesPanel.getByText("missing-image.png", { exact: true })).toBeVisible();
-  await expect(filesPanel.getByText(/已缓存|Cached/)).toBeVisible();
-  await expect(filesPanel.getByText(/离线不可用|Unavailable offline/)).toBeVisible();
+  await expect(filesPanel.getByRole("article").filter({ hasText: "cached-note.txt" }).getByText(/已缓存|Cached/)).toBeVisible();
+  await expect(filesPanel.getByRole("article").filter({ hasText: "missing-image.png" }).getByText(/离线不可用|Unavailable offline/)).toBeVisible();
   await expect(filesPanel.getByRole("button", { name: /上传|Upload|重命名|Rename|移除|Detach|删除|Delete/ })).toHaveCount(0);
   await page.getByTestId("conversation-files-workspace").getByRole("button", { name: /关闭|Close/ }).click();
 
@@ -585,7 +593,7 @@ test("copies a long virtualized offline message as complete Markdown and release
   await page.goto("/library");
   await seedOfflineFixture(page);
   await page.goto("/library?conversationId=offline-fixture&annotations=open");
-  await page.getByRole("button", { name: /^(鍏ㄩ儴鎵规敞|All)$/ }).click();
+  await page.getByRole("button", { name: /^(全部批注|All)$/ }).click();
   await page.locator("#annotation-offline-far button").first().click();
   const firstBlock = page.locator("#block-offline-message-40-1");
   await expect(firstBlock).toBeVisible();

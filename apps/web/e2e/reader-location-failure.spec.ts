@@ -63,7 +63,7 @@ test("stale block fallback preserves Reader content and reports no false exact p
   const article = reader.locator(`#message-${messageId}`);
   await expect(article).toContainText(preservedText);
   await expect(reader).toHaveAttribute("data-navigation-stage", /^(settled|settled:fallback)$/, { timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "Retry locate" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^(Retry locate|重新定位)$/ })).toHaveCount(0);
   await expect(page.locator("[data-locate-pulse]")).toHaveCount(0, { timeout: 2_000 });
   await expect(reader.locator("article[data-message-id]")).toHaveCount(1);
   await expect(page.locator('[data-locate-pulse="text"]')).toHaveCount(0);
@@ -75,9 +75,9 @@ test("missing target preserves the safe initial Reader window", async ({ page })
   const reader = page.getByTestId("reader-scroll-root");
   const preservedArticle = reader.locator(`#message-${messageId}`);
   await expect(preservedArticle).toContainText(preservedText);
-  await expect(page.locator('[role="alert"]').filter({ hasText: /could not be located|Unable to locate/i })).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByRole("button", { name: "Retry locate" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Locate message" })).toBeVisible();
+  await expect(page.locator('[role="alert"]').filter({ hasText: /could not be located|Unable to locate|无法定位该消息/i })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("button", { name: /^(Retry locate|重新定位)$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^(Locate message|定位到消息)$/ })).toBeVisible();
   await expect(reader.locator("article[data-message-id]")).toHaveCount(1);
   await expect(page.locator("[data-locate-pulse]")).toHaveCount(0);
 });

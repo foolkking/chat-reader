@@ -128,8 +128,8 @@ test("Task Center reports partial results and task-specific result actions truth
   await page.goto("/");
   await page.getByTestId("sidebar-tasks-button").click();
 
-  await expect(page.getByTestId("task-center-panel")).toContainText("Partially completed");
-  await expect(page.getByTestId("task-center-panel")).toContainText("1 completed \u00b7 1 failed");
+  await expect(page.getByTestId("task-center-panel")).toContainText(/Partially completed|部分完成/);
+  await expect(page.getByTestId("task-center-panel")).toContainText(/1 completed · 1 failed|1 项完成 · 1 项失败/);
   await expect(page.getByTestId("task-result-download")).toHaveAttribute("href", "/api/exports/result/download");
 });
 
@@ -303,12 +303,12 @@ test("batch mode keeps its trigger width and exposes an explicit Done state", as
   const conversation = conversationFixture("44444444-4444-4444-8444-444444444444", "Batch fixture");
   await page.route("**/api/**", async (route) => mockOwnerApi(route, [], [], [conversation]));
   await page.goto("/");
-  const trigger = page.getByRole("button", { name: "Manage conversations" });
+  const trigger = page.getByRole("button", { name: /^(Manage conversations|批量操作)$/ });
   const before = await trigger.boundingBox();
   expect(before).not.toBeNull();
 
   await trigger.click();
-  const done = page.getByRole("button", { name: "Done", exact: true }).first();
+  const done = page.getByRole("button", { name: /^(Done|完成批量操作)$/ }).first();
   await expect(done).toHaveAttribute("aria-pressed", "true");
   const after = await done.boundingBox();
   expect(after).not.toBeNull();
@@ -322,13 +322,13 @@ test("merge workflow opens in a body-level dialog outside the list frame", async
   ];
   await page.route("**/api/**", async (route) => mockOwnerApi(route, [], [], conversations));
   await page.goto("/");
-  await page.getByRole("button", { name: "Manage conversations" }).click();
+  await page.getByRole("button", { name: /^(Manage conversations|批量操作)$/ }).click();
   for (const title of ["Merge first", "Merge second"]) {
     await page.getByRole("article").filter({ hasText: title }).locator("button").first().click();
   }
-  await page.getByRole("toolbar").getByRole("button", { name: "Merge", exact: true }).click();
+  await page.getByRole("toolbar").getByRole("button", { name: /^(Merge|合并对话)$/ }).click();
 
-  const dialog = page.getByRole("dialog", { name: "Merge conversations" });
+  const dialog = page.getByRole("dialog", { name: /^(Merge conversations|合并对话)$/ });
   await expect(dialog).toBeVisible();
   await expect.poll(() => dialog.evaluate((element) => element.parentElement === document.body)).toBe(true);
 });
