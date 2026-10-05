@@ -173,3 +173,31 @@ test("closing Tasks while regeneration is pending leaves the accepted job runnin
     await expect(page.getByTestId("task-center-panel")).toHaveCount(0);
   } finally { await context.close(); await admin.dispose(); }
 });
+
+test("legacy live exports retain their deadline and download without a fabricated retention duration", async ({ browser, playwright, baseURL }) => {
+  const admin = await settingsAdmin(playwright.request, baseURL!);
+  const context = await browser.newContext({ storageState: await admin.storageState() });
+  try {
+    const queued = await (await admin.post("/api/me/archive/exports", { data: {}, headers: { "Idempotency-Key": crypto.randomUUID() } })).json();
+    await expect.poll(async () => (await (await admin.get(`/api/tasks/${queued.job_id}`)).json()).status).toBe("committed");
+    const task = await (await admin.get(`/api/tasks/${queued.job_id}`)).json();
+    const artifact = task.result.artifact_id;
+    const original = await (await admin.get(`/api/exports/${artifact}`)).json();
+    exportFixture(artifact, false, true);
+    const legacy = await (await admin.get(`/api/exports/${artifact}`)).json();
+    expect(legacy.retention_seconds).toBeNull();
+    expect(legacy.expires_at).toBe(original.expires_at);
+    const page = await context.newPage(); await page.goto(baseURL!);
+    await page.getByTestId("sidebar-tasks-button").click();
+    const row = page.locator("[data-task-row]").filter({ has: page.getByTestId(`task-dismiss-${queued.job_id}`) });
+    await expect(row.getByTestId("export-artifact-delivery").getByRole("status")).toContainText(/到期后可重新生成|Generate it again after expiry/);
+    await expect(row).not.toContainText(/0 分钟|0 minutes/);
+    const pending = page.waitForEvent("download");
+    await row.getByTestId("task-result-download").click();
+    const downloaded = await pending;
+    expect(await downloaded.failure()).toBeNull();
+    expect(Object.keys(unzipSync(await readFile((await downloaded.path())!))).length).toBeGreaterThan(0);
+    exportFixture(artifact, true);
+    await expect.poll(() => exportFixture(artifact).exists, { timeout: 40_000 }).toBe(false);
+  } finally { await context.close(); await admin.dispose(); }
+});

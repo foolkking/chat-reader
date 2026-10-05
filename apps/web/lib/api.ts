@@ -723,7 +723,7 @@ export async function getTask(jobId: string): Promise<BackgroundTaskRead> {
 
 export type ExportArtifactStatus = {
   artifact_id: string; status: string; expires_at: string; server_now: string;
-  retention_seconds: number; release_on_close: boolean; download_url: string | null;
+  retention_seconds: number | null; release_on_close: boolean; download_url: string | null;
 };
 export const exportArtifactApi = {
   status: (id: string) => fetchJson<ExportArtifactStatus>(`/api/exports/${id}`, { cache: "no-store" }),

@@ -34,6 +34,10 @@ function Delivery({ artifactId, scope, label, onRegenerated }: { artifactId: str
   }, [artifactId, scope]);
   const available = state.status?.status === "available";
   const expired = !!state.status && !available;
+  const retentionSeconds = state.status?.retention_seconds;
+  const availableNotice = retentionSeconds != null && retentionSeconds > 0
+    ? (zh ? `临时下载，生成后保留 ${Math.ceil(retentionSeconds / 60)} 分钟。` : `Temporary download, retained for ${Math.ceil(retentionSeconds / 60)} minutes after generation.`)
+    : (zh ? "临时下载，到期后可重新生成。" : "Temporary download. Generate it again after expiry.");
   async function act(action: "download" | "regenerate") {
     if (lock.current) return;
     lock.current = true; setBusy(action); setError(null);
@@ -61,7 +65,7 @@ function Delivery({ artifactId, scope, label, onRegenerated }: { artifactId: str
       {expired ? <RefreshCw className="h-4 w-4 shrink-0" aria-hidden /> : <Download className="h-4 w-4 shrink-0" aria-hidden />}
       {busy === "download" ? (zh ? "正在开始下载…" : "Starting download…") : busy === "regenerate" ? (zh ? "正在创建任务…" : "Creating task…") : !state.status ? (zh ? "正在读取下载状态…" : "Checking download…") : expired ? (zh ? "重新生成" : "Generate again") : label ?? (zh ? "下载结果" : "Download result")}
     </button>}
-    <p className="text-xs leading-5 text-secondary" role="status">{expired ? (zh ? "临时文件已失效，将按原选项从当前资料重新生成。" : "This temporary file is no longer available. Regeneration uses the original options and current data.") : available ? (zh ? `临时下载，生成后保留 ${Math.ceil(state.status!.retention_seconds / 60)} 分钟。` : `Temporary download, retained for ${Math.ceil(state.status!.retention_seconds / 60)} minutes after generation.`) : null}</p>
+    <p className="text-xs leading-5 text-secondary" role="status">{expired ? (zh ? "临时文件已失效，将按原选项从当前资料重新生成。" : "This temporary file is no longer available. Regeneration uses the original options and current data.") : available ? availableNotice : null}</p>
     {error ? <p role="alert" className="text-sm text-[var(--danger)]">{error}</p> : null}
   </div>;
 }
