@@ -29,7 +29,11 @@ Local workstation residues remain for the user.
 failed attempts, capacity cleanup, live checks and recovery details;
 [implementation record](docs/execution/CORE_GUIDANCE_2026-10-05.md) owns behavior.
 
-Local follow-up (not deployed): Skill management now presents one system Bundle
+Follow-up source `2863a00` is committed/pushed and passed complete
+[CI 37269234174](https://github.com/foolkking/chat-reader/actions/runs/37269234174).
+It is not deployed: capacity preflight refuses the available space, and optional
+backup-file deduplication awaits user authorization. Production services are unchanged.
+Skill management now presents one system Bundle
 per purpose, no cloning or language picker, and preserves personal files. Explicit
 preferences apply across interface languages; divergent legacy choices remain
 until the user selects one. System replacement/default selection applies to the
@@ -99,7 +103,11 @@ passed. Gates overlap and skips are not passes. The first source's queued-import
 fixture failure was corrected; a subsequent settings proxy reset passed the full
 unchanged settings rerun. Both failures remain in the release record. Local
 SQLite worker-lock failures remain separate from successful PostgreSQL CI evidence.
-Production verification and cleanup are complete; no further deployment is pending.
+The prior production verification and cleanup are complete. Follow-up `2863a00`
+passed API (883 passed/3 skipped), Context (35), authenticated settings (126 plus
+1 fresh restore), PWA baseline (134 passed/269 opt-in skips), authentication (18),
+offline negatives (17) and both image gates. Deployment awaits capacity recovery;
+no new production replacement or backup cleanup has occurred.
 
 ## Work rules and navigation
 
@@ -107,7 +115,8 @@ Read [AGENTS.md](AGENTS.md). Default temporary root is
 `C:/Users/86182/Desktop/wkkk`, with per-task directories and process-local TEMP/TMP.
 The earlier auth-resume test batch had a one-time exception for
 `E:/1project/chat-reader/.tmp/context-tests`; current guidance tests use the
-default `wkkk/chat-reader-guidance-20261005` task directory.
+default `wkkk/chat-reader-guidance-20261005` task directory. Current Skill work uses
+`wkkk/chat-reader-skill-unification-20261005`; its isolated test processes are stopped.
 Do not touch user imports, delete production volumes, overwrite server environment,
 clean unrelated caches or include credentials/private content in evidence.
 

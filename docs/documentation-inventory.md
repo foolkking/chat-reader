@@ -1,8 +1,9 @@
 # Markdown 文档台账
 
 2026-10-05 Skill unification: `execution/SKILL_UNIFICATION_2026-10-05.md` owns the
-local implementation, concurrent-write correction, real Bundle/restore/browser
-evidence and pending release checks. Context, API and data-archive contracts own
+implementation `2863a00`, concurrent-write correction, real Bundle/restore/browser
+evidence, successful CI `37269234174` and deployment awaiting capacity authorization.
+Context, API and data-archive contracts own
 locale compatibility and preference semantics; development documents bounded
 ordinary Web builds. This is separate from the live guidance release and pending
 administrator support/quota requests.

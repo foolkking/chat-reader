@@ -1,5 +1,16 @@
 # 生产部署
 
+## Pending Skill follow-up — 2026-10-05
+
+Source `2863a00` passed complete CI `37269234174` and its verified image artifact
+is staged in the matching `/opt/chat-reader/releases/` directory. It is **not
+deployed**: actual capacity preflight has 3,268,780 KiB available against
+5,278,167 KiB required. A checksum-verified optional duplicate-backup storage plan
+awaits explicit user authorization; no backup, image or running service has been
+removed/replaced. Production remains `3f1d539` below. The
+[Skill execution record](execution/SKILL_UNIFICATION_2026-10-05.md) owns artifacts,
+test failures/reruns, authorization boundary and exact resume sequence.
+
 ## Current release — 2026-10-05
 
 Production source `3f1d539d82fdbaa5d4f7f0b7f8857870c13c1926` from CI
