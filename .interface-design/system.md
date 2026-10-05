@@ -121,3 +121,9 @@ submitting work. Bulk-toolbar groups wrap according to available space; scrollab
 actions start at the leading edge so narrow project columns cannot hide them under
 the selection summary. Merge order offers 44px handles and up/down buttons with
 quiet border-ui rows; keyboard users can reorder without a drag gesture.
+
+Format conversion uses one short three-step guide before and after analysis.
+Before analysis it stays collapsed by default; opening it compacts the source
+drop area. Show the selected Bundle and real retry/manual-copy recovery. A nested
+conversion dialog owns keyboard focus and returns to its original action. Do not
+recommend format conversion as a fix for permission, quota or connection failures.

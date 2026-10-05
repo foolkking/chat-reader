@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "node:path";
 import { unzipSync, strFromU8 } from "fflate";
+import { settingsAppearance } from "./settings-test-helper";
 
 const runImportFlow = process.env.E2E_IMPORT_FLOW === "1";
 
@@ -228,3 +229,103 @@ async function cleanupAdaptiveE2EProfiles(page: Page): Promise<void> {
     }
   }
 }
+
+for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "zh-CN"]] as const) {
+  test(`${width}px: discover conversion before analysis and import the actual converted Markdown`, async ({ page, baseURL }) => {
+    await settingsAppearance(page.request, baseURL!, locale);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    if (width < 768) await page.getByRole("button", { name: /打开侧栏|Open sidebar/, exact: true }).click();
+    await page.getByRole("button", { name: /Import data|导入数据/, exact: true }).click();
+    const help = page.getByRole("button", { name: /格式不支持？|Format not supported\?/ });
+    await expect(help).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByTestId("format-conversion-guide")).toHaveCount(0);
+    const source = { name: "synthetic-transcript.log", mimeType: "text/plain", buffer: Buffer.from("Human: Synthetic question\nAssistant: Synthetic answer") };
+    const input = page.getByTestId("import-file-input");
+    await input.setInputFiles(source);
+    await expect(page.getByTestId("preview-import-button")).toBeDisabled();
+    await help.click();
+    const guide = page.getByTestId("format-conversion-guide");
+    const link = guide.getByRole("link", { name: /下载 Skill|Download skill/ });
+    await expect(link).toBeVisible();
+    const bundle = await page.request.get((await link.getAttribute("href"))!);
+    expect(bundle.status()).toBe(200);
+    expect(Object.keys(unzipSync(await bundle.body())).some(name => name.endsWith("/SKILL.md"))).toBe(true);
+    await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined }));
+    await guide.getByRole("button", { name: /复制模板|Copy template/ }).click();
+    const template = guide.getByRole("textbox", { name: /转换请求模板|Conversion request template/ });
+    await expect(template).toHaveValue(/ChatGPT Markdown Transcript Profile v1/);
+    await template.focus();
+    expect(await template.evaluate((element: HTMLTextAreaElement) => element.selectionEnd - element.selectionStart)).toBeGreaterThan(50);
+    await expect(guide).not.toContainText(/已复制。|Copied\./);
+    await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/normalizer-${width}.png` });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await help.click();
+    expect(await input.evaluate((element: HTMLInputElement) => element.files?.[0]?.name)).toBe(source.name);
+    await help.click();
+    const chooserPromise = page.waitForEvent("filechooser");
+    await guide.getByRole("button", { name: /选择转换后的文件|Choose the converted file/ }).click();
+    const title = `Synthetic converted ${width} ${Date.now()}`;
+    const markdown = `# ${title}\n\n**User:** Anonymous  \n**Created:** Unknown  \n**Updated:** Unknown  \n**Exported:** 9/29/2026 15:29:29  \n**Link:** N/A\n\n## Prompt:\nUnknown\n\nSynthetic question ${width}\n\n## Response:\nUnknown · test-model\n\nSynthetic answer ${width}\n`;
+    await (await chooserPromise).setFiles({ name: "converted.chat-transcript.md", mimeType: "text/markdown", buffer: Buffer.from(markdown) });
+    await expect(help).toHaveAttribute("aria-expanded", "false");
+    await page.getByTestId("preview-import-button").click();
+    await expect(page.getByText(/准备导入 1 个对话、2 条消息|Ready to import 1 conversations and 2 messages/)).toBeVisible();
+    await page.getByTestId("commit-import-button").click();
+    await page.getByRole("button", { name: /^(打开对话|Open conversation)$/ }).click();
+    await expect(page).toHaveURL(/\/conversations\/[0-9a-f-]+$/);
+    await page.reload();
+    await expect(page.getByRole("article").getByText(`Synthetic question ${width}`, { exact: true })).toBeVisible();
+    await expect(page.getByRole("article").getByText(`Synthetic answer ${width}`, { exact: true })).toBeVisible();
+  });
+}
+
+test("conversion is not offered as recovery for archives, Skills or a service failure", async ({ page, baseURL }) => {
+  await settingsAppearance(page.request, baseURL!, "en-US");
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import data", exact: true }).click();
+  const input = page.getByTestId("import-file-input");
+  const help = page.getByRole("button", { name: "Format not supported?" });
+  for (const name of ["synthetic.cr", "synthetic.context.zip", "SKILL.md"]) {
+    await input.setInputFiles({ name, mimeType: "application/octet-stream", buffer: Buffer.from("Synthetic input") });
+    await expect(help).toHaveCount(0);
+    await expect(page.getByTestId("preview-import-button")).toBeDisabled();
+  }
+  await input.setInputFiles({ name: "synthetic.json", mimeType: "application/json", buffer: Buffer.from("{}") });
+  await page.route("**/api/adaptive-import/sessions", route => route.fulfill({ status: 503, contentType: "application/json", body: '{}' }));
+  await page.getByTestId("preview-import-button").click();
+  await expect(page.getByRole("dialog", { name: "Import data", exact: true }).getByRole("alert")).toContainText("temporarily unavailable");
+  await expect(help).toHaveCount(0);
+  expect(await input.evaluate((element: HTMLInputElement) => element.files?.[0]?.name)).toBe("synthetic.json");
+  await expect(input).toBeEnabled();
+});
+
+test("an in-flight analysis keeps its source while exit remains available", async ({ page, baseURL }) => {
+  await settingsAppearance(page.request, baseURL!, "en-US");
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import data", exact: true }).click();
+  const input = page.getByTestId("import-file-input");
+  await input.setInputFiles({ name: "synthetic-original.json", mimeType: "application/json", buffer: Buffer.from("not-json") });
+  let release!: () => void;
+  const paused = new Promise<void>(resolve => { release = resolve; });
+  let started!: () => void;
+  const reached = new Promise<void>(resolve => { started = resolve; });
+  await page.route("**/api/adaptive-import/sessions", async route => { started(); await paused; await route.continue(); });
+  try {
+    await page.getByTestId("preview-import-button").click();
+    await reached;
+    await expect(input).toBeDisabled();
+    await expect(page.getByTestId("import-dialog-close")).toBeEnabled();
+    await input.locator("xpath=../..").evaluate(element => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["not-json"], "synthetic-new.json", { type: "application/json" }));
+      element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }));
+    });
+    expect(await input.evaluate((element: HTMLInputElement) => element.files?.[0]?.name)).toBe("synthetic-original.json");
+  } finally { release(); }
+  await expect(page.getByRole("article").filter({ hasText: "synthetic-original.json" })).toBeVisible();
+  await expect(page.getByText("synthetic-new.json")).toHaveCount(0);
+  await expect(page.getByTestId("import-dialog-close")).toBeEnabled();
+  await page.getByTestId("import-dialog-close").click();
+  await expect(page.getByRole("dialog", { name: "Import data", exact: true })).toHaveCount(0);
+});

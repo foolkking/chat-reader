@@ -133,6 +133,18 @@ test("format conversion respects the selected Bundle and exposes loading failure
     await dialog.getByRole("button", { name: /Copy template|复制模板/ }).click();
     await expect(dialog.getByRole("alert")).toContainText("copy it manually");
     await expect(dialog).not.toContainText("Copied.");
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/normalizer-dialog.png` });
+    const last = dialog.getByRole("button", { name: "Do this later" });
+    await last.focus();
+    await page.keyboard.press("Tab");
+    await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(last).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toBeFocused();
+    await expect(page.getByRole("dialog", { name: "Import data", exact: true })).toBeVisible();
   } finally {
     await page.unroute("**/api/skills/resolve?**");
     await page.request.delete(`/api/skills/${skill.id}`, { headers: { Origin: baseURL! } });

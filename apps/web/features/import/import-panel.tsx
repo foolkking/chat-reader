@@ -2,16 +2,17 @@
 
 import { importErrorMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, ScanSearch, UploadCloud } from "lucide-react";
+import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, previewImport } from "../../lib/api";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent } from "react";
+import { ApiRequestError, cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, previewImport } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
 import { readAccountCapabilities } from "../../lib/auth-client";
 import { SupportLimitAction } from "../../components/support-limit-action";
 import { ImportPreviewCard } from "./import-preview-card";
 import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
+import { FormatConversionGuide } from "./format-conversion-guide";
 
 type ImportMode = "adaptive" | "archive";
 const ACTIVE_SESSION_KEY = "chat-reader:adaptive-import-session";
@@ -44,6 +45,9 @@ export function ImportPanel({
   const [pendingImportId, setPendingImportId] = useState<string | null>(null);
   const [commitResult, setCommitResult] = useState<CommitImportResponse | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [conversionOpen, setConversionOpen] = useState(false);
+  const conversionId = useId();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [duplicatePolicy, setDuplicatePolicy] = useState<ImportDuplicatePolicy>("clone");
   const completedImportRef = useRef<string | null>(null);
   const previewButtonRef = useRef<HTMLButtonElement>(null);
@@ -118,6 +122,7 @@ export function ImportPanel({
       else setPendingImportId(result.import_id);
     },
   });
+  const busy = adaptiveMutation.isPending || archiveMutation.isPending || commitMutation.isPending || Boolean(pendingImportId);
 
   const validationError = useMemo(() => {
     if (capabilities.data && !capabilities.data.allow_user_import) return tr("管理员已关闭导入功能。");
@@ -134,6 +139,7 @@ export function ImportPanel({
     setSession(null);
     setPendingImportId(null);
     setCommitResult(null);
+    setConversionOpen(false);
     setDuplicatePolicy("clone");
     completedImportRef.current = null;
     adaptiveMutation.reset();
@@ -142,6 +148,7 @@ export function ImportPanel({
   }
 
   function chooseFiles(nextFiles: File[], nextMode = mode) {
+    if (busy) return;
     reset(nextMode);
     setFiles(nextFiles);
   }
@@ -149,6 +156,7 @@ export function ImportPanel({
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
+    if (busy) return;
     const nextFiles = Array.from(event.dataTransfer.files);
     chooseFiles(nextFiles);
   }
@@ -167,26 +175,31 @@ export function ImportPanel({
     );
   }
 
-  const busy = adaptiveMutation.isPending || archiveMutation.isPending;
   const selectedLabel = files.length === 0 ? tr("尚未选择文件") : files.length === 1 ? files[0]?.name : tr("已选择 {0} 个文件", files.length);
   const archiveCanCommit = Boolean(archivePreview?.can_commit ?? archivePreview?.archive_summary);
+  const totalOverLimit = capabilities.data?.maximum_import_total_mb != null && files.reduce((bytes, file) => bytes + file.size, 0) > capabilities.data.maximum_import_total_mb * 1024 * 1024;
+  const sourceError = adaptiveMutation.error;
+  const formatError = sourceError instanceof ApiRequestError && ["SOURCE_UNSUPPORTED", "JSON_INVALID", "NO_MESSAGE_STRUCTURE", "MARKDOWN_ENCODING_INVALID", "MARKDOWN_FENCE_UNCLOSED"].includes(sourceError.code ?? "");
+  const showConversion = mode === "adaptive" && !commitResult && capabilities.data?.allow_user_import && !fileOverLimit && !totalOverLimit && files.length <= 500
+    && !files.some(file => /\.(?:cr|zip)$/i.test(file.name) || file.name.toLowerCase() === "skill.md")
+    && (!sourceError || formatError);
 
   return (
     <section className="space-y-5">
       {repairProfileId ? <p className="text-sm leading-6 text-secondary">{tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。")}</p> : null}
       <div
-        onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
+        onDragEnter={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
         onDragOver={(event) => event.preventDefault()}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={`border border-dashed px-6 py-8 text-center transition-colors ${dragging ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-ui bg-subtle"}`}
+        className={`border border-dashed text-center transition-colors ${conversionOpen ? "px-4 py-3" : "px-6 py-8"} ${dragging ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-ui bg-subtle"}`}
       >
-        <UploadCloud className="mx-auto h-6 w-6 text-secondary" aria-hidden="true" />
+        {!conversionOpen ? <><UploadCloud className="mx-auto h-6 w-6 text-secondary" aria-hidden="true" />
         <p className="mt-3 text-sm font-medium text-primary">{tr("拖放文件到这里")}</p>
-        <p className="my-2 text-xs text-secondary">{tr("或")}</p>
-        <label className="btn-secondary inline-flex min-h-11 cursor-pointer focus-within:ring-2 focus-within:ring-[var(--focus)] items-center justify-center px-4 text-sm font-medium">
+        <p className="my-2 text-xs text-secondary">{tr("或")}</p></> : null}
+        <label className={`btn-secondary inline-flex min-h-11 focus-within:ring-2 focus-within:ring-[var(--focus)] items-center justify-center px-4 text-sm font-medium ${busy ? "cursor-wait opacity-50" : "cursor-pointer"}`}>
           {mode === "adaptive" ? tr("选择 JSON / Markdown 文件") : tr("选择 .cr 归档")}
-          <input data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
+          <input ref={fileInputRef} disabled={busy} data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => { const selected = Array.from(event.currentTarget.files ?? []); if (selected.length) chooseFiles(selected); }} />
         </label>
         {files.length ? <p className="mt-3 break-all text-sm text-secondary">{selectedLabel}</p> : null}
       </div>
@@ -196,6 +209,10 @@ export function ImportPanel({
       {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error.message} /> : null}
       {archiveMutation.isError ? <ErrorLine message={archiveMutation.error.message} /> : null}
       {commitMutation.isError ? <ErrorLine message={commitMutation.error.message} /> : null}
+      {showConversion ? <div className="border-y border-ui">
+        <button type="button" disabled={busy} aria-expanded={conversionOpen} aria-controls={conversionId} onClick={() => setConversionOpen(open => !open)} className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left text-sm text-secondary hover:text-primary disabled:opacity-50">{tr("格式不支持？")}<ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${conversionOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button>
+        {conversionOpen ? <div id={conversionId} className="pb-4 pt-2"><FormatConversionGuide resultAction={<button type="button" disabled={busy} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => fileInputRef.current?.click()}>{files.length > 1 ? tr("重新选择本批文件") : tr("选择转换后的文件")}</button>} /></div> : null}
+      </div> : null}
       <div className="flex flex-wrap gap-3">
         <button ref={previewButtonRef} type="button" disabled={!files.length || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={() => mode === "archive" ? archiveMutation.mutate(files) : adaptiveMutation.mutate(files)} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
           {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
@@ -245,6 +262,7 @@ function validateFiles(files: File[], mode: ImportMode, tr: ImportCopy): string 
   if (mode === "archive") return files.length === 1 && extensions[0] === ".cr" ? null : tr(".cr 归档必须单独导入。");
   if (extensions.includes(".cr")) return tr("请在设置的数据与备份中恢复 .cr 归档。");
   if (files.some((file) => file.name.toLowerCase().endsWith(".context.zip"))) return tr("请打开目标对话，在批注旁的上下文面板中更新 Current / Index。");
+  if (files.some((file) => file.name.toLowerCase() === "skill.md")) return tr("这是 Skill 文件，请在设置的 Skill 管理中上传。");
   if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"].includes(extension))) return tr("仅支持 JSON、Markdown 或文本源文件。");
   if (files.length > 500) return tr("一次最多分析 500 个文件。");
   return null;

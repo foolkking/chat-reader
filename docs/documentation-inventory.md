@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-05 Normalizer discovery: `execution/NORMALIZER_DISCOVERY_2026-10-05.md`
+tracks FLOW-03, actual import/Bundle tests and retained fixture failures. Context
+Skill inventory and interface patterns describe the shared guide. This follow-up
+is separate from the inspected support artifact and pending production deployment.
+
 2026-10-05 support backend/UI: `execution/SUPPORT_REQUESTS_2026-10-05.md` records
 implementation, failures/reruns, PostgreSQL/SMTP/restore evidence, committed source
 `ad82cf4` and successful exact-source CI `37295004053`. `system/SUPPORT_REQUEST_CONTRACT.md`

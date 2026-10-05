@@ -13,7 +13,7 @@ StructureFamily. The UI uses this field for its primary action:
 - `NOT_MAPPABLE`: the source is not a safely segmentable conversation (for
   example an instruction/document file or invalid source); do not create a
   mapping plan or learned profile. Keep it in the current Import Session and
-  offer diagnosis, replacement, exclusion, or contextual Conversation Rescue.
+  offer diagnosis, replacement, exclusion, or the format-conversion Skill.
 
 The Web treats this required server field as the only handling authority. It
 does not derive capability from `resolution_status`; that status remains a
@@ -29,12 +29,20 @@ is a transcript. Context or instruction packages that combine explicit package
 markers, instruction sections and line-reference records are classified as
 `NOT_MAPPABLE`, even when their historical text contains labels such as
 `用户:` or `Assistant:`. They remain eligible for replacement, exclusion and
-Conversation Rescue, but never enter Mapping.
+external format conversion, but never enter Mapping. Conversion must preserve
+available history and must not invent missing messages.
 
 The current external conversion default is `chat-transcript-normalizer-skill.zip`.
 It produces ChatGPT Markdown Transcript Profile v1, a project-defined interchange
 format, not an official OpenAI export schema. Personal Skill selection still wins.
 Chat Reader does not execute the uploaded scripts or call an external model.
+
+Ordinary import also exposes a collapsed conversion guide before analysis; the
+same three steps serve NOT_MAPPABLE recovery. It resolves the selected Bundle,
+offers retry/manual copying and returns to file selection. Archive/Context/Skill
+routing and permission, quota or transport failures do not use conversion as a
+recovery action. A selected batch survives closing the guide. During analysis,
+new file selection/drops are disabled; the existing exit remains available.
 
 The adaptive import entry recognizes its ordered bold header and complete message
 signatures before generic mapping. Unknown timestamps and assistant model labels

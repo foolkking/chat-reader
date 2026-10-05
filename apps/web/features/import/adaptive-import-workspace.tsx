@@ -1,15 +1,13 @@
 "use client";
 
 import { importErrorMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Braces,
   CheckCircle2,
-  Clipboard,
   ChevronRight,
   CircleAlert,
-  Download,
   FileText,
   FileUp,
   FolderCog,
@@ -27,7 +25,6 @@ import {
   replaceAdaptiveImportArtifact,
   resolveAdaptiveImportGroups,
   selectAdaptiveFamilyProfile,
-  resolveSkill,
 } from "../../lib/api";
 import type {
   AdaptiveImportDiagnostic,
@@ -35,7 +32,7 @@ import type {
   AdaptiveImportGroup,
   AdaptiveImportSession,
 } from "../../lib/types";
-import { usePreferences } from "../../components/preferences-provider";
+import { FormatConversionDialog } from "./format-conversion-guide";
 import { MappingWorkspace } from "./mapping-workspace";
 import { FormatHealthCheck } from "./format-health-check";
 
@@ -283,50 +280,7 @@ function NotMappableRecovery({ session, family, onSession }: {
       ))}
       {replaceMutation.isError ? <div className="mt-3"><ErrorLine message={replaceMutation.error.message} /></div> : null}
       {excludeMutation.isError ? <div className="mt-3"><ErrorLine message={excludeMutation.error.message} /></div> : null}
-      {rescueArtifact ? <RescueDialog filename={rescueArtifact.filename} onClose={() => setRescueArtifact(null)} onReplace={(file) => { setRescueArtifact(null); replaceMutation.mutate({ artifactId: rescueArtifact.id, file }); }} /> : null}
-    </div>
-  );
-}
-
-function RescueDialog({ filename, onClose, onReplace }: { filename: string; onClose: () => void; onReplace: (file: File) => void }) {
-  const tr = useImportCopy();
-  const { resolvedLocale } = usePreferences();
-  const language = resolvedLocale === "zh-CN" ? "zh" : "en";
-  const [copyError, setCopyError] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const resolved = useQuery({ queryKey: ["resolved-skill", "CONVERSATION_RESCUE", language], queryFn: () => resolveSkill("CONVERSATION_RESCUE", language === "zh" ? "zh-CN" : "en"), staleTime: 60_000 });
-  const request = language === "zh"
-    ? "请严格按照附带的 chat-transcript-normalizer Skill，将源文件恢复为一个 ChatGPT Markdown Transcript Profile v1 文件。不要总结、改写、补造或回答原对话内容。输出一个可重新上传的 .md 文件。"
-    : "Use the attached chat-transcript-normalizer Skill to recover this source as one ChatGPT Markdown Transcript Profile v1 file. Do not summarize, rewrite, invent, or answer the transcript. Output one .md file that can be uploaded again.";
-  async function copy(label: string, value: string) {
-    try {
-      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
-      await navigator.clipboard.writeText(value);
-      setCopyError(false); setCopied(label);
-      window.setTimeout(() => setCopied(null), 1800);
-    } catch { setCopyError(true); setCopied(null); }
-  }
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
-      <section role="dialog" aria-modal="true" aria-labelledby="rescue-dialog-title" className="flex max-h-[min(760px,calc(100vh-2rem))] w-full max-w-[740px] flex-col overflow-hidden rounded-lg border border-ui bg-surface shadow-xl">
-        <header className="flex items-start justify-between gap-4 border-b border-ui px-5 py-4">
-          <div><h2 id="rescue-dialog-title" className="text-base font-semibold text-primary">{tr("使用格式转换 Skill")}</h2><p className="mt-1 text-xs leading-5 text-secondary">{tr("将不可映射的源文件恢复为 Chat Reader 可导入的 Markdown。Chat Reader 不会自动上传原文。")}</p></div>
-          <button type="button" onClick={onClose} className="btn-ghost" aria-label={tr("关闭")}><span aria-hidden="true">×</span></button>
-        </header>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-
-          <div className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-3 text-sm"><p className="font-semibold text-primary">{tr("当前文件：")}{filename}</p><p className="mt-1 text-secondary">{tr("当前结构没有可靠的消息边界。继续设置角色或内容字段无法安全得到 Conversation。")}</p></div>
-          <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-secondary"><li>{tr("下载 Skill ZIP。")}</li><li>{tr("将源文件和 Skill 提供给你选择的大模型。")}</li><li>{tr("要求输出 ChatGPT Markdown Transcript Profile v1。")}</li><li>{tr("回到这里替换当前文件，再重新分析。")}</li></ol>
-          <div className="flex flex-wrap items-center gap-3">
-            {resolved.data?.bundle_url ? <><a href={resolved.data.bundle_url} download className="btn-secondary inline-flex min-h-11 items-center gap-2 px-3 text-sm"><Download className="h-4 w-4" />{tr("下载 Skill")}</a><span className="break-all text-xs text-secondary">{resolved.data.name}</span></> : resolved.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{language === "zh" ? "暂时无法获取首选 Skill。" : "Your preferred Skill could not be loaded."}</p><button type="button" className="min-h-11 underline" onClick={() => void resolved.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{language === "zh" ? "正在获取 Skill…" : "Loading Skill…"}</p>}
-          </div>
-          {copyError ? <p role="alert" className="text-sm text-[var(--danger)]">{language === "zh" ? "无法复制，请选中下方模板手动复制。" : "Could not copy. Select the template below and copy it manually."}</p> : null}
-          <div className="border border-ui p-3"><div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-primary">{tr("转换请求模板")}</p><button type="button" onClick={() => void copy("request", request)} className="btn-secondary inline-flex min-h-8 items-center gap-2 px-2.5 text-xs"><Clipboard className="h-3.5 w-3.5" />{tr("复制模板")}</button></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-secondary">{request}</p><p className="mt-2 text-xs text-accent">{copied === "request" ? tr("已复制。") : tr("输出后请重新上传生成的 .md 文件。")}</p></div>
-          <p className="text-xs leading-5 text-secondary">{tr("隐私提示：外部大模型可能会读取源文件中的对话内容。Chat Reader 不会代替你向第三方服务上传文件，请自行确认隐私范围。")}</p>
-        </div>
-        <footer className="flex flex-wrap justify-end gap-2 border-t border-ui px-5 py-3"><button type="button" onClick={() => inputRef.current?.click()} className="btn-primary min-h-10 px-4 text-sm">{tr("替换当前文件")}</button><button type="button" onClick={onClose} className="btn-secondary min-h-10 px-4 text-sm">{tr("稍后处理")}</button><input ref={inputRef} type="file" accept=".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ""; if (file) onReplace(file); }} /></footer>
-      </section>
+      {rescueArtifact ? <FormatConversionDialog filename={rescueArtifact.filename} onClose={() => setRescueArtifact(null)} onReplace={(file) => { setRescueArtifact(null); replaceMutation.mutate({ artifactId: rescueArtifact.id, file }); }} /> : null}
     </div>
   );
 }

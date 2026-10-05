@@ -60,6 +60,15 @@ and [local support contract](docs/system/SUPPORT_REQUEST_CONTRACT.md).
 
 ## System and boundaries
 
+Follow-up Normalizer discovery work after `0d228d4` closes the early-import Skill
+entry gap and shares the concise conversion guide with failed-analysis recovery.
+It preserves source selections, handles Clipboard failure and uses the common
+modal keyboard lifecycle. Local acceptance passed build/lint/typecheck, 11 API
+profile checks, 17 browser cases (1 external-fixture skip) and a 2-case focused
+rerun. Evidence and retained failures are recorded in
+[Normalizer discovery](docs/execution/NORMALIZER_DISCOVERY_2026-10-05.md); it is not
+part of the inspected `ad82cf4` artifact and has not been deployed.
+
 - Next.js 16 / React 19 / TypeScript Web; FastAPI / SQLAlchemy API; PostgreSQL;
   one concurrent background worker. Corepack + pnpm 9.15.4, Python 3.11+.
 - Browser requests use same-origin `/api/*`. `API_INTERNAL_URL` supplies Next
