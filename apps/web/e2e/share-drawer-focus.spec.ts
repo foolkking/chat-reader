@@ -83,6 +83,33 @@ test("mobile Share replaces the tools sheet and restores the More trigger", asyn
     await page.keyboard.press("Escape");
     await expect(share).toBeHidden();
     await expect(more).toBeFocused();
+
+    // A short viewport must still expose the last tool without scrolling the
+    // fixed title out of sight. Both snap positions use the visible height.
+    await page.setViewportSize({ width: 375, height: 480 });
+    await more.click();
+    const lastTool = tools.getByRole("button").last();
+    await lastTool.focus();
+    await expect(lastTool).toBeInViewport({ ratio: 1 });
+    const close = tools.getByRole("button", { name: /^(关闭|Close)$/ });
+    await expect(close).toBeInViewport({ ratio: 1 });
+    const bounds = await tools.boundingBox();
+    expect(bounds).not.toBeNull();
+    await page.mouse.move(187, bounds!.y + 14);
+    await page.mouse.down();
+    await page.mouse.move(187, 40, { steps: 15 });
+    await page.mouse.up();
+    await expect.poll(async () => (await tools.boundingBox())!.y).toBeLessThan(60);
+    await expect(lastTool).toBeInViewport({ ratio: 1 });
+    await close.click();
+    await expect(tools).toBeHidden();
+    await more.click();
+    await expect.poll(async () => (await tools.boundingBox())!.y).toBeGreaterThan(180);
+    await lastTool.focus();
+    await expect(lastTool).toBeInViewport({ ratio: 1 });
+    await expect(close).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press("Escape");
+    await expect(tools).toBeHidden();
   } finally {
     await page.request.delete(`/api/conversations/${conversationId}`);
   }

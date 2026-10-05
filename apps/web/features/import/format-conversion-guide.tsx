@@ -2,26 +2,21 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Clipboard, Download, X } from "lucide-react";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import { useDialogFocus } from "../../components/use-dialog-focus";
+import { useClipboardCopy } from "../../components/use-clipboard-copy";
 import { resolveSkill } from "../../lib/api";
 
 /** The same short handoff before upload and after a failed format analysis. */
 export function FormatConversionGuide({ sourceName, resultAction }: { sourceName?: string; resultAction: ReactNode }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const resolved = useQuery({ queryKey: ["resolved-skill", "CONVERSATION_RESCUE", zh ? "zh" : "en"], queryFn: () => resolveSkill("CONVERSATION_RESCUE", zh ? "zh-CN" : "en"), staleTime: 60_000 });
   const request = zh
     ? "请使用我提供的格式转换 Skill，将源对话整理为 ChatGPT Markdown Transcript Profile v1，输出可重新导入的 .md 文件。保留原有消息顺序和内容，不要总结、改写、补造或回答原对话。"
     : "Use the supplied format conversion Skill to produce a ChatGPT Markdown Transcript Profile v1 .md file for reimport. Preserve message order and content. Do not summarize, rewrite, invent, or answer the original conversation.";
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(request);
-      setCopyState("copied");
-    } catch { setCopyState("failed"); }
-  }
+  const { copy, state: copyState, manualRef } = useClipboardCopy(request);
   return <div className="space-y-4" data-testid="format-conversion-guide">
     {sourceName ? <p className="break-all text-xs text-secondary">{sourceName}</p> : null}
     <ol className="list-decimal space-y-5 pl-5 text-sm text-primary marker:text-secondary">
@@ -36,9 +31,9 @@ export function FormatConversionGuide({ sourceName, resultAction }: { sourceName
       <li className="pl-1">
         <p className="font-medium">{zh ? "把源文件和 Skill 交给你使用的 AI" : "Give the source and Skill to your AI"}</p>
         <p className="mt-1 text-xs leading-5 text-secondary">{zh ? "请它整理为可导入的 Markdown，保留原文，不作总结。" : "Ask for importable Markdown that preserves the transcript without summarizing it."}</p>
-        <button type="button" onClick={() => void copy()} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm text-accent"><Clipboard className="h-4 w-4" aria-hidden="true" />{zh ? "复制模板" : "Copy template"}</button>
+        <button type="button" disabled={copyState === "copying"} onClick={() => void copy()} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm text-accent disabled:opacity-50"><Clipboard className="h-4 w-4" aria-hidden="true" />{copyState === "copying" ? (zh ? "正在复制…" : "Copying…") : (zh ? "复制模板" : "Copy template")}</button>
         {copyState === "copied" ? <p role="status" className="text-xs text-secondary">{zh ? "已复制。" : "Copied."}</p> : null}
-        {copyState === "failed" ? <div className="space-y-2"><p role="alert" className="text-xs text-[var(--danger)]">{zh ? "无法复制，请选中下方模板手动复制。" : "Could not copy. Select the template below and copy it manually."}</p><textarea readOnly aria-label={zh ? "转换请求模板" : "Conversion request template"} value={request} onFocus={event => event.currentTarget.select()} rows={5} className="w-full resize-y rounded-md border border-ui bg-surface p-3 text-sm leading-6 text-primary" /></div> : null}
+        {copyState === "failed" ? <div className="space-y-2"><p role="alert" className="text-xs text-[var(--danger)]">{zh ? "无法复制，请选中下方模板手动复制。" : "Could not copy. Select the template below and copy it manually."}</p><textarea ref={manualRef} readOnly aria-label={zh ? "转换请求模板" : "Conversion request template"} value={request} onFocus={event => event.currentTarget.select()} rows={5} className="w-full resize-y rounded-md border border-ui bg-surface p-3 text-sm leading-6 text-primary" /></div> : null}
       </li>
       <li className="pl-1"><p className="mb-2 font-medium">{zh ? "回来选择转换后的文件，再分析导入" : "Choose the converted file, then analyze and import"}</p>{resultAction}</li>
     </ol>

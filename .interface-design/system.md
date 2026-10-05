@@ -58,6 +58,10 @@ Import Format revision ledger.
 - Status: compact semantic badge with icon/text; never rely on color alone.
 - Error/warning: left semantic rule plus concise cause and a real recovery or
   navigation action.
+- Copy actions: confirm only an actual completed write; reveal a labelled,
+  selectable read-only field on failure. Keep download actions available and
+  avoid making fallback instructions a permanent introductory block.
+  Focus/select the fallback and keep it inside the visible scroll viewport.
 - Loading: inline contextual spinner without replacing the entire workspace.
 - Empty state: state what is absent and identify the next useful action.
 - Forms: label above input, inset `bg-surface`, `border-ui`, visible `--focus`.
@@ -114,6 +118,9 @@ Import Format revision ledger.
 ## Usability recovery surfaces
 
 Dirty composition uses the shared confirmation; short dialogs keep title/actions fixed and scroll only their fields. Touch project menus remain visible; nested menu keys must not start drag sorting. Search filters disclose on demand without remounting focused inputs. Retry states preserve the query, failed draft or selected items. One bounded task launcher opens the existing Task Center; detailed phases remain bilingual. Keep these changes in the paper/graphite/sea-green token system.
+
+Mobile bottom sheets size their working area to the active visible snap height.
+Keep the title available while the tools or fields scroll, including short screens.
 
 Limit requests open a focused Settings dialog above the existing import/merge,
 retaining files, title and order. Returning refreshes limits without automatically

@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-10-05 Skill copy recovery: `execution/SKILL_COPY_RECOVERY_2026-10-05.md`
+records the missing-Clipboard recovery, shared text-bound feedback and real
+Clipboard/export browser acceptance. The Context Skill contract, frontend
+architecture and interface patterns own copying and visible mobile snap height;
+this follow-up is not in `daf759d` images.
+
 2026-10-05 Normalizer discovery: `execution/NORMALIZER_DISCOVERY_2026-10-05.md`
 tracks FLOW-03, actual import/Bundle tests and retained fixture failures. Context
 Skill inventory and interface patterns describe the shared guide. Final source

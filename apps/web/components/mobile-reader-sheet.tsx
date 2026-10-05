@@ -61,16 +61,20 @@ export function MobileReaderSheet({
             event.preventDefault();
             target.focus({ preventScroll: true });
           }}
-          className="fixed inset-x-0 bottom-0 z-50 flex h-[92vh] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden"
+          className="fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden"
         >
-          <div className="flex shrink-0 justify-center pb-2 pt-3" aria-hidden="true">
-            <div className="h-1.5 w-10 rounded-full bg-[var(--border-strong)]" />
-          </div>
-          <Drawer.Title className="sr-only">{title}</Drawer.Title>
-          {header ? <div className="shrink-0 border-b border-ui px-[3vw] pb-3">{header}</div> : null}
-          {status ? <div className="shrink-0 px-[3vw] py-2" aria-live="polite">{status}</div> : null}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-[3vw] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {children}
+          {/* Vaul translates by viewport minus snap height. Size the working
+              area to that visible height, not the offscreen drawer surface. */}
+          <div className="flex min-h-0 flex-col overflow-clip" style={{ height: `${Number(snapPoint ?? 0.6) * 100}%` }}>
+            <div className="flex shrink-0 justify-center pb-2 pt-3" aria-hidden="true">
+              <div className="h-1.5 w-10 rounded-full bg-[var(--border-strong)]" />
+            </div>
+            <Drawer.Title className="sr-only">{title}</Drawer.Title>
+            {header ? <div className="shrink-0 border-b border-ui px-[3vw] pb-3">{header}</div> : null}
+            {status ? <div className="shrink-0 px-[3vw] py-2" aria-live="polite">{status}</div> : null}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-[3vw] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              {children}
+            </div>
           </div>
         </Drawer.Content>
       </Drawer.Portal>

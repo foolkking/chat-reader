@@ -2538,7 +2538,7 @@ export function ConversationReader({
         }}
       /> : null}
       <MobileReaderSheet open={mobileActionsExpanded} onOpenChange={setMobileActionsExpanded} title={t("readerTools")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("readerTools")}</h2><button type="button" onClick={() => setMobileActionsExpanded(false)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <div className="grid grid-cols-2 gap-2 py-3">
+        <div className="reader-aux-scroll grid min-h-0 grid-cols-2 gap-2 overflow-y-auto py-3">
           {mobileHeaderActions.map((action) => { const Icon = action.icon; return <button key={action.id} type="button" disabled={action.disabled} onClick={() => { setMobileActionsExpanded(false); action.onSelect(); }} className="flex min-h-12 items-center gap-3 rounded-lg border border-ui bg-surface px-3 text-left text-sm text-primary disabled:opacity-50"><Icon className="h-4 w-4 shrink-0 text-accent" /><span className="min-w-0 line-clamp-2">{action.label}</span></button>; })}
         </div>
       </MobileReaderSheet>

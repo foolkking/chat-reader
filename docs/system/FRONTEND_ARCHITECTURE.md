@@ -1,5 +1,18 @@
 # 前端架构
 
+## Mobile sheets and copy recovery (2026-10-05)
+
+MobileReaderSheet keeps its working area within the active 60%/92% viewport snap,
+with a fixed title and bounded child scrolling. The offscreen Vaul surface must
+not determine content height or scroll the title away. The tools grid scrolls
+independently on short screens; navigation, Share and export retain their existing
+focus ownership and return targets.
+
+Skill handoff copying shares text-bound pending/success/failure state. Missing or
+denied Clipboard access reveals, focuses and selects a read-only manual field,
+scrolling it into view while keeping download available. A later successful write
+hides that fallback. UI feedback never treats a rejected write as success.
+
 ## Whole-site interaction contracts (2026-10-04)
 
 New/inserted-message and project-setting forms share dirty-close confirmation and

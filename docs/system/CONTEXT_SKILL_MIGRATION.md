@@ -22,6 +22,12 @@ The default Bundle bytes live in `tools/context-skills/default-bundles/` and mat
 content endpoints. Installing/downloading a Skill Bundle and updating a Context
 Package are different operations. Never embed a Skill ZIP inside a Context ZIP.
 
+Copying usage instructions is optional. Online/offline Context delivery and the
+Normalizer handle unavailable or denied Clipboard access with a selectable,
+read-only manual-copy field shown only on failure. Download actions stay usable.
+Copy success belongs to the exact language/purpose text whose write completed;
+switching that text does not inherit the prior success indication.
+
 ## Reviewed external runtime distribution
 
 Editable Acquisition/Maintainer sources are under `tools/context-skills/`. They

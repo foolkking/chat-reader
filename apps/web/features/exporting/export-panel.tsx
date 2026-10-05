@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { MaintenanceHint } from "./maintenance-hint";
 import { captureOfflineAccess, assertOfflineAccess } from "../../lib/offline-access";
 import { usePreferences } from "../../components/preferences-provider";
+import { useClipboardCopy } from "../../components/use-clipboard-copy";
 import {
   getConversationAttachments,
   continuationApi,
@@ -219,7 +220,6 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const skillLocale = defaultSkillLocale;
-  const [status, setStatus] = useState("");
   const category = purpose === "maintenance" ? "CONTEXT_MAINTENANCE" : "EXPORT_CONTEXT";
   const resolved = useQuery({ queryKey: ["resolved-skill", category, skillLocale], queryFn: () => resolveSkill(category, skillLocale), enabled: !offline });
   const offlineUrl = purpose === "maintenance" ? "/skills/context-continuation-maintainer.zip" : "/skills/context-acquisition.zip";
@@ -233,16 +233,18 @@ export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultS
   const request = purpose === "maintenance"
     ? (zh ? "请使用我提供的维护 Skill 更新这个 .context.zip 内的 Current 和 Index，保留原始对话和附件，输出新的 .context.zip。" : "Use the supplied maintenance Skill to update Current and Index in this .context.zip. Preserve the raw conversation and attachments and return a new .context.zip.")
     : (zh ? "请使用我提供的接续 Skill 读取这个 .context.zip 并继续任务。" : "Use the supplied acquisition Skill to read this .context.zip and continue the task.");
+  const { copy, state: copyState, manualRef } = useClipboardCopy(request);
   return <section className="space-y-3 border-t border-ui pt-3" data-testid="context-package-delivery">
     <p className="text-xs text-secondary">{offline ? (zh ? "使用缓存的系统默认 Skill ZIP。" : "Uses the cached system-default Skill ZIP.") : resolved.data?.name}</p>
     <button type="button" className="btn-primary min-h-11 w-full px-3" onClick={() => { const link = document.createElement("a"); link.href = downloadUrl; link.download = downloadFilename ?? ""; link.click(); }}>{zh ? "下载上下文包" : "Download Context Package"}</button>
     <div className="flex flex-wrap gap-3 text-sm">
       {bundleUrl ? <a href={bundleUrl} download className="min-h-11 py-3 text-accent">{purpose === "maintenance" ? (zh ? "下载维护 Skill" : "Download maintenance Skill") : (zh ? "下载接续 Skill" : "Download acquisition Skill")}</a> : null}
-      <button type="button" className="min-h-11 text-secondary" onClick={() => { void navigator.clipboard.writeText(request).then(() => setStatus(zh ? "使用说明已复制" : "Usage instructions copied"), () => setStatus(zh ? "复制失败，请重试" : "Copy failed; retry")); }}>{zh ? "复制使用说明" : "Copy usage instructions"}</button>
+      <button type="button" disabled={copyState === "copying"} className="min-h-11 text-secondary disabled:opacity-50" onClick={() => void copy()}>{copyState === "copying" ? (zh ? "正在复制…" : "Copying…") : (zh ? "复制使用说明" : "Copy usage instructions")}</button>
     </div>
     {resolved.isError ? <button type="button" onClick={() => void resolved.refetch()} className="text-sm text-[var(--danger)]">{zh ? "Skill 读取失败，重试" : "Skill unavailable; retry"}</button> : null}
     {offline && !cached.isPending && !cached.data ? <p className="text-xs text-secondary">{zh ? "此 Skill 尚未缓存，联网后可下载；上下文包仍可下载。" : "This Skill is not cached. Download it when online; your Context Package is still available."}</p> : null}
-    {status ? <p role="status" className="text-xs text-secondary">{status}</p> : null}
+    {copyState === "copied" ? <p role="status" className="text-xs text-secondary">{zh ? "使用说明已复制" : "Usage instructions copied"}</p> : null}
+    {copyState === "failed" ? <div className="space-y-2"><p role="alert" className="text-xs text-[var(--danger)]">{zh ? "无法复制，请选中下方说明手动复制。" : "Could not copy. Select the instructions below and copy them manually."}</p><textarea ref={manualRef} readOnly aria-label={zh ? "交给 AI 的使用说明" : "Instructions for your AI"} value={request} onFocus={event => event.currentTarget.select()} rows={5} className="w-full resize-y rounded-md border border-ui bg-surface p-3 text-sm leading-6 text-primary" /></div> : null}
   </section>;
 }
 

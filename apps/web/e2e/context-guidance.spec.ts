@@ -19,8 +19,9 @@ async function openAction(page: Page, width: number, name: RegExp) {
 }
 
 for (const width of [375, 768, 1440]) {
-  test(`${width}px: optional first guide, real maintenance ZIP and uncovered-range reminder`, async ({ page, baseURL }, info) => {
-    await page.setViewportSize({ width, height: 950 });
+  test(`${width}px: optional first guide, real maintenance ZIP and uncovered-range reminder`, async ({ page, context, baseURL }, info) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3107" });
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 950 });
     await settingsAppearance(page.request, baseURL!, width === 768 ? "en-US" : "zh-CN");
     const payload = { metadata: { title: "Synthetic guidance", powered_by: "ChatGPT Exporter" }, messages: Array.from({ length: 105 }, (_, i) => ({ role: i % 2 ? "Response" : "Prompt", say: `Synthetic turn ${i + 1}` })) };
     const preview = await page.request.post("/api/imports/preview", { multipart: { files: { name: "synthetic-guidance.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(payload)) } } });
@@ -67,6 +68,29 @@ for (const width of [375, 768, 1440]) {
     const skill = await skillPromise;
     expect(skill.suggestedFilename()).toMatch(/\.zip$/);
     expect(createHash("sha256").update(await readFile((await skill.path())!)).digest("hex")).toBe(createHash("sha256").update(await readFile("../../tools/context-skills/default-bundles/context-continuation-maintainer.zip")).digest("hex"));
+    await page.evaluate(() => navigator.clipboard.writeText("Synthetic maintenance clipboard sentinel"));
+    await page.evaluate(width => Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+      writeText: () => { if (width === 1440) throw new Error("Synthetic synchronous Clipboard failure"); return Promise.reject(new DOMException("Synthetic denied copy", "NotAllowedError")); },
+    } }), width);
+    const instructions = width === 768
+      ? "Use the supplied maintenance Skill to update Current and Index in this .context.zip. Preserve the raw conversation and attachments and return a new .context.zip."
+      : "请使用我提供的维护 Skill 更新这个 .context.zip 内的 Current 和 Index，保留原始对话和附件，输出新的 .context.zip。";
+    const manual = preparation.getByRole("textbox", { name: /交给 AI 的使用说明|Instructions for your AI/ });
+    await preparation.getByRole("button", { name: /复制使用说明|Copy usage instructions/ }).click();
+    await expect(preparation.getByRole("alert")).toContainText(/手动复制|copy them manually/);
+    await expect(manual).toHaveValue(instructions);
+    await expect(manual).toBeFocused();
+    await expect(manual).toBeInViewport({ ratio: 1 });
+    expect(await manual.evaluate(element => { const rect = element.getBoundingClientRect(); return document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === element; })).toBe(true);
+    expect(await manual.evaluate((element: HTMLTextAreaElement) => [element.selectionStart, element.selectionEnd])).toEqual([0, instructions.length]);
+    await page.keyboard.press("ControlOrMeta+C");
+    await page.screenshot({ path: info.outputPath(`maintenance-copy-fallback-${width}.png`) });
+    await page.evaluate(() => Reflect.deleteProperty(navigator, "clipboard"));
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(instructions);
+    await preparation.getByRole("button", { name: /复制使用说明|Copy usage instructions/ }).click();
+    await expect(preparation.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(instructions);
+    await expect(manual).toHaveCount(0);
     await page.getByRole("button", { name: /关闭接续|Close continuation$/ }).click();
     await openAction(page, width, /^(导出|Export)$/);
     const hint = page.getByRole("complementary", { name: /接续维护建议|Continuation suggestion/ });

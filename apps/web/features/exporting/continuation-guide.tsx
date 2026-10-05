@@ -22,9 +22,9 @@ export function ContinuationGuide({ conversationId, offline, initiallyOpen = fal
     void seen.save(true).catch(() => undefined);
   }, [seen]);
   return <div className="border-b border-ui py-3" data-testid="continuation-guide">
-    <div className="flex flex-wrap items-center gap-3">
-      <button ref={trigger} type="button" aria-expanded={open} className="min-h-11 text-sm text-secondary hover:text-primary" onClick={() => setOpen(v => !v)}>{zh ? "如何使用 Current / Index" : "How to use Current / Index"}</button>
-      <button type="button" className="ml-auto min-h-11 text-sm font-medium text-accent" aria-expanded={preparing} onClick={() => { setPreparing(v => !v); setOpen(true); }}>{preparing ? (zh ? "收起维护步骤" : "Hide maintenance steps") : (zh ? "准备维护" : "Prepare maintenance")}</button>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <button ref={trigger} type="button" aria-expanded={open} className="min-h-11 shrink-0 text-left text-sm text-secondary hover:text-primary" onClick={() => setOpen(v => !v)}>{zh ? "如何使用 Current / Index" : "How to use Current / Index"}</button>
+      <button type="button" className="ml-auto min-h-11 shrink-0 whitespace-nowrap text-sm text-accent" aria-expanded={preparing} onClick={() => { setPreparing(v => !v); setOpen(true); }}>{preparing ? (zh ? "收起维护步骤" : "Hide maintenance steps") : (zh ? "准备维护" : "Prepare maintenance")}</button>
     </div>
     {open ? <section aria-label={zh ? "接续使用指引" : "Continuation guide"} className="relative py-2 pr-11">
       <button type="button" className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭使用指引" : "Close continuation guide"} onClick={() => { started.current = true; setOpen(false); setPreparing(false); void seen.save(true).catch(() => undefined); trigger.current?.focus(); }}><X className="h-4 w-4" /></button>

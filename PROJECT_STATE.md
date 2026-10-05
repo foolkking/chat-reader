@@ -70,6 +70,14 @@ and [local support contract](docs/system/SUPPORT_REQUEST_CONTRACT.md).
 
 ## System and boundaries
 
+Local follow-up after `5ed981c` adds recoverable Skill-instruction copying for
+Acquisition, Maintainer and Normalizer, including offline delivery, plus visible
+mobile snap sizing. Local build/lint/typecheck and 42 browser scenarios passed
+(1 external-fixture skip); final short-screen/drag/export regression passed 12.
+Baseline PWA and exact-source CI remain pending. This is separate from inspected
+`daf759d`; production remains unchanged, with 3,326,108 KiB free at the latest
+read-only check. See [copy recovery](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md).
+
 Follow-up Normalizer discovery work after `0d228d4` closes the early-import Skill
 entry gap and shares the concise conversion guide with failed-analysis recovery.
 It preserves source selections, handles Clipboard failure and uses the common
