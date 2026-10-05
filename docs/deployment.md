@@ -1,49 +1,29 @@
 # 生产部署
 
-最新已验证应用源码：`5d48b686893d44f98092dfffbfa32a4464e8ede1`，CI `37323431809`
-五项全过。其镜像、13 个部署辅助脚本及精确源码 `support.tar` 已在本机
-`C:/Users/86182/Desktop/wkkk/chat-reader-skill-copy-20261005/release/` 准备并校验，未上传／执行。
-后续测试与文档提交不改变该应用镜像来源。生产仍为 `3f1d539`/`0046`，健康，
-2026-10-06 用户明确授权服务器备份仅保留最新两份；两份重新验证后删除八份旧备份，释放约 9.25 GiB。
-服务器可用空间现为 12,938,848 KiB；业务数据与运行服务未改动。尚未重新执行发布预检或替换服务。
-保留 `chat-reader-20261004T151827Z`、`chat-reader-20261005T042224Z`，先前“备份均保持不动”解释已被此授权替代。
-实际结果与后续实施顺序见 [导出与备份保留](planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md)。
-[服务器存储检查](execution/SERVER_STORAGE_REVIEW_2026-10-05.md) 列出其他缓存、旧传输包、
-远程编辑器旧版本和历史日志的估算，这些候选尚未清理；当前与直接回滚镜像归档保留。
-不使用本机 Docker 构建，继续使用已核验的 GitHub CI 产物。
-恢复容量后仅使用这批产物，重新执行预检、备份、迁移、验收，再清理旧镜像。
-完整结果、摘要及失败记录：[copy recovery execution](execution/SKILL_COPY_RECOVERY_2026-10-05.md)。
+## Current release — 2026-10-06
 
-以下保留前一待发布批次记录：
-最新待发布源码是 `daf759db2979449ba34e7e8295c56da96fd3f509`，包含下方支持请求与 Skill
-改动，以及 Normalizer 入口恢复。CI `37307115329` 五项任务全部通过，发布产物已本地核对；发布准备及首轮设置测试失败
-记录见 [Normalizer execution](execution/NORMALIZER_DISCOVERY_2026-10-05.md)。
-新脚本与镜像位于本机该任务 `release-final/`，已锁定这次源码与运行，尚未上传服务器。
-生产仍为 `3f1d539`，没有执行未获批准的备份去重或绕过容量预检。
-最后只读检查为 `0046 (head/current)`、公开 HTTPS 健康正常、可用空间 **3,326,888 KiB**。
-容量恢复后，必须对这次产物重新预检、备份、迁移和验收，不能将 CI 成功当作部署完成。
+Production source `5d48b686893d44f98092dfffbfa32a4464e8ede1` from CI `37323431809`
+is deployed, with single Alembic head/current `20261005_0047`. Runtime, authenticated
+HTTP, Skill and post-cleanup checks pass. PostgreSQL/environment/Nginx remain
+unchanged; live Compose adds only the two import-limit declarations.
 
-Support backend/UI source `ad82cf4465287caaf8daeb264f0eb8a785fa28a5` is committed
-and pushed. [CI 37295004053](https://github.com/foolkking/chat-reader/actions/runs/37295004053)
-passed all five jobs against that exact source. It includes the Skill changes from `2863a00`
-and adds migration `20261005_0047`; neither batch is deployed. Use only the final
-inspected artifact for the source being released. The previously staged `2863a00`
-artifact/helpers do not contain support requests and must not be relabeled as the
-new source. Release evidence and remaining gates are in
-[support execution](execution/SUPPORT_REQUESTS_2026-10-05.md).
+[Deployment record](execution/DEPLOYMENT_SUPPORT_2026-10-06.md) owns image digests,
+first-attempt recovery, fresh retry backup and acceptance limits. Latest two verified
+backups are `chat-reader-20261005T162104Z` and `chat-reader-20261005T162912Z`.
+Older backups and four replaced `3f1d539` tags were deleted after acceptance.
+Rollback requires loading its retained image archive first. Final free space was
+12,737,072 KiB. Local/server image builds were not used; no off-site copy is configured.
 
-## Pending Skill follow-up — 2026-10-05
+[Retention implementation](planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md) remains
+pending. The one-time two-backup cleanup is not automatic retention. Three-minute
+export reclamation and deduplication are not part of this deployed release.
 
-Source `2863a00` passed complete CI `37269234174` and its verified image artifact
-is staged in the matching `/opt/chat-reader/releases/` directory. It is **not
-deployed**: actual capacity preflight has 3,268,780 KiB available against
-5,278,167 KiB required. A checksum-verified optional duplicate-backup storage plan
-awaits explicit user authorization; no backup, image or running service has been
-removed/replaced. Production remains `3f1d539` below. The
-[Skill execution record](execution/SKILL_UNIFICATION_2026-10-05.md) owns artifacts,
-test failures/reruns, authorization boundary and exact resume sequence.
+## Historical release checkpoints
 
-## Current release — 2026-10-05
+The dated snapshots below describe their original release, not current production
+or the current retained backup/image inventory.
+
+## Guidance release — 2026-10-05
 
 Production source `3f1d539d82fdbaa5d4f7f0b7f8857870c13c1926` from CI
 `37259074167` attempt 2 is deployed. All quality/image gates passed; Alembic

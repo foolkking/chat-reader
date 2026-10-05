@@ -1,24 +1,10 @@
 # 文档导航
 
-最新已验证应用源码 `5d48b68` 的 [Skill 复制恢复与移动面板修正](execution/SKILL_COPY_RECOVERY_2026-10-05.md)
-已通过 CI `37323431809` 全部五项任务，镜像已本地核验。后续仅修正测试准备与双语断言，
-本机完整回归 138 通过／284 跳过；生产仍为 `3f1d539`。
-用户已授权服务器备份只保留两份；验证后删除八份旧备份，释放约 9.25 GiB，业务数据与服务未改动。
-[导出回收与备份保留整理](planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md) 记录已执行清理和待实现的三分钟导出/管理员策略；发布仍需重新预检与验收。
-[服务器存储检查](execution/SERVER_STORAGE_REVIEW_2026-10-05.md) 保存清理前的只读测量、其他候选与边界。
-[备份组成与策略检查](execution/BACKUP_STORAGE_REVIEW_2026-10-05.md) 保存清理前十份全量备份、重复组件、过期导出保留及报告运行兼容问题。
-
-之前的待发布记录：
-最新待发布源码 `daf759d` 包含 [格式转换入口与恢复](execution/NORMALIZER_DISCOVERY_2026-10-05.md)：普通导入的折叠入口、转换步骤复用、键盘返回与文件保留。首次 CI 的草稿读取时序失败已修正；本机 10 次复验及最终 CI `37307115329` 五项任务全部通过，发布产物已本地核对。生产仍为 `3f1d539`，等待容量处理；没有执行未获批准的备份去重。
-
-当前 [管理员请求与限额](execution/SUPPORT_REQUESTS_2026-10-05.md) 已提交推送 `ad82cf4`，
-新增未发布 migration `20261005_0047`；核心界面、离线草稿、邮件链接及导入／合并中的申请入口已接入，准确源码 CI `37295004053` 全部通过，部署等待服务器空间。
-[请求合同](system/SUPPORT_REQUEST_CONTRACT.md) 标明本机实现及未交付边界。
-
-当前线上：2026-10-05 核心引导发布，源码 `3f1d539`，CI `37259074167`（attempt 2），唯一 migration head/current `20261003_0046`。
-[Project State](../PROJECT_STATE.md) 是当前快照；[引导部署记录](execution/DEPLOYMENT_GUIDANCE_2026-10-05.md) 记录完整 CI、容量预检、备份、线上验收与旧镜像清理。
-[Skill 首选与管理清理](execution/SKILL_UNIFICATION_2026-10-05.md) 已提交 `2863a00` 并通过 CI；部署等待容量处理，尚未替换线上服务。
-[引导实施](execution/CORE_GUIDANCE_2026-10-05.md) 保存方案 B 和未纳入 Index 范围的提示行为。之前的 [18 项审查](evidence/ux-audit-whole-site-2026-10-04.md) 与 [UX 发布](execution/DEPLOYMENT_UX_2026-10-04.md) 保留历史证据；后续 Skill/管理员求助事项仍独立跟踪。
+当前线上源码 `5d48b68`、唯一 migration `20261005_0047`，CI `37323431809` 五项全过。
+[2026-10-06 发布记录](execution/DEPLOYMENT_SUPPORT_2026-10-06.md) 包含失败恢复、真实验收、
+两份备份收敛及旧镜像清理。[Project State](../PROJECT_STATE.md) 是当前快照。
+[导出回收与备份计划](planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md) 仍在实施；
+管理员三分钟导出回收、自动两份保留和去重尚未上线。异地副本暂不设置。
 
 ## 开始这里
 

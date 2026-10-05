@@ -1,10 +1,11 @@
 # API 参考
 
-## Local support backend (2026-10-05, not deployed)
+## Support requests (deployed 2026-10-06)
 
 The [support contract](system/SUPPORT_REQUEST_CONTRACT.md) owns lifecycle, limits,
 notification and archive semantics. User/admin UI and contextual import/merge
-entries are implemented locally; full integration/release gates remain.
+entries are deployed in `5d48b68`; see the production acceptance and SMTP limits in
+[deployment evidence](execution/DEPLOYMENT_SUPPORT_2026-10-06.md).
 
 | Path | Methods / purpose |
 |---|---|
@@ -26,7 +27,7 @@ failures return `IMPORT_TOTAL_SIZE_LIMIT`; all values still obey global feature 
 and the existing human-readable `detail.message` when the effective count is
 exceeded. Rejected admission creates no merge job.
 
-2026-10-05 本地 Skill 首选统一（发布状态见 PROJECT_STATE）：
+2026-10-06 已部署的 Skill 首选统一：
 `GET /api/skills` 返回每用途一个有效系统项与本人全部语言来源的文件；`locale` 只作为
 尚未解决的旧首选分歧读取提示。`POST /api/skills` 和 `/resolve` 的 locale 可省略；
 `PUT /api/skills/selections` 的 locale 可省略或为 null，显式选择原子写入两个兼容槽。

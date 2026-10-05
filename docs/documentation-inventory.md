@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-10-06 deployment: `execution/DEPLOYMENT_SUPPORT_2026-10-06.md` owns the
+5d48b68/0047 release, mixed-newline helper failure/retry, retained two backups,
+old-image cleanup and production HTTP evidence. Project State/index/deployment,
+API/support/environment contracts now point to this live release. Earlier entries
+below remain historical; automatic export/backup policy work is still pending.
+
 2026-10-06 retention decisions: `planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md`
 owns the user-authorized two-backup policy, completed eight-backup cleanup evidence,
 and proposed administrator-controlled short-lived export UX/lifecycle. Application

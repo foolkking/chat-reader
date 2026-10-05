@@ -1,8 +1,9 @@
 # Private requests and account limit increases
 
-Implementation contract, 2026-10-05, committed in `ad82cf4`. Not deployed;
-exact-source CI passed, with deployment pending capacity. [Execution and remaining work](../execution/SUPPORT_REQUESTS_2026-10-05.md)
-separates implemented behavior, evidence and unverified flows.
+Deployed 2026-10-06 in `5d48b68`, Alembic `20261005_0047`. Exact-source CI and
+production HTTP acceptance passed. [Deployment](../execution/DEPLOYMENT_SUPPORT_2026-10-06.md)
+separates live verification from CI browser tests and unavailable SMTP delivery.
+[Implementation evidence](../execution/SUPPORT_REQUESTS_2026-10-05.md) retains earlier checks.
 
 ## Identity and lifecycle
 

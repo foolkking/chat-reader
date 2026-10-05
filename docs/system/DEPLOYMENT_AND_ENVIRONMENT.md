@@ -1,22 +1,24 @@
 # 部署与运行环境
 
-2026-10-05 current: production remains `3f1d539`, migration `20261003_0046`.
-Skill source `2863a00` passed CI but awaits capacity before replacement. See
-[current snapshot](../../PROJECT_STATE.md) and
-[Skill release record](../execution/SKILL_UNIFICATION_2026-10-05.md).
+Current production is `5d48b68`, Alembic `20261005_0047`, deployed 2026-10-06.
+[Current snapshot](../../PROJECT_STATE.md) and
+[deployment evidence](../execution/DEPLOYMENT_SUPPORT_2026-10-06.md) own live status,
+verified backups, preserved environment and archive-based rollback.
+Only GitHub CI images are used; do not build on the workstation or King.
 
-Committed support source `ad82cf4` passed all five jobs in CI `37295004053` and is
-not deployed. It includes the earlier Skill follow-up. Support adds migration `20261005_0047` and optional
-`IMPORT_GATEWAY_FILE_LIMIT_MB` (default 500 MiB) to API/worker Compose environment.
-This is a declared safe file/batch budget, not a reverse-proxy probe. Before raising
-it, align the import/adaptive upload locations, API file maximum and adaptive total
-capacity. The resolver takes their minimum and never modifies Nginx. Existing
-server environment and routes remain unchanged. No new SMTP provider is required;
-actual delivery remains unavailable in the verified production snapshot.
-[Support contract](SUPPORT_REQUEST_CONTRACT.md) owns the implemented behavior;
-[execution](../execution/SUPPORT_REQUESTS_2026-10-05.md) records remaining release gates.
+Support/limit requests and Skill unification are live. API/worker Compose declares
+`IMPORT_GATEWAY_FILE_LIMIT_MB` (500 MiB default) and `MAX_ADAPTIVE_IMPORT_TOTAL_MB`
+(512 MiB default). Raising limits requires aligning every relevant Nginx route,
+API file maximum and adaptive aggregate budget. No reverse-proxy auto-detection
+or modification occurs. SMTP is unconfigured; actual mail delivery is unavailable.
+[Support contract](SUPPORT_REQUEST_CONTRACT.md) owns request behavior.
 
-## Current deployment (2026-10-04)
+Server backup retention is two; the current cleanup was manual, with automatic
+retention and short-lived export reclamation still under implementation. Off-site
+copies are deferred. The historical snapshots below do not override current
+production or the retained backup/image inventory.
+
+## Historical deployment (2026-10-04)
 
 Production source `5ef984af86d6b36b7cfac8f1a82d8118d6434d51` from CI
 `37208932974` is deployed; Alembic remains `20261003_0046`. Verified backup:
