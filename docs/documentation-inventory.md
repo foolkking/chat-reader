@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-05 backup storage: `execution/BACKUP_STORAGE_REVIEW_2026-10-05.md`
+records aggregate backup contents, verified duplicate-file hashes, expiry versus
+artifact retention and the host Python report failure. Proposed retention changes
+are not implemented; no deletion or restore-success claim is made.
+
 2026-10-05 server storage: `execution/SERVER_STORAGE_REVIEW_2026-10-05.md`
 records read-only server measurements, exact old-artifact/editor candidates,
 optional log retention and preserved data/rollback resources. It is a historical

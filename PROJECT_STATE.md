@@ -19,6 +19,10 @@ No production replacement, backup change or old-image removal occurred.
 [Server storage review](docs/execution/SERVER_STORAGE_REVIEW_2026-10-05.md)
 records bounded cache/old-artifact/log candidates and preserved rollback/data.
 No local image builds; deployment continues to use the inspected CI artifact.
+[Backup storage review](docs/execution/BACKUP_STORAGE_REVIEW_2026-10-05.md)
+identifies ten full snapshots (12.95 GiB), verified duplicate components and
+55 expired retained exports (1.04 GiB). Retention changes are recommendations;
+no backup or export cleanup has been applied.
 [Copy recovery execution](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md) records
 all failed/rerun checks, artifact identity and the prepared release directory.
 
