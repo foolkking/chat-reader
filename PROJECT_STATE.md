@@ -2,6 +2,16 @@
 
 ## Current release and active work — 2026-10-05
 
+Latest pending release source is **daf759db2979449ba34e7e8295c56da96fd3f509**,
+including Skill unification, private support/limit requests and Normalizer discovery.
+[CI 37307115329](https://github.com/foolkking/chat-reader/actions/runs/37307115329)
+passed all five jobs; its four-tag image archive is downloaded and locally verified.
+Earlier `ea56227` passed API/Web but failed one settings fixture that
+typed before the persisted draft became editable; the explicit readiness assertion
+passed ten local repetitions and the complete CI settings rerun. Production remains
+`3f1d539`/`0046`, healthy, with **3,326,888 KiB** free; capacity recovery and backup
+deduplication authorization remain pending. No production replacement or backup cleanup occurred.
+
 Production `https://chat.king.2bd.net` runs source
 **3f1d539d82fdbaa5d4f7f0b7f8857870c13c1926**, built by successful
 [CI 37259074167, attempt 2](https://github.com/foolkking/chat-reader/actions/runs/37259074167).
@@ -47,9 +57,9 @@ deployed; [previous release](docs/execution/DEPLOYMENT_UX_2026-10-04.md) retains
 their evidence. Skill locale/clone cleanup and administrator quota/support-request
 work from the later [usability review](docs/evidence/ux-audit-skills-help-2026-10-05.md)
 are tracked separately; the guidance release does not complete them. Skill
-unification awaits deployment capacity; administrator quota/support requests are
-the current release candidate `ad82cf4465287caaf8daeb264f0eb8a785fa28a5`, committed
-and pushed. Their backend, account limit enforcement, worker mail lifecycle and
+unification awaits deployment capacity; administrator quota/support requests were
+committed and pushed in checkpoint `ad82cf4465287caaf8daeb264f0eb8a785fa28a5`.
+Their backend, account limit enforcement, worker mail lifecycle and
 archive extension passed all five jobs in [CI 37295004053](https://github.com/foolkking/chat-reader/actions/runs/37295004053)
 against that exact source; deployment remains pending server capacity.
 Local migration head is **20261005_0047**; production and staged Skill source stay
@@ -67,7 +77,8 @@ modal keyboard lifecycle. Local acceptance passed build/lint/typecheck, 11 API
 profile checks, 17 browser cases (1 external-fixture skip) and a 2-case focused
 rerun. Evidence and retained failures are recorded in
 [Normalizer discovery](docs/execution/NORMALIZER_DISCOVERY_2026-10-05.md); it is not
-part of the inspected `ad82cf4` artifact and has not been deployed.
+part of the older `ad82cf4` artifact. Its final source `daf759d` passed exact-source
+CI and independent artifact inspection; it has not been deployed.
 
 - Next.js 16 / React 19 / TypeScript Web; FastAPI / SQLAlchemy API; PostgreSQL;
   one concurrent background worker. Corepack + pnpm 9.15.4, Python 3.11+.
@@ -142,6 +153,14 @@ locally. Production still runs `3f1d539`/`0046`: last read-only capacity check w
 **3,264,412 KiB** free and public health passed. Backup deduplication remains
 unapproved. Additional optional browser probes and deployment remain; all
 task-owned support test services are stopped.
+
+Latest `daf759d` CI passed API **902/3**, settings **136** plus **1** fresh restore,
+Context **35**, import recovery **8/1**, PWA **134/284**, authentication **18** and
+offline negatives **17**, plus build/lint/typecheck and both image gates. Its local
+reply-readiness regression passed **10/10**; the original CI failure remains in
+the execution record. All task-owned Normalizer/reply test services are stopped.
+The exact release artifact and helpers are under that task's `release-final/`;
+the older `release/` belongs to failed `ea56227` and must not be used for deployment.
 
 ## Work rules and navigation
 

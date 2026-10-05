@@ -2,8 +2,11 @@
 
 2026-10-05 Normalizer discovery: `execution/NORMALIZER_DISCOVERY_2026-10-05.md`
 tracks FLOW-03, actual import/Bundle tests and retained fixture failures. Context
-Skill inventory and interface patterns describe the shared guide. This follow-up
-is separate from the inspected support artifact and pending production deployment.
+Skill inventory and interface patterns describe the shared guide. Final source
+`daf759d` passed all five jobs in CI `37307115329` and local artifact inspection;
+the first settings readiness failure and ten local repeats remain recorded.
+Project State, docs index and deployment point to this latest pending release;
+production is unchanged while capacity recovery authorization remains pending.
 
 2026-10-05 support backend/UI: `execution/SUPPORT_REQUESTS_2026-10-05.md` records
 implementation, failures/reruns, PostgreSQL/SMTP/restore evidence, committed source

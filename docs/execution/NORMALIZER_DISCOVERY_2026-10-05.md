@@ -1,10 +1,10 @@
 # Normalizer discovery and import recovery — 2026-10-05
 
-Status: source `ea5622719abba16433f03fd221cbb44b096ab64d` is committed and pushed;
-local acceptance passed; CI `37304576688` failed one settings fixture readiness
-check. The correction below passed ten local repeats and needs new exact-source CI. The inspected
-support release `ad82cf4` remains a separate, undeployed artifact. Server capacity
-and the pending backup-deduplication decision are unchanged by this work.
+Status: final source `daf759db2979449ba34e7e8295c56da96fd3f509` is committed/pushed,
+passed all five jobs in CI `37307115329`, and its downloaded image artifact passed
+local inspection. The initial `ea56227` CI failure and correction remain below.
+Production is unchanged; capacity recovery and the backup-deduplication decision
+remain pending. The older support artifact is not this release.
 
 ## Evidence and behavior
 
@@ -94,9 +94,9 @@ fixtures and evidence remain; no local residue or production resource was delete
 
 ## Next work
 
-Complete exact-source CI and inspect its deployable artifact.
-Deployment remains separate from local checks and the already inspected support
-artifact. Acquisition/Maintainer delivery still needs a review of Clipboard failure
+After authorized capacity recovery, run the final source's own preflight, consistent
+backup, migration, live acceptance and authorized superseded-image cleanup.
+Acquisition/Maintainer delivery still needs a review of Clipboard failure
 handling: its direct `navigator.clipboard.writeText` call lacks the Normalizer's
 manual fallback when Clipboard support is absent. Do not claim all three handoffs
 have identical recovery behavior yet.
@@ -155,3 +155,55 @@ typecheck also passed. Logs are in the `ci-reply-readiness/` task subdirectory.
 Initial cluster startup omitted its nondefault port and failed to bind; restarting
 with the recorded `55948` loopback address succeeded. No other cluster was stopped.
 The original CI failure and local startup failure remain recorded.
+
+Correction source **daf759db2979449ba34e7e8295c56da96fd3f509** was pushed and
+[CI 37307115329](https://github.com/foolkking/chat-reader/actions/runs/37307115329)
+dispatched against that exact SHA. API/worker PIDs were checked against saved
+command/creation-time records before stopping; the task cluster was stopped by
+its exact data path. The previous failed run's Web summary and settings error
+context are retained under `ci-r1-web/` and `ci-r1-settings/`.
+
+The final source has separate helpers in `release-final/`, all source-pinned;
+syntax, archive bytes and LF/CRLF Compose checks pass. The earlier `release/`
+directory belongs to the failed `ea56227` run and must never be deployed. A fresh
+read-only storage inventory found the entire server release directory is only
+770,232 KiB and build cache 15.37 MB, insufficient to close the capacity gap.
+No general Docker prune or backup change was performed.
+
+## Final CI and artifact verification
+
+All five final-source jobs passed: API, Web, settings, image build and independent
+artifact download/load. API **902 passed / 3 skipped**, reviewed runtime **64**,
+worker/cleanup **53**, single head/current **0047**. Authenticated settings passed
+**136/136**, followed by **1/1** fresh PostgreSQL system-archive restore.
+
+The downloaded Web report binds to `daf759d` and reports **13/13** gates PASS:
+import recovery **8 passed / 1 external-pair skip**, Context **35**, Reader/security
+**45**, Share **2**, source mutation **16**, cleanup **1**, upload atomicity **18**,
+image viewer **1**, PDF **5**, CSP **4**, authentication **18**, offline negatives
+**17** and default PWA **134 passed / 284 opt-in skips**. Suites overlap; skips
+and repeat runs are not added as unique passes. No test or dependency gate was
+disabled. The original settings failure remains preserved as failed evidence.
+
+Artifact `chat-reader-images-daf759db2979449ba34e7e8295c56da96fd3f509-1` is retained
+under `release-final/artifact/`: **196,631,568 bytes**, SHA-256
+`9f6347a49c80c94864536aabc5930c2dac278b538a54c4a958181e4327848406`.
+Streaming local inspection checked all **50** blobs and **4** tags, exact workflow
+provenance, Linux/amd64 configuration and source labels without running the images.
+API/worker/migrate image:
+`sha256:19dbfdf7cd94dbc2d267ce8e364750b086a7f977567dda2eb8409efcb3248973`;
+Web image:
+`sha256:6ee78928b84c1cbe6f2b5a0898e04fb033e78586724a03f5adfa911dd2259a6f`.
+
+Final live read-only check: API and Web still select **3f1d539**, Alembic is
+**20261003_0046 (head/current)**, public HTTPS health passes and **3,326,888 KiB**
+is available. This is still below the previous ~5.03 GiB release preflight
+requirement. No new archive was uploaded to production, and no production backup,
+image load, migration, service replacement or cleanup was performed. The proposed
+15-file deduplication still needs explicit authorization; further optimization or
+an instruction to continue is not treated as approval of that backup operation.
+
+Evidence is stored in `ci-final.json`, `ci-final-summary.json`, `ci-final-api.log`,
+`ci-final-settings.log`, `ci-final-web/`, `ci-final-settings/` and
+`release-final/local-artifact-verification.json`. External model Skill execution
+and authenticated production UI acceptance remain unverified for this release.

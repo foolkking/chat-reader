@@ -1,5 +1,13 @@
 # 生产部署
 
+最新待发布源码是 `daf759db2979449ba34e7e8295c56da96fd3f509`，包含下方支持请求与 Skill
+改动，以及 Normalizer 入口恢复。CI `37307115329` 五项任务全部通过，发布产物已本地核对；发布准备及首轮设置测试失败
+记录见 [Normalizer execution](execution/NORMALIZER_DISCOVERY_2026-10-05.md)。
+新脚本与镜像位于本机该任务 `release-final/`，已锁定这次源码与运行，尚未上传服务器。
+生产仍为 `3f1d539`，没有执行未获批准的备份去重或绕过容量预检。
+最后只读检查为 `0046 (head/current)`、公开 HTTPS 健康正常、可用空间 **3,326,888 KiB**。
+容量恢复后，必须对这次产物重新预检、备份、迁移和验收，不能将 CI 成功当作部署完成。
+
 Support backend/UI source `ad82cf4465287caaf8daeb264f0eb8a785fa28a5` is committed
 and pushed. [CI 37295004053](https://github.com/foolkking/chat-reader/actions/runs/37295004053)
 passed all five jobs against that exact source. It includes the Skill changes from `2863a00`
