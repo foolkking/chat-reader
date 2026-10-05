@@ -8,8 +8,9 @@ import { assertOfflineAccess, captureOfflineAccess } from "../lib/offline-access
 import { getInitialOfflineShellStatus, inspectOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../lib/offline-shell";
 import { buildRevision, diagnosticReport, type HelpInfo } from "../lib/help-diagnostics";
 import { readCachedHelpInfo, refreshHelpInfo } from "../lib/help-status";
+import { QuickStartGuide } from "./quick-start-guide";
 
-export function HelpPanel() {
+export function HelpPanel({ onImport }: { onImport?: () => void }) {
   const preferences = usePreferences(), zh = preferences.resolvedLocale === "zh-CN";
   const [connection, setConnection] = useState<"checking" | "online" | "offline" | "unavailable">("checking");
   const [info, setInfo] = useState<HelpInfo | null>(null), [cached, setCached] = useState(true), [cacheFailed, setCacheFailed] = useState(false);
@@ -58,6 +59,7 @@ export function HelpPanel() {
   const connectionText = { checking: zh ? "检查中…" : "Checking…", online: zh ? "已连接服务器" : "Connected to server", offline: zh ? "当前离线" : "Currently offline", unavailable: zh ? "无法连接或验证服务器" : "Server unavailable or unverified" };
   const shellText = { ready: zh ? "启动资源完整" : "Startup resources complete", unknown: zh ? "尚未确认完整性" : "Completeness not verified", unavailable: zh ? "启动资源不完整" : "Startup resources incomplete", unsupported: zh ? "当前浏览器不支持" : "Unsupported in this browser" };
   return <section aria-label={zh ? "帮助与诊断" : "Help & diagnostics"} className="space-y-6">
+    <QuickStartGuide onImport={onImport} />
     <div><h3 className="mb-2 text-sm font-semibold">{zh ? "当前功能限制" : "Current feature limits"}{cached && info ? <span className="ml-2 text-xs font-normal text-secondary">{zh ? "上次已知" : "Last known"}</span> : null}</h3><dl className="divide-y divide-[var(--border)] border-y border-ui"><HelpRow label={zh ? "导入" : "Import"}>{permission(caps?.allow_user_import)}{caps?.maximum_import_size_mb != null ? ` · ${caps.maximum_import_size_mb} MiB` : ""}</HelpRow><HelpRow label={zh ? "合并消息上限" : "Merge message limit"}>{caps?.maximum_merge_message_count ?? unknown}</HelpRow><HelpRow label={zh ? "创建分享" : "Create shares"}>{permission(caps?.allow_share_links)}</HelpRow><HelpRow label={zh ? "公开分享 / 密码保护" : "Public sharing / Password protection"}>{permission(caps?.allow_public_share)} / {permission(caps?.allow_share_password)}</HelpRow><HelpRow label={zh ? "个人 Skill / 上传" : "Personal skills / Upload"}>{permission(caps?.allow_user_skills)} / {permission(caps?.allow_skill_import)}</HelpRow></dl>{cacheFailed ? <p className="mt-2 text-xs text-secondary">{zh ? "本次信息未能存到本机；离线时可能没有最新限制。" : "Could not save this snapshot locally. Offline limits may be outdated."}</p> : null}</div>
     <div><h3 className="mb-2 text-sm font-semibold">{zh ? "常见问题" : "Common questions"}</h3><div className="divide-y divide-[var(--border)] border-y border-ui">{[
       [zh ? "离线打不开或附件缺失？" : "Offline page or attachments missing?", zh ? "联网后进入“离线与同步”，检查副本及附件档位并重试下载。更新失败时会保留上一份已完成副本；仅缓存过的附件可离线打开。" : "Open Offline & sync when connected. Check the copy and attachment tier, then retry downloading. Failed updates keep the last completed copy. Only cached attachments open offline."],

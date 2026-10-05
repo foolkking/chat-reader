@@ -2,10 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Download, FileArchive, FileJson2, FileText } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type MutableRefObject } from "react";
+import { MaintenanceHint } from "./maintenance-hint";
+import { captureOfflineAccess, assertOfflineAccess } from "../../lib/offline-access";
 import { usePreferences } from "../../components/preferences-provider";
 import {
   getConversationAttachments,
+  continuationApi,
   getConversationExportUrl,
   getTask,
   queueConversationAttachmentBundleExport,
@@ -16,30 +19,50 @@ import {
 
 type ConversationExportFormat = "context" | "canjson" | "markdown";
 type SkillLocale = "zh-CN" | "en";
+export type ExportPanelState = { format: ConversationExportFormat; includeContinuation: boolean; includeAttachments: boolean; includeDescription: boolean; includeAnnotations: boolean; includeNotebook: boolean; includeSourceRefs: boolean; jobId: string | null; jobKey: string | null };
 
 export function ExportPanel({
   conversationId,
   compact = false,
+  maintenance = false,
+  onOpenContinuation,
+  stateRef,
+  sourceRevision,
 }: {
   conversationId: string;
   selectedMessageIds: string[];
   compact?: boolean;
   readingStartMessageId?: string | null;
+  maintenance?: boolean;
+  onOpenContinuation?: () => void;
+  stateRef?: MutableRefObject<ExportPanelState | null>;
+  sourceRevision?: number;
 }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [format, setFormat] = useState<ConversationExportFormat>("context");
-  const [includeContinuation, setIncludeContinuation] = useState(true);
+  const [format, setFormat] = useState<ConversationExportFormat>(stateRef?.current?.format ?? "context");
+  const [includeContinuation, setIncludeContinuation] = useState(stateRef?.current?.includeContinuation ?? true);
   const submitLock = useRef(false);
   const [submitting, setSubmitting] = useState(false);
-  const [includeAttachments, setIncludeAttachments] = useState(false);
-  const [includeDescription, setIncludeDescription] = useState(false);
-  const [includeAnnotations, setIncludeAnnotations] = useState(false);
-  const [includeNotebook, setIncludeNotebook] = useState(false);
-  const [includeSourceRefs, setIncludeSourceRefs] = useState(true);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [jobKey, setJobKey] = useState<string | null>(null);
+  const [includeAttachments, setIncludeAttachments] = useState(stateRef?.current?.includeAttachments ?? false);
+  const [includeDescription, setIncludeDescription] = useState(stateRef?.current?.includeDescription ?? false);
+  const [includeAnnotations, setIncludeAnnotations] = useState(stateRef?.current?.includeAnnotations ?? false);
+  const [includeNotebook, setIncludeNotebook] = useState(stateRef?.current?.includeNotebook ?? false);
+  const [includeSourceRefs, setIncludeSourceRefs] = useState(stateRef?.current?.includeSourceRefs ?? true);
+  const [jobId, setJobId] = useState<string | null>(stateRef?.current?.jobId ?? null);
+  const [jobKey, setJobKey] = useState<string | null>(stateRef?.current?.jobKey ?? null);
+  useEffect(() => {
+    if (stateRef) stateRef.current = { format, includeContinuation, includeAttachments, includeDescription, includeAnnotations, includeNotebook, includeSourceRefs, jobId, jobKey };
+  }, [stateRef, format, includeContinuation, includeAttachments, includeDescription, includeAnnotations, includeNotebook, includeSourceRefs, jobId, jobKey]);
   const [queueError, setQueueError] = useState<string | null>(null);
+  const continuationState = useQuery({
+    queryKey: ["continuation", conversationId, "state"],
+    queryFn: () => continuationApi.state(conversationId),
+    enabled: format === "context" && includeContinuation,
+    staleTime: 0,
+  });
+  const needsContinuationState = format === "context" && includeContinuation;
+  const continuationUnavailable = needsContinuationState && !continuationState.isSuccess;
   const attachmentsQuery = useQuery({
     queryKey: ["conversation-attachments", conversationId],
     queryFn: () => getConversationAttachments(conversationId),
@@ -58,8 +81,8 @@ export function ExportPanel({
   const attachments = attachmentsQuery.data ?? [];
   const unavailableCount = attachments.filter((item) => item.resolution_status !== "resolved" || !item.asset_object).length;
   const exportOptions = { includeDescription, includeAnnotations, includeNotebook, includeSourceRefs };
-  const currentKey = JSON.stringify({ conversationId, format, includeAttachments, includeContinuation, ...exportOptions });
-  const downloadUrl = jobKey === currentKey ? taskQuery.data?.result.download_url : null;
+  const currentKey = JSON.stringify({ conversationId, sourceRevision, continuationGeneration: needsContinuationState ? continuationState.data?.generation : null, format, includeAttachments, includeContinuation, ...exportOptions });
+  const downloadUrl = jobKey === currentKey && !continuationUnavailable && !(needsContinuationState && continuationState.isFetching) ? taskQuery.data?.result.download_url : null;
   const plainHref = getConversationExportUrl(conversationId, {
     format: format === "canjson" ? "canjson_v2" : "markdown_v2",
     includeMetadata: true,
@@ -76,11 +99,13 @@ export function ExportPanel({
 
   return (
     <section className="min-w-0 space-y-5">
-      <div className="grid grid-cols-3 rounded-lg bg-subtle p-1" role="group" aria-label={zh ? "导出格式" : "Export format"}>
+      {!maintenance ? <div className="grid grid-cols-3 rounded-lg bg-subtle p-1" role="group" aria-label={zh ? "导出格式" : "Export format"}>
         <FormatButton active={format === "context"} onClick={() => { setFormat("context"); resetQueuedResult(); }} icon={<FileArchive className="h-4 w-4 shrink-0" />} label={zh ? "交给 AI" : "For AI"} />
         <FormatButton active={format === "canjson"} onClick={() => { setFormat("canjson"); resetQueuedResult(); }} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />
         <FormatButton active={format === "markdown"} onClick={() => { setFormat("markdown"); resetQueuedResult(); }} icon={<FileText className="h-4 w-4" />} label="Markdown" />
-      </div>
+      </div> : null}
+
+      {!maintenance && format === "context" && onOpenContinuation ? <MaintenanceHint key={conversationId} conversationId={conversationId} onOpen={onOpenContinuation} /> : null}
 
       <OptionRow
         checked={includeAttachments}
@@ -94,7 +119,7 @@ export function ExportPanel({
       />
 
       {attachmentsQuery.isError ? <button type="button" disabled={attachmentsQuery.isFetching} onClick={() => void attachmentsQuery.refetch()} className="min-h-10 text-sm text-accent">{zh ? "重试读取附件" : "Retry loading attachments"}</button> : null}
-      {format === "context" ? <OptionRow
+      {maintenance ? null : format === "context" ? <OptionRow
         checked={includeContinuation}
         onChange={setIncludeContinuation}
         label={zh ? "包含接续文件" : "Include continuation files"}
@@ -112,7 +137,7 @@ export function ExportPanel({
         </div>
       </details>}
 
-      <div className="rounded-lg bg-subtle px-3 py-3 text-sm leading-6 text-secondary">
+      {!maintenance ? <div className="rounded-lg bg-subtle px-3 py-3 text-sm leading-6 text-secondary">
         <div className="mb-1 flex items-center gap-2 font-medium text-primary">
           {format === "context" || includeAttachments ? <FileArchive className="h-4 w-4" /> : format === "canjson" ? <FileJson2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
           <span>{zh ? `输出 ${output}` : `Output ${output}`}</span>
@@ -128,13 +153,14 @@ export function ExportPanel({
               ? (zh ? "解压后可直接在 Obsidian、Typora 或 VS Code 中打开，附件使用相对路径。" : "The extracted folder opens directly in Obsidian, Typora, or VS Code with relative attachment paths.")
               : (zh ? "单个 Markdown 文件；附件位置会显示为可读的未包含提示。" : "A single Markdown file with readable placeholders where files were omitted.")}
         </p>
-      </div>
+      </div> : null}
 
       {jobKey === currentKey && taskQuery.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{zh ? "暂时无法获取导出进度，任务可能仍在运行。" : "Export status is unavailable. The task may still be running."}</p><button type="button" disabled={taskQuery.isFetching} onClick={() => void taskQuery.refetch()} className="min-h-10 underline">{zh ? "重新获取进度" : "Retry status"}</button></div> : null}
+      {needsContinuationState && continuationState.isError ? <button type="button" className="min-h-11 text-sm text-[var(--danger)]" onClick={() => void continuationState.refetch()}>{zh ? "接续文件状态读取失败，重试" : "Could not read continuation status; retry"}</button> : null}
       {format === "context" || includeAttachments ? (
         downloadUrl && taskQuery.data?.status === "committed" ? (
           format === "context" ? (
-            <ContextPackageDelivery downloadUrl={String(downloadUrl)} defaultSkillLocale={zh ? "zh-CN" : "en"} />
+            <ContextPackageDelivery downloadUrl={String(downloadUrl)} defaultSkillLocale={zh ? "zh-CN" : "en"} purpose={maintenance ? "maintenance" : "acquisition"} />
           ) : (
             <a href={String(downloadUrl)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
               <Download className="h-4 w-4" />{zh ? "下载导出包" : "Download export"}
@@ -143,7 +169,7 @@ export function ExportPanel({
         ) : (
           <button
             type="button"
-            disabled={submitting || (jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled"].includes(taskQuery.data?.status ?? "queued"))}
+            disabled={submitting || continuationUnavailable || (needsContinuationState && continuationState.isFetching) || (jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled"].includes(taskQuery.data?.status ?? "queued"))}
             onClick={() => void (async () => {
               if (submitLock.current) return;
               submitLock.current = true;
@@ -189,23 +215,33 @@ export function ExportPanel({
   );
 }
 
-export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultSkillLocale, offline = false }: { downloadUrl: string; downloadFilename?: string; defaultSkillLocale: SkillLocale; offline?: boolean }) {
+export function ContextPackageDelivery({ downloadUrl, downloadFilename, defaultSkillLocale, offline = false, purpose = "acquisition" }: { downloadUrl: string; downloadFilename?: string; defaultSkillLocale: SkillLocale; offline?: boolean; purpose?: "acquisition" | "maintenance" }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [skillLocale, setSkillLocale] = useState<SkillLocale>(defaultSkillLocale);
+  const skillLocale = defaultSkillLocale;
   const [status, setStatus] = useState("");
-  const resolved = useQuery({ queryKey: ["resolved-skill", "EXPORT_CONTEXT", skillLocale], queryFn: () => resolveSkill("EXPORT_CONTEXT", skillLocale), enabled: !offline });
-  const bundleUrl = offline ? "/skills/context-acquisition.zip" : resolved.data?.bundle_url;
-  return <section className="space-y-3 rounded-lg border border-ui bg-surface p-3" data-testid="context-package-delivery">
-    <h3 className="text-sm font-semibold">{zh ? "AI 上下文" : "AI context"}</h3>
-    <div className="flex gap-2">{(["zh-CN", "en"] as const).map(locale => <button key={locale} type="button" aria-pressed={locale === skillLocale} className="min-h-9 rounded border border-ui px-3 text-xs" onClick={() => setSkillLocale(locale)}>{locale === "zh-CN" ? "中文" : "English"}</button>)}</div>
+  const category = purpose === "maintenance" ? "CONTEXT_MAINTENANCE" : "EXPORT_CONTEXT";
+  const resolved = useQuery({ queryKey: ["resolved-skill", category, skillLocale], queryFn: () => resolveSkill(category, skillLocale), enabled: !offline });
+  const offlineUrl = purpose === "maintenance" ? "/skills/context-continuation-maintainer.zip" : "/skills/context-acquisition.zip";
+  const cached = useQuery({ queryKey: ["cached-guide-skill", offlineUrl], enabled: offline, networkMode: "always", queryFn: async () => {
+    const access = captureOfflineAccess();
+    const response = await caches.match(offlineUrl);
+    assertOfflineAccess(access);
+    return response?.ok ?? false;
+  } });
+  const bundleUrl = offline ? cached.data ? offlineUrl : null : resolved.data?.bundle_url;
+  const request = purpose === "maintenance"
+    ? (zh ? "请使用我提供的维护 Skill 更新这个 .context.zip 内的 Current 和 Index，保留原始对话和附件，输出新的 .context.zip。" : "Use the supplied maintenance Skill to update Current and Index in this .context.zip. Preserve the raw conversation and attachments and return a new .context.zip.")
+    : (zh ? "请使用我提供的接续 Skill 读取这个 .context.zip 并继续任务。" : "Use the supplied acquisition Skill to read this .context.zip and continue the task.");
+  return <section className="space-y-3 border-t border-ui pt-3" data-testid="context-package-delivery">
     <p className="text-xs text-secondary">{offline ? (zh ? "使用缓存的系统默认 Skill ZIP。" : "Uses the cached system-default Skill ZIP.") : resolved.data?.name}</p>
-    <button type="button" className="btn-primary min-h-11 w-full px-3" onClick={() => { const link = document.createElement("a"); link.href = downloadUrl; link.download = downloadFilename ?? ""; link.click(); }}>{zh ? "下载 Context Package" : "Download Context Package"}</button>
+    <button type="button" className="btn-primary min-h-11 w-full px-3" onClick={() => { const link = document.createElement("a"); link.href = downloadUrl; link.download = downloadFilename ?? ""; link.click(); }}>{zh ? "下载上下文包" : "Download Context Package"}</button>
     <div className="flex flex-wrap gap-3 text-sm">
-      {bundleUrl ? <a href={bundleUrl} download className="min-h-11 py-3 text-accent">{zh ? "下载 Skill ZIP" : "Download Skill ZIP"}</a> : null}
-      <button type="button" className="min-h-11 text-secondary" onClick={() => { void navigator.clipboard.writeText(skillLocale === "zh-CN" ? "请使用我提供的 Skill ZIP 读取这个 .context.zip 并继续任务。" : "Use the supplied Skill ZIP to read this .context.zip and continue the task.").then(() => setStatus(zh ? "使用说明已复制" : "Usage instructions copied"), () => setStatus(zh ? "复制失败，请重试" : "Copy failed; retry")); }}>{zh ? "复制使用说明" : "Copy usage instructions"}</button>
+      {bundleUrl ? <a href={bundleUrl} download className="min-h-11 py-3 text-accent">{purpose === "maintenance" ? (zh ? "下载维护 Skill" : "Download maintenance Skill") : (zh ? "下载接续 Skill" : "Download acquisition Skill")}</a> : null}
+      <button type="button" className="min-h-11 text-secondary" onClick={() => { void navigator.clipboard.writeText(request).then(() => setStatus(zh ? "使用说明已复制" : "Usage instructions copied"), () => setStatus(zh ? "复制失败，请重试" : "Copy failed; retry")); }}>{zh ? "复制使用说明" : "Copy usage instructions"}</button>
     </div>
     {resolved.isError ? <button type="button" onClick={() => void resolved.refetch()} className="text-sm text-[var(--danger)]">{zh ? "Skill 读取失败，重试" : "Skill unavailable; retry"}</button> : null}
+    {offline && !cached.isPending && !cached.data ? <p className="text-xs text-secondary">{zh ? "此 Skill 尚未缓存，联网后可下载；上下文包仍可下载。" : "This Skill is not cached. Download it when online; your Context Package is still available."}</p> : null}
     {status ? <p role="status" className="text-xs text-secondary">{status}</p> : null}
   </section>;
 }

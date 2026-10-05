@@ -31,7 +31,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     await expect(page.getByRole("checkbox", { name: /^(包含附件|Include attachments)/ })).not.toBeChecked();
     await page.getByRole("checkbox", { name: /包含接续文件|Include continuation files/ }).uncheck();
     await page.getByRole("button", { name: /生成导出包|Generate export/, exact: true }).click();
-    const download = page.getByRole("button", { name: /下载 Context Package|Download Context Package/, exact: true });
+    const download = page.getByRole("button", { name: /下载上下文包|Download Context Package/, exact: true });
     await expect(download).toBeVisible();
     const saved = page.waitForEvent("download");
     await download.click();

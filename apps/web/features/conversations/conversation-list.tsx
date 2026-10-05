@@ -22,6 +22,7 @@ import { ConversationActionMenu, type UndoAction } from "./conversation-action-m
 import { MergeConversationsDialog } from "./merge-conversations-dialog";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
+import { QuickStartGuide } from "../../components/quick-start-guide";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { downloadConversationBundle } from "../../lib/bulk-export";
@@ -245,6 +246,7 @@ export function ConversationList({
             >
               {resolvedLocale === "zh-CN" ? "导入对话" : "Import conversations"}
             </button>
+            <QuickStartGuide onImport={onImportClick} />
           </div>
         ) : undefined}
       />

@@ -1652,6 +1652,7 @@ export type ContinuationRevisionRead = {
 };
 const continuationPath = (id: string) => `/api/conversations/${encodeURIComponent(id)}/continuation`;
 export const continuationApi = {
+  guidance: (id: string) => fetchJson<{ coverage: "none" | "declared" | "unknown"; index_digest: string | null; unindexed_messages: number | null; unindexed_characters: number | null; suggest_maintenance: boolean; message_threshold: number; character_threshold: number; source_revision: number }>(`${continuationPath(id)}/guidance`),
   updateFiles: (id: string, form: FormData) => fetchJson<{ generation: number; revision_id: string }>(`${continuationPath(id)}/files`, { method: "PUT", body: form }),
   state: (id: string) => fetchJson<{ generation: number; adopted_revision_id: string | null; pending_return_task_id?: string | null }>(continuationPath(id)),
   revisions: (id: string, offset = 0) => fetchJson<ContinuationRevisionRead[]>(`${continuationPath(id)}/revisions?limit=30&offset=${offset}`),

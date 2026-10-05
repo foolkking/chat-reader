@@ -14,7 +14,7 @@ import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext
 import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
 import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
-import { ExportPanel } from "../exporting/export-panel";
+import { ExportPanel, type ExportPanelState } from "../exporting/export-panel";
 import { OfflineExportPanel } from "../exporting/offline-export-panel";
 import { MobileSidebarTrigger, ProjectSidebar } from "../projects/project-sidebar";
 import { SharePanel } from "../sharing/share-panel";
@@ -106,6 +106,8 @@ export function ConversationReader({
   const [showExport, setShowExport] = useState(false);
   const requestedContinuation = searchParams?.get("continuation");
   const [continuationOpen, setContinuationOpen] = useState(requestedContinuation === "current" || requestedContinuation === "index");
+  const [continuationGuideRequested, setContinuationGuideRequested] = useState(false);
+  const exportPanelState = useMemo<{ current: ExportPanelState | null }>(() => ({ current: null }), [conversationId]);
   // Ephemeral Reader navigation state, never persisted as user content or a draft.
   const continuationView = useMemo<ContinuationViewState>(() => ({ member: requestedContinuation === "index" ? "index" : "current", indexQuery: "" }), [conversationId, requestedContinuation]);
   const [showSearch, setShowSearch] = useState(false);
@@ -2207,7 +2209,7 @@ export function ConversationReader({
       id: "continuation",
       label: resolvedLocale === "zh-CN" ? "接续" : "Continuation",
       icon: BookOpen,
-      onSelect: () => { setContinuationOpen(true); },
+      onSelect: () => { setContinuationGuideRequested(false); setContinuationOpen(true); },
     } as ReaderHeaderAction] : []),
     {
       id: "focus-mode",
@@ -2568,7 +2570,7 @@ export function ConversationReader({
         <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3"><SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact /></div>
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "export" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("export")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("export")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3">{dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} compact readingStartMessageId={activeMessageId} />}</div>
+        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto py-3">{dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} compact readingStartMessageId={activeMessageId} onOpenContinuation={() => { setUtilityPanel(null); setShowExport(false); setContinuationGuideRequested(true); setContinuationOpen(true); }} />}</div>
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "files" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} />}
@@ -2578,7 +2580,7 @@ export function ConversationReader({
             <div className="flex h-full min-w-0 w-full overflow-hidden">
               {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
-                {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} /> : null}
+                {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} onOpenContinuation={() => { setShowExport(false); setUtilityPanel(null); setContinuationGuideRequested(true); setContinuationOpen(true); }} /> : null}
               </ReaderPanelShell>}
             </div>
         </ReaderUtilityDrawer>
@@ -2600,7 +2602,7 @@ export function ConversationReader({
             /> : <OfflineConversationFilesPanel conversationId={conversation.id} onLocate={async (target) => { setShowFiles(false); await navigateToTarget(target); }} />}
         </FloatingWorkspacePanel>
       ) : null}
-      {continuationOpen && (canManageCanonical || dataSource.mode === "offline") ? <ContinuationWorkspace key={conversationId} conversationId={conversationId} viewState={continuationView} offline={dataSource.mode === "offline"} onClose={() => setContinuationOpen(false)} onNavigate={async reference => {
+      {continuationOpen && (canManageCanonical || dataSource.mode === "offline") ? <ContinuationWorkspace key={conversationId} conversationId={conversationId} viewState={continuationView} showGuideInitially={continuationGuideRequested} offline={dataSource.mode === "offline"} onClose={() => setContinuationOpen(false)} onNavigate={async reference => {
         let messageId = reference.messageId;
         if (!messageId && reference.sequence) {
           const page = await dataSource.getDialogueIndex(conversationId, { offset: reference.sequence - 1, limit: 1 });

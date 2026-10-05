@@ -80,6 +80,16 @@ def list_revisions(conversation_id: uuid.UUID, request: Request, limit: int = Qu
         fail(db, exc)
 
 
+@router.get('/guidance')
+def get_guidance(conversation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)):
+    from app.services.continuation_guidance import guidance_counts
+    try:
+        conversation = owned_conversation(db, conversation_id, ownership_scope_from_request(request))
+        return guidance_counts(db, conversation)
+    except ContinuationError as exc:
+        fail(db, exc)
+
+
 @router.get('/revisions/{revision_id}/members/{member}')
 def get_revision_member(conversation_id: uuid.UUID, revision_id: uuid.UUID, member: str, request: Request, db: Session = Depends(get_db)):
     from app.models.context_continuation import ContinuationRevision

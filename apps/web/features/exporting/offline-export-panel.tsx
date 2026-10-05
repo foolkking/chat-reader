@@ -16,7 +16,7 @@ type ExportResultState = {
   unavailableAnnotationAnchorCount: number;
 };
 
-export function OfflineExportPanel({ conversationId }: { conversationId: string }) {
+export function OfflineExportPanel({ conversationId, maintenance = false }: { conversationId: string; maintenance?: boolean }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [format, setFormat] = useState<OfflineExportFormat>("context");
@@ -75,11 +75,11 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
       <div className="rounded-lg bg-subtle px-3 py-2 text-xs leading-5 text-secondary">
         {zh ? "离线导出使用当前已下载快照，不连接服务器。未缓存的附件只保留元数据。" : "Offline export uses the downloaded snapshot and never contacts the server. Uncached files remain as metadata only."}
       </div>
-      <div className="grid grid-cols-1 gap-1 rounded-lg bg-subtle p-1 sm:grid-cols-3" role="group" aria-label={zh ? "导出格式" : "Export format"}>
+      {!maintenance ? <div className="grid grid-cols-1 gap-1 rounded-lg bg-subtle p-1 sm:grid-cols-3" role="group" aria-label={zh ? "导出格式" : "Export format"}>
         <FormatButton active={format === "context"} onClick={() => { setFormat("context"); resetResult(); }} icon={<FileArchive className="h-4 w-4" />} label={zh ? "交给 AI" : "For AI"} />
         <FormatButton active={format === "canjson"} onClick={() => { setFormat("canjson"); resetResult(); }} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />
         <FormatButton active={format === "markdown"} onClick={() => { setFormat("markdown"); resetResult(); }} icon={<FileText className="h-4 w-4" />} label="Markdown" />
-      </div>
+      </div> : null}
       <label className="flex min-h-11 items-center justify-between gap-4 rounded-lg border border-ui px-3 text-sm text-primary">
         <span className="min-w-0"><span className="block font-medium">{zh ? "包含已缓存附件" : "Include cached attachments"}</span><span className="block text-xs leading-5 text-secondary">{zh ? `${attachmentCountQuery.data ?? 0} 个附件记录` : `${attachmentCountQuery.data ?? 0} attachment records`}</span></span>
         <input type="checkbox" checked={includeAttachments} onChange={(event) => { setIncludeAttachments(event.target.checked); resetResult(); }} className="h-5 w-5 accent-[var(--accent)]" />
@@ -98,7 +98,7 @@ export function OfflineExportPanel({ conversationId }: { conversationId: string 
         <p>{zh ? "导出只包含该离线副本中已有的当前版本数据。" : "The export contains the current-version data available in this offline copy."}</p>
       </div>
       {result ? result.contextPackage ? (
-        <ContextPackageDelivery downloadUrl={result.url} downloadFilename={result.filename} defaultSkillLocale={zh ? "zh-CN" : "en"} offline />
+        <ContextPackageDelivery downloadUrl={result.url} downloadFilename={result.filename} defaultSkillLocale={zh ? "zh-CN" : "en"} offline purpose={maintenance ? "maintenance" : "acquisition"} />
       ) : (
         <a href={result.url} download={result.filename} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85"><Download className="h-4 w-4" />{zh ? "下载导出文件" : "Download export"}</a>
       ) : (

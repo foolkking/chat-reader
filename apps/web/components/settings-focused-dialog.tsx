@@ -58,7 +58,7 @@ export function SettingsFocusedDialog({ category, onClose, restoreFocus, initial
           <button type="button" onClick={() => void requestClose()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary" aria-label={t("close")} title={t("close")}><X className="h-5 w-5" aria-hidden="true" /></button>
         </header>
         <div data-settings-scroll-root="true" className="min-h-0 overflow-y-auto px-5 py-5">
-          {category === "help" ? <HelpPanel /> : null}
+          {category === "help" ? <HelpPanel onImport={() => { void requestClose().then(closed => { if (closed) openImportDialog(); }); }} /> : null}
           {category === "admin-runtime" ? <AdminRuntimePanel /> : null}
           {category === "offline" ? <OfflineSyncCenter onDirtyChange={setDirty} initialConflictKey={initialConflictKey} /> : null}
           {category === "data" ? <DataBackupPanel focused onDirtyChange={setDirty} initialTaskId={initialArchiveTaskId} onRestoreConversation={() => { void requestClose().then((closed) => { if (closed) openImportDialog({ initialMode: "archive" }); }); }} /> : null}

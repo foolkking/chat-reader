@@ -1,6 +1,6 @@
 # Chat Reader Interface System
 
-Last synchronized: 2026-10-04.
+Last synchronized: 2026-10-05.
 
 ## Direction
 
@@ -72,6 +72,11 @@ Import Format revision ledger.
 - Import completion: a committed batch stays on the Import surface until the
   user chooses Library, the first conversation, or close; do not auto-collapse
   a multi-item result into one Reader.
+- Guidance: optional, flat three-step lists beside the real task. Current/Index
+  explains its purpose once per account/browser, with close and manual reopen.
+  Maintenance advice appears only during Context export and counts uncovered
+  Index ranges; it never blocks export or interrupts reading. Respect dismissal
+  and per-conversation mute; use existing tokens and 44px action targets.
 
 ## Adaptive Import Rules
 

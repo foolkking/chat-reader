@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+2026-10-05 guidance implementation: `execution/CORE_GUIDANCE_2026-10-05.md`
+records option B, first-use explanations, uncovered Index-range counts and local
+test evidence. PROJECT_STATE, Context contract and API reference distinguish this
+unreleased behavior from the deployed version. Earlier UX requests remain tracked
+separately; this does not claim their implementation.
+
+2026-10-05 guidance options: `planning/CORE_GUIDANCE_OPTIONS_2026-10-05.md`
+preserves the original options and records the user's selection of B with
+uncovered-Index-range reminders. Current implementation and verification belong
+to the execution record and Context contract linked above.
+
+2026-10-05 Skill/help usability review: `evidence/ux-audit-skills-help-2026-10-05.md`
+records five user-supplied screenshots plus source evidence, twelve prioritized
+findings, three-Skill discovery, locale migration and administrator request/limit
+proposals. It is analysis only; it does not change deployed contracts or claim
+implementation, tests or email delivery.
+
 2026-10-04 Context goal closure: `execution/CONTEXT_GOAL_COMPLETION_2026-10-04.md`
 maps the seven stages and later user overrides to implementation/CI/deployment
 evidence. `system/CONTEXT_PACKAGE_CONTRACT.md` now reflects the deployed state;

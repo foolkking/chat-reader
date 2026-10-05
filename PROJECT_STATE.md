@@ -1,5 +1,20 @@
 # Project State
 
+## Local guidance work — 2026-10-05 (not deployed)
+
+Option B is implemented locally: an opt-in three-step quick start, a dismissible
+first Current/Index guide, maintenance-package/Skill preparation and a quiet
+export-time link to the continuation workspace. Thresholds count only messages
+outside the Index's declared ranges (100 messages or 60,000 Unicode characters),
+not the total history. Unknown/foreign/reordered ranges suppress numeric advice.
+Dismissal is account/device scoped; users can mute and restore a conversation's
+suggestions. The [execution record](docs/execution/CORE_GUIDANCE_2026-10-05.md)
+owns checks and remaining verification. No new migration or production changes.
+Local checks: API 809 passed/70 skipped; final Context guidance/export/reading
+browser gate 13 passed; offline maintenance/worker recheck 2 passed. Lint,
+typecheck and build pass. The execution record retains the earlier browser
+timeout and separates skipped PostgreSQL/full-PWA gates from verified scope.
+
 ## Current release and active work — 2026-10-04
 
 Production `https://chat.king.2bd.net` runs source
@@ -61,9 +76,9 @@ and [execution](docs/execution/WHOLE_SITE_UX_2026-10-04.md) retain findings and 
 | Synchronization | Account preference field revisions, real reading anchors, outbox confirmation/retries/conflicts and offline account fences. Remote position changes do not force the active Reader to jump. |
 | Admin | Search/paginated users, approval/status/session/reset/delete, invitations/audit, read-only cross-user Reader and bounded runtime state. Shared objects survive when others still reference them. |
 
-Long-conversation maintenance guidance remains a
-[proposal](docs/planning/CONTEXT_MAINTENANCE_GUIDANCE_2026-10-03.md).
-No threshold reminder has been implemented. The original Skill inline-version
+Production does not yet include the local guidance described above. The original
+[threshold proposal](docs/planning/CONTEXT_MAINTENANCE_GUIDANCE_2026-10-03.md) is
+superseded by the user's uncovered-Index-range rule for this local work. Skill inline-version
 editing stage was superseded by the confirmed replacement-only Bundle design.
 SMTP is unconfigured in the verified production snapshot; email delivery remains
 unavailable until the operator configures it. Administrator reset links remain.
@@ -82,7 +97,9 @@ Production verification and cleanup are complete; no further deployment is pendi
 
 Read [AGENTS.md](AGENTS.md). Default temporary root is
 `C:/Users/86182/Desktop/wkkk`, with per-task directories and process-local TEMP/TMP.
-This test batch has explicit permission for `E:/1project/chat-reader/.tmp/context-tests`.
+The earlier auth-resume test batch had a one-time exception for
+`E:/1project/chat-reader/.tmp/context-tests`; current guidance tests use the
+default `wkkk/chat-reader-guidance-20261005` task directory.
 Do not touch user imports, delete production volumes, overwrite server environment,
 clean unrelated caches or include credentials/private content in evidence.
 

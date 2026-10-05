@@ -57,6 +57,17 @@ test("reads cached continuation without edit or upload controls", async ({ page,
   const dialog = page.getByRole('dialog', { name: /上下文接续|Context continuation/ });
   await expect(dialog.getByRole('heading', { name: 'Offline continuation' })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /编辑|Edit|更新文件|Update files/ })).toHaveCount(0);
+  await dialog.getByRole('button', { name: /^(准备维护|Prepare maintenance)$/ }).click();
+  const maintenance = dialog.getByTestId('maintenance-preparation');
+  await maintenance.getByRole('button', { name: /生成离线导出|Generate offline export/ }).click();
+  await expect(maintenance.getByRole('button', { name: /下载上下文包|Download Context Package/ })).toBeVisible();
+  const maintenanceDownload = page.waitForEvent('download');
+  await maintenance.getByRole('link', { name: /下载维护 Skill|Download maintenance Skill/ }).click();
+  const maintenanceSkill = await maintenanceDownload;
+  expect(createHash('sha256').update(await readFile((await maintenanceSkill.path())!)).digest('hex')).toBe(
+    createHash('sha256').update(await readFile('../../tools/context-skills/default-bundles/context-continuation-maintainer.zip')).digest('hex'),
+  );
+  await dialog.getByRole('button', { name: /关闭使用指引|Close continuation guide/ }).click();
   await dialog.getByRole('button', { name: 'Index', exact: true }).click();
   await expect(dialog.getByText('Synthetic history', { exact: true })).toBeVisible();
   await dialog.getByText('Synthetic history', { exact: true }).click();
@@ -72,7 +83,7 @@ test("reads cached continuation without edit or upload controls", async ({ page,
   await expect(exportPanel.getByLabel(/包含已缓存附件|Include cached attachments/)).not.toBeChecked();
   await exportPanel.getByRole('button', { name: /生成离线导出|Generate offline export/ }).click();
   const downloadPromise = page.waitForEvent('download');
-  await exportPanel.getByRole('button', { name: /下载 Context Package|Download Context Package/ }).click();
+  await exportPanel.getByRole('button', { name: /下载上下文包|Download Context Package/ }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.context\.zip$/);
   const archive = unzipSync(await readFile((await download.path())!));
@@ -96,7 +107,7 @@ test("reads cached continuation without edit or upload controls", async ({ page,
   await exportPanel.getByLabel(/携带已缓存的接续文件|Include cached continuation files/).uncheck();
   await exportPanel.getByRole('button', { name: /生成离线导出|Generate offline export/ }).click();
   const rawDownloadPromise = page.waitForEvent('download');
-  await exportPanel.getByRole('button', { name: /下载 Context Package|Download Context Package/ }).click();
+  await exportPanel.getByRole('button', { name: /下载上下文包|Download Context Package/ }).click();
   const rawDownload = await rawDownloadPromise;
   const raw = unzipSync(await readFile((await rawDownload.path())!));
   expect(Object.keys(raw).some(name => name.startsWith('continuation/'))).toBe(false);
@@ -405,19 +416,18 @@ test("exports cached files and the pinned Skill ZIP offline with bilingual usage
   await exportPanel.getByRole("button", { name: /生成离线导出|Generate offline export/ }).click();
   const delivery = exportPanel.getByTestId("context-package-delivery");
   await expect(delivery).toBeVisible();
-  await expect(delivery.getByRole("button", { name: /下载 Context Package|Download Context Package/ })).toBeVisible();
+  await expect(delivery.getByRole("button", { name: /下载上下文包|Download Context Package/ })).toBeVisible();
   const copyInstructions = delivery.getByRole("button", { name: /复制使用说明|Copy usage instructions/ });
   await expect(copyInstructions).toBeEnabled();
   await expect(delivery.getByRole("button", { name: /查看 Skill|View Skill/ })).toHaveCount(0);
   await expect(exportPanel.getByText(/1 个附件未缓存|1 uncached attachment/)).toBeVisible();
 
-  await delivery.getByRole("button", { name: "English" }).click();
-  await expect(delivery.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+  await expect(delivery.getByRole("button", { name: "English" })).toHaveCount(0);
   await copyInstructions.click();
   await expect(delivery.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Use the supplied Skill ZIP to read this .context.zip and continue the task.");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/请使用我提供的接续 Skill|Use the supplied acquisition Skill/);
   const skillDownloadPromise = page.waitForEvent("download");
-  await delivery.getByRole("link", { name: /下载 Skill ZIP|Download Skill ZIP/ }).click();
+  await delivery.getByRole("link", { name: /下载接续 Skill|Download acquisition Skill/ }).click();
   const skillDownload = await skillDownloadPromise;
   expect(skillDownload.suggestedFilename()).toBe("context-acquisition.zip");
   expect(await skillDownload.failure()).toBeNull();
@@ -431,11 +441,11 @@ test("exports cached files and the pinned Skill ZIP offline with bilingual usage
     "context-acquisition/references/continuation-schema-v1.md",
   ]));
 
-  await delivery.getByRole("button", { name: "中文" }).click();
+  await expect(delivery.getByRole("button", { name: "中文" })).toHaveCount(0);
   await copyInstructions.click();
   await expect(delivery.getByRole("status")).toContainText(/使用说明已复制|Usage instructions copied/);
   const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard).toBe("请使用我提供的 Skill ZIP 读取这个 .context.zip 并继续任务。");
+  expect(clipboard).toMatch(/请使用我提供的接续 Skill|Use the supplied acquisition Skill/);
 
   await page.evaluate(() => {
     const writeText = navigator.clipboard.writeText.bind(navigator.clipboard);
@@ -454,7 +464,7 @@ test("exports cached files and the pinned Skill ZIP offline with bilingual usage
   await copyInstructions.click();
   await expect(delivery.getByRole("status")).toContainText(/复制失败，请重试|Copy failed; retry/);
   const packageDownloadPromise = page.waitForEvent("download");
-  await delivery.getByRole("button", { name: /下载 Context Package|Download Context Package/ }).click();
+  await delivery.getByRole("button", { name: /下载上下文包|Download Context Package/ }).click();
   const packageDownload = await packageDownloadPromise;
   expect(packageDownload.suggestedFilename()).toMatch(/\.context\.zip$/);
   expect(await packageDownload.failure()).toBeNull();

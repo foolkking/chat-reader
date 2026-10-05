@@ -28,11 +28,15 @@ def update_files(db, conversation_id, scope, *, members, base_generation):
     for name, data in members.items():
         hashes[name] = _store_member(db, data)
     revision_id = uuid.uuid4()
+    from app.services.continuation_guidance import index_order_binding
+    binding = index_order_binding(db, conversation_id, members['index']) if 'index' in members else (
+        previous.source_metadata.get('guidance_index_order') if previous else None)
     row = ContinuationRevision(id=revision_id, conversation_id=conversation_id, parent_id=previous.id if previous else None,
         branch_key="direct-files", protocol_revision=str(state.generation + 1), schema_version="unspecified",
         declared_trust="unverified", digest=hashlib.sha256(json.dumps([str(revision_id), hashes], sort_keys=True).encode()).hexdigest(),
         current_sha256=hashes["current"], index_sha256=hashes["index"],
-        source_metadata={"mode": "direct_files", "updated_members": sorted(members), "system_validation": "not_performed"})
+        source_metadata={"mode": "direct_files", "updated_members": sorted(members), "system_validation": "not_performed",
+                         "guidance_index_order": binding})
     db.add(row)
     db.flush()
     state.adopted_revision_id = row.id

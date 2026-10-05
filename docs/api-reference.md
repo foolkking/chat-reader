@@ -1,5 +1,10 @@
 # API 参考
 
+2026-10-05 本地新增 `GET /api/conversations/{id}/continuation/guidance`：本人范围的
+只读引导统计，返回 Index 声明范围外的消息/字符数、阈值、来源 revision 和是否建议维护。
+范围不能对应时返回 unknown/null，不阻断文件保存。它不是语义校验接口；见
+[Context 合同](system/CONTEXT_PACKAGE_CONTRACT.md)。
+
 2026-10-03 离线 v3 增加可选消息 `annotation_versions`（仅本人批注需要的历史版本）、
 对话 `project_context` 和附件来源字段，沿用现有下载接口与 Dexie v2。项目说明更新会
 递增关联对话离线 revision。旧包缺失这些字段仍可读取；离线导出明确记录缺失锚点，

@@ -164,7 +164,7 @@ def test_foreign_account_cannot_read_direct_or_retired_endpoints(auth_client, mo
     assert saved.status_code == 200
     _, other = _normal_user_session(auth_client)
     auth_client.cookies.set('chat_reader_session', other)
-    for suffix in ('', '/revisions', '/candidates', '/candidates/old/preview',
+    for suffix in ('', '/guidance', '/revisions', '/candidates', '/candidates/old/preview',
         '/revisions/' + saved.json()['revision_id'] + '/members/current'):
         assert auth_client.get(path + suffix).status_code == 404
     assert auth_client.post(path + '/candidates/old/adopt').status_code == 404

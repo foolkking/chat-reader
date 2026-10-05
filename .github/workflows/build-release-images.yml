@@ -231,6 +231,7 @@ jobs:
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/context-continuation.spec.ts
+          e2e/context-guidance.spec.ts
           e2e/context-continuation-drop.spec.ts
           e2e/context-reading-tools.spec.ts
           e2e/context-drafts.spec.ts

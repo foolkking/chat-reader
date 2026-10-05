@@ -107,6 +107,34 @@ export uses the same projection when source refs are requested.
 
 ## Reader workspace
 
+Local implementation, 2026-10-05 (not yet deployed): the first visit to Current/
+Index shows a short inline guide. The account-scoped browser settings remember
+the visit; the guide can always be closed/reopened. Optional preparation uses
+the actual selected maintenance Skill and a normal Context export, without model
+execution or semantic validation. Offline preparation uses the cached system
+Maintainer Bundle and reconnects for updates.
+
+`GET /api/conversations/{id}/continuation/guidance` is owner-scoped and read-only.
+It counts nonblank canonical messages and Unicode characters outside the union
+of Index segments inside its declared coverage. Only matching conversation
+identity and usable integer ranges yield a numeric advisory. Unknown custom,
+foreign, out-of-bounds or unreadable Index data returns unknown, not a made-up
+uncovered count. A local order digest retained on Index writes detects later
+insertion/deletion/reordering in those ranges; it does not validate semantics or
+infer coverage from a Current save. Existing legacy files with no binding use
+their declared ranges; this is not a source-fingerprint verification.
+
+At 100 uncovered messages or 60,000 uncovered characters, the AI export surface
+offers one dismissible link into the guide. No reading popup or required
+maintenance step. Closing suppresses the same index/range milestone until another
+threshold-sized increase; per-conversation mute is reversible in the guide.
+Hints use account-isolated Dexie settings and remain dismissible if storage fails.
+Quick start is an optional three-step list in the empty library and Help.
+Navigation from export to the guide preserves options and task references.
+Export result reuse includes the saved-file generation and Reader's known source
+revision; after a file update, regenerate instead of offering the earlier ZIP.
+Unknown file status provides retry without disabling the Raw-only choice.
+
 Desktop uses an expandable side panel; mobile a full-screen surface. Current and
 Index are primary reading destinations; Update files and History are separate.
 Current uses existing Markdown rendering with collapsed frontmatter and full source
@@ -238,7 +266,7 @@ and resets validation claims. Conversation/account deletion retains shared objec
 and queues cleanup. See [Data archive contract](DATA_ARCHIVE_CONTRACT.md).
 Share excludes private Context files and personal Skill objects.
 
-Full release checks, remaining
-PostgreSQL concurrency and UI capabilities, external semantic use, settings cleanup
-and the subsequent full-site UX audit remain outstanding. Passes and skips are
-recorded separately in the execution record.
+The deployed migration and whole-site UX acceptance are recorded in the completion
+and deployment records linked above. Independent external semantic use remains
+unverified. Local guidance checks and any skips are tracked separately in
+[the guidance execution record](../execution/CORE_GUIDANCE_2026-10-05.md).
