@@ -62,6 +62,10 @@ test("personal archive recovers lost upload response, keyboard navigation and ta
     await panel.getByRole("button", { name: "Remove uploaded file" }).click();
     await page.getByRole("dialog", { name: "Remove this uploaded archive?" }).getByRole("button", { name: "Remove upload", exact: true }).click();
     await expect.poll(async () => (await (await context.request.get(`${base}/api/me/archive/tasks`)).json()).find((item: { job_id: string }) => item.job_id === previewId).result.artifact_available).toBe(false);
+    // The DB response can precede the panel's awaited cache refresh. Closing
+    // while it is still busy correctly invokes the unsaved-work guard.
+    await expect(panel.getByText("The preview expired or its upload was removed. Upload the file again.", { exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Back to options", exact: true })).toBeEnabled();
     await panel.getByRole("button", { name: "Close", exact: true }).click();
     await expect(center.getByRole("button", { name: "Review preview & restore" })).toBeFocused();
   } finally { await context.close(); await admin.dispose(); }
