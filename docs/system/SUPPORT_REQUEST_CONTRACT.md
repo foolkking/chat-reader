@@ -1,7 +1,7 @@
 # Private requests and account limit increases
 
-Local implementation contract, 2026-10-05. Not deployed; full integration/release
-gates remain. [Execution and remaining work](../execution/SUPPORT_REQUESTS_2026-10-05.md)
+Implementation contract, 2026-10-05, committed in `ad82cf4`. Not deployed;
+exact-source CI passed, with deployment pending capacity. [Execution and remaining work](../execution/SUPPORT_REQUESTS_2026-10-05.md)
 separates implemented behavior, evidence and unverified flows.
 
 ## Identity and lifecycle

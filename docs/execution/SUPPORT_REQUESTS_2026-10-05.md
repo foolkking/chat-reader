@@ -1,10 +1,12 @@
 # Administrator requests — 2026-10-05
 
-Status: backend, core Help/request UI and contextual limit entries implemented
-locally and not deployed; local regression is recorded below and release CI remains. The separate
-Skill release `2863a00` has passed complete CI and remains staged; its production
-replacement is still gated by server capacity. This support batch must not be
-included in that pinned release or represented as a finished user-facing feature.
+Status: backend, core Help/request UI and contextual limit entries are committed
+and pushed in `ad82cf4465287caaf8daeb264f0eb8a785fa28a5`, not deployed. Exact-source
+[CI 37295004053](https://github.com/foolkking/chat-reader/actions/runs/37295004053)
+passed all five jobs. This source includes the separately staged Skill changes (`2863a00`),
+but needs its own inspected artifact and migration `20261005_0047`. Production
+replacement remains gated by server capacity. Earlier checkpoints below describe
+their respective time points, not the latest commit or release status.
 
 ## Scope and sequence
 
@@ -286,3 +288,72 @@ Final evidence: `api-full-contextual.log`, `browser-contextual-acceptance.log`,
 All task-owned API/worker/SMTP/Web/PostgreSQL processes were stopped. Synthetic
 databases, logs and other local residues remain in the task directory for later
 user cleanup. No production configuration, backups or images were changed.
+
+## Commit and release preparation
+
+Source `ad82cf4465287caaf8daeb264f0eb8a785fa28a5` was pushed to `master`.
+Because the release workflow uses `workflow_dispatch`, pushing did not start it.
+Run `37295004053` was explicitly dispatched and its source SHA verified. Existing
+Git credentials are supplied only to the child `gh` process; no interactive login,
+credential output or persistent authentication change was used.
+
+Source-pinned helpers and a `git archive` of the deployment files are prepared
+under the support task's `release/` directory, separate from the old Skill release.
+The new authenticated smoke includes both request inbox endpoints. Preparation
+alone is not image verification, a passed capacity check or production acceptance.
+
+Read-only server inspection found **3,264,704 KiB** free. Only the running
+`3f1d539` Chat Reader images remain, so the old-image cleanup authorization cannot
+recover the approximately 2 GiB shortfall. Other applications' images, all backups,
+and rollback archives remain untouched. The previously reviewed optional backup
+deduplication is still unapproved. No new artifact was staged on the constrained
+server and no service was stopped.
+
+Completed CI quality evidence so far: full API **902 passed / 3 skipped**, reviewed
+Context runtime **64 passed**, worker/cleanup safety **53 passed**, single migration
+head/current `20261005_0047`; authenticated settings **136/136 passed** and fresh
+PostgreSQL system-archive browser restore **1/1 passed**, with no settings skips.
+The Windows-only symlink skip passes on the Linux runner. Remaining API skips
+require external import fixtures. The two settings gate reports identify the
+exact source and have PASS status. A first `gh run view --job --log` call refused
+logs while the overall run was active; the completed job's REST log endpoint
+worked. This retrieval limitation is not a test failure.
+
+## Final CI and artifact result
+
+All five jobs finished successfully: API, Web, settings, image build and independent
+download/load inspection. Web's machine-readable report has all 13 gates PASS:
+Context 35, focused Reader/security 45, Share focus 2, source mutation 16, cleanup 1,
+upload atomicity 18, image viewer 1, PDF 5, CSP 4, authentication 18 and offline
+negatives 17. Baseline PWA is **134 passed / 279 opt-in skips**; adaptive import is
+**3 passed / 1 skipped**, the latter needing external paired JSON/Markdown paths.
+Suites overlap and their counts must not be summed as unique scenarios. API's
+14 warnings are dependency deprecations; the existing patched-braces audit
+exception is unchanged, with no unapproved advisory or new exception.
+
+Artifact `chat-reader-images-ad82cf4465287caaf8daeb264f0eb8a785fa28a5-1` is downloaded
+under the support task's `release/artifact/` directory. It is **196,618,327 bytes**;
+SHA-256 `fc4317ebd8e58bba23c80a30915954d225be5f5094d8ce739120b2943fc509ad`.
+Local streaming inspection verified all 50 content-addressed blobs, four exact
+tags, manifest provenance and amd64 Linux configurations without extracting or
+running the images. API/worker/migrate image:
+`sha256:2a7d0cb9b33ebbcbc6a8ce703178887d1dbf6ef736a4600ed8247160763bb11e`;
+Web image: `sha256:3cb2fa73b64c6337052d8568c4b1fd1f1eb11500c3c4a686d799d42d53d7e51f`.
+
+The prepared Compose change adds exactly the two published gateway/adaptive limit
+environment declarations, preserving `.env.production`. LF and CRLF transformation
+checks produce exactly the pinned source diff. This helper runs only after a
+verified backup, validates Compose quietly and records the expected post-change
+bytes; the post-release check compares against those bytes. No Compose change has
+been applied to production. Finalization requires an acceptance-passed marker.
+
+Final live read-only check: public health **200**, **3,264,412 KiB** free. Production
+still uses `3f1d539` with `0046`; no new server staging, backup, image load, migration,
+service replacement or cleanup occurred. Capacity recovery authorization and live
+acceptance remain. The reviewed 15-file backup deduplication plan is still pending;
+it must not be executed under the existing old-image cleanup authorization.
+
+CI status, API log and downloaded Web/settings reports are retained under the
+support task directory (`ci-final.json`, `ci-api.log`, `ci-web-evidence/`,
+`ci-settings-evidence/`). Deployment uses this exact artifact, not the older
+Skill archive. The documentation-only follow-up commit does not change its source.

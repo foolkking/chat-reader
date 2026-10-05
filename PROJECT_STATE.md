@@ -48,12 +48,14 @@ their evidence. Skill locale/clone cleanup and administrator quota/support-reque
 work from the later [usability review](docs/evidence/ux-audit-skills-help-2026-10-05.md)
 are tracked separately; the guidance release does not complete them. Skill
 unification awaits deployment capacity; administrator quota/support requests are
-the current local batch. Their backend, account limit enforcement, worker mail
-lifecycle and archive extension are implemented locally and awaiting release CI/deployment.
+the current release candidate `ad82cf4465287caaf8daeb264f0eb8a785fa28a5`, committed
+and pushed. Their backend, account limit enforcement, worker mail lifecycle and
+archive extension passed all five jobs in [CI 37295004053](https://github.com/foolkking/chat-reader/actions/runs/37295004053)
+against that exact source; deployment remains pending server capacity.
 Local migration head is **20261005_0047**; production and staged Skill source stay
 on **20261003_0046**. Core Help/admin request UI, protected drafts and the notification-
 link destination are now implemented locally. Contextual import/merge limit links
-retain selections and drafts; full integration/release gates remain. See [support execution](docs/execution/SUPPORT_REQUESTS_2026-10-05.md)
+retain selections and drafts; live deployment/acceptance remain. See [support execution](docs/execution/SUPPORT_REQUESTS_2026-10-05.md)
 and [local support contract](docs/system/SUPPORT_REQUEST_CONTRACT.md).
 
 ## System and boundaries
@@ -122,9 +124,15 @@ and baseline PWA **134 passed / 279 mode-specific skips**. The complete settings
 matrix first returned **135 passed / 1 failed**; the accessible filter label was
 fixed and the affected case passed the final focused rerun. Suites overlap; skips
 are not passes. Single local migration head/current is `0047`. Earlier test and
-environment failures remain in the support execution record. Exact-source CI,
-additional optional browser failure probes and deployment remain. All task-owned
-support API/worker/SMTP/Web/PostgreSQL processes are now stopped.
+environment failures remain in the support execution record. Exact-source CI then
+passed API **902/3**, Context **35**, settings **136** plus **1** fresh restore,
+PWA **134/279**, authentication **18**, offline negatives **17**, image build and
+independent artifact inspection. Slash counts mean passed/skipped, not total.
+The four-tag artifact is downloaded and all 50 content-addressed blobs verified
+locally. Production still runs `3f1d539`/`0046`: last read-only capacity check was
+**3,264,412 KiB** free and public health passed. Backup deduplication remains
+unapproved. Additional optional browser probes and deployment remain; all
+task-owned support test services are stopped.
 
 ## Work rules and navigation
 
@@ -135,8 +143,8 @@ The earlier auth-resume test batch had a one-time exception for
 default `wkkk/chat-reader-guidance-20261005` task directory. Current Skill work uses
 `wkkk/chat-reader-skill-unification-20261005`; its isolated test processes are stopped.
 Support backend/UI tests use `wkkk/chat-reader-support-20261005`; its execution
-record tracks isolated process lifecycle. The current support worktree is intentionally not
-included in the staged Skill artifact; complete its integration gates first.
+record tracks isolated process lifecycle. The committed support source is not
+included in the older staged Skill artifact; complete its own release gates first.
 Do not touch user imports, delete production volumes, overwrite server environment,
 clean unrelated caches or include credentials/private content in evidence.
 

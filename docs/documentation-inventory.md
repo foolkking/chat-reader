@@ -1,14 +1,15 @@
 # Markdown 文档台账
 
 2026-10-05 support backend/UI: `execution/SUPPORT_REQUESTS_2026-10-05.md` records
-partial implementation, failures/reruns, PostgreSQL/SMTP/restore evidence and UI
-handoff, local composition/inbox/draft/notification-link/contextual-limit implementation and remaining
-integration gates. `system/SUPPORT_REQUEST_CONTRACT.md` owns the local identity, limits,
-mail and archive contract. This worktree is not deployed or a completed feature;
-source head `0047` is distinct from production/staged `0046`. API, deployment,
+implementation, failures/reruns, PostgreSQL/SMTP/restore evidence, committed source
+`ad82cf4` and successful exact-source CI `37295004053`. `system/SUPPORT_REQUEST_CONTRACT.md`
+owns identity, limits, mail and archive behavior. This source is not deployed;
+migration head `0047` is distinct from production/staged `0046`. API, deployment,
 environment and data/storage entry points link to this contract. Final local
-lint/typecheck, import-budget and adaptive compatibility reruns are recorded;
-Targeted Web build/browser checks pass; full integration and CI remain outstanding.
+lint/typecheck/build, 901/4 API, 134/279 PWA and 16 focused browser results are
+recorded separately from the initial 135/1 settings result. Subsequent CI passed
+902/3 API, 136 settings plus 1 restore, all Web gates and both image gates.
+Capacity-gated deployment remains; skipped cases are not passes.
 
 2026-10-05 Skill unification: `execution/SKILL_UNIFICATION_2026-10-05.md` owns the
 implementation `2863a00`, concurrent-write correction, real Bundle/restore/browser

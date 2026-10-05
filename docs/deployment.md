@@ -1,10 +1,13 @@
 # 生产部署
 
-Local support backend/UI is a separate unfinished batch: migration `20261005_0047`
-and `IMPORT_GATEWAY_FILE_LIMIT_MB` have not been released. Continue deploying only
-the pinned, inspected `2863a00` artifact below once capacity permits. Do not build
-or deploy the uncommitted support worktree. Its remaining full-integration gates
-remain in [support execution](execution/SUPPORT_REQUESTS_2026-10-05.md).
+Support backend/UI source `ad82cf4465287caaf8daeb264f0eb8a785fa28a5` is committed
+and pushed. [CI 37295004053](https://github.com/foolkking/chat-reader/actions/runs/37295004053)
+passed all five jobs against that exact source. It includes the Skill changes from `2863a00`
+and adds migration `20261005_0047`; neither batch is deployed. Use only the final
+inspected artifact for the source being released. The previously staged `2863a00`
+artifact/helpers do not contain support requests and must not be relabeled as the
+new source. Release evidence and remaining gates are in
+[support execution](execution/SUPPORT_REQUESTS_2026-10-05.md).
 
 ## Pending Skill follow-up — 2026-10-05
 

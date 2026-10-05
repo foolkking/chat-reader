@@ -5,14 +5,16 @@ Skill source `2863a00` passed CI but awaits capacity before replacement. See
 [current snapshot](../../PROJECT_STATE.md) and
 [Skill release record](../execution/SKILL_UNIFICATION_2026-10-05.md).
 
-Local support work adds migration `20261005_0047` and optional
+Committed support source `ad82cf4` passed all five jobs in CI `37295004053` and is
+not deployed. It includes the earlier Skill follow-up. Support adds migration `20261005_0047` and optional
 `IMPORT_GATEWAY_FILE_LIMIT_MB` (default 500 MiB) to API/worker Compose environment.
 This is a declared safe file/batch budget, not a reverse-proxy probe. Before raising
 it, align the import/adaptive upload locations, API file maximum and adaptive total
 capacity. The resolver takes their minimum and never modifies Nginx. Existing
 server environment and routes remain unchanged. No new SMTP provider is required;
 actual delivery remains unavailable in the verified production snapshot.
-[Local support contract](SUPPORT_REQUEST_CONTRACT.md) owns the unfinished feature.
+[Support contract](SUPPORT_REQUEST_CONTRACT.md) owns the implemented behavior;
+[execution](../execution/SUPPORT_REQUESTS_2026-10-05.md) records remaining release gates.
 
 ## Current deployment (2026-10-04)
 
