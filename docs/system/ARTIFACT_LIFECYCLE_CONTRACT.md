@@ -248,6 +248,15 @@ changing publication order, retention policy, storage format or schema.
 
 ## Logging
 
+Dedicated Context exports register both JSONL and ZIP staging paths before writes,
+close streams before unlinking, and register unique published paths with the existing
+transaction object tracker. Failure before DB flush, rollback/failed commit and
+abandoned sessions remove those new objects. Temporary nonpersistent snapshots
+remain owned by their caller's temporary-directory lifetime. A caught failure never
+overwrites a previous result's physical path. Process crashes still use the existing
+orphan/grace cleanup contract; synchronous cleanup is not a crash-proof DB/filesystem
+transaction. See the Context contract and dated integrity-stage evidence.
+
 Structured lifecycle events contain category, opaque artifact/job id, size,
 attempt and state only. They never include message text, attachment content,
 tokens, cookies, filenames supplied by users, or secrets.

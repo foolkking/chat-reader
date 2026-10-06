@@ -1,0 +1,1 @@
+{"database": "SQLite in memory", "results": {"disabled_account_published": true, "files_after_write_failure": 1, "revoked_asset_published": true, "rollback": {"artifact_rows": 0, "published_file_exists": true}, "same_size_corruption_published": {"checksum_matches": false, "completeness": "complete"}}, "source": "25c7f6a", "synthetic_only": true}

@@ -40,10 +40,15 @@ was introduced by this Task Center stage.
 ## Active work
 
 The Task Center stage is deployed and accepted. Do not repeat its backup, deployment
-or cleanup. The continuous optimization goal remains active; the next stage should
-start with a fresh evidence-based product/runtime review. No further implementation
-is claimed by this release. The unrelated earlier Next stream-close observation
-remains unproven and is not claimed fixed. Off-site copies remain deferred.
+or cleanup. The continuous optimization goal remains active. The current stage is
+[Context export integrity and bounded processing](docs/execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md),
+following reproduced corrupt-object delivery, staging/rollback residue and access
+revocation defects. Working-tree fixes use bounded JSONL/body/reference streaming,
+PostgreSQL read snapshots, final access/source fences and transaction-owned file
+cleanup. They are not part of the deployed source above; exact-source CI and release
+acceptance are required. Current/Index remain direct user-managed files, with no
+semantic validation or adoption workflow. The unrelated earlier Next stream-close
+observation remains unproven and is not claimed fixed. Off-site copies remain deferred.
 
 ## System and boundaries
 

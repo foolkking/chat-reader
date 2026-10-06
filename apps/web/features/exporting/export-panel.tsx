@@ -212,7 +212,7 @@ export function ExportPanel({
 
       {jobKey === currentKey && taskQuery.data?.status === "cancelled" ? <p className="text-sm text-secondary">{zh ? "生成已取消，可以重新生成。" : "Export cancelled. You can generate it again."}</p> : null}
       {queueError ? <p className="text-sm text-[var(--danger)]">{queueError}</p> : null}
-      {jobKey === currentKey && taskQuery.data?.status === "failed" ? <p className="text-sm text-[var(--danger)]">{(taskQuery.data.error_message?.startsWith("ATTACHMENT_EXPORT_") ? batchExportError(taskQuery.data.error_message, zh) : taskQuery.data.error_message) || (zh ? "导出失败，请重试。" : "Export failed. Try again.")}</p> : null}
+      {jobKey === currentKey && taskQuery.data?.status === "failed" ? <p className="text-sm text-[var(--danger)]">{(/^(ATTACHMENT|CONTEXT)_EXPORT_/.test(taskQuery.data.error_message ?? "") ? batchExportError(taskQuery.data.error_message, zh) : taskQuery.data.error_message) || (zh ? "导出失败，请重试。" : "Export failed. Try again.")}</p> : null}
       {!compact && unavailableCount > 0 ? <p className="text-xs leading-5 text-secondary">{zh ? "缺失文件仍保留在元数据中，附件完整性会标记为 partial。" : "Missing files remain in metadata and make asset completeness partial."}</p> : null}
     </section>
   );

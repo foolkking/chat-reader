@@ -132,7 +132,7 @@ def test_export_change_before_publication_leaves_no_final_or_staging_package(cli
                 changed = True
                 db.query(Conversation).filter_by(id=cid).update({Conversation.offline_revision: Conversation.offline_revision + 1}, synchronize_session=False)
                 db.flush()
-        with pytest.raises(ContextPackageError, match='source changed'):
+        with pytest.raises(ContextPackageError, match='CONTEXT_EXPORT_SOURCE_CHANGED'):
             create_context_package(db, conversation_id=cid, job_id=uuid.uuid4(), scope_kind='full_conversation',
                 start_message_id=None, subject_key=LEGACY_SUBJECT_KEY, output_directory=tmp_path / "attempt",
                 record_artifact=False, progress_callback=change_source)

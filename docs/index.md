@@ -6,6 +6,9 @@
 [Project State](../PROJECT_STATE.md) 是当前快照。异地副本暂不设置；
 本阶段已交付，长期优化目标继续，勿重放已完成的部署与清理。
 
+当前开发阶段：[Context 导出完整性与有界处理](execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md)。
+该阶段与上述已上线提交分开记录，不能用旧 CI 代替当前工作区验收。
+
 ## 开始这里
 
 | 文档 | 长期职责 |

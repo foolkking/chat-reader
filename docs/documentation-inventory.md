@@ -1140,3 +1140,10 @@ artifact ID, archive digest and image IDs. `production-acceptance.json` records
 redacted real export/task checks, unchanged canonical data, healthy services,
 retained backups and authorized old-image cleanup. The release is complete;
 these are historical evidence, not permission to replay the operations.
+
+2026-10-06: `execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md` tracks the current
+Context integrity/streaming stage separately from deployed Task Center code.
+`execution/ux-audit-context-export-2026-10-06.md` and its evidence directory retain
+the pre-fix synthetic reproduction and scoped test outputs. Current behavior belongs
+to the Context Package and Artifact Lifecycle contracts; no protocol/migration or
+semantic Current/Index policy change is introduced.

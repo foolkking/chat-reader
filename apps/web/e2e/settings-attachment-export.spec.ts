@@ -24,8 +24,8 @@ with SessionLocal() as db:
 `, attachmentId, content], { cwd: path.resolve(process.cwd(), "../api"), encoding: "utf8" });
 }
 
-for (const width of [375, 768, 1440]) {
-  test(`${width}px: attachment export failure recovers with verified downloaded bytes`, async ({ page, context, playwright, baseURL }, info) => {
+for (const width of [375, 768, 1440]) for (const format of ["canjson", "context"] as const) {
+  test(`${width}px ${format}: attachment export failure recovers with verified downloaded bytes`, async ({ page, context, playwright, baseURL }, info) => {
     const admin = await settingsAdmin(playwright.request, baseURL!);
     const locale = width === 768 ? "en-US" : "zh-CN";
     let attachmentId = "";
@@ -60,7 +60,7 @@ for (const width of [375, 768, 1440]) {
         await page.getByRole("button", { name: /^(消息操作|Message actions)$/ }).click();
         await page.getByRole("button", { name: /^(导出|Export)$/ }).click();
       }
-      await page.getByRole("button", { name: "CanJSON", exact: true }).click();
+      if (format === "canjson") await page.getByRole("button", { name: "CanJSON", exact: true }).click();
       await page.getByRole("checkbox", { name: /包含附件|Include attachments/ }).check();
       const submit = page.getByRole("button", { name: /^(生成导出包|Generate export)$/ });
       const failedJob = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith(`/conversations/${id}/exports`));
@@ -69,7 +69,7 @@ for (const width of [375, 768, 1440]) {
       await expect.poll(async () => (await (await admin.get(`/api/tasks/${job.job_id}`)).json()).status).toBe("failed");
       await expect(page.getByText(/附件内容校验失败|Attachment integrity check failed/)).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await page.screenshot({ path: info.outputPath(`attachment-failure-${width}.png`) });
+      await page.screenshot({ path: info.outputPath(`attachment-failure-${format}-${width}.png`) });
       fixtureBytes(attachmentId, original);
       const resubmitted = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith(`/conversations/${id}/exports`));
       await submit.focus(); await page.keyboard.press("Enter");
@@ -77,7 +77,7 @@ for (const width of [375, 768, 1440]) {
       expect(retry.job_id).not.toBe(job.job_id);
       await expect.poll(async () => (await (await admin.get(`/api/tasks/${retry.job_id}`)).json()).status).toBe("committed");
       const saved = page.waitForEvent("download");
-      await page.getByRole("button", { name: /^(下载导出包|Download export)$/ }).click();
+      await page.getByRole("button", { name: format === "context" ? /^(下载上下文包|Download Context Package)$/ : /^(下载导出包|Download export)$/ }).click();
       const file = await saved;
       expect(await file.failure()).toBeNull();
       expect(file.suggestedFilename()).toBe("Synthetic 100x.context.zip");
@@ -93,7 +93,7 @@ for (const width of [375, 768, 1440]) {
       }
       const attachment = records.find(record => record.record_type === "attachment");
       expect(strFromU8(entries[attachment.object.path])).toBe(original);
-      await page.screenshot({ path: info.outputPath(`attachment-download-${width}.png`) });
+      await page.screenshot({ path: info.outputPath(`attachment-download-${format}-${width}.png`) });
     } finally {
       if (attachmentId) fixtureBytes(attachmentId, original);
       await admin.dispose();

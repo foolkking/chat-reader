@@ -3,13 +3,16 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 import uuid
 import zipfile
+from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import get_settings
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
@@ -21,10 +24,14 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
-from app.services.assets.asset_store import get_asset_store
+from app.services.assets.asset_store import LocalAssetStore, get_asset_store
 from app.services.assets.scanner import scan_status_allows_use
 from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
-from app.services.exporting.export_service import _source_refs_by_message
+from app.services.exporting.export_service import ExportError, _source_refs_by_message
+from app.services.exporting.archive_transaction import archive_read_snapshot, track_archive_object
+from app.services.exporting.attachment_bundle import _WriteBudget, _write_stream, _asset_chunks
+from app.services.ownership import OwnershipScope
+from app.models.user import User
 
 
 CONTEXT_PACKAGE_FORMAT = "chat-reader-context-package"
@@ -49,39 +56,66 @@ def create_context_package(
     record_artifact: bool = True,
     include_continuation: bool = True,
     include_attachments: bool = True,
+    ownership_scope: OwnershipScope | None = None,
 ) -> ExportArtifact:
+    cleanup_paths: list[Path] = []
+    try:
+        with ExitStack() as resources:
+            snapshot = resources.enter_context(archive_read_snapshot(db)) if record_artifact else db
+            return _create_context_package(snapshot, conversation_id=conversation_id, job_id=job_id,
+                scope_kind=scope_kind, start_message_id=start_message_id,
+                progress_callback=progress_callback, subject_key=subject_key,
+                output_directory=output_directory, record_artifact=record_artifact,
+                include_continuation=include_continuation, include_attachments=include_attachments,
+                ownership_scope=ownership_scope, cleanup_paths=cleanup_paths,
+                publication_db=db, resources=resources)
+    except OSError as error:
+        raise ContextPackageError("CONTEXT_EXPORT_STORAGE_UNAVAILABLE") from error
+    except ExportError as error:
+        # Reuse the bounded ZIP writer; expose errors for this export purpose.
+        raise ContextPackageError(str(error).replace("ATTACHMENT_EXPORT_", "CONTEXT_EXPORT_")) from error
+    finally:
+        for path in cleanup_paths:
+            path.unlink(missing_ok=True)
+
+
+def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
+    start_message_id, progress_callback, subject_key, output_directory,
+    record_artifact, include_continuation, include_attachments, ownership_scope,
+    cleanup_paths: list[Path], publication_db, resources) -> ExportArtifact:
     if scope_kind not in {"full_conversation", "reading_scope"}:
         raise ContextPackageError("Unsupported context package scope.")
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None:
-        raise ContextPackageError("Conversation not found.")
+    conversation = _require_source(db, conversation_id, ownership_scope)
+    source_owner = conversation.owner_user_id
     from app.models.context_continuation import ContinuationState
     from app.services.context_dependencies import context_dependency_digest
     source_revision = conversation.offline_revision
     source_dependencies = context_dependency_digest(db, conversation.id, subject_key)
     source_generation = db.query(ContinuationState.generation).filter_by(conversation_id=conversation.id).scalar()
 
-    messages = (
-        db.query(Message, MessageVersion)
-        .join(MessageVersion, MessageVersion.id == Message.current_version_id)
-        .filter(Message.conversation_id == conversation.id, Message.is_deleted.is_(False))
-        .order_by(Message.order_key.asc())
-        .all()
-    )
-    if not messages:
-        raise ContextPackageError("Conversation has no exportable messages.")
-    all_sequence = {message.id: index for index, (message, _) in enumerate(messages, start=1)}
+    selected_query = db.query(Message).join(MessageVersion, MessageVersion.id == Message.current_version_id).filter(
+        Message.conversation_id == conversation.id, Message.is_deleted.is_(False))
+    first_sequence = 1
     if scope_kind == "reading_scope":
-        if start_message_id is None or start_message_id not in all_sequence:
+        start = selected_query.filter(Message.id == start_message_id).first() if start_message_id else None
+        if start is None:
             raise ContextPackageError("Reading scope requires a message in this conversation.")
-        first_sequence = all_sequence[start_message_id]
-        messages = messages[first_sequence - 1 :]
-    else:
-        first_sequence = 1
-    last_sequence = all_sequence[messages[-1][0].id]
-    selected_message_ids = [message.id for message, _ in messages]
-    selected_version_ids = [version.id for _, version in messages]
-    total = max(len(messages), 1)
+        first_sequence += selected_query.filter(Message.order_key < start.order_key).count()
+        selected_query = selected_query.filter(Message.order_key >= start.order_key)
+    # Retain bounded identity metadata, never all message bodies or ORM versions.
+    selected_message_ids = [row.id for row in selected_query.with_entities(Message.id).order_by(Message.order_key)
+                            .limit(get_settings().canjson_max_messages + 1)]
+    message_count = len(selected_message_ids)
+    if message_count > get_settings().canjson_max_messages:
+        raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
+    if not message_count:
+        raise ContextPackageError("Conversation has no exportable messages.")
+    last_sequence = first_sequence + message_count - 1
+    message_seq = {identity: seq for seq, identity in enumerate(selected_message_ids, first_sequence)}
+    selected_ids = selected_query.with_entities(Message.id).statement
+    selected_versions = selected_query.with_entities(Message.current_version_id).statement
+    messages = selected_query.with_entities(Message, MessageVersion).order_by(Message.order_key).yield_per(100)
+    total = message_count
     package_id = uuid.uuid4()
     exported_at = datetime.now(timezone.utc)
 
@@ -93,30 +127,41 @@ def create_context_package(
         raise ContextPackageError("Invalid export storage path.")
     export_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{_safe_filename(conversation.display_title)}.context.zip"
-    destination = export_dir / filename
+    # A failed retry must never overwrite another still-referenced result.
+    destination = export_dir / f"{package_id.hex}-{filename}"
     temporary = staging_path(destination)
+    cleanup_paths.append(temporary)
     jsonl_path = staging_path(export_dir / "conversation.canjsonl")
+    cleanup_paths.append(jsonl_path)
 
-    links = (
-        db.query(MessageVersionAttachment)
-        .filter(MessageVersionAttachment.message_version_id.in_(selected_version_ids))
-        .order_by(MessageVersionAttachment.message_version_id, MessageVersionAttachment.display_order)
-        .all()
-    )
-    links_by_version: dict[uuid.UUID, list[MessageVersionAttachment]] = {}
-    for link in links:
-        links_by_version.setdefault(link.message_version_id, []).append(link)
     attachment_query = db.query(Attachment).filter(
         Attachment.conversation_id == conversation.id,
-        Attachment.deleted_at.is_(None),
-        Attachment.status != "detached",
-    )
+        Attachment.deleted_at.is_(None), Attachment.status != "detached")
     if scope_kind == "reading_scope":
-        attachment_query = attachment_query.filter(Attachment.id.in_({link.attachment_id for link in links}))
-    attachments = {row.id: row for row in attachment_query.all()}
-    message_seq = {message.id: all_sequence[message.id] for message, _ in messages}
-
-    records: list[dict[str, Any]] = [
+        attachment_query = attachment_query.filter(Attachment.id.in_(select(MessageVersionAttachment.attachment_id).where(
+            MessageVersionAttachment.message_version_id.in_(selected_versions))))
+    attachment_count = attachment_query.count()
+    if attachment_count > get_settings().bundle_max_entries:
+        raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
+    attachment_ids = attachment_query.with_entities(Attachment.id).statement
+    # References and bodies advance in the same stable order without a global link map.
+    links = iter(db.query(Message.id, MessageVersionAttachment).join(
+        MessageVersionAttachment, MessageVersionAttachment.message_version_id == Message.current_version_id)
+        .filter(Message.id.in_(selected_ids), MessageVersionAttachment.attachment_id.in_(attachment_ids))
+        .order_by(Message.order_key, MessageVersionAttachment.display_order, MessageVersionAttachment.id).yield_per(100))
+    resources.callback(links.close)
+    next_link = next(links, None)
+    reference_count = 0
+    annotations = db.query(ConversationAnnotation).filter(
+        ConversationAnnotation.conversation_id == conversation.id,
+        ConversationAnnotation.subject_key == subject_key,
+        ConversationAnnotation.is_deleted.is_(False), ConversationAnnotation.message_id.in_(selected_ids))
+    anchor_versions = db.query(MessageVersion).filter(
+        MessageVersion.id.in_(annotations.with_entities(ConversationAnnotation.message_version_id).statement),
+        MessageVersion.id.not_in(selected_versions), MessageVersion.message_id.in_(selected_ids))
+    has_anchor_versions = db.query(anchor_versions.exists()).scalar()
+    records = resources.enter_context(_JsonlRecords(jsonl_path, progress_callback))
+    records.append(
         {
             "record_type": "manifest",
             "format": "chat-reader-canonical-jsonl",
@@ -136,22 +181,23 @@ def create_context_package(
             },
             "selection": {
                 "scope": "all_current_messages" if scope_kind == "full_conversation" else "selected_messages",
-                "message_count": len(messages),
+                "message_count": message_count,
                 "first_message_seq": first_sequence,
                 "last_message_seq": last_sequence,
             },
-            "content": {"format": "markdown", "versions": "current_only", "attachments": "metadata_and_objects" if include_attachments else "metadata_only"},
-        },
-    ]
+            "content": {"format": "markdown", "versions": "current_plus_annotation_anchors" if has_anchor_versions else "current_only", "attachments": "metadata_and_objects" if include_attachments else "metadata_only"},
+        }
+    )
     project_context = _project_context(db, conversation.id)
     if project_context is not None:
         records.append(project_context)
 
     for processed, (message, version) in enumerate(messages, start=1):
+        records.progress = (min(55, round(processed * 55 / total)), processed, total)
         records.append({
             "record_type": "message",
             "id": str(message.id),
-            "seq": all_sequence[message.id],
+            "seq": message_seq[message.id],
             "order_key": message.order_key,
             "role": message.role,
             "turn_index": message.turn_index,
@@ -159,9 +205,9 @@ def create_context_package(
             "created_at": _dt(message.created_at),
             "current_version": _version_payload(version),
         })
-        for link in links_by_version.get(version.id, []):
-            if link.attachment_id not in attachments:
-                continue
+        while next_link is not None and next_link[0] == message.id:
+            link = next_link[1]
+            reference_count += 1
             records.append({
                 "record_type": "attachment_ref",
                 "message_id": str(message.id),
@@ -176,6 +222,7 @@ def create_context_package(
                 "alt_text": link.alt_text,
                 "caption": link.caption,
             })
+            next_link = next(links, None)
         _report(progress_callback, "serializing", min(55, round(processed * 55 / total)), processed, total)
 
     for offset in range(0, len(selected_message_ids), 100):
@@ -184,27 +231,32 @@ def create_context_package(
             records.extend(refs)
 
     asset_entries: dict[str, tuple[AssetObject, Path]] = {}
-    available_objects: set[uuid.UUID] = set()
+    physical_objects: set[uuid.UUID] = set()
     missing_objects: set[str] = set()
     excluded_objects: set[uuid.UUID] = set()
     omitted_objects: set[uuid.UUID] = set()
     available_attachments = 0
-    for attachment in sorted(attachments.values(), key=lambda item: str(item.id)):
+    for attachment in attachment_query.options(joinedload(Attachment.asset_object)).order_by(Attachment.id).yield_per(100):
         asset = attachment.asset_object
+        if attachment.asset_object_id:
+            physical_objects.add(attachment.asset_object_id)
         resolution_status = attachment.resolution_status
         object_payload = None
-        if asset is None or asset.status != "available" or not scan_status_allows_use(asset.scan_status):
+        if asset is None or asset.status != "available" or asset.deleted_at is not None or not scan_status_allows_use(asset.scan_status):
             resolution_status = "missing"
             missing_objects.add(str(asset.id if asset is not None else attachment.id))
         else:
-            source_path = get_asset_store().resolve_key(asset.storage_key)
-            if not source_path.is_file():
+            try:
+                source_path = get_asset_store().resolve_key(asset.storage_key)
+            except (FileNotFoundError, ValueError):
+                source_path = None
+            if source_path is None or not source_path.is_file():
                 resolution_status = "missing"
                 missing_objects.add(str(asset.id))
             else:
                 byte_size = source_path.stat().st_size
-                if byte_size != asset.byte_size:
-                    raise ContextPackageError("Attachment size validation failed.")
+                if include_attachments and byte_size != asset.byte_size:
+                    raise ContextPackageError("CONTEXT_EXPORT_INTEGRITY")
                 object_path = f"assets/objects/{asset.sha256[:2]}/{asset.sha256}"
                 object_payload = {
                     "path": object_path,
@@ -212,10 +264,13 @@ def create_context_package(
                     "byte_size": asset.byte_size,
                 }
                 if include_attachments:
+                    if asset.byte_size > get_settings().bundle_max_object_bytes:
+                        raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
                     asset_entries.setdefault(object_path, (asset, source_path))
+                    if len(asset_entries) > get_settings().bundle_max_objects:
+                        raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
                 else:
                     omitted_objects.add(asset.id)
-                available_objects.add(asset.id)
                 available_attachments += 1
         records.append({
             "record_type": "attachment",
@@ -235,25 +290,12 @@ def create_context_package(
             },
         })
 
-    annotations = (
-        db.query(ConversationAnnotation)
-        .filter(
-            ConversationAnnotation.conversation_id == conversation.id,
-            ConversationAnnotation.subject_key == subject_key,
-            ConversationAnnotation.is_deleted.is_(False),
-            ConversationAnnotation.message_id.in_(selected_message_ids),
-        )
-        .order_by(ConversationAnnotation.created_at.asc())
-        .all()
-    )
-    anchor_version_ids = {item.message_version_id for item in annotations if item.message_version_id} - set(selected_version_ids)
-    if anchor_version_ids:
-        records[0]["content"]["versions"] = "current_plus_annotation_anchors"
-        for version in db.query(MessageVersion).filter(
-            MessageVersion.id.in_(anchor_version_ids), MessageVersion.message_id.in_(selected_message_ids),
-        ).order_by(MessageVersion.message_id, MessageVersion.version_number):
+    if has_anchor_versions:
+        for version in anchor_versions.order_by(MessageVersion.message_id, MessageVersion.version_number).yield_per(100):
             records.append({"record_type": "message_version", "message_id": str(version.message_id), **_version_payload(version)})
-    for annotation in annotations:
+    annotation_ids = set()
+    for annotation in annotations.order_by(ConversationAnnotation.created_at, ConversationAnnotation.id).yield_per(100):
+        annotation_ids.add(str(annotation.id))
         records.append({
             "record_type": "annotation",
             "id": str(annotation.id),
@@ -281,7 +323,6 @@ def create_context_package(
         .first()
     )
     if notebook is not None:
-        annotation_ids = {str(item.id) for item in annotations}
         blocks = [block for block in notebook.blocks if isinstance(block, dict) and (
             block.get("type") == "markdown" or (
                 block.get("type") == "annotation_reference" and str(block.get("annotation_id")) in annotation_ids
@@ -301,11 +342,8 @@ def create_context_package(
             "created_at": _dt(notebook.created_at),
         })
 
-    records.append({"record_type": "end", "record_count": len(records) + 1, "message_count": len(messages)})
-    with jsonl_path.open("wb") as output:
-        for record in records:
-            output.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
-            output.write(b"\n")
+    records.append({"record_type": "end", "record_count": len(records) + 1, "message_count": message_count})
+    records.close()
     jsonl_sha, jsonl_size = _hash_file(jsonl_path)
     manifest = {
         "format": CONTEXT_PACKAGE_FORMAT,
@@ -319,7 +357,7 @@ def create_context_package(
             "title": conversation.display_title,
             "conversation_revision": conversation.offline_revision,
             "current_versions_only": True,
-            "message_count": len(messages),
+            "message_count": message_count,
         },
         "scope": {
             "kind": scope_kind,
@@ -328,8 +366,8 @@ def create_context_package(
             "current_versions_only": True,
             "first_message_seq": first_sequence,
             "last_message_seq": last_sequence,
-            "message_count": len(messages),
-            "is_complete_conversation": first_sequence == 1 and last_sequence == len(all_sequence),
+            "message_count": message_count,
+            "is_complete_conversation": first_sequence == 1 and last_sequence == message_count,
         },
         "included_content": {
             "conversation_description": True,
@@ -345,19 +383,19 @@ def create_context_package(
                for path, (asset, _) in asset_entries.items()},
         },
         "assets": {
-            "attachment_records": len(attachments),
-            "physical_objects": len({item.asset_object_id for item in attachments.values() if item.asset_object_id}),
+            "attachment_records": attachment_count,
+            "physical_objects": len(physical_objects),
             "available_objects": len(asset_entries),
             "missing_objects": len(missing_objects),
             "excluded_sensitive_objects": len(excluded_objects),
             "total_available_bytes": sum(asset.byte_size for asset, _ in asset_entries.values()),
         },
         "conversation_completeness": (
-            "complete" if first_sequence == 1 and last_sequence == len(all_sequence) else "partial"
+            "complete" if first_sequence == 1 and last_sequence == message_count else "partial"
         ),
         "asset_completeness": (
             "none"
-            if not attachments
+            if not attachment_count
             else "partial"
             if missing_objects or excluded_objects or omitted_objects
             else "complete"
@@ -368,16 +406,16 @@ def create_context_package(
             "omitted_object_count": len(omitted_objects),
             "metadata_included": True,
             "binary_objects_included": bool(asset_entries),
-            "record_count": len(attachments),
-            "reference_count": len(links),
+            "record_count": attachment_count,
+            "reference_count": reference_count,
             "resolved_attachment_count": available_attachments,
-            "physical_object_count": len({item.asset_object_id for item in attachments.values() if item.asset_object_id}),
+            "physical_object_count": len(physical_objects),
             "available_object_count": len(asset_entries),
             "missing_object_count": len(missing_objects),
             "excluded_object_count": len(excluded_objects),
             "completeness": (
                 "none"
-                if not attachments
+                if not attachment_count
                 else "partial"
                 if missing_objects or excluded_objects or omitted_objects
                 else "complete"
@@ -397,27 +435,40 @@ def create_context_package(
             manifest["continuation"] = continuation_metadata
             for name, data in continuation_members.items():
                 manifest["files"][name] = {"sha256": hashlib.sha256(data).hexdigest(), "byte_size": len(data)}
+    if len(asset_entries) > get_settings().bundle_max_objects or 2 + len(asset_entries) + len(continuation_members) > get_settings().bundle_max_entries:
+        raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
+    budget = _WriteBudget(progress_callback)
     try:
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
-            archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"))
-            archive.write(jsonl_path, "conversation.canjsonl")
+            _write_stream(archive, "manifest.json", (json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),), budget=budget)
+            _write_stream(archive, "conversation.canjsonl", _asset_chunks(jsonl_path, jsonl_size), budget=budget)
             for member_name, member_bytes in continuation_members.items():
-                archive.writestr(member_name, member_bytes)
-            for index, (object_path, (_, source_path)) in enumerate(asset_entries.items(), start=1):
-                archive.write(source_path, object_path)
-                _report(progress_callback, "packaging_assets", 55 + round(index * 40 / max(len(asset_entries), 1)), len(messages), total)
+                _write_stream(archive, member_name, (member_bytes,), budget=budget)
+            for index, (object_path, (asset, source_path)) in enumerate(asset_entries.items(), start=1):
+                budget.phase = "assets"
+                budget.processed = index - 1
+                budget.total = max(len(asset_entries), 1)
+                actual = _write_stream(archive, object_path, _asset_chunks(source_path, asset.byte_size), budget=budget)
+                if actual != {"sha256": asset.sha256, "byte_size": asset.byte_size}:
+                    raise ContextPackageError("CONTEXT_EXPORT_INTEGRITY")
+                _report(progress_callback, "packaging_assets", 55 + round(index * 40 / max(len(asset_entries), 1)), message_count, total)
     finally:
         jsonl_path.unlink(missing_ok=True)
 
     artifact_id = uuid.uuid4()
     try:
-        latest_revision = db.query(Conversation.offline_revision).filter(
-            Conversation.id == conversation.id, Conversation.deleted_at.is_(None)).scalar()
-        latest_generation = db.query(ContinuationState.generation).filter_by(conversation_id=conversation.id).scalar()
-        if (latest_revision != source_revision
-                or context_dependency_digest(db, conversation.id, subject_key) != source_dependencies
-                or (include_continuation and latest_generation != source_generation)):
-            raise ContextPackageError("Context source changed during export; retry with the current version.")
+        if temporary.stat().st_size > get_settings().bundle_max_compressed_bytes:
+            raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
+        def check_source(*, lock=False):
+            _check_publication(publication_db, conversation_id, ownership_scope, source_owner,
+                source_revision, source_dependencies, source_generation, subject_key,
+                include_continuation, {asset.id for asset, _ in asset_entries.values()}, lock=lock)
+        check_source()
+        if destination.exists():
+            raise ContextPackageError("CONTEXT_EXPORT_STORAGE_UNAVAILABLE")
+        cleanup_paths.append(destination)
+        if record_artifact:
+            track_archive_object(publication_db, LocalAssetStore(export_root), destination.relative_to(export_root).as_posix())
         published = publish_zip_artifact(
             temporary,
             destination,
@@ -425,6 +476,8 @@ def create_context_package(
             artifact_id=artifact_id,
             required_entries=("manifest.json", "conversation.canjsonl"),
         )
+        # ZIP validation may take time: fence source access again after I/O.
+        check_source(lock=record_artifact)
     finally:
         temporary.unlink(missing_ok=True)
     artifact = ExportArtifact(
@@ -440,23 +493,117 @@ def create_context_package(
     )
     if not record_artifact:
         _report(progress_callback, "publishing", 99, total, total)
+        cleanup_paths.remove(destination)
         return artifact
-    db.add(artifact)
-    db.add(ConversationEvent(
+    publication_db.add(artifact)
+    publication_db.add(ConversationEvent(
         id=uuid.uuid4(),
         conversation_id=conversation.id,
         event_type="context_package_exported",
         payload={
             "scope_kind": scope_kind,
-            "message_count": len(messages),
-            "attachment_count": len(attachments),
+            "message_count": message_count,
+            "attachment_count": attachment_count,
             "excluded_sensitive_objects": len(excluded_objects),
         },
         created_by="user",
     ))
-    db.flush()
+    publication_db.flush()
     _report(progress_callback, "publishing", 99, total, total)
+    cleanup_paths.remove(destination)
     return artifact
+
+
+def _check_publication(db, conversation_id, scope, source_owner, source_revision,
+    source_dependencies, source_generation, subject_key, include_continuation, asset_ids, *, lock):
+    from app.models.context_continuation import ContinuationState
+    from app.services.context_dependencies import context_dependency_digest
+
+    # Match mutation lock order: owner, conversation, then ordered asset objects.
+    # Temporary read-only snapshots must never request row locks.
+    if lock and source_owner is not None:
+        owner = db.query(User).filter(User.id == source_owner).populate_existing().with_for_update(read=True).one_or_none()
+        if owner is None or not owner.can_login:
+            raise ContextPackageError("CONTEXT_EXPORT_ACCOUNT_UNAVAILABLE")
+    latest = _require_source(db, conversation_id, scope, lock=lock)
+    if latest.owner_user_id != source_owner:
+        raise ContextPackageError("CONTEXT_EXPORT_SOURCE_UNAVAILABLE")
+    _require_assets(db, asset_ids, lock=lock)
+    generation = db.query(ContinuationState.generation).filter_by(conversation_id=conversation_id).scalar()
+    if (latest.offline_revision != source_revision
+            or context_dependency_digest(db, conversation_id, subject_key) != source_dependencies
+            or (include_continuation and generation != source_generation)):
+        raise ContextPackageError("CONTEXT_EXPORT_SOURCE_CHANGED")
+
+
+def _require_source(db, conversation_id, scope, *, lock=False):
+    query = db.query(Conversation).filter(Conversation.id == conversation_id, Conversation.deleted_at.is_(None))
+    if scope is not None:
+        query = query.filter(scope.predicate(Conversation))
+    if lock:
+        query = query.with_for_update(read=True)
+    conversation = query.populate_existing().one_or_none()
+    if conversation is None:
+        raise ContextPackageError("CONTEXT_EXPORT_SOURCE_UNAVAILABLE")
+    if conversation.owner_user_id is not None:
+        user = db.get(User, conversation.owner_user_id, populate_existing=True)
+        if user is None or not user.can_login:
+            raise ContextPackageError("CONTEXT_EXPORT_ACCOUNT_UNAVAILABLE")
+    return conversation
+
+
+def _require_assets(db, ids, *, lock=False):
+    ordered = sorted(ids)
+    for offset in range(0, len(ordered), 200):
+        batch = ordered[offset:offset + 200]
+        query = db.query(AssetObject).filter(AssetObject.id.in_(batch)).order_by(AssetObject.id).populate_existing()
+        if lock:
+            query = query.with_for_update(read=True)
+        rows = query.all()
+        if len(rows) != len(batch) or any(row.status != "available" or row.deleted_at is not None
+                or not scan_status_allows_use(row.scan_status) for row in rows):
+            raise ContextPackageError("CONTEXT_EXPORT_ASSET_UNAVAILABLE")
+
+
+class _JsonlRecords:
+    """Write each bounded record immediately; close before hashing or failure cleanup."""
+
+    def __init__(self, path, callback):
+        self.path = path
+        self.callback = callback
+        self.count = 0
+        self.byte_size = 0
+        self.progress = (0, 0, 1)
+        self.last_report = time.monotonic()
+        self.resources = ExitStack()
+
+    def __enter__(self):
+        self.output = self.resources.enter_context(self.path.open("wb"))
+        return self
+
+    def __exit__(self, *args):
+        return self.resources.__exit__(*args)
+
+    def close(self):
+        self.resources.close()
+
+    def __len__(self):
+        return self.count
+
+    def append(self, record):
+        line = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
+        if len(line) > get_settings().canjson_max_line_bytes or self.byte_size + len(line) > get_settings().bundle_max_expanded_bytes:
+            raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
+        self.output.write(line)
+        self.count += 1
+        self.byte_size += len(line)
+        if self.callback and time.monotonic() - self.last_report >= 0.25:
+            self.callback("serializing", *self.progress)
+            self.last_report = time.monotonic()
+
+    def extend(self, records):
+        for record in records:
+            self.append(record)
 
 
 def _project_context(db: Session, conversation_id: uuid.UUID) -> dict[str, Any] | None:

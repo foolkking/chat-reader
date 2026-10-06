@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.config import get_settings
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.user import User
+from app.services.ownership import LEGACY_OWNER_USER_ID
 
 
 @pytest.fixture()
@@ -21,6 +23,11 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestCli
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}")
     testing_session_local = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     Base.metadata.create_all(bind=engine)
+    # Match migration 0030: imported rows belong to a real legacy administrator.
+    # Source-access checks must not be bypassed for orphaned fixture ownership.
+    with testing_session_local() as db:
+        db.add(User(id=LEGACY_OWNER_USER_ID, role="ADMIN", status="ACTIVE"))
+        db.commit()
 
     def override_get_db() -> Generator[Session, None, None]:
         db = testing_session_local()

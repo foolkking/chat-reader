@@ -901,6 +901,7 @@ def process_background_job(
                 if payload.get("export_format") == "context_package":
                     artifact = create_context_package(
                         db,
+                        ownership_scope=job_scope,
                         conversation_id=conversation_id,
                         job_id=job.id,
                         scope_kind=str(payload.get("context_scope") or "full_conversation"),

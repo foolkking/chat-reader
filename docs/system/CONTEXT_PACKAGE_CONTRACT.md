@@ -211,6 +211,28 @@ corrupt optional objects fall back to Raw-only without publishing half the saved
 set. Publication rechecks source revision, supplementary dependency digest and
 saved-file generation, rejecting concurrent source changes.
 
+Dedicated online Context builds stream canonical JSONL records and batches of 100
+message bodies/reference rows. Only bounded identity metadata is retained; the
+selected-range message budget excludes earlier history. Attachments, annotation
+anchors and annotations stream too; source refs use batches of 100. Individual
+records/notebooks remain subject to the CanJSON line-byte limit. Object, entry,
+expanded and compressed limits use the existing bundle configuration.
+
+Permanent worker exports use the existing PostgreSQL repeatable-read snapshot.
+Publication rechecks the live source/account, asset status, source revision,
+supplementary digest and saved-file generation before and after ZIP validation/I/O.
+The final permanent-export check shares locks on owner, conversation and ordered
+asset objects until the worker transaction completes. Read-only temporary snapshots
+do not take locks. Snapshot consistency never substitutes for current authorization.
+
+Copied asset streams must match stored size and SHA-256. Missing objects remain
+honest partial Raw packages; damaged included bytes fail instead of being advertised
+as complete. Metadata-only export does not require intact binary content. Failure,
+cancellation and transaction rollback remove registered staging/final files. Physical
+result paths are unique per build; user-facing download filenames stay unchanged.
+Errors use `CONTEXT_EXPORT_*` codes with localized retry/reselection instructions.
+This is delivery integrity, not semantic validation of saved Current or Index.
+
 The fixed experimental runtime reads canonical v2 and legacy CanJSON 2.1,
 normalizes legacy scope/array files, rejects conflicting declarations, and applies
 bounded ZIP/JSON parsing. The actual pinned Skill readers accept canonical v2 but
