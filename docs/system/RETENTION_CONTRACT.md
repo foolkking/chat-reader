@@ -31,10 +31,13 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 - Submitted server time is shown through seconds, with full accessible date/time.
   In progress, Failed, Needs attention, Completed and Cancelled have distinct
   groups. Partial results belong under Needs attention. Only active work displays
-  a progress bar; errors retain the full recovery text.
+  a progress bar; errors retain the full recovery text. Single-package exports
+  commit both counters as 1; terminal single-item counters are omitted.
 - Retry/cancel preserves keyboard focus when a row moves between groups, without
   stealing focus from another control. Dismissed terminal notifications are not
-  reintroduced by the short-lived local completion state.
+  reintroduced by the short-lived local completion state. Mutation and late task
+  lookup callbacks must still belong to the current authentication generation
+  before changing cached rows, notifications or recovery errors.
 
 - Closing Tasks does not cancel work or delete canonical data. Explicitly closing
   a temporary export result releases its usage under the export policy; it does not

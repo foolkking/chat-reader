@@ -86,7 +86,9 @@ export function ExportPanel({
   const unavailableCount = attachments.filter((item) => item.resolution_status !== "resolved" || !item.asset_object).length;
   const exportOptions = { includeDescription, includeAnnotations, includeNotebook, includeSourceRefs };
   const currentKey = JSON.stringify({ conversationId, sourceRevision, continuationGeneration: needsContinuationState ? continuationState.data?.generation : null, format, includeAttachments, includeContinuation, ...exportOptions });
-  const artifactId = jobKey === currentKey && !continuationUnavailable && !(needsContinuationState && continuationState.isFetching) ? taskQuery.data?.result.artifact_id : null;
+  // A background refresh with cached, unchanged generation must not repeatedly
+  // unmount a valid immutable download. A changed generation still breaks the key.
+  const artifactId = jobKey === currentKey && !continuationUnavailable ? taskQuery.data?.result.artifact_id : null;
   const exportScope = `${maintenance ? "maintenance" : "export"}:${conversationId}`;
   const plainHref = getConversationExportUrl(conversationId, {
     format: format === "canjson" ? "canjson_v2" : "markdown_v2",

@@ -1245,6 +1245,11 @@ def process_background_job(
                 "completed_at": now,
                 "error_message": None,
             }
+            if job.job_type == "conversation_export":
+                # Progress reports use a separate PostgreSQL session and may
+                # count messages, assets, then one package. Do not pair a stale
+                # in-memory message total with the final package total (e.g. 2/1).
+                committed_values.update(processed_items=1, total_items=1)
             post_commit_cleanup: list[tuple[str, list[Path], Path]] = []
             if job.job_type == "context_return":
                 post_commit_cleanup.append(("export", [return_upload_path], Path(get_settings().export_storage_dir)))

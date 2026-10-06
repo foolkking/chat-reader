@@ -12,6 +12,7 @@ import { ContentCleanupDialog } from "../conversations/content-cleanup-panel";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { SettingsFocusedDialog } from "../../components/settings-focused-dialog";
 import { fullActivityTime } from "../../lib/activity-time";
+import { authenticationGeneration } from "../../lib/offline-access";
 
 export function ImportTaskMonitor({ placement, forceVisible = false }: { placement: "sidebar" | "mobile" | "center"; forceVisible?: boolean }) {
   const t = useTranslations();
@@ -64,9 +65,10 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   }, [tasksQuery.data]);
   const retryMutation = useMutation({
     mutationFn: retryTask,
-    onMutate: () => setActionError(null),
-    onError: () => setActionError(zh ? "重试未成功，请再次重试。" : "Could not retry the task. Try again."),
-    onSuccess: (task) => {
+    onMutate: () => { setActionError(null); return authenticationGeneration(); },
+    onError: (_error, _id, generation) => { if (generation === authenticationGeneration()) setActionError(zh ? "重试未成功，请再次重试。" : "Could not retry the task. Try again."); },
+    onSuccess: (task, _id, generation) => {
+      if (generation !== authenticationGeneration()) return;
       queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
         task,
         ...current.filter((item) => item.job_id !== task.job_id),
@@ -75,9 +77,10 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   });
   const cancelMutation = useMutation({
     mutationFn: cancelTask,
-    onMutate: () => setActionError(null),
-    onError: () => setActionError(zh ? "取消未成功，任务可能仍在运行，请重试。" : "Cancellation failed. The task may still be running; retry."),
-    onSuccess: (task) => {
+    onMutate: () => { setActionError(null); return authenticationGeneration(); },
+    onError: (_error, _id, generation) => { if (generation === authenticationGeneration()) setActionError(zh ? "取消未成功，任务可能仍在运行，请重试。" : "Cancellation failed. The task may still be running; retry."); },
+    onSuccess: (task, _id, generation) => {
+      if (generation !== authenticationGeneration()) return;
       if (task.status === "cancelled") {
         setCompletedTask(task);
         void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
@@ -93,12 +96,15 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
 
   const dismissMutation = useMutation({
     mutationFn: dismissCleanupScan,
-    onMutate: () => setActionError(null),
-    onError: () => setActionError(zh ? "忽略失败，请重试。" : "Could not dismiss this result. Retry."),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }),
+    onMutate: () => { setActionError(null); return authenticationGeneration(); },
+    onError: (_error, _id, generation) => { if (generation === authenticationGeneration()) setActionError(zh ? "忽略失败，请重试。" : "Could not dismiss this result. Retry."); },
+    onSuccess: (_result, _id, generation) => {
+      if (generation === authenticationGeneration()) return queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] });
+    },
   });
   useEffect(() => {
     if (tasksQuery.isError || !tasksQuery.data) return;
+    const generation = authenticationGeneration();
     const current = tasksQuery.data;
     const previousById = new Map(previousTasks.current.map((task) => [task.job_id, task]));
     const currentIds = new Set(current.map((task) => task.job_id));
@@ -107,6 +113,7 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     );
     previousTasks.current = current;
     const handleTerminal = (result: BackgroundTaskRead) => {
+        if (generation !== authenticationGeneration()) return;
         if (!isTerminalTask(result) || handledTerminalTaskIds.current.has(result.job_id)) return;
         handledTerminalTaskIds.current.add(result.job_id);
         if (result.job_type === "content_noise_scan") {
@@ -133,7 +140,10 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
       if (previous && !isTerminalTask(previous) && isTerminalTask(task)) handleTerminal(task);
     }
     for (const task of disappeared) {
-      void getTask(task.job_id).then(handleTerminal).catch(() => { previousTasks.current.push(task); setTrackingError(true); });
+      void getTask(task.job_id).then(handleTerminal).catch(() => {
+        if (generation !== authenticationGeneration()) return;
+        previousTasks.current.push(task); setTrackingError(true);
+      });
     }
   }, [queryClient, tasksQuery.data, tasksQuery.isError]);
 
@@ -304,7 +314,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending ? "text-[var(--warning)]" : ""}>{partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
         {validTimestamp ? <time dateTime={timestamp} title={fullActivityTime(timestamp, resolvedLocale)} aria-label={`${zh ? "提交于" : "Submitted"} ${fullActivityTime(timestamp, resolvedLocale)}`} className="tabular-nums">{new Intl.DateTimeFormat(resolvedLocale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).format(new Date(timestamp))}</time> : null}
-        {task.total_items > 0 ? <span className="tabular-nums">{task.processed_items} / {task.total_items}</span> : null}
+        {task.total_items > 0 && (active || task.total_items > 1) ? <span className="tabular-nums">{task.processed_items} / {task.total_items}</span> : null}
       </div>
       {active ? <div role="progressbar" aria-label={taskTypeLabel(task, zh)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-valuetext={`${phaseLabel(task, zh)} · ${progress}%`} className="mt-2 h-1 overflow-hidden rounded-full bg-subtle">
         <div

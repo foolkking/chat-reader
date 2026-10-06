@@ -49,8 +49,12 @@ function Delivery({ artifactId, scope, label, onRegenerated }: { artifactId: str
         const task = await exportArtifactApi.regenerate(artifactId, requestKey.current);
         if (generation !== authenticationGeneration()) return;
         client.setQueryData(["task", task.job_id], task);
+        // The result owner can outlive this delivery control (e.g. a background
+        // continuation refresh temporarily hides it). Bind the new job as soon
+        // as the server accepts it, even if only this child was unmounted.
+        onRegenerated?.(task);
         await Promise.all(["active-tasks", "personal-archive-tasks", "system-archive-tasks"].map(key => client.invalidateQueries({ queryKey: [key] })));
-        if (mounted.current) onRegenerated?.(task);
+        if (generation !== authenticationGeneration()) return;
         if (mounted.current && !onRegenerated) window.dispatchEvent(new Event("chat-reader:open-task-center"));
       }
     } catch {

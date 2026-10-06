@@ -1,5 +1,15 @@
 # Artifact Lifecycle Contract
 
+## Pending Task Center follow-up — 2026-10-06
+
+Same-generation background Continuation refresh keeps the existing immutable
+export delivery mounted. An accepted regeneration binds its job and original
+options to the owning panel before global refreshes, even if only its delivery
+child was removed by an option change. Changed generations invalidate the match;
+late account-generation responses cannot update another account's cache/events.
+[Stage verification](../execution/TASK_CENTER_CLARITY_2026-10-06.md) distinguishes
+passed original cases from the follow-up tests awaiting CI and deployment.
+
 ## Attachment bundles — 2026-10-06 (deployed)
 
 `markdown_bundle` and `canjson_bundle` use one PostgreSQL READ ONLY / REPEATABLE

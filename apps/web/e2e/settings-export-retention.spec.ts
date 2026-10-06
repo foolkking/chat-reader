@@ -86,6 +86,72 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
   });
 }
 
+test("regeneration survives a polling refresh and a temporary option change", async ({ page, context, playwright, baseURL }) => {
+  const admin = await settingsAdmin(playwright.request, baseURL!);
+  let releaseState!: () => void, releaseResult!: () => void;
+  const stateGate = new Promise<void>(resolve => { releaseState = resolve; });
+  const resultGate = new Promise<void>(resolve => { releaseResult = resolve; });
+  let stateArrived!: () => void, resultArrived!: () => void;
+  const stateReady = new Promise<void>(resolve => { stateArrived = resolve; });
+  const resultReady = new Promise<void>(resolve => { resultArrived = resolve; });
+  try {
+    await context.addCookies((await admin.storageState()).cookies);
+    await settingsAppearance(context.request, baseURL!, "en-US");
+    await page.setViewportSize({ width: 768, height: 900 });
+    const created = await admin.post("/api/conversations", { data: { title: "Synthetic regeneration race", messages: [
+      { role: "user", content_markdown: "Synthetic preserved regeneration" },
+      { role: "assistant", content_markdown: "Synthetic answer" },
+    ] } });
+    expect(created.status()).toBe(201);
+    const id = (await created.json()).conversation.id;
+    await page.goto(`/conversations/${id}`);
+    await action(page, 768, /^(接续|Continuation)$/);
+    await page.getByRole("button", { name: "Prepare maintenance", exact: true }).click();
+    const preparation = page.getByTestId("maintenance-preparation");
+    const queued = page.waitForResponse(response => response.url().endsWith(`/conversations/${id}/exports`) && response.request().method() === "POST");
+    await preparation.getByRole("button", { name: "Generate export", exact: true }).click();
+    const job = await (await queued).json();
+    const download = preparation.getByRole("button", { name: "Download Context Package", exact: true });
+    await expect(download).toBeEnabled();
+    const original = (await (await admin.get(`/api/tasks/${job.job_id}`)).json()).result.artifact_id;
+    exportFixture(original, true);
+    const regenerate = preparation.getByRole("button", { name: "Generate again", exact: true });
+    await expect(regenerate).toBeEnabled();
+    let nextId = "";
+    await page.route(`**/api/exports/${original}/regenerate`, async route => {
+      const response = await route.fetch();
+      expect(response.status()).toBe(202);
+      nextId = (await response.json()).job_id;
+      resultArrived(); await resultGate; await route.fulfill({ response });
+    });
+    await page.route(`**/api/conversations/${id}/continuation`, async route => {
+      const response = await route.fetch();
+      stateArrived(); await stateGate; await route.fulfill({ response });
+    });
+    await regenerate.click(); await resultReady; await stateReady;
+    await expect(preparation.getByRole("button", { name: "Creating task…", exact: true })).toBeVisible();
+    // Changing options hides the old result without closing its owning panel.
+    // A late accepted job must keep its original options and still be recoverable.
+    const attachments = preparation.getByRole("checkbox", { name: /Include attachments/ });
+    await attachments.check();
+    const responseArrived = page.waitForResponse(response => response.url().endsWith(`/exports/${original}/regenerate`));
+    releaseResult(); await responseArrived;
+    releaseState();
+    await expect(attachments).toBeChecked();
+    await expect(preparation.getByRole("button", { name: "Generate export", exact: true })).toBeEnabled();
+    await attachments.uncheck();
+    await expect(download).toBeEnabled();
+    const next = await (await admin.get(`/api/tasks/${nextId}`)).json();
+    expect(next.status).toBe("committed");
+    expect(next.result.parent_task_id).toBe(job.job_id);
+    const saved = page.waitForEvent("download");
+    await download.click();
+    const file = await saved;
+    expect(await file.failure()).toBeNull();
+    expect(strFromU8(unzipSync(await readFile((await file.path())!))["conversation.canjsonl"])).toContain("Synthetic preserved regeneration");
+  } finally { releaseState(); releaseResult(); await admin.dispose(); }
+});
+
 test("two tabs, refresh and a failed status request retain the last usable export", async ({ browser, playwright, baseURL }) => {
   test.setTimeout(150_000);
   const admin = await settingsAdmin(playwright.request, baseURL!);

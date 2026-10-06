@@ -1,6 +1,6 @@
 # Markdown 文档台账
 
-`execution/TASK_CENTER_CLARITY_2026-10-06.md` tracks the pending Task Center source,
+`execution/TASK_CENTER_CLARITY_2026-10-06.md` tracks the pending Task Center source, failed initial CI and follow-up race fixes,
 format/time hierarchy, grouping/focus fixes and real regression verification.
 `system/RETENTION_CONTRACT.md` and `api-reference.md` own the additive contract;
 this work does not change the production or retention boundaries below.
@@ -1126,3 +1126,6 @@ acceptance remains `NOT_VERIFIED` pending operator-run browser verification.
 component reuse/two-point retention documented in ARTIFACT_LIFECYCLE_CONTRACT,
 deployment.md, PROJECT_STATE and EXPORT_RETENTION execution; production remains
 5d48b68/0047 until a separately verified release. Off-site copies remain deferred.
+
+`evidence/task-center-2026-10-06/` contains synthetic intermediate screenshots from
+CI 37448984796/artifact 11406718713; the counter correction is not yet shown.

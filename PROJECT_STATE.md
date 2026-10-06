@@ -42,8 +42,11 @@ rollback requires loading it first. Final server available space: **15,887,081,4
 The attachment-integrity stage is delivered. The continuous optimization goal
 remains active. The next Task Center stage separates operation, source, file format
 and server submission time, brings failures/partial results before completed work,
-and removes terminal progress bars. Its code and regression coverage are under
-verification, not deployed. See the [stage record](docs/execution/TASK_CENTER_CLARITY_2026-10-06.md).
+and removes terminal progress bars. CI 37448984796 passed API/Web but failed one
+maintenance regeneration race (settings 169 passed / 1 failed); no image was built.
+Follow-ups fix polling/regeneration, late callbacks after account changes and
+PostgreSQL terminal export counters. New regressions await exact-source CI; none
+of this stage is deployed. See the [stage record](docs/execution/TASK_CENTER_CLARITY_2026-10-06.md).
 Off-site copies remain deferred,
 and no scheduled backups were added. The unrelated earlier Next stream-close
 observation remains unproven and is not claimed fixed.

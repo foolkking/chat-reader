@@ -104,6 +104,7 @@ def test_concurrent_messages_attachments_and_notes_use_one_snapshot(bundle_state
         assert db.get(Conversation, info["sources"][0]).display_title == "AFTER-TITLE"
         job = db.get(BackgroundJob, identity)
         assert job.status == "committed", job.error_message
+        assert job.processed_items == job.total_items == 1
         artifact = db.scalar(select(ExportArtifact))
         assert "100x" in artifact.filename
         with zipfile.ZipFile(artifact.storage_uri) as archive:
