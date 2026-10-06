@@ -1,4 +1,5 @@
 "use client";
+import { batchExportError } from "../../lib/batch-export-errors";
 import { ExportArtifactDelivery } from "../exporting/export-artifact-delivery";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -235,7 +236,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
   return (
     <div className="min-w-0 text-xs text-secondary" data-testid={`task-${task.job_type}-${task.status}`}>
       <div className="flex items-center justify-between gap-3">
-        <p className="truncate font-medium text-primary">{accountDelete ? (zh ? "删除用户账户" : "Delete user account") : task.job_type === "context_return" ? (zh ? "接收上下文接续" : "Receive context continuation") : task.job_type === "context_validation" ? (zh ? "旧接续校验（已停用）" : "Legacy continuation validation (retired)") : task.job_type === "context_object_cleanup" ? (zh ? "清理接续文件" : "Clean up continuation files") : task.job_type === "skill_object_cleanup" ? (zh ? "清理 Skill 文件" : "Clean up Skill files") : task.label || taskTypeLabel(task, zh)}</p>
+        <p className="truncate font-medium text-primary">{accountDelete ? (zh ? "删除用户账户" : "Delete user account") : task.job_type === "context_return" ? (zh ? "接收上下文接续" : "Receive context continuation") : task.job_type === "context_validation" ? (zh ? "旧接续校验（已停用）" : "Legacy continuation validation (retired)") : task.job_type === "context_object_cleanup" ? (zh ? "清理接续文件" : "Clean up continuation files") : task.job_type === "skill_object_cleanup" ? (zh ? "清理 Skill 文件" : "Clean up Skill files") : (task.job_type === "conversation_batch_export" ? taskTypeLabel(task, zh) : task.label || taskTypeLabel(task, zh))}</p>
         <div className="flex shrink-0 items-center gap-1">
           <span>{committed ? "100%" : `${task.progress}%`}</span>
           {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-subtle" aria-label={zh ? "关闭任务提示" : "Dismiss task"} title={zh ? "关闭任务提示" : "Dismiss task"}><X className="h-4 w-4" /></button> : null}
@@ -253,7 +254,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
       </div>
       {failed ? (
         <div className="mt-2">
-          <p className="line-clamp-2 text-[var(--danger)]">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : task.error_message || (zh ? "任务失败" : "Task failed")}</p>
+          <p className="line-clamp-2 text-[var(--danger)]">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : (task.job_type === "conversation_batch_export" ? batchExportError(task.error_message ?? undefined, zh) : task.error_message) || (zh ? "任务失败" : "Task failed")}</p>
           {onRetry && task.job_type !== "context_validation" ? (
             <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex items-center gap-1 font-medium text-[var(--danger)] underline">
               <RefreshCw className="h-3.5 w-3.5" /> {zh ? "重试" : "Retry"}
@@ -285,7 +286,7 @@ function TaskResultActions({ task, conversationId, compact, zh }: { task: Backgr
     <div className={`mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ${compact ? "text-[11px]" : "text-xs"}`} data-testid={`task-result-${task.job_type}`}>
       {(task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? <button ref={archiveTrigger} type="button" className="min-h-11 font-medium text-accent underline underline-offset-2" onClick={() => setArchiveOpen(true)}>{task.job_type.endsWith("_archive_preflight") ? (zh ? "查看预检并恢复" : "Review preview & restore") : (zh ? "查看归档详情" : "View archive details")}</button> : null}
       {archiveOpen ? <SettingsFocusedDialog category={task.job_type.startsWith("system_archive_") ? "admin-system" : "data"} initialArchiveTaskId={task.job_id} onClose={() => setArchiveOpen(false)} restoreFocus={() => archiveTrigger.current} /> : null}
-      {task.result.artifact_id && ["conversation_export", "context_package_export", "attachment_batch_download", "personal_archive_export", "system_archive_export"].includes(task.job_type) ? <ExportArtifactDelivery artifactId={task.result.artifact_id} scope="tasks" /> : task.result.download_url ? <a data-testid="task-result-download" className="font-medium text-accent underline underline-offset-2" href={String(task.result.download_url)}>{zh ? "\u4e0b\u8f7d\u7ed3\u679c" : "Download result"}</a> : null}
+      {task.result.artifact_id && ["conversation_export", "conversation_batch_export", "context_package_export", "attachment_batch_download", "personal_archive_export", "system_archive_export"].includes(task.job_type) ? <ExportArtifactDelivery artifactId={task.result.artifact_id} scope="tasks" /> : task.result.download_url ? <a data-testid="task-result-download" className="font-medium text-accent underline underline-offset-2" href={String(task.result.download_url)}>{zh ? "\u4e0b\u8f7d\u7ed3\u679c" : "Download result"}</a> : null}
       {conversationId && importIds.length <= 1 ? <Link data-testid="task-result-conversation" className="font-medium text-accent underline underline-offset-2" href={`/conversations/${conversationId}`}>{zh ? (task.job_type === "conversation_merge" ? "\u6253\u5f00\u5408\u5e76\u540e\u7684\u5bf9\u8bdd" : "\u6253\u5f00\u5bf9\u8bdd") : (task.job_type === "conversation_merge" ? "Open merged conversation" : "Open conversation")}</Link> : null}
       {importIds.length > 1 ? <><span className="text-secondary">{zh ? `\u5df2\u5bfc\u5165 ${importIds.length} \u4e2a\u5bf9\u8bdd` : `${importIds.length} conversations imported`}</span>{importIds.slice(0, 3).map((id, index) => <Link key={id} className="font-medium text-accent underline underline-offset-2" href={`/conversations/${id}`}>{zh ? `\u6253\u5f00\u7b2c ${index + 1} \u4e2a` : `Open ${index + 1}`}</Link>)}</> : null}
     </div>
@@ -299,6 +300,9 @@ function taskCompletedItems(task: BackgroundTaskRead): number {
 }
 
 function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
+  if (task.job_type === "conversation_batch_export" && task.status === "processing") {
+    return task.phase === "publishing" ? (zh ? "准备下载文件" : "Preparing download") : (zh ? "打包所选对话" : "Packaging selected conversations");
+  }
   if (!zh) {
     const terminal = { queued: "Queued", cancelling: "Cancelling", cancelled: "Cancelled", failed: "Failed", committed: "Completed" }[task.status];
     if (terminal) return terminal;
@@ -355,7 +359,7 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
 }
 
 function taskTypeLabel(task: BackgroundTaskRead, zh: boolean): string {
-  if (!zh) return ({ offline_package: "Prepare offline copy", conversation_batch_delete: "Delete archived conversations", conversation_merge: "Merge conversations", conversation_export: "Export conversation", context_package_export: "Export Context Package", context_return: "Update continuation", content_noise_scan: "Scan for noise", import: "Import conversations", conversation_auto_clean: "Clean conversation", personal_archive_export: "Back up my data", personal_archive_preflight: "Preview personal archive", personal_archive_restore: "Restore personal archive", system_archive_export: "Back up system data", system_archive_preflight: "Preview system archive", system_archive_restore: "Restore system archive" }[task.job_type] ?? "Background task");
+  if (!zh) return ({ offline_package: "Prepare offline copy", conversation_batch_delete: "Delete archived conversations", conversation_merge: "Merge conversations", conversation_export: "Export conversation", conversation_batch_export: "Export conversations", context_package_export: "Export Context Package", context_return: "Update continuation", content_noise_scan: "Scan for noise", import: "Import conversations", conversation_auto_clean: "Clean conversation", personal_archive_export: "Back up my data", personal_archive_preflight: "Preview personal archive", personal_archive_restore: "Restore personal archive", system_archive_export: "Back up system data", system_archive_preflight: "Preview system archive", system_archive_restore: "Restore system archive" }[task.job_type] ?? "Background task");
   return {
     offline_package: "准备离线副本",
     context_package_export: "导出上下文包",
@@ -364,6 +368,7 @@ function taskTypeLabel(task: BackgroundTaskRead, zh: boolean): string {
     conversation_batch_delete: "删除归档对话",
     conversation_merge: "合并会话",
     conversation_export: "导出归档",
+    conversation_batch_export: "批量导出对话",
     conversation_auto_clean: "清理对话",
     import: "导入会话",
     system_archive_export: "备份系统数据",

@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.conversation import Conversation
 from app.schemas.task import BackgroundTaskRead
-from app.schemas.export import ExportRequest
+from app.schemas.export import ExportRequest, ConversationBatchExportRequest
 from app.services.background_jobs import queue_conversation_auto_clean, queue_conversation_derived_rebuild, queue_conversation_export
 from app.services.editing.message_edit_service import MessageEditError
 from app.api.routes.tasks import background_job_read
@@ -27,6 +27,24 @@ from app.api.routes.exports import direct_export_response
 
 
 router = APIRouter(tags=["exports"])
+
+
+@router.post("/api/conversations/batch-export", response_model=BackgroundTaskRead, status_code=202)
+def queue_batch_export(
+    payload: ConversationBatchExportRequest,
+    request: Request,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=200),
+    db: Session = Depends(get_db),
+) -> BackgroundTaskRead:
+    from app.services.exporting.conversation_batch import queue_conversation_batch_export
+    try:
+        job = queue_conversation_batch_export(db, conversation_ids=payload.conversation_ids,
+            idempotency_key=idempotency_key, ownership_scope=ownership_scope_from_request(request))
+        db.commit()
+    except ExportError as error:
+        db.rollback()
+        raise HTTPException(error.status_code, str(error)) from error
+    return background_job_read(job)
 
 
 @router.post(
@@ -153,7 +171,7 @@ def download_archive(
         CONTEXT_PACKAGE_MIME
         if artifact.format == CONTEXT_PACKAGE_FORMAT
         else BUNDLE_MIME
-        if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT, "attachment-batch-zip"}
+        if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT, "attachment-batch-zip", "chat-reader-conversation-batch"}
         else ARCHIVE_MIME
     )
     return ExportFileResponse(path, media_type=media_type, filename=artifact.filename,

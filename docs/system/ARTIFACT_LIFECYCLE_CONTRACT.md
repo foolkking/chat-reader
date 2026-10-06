@@ -1,5 +1,22 @@
 # Artifact Lifecycle Contract
 
+## Batch CanJSON ZIP extension — 2026-10-06 (local, release pending)
+
+`conversation_batch_export` admits 1–5000 distinct owned sources and a required
+idempotency key; ordered selection is part of the key's meaning. One worker
+streams the existing CanJSON serializer sequentially into a ZIP under one
+PostgreSQL read-only repeatable-read snapshot for all entries. Source/account
+access is rechecked before publication. Entry/compressed/expanded bounds reuse
+bundle limits. Failure produces no partial-success download.
+
+New files are transaction-owned, so cancellation, rollback and commit failure
+remove the new staging/final file. Crash leftovers retain the existing orphan
+contract. This job joins the same retention, leases, reclamation, download and
+regeneration paths as other exports. Regeneration reads the original ordered
+source IDs against current ownership/data. ZIP entries remain CanJSON without
+binary attachments, notes, annotations or Continuation; no schema migration.
+See [stage evidence](../execution/BATCH_EXPORT_RECOVERY_2026-10-06.md).
+
 ## Direct downloads — 2026-10-06 (deployed)
 
 Owner-only Markdown/CanJSON GET downloads, legacy `/export`, and the equivalent

@@ -28,7 +28,7 @@ import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
-import { downloadConversationBundle } from "../../lib/bulk-export";
+import { useBatchExport } from "../conversations/use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
 import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
@@ -39,6 +39,7 @@ import { HoverPreviewLink } from "../../components/hover-preview-link";
 export function ProjectConversationList({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const batchExport = useBatchExport(resolvedLocale === "zh-CN");
   const dialog = useInteractionDialog();
   const workspace = useWorkspaceShell();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
@@ -218,6 +219,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
       {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
 
+            {batchExport.feedback}
             {selectionMode ? <SelectionToolbar
               selectedCount={selectedConversationIds.size}
               totalCount={conversations.length}
@@ -250,7 +252,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 onExport={async (selected) => {
                   setBulkBusy("export");
                   try {
-                    await downloadConversationBundle(selected);
+                    await batchExport.submit(selected);
                   } finally {
                     setBulkBusy(null);
                   }

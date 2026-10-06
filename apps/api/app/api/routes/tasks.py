@@ -207,6 +207,7 @@ def _job_label(job_type: str) -> str:
     return {
         "conversation_merge": "合并对话",
         "conversation_export": "导出归档",
+        "conversation_batch_export": "批量导出对话",
         "conversation_auto_clean": "清理对话内容",
         "content_noise_scan": "后台审查噪音",
         "conversation_derived_rebuild": "重建派生数据",

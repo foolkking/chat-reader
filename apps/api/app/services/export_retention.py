@@ -23,7 +23,7 @@ from app.services.feature_policies import get_feature_policy
 from app.services.ownership import get_owned
 
 logger = logging.getLogger(__name__)
-EXPORT_JOB_TYPES = frozenset({"conversation_export", "system_archive_export", "personal_archive_export", "attachment_batch_download"})
+EXPORT_JOB_TYPES = frozenset({"conversation_export", "conversation_batch_export", "system_archive_export", "personal_archive_export", "attachment_batch_download"})
 VIEWER_SECONDS = 45
 DOWNLOAD_SECONDS = 90
 
@@ -69,6 +69,11 @@ def regenerate_export(db, artifact, ownership_scope, key):
         job = queue_conversation_export(db, conversation_id=uuid.UUID(payload["conversation_id"]),
             idempotency_key=request_key, ownership_scope=ownership_scope,
             start_message_id=uuid.UUID(payload["start_message_id"]) if payload.get("start_message_id") else None, **options)
+    elif original.job_type == "conversation_batch_export":
+        from app.services.exporting.conversation_batch import queue_conversation_batch_export
+        job = queue_conversation_batch_export(db,
+            conversation_ids=[uuid.UUID(value) for value in payload["conversation_ids"]],
+            idempotency_key=request_key, ownership_scope=ownership_scope)
     elif original.job_type == "attachment_batch_download":
         job = queue_attachment_download(db, conversation_id=uuid.UUID(payload["conversation_id"]),
             attachment_ids=[uuid.UUID(value) for value in payload["attachment_ids"]],

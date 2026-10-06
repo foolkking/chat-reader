@@ -18,7 +18,7 @@ _STAGING_NAME = re.compile(r"^\.(?P<base>.+)\.tmp\.[0-9a-f]{32}$")
 _OFFLINE_FINAL_NAME = re.compile(
     r"^offline-(?:all|project|conversation)-(?P<job_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.crpkg$"
 )
-_EXPORT_JOB_TYPES = {"system_archive_export", "system_archive_preflight", "personal_archive_export", "personal_archive_preflight", "conversation_export", "attachment_batch_download"}
+_EXPORT_JOB_TYPES = {"system_archive_export", "system_archive_preflight", "personal_archive_export", "personal_archive_preflight", "conversation_export", "conversation_batch_export", "attachment_batch_download"}
 _ELIGIBLE_CATEGORIES = {"SAFE_TEMP", "ORPHAN_FINAL", "SUPERSEDED_ARTIFACT"}
 _MANAGED_ROOTS = {"export", "offline"}
 _REFERENCE_QUERY_CHUNK_SIZE = 500

@@ -25,7 +25,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import { QuickStartGuide } from "../../components/quick-start-guide";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
-import { downloadConversationBundle } from "../../lib/bulk-export";
+import { useBatchExport } from "./use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
 import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
@@ -40,6 +40,7 @@ export function ConversationList({
 }) {
   const queryClient = useQueryClient();
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const batchExport = useBatchExport(resolvedLocale === "zh-CN");
   const dialog = useInteractionDialog();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [isMerging, setIsMerging] = useState(false);
@@ -278,6 +279,7 @@ export function ConversationList({
       </div>
       {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
       {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
+      {batchExport.feedback}
       {selectionMode ? <SelectionToolbar
         selectedCount={selectedConversationIds.size}
         totalCount={conversations.length}
@@ -312,7 +314,7 @@ export function ConversationList({
             onExport={async (selected) => {
               setBulkBusy("export");
               try {
-                await downloadConversationBundle(selected);
+                await batchExport.submit(selected);
               } finally {
                 setBulkBusy(null);
               }

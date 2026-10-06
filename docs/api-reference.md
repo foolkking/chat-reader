@@ -259,6 +259,19 @@ Owner, Share and derivative content authorization occurs before file stat/read. 
 
 ## Current task additions (2026-08-04)
 
+2026-10-06 local addition (release pending):
+`POST /api/conversations/batch-export` accepts `conversation_ids` (1–5000 distinct
+UUIDs, ordered) and required `Idempotency-Key` (1–200 characters), returning
+`202 BackgroundTaskRead`. Same owner/key/order reuses the job; another order
+conflicts with 409. Missing or foreign sources return 404 without partial queueing.
+`conversation_batch_export` supports existing task cancellation/retry and export
+download/retention/regeneration. Result includes `artifact_id`, `filename`,
+`byte_size`, `conversation_count`, `expires_at` and the normal lifecycle fields.
+The download is `application/zip`, with numbered `.canonical.jsonl` entries.
+Stable failure codes are `BATCH_EXPORT_SOURCE_UNAVAILABLE`,
+`BATCH_EXPORT_ACCOUNT_UNAVAILABLE`, `BATCH_EXPORT_LIMIT` and
+`BATCH_EXPORT_STORAGE_UNAVAILABLE`. See the Artifact Lifecycle Contract.
+
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/tasks/{job_id}/cancel` | Cancel a conversation merge or ordered deletion. A running job returns `cancelling`; a queued/already-cancelled job returns `cancelled`; completed or unsupported tasks return `409`. |

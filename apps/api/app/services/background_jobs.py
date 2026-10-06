@@ -46,7 +46,7 @@ from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_o
 logger = logging.getLogger(__name__)
 
 ACTIVE_JOB_STATUSES = ("queued", "processing", "cancelling")
-CANCELLABLE_JOB_TYPES = {"context_return", "context_validation", "conversation_merge", "conversation_batch_delete", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
+CANCELLABLE_JOB_TYPES = {"context_return", "context_validation", "conversation_merge", "conversation_batch_delete", "conversation_batch_export", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
 ProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -888,6 +888,13 @@ def process_background_job(
                     **artifact.archive_summary,
                 }
                 processed_items = job.total_items
+            elif job.job_type == "conversation_batch_export":
+                from app.services.exporting.conversation_batch import create_conversation_batch_export
+                artifact = create_conversation_batch_export(db, job=job, ownership_scope=job_scope, progress_callback=report)
+                job_result = {"artifact_id": str(artifact.id), "filename": artifact.filename,
+                    "byte_size": artifact.byte_size, "download_url": f"/api/exports/{artifact.id}/download",
+                    "expires_at": artifact.expires_at.isoformat(), "conversation_count": len(payload["conversation_ids"])}
+                processed_items = len(payload["conversation_ids"])
             elif job.job_type == "conversation_export":
                 conversation_id = uuid.UUID(payload["conversation_id"])
                 if payload.get("export_format") == "context_package":
@@ -1257,7 +1264,7 @@ def process_background_job(
             if job.job_type in SYSTEM_JOB_TYPES:
                 sync_system_archive_record(db, job, result=job_result, status="COMPLETED")
             db.commit()
-            if job.job_type in {"system_archive_export", "personal_archive_export", "conversation_export", "attachment_batch_download"}:
+            if job.job_type in {"system_archive_export", "personal_archive_export", "conversation_export", "conversation_batch_export", "attachment_batch_download"}:
                 structured_event(logger, logging.INFO, "artifact_db_committed", category="export", job_id=str(job_id))
             elif job.job_type == "offline_package":
                 structured_event(logger, logging.INFO, "artifact_db_committed", category="offline", job_id=str(job_id))

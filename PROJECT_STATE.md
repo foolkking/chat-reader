@@ -39,6 +39,14 @@ they are not retained artifacts. Existing deadlines remain unchanged. The source
 
 ## Active work
 
+Batch export recovery is implemented locally and awaiting its own CI/release.
+Conversation/project lists now queue one durable CanJSON ZIP job, with selection
+retention, same-key admission retry, account fencing and Task Center delivery.
+The worker prepares the whole batch under one PostgreSQL snapshot and reuses
+export cancellation/expiry/regeneration. No migration. This code is not yet
+deployed. [Stage evidence](docs/execution/BATCH_EXPORT_RECOVERY_2026-10-06.md)
+records the real failure, local tests and remaining release checks.
+
 The direct-export snapshot/download-recovery stage is delivered. The long-running
 continuous optimization goal remains active. Off-site copies are explicitly
 deferred; do not ask for a destination or upload them. No scheduled backups were

@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+Local batch stage: `execution/BATCH_EXPORT_RECOVERY_2026-10-06.md` owns the
+reproduced silent multi-export failure, durable replacement, PostgreSQL and
+browser evidence, and pending CI/release. Project State, API and artifact
+lifecycle contracts explicitly separate these changes from deployed e27f415.
+
 Current release: `execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md` owns e27f415/0048,
 the concurrent-edit reproduction, snapshot/download recovery, exact-source CI,
 production acceptance and cleanup. Project State, index, deployment/environment,

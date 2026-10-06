@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from uuid import UUID
 from typing import Literal
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 @dataclass(frozen=True)
@@ -20,6 +20,17 @@ class ExportOptions:
     toc_mode: str = "none"
     compression: str = "none"
     preserve_attachment_uris: bool = False
+
+
+class ConversationBatchExportRequest(BaseModel):
+    conversation_ids: list[UUID] = Field(min_length=1, max_length=5000)
+
+    @field_validator("conversation_ids")
+    @classmethod
+    def distinct_sources(cls, value):
+        if len(set(value)) != len(value):
+            raise ValueError("Duplicate conversation IDs are not allowed")
+        return value
 
 
 class ExportRequest(BaseModel):

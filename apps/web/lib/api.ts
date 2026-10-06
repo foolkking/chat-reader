@@ -721,6 +721,13 @@ export async function getTask(jobId: string): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`);
 }
 
+export async function queueConversationBatchExport(conversationIds: string[], idempotencyKey: string, signal: AbortSignal): Promise<BackgroundTaskRead> {
+  const request = jsonRequest("POST", { conversation_ids: conversationIds });
+  return fetchJson<BackgroundTaskRead>("/api/conversations/batch-export", {
+    ...request, signal, headers: { ...request.headers, "Idempotency-Key": idempotencyKey },
+  });
+}
+
 export type ExportArtifactStatus = {
   artifact_id: string; status: string; expires_at: string; server_now: string;
   retention_seconds: number | null; release_on_close: boolean; download_url: string | null;
