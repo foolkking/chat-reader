@@ -1,0 +1,16 @@
+{
+  "source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+  "run_id": 37470769275,
+  "artifact_id": 11419041245,
+  "producer_attempt": 1,
+  "artifact_zip_sha256": "6372a693a4efccaf4964b49f1eb855b4c15da667623cc13ec4a2f6ea74c71dd5",
+  "archive_sha256": "d7bd98cf444e4f7aa49a125ca80a9b278ed03a5e51480fb1d667312de0497b76",
+  "archive_bytes": 193636974,
+  "images": {
+    "api": "sha256:c13e9171ba1c40e838d59ecedf5adddbda88cce13fad5ad8761f23c9f6d6889a",
+    "web": "sha256:886cd8e97cb41bacffc2d6b056e120c97000d44749dceb7506a597f9a113f216"
+  },
+  "verified_archive_blobs": 50,
+  "verified_support_paths": 17,
+  "all_five_gates_passed": true
+}

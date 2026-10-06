@@ -1,0 +1,177 @@
+{
+  "source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+  "ci": {
+    "source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+    "run_id": 37470769275,
+    "artifact_id": 11419041245,
+    "producer_attempt": 1,
+    "artifact_zip_sha256": "6372a693a4efccaf4964b49f1eb855b4c15da667623cc13ec4a2f6ea74c71dd5",
+    "archive_sha256": "d7bd98cf444e4f7aa49a125ca80a9b278ed03a5e51480fb1d667312de0497b76",
+    "archive_bytes": 193636974,
+    "images": {
+      "api": "sha256:c13e9171ba1c40e838d59ecedf5adddbda88cce13fad5ad8761f23c9f6d6889a",
+      "web": "sha256:886cd8e97cb41bacffc2d6b056e120c97000d44749dceb7506a597f9a113f216"
+    },
+    "verified_archive_blobs": 50,
+    "verified_support_paths": 17,
+    "all_five_gates_passed": true
+  },
+  "runtime": {
+    "postgres": {
+      "running": true,
+      "healthy": "healthy",
+      "restarts": 0,
+      "oom_killed": false
+    },
+    "api": {
+      "running": true,
+      "healthy": "healthy",
+      "restarts": 0,
+      "oom_killed": false,
+      "error_keyword_lines": 0,
+      "reviewed_rejected_request_lines": 0
+    },
+    "import-worker": {
+      "running": true,
+      "healthy": "not_applicable",
+      "restarts": 0,
+      "oom_killed": false,
+      "error_keyword_lines": 0,
+      "reviewed_rejected_request_lines": 0
+    },
+    "web": {
+      "running": true,
+      "healthy": "healthy",
+      "restarts": 0,
+      "oom_killed": false,
+      "error_keyword_lines": 1,
+      "reviewed_rejected_request_lines": 1
+    },
+    "production_environment_unchanged": true
+  },
+  "canonical_data_unchanged": true,
+  "verified_attachment_hashes": 301,
+  "personal_skills_unchanged": true,
+  "private_context_unchanged": true,
+  "private_context_counts": {
+    "context_member_objects": 0,
+    "continuation_revisions": 0,
+    "continuation_states": 0
+  },
+  "imports_and_offline_unchanged": true,
+  "direct_exports": {
+    "direct_exports": [
+      {
+        "format": "text/markdown",
+        "status": "PASS",
+        "content_length_verified": true
+      },
+      {
+        "format": "application/x-ndjson",
+        "status": "PASS",
+        "content_length_verified": true
+      },
+      {
+        "format": "application/gzip",
+        "status": "PASS",
+        "content_length_verified": true
+      },
+      {
+        "format": "application/json",
+        "status": "PASS",
+        "content_length_verified": true
+      }
+    ],
+    "raw_files_saved": false
+  },
+  "batch_export": {
+    "batch_export": "PASS",
+    "selected_conversations": 2,
+    "ordered_canjson_zip": true,
+    "persisted_task_source": true,
+    "idempotent_submission": true,
+    "physical_close_reclamation": true,
+    "sources_retained": true,
+    "anonymous_download_denied": true,
+    "raw_files_saved": false
+  },
+  "attachment_and_context_exports": {
+    "attachment_export": "PASS",
+    "formats": 3,
+    "object_checksums_checked": 148,
+    "persisted_task_identity_and_counts": true,
+    "manifest_counts_match": true,
+    "physical_close_reclamation": true,
+    "source_retained": true,
+    "anonymous_download_denied": true,
+    "raw_files_saved": false
+  },
+  "export_lifecycle": {
+    "cleanup_metric": {
+      "available": true,
+      "failed_count": 0,
+      "pending_bytes": 0,
+      "pending_count": 0
+    },
+    "default_policy": "3 minutes, release on close",
+    "owned_source_retained": true,
+    "physical_release": "PASS",
+    "range_and_zip": "PASS",
+    "regeneration_idempotency": "PASS"
+  },
+  "historical_exports": {
+    "count": 73,
+    "declared_bytes": 1120188904,
+    "existing_files": 0,
+    "reclaimed": 73,
+    "retry": 0
+  },
+  "retained_backups": [
+    "chat-reader-20261006T113958Z",
+    "chat-reader-20261006T141424Z"
+  ],
+  "backup_report": {
+    "candidates": 0,
+    "held": 0,
+    "mode": "read_only",
+    "removed": 0,
+    "retained": 2,
+    "unlinked_bytes": 0,
+    "verified": 2
+  },
+  "old_image_cleanup": {
+    "removed_tags": [
+      "chat-reader-api:25c7f6a16f72780b08b22f1f3bf23665ebfd300c",
+      "chat-reader-import-worker:25c7f6a16f72780b08b22f1f3bf23665ebfd300c",
+      "chat-reader-migrate:25c7f6a16f72780b08b22f1f3bf23665ebfd300c",
+      "chat-reader-web:25c7f6a16f72780b08b22f1f3bf23665ebfd300c"
+    ],
+    "recovery_archive_sha256": "87f058fbc0797fd249d062fe6346b5b4bd9a2f694950726244642a1a950e2eae",
+    "free_bytes_before": 15193051136,
+    "free_bytes_after": 15477968896,
+    "reclaimed_bytes": 284917760
+  },
+  "post_cleanup": {
+    "health": "PASS",
+    "source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+    "postgres_unchanged": true,
+    "environment_unchanged": true,
+    "compose_unchanged": true,
+    "nginx_unchanged": true
+  },
+  "final_space": {
+    "available_bytes": 15477846016,
+    "total_bytes": 41881894912
+  },
+  "reviewed_rejected_request": {
+    "source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+    "observed_at": "2026-10-06T14:50:34.995721766Z",
+    "expected_error": "Error: The Server Reference ID did not match the expected format. Received \"x\".",
+    "reviewed_count": 1,
+    "route": "/login",
+    "status": 404,
+    "preceding_root_status": 307,
+    "private_content_recorded": false,
+    "reason": "Malformed Server Action reference was rejected; full functional acceptance and health checks passed. No evidence of execution or canonical changes."
+  }
+}

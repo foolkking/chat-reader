@@ -2,24 +2,22 @@
 
 ## Current release — 2026-10-06
 
-Production source `25c7f6a16f72780b08b22f1f3bf23665ebfd300c`, CI `37453812341`,
+Production source `b45f04939a728c86bbff769c36ea7574d6a1856d`, CI `37470769275`,
 single head/current `20261006_0048`. All five gates passed; original artifact
-11409659316/attempt 1 was independently verified. This release improves Task Center
-identity/recovery, regeneration during polling and account-generation fencing.
-No schema or export-format migration was added.
+11419041245/attempt 1 was independently verified. Context delivery now streams and
+checks byte integrity, source/access consistency and transaction-owned cleanup.
+No schema or package-version migration was added.
 
-Latest verified backups: `chat-reader-20261006T093548Z`, `chat-reader-20261006T113958Z`.
-After acceptance, one older backup was pruned using verified installed tools.
-Three identical components were reused. No off-site copy or scheduled backup.
-
-[Deployment evidence](execution/TASK_CENTER_CLARITY_2026-10-06.md) records image IDs,
-CI, actual ZIP/74-object checks, persisted task identity/counts, close/regeneration
-and unchanged business data/configuration. Four f0e355a image tags were removed.
+Latest verified backups: `chat-reader-20261006T113958Z`, `chat-reader-20261006T141424Z`.
+One older backup and four replaced 25c7f6a image tags were removed after acceptance.
+No off-site or scheduled backup. [Deployment evidence](execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md)
+records actual ZIP/148-check acceptance, unchanged canonical data/configuration,
+the reviewed malformed-request rejection and corrected report-source metadata.
 Rollback requires loading
-`/opt/chat-reader/releases/f0e355af4169ff593da8134b8148c7dc5c25425d/chat-reader-images.tar.gz`
-(SHA-256 `2bc83c979a90a07178a01e0e7927d05826bc08925123beca0908ecc64441fb06`)
+`/opt/chat-reader/releases/25c7f6a16f72780b08b22f1f3bf23665ebfd300c/chat-reader-images.tar.gz`
+(SHA-256 `87f058fbc0797fd249d062fe6346b5b4bd9a2f694950726244642a1a950e2eae`)
 before using rollback-images.env. No database downgrade is needed. Final available
-server space: **14.60 GiB**. Images were built only in CI. Local residues remain
+server space: **14.41 GiB**. Images were built only in CI. Local residues remain
 for the user. Do not replay completed deployment/cleanup helpers.
 
 Release transfer uses server-compatible Python syntax (the host has Python 3.6.8),

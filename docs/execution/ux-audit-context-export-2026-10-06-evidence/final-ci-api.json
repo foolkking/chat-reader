@@ -1,0 +1,14 @@
+{
+  "source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+  "run": 37470769275,
+  "api_job": 112293346286,
+  "evidence": [
+    "INFO  [alembic.runtime.migration] Running upgrade 20261005_0047 -> 20261006_0048, Short-lived export policy, recoverable reclamation and download fences.",
+    "64 passed in 1.67s",
+    "53 passed, 1 warning in 15.99s",
+    "tests/test_context_export_integrity.py ..........................        [ 34%]",
+    "tests/test_context_export_postgres.py .............                      [ 35%]",
+    "=========== 1042 passed, 3 skipped, 14 warnings in 671.03s (0:11:11) ===========",
+    "20261006_0048 (head/current)"
+  ]
+}

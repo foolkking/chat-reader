@@ -3,52 +3,52 @@
 ## Current release — 2026-10-06
 
 Production `https://chat.king.2bd.net` runs application source
-**25c7f6a16f72780b08b22f1f3bf23665ebfd300c**, built only by successful
-[CI 37453812341](https://github.com/foolkking/chat-reader/actions/runs/37453812341).
-All five gates passed. Original artifact **11409659316**, producer attempt **1**,
-was independently verified, including all 50 archive blobs/configs. Alembic remains
-**20261006_0048**, single head/current.
-[Stage and release evidence](docs/execution/TASK_CENTER_CLARITY_2026-10-06.md)
-records tests, operational interruptions, acceptance, cleanup and scope limits.
+**b45f04939a728c86bbff769c36ea7574d6a1856d**, built only by successful
+[CI 37470769275](https://github.com/foolkking/chat-reader/actions/runs/37470769275).
+All five gates passed. Original artifact **11419041245**, producer attempt **1**,
+was independently verified, including 50 image archive blobs/configs and 17 exact-source
+support paths. Alembic remains **20261006_0048**, single head/current.
+[Stage and release evidence](docs/execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md)
+records the reproduced defects, tests, release, reviewed interruptions and limitations.
 The documentation closeout is a separate commit.
 
-Tasks now distinguish operation, source, format and server submission time. Failed
-and partial results precede completed work; cancelled work is separate. Completed
-work has no misleading full progress bar or redundant single-item counter. Retry
-and cancel preserve keyboard focus. Same-generation background polling no longer
-loses regenerated exports, and late task callbacks cannot repopulate another
-account's cache. PostgreSQL single-export completion records one package consistently.
+Context export now verifies copied attachment bytes, removes failed staging/results,
+streams message bodies and JSONL, respects selected-range limits, and rejects source
+or access changes during publication. Permanent exports read one PostgreSQL snapshot;
+final live checks and transaction-owned file cleanup protect delivery. Progress no
+longer drops from serialization to packaging, and actionable failures are localized.
+Missing objects remain explicitly partial; saved Current/Index are still user-managed
+files without semantic validation, candidates or adoption.
 
-Production checks passed for task source/format/counters, real batch and attachment
-ZIP downloads, **74 object checksums**, regeneration/idempotency and physical close
-reclamation. Four direct formats, Context/Range, login/settings and three default
-Skill Bundles also passed. Canonical data, personal Skill fingerprints, **301 attachment
-checksums**, imports/offline fingerprints, PostgreSQL identity/start time, environment,
-Compose and Nginx remain unchanged. API/Web are healthy and worker heartbeat is alive.
+Production checks passed for login/settings, all three default Skill ZIPs, direct
+exports, batch exports, three attachment/Context formats with **148 object checksum
+checks**, Range/ZIP delivery, regeneration and physical close reclamation. Canonical
+counts, personal Skill state, **301 stored attachment checksums**, imports/offline
+fingerprints and private Context tables remained unchanged. The private Context
+snapshot was empty; nonempty member preservation is covered by CI. PostgreSQL
+identity/start time, environment, Compose and Nginx were preserved. API/Web are healthy
+and worker heartbeat is alive/idle.
 
-Latest verified backups: `chat-reader-20261006T093548Z` and
-`chat-reader-20261006T113958Z`. Three identical components were reused, avoiding
-**623,608,310 bytes**. After acceptance, one older backup and four replaced **f0e355a**
-image tags were removed. Its verified recovery archive remains; rollback requires
-loading it first. Final available server space: **15,674,314,752 bytes (14.60 GiB)**.
-No local/server image builds, local cleanup, off-site copy or scheduled backups.
+Latest verified backups: `chat-reader-20261006T113958Z` and
+`chat-reader-20261006T141424Z`. After acceptance, one older backup and four replaced
+**25c7f6a** image tags were removed. The verified 25c7f6a rollback archive remains;
+load it before rollback. Final available server space: **15,477,846,016 bytes
+(14.41 GiB)**. No local/server image builds, local cleanup, off-site copy or scheduled
+backups. One malformed Server Action reference was rejected with 404 and reviewed;
+no unreviewed startup error, restart or OOM remained at acceptance.
 
-The preceding coherent attachment snapshot/export and three-minute Root-controlled
-artifact lifetime releases remain in effect. No schema or package-format migration
-was introduced by this Task Center stage.
+The preceding [Task Center release](docs/execution/TASK_CENTER_CLARITY_2026-10-06.md),
+attachment bundle consistency and Root-controlled three-minute artifact lifetime
+remain in effect. This stage introduces no schema or package-format migration.
 
 ## Active work
 
-The Task Center stage is deployed and accepted. Do not repeat its backup, deployment
-or cleanup. The continuous optimization goal remains active. The current stage is
-[Context export integrity and bounded processing](docs/execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md),
-following reproduced corrupt-object delivery, staging/rollback residue and access
-revocation defects. Working-tree fixes use bounded JSONL/body/reference streaming,
-PostgreSQL read snapshots, final access/source fences and transaction-owned file
-cleanup. They are not part of the deployed source above; exact-source CI and release
-acceptance are required. Current/Index remain direct user-managed files, with no
-semantic validation or adoption workflow. The unrelated earlier Next stream-close
-observation remains unproven and is not claimed fixed. Off-site copies remain deferred.
+The Context export stage is deployed and accepted. Do not repeat its backup,
+deployment or cleanup. The broad optimization goal remains active; the next stage
+must begin with a fresh product/runtime audit and prioritize demonstrated user value.
+This scoped stage does not close every page, offline UX or external semantic Skill
+review. The unrelated earlier Next stream-close observation remains unproven and
+is not claimed fixed. Off-site copies remain deferred.
 
 ## System and boundaries
 
@@ -96,36 +96,40 @@ unavailable until the operator configures it. Administrator reset links remain.
 
 ## Verification
 
-Exact-source CI 37453812341: API **1003 passed / 3 skipped**, settings **173** plus
-**1** fresh PostgreSQL archive restore; Context **35**, authentication **18**, offline
-negatives **17**, baseline PWA **135 / 321 gated skips**. Reader/Share/upload, source
-editor, PDF/CSP, lint/typecheck/build, migration and image checks passed. Runtime/Bundle
-**64** and cleanup **53** passed. Suites overlap; skips are not passes.
+Exact-source CI 37470769275: API **1042 passed / 3 skipped**, settings **176** plus
+**1** fresh PostgreSQL restore; Context **35**, authentication **18**, offline negatives
+**17**, baseline PWA **135 / 324 gated skips**. Reader/Share/upload, source editor,
+PDF/CSP, lint/typecheck/build, migration and image checks passed. Runtime/Bundle
+**64** and cleanup **53** passed. Suites overlap; skips are not passes. New Context
+coverage includes **26 integrity/streaming** and **13 actual PostgreSQL publication**
+cases, including source changes after physical publication.
 
-The initial 5f5126c CI failed one real maintenance regeneration case (169 passed /
-1 failed); no images from that source were deployed. Source 25c7f6a fixes the race.
-The original failure, deliberately delayed polling/option-change case, two
-same-document account-switch races and persisted export counters all passed.
-Final 375/768/1440px synthetic screenshots were inspected in both locales/themes.
-Actual ZIP contents were checked by real API/PostgreSQL/worker browser tests.
+The first d89c3d7 CI failed one archive fixture duplicate-account setup
+(**1041 passed / 1 failed / 3 skipped**); no failed-source images were deployed.
+The follow-up fixes fixture ownership without weakening account checks and preserves
+monotonic export progress. Final three-width corruption → repair → real ZIP download
+screenshots were inspected in both locales/themes. Actual object hashes, persisted
+results, cleanup, selected sequence numbers and large-source cancellation were checked.
 
-Local follow-up TypeScript (nonincremental) and changed-file ESLint passed. No local
-runtime/browser test is claimed for this stage: C-drive temporary capacity is exhausted,
-and the unanswered batch-specific E-drive exception was not used. Image download and
-release preparation ran in memory, streaming verified members to the server.
+Local nonincremental TypeScript and changed-file ESLint passed. Isolated synthetic
+SQLite/file/worker tests ran in networkless disposable containers using the existing
+CI image with source overlays. No local runtime/browser test or local image build
+is claimed: C-drive temporary capacity is exhausted; no new E-drive exception was
+assumed. Transfers stayed in memory and the private server release directory.
 
 Production smoke is separate from CI; no full interactive production browser matrix
-is claimed. SMTP remains unconfigured. Deployment initially recovered the old API/worker
-after a mounted check script lacked non-root read permission; correcting those two
-script modes and rechecking the recent backup allowed successful completion. Web's
-initial health check was still starting; acceptance resumed after it became healthy.
-Local residues remain for the user.
+or independent external-model semantic trial is claimed. SMTP remains unconfigured.
+Finalization initially stopped on a malformed Server Action reference. Nginx showed
+its rejection at `/login` with 404; only that exact reviewed log was allowed, with
+all others still blocking. A stale short source label in the post-cleanup evidence
+helper was replaced with the actual release directory name and the read-only check
+rerun. Neither correction changed application images or production configuration.
 
 ## Work rules and navigation
 
 Read [AGENTS.md](AGENTS.md), then [docs index](docs/index.md). Temporary files use
 `C:/Users/86182/Desktop/wkkk/<task>` with process-local TEMP/TMP. This stage uses
-`wkkk/chat-reader-task-center-20261006` only as a process-local TEMP/TMP setting;
+`wkkk/chat-reader-context-integrity-20261006` only as a process-local TEMP/TMP setting;
 release transfers use memory and the server release directory. The earlier E-drive test exception was batch
 specific. Do not scan the local workstation, build images locally/on King, modify
 user imports, delete production volumes or overwrite the server environment.

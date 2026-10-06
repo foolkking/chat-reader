@@ -1,0 +1,33 @@
+{
+  "source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+  "run": 37470769275,
+  "summary": {
+    "112293345930": [
+      "  \u2713   16 e2e/settings-attachment-export.spec.ts:28:7 \u203a 375px context: attachment export failure recovers with verified downloaded bytes (9.5s)",
+      "  \u2713   18 e2e/settings-attachment-export.spec.ts:28:7 \u203a 768px context: attachment export failure recovers with verified downloaded bytes (8.1s)",
+      "  \u2713   20 e2e/settings-attachment-export.spec.ts:28:7 \u203a 1440px context: attachment export failure recovers with verified downloaded bytes (8.1s)",
+      "  176 passed (23.0m)",
+      "  1 passed (35.6s)"
+    ],
+    "112293346395": [
+      "  1 skipped",
+      "  8 passed (31.0s)",
+      "  4 passed (5.9s)",
+      "  35 passed (3.8m)",
+      "  45 passed (1.9m)",
+      "  2 passed (9.9s)",
+      "  16 passed (1.5m)",
+      "  1 passed (6.2s)",
+      "  18 passed (54.9s)",
+      "  1 passed (5.1s)",
+      "  5 passed (20.0s)",
+      "  -  291 e2e/settings-attachment-export.spec.ts:28:7 \u203a 375px context: attachment export failure recovers with verified downloaded bytes",
+      "  -  293 e2e/settings-attachment-export.spec.ts:28:7 \u203a 768px context: attachment export failure recovers with verified downloaded bytes",
+      "  -  295 e2e/settings-attachment-export.spec.ts:28:7 \u203a 1440px context: attachment export failure recovers with verified downloaded bytes",
+      "  324 skipped",
+      "  135 passed (2.0m)",
+      "  18 passed (1.5m)",
+      "  17 passed (53.4s)"
+    ]
+  }
+}

@@ -1,13 +1,12 @@
 # 文档导航
 
-当前线上源码 `25c7f6a`、唯一 migration `20261006_0048`，CI `37453812341` 五项全过。
-[当前发布记录](execution/TASK_CENTER_CLARITY_2026-10-06.md) 记录任务中心展示、
-导出重建竞态与账户切换保护、线上验收、两份备份和旧镜像清理。
+当前线上源码 `b45f049`、唯一 migration `20261006_0048`，CI `37470769275` 五项全过。
+[当前发布记录](execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md) 记录 Context 导出
+完整性、有界处理、并发保护、线上验收、两份备份和旧镜像清理。
 [Project State](../PROJECT_STATE.md) 是当前快照。异地副本暂不设置；
 本阶段已交付，长期优化目标继续，勿重放已完成的部署与清理。
 
-当前开发阶段：[Context 导出完整性与有界处理](execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md)。
-该阶段与上述已上线提交分开记录，不能用旧 CI 代替当前工作区验收。
+此前任务中心发布保留在[历史执行记录](execution/TASK_CENTER_CLARITY_2026-10-06.md)。
 
 ## 开始这里
 

@@ -8,6 +8,14 @@ formats are `cr_v2`, `context_package`, `markdown_bundle`, `canjson_bundle`,
 and cancel return the same presentation contract, never raw payload storage keys.
 No migration or change to task/export retention is required.
 
+Dedicated Context worker failures use stable `CONTEXT_EXPORT_*` codes:
+`INTEGRITY`, `LIMIT`, `STORAGE_UNAVAILABLE`, `SOURCE_CHANGED`,
+`SOURCE_UNAVAILABLE`, `ACCOUNT_UNAVAILABLE`, `ASSET_UNAVAILABLE`.
+They leave no downloadable partial result; missing objects instead produce an
+explicitly partial Raw package. Reading-scope limits count selected messages only.
+See [Context Package Contract](system/CONTEXT_PACKAGE_CONTRACT.md) for bounded
+streaming, snapshot/live publication fences and unchanged Current/Index semantics.
+
 Direct `/api/conversations/{id}/exports/markdown`, `/exports/canjson`, legacy
 `/export` and synchronous POST `/exports` now prepare one PostgreSQL snapshot
 before response delivery. Filenames, MIME types and formats remain compatible;

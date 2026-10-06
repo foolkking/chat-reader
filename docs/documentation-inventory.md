@@ -1147,3 +1147,12 @@ Context integrity/streaming stage separately from deployed Task Center code.
 the pre-fix synthetic reproduction and scoped test outputs. Current behavior belongs
 to the Context Package and Artifact Lifecycle contracts; no protocol/migration or
 semantic Current/Index policy change is introduced.
+
+Context stage closure: `PROJECT_STATE.md` / `docs/index.md` now identify deployed
+**b45f049** and CI **37470769275**. The dated execution record distinguishes the
+failed first fixture run, final passing gates and actual production acceptance.
+`ux-audit-context-export-2026-10-06-evidence/final/` holds six inspected synthetic
+screenshots; `release-provenance.json` and `production-acceptance.json` retain
+aggregate release/cleanup evidence, including the reviewed malformed-request
+rejection and corrected post-cleanup source label. These completed operations must
+not be replayed as instructions for a future release.
