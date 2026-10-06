@@ -1,10 +1,9 @@
 # 文档导航
 
-当前线上源码 `5d48b68`、唯一 migration `20261005_0047`，CI `37323431809` 五项全过。
-[2026-10-06 发布记录](execution/DEPLOYMENT_SUPPORT_2026-10-06.md) 包含失败恢复、真实验收、
-两份备份收敛及旧镜像清理。[Project State](../PROJECT_STATE.md) 是当前快照。
-[导出回收与备份计划](planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md) 仍在实施；
-管理员三分钟导出回收、两份保留和去重已本机实现并通过专项，尚未上线。异地副本暂不设置。
+当前线上源码 `6b4ee0a`、唯一 migration `20261006_0048`，CI `37366294097` 五项全过。
+[导出回收发布记录](execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md) 记录三分钟策略、下载保护、历史回收、
+两份备份及组件去重、旧镜像清理和验收边界。[Project State](../PROJECT_STATE.md) 是当前快照。
+异地副本按用户决定暂不设置；长期优化目标继续，当前导出与备份阶段已交付。
 
 ## 开始这里
 

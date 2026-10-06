@@ -1,6 +1,6 @@
 # Artifact Lifecycle Contract
 
-## Local export extension — 2026-10-06 (not deployed)
+## Export extension — 2026-10-06 (deployed)
 
 Migration `20261006_0048` adds per-artifact lifecycle state and short usage/claim/
 download leases. `export_retention.py` is the shared row-lock boundary for these
@@ -30,7 +30,7 @@ connected to export, maintenance, backup and Task Center controls. Explicit scop
 closure releases usage; blur, hiding, resizing and ordinary React disposal do not.
 A refresh relies on bounded leases. The server and client both fence account changes.
 Missing or size-mismatched files return unavailable rather than a misleading download URL.
-Local real-browser acceptance passes; full CI/production acceptance remains pending. [Execution evidence](../execution/EXPORT_RETENTION_2026-10-06.md)
+Local browser, exact-source CI and production lifecycle acceptance pass; [release record](../execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md) states the limits. [Execution evidence](../execution/EXPORT_RETENTION_2026-10-06.md)
 records the implemented boundary and failures/reruns. The historical contract
 below continues to govern offline artifacts and archive-upload inputs.
 

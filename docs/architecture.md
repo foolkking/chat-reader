@@ -128,13 +128,15 @@ PostgreSQL `search_documents` 同时支持全文排名和基于 `pg_trgm` GIN �
 
 ## 分享和导出
 
-Share bootstrap 只返回分享和会话元数据。正文主路径使用 token 约束的 `reader-turn` 一次读取完整轮次；对话索引、TOC、message-window 和 block-range 接口用于索引或兼容路径。每个接口都重新执行 token、expiry、revoke、scope 与 include flags 校验，避免分享链接越权读取未选择消息或私人内容。主阅读器的阅读位置按服务端 `subject_key` 保存，当前单用户身份为 `local:default`；Share 访客位置仅保存在浏览器本地。
+Share bootstrap 只返回分享和会话元数据。正文主路径使用 token 约束的 `reader-turn` 一次读取完整轮次；对话索引、TOC、message-window 和 block-range 接口用于索引或兼容路径。每个接口都重新执行 token、expiry、revoke、scope 与 include flags 校验，避免分享链接越权读取未选择消息或私人内容。主阅读器的阅读位置按服务端确认的账户身份保存；Share 访客位置仅保存在浏览器本地。
 
 Share 只保存 token hash；公开 token 仅在创建时返回。访问接口提供只读 canonical 数据并记录访问次数。
 
 Markdown v2 以 YAML front matter 和隐藏 message markers 流式输出，默认不生成全量 TOC。CanJSON v2 以 manifest/message/optional records/end 的 JSONL 流式输出，正文只保存在 `content_markdown`；CanJSON v1 仅保留兼容导入和 Legacy 导出。
 
-对话导出 UI 只选择 CanJSON/Markdown 与“包含附件”，映射为 metadata-only 流或 AI 承接/可移植 Markdown ZIP。系统 `.cr v4` 由设置中的数据与备份入口创建后台任务，包含 Projects、完整 MessageVersion、Attachment/AssetObject/Occurrence、批注、笔记、来源和排序；第一版只恢复到空实例。旧对话 `.cr` 保持导入兼容。导出 artifact 记录在 `export_artifacts`，默认 24 小时过期。
+对话导出提供 Context Package、Markdown 和 CanJSON；Context 始终交付 `.context.zip`，附件策略独立选择。完整范围可以携带已保存的 Current/Index，受限范围不携带可能暴露范围外信息的接续文件。`.cr` 位于设置中的数据与备份：个人归档预览后新增恢复，系统 `.cr v5` 保留身份及归属并只恢复到空实例，继续兼容旧归档。完整内容和恢复边界见 [Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)。
+
+导出 artifact 记录在 `export_artifacts`；新结果成功发布后默认保留三分钟，Root 可设 1–60 分钟。短期使用/下载占用保护实际传输，worker 有界回收过期或明确关闭后可释放的文件；恢复输入及离线副本不受此策略影响。旧结果保留原期限。
 
 离线 catalog 为每个 conversation 暴露单调递增的 `offline_revision`。`/library` 请求 package 时提交本地 `known_revisions`；v3 `conversation-delta` 包只包含 revision 不同或本地不存在的 conversation，并可按 `asset_mode` 携带附件对象。Dexie v2 保存附件 metadata/occurrence，Cache Storage 保存选定对象；客户端继续读取旧 v1/v2 package 和 Dexie v1 数据。
 

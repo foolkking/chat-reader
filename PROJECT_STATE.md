@@ -2,70 +2,35 @@
 
 ## Current release — 2026-10-06
 
-Production `https://chat.king.2bd.net` runs application source
-**5d48b686893d44f98092dfffbfa32a4464e8ede1**, built by successful
-[CI 37323431809](https://github.com/foolkking/chat-reader/actions/runs/37323431809),
-attempt 1. Alembic is **20261005_0047**, the single head/current. Skill unification,
-private support/limit requests, Normalizer discovery, copy recovery and mobile
-sheet sizing are deployed, together with the earlier optional core guidance.
-Subsequent test/documentation commits do not replace that application image identity.
+Production `https://chat.king.2bd.net` runs application source **6b4ee0aec8bf399d2bd5eefabfb9c538f2933632** from
+successful [CI 37366294097](https://github.com/foolkking/chat-reader/actions/runs/37366294097).
+All five jobs passed. Alembic is **20261006_0048**, the single head/current.
+Temporary exports default to three minutes and explicit-close release, with real
+download protection, expiration status and idempotent regeneration. Root controls
+the duration (1–60 minutes) and release-on-close; legacy exports keep their deadline.
 
-Real login, 14 read-only settings/request endpoints, two owned guidance requests,
-six resolved Bundle downloads across three purposes, exact public ZIP bytes,
-logout/private 401, anonymous large-upload 401 and HTTPS checks pass. API/Web are
-healthy; worker heartbeat is alive. PostgreSQL identity/start, server environment,
-canonical counts and all 301 attachment checksums are unchanged. Compose only adds
-two explicit import-limit declarations. The first mixed-newline helper failure
-restored the old services before a fresh backup and successful retry.
-[Deployment record](docs/execution/DEPLOYMENT_SUPPORT_2026-10-06.md) owns the evidence.
+Historical expired exports: **57**, **1,118,258,860 bytes**, now
+physically reclaimed with no remaining files or retries. Production HTTP, Range/ZIP,
+close/reclamation/regeneration and runtime checks pass. PostgreSQL identity/start,
+canonical data, personal Skills, all 301 attachment checksums, imports and offline
+file fingerprints are unchanged. Environment, Compose and Nginx remain unchanged.
+[Deployment evidence](docs/execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md) owns exact provenance and limits.
 
-Latest two verified backups are `chat-reader-20261005T162104Z` and
-`chat-reader-20261005T162912Z` (UTC names; local date October 6). Earlier backups
-were removed under the user's explicit authorization. Four replaced `3f1d539`
-image tags were deleted; its checked recovery archive remains. Rollback requires
-loading that archive before using rollback-images.env. Final available space is
-**12,737,072 KiB**, about **12.15 GiB**. No local or server image build was used.
-Local residues remain for the user; no production volume or user import was deleted.
+Latest two verified backups: `chat-reader-20261005T162912Z`, `chat-reader-20261006T025905Z`. Byte-identical components may be shared;
+these are two logical recovery points, not independent physical copies. Backup tools
+are installed; after release acceptance, the retention command removes older verified
+points. No scheduled backup or off-site copy was added. Four replaced `5d48b68`
+image tags and this task's unused candidate transfer were removed; the verified
+5d48b68 rollback archive remains and must be loaded before rollback. Final available
+space is **14.63 GiB**. No local/server image build or business-volume deletion occurred.
 
 ## Active work
 
-Latest code is **6b4ee0aec8bf399d2bd5eefabfb9c538f2933632**. Final CI
-**37366294097**, attempt 3, is waiting for hosted runners. Exact-source API
-**929 passed / 3 skipped**, Web (including Context **35**, PWA **134 / 295 skipped**)
-and settings **147** plus fresh PostgreSQL restore **1** passed. Attempt 2 built
-the images, but independent inspection never started and was cancelled with
-"The job was not acquired by Runner of type hosted even after multiple attempts".
-Attempt 3 preserves successful quality gates; its image build passed and the
-artifact is downloaded under `artifact-3/`. Independent inspection job
-**111982188289** is still queued as of **2026-10-05 21:30 UTC**. It has not been
-cancelled or restarted while live. GitHub's public status still reports
-**Actions major outage**, with Hosted Runner failures. This external blocker
-has persisted across three goal turns; release work must wait for that gate.
-Do not rebuild locally/on King or deploy an unverified candidate. Final release
-helpers and detailed continuation notes are in
-`C:/Users/86182/Desktop/wkkk/chat-reader-export-final-20261006/CONTINUE.md`.
-No production replacement, migration or cleanup from this follow-up has run yet.
-
 [Export retention and backup plan](docs/planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md)
-is authorized and unfinished. Server backups have been reduced to two manually.
-[Local export implementation](docs/execution/EXPORT_RETENTION_2026-10-06.md) adds
-policy inputs, download/usage fences, recoverable physical reclamation, task status
-and regeneration APIs; local single migration head is **20261006_0048**.
-Client downloads/close/regeneration and verified two-backup retention with byte-identical
-component reuse are implemented and have passed the exact-source quality gates above.
-Browser retention **10**, related backup/help **11**, PostgreSQL/backup **11**, final
-API core **35 / 1 skipped** are earlier local evidence. First CI 37354343891 found a
-historical-schema test setup and ambiguous copy-status selectors; subsequent fixes
-retain the underlying migration and clipboard assertions. **Final artifact inspection
-and production acceptance remain unfinished; none of this follow-up is deployed.**
-The user deferred off-site backups; do not ask
-for a destination or upload recovery copies. Existing expired exports remain
-protected by DB references until the new lifecycle safely reclaims them.
-
-[Backup review](docs/execution/BACKUP_STORAGE_REVIEW_2026-10-05.md) and
-[server storage review](docs/execution/SERVER_STORAGE_REVIEW_2026-10-05.md) are
-historical measurements, not current deletion lists. The long-running user goal
-remains active; a successful release does not complete these remaining tasks.
+is delivered. [Implementation history](docs/execution/EXPORT_RETENTION_2026-10-06.md)
+records failed gates, corrections and local evidence. The user explicitly deferred
+off-site copies; do not ask for a destination or upload them. The long-running
+continuous optimization goal remains active; this release completes this stage.
 
 ## System and boundaries
 
@@ -113,25 +78,21 @@ unavailable until the operator configures it. Administrator reset links remain.
 
 ## Verification
 
-Exact deployed-source CI passed all five jobs: API **902 passed / 3 skipped**,
-Context **35**, authenticated settings **136** plus **1** fresh PostgreSQL restore,
-authentication **18**, offline negatives **17**, baseline PWA **134 / 284 skipped**,
-and the Reader/Share/source/upload/PDF/CSP, build, lint, typecheck, migration and
-image gates. Suites overlap; skips are not passes. Fifty image blobs were checked.
-
-Later test-only fixes passed the local baseline **138 / 284 skipped**, including
-four CSP cases; those fixes were not executed by the earlier CI. The recurring
-`The destination stream closed early` log has no established root cause and is
-not claimed fixed. See [copy recovery](docs/execution/SKILL_COPY_RECOVERY_2026-10-05.md).
-Production HTTP/data acceptance is separate from CI browser coverage; no fresh
-full interactive production browser matrix is claimed. SMTP is unconfigured, so
-actual mail delivery is unavailable; the station's private request workflow works.
+Exact deployed-source CI: API **929 / 3 skipped**,
+Context **35**, authenticated settings **147** plus **1** fresh
+PostgreSQL restore, authentication **18**, offline negatives **17**, baseline PWA
+**134 / 295 skipped**, plus Reader/Share/upload/PDF/CSP, lint, typecheck,
+build, migration and image checks. Suites overlap; skips are not passes.
+Local legacy-download browser verification passed; previous baseline was **138 / 294 skipped**.
+Production HTTP/data checks are separate from CI browser coverage; no full interactive
+production browser matrix is claimed. SMTP is unconfigured; actual mail delivery
+remains unavailable. Earlier stream-close observations are not claimed fixed here.
 
 ## Work rules and navigation
 
 Read [AGENTS.md](AGENTS.md), then [docs index](docs/index.md). Temporary files use
 `C:/Users/86182/Desktop/wkkk/<task>` with process-local TEMP/TMP. This release uses
-`wkkk/chat-reader-release-20261006`. The earlier E-drive test exception was batch
+`wkkk/chat-reader-export-final-20261006`. The earlier E-drive test exception was batch
 specific. Do not scan the local workstation, build images locally/on King, modify
 user imports, delete production volumes or overwrite the server environment.
 Existing unrelated tsbuildinfo and auth-resume test directories remain untouched.

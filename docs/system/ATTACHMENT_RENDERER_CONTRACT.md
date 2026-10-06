@@ -161,7 +161,7 @@ Overview prefers bounded previews and Focus loads the active item. Original byte
 
 Owner, Share and derivative content routes authorize before stat/read and support GET/HEAD plus one byte range. Valid ranges return 206 with `Accept-Ranges`, `Content-Length`, and `Content-Range`; invalid, multiple, or out-of-bounds ranges return 416. Empty content returns 200 with length zero.
 
-Owner batch downloads validate one conversation, active/available attachments, unique IDs, <= 500 business attachments and <= 2 GiB. The worker streams originals into a safe-name ZIP with a 24-hour artifact TTL. It rejects unsafe paths, cross-conversation IDs, missing/detached data and excessive quotas. Attachments sharing one AssetObject retain distinct business filenames.
+Owner batch downloads validate one conversation, active/available attachments, unique IDs, <= 500 business attachments and <= 2 GiB. The worker streams originals into a safe-name ZIP with the Root-controlled temporary export lifetime (default three minutes), protected active downloads and explicit-close release. It rejects unsafe paths, cross-conversation IDs, missing/detached data and excessive quotas. Attachments sharing one AssetObject retain distinct business filenames.
 
 Share may view/download one authorized attachment and navigate a Gallery composed only from authorized message occurrences. Share cannot enumerate owner conversation files, discover unplaced attachments, open owner conversation Gallery, create derivatives, or create batch ZIPs.
 

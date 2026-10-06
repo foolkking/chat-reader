@@ -1,5 +1,12 @@
 # Cleanup Contract
 
+2026-10-06: the manual categories and grace period below continue to govern
+orphans and Offline artifacts. Referenced, committed temporary exports have a
+separate automatic expiry/release lifecycle under
+[Artifact Lifecycle Contract](ARTIFACT_LIFECYCLE_CONTRACT.md). It checks live
+usage/download leases and excludes restore uploads and canonical data; it does not
+lower the manual 24-hour grace window or enable general storage cleanup.
+
 ## Safety objective
 
 Cleanup may reduce internal Export/Offline artifact debt only after canonical

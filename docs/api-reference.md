@@ -1,6 +1,6 @@
 # API 参考
 
-## Local export lifecycle extension (not deployed)
+## Export lifecycle extension (deployed 2026-10-06)
 
 Migration `20261006_0048` adds owner-scoped `/api/exports/{id}` GET status,
 POST `/usage`, `/release`, `/download-claims` (JSON `session_id` UUID), and POST
@@ -10,7 +10,7 @@ availability, cleanup failure code and a regeneration action without storage pat
 Root `/api/admin/features` accepts `export_retention_minutes` (1–60, default 3)
 and `export_release_on_close` (default true), preserving omitted fields.
 See [artifact contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md) and
-[execution](execution/EXPORT_RETENTION_2026-10-06.md); client integration is pending.
+[release evidence](execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md); export, maintenance, archive and Task Center clients are integrated. Legacy artifacts can return a null retention_seconds while preserving expires_at.
 
 ## Support requests (deployed 2026-10-06)
 
@@ -165,7 +165,7 @@ The settings UI offers ZIP download/replacement without content/history viewing.
 
 个人任务类型：`personal_archive_export`、`personal_archive_preflight`、
 `personal_archive_restore`。支持既有任务取消/失败重试。导出下载仍为
-`/api/exports/{artifact_id}/download`，仅已提交的本人导出可访问，24 小时
+`/api/exports/{artifact_id}/download`，仅已提交的本人导出可访问，按生成时记录的临时保留策略到期
 后 410；上传来源永不通过该接口提供下载。预检结果包含 counts、最多各
 50 个项目/对话标题、缺失附件数量与规范化摘要。偏好默认不导入；归档正文
 和所有内部引用经重映射后新增恢复，按账户与内容摘要持久幂等。
@@ -535,7 +535,7 @@ PATCH 只处理明确提交的字段，支持清空标题/说明/有效期/密�
 
 `POST /api/offline/packages` 可提交 `known_revisions: {conversation_id: revision}`。服务器逐 conversation 与当前 catalog 比对，v3 `conversation-delta` 包只写新增或 revision 不同的 conversation；全部未变化时返回可安全导入的空增量。旧 v1/v2 包仍可由浏览器导入。
 
-系统 `.cr v5` 从 `/api/system/archive/exports` 排队，轮询任务后下载；v4 系统档与旧对话级 `.cr` 仍可读取，但新对话导出 UI 不再生成旧 `.cr`。下载 artifact 默认 24 小时过期。v5 将归档管理员关联目标 Root Admin，普通账户使用新 UUID 且须重设密码，正文/项目/Reader 归属一同更新。v4 的 `owner_mapping` 从来源 UUID（无归属用 `unowned`）映射到已有目标用户 UUID，不静默认领。校验失败为 400，映射参数格式错误为 422。个人导出/预检/新增恢复采用本页开头的 `/api/me/archive/*` 接口，系统恢复仍待任务/UI 整合；当前边界见 [Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)。
+系统 `.cr v5` 从 `/api/system/archive/exports` 排队，轮询任务后下载；v4 系统档与旧对话级 `.cr` 仍可读取，但新对话导出 UI 不再生成旧 `.cr`。下载 artifact 默认生成完成后三分钟过期，Root 可设置 1–60 分钟；下载占用与关闭释放见本页导出生命周期接口。v5 将归档管理员关联目标 Root Admin，普通账户使用新 UUID 且须重设密码，正文/项目/Reader 归属一同更新。v4 的 `owner_mapping` 从来源 UUID（无归属用 `unowned`）映射到已有目标用户 UUID，不静默认领。校验失败为 400，映射参数格式错误为 422。个人导出/预检/新增恢复采用本页开头的 `/api/me/archive/*` 接口，系统恢复已接入任务和设置界面；当前边界见 [Data Archive Contract](system/DATA_ARCHIVE_CONTRACT.md)。
 
 `format=markdown_bundle` 输出 Markdown 与相对 `assets/objects/<sha-prefix>/<sha256>` 文件；`format=canjson_bundle` 输出带附件对象路径的 CanJSON JSONL。两种 Bundle 只包含当前版本，并接受 `include_description`、`annotation_scope`、`notebook_scope` 与 `include_source_refs` 二级选项。当前不做附件内容秘密扫描；对象仍需通过状态、大小和 SHA-256 完整性校验，manifest 中 `excluded_object_count` 为兼容字段。
 

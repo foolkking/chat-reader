@@ -157,3 +157,14 @@ least three times `WORKER_HEARTBEAT_INTERVAL_SECONDS`.
 
 External APM, Prometheus/Grafana, alerting, automatic remediation and a general
 metrics database remain out of scope.
+
+
+## Temporary export reclamation (2026-10-06)
+
+Root-only `GET /api/admin/runtime-status` adds the bounded `export_cleanup`
+aggregate for expired/released temporary exports, including pending bytes/counts
+and retry failures. Unavailable metrics remain unavailable rather than zero.
+The existing worker heartbeat performs bounded reclamation while a user job runs;
+reading runtime status never deletes files or extends a download deadline.
+No filenames, artifact IDs or source content are exposed by this metric. The
+loopback diagnostics boundary remains unchanged.

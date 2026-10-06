@@ -2,21 +2,16 @@
 
 ## Current release — 2026-10-06
 
-Production source `5d48b686893d44f98092dfffbfa32a4464e8ede1` from CI `37323431809`
-is deployed, with single Alembic head/current `20261005_0047`. Runtime, authenticated
-HTTP, Skill and post-cleanup checks pass. PostgreSQL/environment/Nginx remain
-unchanged; live Compose adds only the two import-limit declarations.
+Production source `6b4ee0aec8bf399d2bd5eefabfb9c538f2933632`, CI `37366294097`, single head/current `20261006_0048`.
+Export retention, real download protection and regeneration are live. Verified
+backups are `chat-reader-20261005T162912Z`, `chat-reader-20261006T025905Z`; backup tools support byte-identical reuse and post-acceptance
+two-point retention. No off-site copy or scheduled backup is configured.
 
-[Deployment record](execution/DEPLOYMENT_SUPPORT_2026-10-06.md) owns image digests,
-first-attempt recovery, fresh retry backup and acceptance limits. Latest two verified
-backups are `chat-reader-20261005T162104Z` and `chat-reader-20261005T162912Z`.
-Older backups and four replaced `3f1d539` tags were deleted after acceptance.
-Rollback requires loading its retained image archive first. Final free space was
-12,737,072 KiB. Local/server image builds were not used; no off-site copy is configured.
-
-[Retention implementation](planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md) remains
-pending. The one-time two-backup cleanup is not automatic retention. Three-minute
-export reclamation and deduplication are not part of this deployed release.
+[Deployment record](execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md) owns image digests, tests, cleanup and
+production acceptance. PostgreSQL/business data, environment, Compose and Nginx
+are unchanged. Rollback to 5d48b68 requires loading its retained verified archive
+before using rollback-images.env; no automatic database downgrade. Final free space
+is about 14.63 GiB. Only CI images were used; never build locally or on King.
 
 ## Historical release checkpoints
 
@@ -1354,7 +1349,7 @@ backups or application volumes.
 all five checksums, four tar archives, and the PostgreSQL custom dump through an
 isolated `postgres:16-alpine` container with no network and no mounted volume.
 
-### Two verified backups and component reuse (0048 follow-up; not deployed)
+### Two verified backups and component reuse (deployed 2026-10-06)
 
 The accepted policy retains the latest **two verified** server backups. There is
 no additional 30-day retention and no off-site copy configured. Image upload/load

@@ -1,13 +1,14 @@
 # 数据与持久化
 
-Current 2026-10-05 boundary: production/staged Skill data is on `20261003_0046`;
-uncommitted support work adds local head `20261005_0047` with `support_requests`,
-`support_messages` and `user_limit_overrides`. Its optional `.cr` extension preserves
-private history and bounded system grants, never personal grant/mail replay.
-[Support contract](SUPPORT_REQUEST_CONTRACT.md) and
-[execution evidence](../execution/SUPPORT_REQUESTS_2026-10-05.md) separate this local
-backend from the unfinished UI and actual deployed system. Older dated checkpoints
-below retain their historical migration values; consult PROJECT_STATE for releases.
+Current 2026-10-06 production uses single head `20261006_0048`. ExportArtifact
+stores the pinned retention policy and reclamation state; `export_artifact_leases`
+coordinates short usage, claims and active downloads. Existing deadlines survive
+migration. Canonical data, restore inputs, Skill/Continuation objects and Offline
+copies are outside automatic export reclamation. See the
+[Artifact Lifecycle Contract](ARTIFACT_LIFECYCLE_CONTRACT.md) and
+[current release evidence](../execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md).
+Support requests and bounded account grants from `0047` are deployed. Older dated
+checkpoints below preserve historical schema values; PROJECT_STATE owns current state.
 
 2026-10-02 已部署归档更新：系统 `.cr v5` 增加无凭据身份和新实例归属恢复，保留 v4 显式映射兼容；可选 `configuration_version: 1` 保存格式/规则授权、发布与撤回、偏好、既有 Skill 和功能/访问策略。旧 v5 无配置扩展仍可读取。个人归档已有序列化、完整预检、新增恢复、任务和设置界面。导出在发布前完成全图预检和容量自检，过高压缩率条目有界重打包。`20261001_0041` 保存账户/摘要幂等 receipt。`20261002_0042` 为当前唯一 head，增加按预检任务和来源身份保存的归属草稿，目标用户删除时关联置空。系统预检、归属确认和恢复沿用 worker；完整边界见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。已于2026-10-02随ad223cd部署。
 

@@ -1,22 +1,16 @@
 # 部署与运行环境
 
-Current production is `5d48b68`, Alembic `20261005_0047`, deployed 2026-10-06.
-[Current snapshot](../../PROJECT_STATE.md) and
-[deployment evidence](../execution/DEPLOYMENT_SUPPORT_2026-10-06.md) own live status,
-verified backups, preserved environment and archive-based rollback.
-Only GitHub CI images are used; do not build on the workstation or King.
+Current production is `6b4ee0a`, Alembic `20261006_0048`, deployed 2026-10-06.
+[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md)
+own live status, exact CI images, verified backups and rollback. Never build on the workstation or King.
 
-Support/limit requests and Skill unification are live. API/worker Compose declares
-`IMPORT_GATEWAY_FILE_LIMIT_MB` (500 MiB default) and `MAX_ADAPTIVE_IMPORT_TOTAL_MB`
-(512 MiB default). Raising limits requires aligning every relevant Nginx route,
-API file maximum and adaptive aggregate budget. No reverse-proxy auto-detection
-or modification occurs. SMTP is unconfigured; actual mail delivery is unavailable.
-[Support contract](SUPPORT_REQUEST_CONTRACT.md) owns request behavior.
-
-Server backup retention is two; the current cleanup was manual, with automatic
-retention and short-lived export reclamation still under implementation. Off-site
-copies are deferred. The historical snapshots below do not override current
-production or the retained backup/image inventory.
+Temporary exports use Root-controlled three-minute retention and protected downloads.
+Backup tools are installed; successful release finalization retains two verified
+snapshots and reuses identical components. There is no scheduled backup or off-site copy.
+SMTP is unconfigured; support requests remain available in the application.
+API/worker Compose declares IMPORT_GATEWAY_FILE_LIMIT_MB and MAX_ADAPTIVE_IMPORT_TOTAL_MB;
+raising limits still requires aligning Nginx and application limits. This release
+does not change environment, Compose, Nginx, PostgreSQL or business volumes.
 
 ## Historical deployment (2026-10-04)
 

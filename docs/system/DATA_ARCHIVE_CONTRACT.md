@@ -96,8 +96,10 @@ Rollback, commit failure and session close remove those objects; nested
 rollback cleans only its own objects, while nested commit transfers ownership
 to the parent transaction. Existing objects are not registered for deletion.
 Interrupted asset staging and export cancellation clean their `.part` files.
-Final export artifacts retain the existing worker publication/retention
-contract and 24-hour download lifetime.
+Final export artifacts use the worker publication contract and the Root-controlled
+download lifetime (default three minutes), with explicit-close release, protected
+active transfers and regeneration. Restore uploads below retain their separate
+24-hour admission lifetime; the short export policy never reclaims restore inputs.
 
 ## Personal backup and additive restore
 
