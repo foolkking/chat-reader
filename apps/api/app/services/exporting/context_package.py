@@ -437,7 +437,14 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
                 manifest["files"][name] = {"sha256": hashlib.sha256(data).hexdigest(), "byte_size": len(data)}
     if len(asset_entries) > get_settings().bundle_max_objects or 2 + len(asset_entries) + len(continuation_members) > get_settings().bundle_max_entries:
         raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
-    budget = _WriteBudget(progress_callback)
+    def zip_progress(phase, _progress, processed, count):
+        # The shared writer's generic progress starts at 10%; Context has already
+        # finished serialization at 55%. Keep its visible progress monotonic.
+        percent = 55 if phase == "exporting" else 55 + round(processed * 40 / max(count, 1))
+        _report(progress_callback, "packaging_assets" if phase == "assets" else "packaging",
+                percent, message_count, total)
+
+    budget = _WriteBudget(zip_progress if progress_callback is not None else None)
     try:
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
             _write_stream(archive, "manifest.json", (json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),), budget=budget)

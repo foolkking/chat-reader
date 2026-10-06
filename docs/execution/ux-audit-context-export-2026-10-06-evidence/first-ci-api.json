@@ -1,0 +1,13 @@
+{
+  "source": "d89c3d7ee67b5476ee28ff7124e1350e7fdce360",
+  "run": 37468343599,
+  "api_job": 112284990328,
+  "api_conclusion": "failure",
+  "evidence": [
+    "tests/test_context_export_integrity.py ..........................        [ 34%]",
+    "tests/test_context_export_postgres.py .............                      [ 35%]",
+    "FAILED tests/test_system_archive_api.py::test_system_archive_v5_empty_instance_restore_round_trip - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: users.id",
+    "====== 1 failed, 1041 passed, 3 skipped, 14 warnings in 628.18s (0:10:28) ======"
+  ],
+  "note": "Archive fixture duplicate user insertion corrected in follow-up; no failed-source deployment."
+}

@@ -64,7 +64,9 @@ def test_system_archive_v5_empty_instance_restore_round_trip(client, tmp_path: P
     fixture_db = app.dependency_overrides[get_db]()
     db = next(fixture_db)
     try:
-        db.add(User(id=LEGACY_OWNER_USER_ID, role="ADMIN", normalized_email="archive-root@example.test"))
+        root = db.get(User, LEGACY_OWNER_USER_ID)
+        assert root is not None and root.role == "ADMIN"
+        root.normalized_email = "archive-root@example.test"
         db.commit()
     finally:
         db.close()

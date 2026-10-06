@@ -376,6 +376,9 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
   if (task.status === "processing" && (task.job_type.endsWith("_export") || task.job_type === "attachment_batch_download")) {
     if (task.phase === "publishing") return zh ? "准备下载文件" : "Preparing download";
     if (task.phase === "exporting") return zh ? "生成导出文件" : "Creating export file";
+    if (task.phase === "serializing") return zh ? "整理导出内容" : "Preparing export content";
+    if (task.phase === "packaging") return zh ? "打包导出文件" : "Packaging export file";
+    if (task.phase === "assets" || task.phase === "packaging_assets") return zh ? "写入导出附件" : "Writing export attachments";
   }
   if (!zh) {
     const terminal = { queued: "Queued", cancelling: "Cancelling", cancelled: "Cancelled", failed: "Failed", committed: "Completed" }[task.status];

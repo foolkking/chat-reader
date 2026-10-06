@@ -144,10 +144,15 @@ def test_context_missing_object_remains_usable_raw_package(bundle_state):
 
 def test_temporary_context_is_not_removed_by_session_close(bundle_state):
     info = bundle_state
+    progress = []
     with info["factory"]() as db:
         artifact = context.create_context_package(db, conversation_id=info["sources"][0], job_id=uuid.uuid4(),
             scope_kind="full_conversation", start_message_id=None, subject_key=str(info["owners"][0]),
-            output_directory=info["root"], record_artifact=False)
+            output_directory=info["root"], record_artifact=False,
+            progress_callback=lambda phase, percent, *_: progress.append((phase, percent)))
+    assert {"serializing", "packaging", "packaging_assets", "publishing"} <= {phase for phase, _ in progress}
+    percentages = [percent for _, percent in progress]
+    assert percentages == sorted(percentages)
     assert Path(artifact.storage_uri).is_file()
     with zipfile.ZipFile(artifact.storage_uri) as archive: assert archive.testzip() is None
 

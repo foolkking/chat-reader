@@ -67,3 +67,23 @@ the existing CI image were used, with networkless read-only disposable container
 
 Evidence stays synthetic. Existing `apps/web/tsconfig.tsbuildinfo` remains unstaged;
 old untracked auth-test directories are neither inspected nor cleaned.
+
+## First full CI and follow-up
+
+Source `d89c3d7ee67b5476ee28ff7124e1350e7fdce360` was pushed and CI
+[37468343599](https://github.com/foolkking/chat-reader/actions/runs/37468343599)
+ran against that exact source. API finished **1041 passed / 1 failed / 3 skipped**.
+All **13 real PostgreSQL Context publication cases** and **26 integrity/streaming
+cases** passed. The failure was an archive test inserting the legacy administrator
+that its shared import fixture now already creates. The test now updates that
+fixture account's synthetic email instead of inserting a duplicate; archive restore
+assertions and production authorization are unchanged. Redacted summary is retained
+as `first-ci-api.json`. Failed-source images must not be deployed.
+
+Follow-up code also maps the reused ZIP writer's progress onto Context's 55–95%
+packaging phase, preventing a visible reset to 10%; the real export test asserts
+monotonic phase percentages. Task labels distinguish exporting attachments from
+building an offline copy. The 26-case suite passed again (21.79s). Fresh exact-source
+CI is required for this follow-up, including the archive fixture correction.
+The corrected actual archive round trip passed in isolation (1 case, 8.40s);
+follow-up nonincremental TypeScript and changed-file ESLint passed too.
