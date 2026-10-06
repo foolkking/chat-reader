@@ -919,6 +919,7 @@ def process_background_job(
                         db,
                         conversation_id=conversation_id,
                         job_id=job.id,
+                        ownership_scope=job_scope,
                         bundle_format=(
                             MARKDOWN_BUNDLE_FORMAT
                             if export_format == "markdown_bundle"

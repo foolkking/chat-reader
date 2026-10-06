@@ -1,5 +1,31 @@
 # Artifact Lifecycle Contract
 
+## Attachment bundles — 2026-10-06 (source; deployment pending)
+
+`markdown_bundle` and `canjson_bundle` use one PostgreSQL READ ONLY / REPEATABLE
+READ connection for metadata, canonical message serialization, secondary content
+and attachment mapping. Concurrent edits cannot mix earlier object bytes with
+later metadata. Source ownership/account availability and the copied objects'
+scan/status are rechecked before publication. Snapshot consistency is not a
+replacement for authorization. The separate `context_package` builder retains
+its existing optimistic-change contract.
+
+Each object is copied in at most 1 MiB reads, checking actual byte size and SHA-256.
+Pre-existing unavailable files remain explicitly missing; mismatched/corrupt or
+newly revoked objects fail the task without publishing. ZIP entries, objects,
+expanded/compressed bytes, individual object size and CanJSON line/message counts
+use existing configured limits. Progress callbacks run during copying as well as
+between objects. Markdown paths escape spaces, parentheses and URL fragments.
+
+Staging creation through publication is guarded by cleanup; new final files are
+owned by the worker transaction and removed on rollback, including post-rename
+failure. Serializer interruption closes nested iterators/sessions. Process crash
+leftovers still follow orphan cleanup; this does not introduce general cancellation
+for `conversation_export`. Existing expiry/close/transfer leases/regeneration and
+download ownership remain in use. No schema or ZIP format migration.
+
+See [stage evidence](../execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md).
+
 ## Batch CanJSON ZIP extension — 2026-10-06 (deployed)
 
 `conversation_batch_export` admits 1–5000 distinct owned sources and a required

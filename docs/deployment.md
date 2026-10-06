@@ -1,5 +1,12 @@
 # 生产部署
 
+Source follow-up (not deployed): attachment-bundle snapshot/integrity fixes add
+no migration; head remains `20261006_0048`. Use a fresh CI artifact and source-bound
+release helpers after all gates pass. Do not replay completed aee64ff release
+mutations. Local Web build passed with process-local `RAYON_NUM_THREADS=2` and
+`TOKIO_WORKER_THREADS=2` after a Windows page-file/thread-allocation failure.
+See [attachment export evidence](execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md).
+
 ## Current release — 2026-10-06
 
 Production source `aee64ff6146d3ac915b2a281aac3bc040268ffed`, CI `37429071820`,

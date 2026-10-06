@@ -42,9 +42,13 @@ rollback requires loading that archive first. Final server available space:
 ## Active work
 
 The durable batch-export stage is delivered. The continuous optimization goal
-remains active. Follow-up observations: repeated exports in Task Center can be
-hard to distinguish; background attachment-bundle snapshot consistency needs its
-own reproduction. Neither is claimed fixed here. Off-site copies remain deferred;
+remains active. The next attachment-bundle change is implemented locally and
+awaits exact-source CI/deployment: coherent PostgreSQL snapshot, streamed object
+checksum verification, bounded writes and rollback cleanup. Local API/related
+tests, nine PostgreSQL races and three actual browser cases pass; see
+[stage evidence](docs/execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md).
+Repeated exports in Task Center can still be hard to distinguish; that separate
+observation is not claimed fixed. Off-site copies remain deferred;
 no scheduled backups were added. The unrelated earlier Next stream-close
 observation remains unproven and is not claimed fixed.
 

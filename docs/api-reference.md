@@ -387,6 +387,15 @@ Project 列表支持 `sort=recent_read|updated|created|title|conversation_count|
 
 ## Background Tasks
 
+Attachment-bundle tasks (`markdown_bundle`, `canjson_bundle`) use one PostgreSQL
+snapshot and verify the actual copied object bytes. Failures return stable task
+errors `ATTACHMENT_EXPORT_INTEGRITY`, `ATTACHMENT_EXPORT_LIMIT`,
+`ATTACHMENT_EXPORT_STORAGE_UNAVAILABLE`, `ATTACHMENT_EXPORT_SOURCE_UNAVAILABLE`,
+`ATTACHMENT_EXPORT_ACCOUNT_UNAVAILABLE` or `ATTACHMENT_EXPORT_ASSET_UNAVAILABLE`.
+The export panel and Task Center translate these into recovery guidance. The
+existing task retry and export regeneration endpoints remain unchanged; retry
+reads a fresh snapshot. No partial-success artifact is published on corruption.
+
 | Method | Path | 说明 |
 | --- | --- | --- |
 | GET | `/api/tasks/active` | 返回 active 与保留期内 terminal 的 import/merge/export/cleanup/noise-review 等任务；噪声审查通过 `parent_task_id` 关联导入 |

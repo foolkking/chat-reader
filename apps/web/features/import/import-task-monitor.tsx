@@ -254,7 +254,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
       </div>
       {failed ? (
         <div className="mt-2">
-          <p className="line-clamp-2 text-[var(--danger)]">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : (task.job_type === "conversation_batch_export" ? batchExportError(task.error_message ?? undefined, zh) : task.error_message) || (zh ? "任务失败" : "Task failed")}</p>
+          <p className="line-clamp-2 text-[var(--danger)]">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : ((task.job_type === "conversation_batch_export" || task.error_message?.startsWith("ATTACHMENT_EXPORT_")) ? batchExportError(task.error_message ?? undefined, zh) : task.error_message) || (zh ? "任务失败" : "Task failed")}</p>
           {onRetry && task.job_type !== "context_validation" ? (
             <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex items-center gap-1 font-medium text-[var(--danger)] underline">
               <RefreshCw className="h-3.5 w-3.5" /> {zh ? "重试" : "Retry"}

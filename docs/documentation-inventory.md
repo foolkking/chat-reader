@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+`execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md` records reproduced attachment
+bundle defects, snapshot/checksum/lifecycle fixes, actual PostgreSQL and browser
+evidence, and pending release gates. Current implementation contract belongs to
+`system/ARTIFACT_LIFECYCLE_CONTRACT.md`; production state remains separate.
+
 Current release: `execution/BATCH_EXPORT_RECOVERY_2026-10-06.md` owns aee64ff/0048,
 the reproduced batch failure, durable replacement, exact-source CI 37429071820,
 production acceptance and cleanup. Project State, index, deployment/environment,
