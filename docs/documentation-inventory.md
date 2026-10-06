@@ -1,14 +1,16 @@
 # Markdown 文档台账
 
-`execution/TASK_CENTER_CLARITY_2026-10-06.md` tracks the pending Task Center source, failed initial CI and follow-up race fixes,
-format/time hierarchy, grouping/focus fixes and real regression verification.
+`execution/TASK_CENTER_CLARITY_2026-10-06.md` tracks deployed source 25c7f6a/0048,
+CI 37453812341, the failed initial CI and verified follow-up race fixes, format/time
+hierarchy, grouping/focus, production acceptance and cleanup.
 `system/RETENTION_CONTRACT.md` and `api-reference.md` own the additive contract;
-this work does not change the production or retention boundaries below.
+retention boundaries are unchanged. Earlier release checkpoints below are historical.
 
 `execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md` records reproduced attachment
 bundle defects, snapshot/checksum/lifecycle fixes, actual PostgreSQL and browser
 evidence, and successful CI/deployment/cleanup. Current implementation contract belongs to
-`system/ARTIFACT_LIFECYCLE_CONTRACT.md`; production source is f0e355a/0048, CI 37439899921.
+`system/ARTIFACT_LIFECYCLE_CONTRACT.md`; that previous release used f0e355a/0048
+and CI 37439899921. Its backup/image inventory is historical.
 
 Previous release: `execution/BATCH_EXPORT_RECOVERY_2026-10-06.md` owns aee64ff/0048,
 the reproduced batch failure, durable replacement, exact-source CI 37429071820,
@@ -1129,3 +1131,12 @@ deployment.md, PROJECT_STATE and EXPORT_RETENTION execution; production remains
 
 `evidence/task-center-2026-10-06/` contains synthetic intermediate screenshots from
 CI 37448984796/artifact 11406718713; the counter correction is not yet shown.
+
+`evidence/task-center-2026-10-06/final/` contains the inspected final synthetic
+375/768/1440 screenshots from CI 37453812341/artifact 11408998920.
+
+`evidence/task-center-2026-10-06/release-provenance.json` records exact CI/source,
+artifact ID, archive digest and image IDs. `production-acceptance.json` records
+redacted real export/task checks, unchanged canonical data, healthy services,
+retained backups and authorized old-image cleanup. The release is complete;
+these are historical evidence, not permission to replay the operations.

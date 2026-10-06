@@ -1,0 +1,121 @@
+{
+  "attachment_exports": {
+    "anonymous_download_denied": true,
+    "attachment_export": "PASS",
+    "formats": 2,
+    "manifest_counts_match": true,
+    "object_checksums_checked": 74,
+    "persisted_task_identity_and_counts": true,
+    "physical_close_reclamation": true,
+    "raw_files_saved": false,
+    "source_retained": true
+  },
+  "attachments_verified": 301,
+  "backups": {
+    "removed": 1,
+    "retained": [
+      "chat-reader-20261006T093548Z",
+      "chat-reader-20261006T113958Z"
+    ],
+    "verified": 2
+  },
+  "batch": {
+    "anonymous_download_denied": true,
+    "batch_export": "PASS",
+    "idempotent_submission": true,
+    "ordered_canjson_zip": true,
+    "persisted_task_source": true,
+    "physical_close_reclamation": true,
+    "raw_files_saved": false,
+    "selected_conversations": 2,
+    "sources_retained": true
+  },
+  "canonical_unchanged": true,
+  "direct_exports": {
+    "direct_exports": [
+      {
+        "content_length_verified": true,
+        "format": "text/markdown",
+        "status": "PASS"
+      },
+      {
+        "content_length_verified": true,
+        "format": "application/x-ndjson",
+        "status": "PASS"
+      },
+      {
+        "content_length_verified": true,
+        "format": "application/gzip",
+        "status": "PASS"
+      },
+      {
+        "content_length_verified": true,
+        "format": "application/json",
+        "status": "PASS"
+      }
+    ],
+    "raw_files_saved": false
+  },
+  "export_lifecycle": {
+    "cleanup_metric": {
+      "available": true,
+      "failed_count": 0,
+      "pending_bytes": 0,
+      "pending_count": 0
+    },
+    "default_policy": "3 minutes, release on close",
+    "owned_source_retained": true,
+    "physical_release": "PASS",
+    "range_and_zip": "PASS",
+    "regeneration_idempotency": "PASS"
+  },
+  "old_images": {
+    "reclaimed_bytes": 284909568,
+    "recovery_archive_sha256": "2bc83c979a90a07178a01e0e7927d05826bc08925123beca0908ecc64441fb06",
+    "removed_tags": 4
+  },
+  "post_cleanup": {
+    "compose_unchanged": true,
+    "environment_unchanged": true,
+    "health": "PASS",
+    "nginx_unchanged": true,
+    "postgres_unchanged": true,
+    "source": "25c7f6a"
+  },
+  "protected_imports_offline_unchanged": true,
+  "runtime": {
+    "api": {
+      "error_keyword_lines": 0,
+      "healthy": "healthy",
+      "oom_killed": false,
+      "restarts": 0,
+      "running": true
+    },
+    "import-worker": {
+      "error_keyword_lines": 0,
+      "healthy": "not_applicable",
+      "oom_killed": false,
+      "restarts": 0,
+      "running": true
+    },
+    "postgres": {
+      "healthy": "healthy",
+      "oom_killed": false,
+      "restarts": 0,
+      "running": true
+    },
+    "production_environment_unchanged": true,
+    "web": {
+      "error_keyword_lines": 0,
+      "healthy": "healthy",
+      "oom_killed": false,
+      "restarts": 0,
+      "running": true
+    }
+  },
+  "source": "25c7f6a16f72780b08b22f1f3bf23665ebfd300c",
+  "space": {
+    "available_bytes": 15674314752,
+    "total_bytes": 41881894912
+  }
+}

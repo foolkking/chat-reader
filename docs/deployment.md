@@ -2,23 +2,33 @@
 
 ## Current release — 2026-10-06
 
-Production source `f0e355af4169ff593da8134b8148c7dc5c25425d`, CI `37439899921`,
+Production source `25c7f6a16f72780b08b22f1f3bf23665ebfd300c`, CI `37453812341`,
 single head/current `20261006_0048`. All five gates passed; original artifact
-11401429587/attempt 1 was independently verified. Attachment bundles now have a
-coherent PostgreSQL snapshot, actual-byte verification and rollback cleanup.
+11409659316/attempt 1 was independently verified. This release improves Task Center
+identity/recovery, regeneration during polling and account-generation fencing.
+No schema or export-format migration was added.
 
-Latest verified backups: `chat-reader-20261006T075948Z`, `chat-reader-20261006T093548Z`.
-After acceptance, one older backup was pruned using the verified installed tools.
+Latest verified backups: `chat-reader-20261006T093548Z`, `chat-reader-20261006T113958Z`.
+After acceptance, one older backup was pruned using verified installed tools.
 Three identical components were reused. No off-site copy or scheduled backup.
 
-[Deployment evidence](execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md) records
-image IDs, CI, actual ZIP/74-object hash/close-regeneration checks and unchanged
-business data/configuration. Four aee64ff image tags were removed. Rollback requires
-loading `/opt/chat-reader/releases/aee64ff6146d3ac915b2a281aac3bc040268ffed/chat-reader-images.tar.gz`
-(SHA-256 `44ccb4dc95afccf6cdb6f675c2f95705b837f4da00e32e47a57c81e4163ee02d`)
+[Deployment evidence](execution/TASK_CENTER_CLARITY_2026-10-06.md) records image IDs,
+CI, actual ZIP/74-object checks, persisted task identity/counts, close/regeneration
+and unchanged business data/configuration. Four f0e355a image tags were removed.
+Rollback requires loading
+`/opt/chat-reader/releases/f0e355af4169ff593da8134b8148c7dc5c25425d/chat-reader-images.tar.gz`
+(SHA-256 `2bc83c979a90a07178a01e0e7927d05826bc08925123beca0908ecc64441fb06`)
 before using rollback-images.env. No database downgrade is needed. Final available
-server space: **14.80 GiB**. Images were built only in CI. Local residues remain
-for the user. Task-owned local API/worker/PostgreSQL have been stopped.
+server space: **14.60 GiB**. Images were built only in CI. Local residues remain
+for the user. Do not replay completed deployment/cleanup helpers.
+
+Release transfer uses server-compatible Python syntax (the host has Python 3.6.8),
+checks the exact-source artifact in memory, and streams into a private versioned
+release directory. Scripts mounted into non-root API containers need readable file
+modes; the enclosing host directory remains private. Execute resume scripts as a
+file or quoted command argument, not shell stdin that Docker can consume. Wait for
+Web health after Compose starts it before beginning acceptance. Actual interrupted
+attempts and their recovery are recorded in the stage evidence.
 
 ## Historical release checkpoints
 

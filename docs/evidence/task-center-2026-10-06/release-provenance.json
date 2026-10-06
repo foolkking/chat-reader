@@ -1,0 +1,14 @@
+{
+  "source": "25c7f6a16f72780b08b22f1f3bf23665ebfd300c",
+  "workflow_run_id": "37453812341",
+  "workflow_run_attempt": "1",
+  "artifact_id": 11409659316,
+  "archive_sha256": "87f058fbc0797fd249d062fe6346b5b4bd9a2f694950726244642a1a950e2eae",
+  "archive_bytes": 193619321,
+  "verified_blobs": 50,
+  "images": {
+    "api": "sha256:22e067c1f2086f358720164519b473bd111f0e0533bf655a41ed17946045df74",
+    "web": "sha256:17bb70be10e0a17fb9802d43aa3fe8b4b6d1941cf235ea2a7215c05bf4580e26"
+  },
+  "local_or_server_image_build": false
+}
