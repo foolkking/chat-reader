@@ -5,7 +5,7 @@
 subprocess regressions exercise indexed offsets, nested sources and normal mappings
 through both application dependency paths. Official audit has no unapproved
 high/critical finding; no exception was added. [Verification and release status](../execution/SOURCE_MAP_SECURITY_2026-10-06.md)
-include completed CI and production deployment of bdfb725, as recorded in PROJECT_STATE.
+record its first deployment in bdfb725; the fix remains in the current release listed in PROJECT_STATE.
 
 2026-10-03: registry advisory `GHSA-vfj7-8cjw-p6xm` affects `braces` 3.0.3,
 the latest upstream version at review. Tailwind's build/watch dependencies use it.

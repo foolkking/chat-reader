@@ -2,61 +2,48 @@
 
 ## Current release — 2026-10-06
 
-Production `https://chat.king.2bd.net` runs application source **bdfb7257341f0f74685de4ad80e339fbde525ab7** from
-successful [CI 37411587470](https://github.com/foolkking/chat-reader/actions/runs/37411587470).
-All five jobs passed. A consumer-only rerun also passed using the same immutable
-artifact **11389837379**; the producer remained attempt 1 and images were built
-only once. Alembic remains **20261006_0048**, the single head/current.
+Production `https://chat.king.2bd.net` runs application source
+**e27f415024252eaffa527957a37766699a6962a9**, built only by successful
+[CI 37419965889](https://github.com/foolkking/chat-reader/actions/runs/37419965889).
+All five gates passed; artifact **11392973308**, producer attempt **1**, was
+independently checked. Alembic remains **20261006_0048**, single head/current.
+[Release evidence](docs/execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md) owns exact
+provenance, acceptance, cleanup and the remaining scope limits.
 
-`source-map-js` is now upstream **1.2.2**, resolving GHSA-68fv-2mgg-jv7q without
-adding an audit exception. Nine dependency regressions and the full CI gate pass.
-Production login, settings, exact Skill ZIPs, export Range/ZIP, close/reclamation,
-idempotent regeneration and runtime checks pass. PostgreSQL identity/start,
-canonical counts, personal Skill aggregates, all 301 attachment checksums, imports
-and offline fingerprints are unchanged. Environment, Compose and Nginx are unchanged.
-[Deployment evidence](docs/execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md) owns exact provenance and limits.
+Direct Markdown/CanJSON/legacy JSON downloads now prepare one PostgreSQL
+read-only repeatable-read snapshot. A private spool spills above 1 MiB; the
+database connection is released before download delivery. Completion, cancellation
+and failures close the spool. Storage errors return retryable 503. The Web
+download action retains Reader, supports cancel/retry and fences account/option
+changes. Actual UTF-8 filenames and file contents passed local, CI and production
+checks. Background attachment bundles do not gain a new full-snapshot guarantee.
 
-Latest two verified backups: `chat-reader-20261006T025905Z`, `chat-reader-20261006T043843Z`.
-The new backup reused three byte-identical components, avoiding **623,608,310 bytes**
-of duplication. Older verified backup retention and four replaced **6b4ee0a** image
-tag removals completed after acceptance. Its verified recovery archive remains;
-rollback requires loading it first. These are two logical recovery points that can
-share physical files. No scheduled backup or off-site copy was added.
-Final available server space is **14.39 GiB**. No local/server image build,
-business-volume deletion or local-residue cleanup occurred.
+Production settings, Skill Bundles, four direct formats, Context ZIP/Range,
+close/reclamation/regeneration and runtime checks passed. Canonical data counts,
+personal Skill fingerprints, 301 attachment checksums, imports/offline fingerprints,
+PostgreSQL identity/start time, environment, Compose and Nginx remain unchanged.
 
-Temporary exports retain the previously deployed three-minute default and explicit
-close release, with active-download protection, expiration and regeneration. Root
-controls 1–60 minutes and release-on-close; legacy exports keep their deadline.
-The earlier 57-file reclamation is recorded in the
-[export retention release](docs/execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md),
-not counted again as this release's cleanup.
+Latest verified backups: `chat-reader-20261006T043843Z` and
+`chat-reader-20261006T061915Z`. The new backup reused three identical components,
+avoiding **623,608,310 bytes**. Post-acceptance retention removed one older backup
+and the four replaced **bdfb725** image tags. Its verified recovery archive remains;
+rollback requires loading that archive first. Final server available space:
+**15.18 GiB**. No local/server image builds or local-residue cleanup occurred.
+
+Temporary retained exports keep the three-minute default and explicit close
+release, active-transfer protection and regeneration. Root controls 1–60 minutes
+and release-on-close. Direct-download spools close immediately after transfer;
+they are not retained artifacts. Existing deadlines remain unchanged. The source-map-js
+1.2.2 security fix and immutable-artifact retry support from the
+[previous release](docs/execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md) remain.
 
 ## Active work
 
-Direct Markdown/CanJSON/legacy JSON downloads now prepare bytes from one
-PostgreSQL read-only repeatable-read snapshot and release the connection before
-delivery. A private spool spills above 1 MiB and closes on completion/failure;
-storage failures return retryable 503. The download control retains Reader,
-supports cancel/retry, and fences account/option changes. This follow-up is
-**local, not yet deployed**; production remains the source above.
-[Implementation and acceptance](docs/execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md)
-records the real concurrent-edit reproduction, checks and remaining release work.
-
-The export/backup stage and this dependency/CI retry follow-up are delivered.
-The long-running continuous optimization goal remains active. Off-site copies are
-explicitly deferred; do not ask for a destination or upload them.
-
-[Retry evidence](docs/execution/CI_ARTIFACT_RETRY_2026-10-06.md) records 25 local
-contract checks and the successful real consumer-only rerun. GitHub creates new
-records for carried-forward successful jobs; unchanged timestamps/steps/runner and
-byte-identical build logs establish that they were not executed again.
-
-The first source `f59247b`, CI `37409815492`, failed the newly matched source-map-js
-advisory; API/settings passed and build/inspection were skipped. The final source
-upgrades only the affected dependency and regression gate, preserving unrelated
-lock metadata. [Security evidence](docs/execution/SOURCE_MAP_SECURITY_2026-10-06.md)
-records local failures/corrections, successful final CI and the completed release.
+The direct-export snapshot/download-recovery stage is delivered. The long-running
+continuous optimization goal remains active. Off-site copies are explicitly
+deferred; do not ask for a destination or upload them. No scheduled backups were
+added. Snapshot preparation needs temporary capacity and delays first byte;
+the unrelated earlier Next stream-close observation is not claimed fixed.
 
 ## System and boundaries
 
@@ -104,21 +91,22 @@ unavailable until the operator configures it. Administrator reset links remain.
 
 ## Verification
 
-Exact deployed-source CI: API **929 / 3 skipped**,
-Context **35**, authenticated settings **147** plus **1** fresh
-PostgreSQL restore, authentication **18**, offline negatives **17**, baseline PWA
-**134 / 295 skipped**, plus Reader/Share/upload/PDF/CSP, lint, typecheck,
-build, migration and image checks. Suites overlap; skips are not passes.
-Local legacy-download browser verification passed; previous baseline was **138 / 294 skipped**.
-Production HTTP/data checks are separate from CI browser coverage; no full interactive
-production browser matrix is claimed. SMTP is unconfigured; actual mail delivery
-remains unavailable. Earlier stream-close observations are not claimed fixed here.
+Exact-source CI: API **940 passed / 3 skipped**, Context **35**, authenticated
+settings **157** plus **1** fresh PostgreSQL archive restore, authentication **18**,
+offline negatives **17**, baseline PWA **134 / 305 skipped**, and Reader/Share,
+upload/PDF/CSP, lint, typecheck, build, migration and image gates all passed.
+Suites overlap; gated-off cases and missing external fixtures are not passes.
+Local focused backend: **60 / 1 skipped** (Windows symlink unavailable); browser:
+**10 passed**, 375/768/1440px, Chinese/light and English/dark, with real files,
+retry/cancel/options/closure and account changes. Initial fixture failures were
+corrected and recorded. No full interactive production browser matrix is claimed.
+SMTP remains unconfigured; actual external mail delivery remains unavailable.
 
 ## Work rules and navigation
 
 Read [AGENTS.md](AGENTS.md), then [docs index](docs/index.md). Temporary files use
 `C:/Users/86182/Desktop/wkkk/<task>` with process-local TEMP/TMP. This release uses
-`wkkk/chat-reader-ci-artifact-retry-20261006`. The earlier E-drive test exception was batch
+`wkkk/chat-reader-export-snapshot-20261006`. The earlier E-drive test exception was batch
 specific. Do not scan the local workstation, build images locally/on King, modify
 user imports, delete production volumes or overwrite the server environment.
 Existing unrelated tsbuildinfo and auth-resume test directories remain untouched.

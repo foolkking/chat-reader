@@ -2,22 +2,22 @@
 
 ## Current release — 2026-10-06
 
-Production source `bdfb7257341f0f74685de4ad80e339fbde525ab7`, CI `37411587470`, single head/current `20261006_0048`.
-All five gates passed; an independent consumer-only retry reused the same producer
-artifact without rebuilding. The source-map-js 1.2.2 security fix is deployed.
-Export retention, protected downloads and regeneration remain verified.
+Production source `e27f415024252eaffa527957a37766699a6962a9`, CI `37419965889`,
+single head/current `20261006_0048`. All five gates passed; original artifact
+11392973308/attempt 1 was verified before transfer. Direct downloads use one
+database snapshot and temporary spooling, with cancel/retry inside Reader.
 
-Latest backups: `chat-reader-20261006T025905Z`, `chat-reader-20261006T043843Z`.
-Installed backup tools support byte-identical component reuse and post-acceptance
-two-point retention. No off-site copy or scheduled backup is configured.
+Latest verified backups: `chat-reader-20261006T043843Z`, `chat-reader-20261006T061915Z`.
+The installed tools reuse byte-identical components and retain two recovery points
+only after release acceptance. No off-site copy or scheduled backup is configured.
 
-[Deployment record](execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md) owns image digests,
-CI retry evidence, tests, cleanup and production acceptance. PostgreSQL/business
-data, environment, Compose and Nginx are unchanged. Four replaced `6b4ee0a` tags
-were removed; rollback requires loading its retained verified archive before using
-rollback-images.env. No database downgrade is needed by this release.
-Final available space is about **14.39 GiB**. Only CI images were used; never build
-locally or on King. Local residues remain for the user.
+[Deployment evidence](execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md) records image
+digests, CI, direct exports and existing lifecycle acceptance, unchanged business
+data/configuration, and cleanup. Four bdfb725 image tags were removed; rollback
+requires loading `/opt/chat-reader/releases/bdfb7257341f0f74685de4ad80e339fbde525ab7/chat-reader-images.tar.gz`
+before using `/etc/chat-reader/release-state/rollback-images.env`. No database
+downgrade is needed. Final available server space: **15.18 GiB**. Images were
+built only in CI; never build locally or on King. Local residues remain for the user.
 
 ## Historical release checkpoints
 

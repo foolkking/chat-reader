@@ -1,6 +1,6 @@
 # Artifact Lifecycle Contract
 
-## Direct downloads — 2026-10-06 implementation
+## Direct downloads — 2026-10-06 (deployed)
 
 Owner-only Markdown/CanJSON GET downloads, legacy `/export`, and the equivalent
 synchronous POST `/exports` formats drain existing serializers under PostgreSQL
@@ -27,7 +27,7 @@ Large downloads require temporary capacity on both server and client.
 This change does not extend the full snapshot guarantee to background attachment
 bundle creation, or change Context/Share/offline/archive contracts. No migration
 is added. [Execution record](../execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md)
-distinguishes tested local code from production release status.
+records local/CI tests and successful production acceptance separately.
 
 ## Export extension — 2026-10-06 (deployed)
 

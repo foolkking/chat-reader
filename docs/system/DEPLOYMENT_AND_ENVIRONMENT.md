@@ -1,7 +1,7 @@
 # 部署与运行环境
 
-Current production is `bdfb725`, Alembic `20261006_0048`, deployed 2026-10-06.
-[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md)
+Current production is `e27f415`, Alembic `20261006_0048`, deployed 2026-10-06.
+[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md)
 own live status, exact CI images, verified backups and rollback. Never build on the workstation or King.
 
 Temporary exports use Root-controlled three-minute retention and protected downloads.
