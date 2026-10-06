@@ -1,12 +1,9 @@
 # 文档导航
 
-本地待发布：[附件导出一致性修复](execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md)
-已完成专项与浏览器验证，完整 CI 和生产部署另行记录。
-
-当前线上源码 `aee64ff`、唯一 migration `20261006_0048`，CI `37429071820` 五项全过。
-[当前发布记录](execution/BATCH_EXPORT_RECOVERY_2026-10-06.md) 记录批量导出的后台任务、
-一致性快照、失败恢复、两份备份与旧镜像清理。[Project State](../PROJECT_STATE.md) 是当前快照。
-异地副本按用户决定暂不设置；长期优化目标继续，本轮批量导出改进已交付。
+当前线上源码 `f0e355a`、唯一 migration `20261006_0048`，CI `37439899921` 五项全过。
+[当前发布记录](execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md) 记录附件导出快照、
+校验与失败清理、线上验收、两份备份和旧镜像清理。[Project State](../PROJECT_STATE.md)
+是当前快照。异地副本暂不设置；本阶段已交付，长期优化目标继续。
 
 ## 开始这里
 

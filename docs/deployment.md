@@ -1,32 +1,24 @@
 # 生产部署
 
-Source follow-up (not deployed): attachment-bundle snapshot/integrity fixes add
-no migration; head remains `20261006_0048`. Use a fresh CI artifact and source-bound
-release helpers after all gates pass. Do not replay completed aee64ff release
-mutations. Local Web build passed with process-local `RAYON_NUM_THREADS=2` and
-`TOKIO_WORKER_THREADS=2` after a Windows page-file/thread-allocation failure.
-See [attachment export evidence](execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md).
-
 ## Current release — 2026-10-06
 
-Production source `aee64ff6146d3ac915b2a281aac3bc040268ffed`, CI `37429071820`,
+Production source `f0e355af4169ff593da8134b8148c7dc5c25425d`, CI `37439899921`,
 single head/current `20261006_0048`. All five gates passed; original artifact
-11396964056/attempt 1 was independently verified. Batch CanJSON exports now use
-one durable worker job and one database snapshot, with Task Center recovery.
+11401429587/attempt 1 was independently verified. Attachment bundles now have a
+coherent PostgreSQL snapshot, actual-byte verification and rollback cleanup.
 
-Latest verified backups: `chat-reader-20261006T061915Z`, `chat-reader-20261006T075948Z`.
-The installed tools reused three identical components and retained two recovery
-points after acceptance. No off-site copy or scheduled backup is configured.
+Latest verified backups: `chat-reader-20261006T075948Z`, `chat-reader-20261006T093548Z`.
+After acceptance, one older backup was pruned using the verified installed tools.
+Three identical components were reused. No off-site copy or scheduled backup.
 
-[Deployment evidence](execution/BATCH_EXPORT_RECOVERY_2026-10-06.md) records image
-IDs, CI, real batch ZIP/close recovery, existing export/settings acceptance and
-unchanged business data/configuration. Four e27f415 image tags were removed;
-rollback requires loading
-`/opt/chat-reader/releases/e27f415024252eaffa527957a37766699a6962a9/chat-reader-images.tar.gz`
-(SHA-256 `5f31b3e7491c7450c46865b559089c83384d634ab97345ac1ebf0273ad4a97f4`)
-before using rollback-images.env. No database downgrade is needed. Final server
-available space: **14.99 GiB**. Images were built only in CI. Local residues remain
-for the user. The prior direct-export snapshot fix remains in this release.
+[Deployment evidence](execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md) records
+image IDs, CI, actual ZIP/74-object hash/close-regeneration checks and unchanged
+business data/configuration. Four aee64ff image tags were removed. Rollback requires
+loading `/opt/chat-reader/releases/aee64ff6146d3ac915b2a281aac3bc040268ffed/chat-reader-images.tar.gz`
+(SHA-256 `44ccb4dc95afccf6cdb6f675c2f95705b837f4da00e32e47a57c81e4163ee02d`)
+before using rollback-images.env. No database downgrade is needed. Final available
+server space: **14.80 GiB**. Images were built only in CI. Local residues remain
+for the user. Task-owned local API/worker/PostgreSQL have been stopped.
 
 ## Historical release checkpoints
 

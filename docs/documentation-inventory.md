@@ -2,13 +2,13 @@
 
 `execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md` records reproduced attachment
 bundle defects, snapshot/checksum/lifecycle fixes, actual PostgreSQL and browser
-evidence, and pending release gates. Current implementation contract belongs to
-`system/ARTIFACT_LIFECYCLE_CONTRACT.md`; production state remains separate.
+evidence, and successful CI/deployment/cleanup. Current implementation contract belongs to
+`system/ARTIFACT_LIFECYCLE_CONTRACT.md`; production source is f0e355a/0048, CI 37439899921.
 
-Current release: `execution/BATCH_EXPORT_RECOVERY_2026-10-06.md` owns aee64ff/0048,
+Previous release: `execution/BATCH_EXPORT_RECOVERY_2026-10-06.md` owns aee64ff/0048,
 the reproduced batch failure, durable replacement, exact-source CI 37429071820,
-production acceptance and cleanup. Project State, index, deployment/environment,
-lifecycle/API/user-flow contracts reflect this release. Local, CI and production
+production acceptance and cleanup. Current contracts also include the later
+attachment-integrity release above. Local, CI and production
 HTTP evidence are separate. Direct-export snapshot behavior from the previous
 `execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md` release remains; its backup/image
 inventory is historical.

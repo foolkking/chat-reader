@@ -1,6 +1,6 @@
 # Artifact Lifecycle Contract
 
-## Attachment bundles — 2026-10-06 (source; deployment pending)
+## Attachment bundles — 2026-10-06 (deployed)
 
 `markdown_bundle` and `canjson_bundle` use one PostgreSQL READ ONLY / REPEATABLE
 READ connection for metadata, canonical message serialization, secondary content
@@ -67,9 +67,9 @@ download, checks account access before/after body reading, and aborts on explici
 cancel, option changes, closure or account lock. Errors stay inside Reader.
 Large downloads require temporary capacity on both server and client.
 
-This change does not extend the full snapshot guarantee to background attachment
-bundle creation, or change Context/Share/offline/archive contracts. No migration
-is added. [Execution record](../execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md)
+The dedicated attachment-bundle extension above covers background bundles. The
+direct-download extension does not change Context/Share/offline/archive contracts.
+No migration is added. [Execution record](../execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md)
 records local/CI tests and successful production acceptance separately.
 
 ## Export extension — 2026-10-06 (deployed)
