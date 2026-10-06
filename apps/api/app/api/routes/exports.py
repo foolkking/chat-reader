@@ -6,14 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.export import ExportOptions
-from app.services.exporting.export_service import (
-    ExportError,
-    content_disposition,
-    export_conversation_canonical_json,
-    export_conversation_canjson_v2,
-    export_conversation_markdown,
-    export_conversation_markdown_v2,
-)
+from app.services.exporting.export_service import ExportError
+from app.services.exporting.prepared_export import prepare_direct_export
+from app.services.export_download import PreparedExportResponse
 from app.models.conversation import Conversation
 from app.services.ownership import get_owned, ownership_scope_from_request
 
@@ -46,9 +41,7 @@ def export_markdown_v2(
             include_notebook=include_notebook,
             toc_mode=toc_mode,
         )
-        result = export_conversation_markdown_v2(db, conversation_id, options)
-        db.commit()
-        return _streaming_response(result)
+        return direct_export_response(db, conversation_id, options)
     except ExportError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -81,9 +74,7 @@ def export_canjson_v2(
             include_source_refs=include_source_refs,
             compression=compression,
         )
-        result = export_conversation_canjson_v2(db, conversation_id, options)
-        db.commit()
-        return _streaming_response(result)
+        return direct_export_response(db, conversation_id, options)
     except ExportError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -117,22 +108,7 @@ def export_conversation(
             include_annotations=include_annotations,
             include_notebook=include_notebook,
         )
-        if format == "markdown":
-            result = export_conversation_markdown(db, conversation_id, options)
-        else:
-            result = export_conversation_canonical_json(db, conversation_id, options)
-        db.commit()
-        if format == "canonical_json":
-            return StreamingResponse(
-                result.content,
-                media_type=result.media_type,
-                headers={"Content-Disposition": content_disposition(result.filename)},
-            )
-        return Response(
-            content=result.content,
-            media_type=result.media_type,
-            headers={"Content-Disposition": content_disposition(result.filename)},
-        )
+        return direct_export_response(db, conversation_id, options)
     except ExportError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -157,9 +133,15 @@ def _require_owner(db: Session, conversation_id: uuid.UUID, request: Request) ->
         raise HTTPException(status_code=404, detail="Conversation not found.")
 
 
-def _streaming_response(result) -> StreamingResponse:
-    return StreamingResponse(
-        result.content,
-        media_type=result.media_type,
-        headers={"Content-Disposition": content_disposition(result.filename)},
-    )
+def direct_export_response(db: Session, conversation_id: uuid.UUID, options: ExportOptions) -> StreamingResponse:
+    # Ownership was checked above without writes. Release that read transaction
+    # before opening the snapshot, so concurrent downloads need only one pool slot.
+    db.rollback()
+    result = prepare_direct_export(db, conversation_id, options)
+    try:
+        db.commit()
+        return PreparedExportResponse(result)
+    except BaseException:
+        result.content.close()
+        db.rollback()
+        raise

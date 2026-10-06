@@ -2,12 +2,36 @@
 import logging
 
 import anyio
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.core.observability import structured_event
 from app.services.export_retention import release_download, renew_download
 
 logger = logging.getLogger(__name__)
+
+
+class PreparedExportResponse(StreamingResponse):
+    """Close prepared bytes even if sending fails before the first body chunk."""
+
+    def __init__(self, result):
+        from app.services.exporting.export_service import content_disposition
+
+        self.content = result.content
+        super().__init__(
+            self.content,
+            media_type=result.media_type,
+            headers={
+                "Content-Disposition": content_disposition(result.filename),
+                "Content-Length": str(self.content.size),
+            },
+        )
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            with anyio.CancelScope(shield=True):
+                await anyio.to_thread.run_sync(self.content.close)
 
 
 class ExportFileResponse(FileResponse):

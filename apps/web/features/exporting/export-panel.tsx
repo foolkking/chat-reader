@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Download, FileArchive, FileJson2, FileText } from "lucide-react";
+import { ChevronDown, FileArchive, FileJson2, FileText } from "lucide-react";
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { MaintenanceHint } from "./maintenance-hint";
 import { ExportArtifactDelivery } from "./export-artifact-delivery";
+import { DirectExportDownload } from "./direct-export-download";
 import { captureOfflineAccess, assertOfflineAccess } from "../../lib/offline-access";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
@@ -203,9 +204,7 @@ export function ExportPanel({
           </button>
         )
       ) : (
-        <a href={plainHref} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85">
-          <Download className="h-4 w-4" />{zh ? "下载文件" : "Download file"}
-        </a>
+        <DirectExportDownload href={plainHref} format={format === "canjson" ? "canjson" : "markdown"} />
       )}
 
       {jobKey === currentKey && taskQuery.data?.status === "cancelled" ? <p className="text-sm text-secondary">{zh ? "生成已取消，可以重新生成。" : "Export cancelled. You can generate it again."}</p> : null}

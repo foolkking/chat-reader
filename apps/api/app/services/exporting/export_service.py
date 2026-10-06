@@ -33,11 +33,12 @@ def _subject_key_for_conversation(conversation: Conversation) -> str:
     return str(conversation.owner_user_id) if conversation.owner_user_id is not None else "local:default"
 
 
-def export_conversation_markdown_v2(db: Session, conversation_id: uuid.UUID, options: ExportOptions) -> StreamingExportResult:
+def export_conversation_markdown_v2(db: Session, conversation_id: uuid.UUID, options: ExportOptions, *, record_event: bool = True) -> StreamingExportResult:
     conversation = _get_conversation(db, conversation_id)
     _validate_message_ids(db, conversation.id, options.message_ids)
     message_count = _message_count(db, conversation.id, options.message_ids)
-    _write_export_event(db, conversation.id, options, message_count)
+    if record_event:
+        _write_export_event(db, conversation.id, options, message_count)
     chunks = _markdown_v2_chunks(db.get_bind(), conversation.id, options, _utc_now().isoformat())
     if not options.preserve_attachment_uris:
         attachment_names = {
@@ -57,11 +58,12 @@ def export_conversation_markdown_v2(db: Session, conversation_id: uuid.UUID, opt
     )
 
 
-def export_conversation_canjson_v2(db: Session, conversation_id: uuid.UUID, options: ExportOptions) -> StreamingExportResult:
+def export_conversation_canjson_v2(db: Session, conversation_id: uuid.UUID, options: ExportOptions, *, record_event: bool = True) -> StreamingExportResult:
     conversation = _get_conversation(db, conversation_id)
     _validate_message_ids(db, conversation.id, options.message_ids)
     message_count = _message_count(db, conversation.id, options.message_ids)
-    _write_export_event(db, conversation.id, options, message_count)
+    if record_event:
+        _write_export_event(db, conversation.id, options, message_count)
     chunks: Iterator[bytes] = _canjson_v2_chunks(db.get_bind(), conversation.id, options, _utc_now().isoformat())
     compressed = options.compression == "gzip"
     if compressed:
@@ -410,15 +412,20 @@ def _markdown_attachment_placeholder_chunks(
     chunks: Iterator[bytes],
     attachment_names: dict[uuid.UUID, str],
 ) -> Iterator[bytes]:
-    names = {str(attachment_id): name for attachment_id, name in attachment_names.items()}
-    pending = b""
-    for chunk in chunks:
-        pending += chunk
-        while b"\n" in pending:
-            line, pending = pending.split(b"\n", 1)
-            yield (_replace_markdown_attachment_line(line.decode("utf-8"), names) + "\n").encode("utf-8")
-    if pending:
-        yield _replace_markdown_attachment_line(pending.decode("utf-8"), names).encode("utf-8")
+    try:
+        names = {str(attachment_id): name for attachment_id, name in attachment_names.items()}
+        pending = b""
+        for chunk in chunks:
+            pending += chunk
+            while b"\n" in pending:
+                line, pending = pending.split(b"\n", 1)
+                yield (_replace_markdown_attachment_line(line.decode("utf-8"), names) + "\n").encode("utf-8")
+        if pending:
+            yield _replace_markdown_attachment_line(pending.decode("utf-8"), names).encode("utf-8")
+    finally:
+        close = getattr(chunks, "close", None)
+        if close is not None:
+            close()
 
 
 _MARKDOWN_ATTACHMENT_LINK_RE = re.compile(
@@ -659,17 +666,22 @@ def content_disposition(filename: str) -> str:
 
 
 def _gzip_chunks(chunks: Iterator[bytes]) -> Iterator[bytes]:
-    compressor = zlib.compressobj(level=6, wbits=31)
-    for chunk in chunks:
-        compressed = compressor.compress(chunk)
-        if compressed:
-            yield compressed
-    tail = compressor.flush()
-    if tail:
-        yield tail
+    try:
+        compressor = zlib.compressobj(level=6, wbits=31)
+        for chunk in chunks:
+            compressed = compressor.compress(chunk)
+            if compressed:
+                yield compressed
+        tail = compressor.flush()
+        if tail:
+            yield tail
+    finally:
+        close = getattr(chunks, "close", None)
+        if close is not None:
+            close()
 
 
-def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, options: ExportOptions) -> ExportResult:
+def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, options: ExportOptions, *, record_event: bool = True) -> ExportResult:
     conversation = _get_conversation(db, conversation_id)
     rows = _message_rows(db, conversation, options.message_ids)
     toc = _toc_rows(db, conversation, options.message_ids) if options.include_toc else []
@@ -729,7 +741,8 @@ def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, option
                     if annotation and annotation.quote:
                         lines.extend([f"> {annotation.quote}", ""])
 
-    _write_export_event(db, conversation.id, options, len(rows))
+    if record_event:
+        _write_export_event(db, conversation.id, options, len(rows))
     content = "\n".join(lines).strip() + "\n"
     return ExportResult(
         content=content,
@@ -739,7 +752,7 @@ def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, option
     )
 
 
-def export_conversation_canonical_json(db: Session, conversation_id: uuid.UUID, options: ExportOptions) -> StreamingExportResult:
+def export_conversation_canonical_json(db: Session, conversation_id: uuid.UUID, options: ExportOptions, *, record_event: bool = True) -> StreamingExportResult:
     conversation = _get_conversation(db, conversation_id)
     _validate_message_ids(db, conversation.id, options.message_ids)
     message_count = _message_count(db, conversation.id, options.message_ids)
@@ -757,7 +770,8 @@ def export_conversation_canonical_json(db: Session, conversation_id: uuid.UUID, 
     if options.include_description:
         conversation_payload["description_markdown"] = conversation.description_markdown
 
-    _write_export_event(db, conversation.id, options, message_count)
+    if record_event:
+        _write_export_event(db, conversation.id, options, message_count)
     return StreamingExportResult(
         content=_canonical_json_chunks(
             bind=db.get_bind(),

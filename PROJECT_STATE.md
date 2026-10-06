@@ -34,6 +34,15 @@ not counted again as this release's cleanup.
 
 ## Active work
 
+Direct Markdown/CanJSON/legacy JSON downloads now prepare bytes from one
+PostgreSQL read-only repeatable-read snapshot and release the connection before
+delivery. A private spool spills above 1 MiB and closes on completion/failure;
+storage failures return retryable 503. The download control retains Reader,
+supports cancel/retry, and fences account/option changes. This follow-up is
+**local, not yet deployed**; production remains the source above.
+[Implementation and acceptance](docs/execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md)
+records the real concurrent-edit reproduction, checks and remaining release work.
+
 The export/backup stage and this dependency/CI retry follow-up are delivered.
 The long-running continuous optimization goal remains active. Off-site copies are
 explicitly deferred; do not ask for a destination or upload them.

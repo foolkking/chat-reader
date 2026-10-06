@@ -1,5 +1,12 @@
 # 当前用户流程
 
+Direct export: select Markdown or CanJSON → Download file → browser download.
+While preparing, the button prevents duplicate requests and exposes Cancel.
+Failures retain Reader and the selected options with an inline retry action.
+Changing format/options or closing the export panel cancels this direct download;
+it does not cancel queued Context/archive jobs. Success only reports that the
+download was handed to the browser, not that a file was saved to disk.
+
 ## Whole-site recovery and mobile flows (2026-10-04)
 
 New conversation, message insertion and project settings retain unsaved input

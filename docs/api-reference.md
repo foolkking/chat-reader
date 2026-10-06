@@ -1,5 +1,13 @@
 # API 参考
 
+Direct `/api/conversations/{id}/exports/markdown`, `/exports/canjson`, legacy
+`/export` and synchronous POST `/exports` now prepare one PostgreSQL snapshot
+before response delivery. Filenames, MIME types and formats remain compatible;
+Content-Length is supplied. Temporary storage failure returns sanitized 503;
+permission and missing-resource behavior is unchanged. See the
+[direct-download contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md) and
+[release status](execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md).
+
 ## Export lifecycle extension (deployed 2026-10-06)
 
 Migration `20261006_0048` adds owner-scoped `/api/exports/{id}` GET status,

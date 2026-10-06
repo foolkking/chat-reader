@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+`execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md` owns the concurrent-edit
+reproduction, snapshot/spool/download recovery implementation, real PostgreSQL
+and browser acceptance, and its release status. Current lifecycle/API/user-flow
+contracts describe the new code; Project State keeps local work separate from
+the already deployed bdfb725 release.
+
 2026-10-06 current release: `execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md` owns
 bdfb725/0048 CI, immutable-artifact consumer retry, production HTTP/data checks,
 two-backup retention, exact old-image removal and rollback provenance. Project

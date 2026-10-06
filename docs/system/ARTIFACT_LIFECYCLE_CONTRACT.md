@@ -1,5 +1,34 @@
 # Artifact Lifecycle Contract
 
+## Direct downloads — 2026-10-06 implementation
+
+Owner-only Markdown/CanJSON GET downloads, legacy `/export`, and the equivalent
+synchronous POST `/exports` formats drain existing serializers under PostgreSQL
+REPEATABLE READ / READ ONLY before sending headers. Metadata, selected messages,
+versions, notes and attachment labels therefore come from one database snapshot.
+The preceding read-only ownership transaction is released first, permitting a
+one-slot pool. Download delivery holds no database connection.
+
+Prepared bytes use a private SpooledTemporaryFile, spilling above 1 MiB; reads
+are bounded to 64 KiB. Content-Length describes the prepared representation.
+EOF, header/body failure and cancellation close the spool. Preparation storage
+failure returns sanitized 503 and records no successful export event. The export
+event commits after preparation; commit failure closes bytes and rolls back.
+That event means preparation succeeded, not that the user saved the file.
+
+Direct downloads have no retained artifact row and no three-minute retention
+period. Preparation finishes before first response bytes; it can still continue
+briefly after a disconnected client while synchronous serialization finishes.
+The Web control buffers the response as a browser Blob before initiating a file
+download, checks account access before/after body reading, and aborts on explicit
+cancel, option changes, closure or account lock. Errors stay inside Reader.
+Large downloads require temporary capacity on both server and client.
+
+This change does not extend the full snapshot guarantee to background attachment
+bundle creation, or change Context/Share/offline/archive contracts. No migration
+is added. [Execution record](../execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md)
+distinguishes tested local code from production release status.
+
 ## Export extension — 2026-10-06 (deployed)
 
 Migration `20261006_0048` adds per-artifact lifecycle state and short usage/claim/

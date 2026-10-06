@@ -22,12 +22,9 @@ from app.services.artifact_lifecycle import validate_final_artifact
 from app.services.export_retention import owned_export, require_available, artifact_status, acquire_viewer, release_viewer, acquire_download, claim_download, regenerate_export
 from app.services.export_download import ExportFileResponse
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
-from app.services.exporting.export_service import (
-    ExportError,
-    content_disposition,
-    export_conversation_canjson_v2,
-    export_conversation_markdown_v2,
-)
+from app.services.exporting.export_service import ExportError
+from app.api.routes.exports import direct_export_response
+
 
 router = APIRouter(tags=["exports"])
 
@@ -53,18 +50,7 @@ def queue_archive_export(
     if payload is not None and payload.format in {"markdown_v2", "canjson_v2"}:
         try:
             options = payload.to_options()
-            result = (
-                export_conversation_markdown_v2(db, conversation_id, options)
-                if payload.format == "markdown_v2"
-                else export_conversation_canjson_v2(db, conversation_id, options)
-            )
-            db.commit()
-            return StreamingResponse(
-                result.content,
-                media_type=result.media_type,
-                headers={"Content-Disposition": content_disposition(result.filename)},
-                status_code=status.HTTP_200_OK,
-            )
+            return direct_export_response(db, conversation_id, options)
         except ExportError as exc:
             db.rollback()
             raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
