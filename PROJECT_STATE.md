@@ -40,8 +40,11 @@ rollback requires loading it first. Final server available space: **15,887,081,4
 ## Active work
 
 The attachment-integrity stage is delivered. The continuous optimization goal
-remains active. Repeated exports in Task Center can still be hard to distinguish;
-that separate UX observation is not claimed fixed. Off-site copies remain deferred,
+remains active. The next Task Center stage separates operation, source, file format
+and server submission time, brings failures/partial results before completed work,
+and removes terminal progress bars. Its code and regression coverage are under
+verification, not deployed. See the [stage record](docs/execution/TASK_CENTER_CLARITY_2026-10-06.md).
+Off-site copies remain deferred,
 and no scheduled backups were added. The unrelated earlier Next stream-close
 observation remains unproven and is not claimed fixed.
 

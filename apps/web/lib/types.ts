@@ -630,6 +630,8 @@ export type BackgroundTaskRead = {
   processed_items: number;
   total_items: number;
   label: string | null;
+  source_label?: string | null;
+  export_format?: string | null;
   result: {
     conversation_ids?: string[];
       conversation_id?: string;

@@ -190,6 +190,8 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         processed_items=job.processed_items,
         total_items=job.total_items,
         label=payload.get("title") or _job_label(job.job_type),
+        source_label=payload.get("source_label") or payload.get("title"),
+        export_format=_task_export_format(job.job_type, payload),
         result=result,
         error_message=job.error_message,
         queued_at=job.queued_at,
@@ -199,6 +201,19 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         cancellable=job.job_type in CANCELLABLE_JOB_TYPES and job.status in {"queued", "processing", "cancelling"},
         attempt_count=job.attempt_count,
     )
+
+
+def _task_export_format(job_type: str, payload: dict) -> str | None:
+    if job_type == "conversation_export":
+        value = payload.get("export_format", "cr_v2")
+        return value if value in {"cr_v2", "context_package", "markdown_bundle", "canjson_bundle"} else None
+    return {
+        "conversation_batch_export": "canjson_batch",
+        "context_package_export": "context_package",
+        "attachment_batch_download": "attachments_zip",
+        "personal_archive_export": "cr_v2",
+        "system_archive_export": "cr_v2",
+    }.get(job_type)
 
 
 def _job_label(job_type: str) -> str:
@@ -236,6 +251,7 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
         processed_items=record.processed_messages,
         total_items=record.total_messages,
         label=primary_filename(record),
+        source_label=primary_filename(record),
         result={"conversation_ids": [str(value) for value in conversation_ids]},
         error_message=record.error_message,
         queued_at=record.queued_at,

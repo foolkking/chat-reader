@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+`execution/TASK_CENTER_CLARITY_2026-10-06.md` tracks the pending Task Center source,
+format/time hierarchy, grouping/focus fixes and real regression verification.
+`system/RETENTION_CONTRACT.md` and `api-reference.md` own the additive contract;
+this work does not change the production or retention boundaries below.
+
 `execution/ATTACHMENT_EXPORT_INTEGRITY_2026-10-06.md` records reproduced attachment
 bundle defects, snapshot/checksum/lifecycle fixes, actual PostgreSQL and browser
 evidence, and successful CI/deployment/cleanup. Current implementation contract belongs to

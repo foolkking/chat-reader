@@ -130,6 +130,10 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       const download = row.getByRole("button", { name: /^(下载结果|Download result)$/ });
       await expect(download).toBeEnabled();
       await expect(row).toContainText(locale === "zh-CN" ? "批量导出对话" : "Export conversations");
+      await expect(row).toContainText("CanJSON ZIP");
+      for (const id of order.slice(0, 2)) await expect(row).toContainText(data.items.find(item => item.id === id)!.title);
+      await expect(row.locator("time")).toHaveCount(1);
+      await expect(row.getByRole("progressbar")).toHaveCount(0);
       const saved = page.waitForEvent("download");
       await download.focus(); await page.keyboard.press("Enter");
       const file = await saved;

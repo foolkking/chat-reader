@@ -11,6 +11,7 @@ import type { BackgroundTaskRead, CleanupScanRead } from "../../lib/types";
 import { ContentCleanupDialog } from "../conversations/content-cleanup-panel";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { SettingsFocusedDialog } from "../../components/settings-focused-dialog";
+import { fullActivityTime } from "../../lib/activity-time";
 
 export function ImportTaskMonitor({ placement, forceVisible = false }: { placement: "sidebar" | "mobile" | "center"; forceVisible?: boolean }) {
   const t = useTranslations();
@@ -139,13 +140,14 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const allTasks = (tasksQuery.data ?? []).filter((task) => !dismissedTaskIds.has(task.job_id) || (placement === "center" && needsAccountCleanup(task)));
   const noiseTasks = allTasks.filter((task) => task.job_type === "content_noise_scan" && !["committed", "cancelled"].includes(task.status));
   const tasks = allTasks.filter((task) => task.job_type !== "content_noise_scan");
-  const taskRows = completedTask && !tasks.some((task) => task.job_id === completedTask.job_id)
+  const taskRows = completedTask && !dismissedTaskIds.has(completedTask.job_id) && !tasks.some((task) => task.job_id === completedTask.job_id)
     ? [...tasks, completedTask]
     : tasks;
   const processingTasks = taskRows.filter((task) => ["queued", "processing", "cancelling"].includes(task.status));
   const failedTasks = taskRows.filter((task) => task.status === "failed");
-  const cleanupTasks = taskRows.filter((task) => task.status === "committed" && needsAccountCleanup(task));
-  const completedTasks = taskRows.filter((task) => ["committed", "cancelled"].includes(task.status) && !needsAccountCleanup(task));
+  const cleanupTasks = taskRows.filter((task) => task.status === "committed" && (needsAccountCleanup(task) || hasItemFailures(task)));
+  const completedTasks = taskRows.filter((task) => task.status === "committed" && !needsAccountCleanup(task) && !hasItemFailures(task));
+  const cancelledTasks = taskRows.filter((task) => task.status === "cancelled");
   const visibleTask = processingTasks.find((task) => task.status === "processing")
     ?? processingTasks[0]
     ?? (placement === "mobile" ? completedTask : null);
@@ -161,14 +163,44 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     return <div className={placement === "mobile" ? "fixed bottom-[max(.75rem,env(safe-area-inset-bottom))] right-3 z-40 max-w-[calc(100vw-1.5rem)] md:hidden" : "mb-3"}>
       <button type="button" onClick={() => window.dispatchEvent(new Event("chat-reader:open-task-center"))} data-testid="task-summary-button" className="flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-ui bg-raised px-3 py-2 text-left text-xs text-primary shadow-sm">
         <RefreshCw className={`h-4 w-4 shrink-0 text-accent ${processingTasks.length ? "animate-spin" : ""}`} aria-hidden="true" />
-        <span className="min-w-0 truncate">{loadFailed ? (zh ? "任务状态暂不可用" : "Task status unavailable") : visibleTask ? `${taskTypeLabel(visibleTask, zh)} · ${visibleTask.progress}%` : (zh ? `${count} 项任务待查看` : `${count} tasks to review`)}</span>
+        <span className="min-w-0 truncate">{loadFailed ? (zh ? "任务状态暂不可用" : "Task status unavailable") : visibleTask ? `${taskTypeLabel(visibleTask, zh)} · ${isTerminalTask(visibleTask) ? phaseLabel(visibleTask, zh) : `${visibleTask.progress}%`}` : (zh ? `${count} 项任务待查看` : `${count} tasks to review`)}</span>
       </button>
     </div>;
   }
 
   if (placement === "center") {
-    const taskRow = (task: BackgroundTaskRead) => <div key={task.job_id} data-task-row={task.job_type} className="px-4 py-4"><TaskContent task={task} busy={pending} onRetry={() => { if (!pending) retryMutation.mutate(task.job_id); }} onCancel={() => { if (!pending) cancelMutation.mutate(task.job_id); }} onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) ? () => dismissTask(task.job_id) : undefined} /></div>;
-    return <div className="space-y-4" aria-label={t("tasks")}><div className="flex items-center justify-between gap-3"><span className="text-sm text-secondary">{zh ? "任务进度与结果" : "Progress and results"}</span><span className="text-xs text-secondary">{taskRows.length + Math.max(scans.length, noiseTasks.length)} {zh ? "项" : "items"}</span></div>{loading ? <p role="status" className="text-sm text-secondary">{zh ? "正在加载任务…" : "Loading tasks…"}</p> : null}{loadFailed ? <div role="alert" className="border-l-2 border-[var(--danger)] pl-3 text-sm text-[var(--danger)]"><p>{zh ? "任务状态加载失败，已有任务可能仍在运行。" : "Could not load task status. Existing tasks may still be running."}</p><button type="button" disabled={tasksQuery.isFetching || scansQuery.isFetching} onClick={retryLoading} className="min-h-10 underline">{zh ? "重试" : "Retry"}</button></div> : null}{actionError ? <p role="alert" className="text-sm text-[var(--danger)]">{actionError}</p> : null}{!loading && !loadFailed && !taskRows.length && !noiseTasks.length && !scans.length ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}<TaskSection title={zh ? "处理中" : "In progress"} count={processingTasks.length}>{processingTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "需要处理" : "Needs attention"} count={Math.max(scans.length, noiseTasks.length) + cleanupTasks.length}>{cleanupTasks.map(taskRow)}<NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} busy={pending} onDismiss={(id) => { if (!pending) dismissMutation.mutate(id); }} /></TaskSection><TaskSection title={zh ? "已完成" : "Completed"} count={completedTasks.length}>{completedTasks.map(taskRow)}</TaskSection><TaskSection title={zh ? "失败" : "Failed"} count={failedTasks.length}>{failedTasks.map(taskRow)}</TaskSection>{reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}</div>;
+    const taskRow = (task: BackgroundTaskRead) => (
+      <div key={task.job_id} id={`task-row-${task.job_id}`} tabIndex={-1} data-task-row={task.job_type} className="px-4 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
+        <TaskContent task={task} busy={pending}
+          onRetry={() => { if (!pending) retryMutation.mutate(task.job_id, { onSuccess: restoreMovedTaskFocus(task.job_id) }); }}
+          onCancel={() => { if (!pending) cancelMutation.mutate(task.job_id, { onSuccess: restoreMovedTaskFocus(task.job_id) }); }}
+          onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) ? () => dismissTask(task.job_id) : undefined} />
+      </div>
+    );
+    return (
+      <div className="space-y-4" aria-label={t("tasks")}>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-secondary">{zh ? "任务进度与结果" : "Progress and results"}</span>
+          <span className="text-xs tabular-nums text-secondary">{count} {zh ? "项" : "items"}</span>
+        </div>
+        {loading ? <p role="status" className="text-sm text-secondary">{zh ? "正在加载任务…" : "Loading tasks…"}</p> : null}
+        {loadFailed ? <div role="alert" className="border-l-2 border-[var(--danger)] pl-3 text-sm text-[var(--danger)]">
+          <p>{zh ? "任务状态加载失败，已有任务可能仍在运行。" : "Could not load task status. Existing tasks may still be running."}</p>
+          <button type="button" disabled={tasksQuery.isFetching || scansQuery.isFetching} onClick={retryLoading} className="min-h-11 underline">{zh ? "重试" : "Retry"}</button>
+        </div> : null}
+        {actionError ? <p role="alert" className="text-sm text-[var(--danger)]">{actionError}</p> : null}
+        {!loading && !loadFailed && !count ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}
+        <TaskSection title={zh ? "处理中" : "In progress"} count={processingTasks.length}>{processingTasks.map(taskRow)}</TaskSection>
+        <TaskSection title={zh ? "失败" : "Failed"} count={failedTasks.length}>{failedTasks.map(taskRow)}</TaskSection>
+        <TaskSection title={zh ? "需要处理" : "Needs attention"} count={Math.max(scans.length, noiseTasks.length) + cleanupTasks.length}>
+          {cleanupTasks.map(taskRow)}
+          <NoiseReviewSummary scans={scans} tasks={noiseTasks} onReview={setReviewScanId} busy={pending} onDismiss={(id) => { if (!pending) dismissMutation.mutate(id); }} />
+        </TaskSection>
+        <TaskSection title={zh ? "已完成" : "Completed"} count={completedTasks.length}>{completedTasks.map(taskRow)}</TaskSection>
+        <TaskSection title={zh ? "已取消" : "Cancelled"} count={cancelledTasks.length}>{cancelledTasks.map(taskRow)}</TaskSection>
+        {reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}
+      </div>
+    );
   }
 
   return null;
@@ -176,7 +208,20 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
 
 function TaskSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   if (!count) return null;
-  return <section aria-label={title}><div className="mb-2 flex items-center justify-between px-1"><h3 className="text-xs font-semibold text-primary">{title}</h3><span className="text-[11px] tabular-nums text-secondary">{count}</span></div><div className="divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">{children}</div></section>;
+  return <section aria-label={title}><div className="mb-2 flex items-center justify-between px-1"><h3 className="text-xs font-semibold text-primary">{title}</h3><span className="text-[11px] tabular-nums text-secondary">{count}</span></div><div className="divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface ">{children}</div></section>;
+}
+
+function restoreMovedTaskFocus(taskId: string): () => void {
+  const focused = document.activeElement;
+  const rowId = `task-row-${taskId}`;
+  const originatedInRow = focused && document.getElementById(rowId)?.contains(focused);
+  return () => window.requestAnimationFrame(() => {
+    // Retry/cancel may move the row into another section. Restore only lost
+    // focus; never pull it back after the person has moved to another control.
+    if (originatedInRow && !focused.isConnected && document.activeElement === document.body) {
+      document.getElementById(rowId)?.focus();
+    }
+  });
 }
 
 function NoiseReviewSummary({ scans, tasks, onReview, onDismiss, busy = false }: { busy?: boolean; scans: CleanupScanRead[]; tasks: BackgroundTaskRead[]; onReview: (id: string) => void; onDismiss: (id: string) => void }) {
@@ -199,7 +244,7 @@ function NoiseReviewSummary({ scans, tasks, onReview, onDismiss, busy = false }:
             <p className="mt-1 text-[11px] text-secondary">
               {task?.result.parent_task_id ? (zh ? "导入后扫描 · " : "Import follow-up · ") : ""}{scan.target_count} {zh ? "个对话" : "conversations"} · {scan.processed_messages}/{scan.total_messages} {zh ? "条消息" : "messages"}
             </p>
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${Math.max(scan.progress, 2)}%` }} /></div>
+            {["QUEUED", "SCANNING"].includes(scan.status) ? <div role="progressbar" aria-label={zh ? "噪声扫描" : "Noise scan"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={scan.progress} className="mt-2 h-1 overflow-hidden rounded-full bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${scan.progress}%` }} /></div> : null}
             <div className="mt-2 flex items-center gap-3">
               <button type="button" onClick={() => onReview(scan.id)} disabled={busy || !['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 font-medium text-accent underline disabled:opacity-50">{zh ? "打开审查" : "Open review"}</button>
               <button type="button" onClick={() => onDismiss(scan.id)} disabled={busy || !['READY', 'FAILED', 'STALE'].includes(scan.status)} className="min-h-9 text-secondary underline disabled:opacity-50">{zh ? "忽略本次结果" : "Ignore this result"}</button>
@@ -219,6 +264,10 @@ function needsAccountCleanup(task: BackgroundTaskRead): boolean {
   return task.job_type === "user_account_delete" && task.result.account_deleted === true && Number(task.result.asset_cleanup_pending) > 0;
 }
 
+function hasItemFailures(task: BackgroundTaskRead): boolean {
+  return Array.isArray(task.result.failed) && task.result.failed.length > 0;
+}
+
 function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy = false }: { busy?: boolean; task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -233,30 +282,41 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
   const itemFailures = Array.isArray(task.result.failed) ? task.result.failed.length : 0;
   const completedItems = taskCompletedItems(task);
   const partial = committed && itemFailures > 0;
+  const active = ["queued", "processing", "cancelling"].includes(task.status);
+  const progress = Math.max(0, Math.min(100, task.progress));
+  const format = taskFormatLabel(task, zh);
+  const source = task.source_label ?? (task.job_type === "import" ? task.label : null);
+  const timestamp = task.queued_at;
+  const validTimestamp = timestamp && Number.isFinite(Date.parse(timestamp));
   return (
     <div className="min-w-0 text-xs text-secondary" data-testid={`task-${task.job_type}-${task.status}`}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="truncate font-medium text-primary">{accountDelete ? (zh ? "删除用户账户" : "Delete user account") : task.job_type === "context_return" ? (zh ? "接收上下文接续" : "Receive context continuation") : task.job_type === "context_validation" ? (zh ? "旧接续校验（已停用）" : "Legacy continuation validation (retired)") : task.job_type === "context_object_cleanup" ? (zh ? "清理接续文件" : "Clean up continuation files") : task.job_type === "skill_object_cleanup" ? (zh ? "清理 Skill 文件" : "Clean up Skill files") : (task.job_type === "conversation_batch_export" ? taskTypeLabel(task, zh) : task.label || taskTypeLabel(task, zh))}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="text-sm font-medium text-primary">{taskTypeLabel(task, zh)}</p>
+          {format ? <span className="rounded border border-ui px-1.5 py-0.5 text-xs">{format}</span> : null}
+        </div>
         <div className="flex shrink-0 items-center gap-1">
-          <span>{committed ? "100%" : `${task.progress}%`}</span>
-          {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-subtle" aria-label={zh ? "关闭任务提示" : "Dismiss task"} title={zh ? "关闭任务提示" : "Dismiss task"}><X className="h-4 w-4" /></button> : null}
+          {active ? <span className="tabular-nums">{progress}%</span> : null}
+          {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="-my-2 inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-subtle" aria-label={zh ? "关闭任务提示" : "Dismiss task"} title={zh ? "关闭任务提示" : "Dismiss task"}><X className="h-4 w-4" /></button> : null}
         </div>
       </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-subtle">
+      {source ? <p className="mt-1 break-words text-sm text-primary">{source}</p> : null}
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending ? "text-[var(--warning)]" : ""}>{partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
+        {validTimestamp ? <time dateTime={timestamp} title={fullActivityTime(timestamp, resolvedLocale)} aria-label={`${zh ? "提交于" : "Submitted"} ${fullActivityTime(timestamp, resolvedLocale)}`} className="tabular-nums">{new Intl.DateTimeFormat(resolvedLocale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).format(new Date(timestamp))}</time> : null}
+        {task.total_items > 0 ? <span className="tabular-nums">{task.processed_items} / {task.total_items}</span> : null}
+      </div>
+      {active ? <div role="progressbar" aria-label={taskTypeLabel(task, zh)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-valuetext={`${phaseLabel(task, zh)} · ${progress}%`} className="mt-2 h-1 overflow-hidden rounded-full bg-subtle">
         <div
-          className={`h-full rounded-full transition-[width] ${failed ? "bg-[var(--danger)]" : "bg-accent"}`}
-          style={{ width: `${committed ? 100 : Math.max(task.progress, 2)}%` }}
+          className="h-full rounded-full bg-accent transition-[width]"
+          style={{ width: `${progress}%` }}
         />
-      </div>
-      <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span>{partial ? (zh ? "\u90e8\u5206\u5b8c\u6210" : "Partially completed") : phaseLabel(task, zh)}</span>
-        {task.total_items > 0 ? <span>{task.processed_items} / {task.total_items}</span> : null}
-      </div>
+      </div> : null}
       {failed ? (
         <div className="mt-2">
-          <p className="line-clamp-2 text-[var(--danger)]">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : ((task.job_type === "conversation_batch_export" || task.error_message?.startsWith("ATTACHMENT_EXPORT_")) ? batchExportError(task.error_message ?? undefined, zh) : task.error_message) || (zh ? "任务失败" : "Task failed")}</p>
+          <p className="break-words whitespace-pre-wrap text-[var(--danger)]">{accountDelete ? accountDeleted ? (zh ? "账户已删除，剩余文件清理失败，可重试清理。" : "Account deleted. Remaining file cleanup failed; retry cleanup.") : (zh ? "删除失败，资料已保留。可查看账户并重试。" : "Deletion failed. Data retained; review the account and retry.") : task.job_type === "context_validation" ? (zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.") : ((task.job_type === "conversation_batch_export" || task.error_message?.startsWith("ATTACHMENT_EXPORT_")) ? batchExportError(task.error_message ?? undefined, zh) : task.error_message) || (zh ? "任务失败" : "Task failed")}</p>
           {onRetry && task.job_type !== "context_validation" ? (
-            <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex items-center gap-1 font-medium text-[var(--danger)] underline">
+            <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex min-h-11 items-center gap-1 font-medium text-[var(--danger)] underline">
               <RefreshCw className="h-3.5 w-3.5" /> {zh ? "重试" : "Retry"}
             </button>
           ) : null}
@@ -303,6 +363,10 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
   if (task.job_type === "conversation_batch_export" && task.status === "processing") {
     return task.phase === "publishing" ? (zh ? "准备下载文件" : "Preparing download") : (zh ? "打包所选对话" : "Packaging selected conversations");
   }
+  if (task.status === "processing" && (task.job_type.endsWith("_export") || task.job_type === "attachment_batch_download")) {
+    if (task.phase === "publishing") return zh ? "准备下载文件" : "Preparing download";
+    if (task.phase === "exporting") return zh ? "生成导出文件" : "Creating export file";
+  }
   if (!zh) {
     const terminal = { queued: "Queued", cancelling: "Cancelling", cancelled: "Cancelled", failed: "Failed", committed: "Completed" }[task.status];
     if (terminal) return terminal;
@@ -311,7 +375,7 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
       versions: "Copying version history", blocks: "Preparing message content", annotations: "Copying annotations",
       parsing: "Parsing conversations", persisting: "Saving messages", validating: "Checking source and order",
       creating: "Creating conversation", copying: "Copying messages", headings: "Building table of contents",
-      search: "Building search index", publishing: "Publishing conversation", exporting: "Creating archive",
+      search: "Building search index", publishing: "Saving result", exporting: "Creating export file",
       cleaning_messages: "Cleaning message content", cleaning_skill_files: "Removing unused Skill files",
       rebuilding_index: "Rebuilding contents and search", packaging_messages: "Preparing conversation messages",
       packaging_headings: "Preparing table of contents", packaging_search: "Preparing offline search index",
@@ -340,8 +404,8 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
     copying: "复制消息与 blocks",
     headings: "生成章节目录",
     search: "构建搜索索引",
-    publishing: "发布会话",
-    exporting: "生成 .cr 归档",
+    publishing: "保存结果",
+    exporting: "生成导出文件",
     cleaning_messages: "清理消息内容",
     cleaning_skill_files: "清理未使用的 Skill 文件",
     rebuilding_index: "重建目录与搜索",
@@ -359,6 +423,16 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
 }
 
 function taskTypeLabel(task: BackgroundTaskRead, zh: boolean): string {
+  const additional: Record<string, [string, string]> = {
+    user_account_delete: ["删除用户账户", "Delete user account"],
+    context_validation: ["旧接续校验（已停用）", "Legacy continuation validation (retired)"],
+    context_object_cleanup: ["清理接续文件", "Clean up continuation files"],
+    skill_object_cleanup: ["清理 Skill 文件", "Clean up Skill files"],
+    attachment_batch_download: ["下载附件", "Download attachments"],
+    conversation_derived_rebuild: ["更新对话索引", "Update conversation indexes"],
+    toc_refresh: ["更新目录", "Update table of contents"],
+  };
+  if (additional[task.job_type]) return additional[task.job_type][zh ? 0 : 1];
   if (!zh) return ({ offline_package: "Prepare offline copy", conversation_batch_delete: "Delete archived conversations", conversation_merge: "Merge conversations", conversation_export: "Export conversation", conversation_batch_export: "Export conversations", context_package_export: "Export Context Package", context_return: "Update continuation", content_noise_scan: "Scan for noise", import: "Import conversations", conversation_auto_clean: "Clean conversation", personal_archive_export: "Back up my data", personal_archive_preflight: "Preview personal archive", personal_archive_restore: "Restore personal archive", system_archive_export: "Back up system data", system_archive_preflight: "Preview system archive", system_archive_restore: "Restore system archive" }[task.job_type] ?? "Background task");
   return {
     offline_package: "准备离线副本",
@@ -367,7 +441,7 @@ function taskTypeLabel(task: BackgroundTaskRead, zh: boolean): string {
     content_noise_scan: "扫描噪声",
     conversation_batch_delete: "删除归档对话",
     conversation_merge: "合并会话",
-    conversation_export: "导出归档",
+    conversation_export: "导出对话",
     conversation_batch_export: "批量导出对话",
     conversation_auto_clean: "清理对话",
     import: "导入会话",
@@ -378,6 +452,18 @@ function taskTypeLabel(task: BackgroundTaskRead, zh: boolean): string {
     personal_archive_preflight: "预检个人归档",
     personal_archive_restore: "恢复个人归档",
   }[task.job_type] ?? "后台任务";
+}
+
+function taskFormatLabel(task: BackgroundTaskRead, zh: boolean): string | null {
+  const format = task.export_format;
+  return ({
+    cr_v2: ".cr",
+    context_package: ".context.zip",
+    markdown_bundle: zh ? "Markdown · 含附件" : "Markdown · attachments",
+    canjson_bundle: zh ? "CanJSON · 含附件" : "CanJSON · attachments",
+    canjson_batch: "CanJSON ZIP",
+    attachments_zip: "ZIP",
+  } as Record<string, string>)[format ?? ""] ?? null;
 }
 
 function taskConversationId(task: BackgroundTaskRead): string | null {

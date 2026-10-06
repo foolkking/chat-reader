@@ -11,6 +11,44 @@ from app.models.import_record import ImportRecord
 from test_import_preview_api import client  # noqa: F401
 
 
+@pytest.mark.parametrize("job_type,export_format,expected", [
+    ("conversation_export", "markdown_bundle", "markdown_bundle"),
+    ("conversation_export", "canjson_bundle", "canjson_bundle"),
+    ("conversation_export", "context_package", "context_package"),
+    ("conversation_export", "cr_v2", "cr_v2"),
+    ("conversation_export", None, "cr_v2"),
+    ("conversation_export", "unknown-private-value", None),
+    ("conversation_batch_export", None, "canjson_batch"),
+    ("attachment_batch_download", None, "attachments_zip"),
+    ("personal_archive_export", None, "cr_v2"),
+    ("conversation_merge", None, None),
+])
+def test_task_identity_survives_reload_and_retry_without_exposing_payload(
+    client: TestClient, job_type: str, export_format: str | None, expected: str | None,
+) -> None:
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    try:
+        payload = {"title": "Synthetic source", "private_path": "/private/synthetic-object"}
+        if export_format is not None:
+            payload["export_format"] = export_format
+        job = BackgroundJob(job_type=job_type, status="failed", phase="failed", payload=payload)
+        db.add(job)
+        db.commit()
+        identity = str(job.id)
+    finally:
+        db.close()
+        generator.close()
+    for response in [client.get(f"/api/tasks/{identity}"), client.post(f"/api/tasks/{identity}/retry"),
+                     client.get(f"/api/tasks/{identity}")]:
+        assert response.status_code == 200
+        data = response.json()
+        assert data["source_label"] == "Synthetic source"
+        assert data["export_format"] == expected
+        assert data["queued_at"]
+        assert "private_path" not in data and "/private/synthetic-object" not in response.text
+
+
 def test_active_tasks_include_only_terminal_results_inside_the_retention_window(
     client: TestClient,
     monkeypatch,

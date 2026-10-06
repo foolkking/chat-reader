@@ -1,5 +1,13 @@
 # API 参考
 
+Task read responses add nullable `source_label` and `export_format`, keeping
+`label` compatible. Source metadata comes from the owner-scoped job payload;
+batch admission snapshots up to two owned titles in selection order. Recognized
+formats are `cr_v2`, `context_package`, `markdown_bundle`, `canjson_bundle`,
+`canjson_batch`, `attachments_zip`; unknown values are omitted. List/read/retry
+and cancel return the same presentation contract, never raw payload storage keys.
+No migration or change to task/export retention is required.
+
 Direct `/api/conversations/{id}/exports/markdown`, `/exports/canjson`, legacy
 `/export` and synchronous POST `/exports` now prepare one PostgreSQL snapshot
 before response delivery. Filenames, MIME types and formats remain compatible;

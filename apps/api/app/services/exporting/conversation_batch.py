@@ -45,9 +45,15 @@ def queue_conversation_batch_export(db, *, conversation_ids, idempotency_key, ow
         if existing.payload.get("conversation_ids") != ids:
             raise ExportError("This request key was already used for a different selection.", 409)
         return existing
+    # Snapshot only two owned titles, in selection order. Task reads need no
+    # conversation lookup, and an idempotent retry retains the original label.
+    titles = dict(db.execute(select(Conversation.id, Conversation.display_title).where(
+        Conversation.id.in_(conversation_ids[:2]), ownership_scope.predicate(Conversation),
+        Conversation.deleted_at.is_(None))).all())
+    source_label = " · ".join(titles[value][:160] for value in conversation_ids[:2] if titles.get(value))
     job = BackgroundJob(id=uuid.uuid4(), owner_user_id=ownership_scope.owner_user_id,
         job_type=JOB_TYPE, status="queued", phase="queued", total_items=len(ids),
-        progress=0, processed_items=0, payload={"conversation_ids": ids}, result={},
+        progress=0, processed_items=0, payload={"conversation_ids": ids, "source_label": source_label}, result={},
         idempotency_key=idempotency_key)
     db.add(job)
     db.flush()

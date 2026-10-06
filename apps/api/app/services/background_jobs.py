@@ -281,7 +281,8 @@ def queue_attachment_download(
         progress=0,
         processed_items=0,
         total_items=len(attachment_ids),
-        payload={"conversation_id": str(conversation_id), "attachment_ids": [str(value) for value in attachment_ids]},
+        payload={"conversation_id": str(conversation_id), "attachment_ids": [str(value) for value in attachment_ids],
+                 "title": conversation.display_title},
         result={},
         idempotency_key=idempotency_key,
     )

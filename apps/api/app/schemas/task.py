@@ -13,6 +13,8 @@ class BackgroundTaskRead(BaseModel):
     processed_items: int
     total_items: int
     label: str | None = None
+    source_label: str | None = None
+    export_format: str | None = None
     result: dict = Field(default_factory=dict)
     error_message: str | None = None
     queued_at: datetime | None = None

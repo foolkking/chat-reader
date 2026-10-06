@@ -23,6 +23,19 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 
 ## Re-entry contract
 
+- Task rows separate the localized operation from optional `source_label` and
+  allowlisted `export_format`. Source titles are captured at submission; batch
+  exports retain at most the first two titles in selection order, each bounded to
+  160 characters. Missing legacy metadata remains absent rather than guessed.
+  The compatibility `label` field remains. Reads never expose the whole payload.
+- Submitted server time is shown through seconds, with full accessible date/time.
+  In progress, Failed, Needs attention, Completed and Cancelled have distinct
+  groups. Partial results belong under Needs attention. Only active work displays
+  a progress bar; errors retain the full recovery text.
+- Retry/cancel preserves keyboard focus when a row moves between groups, without
+  stealing focus from another control. Dismissed terminal notifications are not
+  reintroduced by the short-lived local completion state.
+
 - Closing Tasks does not cancel work or delete canonical data. Explicitly closing
   a temporary export result releases its usage under the export policy; it does not
   delete the task record, an Offline Package or an already downloaded local file.

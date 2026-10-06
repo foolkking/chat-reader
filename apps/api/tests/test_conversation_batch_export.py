@@ -197,6 +197,8 @@ def test_http_schema_owner_delivery_and_download_type(state):
     factory, root, owners, sources = state
     app = FastAPI()
     app.include_router(router)
+    from app.api.routes.tasks import router as tasks_router
+    app.include_router(tasks_router)
     current_owner = [owners[0]]
     @app.middleware("http")
     async def identity(request, call_next):
@@ -214,7 +216,15 @@ def test_http_schema_owner_delivery_and_download_type(state):
         response = client.post(url, json=payload, headers=headers)
         assert response.status_code == 202, response.text
         identity = uuid.UUID(response.json()["job_id"])
+        assert response.json()["source_label"] == "合成/甲 · Synthetic B"
+        assert response.json()["export_format"] == "canjson_batch"
+        with factory() as db:
+            db.get(Conversation, sources[0]).display_title = "Renamed after submission"
+            db.commit()
         assert client.post(url, json=payload, headers=headers).json()["job_id"] == str(identity)
+        reloaded = client.get(f"/api/tasks/{identity}").json()
+        assert reloaded["source_label"] == "合成/甲 · Synthetic B"
+        assert reloaded["export_format"] == "canjson_batch"
         run(factory, identity)
         with factory() as db:
             result = db.get(BackgroundJob, identity).result
@@ -222,6 +232,8 @@ def test_http_schema_owner_delivery_and_download_type(state):
         assert download.status_code == 200 and download.headers["content-type"] == "application/zip"
         assert zipfile.is_zipfile(io.BytesIO(download.content))
         current_owner[0] = owners[1]
+        assert client.get(f"/api/tasks/{identity}").status_code == 404
+        assert str(identity) not in client.get("/api/tasks/active").text
         assert client.get(result["download_url"]).status_code == 404
         assert client.post(url, json=payload, headers=headers).status_code == 404
 

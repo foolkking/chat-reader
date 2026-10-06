@@ -130,7 +130,41 @@ test("Task Center reports partial results and task-specific result actions truth
 
   await expect(page.getByTestId("task-center-panel")).toContainText(/Partially completed|部分完成/);
   await expect(page.getByTestId("task-center-panel")).toContainText(/1 completed · 1 failed|1 项完成 · 1 项失败/);
+  await expect(page.getByRole("region", { name: "Needs attention", exact: true })).toContainText("Partially completed");
+  await expect(page.getByRole("region", { name: "Completed", exact: true })).not.toContainText("Partially completed");
   await expect(page.getByTestId("task-result-download")).toHaveAttribute("href", "/api/exports/result/download");
+});
+
+test("failures precede completed results and retry keeps keyboard focus on the moving task", async ({ page }) => {
+  let failed = { ...activeTask, job_type: "conversation_export", status: "failed", phase: "failed", cancellable: false,
+    source_label: "Synthetic failed source", export_format: "markdown_bundle",
+    error_message: "Synthetic failure. Check the source and retry after correcting the unavailable attachment.",
+    completed_at: "2026-08-31T00:00:10Z" as string | null };
+  const finished = { ...activeTask, job_id: "35353535-3535-4535-8535-353535353535", status: "committed", phase: "committed", cancellable: false };
+  const cancelled = { ...finished, job_id: "36363636-3636-4636-8636-363636363636", status: "cancelled" };
+  await page.route("**/api/**", async route => {
+    if (new URL(route.request().url()).pathname === `/api/tasks/${taskId}/retry`) {
+      failed = { ...failed, status: "queued", phase: "queued", completed_at: null };
+      return json(route, failed);
+    }
+    return mockOwnerApi(route, [], [finished, cancelled, failed]);
+  });
+  await page.goto("/");
+  await page.getByTestId("sidebar-tasks-button").click();
+  const panel = page.getByTestId("task-center-panel");
+  await expect(panel.locator("section").first()).toHaveAttribute("aria-label", "Failed");
+  await expect(panel.getByRole("region", { name: "Cancelled", exact: true })).toContainText("Cancelled");
+  const row = panel.locator(`[id="task-row-${taskId}"]`);
+  await expect(row).toContainText("Synthetic failed source");
+  await expect(row).toContainText("Markdown");
+  await expect(row.getByRole("progressbar")).toHaveCount(0);
+  const guidance = row.getByText(failed.error_message);
+  expect(await guidance.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
+  const retry = row.getByRole("button", { name: "Retry", exact: true });
+  await retry.focus(); await page.keyboard.press("Enter");
+  await expect(panel.getByRole("region", { name: "In progress", exact: true })).toContainText("Synthetic failed source");
+  await expect(row).toBeFocused();
+  await expect(row.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "40");
 });
 
 test("batch import completion reports the full scope and waits for an explicit destination", async ({ page }) => {
