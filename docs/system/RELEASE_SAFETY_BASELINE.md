@@ -36,6 +36,15 @@ This contract defines the Release A security and provenance gate. It does not ch
 
 ## Release gate
 
+2026-10-06 independent inspection update: the successful builder exports the
+immutable upload artifact ID and producer attempt. Consumers download that exact
+ID, including on a later consumer-only rerun, and verify source/run/producer
+metadata before loading images. Actual image IDs, architecture and inspection
+report entries must agree. Missing/expired artifacts fail without choosing a
+different artifact. The three-day retention and all quality gates remain.
+Local guard/filter checks pass; [real rerun verification](../execution/CI_ARTIFACT_RETRY_2026-10-06.md)
+is still pending and must not be inferred from local validation.
+
 The deployable image job requires `api-quality`, `web-quality` and
 `settings-quality` to succeed:
 

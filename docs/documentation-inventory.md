@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+2026-10-06 CI retry follow-up: `execution/CI_ARTIFACT_RETRY_2026-10-06.md` records
+the immutable producer reference change, local guard/filter evidence, and pending
+real consumer-only rerun. `system/RELEASE_SAFETY_BASELINE.md` owns its current contract;
+production application deployment remains the separate record below.
+
 2026-10-06 current release: `execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md` owns final 6b4ee0a/0048 CI,
 actual export/backup cleanup, protected-data fingerprints and rollback provenance.
 Project State, docs index, deployment/environment, API and artifact contracts are

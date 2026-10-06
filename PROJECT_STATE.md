@@ -32,6 +32,14 @@ records failed gates, corrections and local evidence. The user explicitly deferr
 off-site copies; do not ask for a destination or upload them. The long-running
 continuous optimization goal remains active; this release completes this stage.
 
+The next scoped improvement fixes independent CI artifact retries. The workflow
+now passes the successful builder's immutable artifact ID and original attempt
+to its consumer instead of guessing a filename from the retry's attempt. Local
+execution of the actual guards/filters passed **25** positive/negative cases
+without Docker; exact-source full CI and a consumer-only rerun are still pending.
+See [retry verification](docs/execution/CI_ARTIFACT_RETRY_2026-10-06.md). This changes
+release tooling only; the production application source above is unchanged.
+
 ## System and boundaries
 
 - Next.js 16 / React 19 / TypeScript Web; FastAPI / SQLAlchemy API; PostgreSQL;

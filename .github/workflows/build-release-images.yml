@@ -544,6 +544,9 @@ jobs:
     needs: [api-quality, web-quality, settings-quality]
     if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' }}
     runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.release_artifact.outputs.artifact-id }}
+      producer_attempt: ${{ steps.provenance.outputs.attempt }}
     steps:
       - uses: actions/checkout@v4
 
@@ -551,6 +554,10 @@ jobs:
 
       - name: Record image build metadata
         run: echo "IMAGE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - name: Record artifact producer attempt
+        id: provenance
+        run: echo "attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
 
       - name: Build API and worker image
         run: |
@@ -600,6 +607,7 @@ jobs:
             > release-manifest.json
 
       - name: Upload deployable release artifact
+        id: release_artifact
         uses: actions/upload-artifact@v4
         with:
           name: chat-reader-images-${{ github.sha }}-${{ github.run_attempt }}
@@ -615,10 +623,22 @@ jobs:
     needs: build-images
     if: ${{ needs.build-images.result == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RELEASE_ARTIFACT_ID: ${{ needs.build-images.outputs.artifact_id }}
+      ARTIFACT_PRODUCER_ATTEMPT: ${{ needs.build-images.outputs.producer_attempt }}
     steps:
+      - name: Require the successful producer's artifact reference
+        run: |
+          case "$RELEASE_ARTIFACT_ID" in ''|*[!0-9]*) exit 1 ;; esac
+          test "$RELEASE_ARTIFACT_ID" -ge 1
+          case "$ARTIFACT_PRODUCER_ATTEMPT" in ''|*[!0-9]*) exit 1 ;; esac
+          test "$ARTIFACT_PRODUCER_ATTEMPT" -ge 1
+          test "$ARTIFACT_PRODUCER_ATTEMPT" -le "$GITHUB_RUN_ATTEMPT"
       - uses: actions/download-artifact@v4
         with:
-          name: chat-reader-images-${{ github.sha }}-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.build-images.outputs.artifact_id }}
+          merge-multiple: true
           path: release-artifact
 
       - name: Inspect downloaded release archive independently
@@ -628,13 +648,25 @@ jobs:
           test -s chat-reader-images.tar.gz
           test -s release-manifest.json
           test -s image-inspection.json
-          manifest_commit="$(jq -r '.commit // empty' release-manifest.json)"
-          test "$manifest_commit" = "$GITHUB_SHA"
-          docker load --input chat-reader-images.tar.gz >/tmp/chat-reader-docker-load.txt
+          jq -e --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" \
+            --arg attempt "$ARTIFACT_PRODUCER_ATTEMPT" \
+            '.schema_version == 2 and .commit == $sha and .workflow_run_id == $run
+              and .workflow_run_attempt == $attempt and .archive == "chat-reader-images.tar.gz"
+              and (.images.api | test("^sha256:[a-f0-9]{64}$"))
+              and (.images.web | test("^sha256:[a-f0-9]{64}$"))' release-manifest.json >/dev/null
+          jq -e --arg sha "$GITHUB_SHA" \
+            '.revision == $sha and .forbidden_paths_present == false and (.images | length == 4)' \
+            image-inspection.json >/dev/null
+          docker load --input chat-reader-images.tar.gz >"$RUNNER_TEMP/chat-reader-docker-load.txt"
           for image in api import-worker migrate web; do
             image_ref="chat-reader-${image}:${GITHUB_SHA}"
-            docker image inspect "$image_ref" >/dev/null
             revision="$(docker image inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_ref")"
             test "$revision" = "$GITHUB_SHA"
+            image_id="$(docker image inspect -f '{{.Id}}' "$image_ref")"
+            case "$image" in web) role=web ;; *) role=api ;; esac
+            test "$image_id" = "$(jq -r --arg role "$role" '.images[$role]' release-manifest.json)"
+            test "$(docker image inspect -f '{{.Os}}/{{.Architecture}}' "$image_ref")" = "linux/amd64"
+            jq -e --arg name "$image_ref" --arg id "$image_id" \
+              '[.images[] | select(.name == $name and .id == $id)] | length == 1' \
+              image-inspection.json >/dev/null
           done
-          jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and (.images.api | length > 0) and (.images.web | length > 0)' release-manifest.json >/dev/null
