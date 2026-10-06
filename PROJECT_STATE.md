@@ -40,6 +40,14 @@ without Docker; exact-source full CI and a consumer-only rerun are still pending
 See [retry verification](docs/execution/CI_ARTIFACT_RETRY_2026-10-06.md). This changes
 release tooling only; the production application source above is unchanged.
 
+That first CI attempt (`37409815492`, source `f59247b`) was blocked by the official
+npm audit: newly matched GHSA-68fv-2mgg-jv7q affects source-map-js 1.2.1 through
+PostCSS. The follow-up pins upstream **1.2.2**, preserves the existing platform
+metadata and adds bounded behavior regressions. Local audit has no unapproved
+high/critical findings; 9 dependency regressions, lint and typecheck pass.
+The local production build also passes. Final CI, consumer-only retry and the dependency release remain pending;
+[security evidence](docs/execution/SOURCE_MAP_SECURITY_2026-10-06.md) records the scope.
+
 ## System and boundaries
 
 - Next.js 16 / React 19 / TypeScript Web; FastAPI / SQLAlchemy API; PostgreSQL;

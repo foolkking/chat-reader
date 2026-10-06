@@ -1,5 +1,9 @@
 # Markdown 文档台账
 
+2026-10-06 dependency follow-up: `execution/SOURCE_MAP_SECURITY_2026-10-06.md`
+records the source-map-js advisory, exact upstream upgrade, platform lock metadata,
+behavioral tests, initial test correction and outstanding CI/deployment evidence.
+
 2026-10-06 CI retry follow-up: `execution/CI_ARTIFACT_RETRY_2026-10-06.md` records
 the immutable producer reference change, local guard/filter evidence, and pending
 real consumer-only rerun. `system/RELEASE_SAFETY_BASELINE.md` owns its current contract;

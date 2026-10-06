@@ -1,5 +1,12 @@
 # Release Safety Baseline
 
+2026-10-06 dependency follow-up: GHSA-68fv-2mgg-jv7q now blocks source-map-js
+1.2.1 through the PostCSS graph. The root override pins upstream 1.2.2; bounded
+subprocess regressions exercise indexed offsets, nested sources and normal mappings
+through both application dependency paths. Official audit has no unapproved
+high/critical finding; no exception was added. [Verification and release status](../execution/SOURCE_MAP_SECURITY_2026-10-06.md)
+remain separate from the currently deployed source in PROJECT_STATE.
+
 2026-10-03: registry advisory `GHSA-vfj7-8cjw-p6xm` affects `braces` 3.0.3,
 the latest upstream version at review. Tailwind's build/watch dependencies use it.
 The locked pnpm patch `patches/braces@3.0.3.patch` bounds parser nesting and all

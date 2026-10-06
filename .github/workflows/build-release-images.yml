@@ -159,8 +159,8 @@ jobs:
           -o "$RUNNER_TEMP/web-build-standard.txt"
           pnpm --filter web build
 
-      - name: Patched glob nesting regression
-        run: node --test scripts/security/braces-depth.test.mjs
+      - name: Build dependency regressions
+        run: node --test scripts/security/braces-depth.test.mjs scripts/security/source-map-offsets.test.mjs
 
       - name: Dependency audit from official npm registry
         run: |
