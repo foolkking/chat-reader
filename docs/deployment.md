@@ -2,16 +2,22 @@
 
 ## Current release — 2026-10-06
 
-Production source `6b4ee0aec8bf399d2bd5eefabfb9c538f2933632`, CI `37366294097`, single head/current `20261006_0048`.
-Export retention, real download protection and regeneration are live. Verified
-backups are `chat-reader-20261005T162912Z`, `chat-reader-20261006T025905Z`; backup tools support byte-identical reuse and post-acceptance
+Production source `bdfb7257341f0f74685de4ad80e339fbde525ab7`, CI `37411587470`, single head/current `20261006_0048`.
+All five gates passed; an independent consumer-only retry reused the same producer
+artifact without rebuilding. The source-map-js 1.2.2 security fix is deployed.
+Export retention, protected downloads and regeneration remain verified.
+
+Latest backups: `chat-reader-20261006T025905Z`, `chat-reader-20261006T043843Z`.
+Installed backup tools support byte-identical component reuse and post-acceptance
 two-point retention. No off-site copy or scheduled backup is configured.
 
-[Deployment record](execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md) owns image digests, tests, cleanup and
-production acceptance. PostgreSQL/business data, environment, Compose and Nginx
-are unchanged. Rollback to 5d48b68 requires loading its retained verified archive
-before using rollback-images.env; no automatic database downgrade. Final free space
-is about 14.63 GiB. Only CI images were used; never build locally or on King.
+[Deployment record](execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md) owns image digests,
+CI retry evidence, tests, cleanup and production acceptance. PostgreSQL/business
+data, environment, Compose and Nginx are unchanged. Four replaced `6b4ee0a` tags
+were removed; rollback requires loading its retained verified archive before using
+rollback-images.env. No database downgrade is needed by this release.
+Final available space is about **14.39 GiB**. Only CI images were used; never build
+locally or on King. Local residues remain for the user.
 
 ## Historical release checkpoints
 

@@ -2,51 +2,52 @@
 
 ## Current release — 2026-10-06
 
-Production `https://chat.king.2bd.net` runs application source **6b4ee0aec8bf399d2bd5eefabfb9c538f2933632** from
-successful [CI 37366294097](https://github.com/foolkking/chat-reader/actions/runs/37366294097).
-All five jobs passed. Alembic is **20261006_0048**, the single head/current.
-Temporary exports default to three minutes and explicit-close release, with real
-download protection, expiration status and idempotent regeneration. Root controls
-the duration (1–60 minutes) and release-on-close; legacy exports keep their deadline.
+Production `https://chat.king.2bd.net` runs application source **bdfb7257341f0f74685de4ad80e339fbde525ab7** from
+successful [CI 37411587470](https://github.com/foolkking/chat-reader/actions/runs/37411587470).
+All five jobs passed. A consumer-only rerun also passed using the same immutable
+artifact **11389837379**; the producer remained attempt 1 and images were built
+only once. Alembic remains **20261006_0048**, the single head/current.
 
-Historical expired exports: **57**, **1,118,258,860 bytes**, now
-physically reclaimed with no remaining files or retries. Production HTTP, Range/ZIP,
-close/reclamation/regeneration and runtime checks pass. PostgreSQL identity/start,
-canonical data, personal Skills, all 301 attachment checksums, imports and offline
-file fingerprints are unchanged. Environment, Compose and Nginx remain unchanged.
-[Deployment evidence](docs/execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md) owns exact provenance and limits.
+`source-map-js` is now upstream **1.2.2**, resolving GHSA-68fv-2mgg-jv7q without
+adding an audit exception. Nine dependency regressions and the full CI gate pass.
+Production login, settings, exact Skill ZIPs, export Range/ZIP, close/reclamation,
+idempotent regeneration and runtime checks pass. PostgreSQL identity/start,
+canonical counts, personal Skill aggregates, all 301 attachment checksums, imports
+and offline fingerprints are unchanged. Environment, Compose and Nginx are unchanged.
+[Deployment evidence](docs/execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md) owns exact provenance and limits.
 
-Latest two verified backups: `chat-reader-20261005T162912Z`, `chat-reader-20261006T025905Z`. Byte-identical components may be shared;
-these are two logical recovery points, not independent physical copies. Backup tools
-are installed; after release acceptance, the retention command removes older verified
-points. No scheduled backup or off-site copy was added. Four replaced `5d48b68`
-image tags and this task's unused candidate transfer were removed; the verified
-5d48b68 rollback archive remains and must be loaded before rollback. Final available
-space is **14.63 GiB**. No local/server image build or business-volume deletion occurred.
+Latest two verified backups: `chat-reader-20261006T025905Z`, `chat-reader-20261006T043843Z`.
+The new backup reused three byte-identical components, avoiding **623,608,310 bytes**
+of duplication. Older verified backup retention and four replaced **6b4ee0a** image
+tag removals completed after acceptance. Its verified recovery archive remains;
+rollback requires loading it first. These are two logical recovery points that can
+share physical files. No scheduled backup or off-site copy was added.
+Final available server space is **14.39 GiB**. No local/server image build,
+business-volume deletion or local-residue cleanup occurred.
+
+Temporary exports retain the previously deployed three-minute default and explicit
+close release, with active-download protection, expiration and regeneration. Root
+controls 1–60 minutes and release-on-close; legacy exports keep their deadline.
+The earlier 57-file reclamation is recorded in the
+[export retention release](docs/execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md),
+not counted again as this release's cleanup.
 
 ## Active work
 
-[Export retention and backup plan](docs/planning/EXPORT_RETENTION_AND_BACKUP_2026-10-06.md)
-is delivered. [Implementation history](docs/execution/EXPORT_RETENTION_2026-10-06.md)
-records failed gates, corrections and local evidence. The user explicitly deferred
-off-site copies; do not ask for a destination or upload them. The long-running
-continuous optimization goal remains active; this release completes this stage.
+The export/backup stage and this dependency/CI retry follow-up are delivered.
+The long-running continuous optimization goal remains active. Off-site copies are
+explicitly deferred; do not ask for a destination or upload them.
 
-The next scoped improvement fixes independent CI artifact retries. The workflow
-now passes the successful builder's immutable artifact ID and original attempt
-to its consumer instead of guessing a filename from the retry's attempt. Local
-execution of the actual guards/filters passed **25** positive/negative cases
-without Docker; exact-source full CI and a consumer-only rerun are still pending.
-See [retry verification](docs/execution/CI_ARTIFACT_RETRY_2026-10-06.md). This changes
-release tooling only; the production application source above is unchanged.
+[Retry evidence](docs/execution/CI_ARTIFACT_RETRY_2026-10-06.md) records 25 local
+contract checks and the successful real consumer-only rerun. GitHub creates new
+records for carried-forward successful jobs; unchanged timestamps/steps/runner and
+byte-identical build logs establish that they were not executed again.
 
-That first CI attempt (`37409815492`, source `f59247b`) was blocked by the official
-npm audit: newly matched GHSA-68fv-2mgg-jv7q affects source-map-js 1.2.1 through
-PostCSS. The follow-up pins upstream **1.2.2**, preserves the existing platform
-metadata and adds bounded behavior regressions. Local audit has no unapproved
-high/critical findings; 9 dependency regressions, lint and typecheck pass.
-The local production build also passes. Final CI, consumer-only retry and the dependency release remain pending;
-[security evidence](docs/execution/SOURCE_MAP_SECURITY_2026-10-06.md) records the scope.
+The first source `f59247b`, CI `37409815492`, failed the newly matched source-map-js
+advisory; API/settings passed and build/inspection were skipped. The final source
+upgrades only the affected dependency and regression gate, preserving unrelated
+lock metadata. [Security evidence](docs/execution/SOURCE_MAP_SECURITY_2026-10-06.md)
+records local failures/corrections, successful final CI and the completed release.
 
 ## System and boundaries
 
@@ -108,7 +109,7 @@ remains unavailable. Earlier stream-close observations are not claimed fixed her
 
 Read [AGENTS.md](AGENTS.md), then [docs index](docs/index.md). Temporary files use
 `C:/Users/86182/Desktop/wkkk/<task>` with process-local TEMP/TMP. This release uses
-`wkkk/chat-reader-export-final-20261006`. The earlier E-drive test exception was batch
+`wkkk/chat-reader-ci-artifact-retry-20261006`. The earlier E-drive test exception was batch
 specific. Do not scan the local workstation, build images locally/on King, modify
 user imports, delete production volumes or overwrite the server environment.
 Existing unrelated tsbuildinfo and auth-resume test directories remain untouched.

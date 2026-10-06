@@ -1,19 +1,20 @@
 # Markdown 文档台账
 
-2026-10-06 dependency follow-up: `execution/SOURCE_MAP_SECURITY_2026-10-06.md`
-records the source-map-js advisory, exact upstream upgrade, platform lock metadata,
-behavioral tests, initial test correction and outstanding CI/deployment evidence.
+2026-10-06 current release: `execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md` owns
+bdfb725/0048 CI, immutable-artifact consumer retry, production HTTP/data checks,
+two-backup retention, exact old-image removal and rollback provenance. Project
+State, docs index, deployment and environment reflect this verified release.
 
-2026-10-06 CI retry follow-up: `execution/CI_ARTIFACT_RETRY_2026-10-06.md` records
-the immutable producer reference change, local guard/filter evidence, and pending
-real consumer-only rerun. `system/RELEASE_SAFETY_BASELINE.md` owns its current contract;
-production application deployment remains the separate record below.
+`execution/SOURCE_MAP_SECURITY_2026-10-06.md` records the source-map-js advisory,
+upstream fix, lock metadata, bounded regressions, initial correction and completed
+CI/deployment. `execution/CI_ARTIFACT_RETRY_2026-10-06.md` records the successful
+real consumer-only rerun and GitHub's carried-forward job records;
+`system/RELEASE_SAFETY_BASELINE.md` owns the current producer-reference contract.
 
-2026-10-06 current release: `execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md` owns final 6b4ee0a/0048 CI,
-actual export/backup cleanup, protected-data fingerprints and rollback provenance.
-Project State, docs index, deployment/environment, API and artifact contracts are
-aligned. `execution/EXPORT_RETENTION_2026-10-06.md` retains failures and local evidence;
-the matching plan is delivered. Below entries are dated historical checkpoints.
+The earlier `execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md` owns the 6b4ee0a
+export-policy release and its original cleanup. Its historical free-space and
+backup inventory do not override the current release. Below entries are dated
+historical checkpoints, not current deployment facts.
 
 2026-10-06 local export lifecycle: `execution/EXPORT_RETENTION_2026-10-06.md`
 tracks migration 0048, leases/reclamation/regeneration, policy inputs, actual

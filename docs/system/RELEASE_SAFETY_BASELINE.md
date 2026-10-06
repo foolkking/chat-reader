@@ -5,7 +5,7 @@
 subprocess regressions exercise indexed offsets, nested sources and normal mappings
 through both application dependency paths. Official audit has no unapproved
 high/critical finding; no exception was added. [Verification and release status](../execution/SOURCE_MAP_SECURITY_2026-10-06.md)
-remain separate from the currently deployed source in PROJECT_STATE.
+include completed CI and production deployment of bdfb725, as recorded in PROJECT_STATE.
 
 2026-10-03: registry advisory `GHSA-vfj7-8cjw-p6xm` affects `braces` 3.0.3,
 the latest upstream version at review. Tailwind's build/watch dependencies use it.
@@ -49,8 +49,11 @@ ID, including on a later consumer-only rerun, and verify source/run/producer
 metadata before loading images. Actual image IDs, architecture and inspection
 report entries must agree. Missing/expired artifacts fail without choosing a
 different artifact. The three-day retention and all quality gates remain.
-Local guard/filter checks pass; [real rerun verification](../execution/CI_ARTIFACT_RETRY_2026-10-06.md)
-is still pending and must not be inferred from local validation.
+Local guard/filter checks and [real rerun verification](../execution/CI_ARTIFACT_RETRY_2026-10-06.md)
+pass. CI 37411587470 consumer attempt 2 reused immutable artifact 11389837379
+from producer attempt 1; timestamps, steps and byte-identical logs confirm no rebuild.
+GitHub may assign new job IDs to carried-forward success records; a new ID alone
+is not evidence of a new execution.
 
 The deployable image job requires `api-quality`, `web-quality` and
 `settings-quality` to succeed:

@@ -1,8 +1,8 @@
 # 文档导航
 
-当前线上源码 `6b4ee0a`、唯一 migration `20261006_0048`，CI `37366294097` 五项全过。
-[导出回收发布记录](execution/DEPLOYMENT_EXPORT_RETENTION_2026-10-06.md) 记录三分钟策略、下载保护、历史回收、
-两份备份及组件去重、旧镜像清理和验收边界。[Project State](../PROJECT_STATE.md) 是当前快照。
+当前线上源码 `bdfb725`、唯一 migration `20261006_0048`，CI `37411587470` 五项全过，单独重试检查也通过。
+[当前发布记录](execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md) 记录依赖修复、原产物复用、
+两份备份、旧镜像清理和验收边界。[Project State](../PROJECT_STATE.md) 是当前快照。
 异地副本按用户决定暂不设置；长期优化目标继续，当前导出与备份阶段已交付。
 
 ## 开始这里
