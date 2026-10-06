@@ -1,15 +1,12 @@
 # Markdown 文档台账
 
-Local batch stage: `execution/BATCH_EXPORT_RECOVERY_2026-10-06.md` owns the
-reproduced silent multi-export failure, durable replacement, PostgreSQL and
-browser evidence, and pending CI/release. Project State, API and artifact
-lifecycle contracts explicitly separate these changes from deployed e27f415.
-
-Current release: `execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md` owns e27f415/0048,
-the concurrent-edit reproduction, snapshot/download recovery, exact-source CI,
+Current release: `execution/BATCH_EXPORT_RECOVERY_2026-10-06.md` owns aee64ff/0048,
+the reproduced batch failure, durable replacement, exact-source CI 37429071820,
 production acceptance and cleanup. Project State, index, deployment/environment,
-lifecycle/API/user-flow contracts reflect that release. Its evidence separates
-local tests, CI and production HTTP checks.
+lifecycle/API/user-flow contracts reflect this release. Local, CI and production
+HTTP evidence are separate. Direct-export snapshot behavior from the previous
+`execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md` release remains; its backup/image
+inventory is historical.
 
 The previous `execution/DEPLOYMENT_SOURCE_MAP_2026-10-06.md` owns the bdfb725
 security release and immutable-artifact consumer retry; its old backup/image and

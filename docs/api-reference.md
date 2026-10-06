@@ -259,7 +259,7 @@ Owner, Share and derivative content authorization occurs before file stat/read. 
 
 ## Current task additions (2026-08-04)
 
-2026-10-06 local addition (release pending):
+2026-10-06 deployed addition:
 `POST /api/conversations/batch-export` accepts `conversation_ids` (1–5000 distinct
 UUIDs, ordered) and required `Idempotency-Key` (1–200 characters), returning
 `202 BackgroundTaskRead`. Same owner/key/order reuses the job; another order

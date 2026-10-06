@@ -1,6 +1,6 @@
 # Artifact Lifecycle Contract
 
-## Batch CanJSON ZIP extension — 2026-10-06 (local, release pending)
+## Batch CanJSON ZIP extension — 2026-10-06 (deployed)
 
 `conversation_batch_export` admits 1–5000 distinct owned sources and a required
 idempotency key; ordered selection is part of the key's meaning. One worker

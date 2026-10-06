@@ -1,5 +1,11 @@
 # 当前用户流程
 
+Batch export: select conversations in a conversation/project list → Export →
+Task Center → Download result. Admitted jobs continue after closing or refreshing
+the list. Failed admission retains selection and permits same-key retry. Tasks
+provides cancellation/retry and temporary ZIP expiry/regeneration. The ZIP keeps
+numbered CanJSON entries in the selected order; it is not a backup/Context bundle.
+
 Direct export: select Markdown or CanJSON → Download file → browser download.
 While preparing, the button prevents duplicate requests and exposes Cancel.
 Failures retain Reader and the selected options with an inline retry action.

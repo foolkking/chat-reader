@@ -2,22 +2,24 @@
 
 ## Current release — 2026-10-06
 
-Production source `e27f415024252eaffa527957a37766699a6962a9`, CI `37419965889`,
+Production source `aee64ff6146d3ac915b2a281aac3bc040268ffed`, CI `37429071820`,
 single head/current `20261006_0048`. All five gates passed; original artifact
-11392973308/attempt 1 was verified before transfer. Direct downloads use one
-database snapshot and temporary spooling, with cancel/retry inside Reader.
+11396964056/attempt 1 was independently verified. Batch CanJSON exports now use
+one durable worker job and one database snapshot, with Task Center recovery.
 
-Latest verified backups: `chat-reader-20261006T043843Z`, `chat-reader-20261006T061915Z`.
-The installed tools reuse byte-identical components and retain two recovery points
-only after release acceptance. No off-site copy or scheduled backup is configured.
+Latest verified backups: `chat-reader-20261006T061915Z`, `chat-reader-20261006T075948Z`.
+The installed tools reused three identical components and retained two recovery
+points after acceptance. No off-site copy or scheduled backup is configured.
 
-[Deployment evidence](execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md) records image
-digests, CI, direct exports and existing lifecycle acceptance, unchanged business
-data/configuration, and cleanup. Four bdfb725 image tags were removed; rollback
-requires loading `/opt/chat-reader/releases/bdfb7257341f0f74685de4ad80e339fbde525ab7/chat-reader-images.tar.gz`
-before using `/etc/chat-reader/release-state/rollback-images.env`. No database
-downgrade is needed. Final available server space: **15.18 GiB**. Images were
-built only in CI; never build locally or on King. Local residues remain for the user.
+[Deployment evidence](execution/BATCH_EXPORT_RECOVERY_2026-10-06.md) records image
+IDs, CI, real batch ZIP/close recovery, existing export/settings acceptance and
+unchanged business data/configuration. Four e27f415 image tags were removed;
+rollback requires loading
+`/opt/chat-reader/releases/e27f415024252eaffa527957a37766699a6962a9/chat-reader-images.tar.gz`
+(SHA-256 `5f31b3e7491c7450c46865b559089c83384d634ab97345ac1ebf0273ad4a97f4`)
+before using rollback-images.env. No database downgrade is needed. Final server
+available space: **14.99 GiB**. Images were built only in CI. Local residues remain
+for the user. The prior direct-export snapshot fix remains in this release.
 
 ## Historical release checkpoints
 
