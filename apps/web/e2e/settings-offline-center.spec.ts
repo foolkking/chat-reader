@@ -75,15 +75,15 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       expect((await readLocal(page, userId)).conversations).toHaveLength(1);
       await page.unroute("**/api/offline/packages");
       await openCenter();
-      await expect(dialog.getByText(/0\/1/)).toBeVisible();
+      await expect(dialog.getByText(/(?:Cached files|已缓存附件) 0\/1\b/)).toBeVisible();
       await dialog.getByRole("button", { name: /Check and update|检查并更新/ }).click();
       await expect.poll(async () => (await storedDownloads(page, userId)).filter((item) => item.state === "completed").length).toBe(2);
-      await expect(dialog.getByText(/1\/1/)).toBeVisible();
+      await expect(dialog.getByText(/(?:Cached files|已缓存附件) 1\/1\b/)).toBeVisible();
       if (process.env.SETTINGS_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/offline-center-copies-${width}.png` });
       await dialog.getByRole("combobox", { name: /Download attachments|下载附件/ }).selectOption("none");
       await dialog.getByRole("button", { name: /Check and update|检查并更新/ }).click();
       await expect.poll(async () => (await storedDownloads(page, userId)).filter((item) => item.state === "completed").length).toBe(3);
-      await expect(dialog.getByText(/1\/1/)).toBeVisible();
+      await expect(dialog.getByText(/(?:Cached files|已缓存附件) 1\/1\b/)).toBeVisible();
       // Reproduce the coordinator's terminal-state/idle-scan lock handoff.
       // No download remains active. Cleanup must wait, then really remove bytes.
       await page.evaluate(async (id) => {
@@ -107,7 +107,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       // Releasing the coordinator lock starts cleanup; it does not await it.
       await expect(dialog.getByRole("button", { name: /^(Refresh|刷新)$/ })).toBeEnabled();
       await expect(dialog.getByRole("alert")).toHaveCount(0);
-      await expect(dialog.getByText(/0\/1/)).toBeVisible();
+      await expect(dialog.getByText(/(?:Cached files|已缓存附件) 0\/1\b/)).toBeVisible();
       await expect.poll(() => page.evaluate(async id => {
         const namespace = Array.from(new TextEncoder().encode(id), b => b.toString(16).padStart(2, "0")).join("");
         const name = localStorage.getItem("chat-reader:offline-legacy-owner-v1") === id ? "chat-reader-offline-assets-v1" : `chat-reader-offline-assets-v1--user-${namespace}`;
@@ -137,7 +137,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await dialog.getByRole("combobox", { name: /Choose project|选择项目/ }).selectOption(projectId);
       await dialog.getByRole("button", { name: /Download project|下载项目/ }).click();
       await expect.poll(async () => (await storedDownloads(page, userId)).filter((item) => item.state === "completed").length).toBe(4);
-      await expect(dialog.getByText(/1\/1/)).toBeVisible();
+      await expect(dialog.getByText(/(?:Cached files|已缓存附件) 1\/1\b/)).toBeVisible();
       await dialog.getByRole("tab", { name: /Failures & conflicts|失败与冲突/ }).click();
       await expect(dialog.getByRole("button", { name: /Retry download|重试下载/ })).toBeEnabled();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

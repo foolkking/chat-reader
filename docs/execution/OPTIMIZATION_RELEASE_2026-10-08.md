@@ -112,6 +112,28 @@ The follow-up's local lint, nonincremental typecheck, one-worker bounded build a
 37-case discovery across the four touched test files pass. Discovery does not run
 the browser or establish the proposed fixes' runtime correctness.
 
+Source `79871329cc8f8bb7b6e01fb94deac89d32bc8b60` ran full CI
+[37760561693](https://github.com/foolkking/chat-reader/actions/runs/37760561693).
+API and Web gates pass. All 13 Web browser gates pass, including the 17-case
+mutation suite with the new search regression. The default PWA suite retains
+588 conditional skips and adaptive-import recovery retains one; overlapping
+suites are not added into a unique-test total. The dependency policy passes
+with the existing approved high-severity braces exception, not zero advisories.
+
+Settings completes **436 passed / 3 failed / 0 skipped**. All three failures are
+the offline-center widths, now at a newly added text assertion: bare `0/1`
+also matches the renewed offline authorization date `10/10`. The reports show
+both the correct `Cached files 0/1` / `已缓存附件 0/1` row and the date. The other
+three previously failing cases now pass. The follow-up qualifies every 0/1 and
+1/1 attachment-count locator with its actual localized label and a numeric word
+boundary. Strict matching, the coordinator-lock check, actual zero-cache check,
+download/cancellation/persistence assertions and production behavior are retained.
+The zero-cache check after that assertion was not reached in the failed run;
+its acceptance still requires the next full CI. Image build and inspection were
+skipped, and no deployable artifact or production change resulted.
+Changed-file ESLint, nonincremental TypeScript and three-case discovery pass for
+the locator-only follow-up; none is counted as browser execution.
+
 The read-only production attachment audit found **310 verified object hashes**,
 304 active attachments and no issues; the production application remains intact.
 
