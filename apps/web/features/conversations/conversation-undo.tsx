@@ -88,8 +88,8 @@ export function ConversationUndoNotice({ undo, onDone, disabled = false }: {
         <p>{undo.label}</p>
         {mode !== "undo" ? <p className="mt-1">
           {mode === "check"
-            ? (zh ? `已撤销 ${completed} 项；${remainingIds.length} 项结果未确认，请先检查。` : `${completed} undone; ${remainingIds.length} results need checking.`)
-            : (zh ? `已撤销 ${completed} 项；${remainingIds.length} 项尚未完成，可以重试。` : `${completed} undone; ${remainingIds.length} remain. Retry those items.`)}
+            ? (zh ? `已撤销 ${completed} 项；${remainingIds.length} 项结果未确认，请先检查。` : `${completed} undone; ${remainingIds.length} ${remainingIds.length === 1 ? "result needs" : "results need"} checking.`)
+            : (zh ? `已撤销 ${completed} 项；${remainingIds.length} 项尚未完成，可以重试。` : `${completed} undone; ${remainingIds.length} remaining. Retry undo.`)}
         </p> : null}
       </div>
       <button type="button" onClick={() => void run()} disabled={busy || disabled}

@@ -504,6 +504,7 @@ active record with critical resource missing + offline navigation
 optional resource missing
   -> shell remains READY
   -> only that feature/update reports unavailable
+  -> online reconciliation repairs the missing resource even at the same revision
 ```
 
 The standalone incomplete response has no external script, style, font, API,
@@ -604,6 +605,14 @@ Automatic shell registration/reconciliation is bounded by the existing single
 preparation/reconciliation promises and one navigation retry. Conversation
 package retry is user-owned through the existing Update action. Repeating a
 retry with the same package identity does not create duplicate current rows.
+
+A same-revision no-work result requires an empty missing-resource set, not just
+critical-resource readiness. Same-revision preparation fetches only missing
+allowlisted entries in the existing active cache; it does not replace intact
+bytes, metadata or other accounts' caches. Failed repair preserves the usable
+shell. A different revision still uses the existing staged replacement path.
+The scoped implementation has synthetic checks and awaits its negative browser
+gate; see the [follow-on audit](../execution/ux-audit-post-release-recovery-2026-10-08.md).
 
 ## Reconnect
 

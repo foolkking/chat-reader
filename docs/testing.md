@@ -20,9 +20,25 @@ partial/unknown undo, lost acknowledgement plus failed refresh, zero-success
 batch handling, mixed-type search pagination, Recent refresh/anchor preservation
 and project-filter read recovery. An injected failure precedes each recovery;
 read checks assert no duplicate writes. Synthetic 375/1440 screenshots are saved
-to the gate output. Local lint/typecheck, one-worker build and nine-case discovery
-pass; browser execution and visual review remain pending. The separate three
-Node baseline checks use accepted source and do not count as browser tests.
+to the gate output. At source 56930fe / CI 37795767145, all nine new cases and
+all 26 mutation cases pass; eight screenshots were reviewed. The full run fails
+one negative PWA case (16 passed / 1 failed), while settings is cancelled and
+image jobs are skipped. Default PWA: 135 passed / 597 conditional skips; adaptive
+import: 8 passed / 1 conditional skip. Do not promote this source to acceptance.
+The separate three Node baseline checks use accepted source and do not count as
+browser tests.
+
+The same-revision shell fix adds `scripts/pwa/offline-shell.test.mjs` to Web CI.
+Run it with `node --test scripts/pwa/offline-shell.test.mjs`: six synthetic regressions
+exercise actual worker/client code, targeted repair, failure/retry, preservation
+and the complete-cache fast path. They pass locally after a 2-pass/4-fail baseline.
+`PWA-NEG-026` adds an optional-only online reload case to the existing negative
+gate, preserving all original assertions. Full browser verification of this
+repair is pending. Settings' total job budget is now 60 minutes: the failed run
+logged 439 passes in 41.8 minutes and one restore pass before the former 45-minute
+job limit cancelled its final step. Individual case timeouts/requirements remain
+unchanged. The user's latest instruction permits finishing this CI cycle only;
+later CI submissions and all follow-up deployment require a new explicit request.
 
 For Windows paths in `PYTEST_ADDOPTS`, use forward slashes, for example
 `C:/Users/86182/Desktop/wkkk/<batch>/pytest`. Its shell-like parser consumes

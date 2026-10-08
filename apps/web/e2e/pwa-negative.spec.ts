@@ -160,6 +160,27 @@ test.describe("Release E PWA negative matrix", () => {
     await expect(optionalPage.locator("main")).not.toContainText(/Offline access is not ready|离线启动尚未就绪/);
   });
 
+  test("PWA-NEG-026 an optional-only miss is repaired on online reload of the same revision", async ({ page }) => {
+    await page.goto("/library");
+    const active = await waitForActiveRecord(page);
+    const optionalSkill = "/skills/context-acquisition.zip";
+    await waitForCachedShellAssets(page, active.assets);
+    expect(await page.evaluate(async ({ cacheName, optionalSkill }) => {
+      return (await caches.open(cacheName)).delete(optionalSkill);
+    }, { cacheName: active.cacheName, optionalSkill })).toBe(true);
+    const degraded = await sendShellMessage(page, { type: "GET_LIBRARY_SHELL_STATUS" });
+    expect(degraded.status?.ready).toBe(true);
+    expect(degraded.status?.missing).toContain(optionalSkill);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator("main")).toContainText(/Offline ready|可离线启动/);
+    const repaired = await waitForCachedShellAssets(page, active.assets);
+    expect(repaired.revision).toBe(active.revision);
+    expect(repaired.cacheName).toBe(active.cacheName);
+    expect(repaired.criticalAssets).toEqual(active.criticalAssets);
+    expect((await sendShellMessage(page, { type: "GET_LIBRARY_SHELL_STATUS" })).status?.missing).toEqual([]);
+  });
+
   test("PWA-NEG-008 shell cache quota keeps the active shell and supports retry", async ({ page, context }) => {
     await page.goto("/library");
     const active = await waitForActiveRecord(page);
@@ -462,7 +483,7 @@ test.describe("Release E PWA negative matrix", () => {
 });
 
 type ActiveRecord = { revision: string; cacheName: string; assets: string[]; criticalAssets?: string[]; workerUrl: string };
-type ShellResult = { ok: boolean; protocolVersion?: number; status?: { ready: boolean; revision: string | null }; error?: string };
+type ShellResult = { ok: boolean; protocolVersion?: number; status?: { ready: boolean; revision: string | null; missing: string[] }; error?: string };
 
 async function readActiveRecord(page: Page): Promise<ActiveRecord> {
   return page.evaluate(async (metaCache) => {

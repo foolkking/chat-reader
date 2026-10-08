@@ -22,11 +22,18 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 ## Record ownership chronology
 
 `execution/ux-audit-post-release-recovery-2026-10-08.md` is the pre-fix follow-on
-audit of six recovery/navigation defects. Its adjacent evidence contains an
-executable three-case synthetic baseline pinned to 30a0d32, not a browser pass.
+audit of six recovery/navigation defects, plus the later CI-observed optional
+shell repair and singular-copy findings, recorded before those edits. Its
+adjacent evidence retains the three-case synthetic baseline pinned to 30a0d32,
+computed token contrast, eight reviewed 56930fe screenshots and sanitized failed
+CI/trace facts. Synthetic checks are not browser acceptance.
 `system/USER_FLOWS.md` owns shared Undo, identity-based selection and cached-read
-recovery behavior; `testing.md` owns the nine-case isolated CI addition. Current
-state separates these pending follow-up checks from accepted production.
+recovery behavior; `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` owns same-revision
+missing-only shell repair; `testing.md` owns nine passing new cases, the six
+synthetic shell regressions and the new optional-only negative case. Current
+state separates partial follow-up verification from accepted production and
+records the user's boundary: after this CI passes, no further CI submission or
+deployment without a new explicit request.
 
 `execution/ux-audit-search-filter-race-2026-10-08.md` records the CI-observed
 rapid-filter input-loss defect before repair, with the minimal synthetic page

@@ -342,7 +342,7 @@ export function ConversationList({
                 const result = await runBatchSelection(ids, archiveConversation);
                 applyBatchResult(result);
                 if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "active",
-                  resolvedLocale === "zh-CN" ? `已归档 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} conversations archived`, refreshLists));
+                  resolvedLocale === "zh-CN" ? `已归档 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "conversation" : "conversations"} archived`, refreshLists));
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
@@ -354,7 +354,7 @@ export function ConversationList({
                 const result = await runBatchSelection(ids, unarchiveConversation);
                 applyBatchResult(result);
                 if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "archived",
-                  resolvedLocale === "zh-CN" ? `已恢复 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} conversations restored`, refreshLists));
+                  resolvedLocale === "zh-CN" ? `已恢复 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "conversation" : "conversations"} restored`, refreshLists));
                 await refreshLists();
               } finally {
                 setBulkBusy(null);

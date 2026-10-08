@@ -89,36 +89,49 @@ async function prepareLibraryShell(data, port) {
     }
 
     const active = await readActiveRecord();
+    let repairAssets = null;
     if (active?.revision === requestedRevision) {
       const status = await inspectActiveShell();
-      if (status.ready) {
+      if (status.ready && status.missing.length === 0) {
         port.postMessage({ type: "RESULT", ok: true, protocolVersion: PROTOCOL_VERSION, status });
         return;
       }
+      // Readiness excludes optional assets. A same-version repair must still
+      // fetch missing resources, without overwriting intact active-shell bytes.
+      if (status.missing.some((asset) => asset !== "/library" && !assets.includes(asset))) {
+        throw new Error("The active offline shell does not match the requested manifest.");
+      }
+      repairAssets = status.missing;
     }
 
-    targetCacheName = shellCacheName(namespace, requestedRevision);
+    targetCacheName = repairAssets ? active.cacheName : shellCacheName(namespace, requestedRevision);
     if (targetCacheName !== active?.cacheName) await caches.delete(targetCacheName);
     const targetCache = await caches.open(targetCacheName);
     const required = ["/library", ...assets];
+    const pendingAssets = repairAssets ?? required;
     let cursor = 0;
     let completed = 0;
 
     async function cacheNext() {
-      while (cursor < required.length) {
+      while (cursor < pendingAssets.length) {
         const index = cursor;
         cursor += 1;
-        const asset = required[index];
+        const asset = pendingAssets[index];
         await cacheRequiredAsset(targetCache, asset);
         completed += 1;
-        port.postMessage({ type: "PROGRESS", completed, total: required.length });
+        port.postMessage({ type: "PROGRESS", completed, total: pendingAssets.length });
       }
     }
 
     await Promise.all(Array.from(
-      { length: Math.min(FETCH_CONCURRENCY, required.length) },
+      { length: Math.min(FETCH_CONCURRENCY, pendingAssets.length) },
       () => cacheNext(),
     ));
+
+    if (repairAssets) {
+      port.postMessage({ type: "RESULT", ok: true, protocolVersion: PROTOCOL_VERSION, status: await inspectActiveShell() });
+      return;
+    }
 
     const record = {
       revision: requestedRevision,

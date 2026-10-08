@@ -10,7 +10,7 @@ the current debt count or deployment state.
 | Current limitation | Control / next step |
 | --- | --- |
 | Local Web start is rejected before process creation; cause unknown | Preserve the original rejection and fixture; no alternate launcher. Isolated CI is separate from specified-Chromium local acceptance. |
-| Follow-on UX audit is in progress after accepted 30a0d32 deployment | Keep evidence-backed findings and any new unverified fixes separate from the deployed source; no production-page testing. |
+| Follow-on CI 37795767145 fails optional-shell recovery; settings cancelled | Nine new UX cases pass, but the same-revision shell repair still needs full CI. No production-page testing or follow-up deployment. After this cycle passes, new CI submissions require the user's explicit request. |
 | King has about 2 GiB RAM | Never build images there; keep PostgreSQL running and bound one-off release checks. |
 | King Compose 2.27 rejects `run --pull never`; `start` may require absent migrate dependencies | Validate a release-only `pull_policy: never` overlay and mounted checks before stopping writers. Guard recovery by migration marker and exact old identities; preserve the actual interruption record. |
 | Dependency policy retains an approved braces exception | Keep its existing mitigation, scope and expiry; a passing policy is not zero advisories. |

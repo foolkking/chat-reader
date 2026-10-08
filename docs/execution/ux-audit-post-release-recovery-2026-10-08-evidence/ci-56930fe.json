@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "source": "56930fe94576318ed30946d77f395bb55cc8234a",
+  "run_id": 37795767145,
+  "conclusion": "failure",
+  "deployed": false,
+  "web": {
+    "job_id": 113374702969,
+    "artifact_id": 11559752583,
+    "gates": { "pass": 12, "fail": 1, "not_verified": 0 },
+    "mutation": { "passed": 26, "failed": 0, "skipped": 0, "new_followup_cases_passed": 9 },
+    "default_pwa": { "passed": 135, "conditional_skips": 597 },
+    "adaptive_import": { "passed": 8, "conditional_skips": 1 },
+    "negative_pwa": {
+      "passed": 16,
+      "failed": 1,
+      "failed_case": "PWA-NEG-001..005 critical and optional shell misses are explicit and recoverable",
+      "location": "apps/web/e2e/pwa-negative.spec.ts:141",
+      "failure": "60-second wait for the original critical chunk and optional Skill in the active shell cache",
+      "later_assertions_not_reached": ["original critical JavaScript set retained", "optional-only offline navigation remains usable"]
+    }
+  },
+  "api": { "job_id": 113374702691, "conclusion": "success", "passed": 1181, "skipped": 3, "warnings": 16, "seconds": 847.74 },
+  "settings": {
+    "job_id": 113374702451,
+    "conclusion": "cancelled",
+    "started_at": "2026-10-08T14:50:34Z",
+    "completed_at": "2026-10-08T15:35:44Z",
+    "job_timeout_minutes": 45,
+    "check_annotation": "The job has exceeded the maximum execution time of 45m0s",
+    "matrix_log": { "passed": 439, "minutes": 41.8 },
+    "fresh_instance_restore_log": { "passed": 1, "seconds": 36.1 },
+    "qualification": "Passing case logs do not override the cancelled job or cancelled restore step."
+  },
+  "image_jobs": { "build": "skipped", "independent_inspection": "skipped" },
+  "synthetic_trace": {
+    "trace_sha256": "292f8ed43588e4d677bd7ccbf8b09e0909c19d0fe96bbbc9cc1630ff191fd29c",
+    "network_sha256": "386d890e0bfbb1796530f4fd765304e016a669e24e08719ff18df46680fd0497",
+    "initial_revision": "1d53ea4264d6d5d2ab8e014f",
+    "manifest_resources": 101,
+    "deleted_critical_chunk": "/_next/static/chunks/1084-24f1ac2474c691f7.js",
+    "deleted_optional_asset": "/skills/context-acquisition.zip",
+    "offline_navigation_status": 503,
+    "online_reload_at": "2026-10-08T15:10:26.516Z",
+    "critical_chunk_refetched_status": 200,
+    "skill_requests_after_online_reload": 0,
+    "repair_polls": 62,
+    "null_poll_results": 62,
+    "qualification": "Trace proves requests and failed cache polls; actual same-revision branch defects are confirmed separately by executing the worker/client source with synthetic doubles."
+  },
+  "local_shell_regressions": {
+    "command": "node --test scripts/pwa/offline-shell.test.mjs",
+    "before_fix": { "passed": 2, "failed": 4 },
+    "after_fix": { "passed": 6, "failed": 0 },
+    "browser_tests": false
+  },
+  "reviewed_synthetic_screenshots": [
+    "56930fe-undo-unconfirmed-375.png",
+    "56930fe-undo-unconfirmed-1440.png",
+    "56930fe-undo-empty-archive.png",
+    "56930fe-undo-empty-restore.png",
+    "56930fe-search-stable-selection.png",
+    "56930fe-recent-refresh-375.png",
+    "56930fe-recent-refresh-1440.png",
+    "56930fe-project-filter-error-mobile.png"
+  ],
+  "verification_boundaries": {
+    "production_browser_tested": false,
+    "specified_windows_chromium_application_tested": false,
+    "followup_deployment_authorized": false,
+    "further_ci_after_this_cycle_requires_explicit_user_request": true
+  }
+}

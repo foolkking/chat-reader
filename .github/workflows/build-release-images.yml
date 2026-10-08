@@ -162,6 +162,9 @@ jobs:
       - name: Build dependency regressions
         run: node --test scripts/security/braces-depth.test.mjs scripts/security/source-map-offsets.test.mjs
 
+      - name: Offline shell reconciliation regressions
+        run: node --test scripts/pwa/offline-shell.test.mjs
+
       - name: Dependency audit from official npm registry
         run: |
           set +e
@@ -419,7 +422,9 @@ jobs:
 
   settings-quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The serial 439-case matrix took 41.8m in 37795767145; setup plus the
+    # passing fresh-instance restore exceeded 45m. Keep per-case bounds intact.
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16-alpine

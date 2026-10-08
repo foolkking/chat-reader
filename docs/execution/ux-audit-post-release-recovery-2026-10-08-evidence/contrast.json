@@ -1,0 +1,14 @@
+{
+  "source": "56930fe94576318ed30946d77f395bb55cc8234a",
+  "method": "WCAG 2.x relative luminance computed from existing globals.css hex tokens",
+  "confidence": "Observed (computed), not sampled from a render",
+  "normal_text_aa_minimum": 4.5,
+  "pairs": [
+    { "theme": "light", "role": "undo notice text", "foreground": "#674611", "background": "#fff8e8", "ratio_rounded": 8.06, "pass": true },
+    { "theme": "light", "role": "undo button text", "foreground": "#ffffff", "background": "#674611", "ratio_rounded": 8.53, "pass": true },
+    { "theme": "dark", "role": "undo notice text", "foreground": "#ffebbd", "background": "#3a301d", "ratio_rounded": 11.03, "pass": true },
+    { "theme": "dark", "role": "undo button text", "foreground": "#202120", "background": "#ffebbd", "ratio_rounded": 13.75, "pass": true }
+  ],
+  "tokens_changed": false,
+  "full_accessibility_conformance_claim": false
+}

@@ -290,7 +290,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                     const result = await runBatchSelection(ids, archiveConversation);
                     applyBatchResult(result);
                     if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "active",
-                      zh ? `已归档 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} conversations archived`, refreshProject));
+                      zh ? `已归档 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "conversation" : "conversations"} archived`, refreshProject));
                     await refreshProject();
                   } finally {
                     setBulkBusy(null);

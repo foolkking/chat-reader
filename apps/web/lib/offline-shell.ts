@@ -408,7 +408,7 @@ async function reconcileOfflineShell(serviceWorker: ServiceWorker, existing: Wor
   const criticalAssets = assets.filter((asset) => !isOptionalShellAsset(asset));
   const workerUrl = searchRuntime.workerUrl;
   const revision = await createRevision(assets);
-  if (existing.ok && existing.status?.ready && existing.status.revision === revision && !force) {
+  if (existing.ok && existing.status?.ready && existing.status.revision === revision && !existing.status.missing.length && !force) {
     return applyWorkerStatus(existing);
   }
   const result = await postMessage(serviceWorker, {

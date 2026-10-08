@@ -64,6 +64,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       const check = notice.getByRole("button", { name: zh ? "检查结果" : "Check result", exact: true });
       await expect(check).toBeEnabled();
       await expect(notice.getByRole("alert")).toContainText(zh ? "已撤销 1 项" : "1 undone");
+      if (!zh) await expect(notice.getByRole("alert")).toContainText("1 result needs checking.");
       expect(await status(page, first)).toBe("active");
       expect(await status(page, second)).toBe("archived");
       let failRead = true;
@@ -83,6 +84,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       await check.click();
       const retry = notice.getByRole("button", { name: zh ? "重试撤销" : "Retry undo", exact: true });
       await expect(retry).toBeEnabled();
+      if (!zh) await expect(notice.getByRole("alert")).toContainText("1 remaining. Retry undo.");
       expect(writes.get(second)).toBe(1);
       failSecond = false;
       await retry.click();
@@ -141,6 +143,7 @@ for (const mode of ["archive", "restore"] as const) {
       const notice = page.locator(`[aria-label="${zh ? "撤销对话操作" : "Undo conversation action"}"]`);
       await expect(page.getByTestId("selection-toolbar")).toHaveCount(0);
       await expect(notice.getByRole("button", { name: zh ? "撤销" : "Undo", exact: true })).toBeEnabled();
+      if (!zh) await expect(notice).toContainText("1 conversation archived");
       await page.screenshot({ path: info.outputPath(`undo-empty-${mode}.png`) });
       await notice.getByRole("button").click();
       const check = notice.getByRole("button", { name: zh ? "检查结果" : "Check result", exact: true });

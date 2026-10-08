@@ -78,7 +78,7 @@ to change Reader or add a global notification system.
 ### ERR-02 — keep Undo outside replaceable list states
 
 **Location:** `apps/web/features/conversations/conversation-list.tsx:173`, `:211`
-and `:264`. Error and empty branches return before the JSX containing Undo.
+and `:260`. Error and empty branches return before the JSX containing Undo.
 Archiving the last active conversation, or restoring the last archived one,
 therefore excludes the newly created Undo from the component's returned tree.
 The project conversation page already keeps its Undo outside its inner list state.
@@ -111,7 +111,7 @@ Test mixed-type pagination and the actual Enter destination.
 
 ### STATE-01 — a failed refresh must not erase a usable recent list
 
-**Location:** `apps/web/features/reading/recent-items.tsx:22`, `:69`.
+**Location:** `apps/web/features/reading/recent-items.tsx:22`, `:64`.
 `isError` unconditionally returns the raw exception before examining cached data.
 The installed QueryObserver synthetic check retains one previous row while
 `isError=true`; the component hides that usable row. `StateLine` exposes a
@@ -201,3 +201,115 @@ discovery is not execution. During test review, refetch-on-focus was confirmed
 disabled globally, so the Recent fixture uses real client navigation back to a
 stale cached list, not a synthetic focus event. Full CI and visual acceptance
 remain pending; the repair is not described as browser-verified or deployed.
+
+The implementation is committed as `56930fe94576318ed30946d77f395bb55cc8234a`;
+full CI [37795767145](https://github.com/foolkking/chat-reader/actions/runs/37795767145)
+is in progress. It does not replace the accepted 30a0d32 production source.
+Local document validation checks 165 links across 12 scoped documents, with none
+missing. [Computed contrast](ux-audit-post-release-recovery-2026-10-08-evidence/contrast.json)
+of the reused Undo text/background and button tokens passes normal-text AA in
+both themes; this is CSS-value computation, not measured rendered contrast or
+a whole-page accessibility score. No tokens or fonts were changed.
+
+The API job **113374702691** passes **1,181 / 3 skipped / 16 warnings** in
+847.74 seconds. Its separate 64-case Bundle and 53-case cleanup runs overlap
+the full suite and are not summed. The Web mutation step has completed
+successfully and advanced to the default PWA baseline; exact new-case counts and
+screenshots still require its artifact. Settings job **113374702451** and Web
+job **113374702969** are the remaining quality owners at this checkpoint.
+One CLI watch ended with a GitHub TLS handshake timeout; a subsequent direct
+status request and completed-job log download succeeded. That transport error
+is not a workflow failure. No local or production application was launched for
+browser acceptance, and the goal remains active pending CI and visual review.
+
+## Failed-CI follow-up, recorded before the next application edit
+
+The completed Web job's artifact **11559752583** verifies **12 passed gates /
+1 failed gate**. The mutation gate passes **26 cases**, including all nine new
+recovery/navigation cases. Default PWA passes **135 / 597 conditional skips**;
+adaptive import passes **8 / 1 conditional skip**. The negative PWA gate passes
+**16 and fails 1**, at `pwa-negative.spec.ts:141`: after reconnect, the original
+critical chunk and optional Skill do not both return to the active cache within
+60 seconds. The later critical-set and optional-only assertions were not reached.
+This source is not release-accepted or deployed. Settings CI is still running
+at this checkpoint; the accepted 30a0d32 production release is unchanged.
+
+All eight new synthetic screenshots were reviewed: two pending-undo states,
+two final-row empty states, mixed-type search selection, two retained Recent
+lists and a failed mobile project filter. The visible new surfaces retain their
+actions/content without overlap in these frames. This does not certify the
+whole application, other states or the specified Windows Chromium. The
+zero-success case has assertion evidence only. Baseline screenshots are retained
+beside this report with a `56930fe-` prefix.
+
+### ERR-03 — same-revision readiness skips repair of missing optional assets
+
+**Dimension:** error recovery / offline state. **Severity:** Medium.
+**Confidence:** Observed (CI trace + code + executable synthetic regression).
+**Effort:** S. **Location:** `apps/web/lib/offline-shell.ts:414` and
+`apps/web/public/library-sw.js:99` at failed source 56930fe.
+
+**Evidence:** the trace records initial preparation of 101 resources, deletion
+of one critical script and `/skills/context-acquisition.zip`, an explicit offline
+503, then online reload. The critical script returns HTTP 200 again; neither
+Skill ZIP is requested after reconnect. All 62 cache-repair polls return null.
+Both same-revision fast paths accept `ready` without checking `missing`.
+`ready` intentionally checks only critical assets, so it does not prove the
+inventory is complete. The new `scripts/pwa/offline-shell.test.mjs` executes the actual
+worker and transpiled client module with in-memory browser doubles: the baseline
+has 2 passes / 4 failures, including both skipped-repair branches. One of those
+failures separately records unnecessary refetch of intact resources during a
+same-revision critical repair. These are synthetic checks, not local browsers.
+
+**User cost:** a person can read offline, but a missing built-in Skill remains
+unavailable even after the normal online recovery. The complete manifest count
+does not reveal that the repair was skipped. This is not a blocked Reader or
+loss of conversation data; optional absence must remain non-blocking.
+
+**Recommendation:** require an empty missing set before taking either
+same-revision no-work path. Repair only missing allowlisted resources in the
+existing same-revision cache, preserving its record, intact bytes and other
+accounts. Failed repair retains the usable shell and explicit retry. Keep the
+original negative-test assertions and add a deterministic optional-only online
+reload case so correctness does not depend on which script sorts first.
+
+### COPY-01 — singular counts use plural-only Undo copy
+
+**Dimension:** content / microcopy. **Severity:** Low.
+**Confidence:** Observed (synthetic CI screenshots + code). **Effort:** S.
+**Location:** `conversation-undo.tsx:91`, `conversation-list.tsx:345`,
+`project-conversation-list.tsx:293` at source 56930fe.
+The English screenshots display “1 results need checking” and
+“1 conversations archived”. Use singular/plural agreement (including restore)
+without changing the approved typography, spacing, tokens or action hierarchy.
+The cost is minor reading friction, not a functional failure. Correct this in
+the already-required PWA revision rather than starting another visual redesign.
+
+## Same-revision repair and latest execution boundary
+
+Both same-revision fast paths now require no missing resources. The worker
+repairs only missing entries from the requested allowlist, preserving metadata,
+intact bytes and other account caches; different-revision staging is unchanged.
+All six synthetic regressions now pass. The new optional-only online reload
+case supplements the unchanged original negative assertion. The English Undo
+counts now agree or use count-neutral wording, with explicit browser assertions.
+The bounded one-worker Web build and nonincremental typecheck pass. The first
+lint of the new Node test failed because browser-like globals were undeclared
+in an `.mjs` file; it was corrected with explicit Node imports/global bindings,
+not a rule disable. The subsequent full lint and all six Node regressions pass;
+nine UX cases are rediscovered, which does not rerun those browsers.
+
+Run 37795767145 is now complete and **failed**. Settings job 113374702451 is
+**cancelled**, not passed: its log reports **439 passed (41.8m)** and the separate
+fresh-instance restore reports **1 passed (36.1s)**, but the job's 45-minute limit
+interrupts finalization. The job ran from 14:50:34Z to 15:35:44Z. The next revision
+budgets 60 minutes for this serial matrix, setup, restore and evidence collection;
+individual test deadlines, assertions and required cases are not relaxed. Both
+image jobs were skipped on this failed source. See the
+[sanitized failed-source evidence](ux-audit-post-release-recovery-2026-10-08-evidence/ci-56930fe.json).
+
+The user's latest instruction supersedes further release automation: finish
+this CI repair/verification cycle, **do not deploy it**, then continue local
+evidence-backed optimization. After this cycle passes, additional commit/push/CI
+submissions and deployment wait for the user's explicit request. Production
+remains at accepted source 30a0d32; the persistent optimization goal stays active.
