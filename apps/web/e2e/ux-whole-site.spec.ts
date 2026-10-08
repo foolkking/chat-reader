@@ -171,6 +171,68 @@ test("search pagination resets with filters while date controls retain focus", a
   } finally { for (const id of ids) expect((await page.request.delete(`/api/conversations/${id}`)).ok()).toBe(true); }
 });
 
+test("rapid search filters preserve both dates, other filters and browser history", async ({ page }) => {
+  await page.request.patch("/api/preferences", { data: { locale_mode: "en-US", theme_mode: "light" } });
+  const key = `UXRAPID${crypto.randomUUID().slice(0, 8)}`;
+  const id = await conversation(page, key);
+  let releaseNavigation = () => {};
+  const navigationBarrier = new Promise<void>((resolve) => { releaseNavigation = resolve; });
+  try {
+    await page.goto(`/search?q=${key}&document_type=message&role=user&status_scope=all`);
+    await expect(page.locator('a[data-search-index]')).toHaveCount(1);
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    // Hold optional RSC navigations until both user edits have happened. This
+    // reproduces a slow navigation deterministically without delaying API reads.
+    await page.route((url) => url.pathname === "/search", async (route) => {
+      if (route.request().headers().rsc === "1") await navigationBarrier;
+      await route.continue();
+    });
+    const from = page.getByLabel("From", { exact: true });
+    const to = page.getByLabel("To", { exact: true });
+    await from.fill("2099-01-01");
+    await to.fill("2020-01-01");
+    releaseNavigation();
+    await expect(from).toHaveValue("2099-01-01");
+    await expect(to).toHaveValue("2020-01-01");
+    await expect(to).toBeFocused();
+    await expect(page.getByRole("alert").filter({ hasText: "From must be on or before To." })).toBeVisible();
+    const invalidRangeUrl = page.url();
+    expect(Object.fromEntries(new URL(invalidRangeUrl).searchParams)).toEqual({
+      q: key, document_type: "message", role: "user", status_scope: "all",
+      date_from: "2099-01-01", date_to: "2020-01-01",
+    });
+    await page.goBack();
+    await expect(from).toHaveValue("2099-01-01");
+    await expect(to).toHaveValue("");
+    await page.goBack();
+    await expect(from).toHaveValue("");
+    await expect(page.locator('a[data-search-index]')).toHaveCount(1);
+    await page.goForward();
+    await expect(from).toHaveValue("2099-01-01");
+    await page.goForward();
+    await expect(page).toHaveURL(invalidRangeUrl);
+    await expect(to).toHaveValue("2020-01-01");
+    await page.reload();
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    await expect(from).toHaveValue("2099-01-01");
+    await expect(to).toHaveValue("2020-01-01");
+    await expect(page.getByRole("combobox", { name: "Role", exact: true })).toHaveValue("user");
+    await expect(page.getByRole("combobox", { name: "Content type", exact: true })).toHaveValue("message");
+    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("all");
+    await page.getByRole("button", { name: "Clear filters", exact: true }).click();
+    await expect(page).toHaveURL((url) => url.search === `?q=${key}`);
+    await expect(page.getByRole("textbox", { name: "Search", exact: true })).toHaveValue(key);
+    await page.goBack();
+    await expect(page).toHaveURL(invalidRangeUrl);
+    await expect(from).toHaveValue("2099-01-01");
+    await expect(to).toHaveValue("2020-01-01");
+  } finally {
+    releaseNavigation();
+    await page.unrouteAll({ behavior: "wait" });
+    expect((await page.request.delete(`/api/conversations/${id}`)).ok()).toBe(true);
+  }
+});
+
 test("attachments: failed load, rename draft, copy feedback and partial detach remain recoverable", async ({ page }, info) => {
   await page.request.patch("/api/preferences", { data: { locale_mode: "en-US", theme_mode: "dark" } });
   const id = await conversation(page, "Synthetic file actions");

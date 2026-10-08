@@ -104,8 +104,11 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       } finally {
         await page.evaluate(() => (window as Window & { releaseIdleDownload?: () => void }).releaseIdleDownload?.());
       }
+      // Releasing the coordinator lock starts cleanup; it does not await it.
+      await expect(dialog.getByRole("button", { name: /^(Refresh|刷新)$/ })).toBeEnabled();
+      await expect(dialog.getByRole("alert")).toHaveCount(0);
       await expect(dialog.getByText(/0\/1/)).toBeVisible();
-      expect(await page.evaluate(async id => {
+      await expect.poll(() => page.evaluate(async id => {
         const namespace = Array.from(new TextEncoder().encode(id), b => b.toString(16).padStart(2, "0")).join("");
         const name = localStorage.getItem("chat-reader:offline-legacy-owner-v1") === id ? "chat-reader-offline-assets-v1" : `chat-reader-offline-assets-v1--user-${namespace}`;
         return (await (await caches.open(name)).keys()).length;

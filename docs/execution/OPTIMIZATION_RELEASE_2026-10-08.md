@@ -87,6 +87,31 @@ check, one explicit retry and the final server dismissal receipt. The original
 seven-remaining-scans assertion is retained. This corrects the regression contract,
 not the application, and does not turn the failed run into a pass.
 
+Source `b18aced` contains that dismissal correction; its full CI is
+[37754402200](https://github.com/foolkking/chat-reader/actions/runs/37754402200).
+Its API gate passes; Web reaches the mutation gate and reports **15 passed /
+1 failed**, now exposing a real rapid-search-filter input-loss defect. The
+[scoped audit](ux-audit-search-filter-race-2026-10-08.md) retains the synthetic
+failure excerpt before repair. Filter-only navigation now composes from the
+synchronous URL through Next's native History integration; a deterministic
+rapid-edit/Back/Forward/reload regression is added. Browser acceptance is pending.
+
+The `1badec1` settings gate completed **433 passed / 6 failed / 0 skipped**.
+All six failure reports were reviewed: one in-flight review route was removed
+before `route.fetch` finished; two offline-recovery tests assumed a transient
+summary existed after a fresh load; three cache-cleanup assertions read Cache
+Storage immediately after releasing a held coordinator lock. Tests now drain
+route handlers, use the permanent Tasks entry, and wait for the actual cleanup
+operation/durable zero-cache state. No cleanup behavior, download assertion,
+authentication guard or production task-visibility rule is weakened. These are
+proposed test corrections, not six claimed passes; the full rerun must prove them.
+The `b18aced` settings gate independently repeats **433 passed / 6 failed /
+0 skipped** with the same six failing cases; both failed artifacts are retained
+locally. Its image build and inspection jobs are skipped because the gates failed.
+The follow-up's local lint, nonincremental typecheck, one-worker bounded build and
+37-case discovery across the four touched test files pass. Discovery does not run
+the browser or establish the proposed fixes' runtime correctness.
+
 The read-only production attachment audit found **310 verified object hashes**,
 304 active attachments and no issues; the production application remains intact.
 

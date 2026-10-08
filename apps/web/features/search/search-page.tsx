@@ -69,12 +69,14 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     });
   }, [offset, result.data, scope]);
   const update = (changes: Record<string, string>) => {
-    const next = new URLSearchParams(params?.toString() ?? "");
+    // Compose rapid edits from the synchronous URL, not a pending router render.
+    // Next's native History integration keeps useSearchParams and Back in sync.
+    const next = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(changes)) {
       if (value && (key === "q" || (key === "status_scope" ? value !== "active" : value !== "all"))) next.set(key, value);
       else next.delete(key);
     }
-    router.push(`/search${next.size ? `?${next}` : ""}`, { scroll: false });
+    window.history.pushState(null, "", `/search${next.size ? `?${next}` : ""}`);
   };
   const total = result.data?.total ?? items.length;
   const openSelected = () => {

@@ -1,5 +1,10 @@
 # Markdown 文档台账
 
+`execution/ux-audit-search-filter-race-2026-10-08.md` records the CI-observed
+rapid-filter input-loss defect before repair, with the minimal synthetic page
+snapshot in its adjacent evidence directory. It owns the scoped finding and
+browser-history acceptance; the release record owns complete CI/deployment status.
+
 `execution/OPTIMIZATION_RELEASE_2026-10-08.md` owns the recovered goal's newly
 authorized commit/CI/deployment, exact-source release evidence and remaining
 verification. PROJECT_STATE, index, deployment and testing distinguish this

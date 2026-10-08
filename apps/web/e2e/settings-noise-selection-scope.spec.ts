@@ -120,12 +120,14 @@ for (const legacy of [false, true]) {
       await expect(f.dialog.getByText("预览包含本次扫描的全部选择", { exact: true })).toBeVisible();
       await expect(f.dialog.getByText("含其他分组的 51 项选择", { exact: true })).toHaveCount(0);
       await shot(f.page, legacy ? "legacy-summary" : "failed-summary");
-      await f.page.unroute(pattern);
+      // A background review refresh may still be finishing route.fetch().
+      // Drain it before removing the handler or navigating to all selections.
+      await f.page.unrouteAll({ behavior: "wait" });
       await f.dialog.getByRole("button", { name: "查看全部已选项", exact: true }).click();
       await expect(f.dialog.getByRole("region", { name: "当前审查范围" })).toContainText("此范围已选 51 项");
       expect((await f.scan()).delete_count).toBe(51);
       const source = await (await f.context.request.get(`${baseURL}/api/messages/${f.conversations[0].messages[1].id}`)).json();
       expect(source.current_version.display_text).toBe(f.sources[0]);
-    } finally { await f.context.close(); await f.admin.dispose(); }
+    } finally { await f.page.unrouteAll({ behavior: "wait" }); await f.context.close(); await f.admin.dispose(); }
   });
 }

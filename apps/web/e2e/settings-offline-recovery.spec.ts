@@ -252,7 +252,9 @@ for (const [code, locale, width] of [["OFFLINE_ASSET_INTEGRITY", "zh-CN", 375], 
           ? { ...task, status: "failed", phase: "failed", error_message: code } : task) });
       });
       await page.goto(baseURL!);
-      await page.getByTestId("task-summary-button").filter({ visible: true }).click();
+      // The always-available Tasks entry also opens retained terminal results;
+      // the transient progress summary is not guaranteed after a fresh load.
+      await page.getByTestId("sidebar-tasks-button").filter({ visible: true }).click();
       const row = page.getByTestId("task-center-panel").locator(`[id="task-row-${jobId}"]`);
       await expect(row.getByText(cause)).toBeVisible();
       await expect(row).not.toContainText(code);
