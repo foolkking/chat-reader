@@ -1,5 +1,14 @@
 # Release Safety Baseline
 
+2026-10-08 release prerequisite: the first accumulated-optimization CI detected
+new high advisories GHSA-cjq9-62q9-8jv4 (Next image optimization) and
+GHSA-wq5f-xc86-pv6w (sharp/librsvg). Next is patched to **16.3.8** and the sharp
+override to **0.35.5**, the advisory-defined fixed versions. The existing npm
+audit policy and exact braces mitigation remain in force; no exception is added.
+No untrusted remote image patterns are configured, but the release still adopts
+the upstream patches. Current verification and deployment status are recorded in
+[the release evidence](../execution/OPTIMIZATION_RELEASE_2026-10-08.md).
+
 2026-10-06 dependency follow-up: GHSA-68fv-2mgg-jv7q now blocks source-map-js
 1.2.1 through the PostCSS graph. The root override pins upstream 1.2.2; bounded
 subprocess regressions exercise indexed offsets, nested sources and normal mappings

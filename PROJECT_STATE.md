@@ -58,6 +58,13 @@ run in the existing isolated release CI; no local browser pass is claimed.
 Production is still b45f049/0048 and healthy. Server operational modifications,
 environment, PostgreSQL and business data must be preserved during release.
 
+Accumulated source `a31a1f8` is committed and pushed. Its first CI passed the full
+API gate (**1,181 passed / 3 skipped**) but the Web dependency audit found newly
+published Next/sharp high advisories. The follow-up pins Next **16.3.8** and sharp
+**0.35.5** without weakening audit policy. Its local build, nine dependency
+regressions and official-registry audit policy pass; complete exact-source CI and
+deployment remain pending. Do not deploy the first run's failed source.
+
 ### Preserved local checkpoints before release preparation
 
 Testing remains **local only**, using the user's specified Chromium

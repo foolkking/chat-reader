@@ -6,6 +6,12 @@ verification. PROJECT_STATE, index, deployment and testing distinguish this
 authorization from historical local-only checkpoints, and the continuing local
 Web-start rejection from isolated CI browser acceptance.
 
+The release record also owns the failed first CI's dependency-audit evidence and
+API result (1,181 passed / 3 skipped). `system/RELEASE_SAFETY_BASELINE.md` records
+the current Next 16.3.8 / sharp 0.35.5 prerequisite; the existing audit exception
+policy is unchanged. Current state distinguishes local patch verification from
+the still-required exact-source release gates.
+
 `execution/local-execution-policy-diagnosis-2026-10-08.md` records the read-only
 policy/configuration/log investigation and corrects the unproven auto-review
 attribution. Current state and testing link the verified scope: effective full

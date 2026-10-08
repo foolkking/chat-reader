@@ -44,6 +44,25 @@ its Compose and environment, and stage exact-source support files separately.
 
 ## Release gates and remaining work
 
+Source `a31a1f8ee5ed730da291a295395f885bfb583d38` was committed and pushed. CI
+[37748221325](https://github.com/foolkking/chat-reader/actions/runs/37748221325)
+started the complete gates. Its Web gate passed lint/typecheck/build and then
+failed the official dependency audit: new high advisories affect Next and sharp.
+No images from this failed gate are deployable. The API gate subsequently passed:
+**1,181 passed / 3 skipped** in the full suite, plus the separate 64-case Bundle
+and 53-case cleanup gates and migration validation. These suites overlap. The
+settings gate continues independently; its result is not yet accepted.
+
+The follow-up adopts advisory-defined **Next 16.3.8** and **sharp 0.35.5**;
+registry metadata and the published advisory ranges were checked. No audit
+exception or threshold is changed. Locked installation, the bounded Next 16.3.8
+production build and all **9 dependency regression tests** pass locally. The
+official-registry audit policy passes with three advisories, one existing approved
+high-severity braces exception, and zero unapproved blockers/policy errors; this
+is not a zero-vulnerability claim. A new exact-source full CI is required.
+The read-only production attachment audit found **310 verified object hashes**,
+304 active attachments and no issues; the production application remains intact.
+
 No production change has occurred at this checkpoint. Record the source commit,
 all CI job outcomes, original artifact/producer identity and independent image
 inspection before deployment. Verify attachment storage, a consistent backup,
