@@ -10,10 +10,14 @@
 | `README.md` | Clarifies isolated user accounts versus an unimplemented collaborative workspace. |
 | `docs/testing.md` / `docs/deployment.md` | Exact-source CI status and local/CI distinction; production instructions forbid King image builds and reflect built-in authentication. |
 | `docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` | Current limitations above explicitly historical risk snapshots; old zero-debt claims do not substitute for current verification. |
+| `docs/system/DEPLOYMENT_AND_ENVIRONMENT.md` / `docs/deployment.md` | Accepted 30a0d32/0050 production, loaded b45f049 rollback, two verified backups and Compose 2.27 compatibility; dated older inventories are historical. |
+| `docs/evidence/optimization-release-2026-10-08.json` | Sanitized acceptance aggregate: exact CI/image identity, stopped-writer migration comparison, bounded live checks, HTTP smoke and finalized retention; not browser interaction evidence. |
 
 The chronology below describes the ownership of dated records. Statements about
 uncommitted work, pending tests or no release apply to their original checkpoint;
 current acceptance belongs to Project State and the accumulated release record.
+The 30a0d32 release is now accepted. Documentation-only closeout commits do not
+replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 

@@ -1,8 +1,16 @@
 # 部署与运行环境
 
-Current production is `b45f049`, Alembic `20261006_0048`, deployed 2026-10-06.
-[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/CONTEXT_EXPORT_INTEGRITY_2026-10-06.md)
+Current production is `30a0d32`, Alembic `20261008_0050`, accepted 2026-10-08.
+[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/OPTIMIZATION_RELEASE_2026-10-08.md)
 own live status, exact CI images, verified backups and rollback. Never build on the workstation or King.
+
+Current/rollback pointers select 30a0d32/b45f049; both exact rollback images are
+already loaded. The latest verified backups are `chat-reader-20261006T141424Z`
+and `chat-reader-20261008T134403Z`. The older 113958Z point was pruned only after
+acceptance. Migration preserved 84 table fingerprints and four storage roots;
+36 source fingerprints were backfilled exactly. No live full-hash sweep was repeated.
+Compose 2.27 requires release-only `pull_policy: never`, not `run --pull never`;
+validate the configuration and bounded mounted helper before stopping writers.
 
 Temporary exports use Root-controlled three-minute retention and protected downloads.
 Backup tools are installed; successful release finalization retains two verified
@@ -42,7 +50,7 @@ secret，发布和部署仍是独立步骤。
 
 2026-10-02 已部署的归档扩展：系统导出 `.cr v5` 保留 v4 显式归属映射和旧 v5 无配置扩展兼容；新配置 schema 1 保存个人授权、系统发布、偏好及功能/访问策略。普通账户恢复后重设密码，目标 Root 凭据不变；启用邮箱验证的策略恢复前要求目标已配置 SMTP。个人恢复新增幂等 receipt migration，当前唯一 head 为 `20261002_0042`（包含归属选择表）。上传沿用 `BUNDLE_MAX_COMPRESSED_BYTES`（默认 512 MiB）；Nginx 为精确路径 `/api/me/archive/previews` 与 `/api/system/archive/previews` 添加 520 MiB multipart 上限并直连 loopback FastAPI，避免 Next rewrite 缓冲截断。导出现在同时验证上传/展开大小、文件/对象数量、单对象及 JSONL/manifest 限制；容量失败需一致核对 `BUNDLE_MAX_*`、`CANJSON_MAX_LINE_BYTES` 和网关上限后重试，不静默忽略附件。没有新增环境变量；此次发布已同步两条精确网关规则。系统预检、持久归属映射和恢复已接入 worker 与管理员页面，详情见 [Data Archive Contract](DATA_ARCHIVE_CONTRACT.md)。应用归档不能替代部署前服务器备份。
 
-## Current deployed snapshot (2026-10-02)
+## Historical deployed snapshot (2026-10-02)
 
 Production runs `ad223cd4bcbbad7a4ff0c5ea5f33ed2846f3a3ca` from successful
 Actions `36955004824`, with Alembic `20261002_0042 (head/current)`. Verified

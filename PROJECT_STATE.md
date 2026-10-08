@@ -6,11 +6,11 @@ Last updated: 2026-10-08. This is the current snapshot, not a release history.
 
 | Item | Verified state |
 | --- | --- |
-| Production | Source `b45f04939a728c86bbff769c36ea7574d6a1856d`; accepted [CI 37470769275](https://github.com/foolkking/chat-reader/actions/runs/37470769275), all five gates |
-| Production database | `20261006_0048`; API/Web/PostgreSQL healthy and worker running at the latest read-only check |
-| Current release candidate | Import-retry transport correction prepared; a new complete exact-source CI is required |
-| Source migration | Single head `20261008_0050`, following 0049; not yet deployed |
-| Latest completed candidate CI | `7825e60` / [37767854364](https://github.com/foolkking/chat-reader/actions/runs/37767854364): API and all 13 Web gates pass; settings **438 passed / 1 failed / 0 skipped**; images not built |
+| Production | Source `30a0d321fe2d538b0fa0bbd61b3e982452f822cb`; accepted [CI 37773748374](https://github.com/foolkking/chat-reader/actions/runs/37773748374), all five gates; original artifact 11550757701 independently verified |
+| Production database | Single head/current `20261008_0050`, migrated through 0049; API/Web/PostgreSQL healthy and worker `alive_idle` at acceptance |
+| Data acceptance | 84 stopped-writer table fingerprints and four storage roots unchanged; 36 expected source hashes backfilled; 67 stable table counts unchanged after restart |
+| Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
+| Active work | Post-deployment ordinary-user audit; later documentation-only commits do not change the deployed application identity above |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -20,11 +20,14 @@ improvements was not a ceiling; over 30 scoped batches are already accumulated.
 Do not repeat the previously accepted Context/Skill/Task Center deployments.
 Do not use subagents unless the user newly requests them.
 
-All three cache-count cases now pass, including actual zero-cache, download,
-cancellation and persistence assertions. The remaining import-retry case removed
-its 503 interception before clicking, allowing background refresh to remove the
-button. The candidate retains the outage until the real click and saves synthetic
-recovery screenshots. CI must prove it; no production changes or deployable artifact exist yet.
+All three cache-count cases pass, including actual zero-cache, download,
+cancellation and persistence assertions. The import-retry case now retains its
+injected outage until the real click and also passes. Twelve new selection-state
+screenshots across six cases and four import-completion/retry screenshots were
+reviewed; the other two new selection cases have assertion-only evidence.
+The release is accepted, including authenticated read-only smoke, exact runtime
+image/source checks and backup finalization. Production configuration and
+PostgreSQL were preserved. The follow-on product audit is now in progress.
 The [search filter audit](docs/execution/ux-audit-search-filter-race-2026-10-08.md)
 records the separately reproduced and CI-verified rapid-input/history repair.
 
@@ -33,7 +36,7 @@ records the separately reproduced and CI-verified rapid-input/history repair.
 - Local lint, nonincremental typecheck, bounded Web build, 33 focused offline/task
   API cases and single source head 0050 have passing evidence. Latest full API CI:
   **1,181 passed / 3 skipped**. Suites overlap; do not add them as unique cases.
-- In the latest completed candidate CI, all 13 Web gates pass, including the
+- In the accepted release CI, all 13 Web gates pass, including the
   17-case mutation gate. Default PWA: **135 passed / 588 conditional skips**;
   adaptive-import recovery has one conditional skip. Skips are not passes.
 - The 16 formerly pending selection/offline cases ran in isolated settings CI.
@@ -48,17 +51,20 @@ records the separately reproduced and CI-verified rapid-input/history repair.
 - King is a low-memory host. Build images only in CI, never locally/on King.
   Preserve its operational checkout, Compose, `.env.production` and PostgreSQL.
   Stage exact-source support separately; never pull/reset the server checkout.
-- Before release, verify provenance, attachment storage, capacity and a consistent
-  five-component backup. Stop API/worker writers for 0048→0050, not PostgreSQL.
-  Use `--no-deps --no-build`; no automatic database downgrade or data restore.
-- Current verified backups: `chat-reader-20261006T113958Z` and
-  `chat-reader-20261006T141424Z`. Keep two verified points; a temporary third
-  during acceptance is expected. Never prune before successful acceptance.
+- The completed release verified provenance, 310 attachment hashes, capacity and
+  a consistent five-component backup. Stop application writers, not PostgreSQL,
+  when a future migration requires it; use `--no-deps --no-build`. Never replay
+  completed release helpers or automatically downgrade/restore the database.
+- Current verified backups: `chat-reader-20261006T141424Z` and
+  `chat-reader-20261008T134403Z`. The exact older 113958Z point was pruned only
+  after acceptance under the two-backup policy; final report has no candidates.
   No off-site or scheduled backup is configured.
-- Current rollback points to the older 25c7f6a archive, which needs loading.
-  The next accepted release must preserve the currently deployed b45f049 images
-  as its rollback pair. Follow [deployment](docs/deployment.md), not old commands
-  copied from dated execution records.
+- Current rollback points to b45f049; its exact API/Web images are already loaded.
+  The superseded 25c7f6a load notice is archived with this release, not active.
+  Follow [deployment](docs/deployment.md), not old commands from dated records.
+- King Compose 2.27 does not accept `run --pull never`. Release-only overlays use
+  `pull_policy: never`; validate configuration and mounted checks before stopping
+  writers. The interrupted first attempt and verified recovery remain recorded.
 
 ## Project and source map
 
@@ -103,7 +109,8 @@ low-memory deployment policy; integrity checks do not mean they are safe.
 Browser eviction/quota and real-device variance remain operational risks.
 Do not claim a full interactive production browser matrix, an external semantic
 Skill trial, or a fix for the earlier unrelated Next stream-close observation.
-The follow-on product audit has not started; release acceptance comes first.
+The follow-on audit uses source, synthetic checks and isolated CI evidence, not
+production browsing. Findings must be recorded before further product edits.
 
 ## Commands and workspace rules
 
@@ -132,6 +139,6 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: finish candidate CI, inspect its original artifact, complete guarded release
-acceptance, update this snapshot, then audit ordinary-user opportunities from
-observed evidence before making further product changes.
+Next: finish the evidence-based follow-on audit of ordinary-user recovery and
+navigation, then implement and verify the worthwhile in-scope findings. The
+accepted release must remain distinct from any not-yet-released follow-up.

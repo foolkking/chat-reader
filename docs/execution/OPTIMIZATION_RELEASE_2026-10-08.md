@@ -1,5 +1,16 @@
 # Accumulated settings and offline improvements — 2026-10-08
 
+## Accepted outcome
+
+Source `30a0d321fe2d538b0fa0bbd61b3e982452f822cb` is deployed and accepted on
+King, with single head/current `20261008_0050`. All five exact-source CI gates,
+independent artifact verification, consistent backup, data preservation and
+authenticated HTTP smoke passed. Finalization retains two verified backups and
+loaded b45f049 rollback images. See the final sections and
+[sanitized evidence](../evidence/optimization-release-2026-10-08.json).
+Earlier pending/failed statements below are chronological checkpoints, not current
+status. The goal continues with the authorized post-deployment product audit.
+
 ## Scope and authorization
 
 The user explicitly requested recovery of task
@@ -154,6 +165,16 @@ Noise-selection and navigation screenshots now default to the test output direct
 when no custom directory is supplied. No application code changes in this follow-up.
 Changed-file ESLint, nonincremental TypeScript and 30-case discovery across the
 two touched test files pass; browser execution still depends on the full rerun.
+The correction and documentation reconciliation are committed as
+`30a0d321fe2d538b0fa0bbd61b3e982452f822cb`; full CI
+[37773748374](https://github.com/foolkking/chat-reader/actions/runs/37773748374)
+is running. Do not substitute a previous run's success for this source.
+Its API job passes **1,181 / 3 skipped / 16 warnings** in 646.38 seconds,
+with separate 64-case Bundle and 53-case cleanup checks. Its downloaded Web
+evidence records **13 passing gates**, zero failed or unverified gates; the
+default-PWA 588 conditional skips and one adaptive-import skip remain explicit.
+Settings and the two image gates are still pending at this checkpoint. Intermittent
+GitHub TLS-read timeouts are transport failures, not workflow failures.
 
 The eight formerly pending offline scenarios have ten synthetic screenshots in
 the `7987132` artifact; all ten were inspected at their actual three widths and
@@ -172,6 +193,12 @@ writers stop; post-start checks use bounded counts and attachment sizes/bindings
 not another full live hash sweep. One-off checks have a 0.5 CPU/384 MiB memory bound.
 The prepared artifact verifier checksums all seven transferred task helpers and
 exact-source support files. No helper has performed a production release yet.
+Seven further pure synthetic archive-verifier tests pass: exact blob/config/tag
+and helper/support inventories, failed gates, wrong producer, corrupted blob,
+archive traversal/duplicate members and nonmatching Git support. These tests do
+not use Docker, network access or application-image builds. The CI identity
+collector reads completed run/job/artifact metadata directly from GitHub and
+refuses missing gates, mixed attempts or mismatched source identity.
 
 Current documentation entry points were compressed while preserving all original
 647 Project State lines in a dated archive with rebased links. Eight touched docs
@@ -193,3 +220,126 @@ heartbeat, aggregate canonical/file preservation and relevant read-only endpoint
 Application testing must use isolated data; production pages are not a substitute
 for the blocked local browser gate. Preserve failed runs and report skipped or
 unverified cases separately. Only then continue the next product audit.
+
+## Exact-source CI acceptance and transfer
+
+The seventh full workflow, **37773748374 / 30a0d32 / attempt 1**, completes all
+five jobs successfully. Settings passes **439 / 0 failed / 0 skipped** in
+2,257.147 seconds; the separate fresh-PostgreSQL archive restore passes its one
+case. API passes **1,181 / 3 skipped / 16 warnings** and all 13 Web gates pass.
+The preceding failed runs remain failed; no consumer-only rerun mixed sources.
+
+Original image artifact **11550757701** is uniquely named
+`chat-reader-images-30a0d321fe2d538b0fa0bbd61b3e982452f822cb-1`.
+Independent verification binds all five successful jobs, the original producer,
+50 content-addressed blobs, two linux/amd64 configurations, four tags, three
+built-in Skill ZIPs, 17 exact-source support files and seven task helpers.
+Archive SHA-256: `2d5d0def797e27a9d015b43b566e613b25561fc96d1b5e10b3803029e0b50561`.
+API/worker/migrate: `sha256:cf45bd516a599618b35fee21b9c501ca8b8d5e776043f718bdd818755c5d930a`.
+Web: `sha256:13871dfaebaed5d585573f82a7253971a1a8700f030509baea47d67da444efcb`.
+
+The first independent support-file check correctly refused Windows Git's CRLF
+conversion of all 17 text files. Byte comparison proves these were newline-only
+changes. The rejected export remains in the task directory. Command-local
+`core.autocrlf=false` and `core.eol=lf` produce original commit bytes without
+changing Git's global settings or weakening comparison. Checksum lists are emitted
+as LF bytes. All **eight** verifier tests pass, including explicit CRLF rejection,
+and the complete real-artifact verification passes afterward.
+
+All 12 newly saved selection-state images were inspected at 375/768/1440 widths:
+unknown acknowledgements and failed reads retain a visible recovery action and
+disable writes/preview; confirmed reads restore the correct one/zero selection.
+These images cover six of the eight new selection cases; unsent and timed-out
+requests have passing CI assertions but no dedicated screenshot. Four additional
+import retry/completion images were inspected, including the former 768px failure.
+This remains isolated-CI evidence, not local specified-Windows-Chromium acceptance.
+
+The private server release directory is being populated from the explicit
+checksummed allowlist. No production application service, database data or
+configuration has changed at this transfer checkpoint. Next: guarded preflight,
+fresh consistent backup, migration and release acceptance.
+
+## Pre-migration Compose compatibility interruption
+
+Transfer checksums, preserved PostgreSQL/configuration identity, old rollback
+images, idle worker, capacity and both existing backups passed. Capacity measured
+13,783,120 KiB available against 4,330,323 KiB required. All four new tags loaded
+with the exact verified image IDs.
+
+The first stop-write attempt failed **before any snapshot, backup or migration**:
+King runs Docker Compose **2.27.0**, whose `run` command has no `--pull` option.
+The attempted snapshot created only an empty output file. The pre-migration
+recovery then hit another Compose dependency check: `start api import-worker`
+refused because its completed `migrate` dependency container was absent.
+
+The agent verified no migration marker existed, PostgreSQL/configuration were
+unchanged, and both stopped containers still used the exact b45f049 image.
+It then started only those two existing containers through Docker. API, Web and
+PostgreSQL health plus the idle worker heartbeat all passed afterward. No
+database migration or restore occurred; the interruption is not an accepted release.
+
+Helper revision 2 uses Compose-supported `pull_policy: never` in the task-only
+resource overlay instead of the unsupported CLI flag. It validates Compose and
+runs the mounted evidence helper's `--help` before stopping writers. Automatic
+pre-migration recovery now verifies old image/source identities and directly
+starts only the existing API/worker; it refuses any started migration. **29 guard
+tests and eight archive-verifier tests pass**, alongside LF shell syntax and
+Python-3.6 host syntax checks. The complete original artifact is independently
+reverified with the new helper hashes. The first helper/proof set and empty
+snapshot output are retained in the private server release evidence. CI images,
+source support, production configuration and business data are unchanged.
+
+## Successful guarded deployment and acceptance
+
+Helper revision 2 passed the actual King's configuration validation and mounted
+one-off `--help` before stopping writers. Its limits were verified as 0.5 CPU,
+384 MiB RAM, 768 MiB memory+swap and `pull_policy: never`. The second attempt
+completed the consistent five-component backup at
+`/opt/chat-reader/backups/chat-reader-20261008T134403Z`, then migrated
+0048→0049→0050 with the independently verified API image. PostgreSQL was neither
+stopped nor restarted. Acceptance marker: **2026-10-08T13:52:31.352498Z**.
+
+| Acceptance | Verified result |
+| --- | --- |
+| Exact-source CI jobs | api-quality 113299389766; settings-quality 113299389961; web-quality 113299390166; build-images 113315391780; inspect-release-artifact 113316496905; all successful |
+| Migration data | All 84 pre-existing table fingerprints identical while writers stopped; all four protected storage roots byte-identical |
+| Intended backfill | Exactly 36 source hashes; actual count/digest match independently computed pre-migration expectation |
+| Attachments | 310 object/file hashes verified, 304 active attachments, zero issues |
+| After restart | 67 stable table counts unchanged; bounded attachment binding/size checks pass; no repeated full live hash sweep |
+| Runtime | Exact 30a0d32 API/Web/worker image IDs; API/Web healthy, worker alive_idle; zero new restarts, OOM kills or error-keyword log lines |
+| Preserved environment | PostgreSQL container identity/start/restarts and configuration hashes unchanged; operational checkout, production environment, Compose and Nginx preserved |
+| Public transport | HTTPS health 200; HTTP redirect 301 to expected HTTPS origin |
+| Authenticated smoke | Login; 17 read-only API routes; three HTML document routes; three system Skill categories and three exact ZIP downloads; logout 204 and subsequent private request 401 |
+
+Attachment policy remains scanner disabled, unscanned allowed, basic preview
+enabled and complex preview disabled. Integrity verification is not a malware
+safety claim. HTTP document checks are not interactive production-browser tests.
+Only sanitized aggregate evidence was downloaded; backup contents, credentials,
+cookies and production conversation content were not copied into the repository.
+
+## Finalized rollback and retention
+
+`/etc/chat-reader/release-state/current-images.env` now selects 30a0d32;
+`rollback-images.env` selects b45f049. The exact rollback images are already loaded:
+API `sha256:c13e9171ba1c40e838d59ecedf5adddbda88cce13fad5ad8761f23c9f6d6889a`;
+Web `sha256:886cd8e97cb41bacffc2d6b056e120c97000d44749dceb7506a597f9a113f216`.
+The obsolete 25c7f6a load notice is archived as
+`older-rollback-requires-load.before.txt` in this release's private directory.
+It is no longer an active instruction beside the new rollback pointer.
+
+After acceptance, the existing two-backup policy retained
+`chat-reader-20261006T141424Z` and `chat-reader-20261008T134403Z`, and removed
+only the verified older `chat-reader-20261006T113958Z` point. The user was told
+that this old time point is no longer separately retained. Pruning unlinked
+244,003,030 bytes (about 232.7 MiB). Its temporary `held=1` was its own operation
+lock; the final read-only report is **verified=2, held=0, candidates=0**.
+Available space after finalization: **12,938,032 KiB (12.34 GiB)**.
+No production volume, import, unrelated application or retained backup was deleted.
+
+The accepted release directory is
+`/opt/chat-reader/releases/30a0d321fe2d538b0fa0bbd61b3e982452f822cb`.
+It retains helper revision 2 and the rejected first helper/proof set separately.
+Do not replay completed deployment/finalization/pruning, and do not reuse these
+b45f049→30a0d32 task guards unchanged for another release. The subsequent
+ordinary-user audit begins from this accepted source, with findings recorded
+before application edits and no production browser testing.

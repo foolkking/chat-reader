@@ -1,19 +1,43 @@
 # 生产部署
 
-## Accumulated optimization release preparation — 2026-10-08
+## Current accepted release — 2026-10-08
 
-The user has explicitly requested commit, full CI and deployment of the accumulated
-work, followed by another product audit. This supersedes the no-release direction
-of the historical local batches below. Current source/CI/production acceptance is
-tracked in [the release record](execution/OPTIMIZATION_RELEASE_2026-10-08.md).
-The local Web process still cannot start because of an unidentified tool policy;
-the existing isolated CI browser gate must pass before deployment. Local static,
-build, 33-test offline/task and single-head 0050 checks pass. Production remains
-b45f049/0048 until exact-source CI and release gates complete. Candidate `7825e60`
-passed API/Web and all three corrected cache cases, but failed one import-retry
-test. Its transport correction needs a new full CI; no failed-source image may be deployed.
+Production source `30a0d321fe2d538b0fa0bbd61b3e982452f822cb`, full CI
+[37773748374](https://github.com/foolkking/chat-reader/actions/runs/37773748374),
+single head/current `20261008_0050`. All five jobs passed; original artifact
+11550757701/attempt 1 and exact-source support were independently verified.
+Images were built only in CI. API/Web are healthy and the worker is `alive_idle`.
+The [release record](execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns image
+digests, interrupted attempts, data comparison and authenticated HTTP acceptance.
+The isolated CI browser results are not specified-Windows-Chromium local acceptance;
+the original local Web-start policy refusal remains unresolved.
 
-## Unreleased offline task recovery — 2026-10-08
+Migration 0048→0049→0050 preserved all 84 pre-existing table fingerprints and
+four storage roots; 36 source hashes match the independently expected backfill.
+After restart, 67 stable table counts and the bounded attachment audit passed.
+PostgreSQL identity/start/restarts, production environment, operational checkout,
+Compose and Nginx were preserved. Do not repeat full live database hash sweeps.
+
+Verified backups: `chat-reader-20261006T141424Z` and
+`chat-reader-20261008T134403Z`. The older `chat-reader-20261006T113958Z` point
+was removed only after acceptance, unlinking 244,003,030 bytes under the existing
+two-point policy. No off-site or scheduled backup is configured. Final available
+space was 12.34 GiB. Current/rollback pointers now select 30a0d32/b45f049;
+the exact b45f049 API/Web images are already loaded. The older 25c7f6a load notice
+is archived in this release's private evidence and is not the active rollback.
+Do not replay this completed release's deployment, finalization or prune helpers.
+
+King has Compose 2.27.0: `compose run --pull never` is unsupported. Use
+`pull_policy: never` in a release-only resource overlay, and verify Compose config
+plus the mounted helper's `--help` before stopping writers. A 0.5 CPU/384 MiB
+RAM/768 MiB memory+swap bound was verified. Before any migration marker, guarded
+recovery may start only existing containers with verified old image identities;
+after a migration starts, automatic recovery must refuse. Do not reuse the
+30a0d32 task helpers unchanged for another release.
+
+## Accepted-release compatibility notes
+
+### Offline task recovery — 2026-10-08
 
 Task responses add nullable `offline_target`; no new migration or worker payload
 format is required beyond the existing local head 0050 below. Older Web clients
@@ -22,14 +46,14 @@ an existing local job when possible, and offers the manual Library route when
 target metadata is absent. Deploy API before Web to enable targeted new-device
 downloads. Legacy task retry and package-download APIs remain available.
 
-Focused API/static/build checks passed, but browser entry/download/focus acceptance
-is blocked by the recorded automatic Web-start rejection. This is not a release
-approval; no commit, CI or deployment was performed. See the
-[execution record](execution/offline-task-recovery-2026-10-08.md).
+The original [local execution record](execution/offline-task-recovery-2026-10-08.md)
+retains its then-blocked browser checkpoint. Full isolated settings CI and the
+release acceptance above supersede that checkpoint's unreleased status, not its
+honest local-browser limitation.
 
-## Unreleased cleanup source fingerprint — 2026-10-08
+### Cleanup source fingerprint — 2026-10-08
 
-Local single head is now `20261008_0050`, parent `20261007_0049`. Apply migration
+Single head/current is `20261008_0050`, parent `20261007_0049`. Apply migration
 before starting this API/worker code. It adds the nullable exact-source fingerprint
 to cleanup candidates and streams legacy source bodies one at a time to backfill
 only unchanged scan targets. Unknown old candidates need rescanning; canonical
@@ -40,11 +64,10 @@ keys intact; the source-safety execution record retains intermediate failures.
 Stop old workers/API while migrating; an older worker cannot populate the new
 fingerprint for scans it creates. Earlier UI clients remain compatible. Reverting
 the application does not require dropping the column, but loses this source-safety
-protection. Explicit downgrade to 0049 drops only the column. Production remains
-0048. No deployment is authorized by this local batch; browser acceptance remains
-pending and normal release gates still apply.
+protection. Explicit downgrade to 0049 drops only the column; it is not part of
+the accepted application rollback and must never be automatic.
 
-## Unreleased rescan index — 2026-10-07
+### Rescan index — 2026-10-07
 
 The preceding local migration `20261007_0049`, parent `20261006_0048`, indexes
 the existing job payload's private admission key; no content/backfill is changed.
@@ -53,10 +76,13 @@ DDL. Deploy compatibility reading and this index before new Web recovery control
 old no-header clients remain supported. Reverting application code need not remove
 the index; explicit downgrade to 0048 only drops it. Account/type/key advisory
 locking is transaction-scoped. Receipt lifetime remains task retention.
-Production below still runs 0048. No release is authorized by this local work;
-normal backup, CI-artifact and release verification requirements still apply.
+Both migrations were applied in the accepted release above; the original local
+batch's no-release statement remains only a historical checkpoint.
 
-## Current release — 2026-10-06
+## Previous release — 2026-10-06
+
+This section is historical. Its backup inventory and 25c7f6a rollback instructions
+do not override the current accepted release above.
 
 Production source `b45f04939a728c86bbff769c36ea7574d6a1856d`, CI `37470769275`,
 single head/current `20261006_0048`. All five gates passed; original artifact

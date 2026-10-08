@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "status": "ACCEPTED",
+  "accepted_at_utc": "2026-10-08T13:52:31.352498Z",
+  "source": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "ci": {
+    "run_id": 37773748374,
+    "attempt": 1,
+    "all_five_jobs_passed": true,
+    "artifact_id": 11550757701,
+    "api": { "passed": 1181, "skipped": 3, "warnings": 16 },
+    "web_gates_passed": 13,
+    "settings": { "passed": 439, "failed": 0, "skipped": 0 },
+    "fresh_archive_restore_passed": 1,
+    "default_pwa": { "passed": 135, "conditional_skips": 588 },
+    "adaptive_import_conditional_skips": 1,
+    "overlapping_suites_not_summed": true
+  },
+  "images": {
+    "archive_sha256": "2d5d0def797e27a9d015b43b566e613b25561fc96d1b5e10b3803029e0b50561",
+    "api_worker_migrate": "sha256:cf45bd516a599618b35fee21b9c501ca8b8d5e776043f718bdd818755c5d930a",
+    "web": "sha256:13871dfaebaed5d585573f82a7253971a1a8700f030509baea47d67da444efcb",
+    "independently_verified": true,
+    "built_only_in_ci": true
+  },
+  "data": {
+    "migration_from": "20261006_0048",
+    "migration_head_current": "20261008_0050",
+    "stopped_writer_table_fingerprints_equal": 84,
+    "protected_storage_roots_equal": 4,
+    "expected_source_hashes_backfilled": 36,
+    "attachment_objects_sha256_verified": 310,
+    "active_attachments": 304,
+    "attachment_issues": 0,
+    "post_start_stable_table_counts_equal": 67,
+    "post_start_attachment_check": "bounded binding and size audit",
+    "live_full_hash_sweep_repeated": false
+  },
+  "runtime": {
+    "exact_source_and_image_ids": true,
+    "api_web_healthy": true,
+    "worker": "alive_idle",
+    "new_restarts": 0,
+    "oom_kills": 0,
+    "error_keyword_log_lines": 0,
+    "postgres_and_configuration_unchanged": true
+  },
+  "http_smoke": {
+    "status": "PASS",
+    "authenticated_read_only_api_routes": 17,
+    "html_document_routes": 3,
+    "system_skill_categories": 3,
+    "exact_skill_zip_downloads": 3,
+    "https_health": 200,
+    "http_redirect": 301,
+    "logout": 204,
+    "private_after_logout": 401
+  },
+  "retention": {
+    "rollback_source": "b45f04939a728c86bbff769c36ea7574d6a1856d",
+    "rollback_images_loaded": true,
+    "verified_backups": ["chat-reader-20261006T141424Z", "chat-reader-20261008T134403Z"],
+    "removed_after_acceptance": "chat-reader-20261006T113958Z",
+    "unlinked_bytes": 244003030,
+    "final_verified": 2,
+    "final_held": 0,
+    "final_candidates": 0,
+    "available_disk_kib": 12938032
+  },
+  "limits": {
+    "specified_windows_chromium_app_acceptance": "NOT_VERIFIED: original Web launch rejected before process creation",
+    "production_interactive_browser_matrix": "NOT_PERFORMED",
+    "dependency_policy": "PASS with existing scoped braces exception, review by 2026-11-02",
+    "malware_scanning": "disabled under accepted deployment policy",
+    "off_site_or_scheduled_backup": false,
+    "historical_failed_attempts_preserved_in_release_record": true
+  }
+}
