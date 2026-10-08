@@ -38,9 +38,11 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const offset = paging.scope === scope ? paging.offset : 0;
   const [collection, setCollection] = useState<{ scope: string; items: SearchResultItem[] }>({ scope, items: [] });
   const items = collection.scope === scope ? collection.items : [];
-  const [activeIndex, setActiveIndex] = useState(-1);
+  const [selection, setSelection] = useState<{ scope: string; documentId: string | null }>({ scope, documentId: null });
   const resultsRef = useRef<HTMLDivElement>(null);
   const orderedItems = orderSearchResults(items);
+  const activeIndex = selection.scope === scope
+    ? orderedItems.findIndex((item) => item.document_id === selection.documentId) : -1;
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
   const filterCount = [statusScope !== "active", documentType !== "all", role !== "all", projectId !== "all", Boolean(dateFrom), Boolean(dateTo)].filter(Boolean).length;
   const result = useQuery({
@@ -59,7 +61,10 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     enabled: query.trim().length > 0 && !invalidDates,
   });
   const projects = useQuery({ queryKey: ["projects", "search-filter"], queryFn: () => getProjects({ sort: "custom", direction: "asc" }) });
-  useEffect(() => { setActiveIndex(-1); }, [scope]);
+  useEffect(() => {
+    setSelection((current) => current.scope !== scope || (current.documentId !== null && !items.some((item) => item.document_id === current.documentId))
+      ? { scope, documentId: null } : current);
+  }, [items, scope]);
   useEffect(() => {
     if (!result.data) return;
     setCollection((current) => {
@@ -93,12 +98,18 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     router.push(`/conversations/${item.conversation_id}${target.size ? `?${target}` : ""}`);
   };
   const clearFilters = () => update({ status_scope: "active", document_type: "all", role: "all", project_id: "all", date_from: "", date_to: "" });
+  const selectIndex = (index: number) => setSelection({ scope, documentId: orderedItems[index]?.document_id ?? null });
   const moveSelection = (delta: number) => {
     if (!orderedItems.length) return;
     const next = Math.max(0, Math.min(orderedItems.length - 1, activeIndex + delta));
-    setActiveIndex(next);
+    selectIndex(next);
     resultsRef.current?.querySelector<HTMLElement>(`[data-search-index="${next}"]`)?.scrollIntoView({ block: "nearest" });
   };
+  const projectOptions: [string, string][] = (projects.data ?? []).filter((project) => !project.is_default).map((project) => [project.id, project.name]);
+  if (projectId !== "all" && !projectOptions.some(([id]) => id === projectId)) {
+    // Keep a URL's applied scope representable while its name is unavailable.
+    projectOptions.unshift([projectId, zh ? "当前项目" : "Current project"]);
+  }
   const content = (
       <section className="flex min-w-0 flex-1 flex-col">
         <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码和批注" : "Search conversations, messages, sections, code, and annotations"} onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)} />
@@ -113,7 +124,14 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
             <Filter label={zh ? "范围" : "Status"} value={statusScope} onChange={(value) => update({ status_scope: value })} options={[["active", zh ? "未归档" : "Active"], ["archived", zh ? "已归档" : "Archived"], ["all", zh ? "全部" : "All"]]} />
             <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"], ["annotation", zh ? "批注" : "Annotations"]]} />
             <Filter label={zh ? "角色" : "Role"} value={role} onChange={(value) => update({ role: value })} options={[["all", zh ? "全部" : "All"], ["user", zh ? "用户" : "User"], ["assistant", "ChatGPT"]]} />
-            <Filter label={zh ? "项目" : "Project"} value={projectId} onChange={(value) => update({ project_id: value })} options={[["all", zh ? "全部项目" : "All projects"], ...(projects.data ?? []).filter((project) => !project.is_default).map((project) => [project.id, project.name] as [string, string])]} />
+            <div>
+              <Filter label={zh ? "项目" : "Project"} value={projectId} onChange={(value) => update({ project_id: value })} options={[["all", zh ? "全部项目" : "All projects"], ...projectOptions]} />
+              {projects.isLoading ? <p role="status" className="mt-1 text-xs text-secondary">{zh ? "正在加载项目…" : "Loading projects…"}</p> : null}
+              {projects.isError ? <div role="alert" className="mt-1 text-xs text-[var(--danger)]">
+                <p>{zh ? "项目加载失败，当前筛选已保留。" : "Could not load projects. Your filter is unchanged."}</p>
+                <button type="button" disabled={projects.isFetching} onClick={() => void projects.refetch()} className="min-h-10 underline disabled:opacity-60">{zh ? "重试项目" : "Retry projects"}</button>
+              </div> : null}
+            </div>
             <label className="text-xs font-medium text-secondary">{zh ? "开始日期" : "From"}<input type="date" value={dateFrom} onChange={(event) => update({ date_from: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
             <label className="text-xs font-medium text-secondary">{zh ? "结束日期" : "To"}<input type="date" value={dateTo} onChange={(event) => update({ date_to: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
 
@@ -123,7 +141,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
           {result.isError ? <div role="alert" className="border-l-2 border-[var(--danger)] pl-4 text-sm text-[var(--danger)]"><p>{zh ? "搜索失败，请重试。" : "Search failed. Try again."}{items.length ? (zh ? " 以下为之前加载的结果。" : " Previously loaded results are shown below.") : ""}</p><button type="button" disabled={result.isFetching} onClick={() => void result.refetch()} className="min-h-10 underline">{zh ? "重试" : "Retry"}</button></div> : null}
           {query && !invalidDates && !result.isError && !result.isFetching && items.length === 0 ? <State text={zh ? "没有找到结果。请清除筛选或修改关键词。" : "No results. Clear filters or try another query."} /> : null}
           <p id="search-selection-status" role="status" className="sr-only">{activeIndex >= 0 && orderedItems[activeIndex] ? `${activeIndex + 1} / ${items.length}: ${orderedItems[activeIndex].conversation_title}` : ""}</p>
-          <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={setActiveIndex} /> : null}</div>
+          <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={selectIndex} /> : null}</div>
           {!result.isError && items.length < total ? <button type="button" onClick={() => setPaging({ scope, offset: items.length })} disabled={result.isFetching} className="mx-auto block min-h-10 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
         </div></div>
       </section>

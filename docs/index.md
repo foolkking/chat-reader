@@ -4,6 +4,8 @@
 [累计优化发布记录](execution/OPTIMIZATION_RELEASE_2026-10-08.md) 负责本次提交、
 完整 CI、镜像来源、备份迁移和验收；精确候选与生产状态见当前快照。
 本次发布已验收完成；当前继续普通用户产品审查，后续改动不等同于已部署。
+[后续恢复与导航审查](execution/ux-audit-post-release-recovery-2026-10-08.md)
+记录修复前的六项证据、合成复现及本轮验证边界。
 
 此前三十余批摘要保存在[历史入口快照](archive/PROJECT_STATE-before-release-2026-10-08.md)
 及各自 execution 记录中。“未提交／未授权部署”等旧状态不覆盖当前用户授权。

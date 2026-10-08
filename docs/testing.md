@@ -3,14 +3,26 @@
 ## Current release verification — 2026-10-08
 
 The [release record](execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact-source
-CI and every failed attempt. The latest completed run, `7825e60` / 37767854364,
-passed API and all 13 Web gates; settings finished **438 passed / 1 failed /
-0 skipped**. The three cache-count cases now pass. The remaining import-retry
-transport correction requires a new full CI; no success is inferred in advance.
+CI and every failed attempt. Accepted source `30a0d32` / 37773748374 passes all
+five CI jobs: API **1,181 passed / 3 skipped**, all 13 Web gates, settings
+**439 passed / 0 failed / 0 skipped**, plus one separate fresh-instance restore.
+The earlier `7825e60` import-retry failure remains a failed historical checkpoint.
 The 16 formerly pending selection/offline cases did execute in isolated CI.
 Default PWA retains 588 conditional skips; adaptive-import recovery retains one.
-No local specified-Chromium application acceptance or production deployment is
-inferred. Other dated sections below retain their original checkpoint meaning.
+Production HTTP/data acceptance is recorded separately from browser execution.
+No local specified-Chromium application acceptance is inferred. Other dated
+sections below retain their original checkpoint meaning.
+
+The [follow-on recovery audit](execution/ux-audit-post-release-recovery-2026-10-08.md)
+adds `e2e/ux-recovery-followup.spec.ts` to the existing `source-editor-mutation`
+gate, under its existing isolated `E2E_MUTATION_FLOW=1` boundary. Nine cases cover
+partial/unknown undo, lost acknowledgement plus failed refresh, zero-success
+batch handling, mixed-type search pagination, Recent refresh/anchor preservation
+and project-filter read recovery. An injected failure precedes each recovery;
+read checks assert no duplicate writes. Synthetic 375/1440 screenshots are saved
+to the gate output. Local lint/typecheck, one-worker build and nine-case discovery
+pass; browser execution and visual review remain pending. The separate three
+Node baseline checks use accepted source and do not count as browser tests.
 
 For Windows paths in `PYTEST_ADDOPTS`, use forward slashes, for example
 `C:/Users/86182/Desktop/wkkk/<batch>/pytest`. Its shell-like parser consumes

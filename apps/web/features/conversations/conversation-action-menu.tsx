@@ -33,11 +33,7 @@ import {
   updateConversation,
 } from "../../lib/api";
 import type { BackgroundTaskRead, ConversationListItem, ProjectConversationRead } from "../../lib/types";
-
-export type UndoAction = {
-  label: string;
-  action: () => Promise<void>;
-};
+import { createConversationUndo, type UndoAction } from "./conversation-undo";
 
 export function ConversationActionMenu({
   conversation,
@@ -397,13 +393,7 @@ export function ConversationActionMenu({
                     disabled={busy !== null}
                     onClick={() => void run("unarchive", async () => {
                       await unarchiveConversation(conversation.id);
-                      onUndo?.({
-                        label: zh ? "对话已取消归档" : "Conversation unarchived",
-                        action: async () => {
-                          await archiveConversation(conversation.id);
-                          await finish();
-                        },
-                      });
+                      onUndo?.(createConversationUndo([conversation.id], "archived", zh ? "对话已取消归档" : "Conversation unarchived", finish));
                     })}
                   >
                     {zh ? "取消归档" : "Unarchive"}
@@ -423,13 +413,7 @@ export function ConversationActionMenu({
                       if (!confirmed) return;
                       await run("archive", async () => {
                         await archiveConversation(conversation.id);
-                        onUndo?.({
-                          label: zh ? "对话已归档" : "Conversation archived",
-                          action: async () => {
-                            await unarchiveConversation(conversation.id);
-                            await finish();
-                          },
-                        });
+                        onUndo?.(createConversationUndo([conversation.id], "active", zh ? "对话已归档" : "Conversation archived", finish));
                       });
                       if (pathname === `/conversations/${conversation.id}`) router.replace("/archived");
                     })()}

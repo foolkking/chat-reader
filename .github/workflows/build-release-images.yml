@@ -276,6 +276,7 @@ jobs:
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/release-mutation-lifecycle.spec.ts
           e2e/ux-whole-site.spec.ts
+          e2e/ux-recovery-followup.spec.ts
 
       - name: Source Editor content cleanup browser gate
         timeout-minutes: 20

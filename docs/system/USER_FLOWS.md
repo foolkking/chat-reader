@@ -1,5 +1,26 @@
 # 当前用户流程
 
+## Conversation undo and read recovery
+
+Archive/restore → Undo keeps one owner outside loading/empty/error list branches.
+Only successfully acknowledged initial changes create an Undo. Pending clicks are
+guarded; confirmed undo items leave the retry set. A lost/error acknowledgement
+offers Check result (GET only), then retries only remaining known-unapplied items;
+failed reads keep checking available. Confirmed writes are acknowledged before
+list refresh and are not replayed because the refresh fails. Conversation and
+project lists share this component; no task, schema or archive-format change is
+introduced. Release/verification status belongs to Project State.
+
+Search selection follows document identity within its query/filter scope when
+later pages insert earlier result groups. Scope changes or removal clear it;
+arrow keys still traverse visual order. Project-filter loading/error feedback
+retains an applied scope even when its name cannot be read. Retry reloads projects
+without resetting other filters or search history.
+
+Recent reading distinguishes first-load failure from a failed update. Failed
+updates retain cached cards and exact saved-position links with a localized
+alert/retry; progress bars expose the existing localized Reading progress name.
+
 Batch export: select conversations in a conversation/project list → Export →
 Task Center → Download result. Admitted jobs continue after closing or refreshing
 the list. Failed admission retains selection and permits same-key retry. Tasks

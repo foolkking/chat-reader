@@ -1,0 +1,18 @@
+{
+  "source": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "evidence_kind": "synthetic pure-helper and QueryObserver execution; no browser",
+  "batch_resolves_with_failed_items": {
+    "succeededIds": ["synthetic-a"],
+    "failedIds": ["synthetic-b"]
+  },
+  "grouped_pagination_changes_index_target": {
+    "activeIndex": 0,
+    "selectedBefore": "synthetic-message",
+    "selectedAfter": "synthetic-annotation"
+  },
+  "failed_background_read_retains_cached_data": {
+    "isError": true,
+    "retainedRows": 1
+  },
+  "checks_passed": 3
+}

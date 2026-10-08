@@ -10,7 +10,7 @@ Last updated: 2026-10-08. This is the current snapshot, not a release history.
 | Production database | Single head/current `20261008_0050`, migrated through 0049; API/Web/PostgreSQL healthy and worker `alive_idle` at acceptance |
 | Data acceptance | 84 stopped-writer table fingerprints and four storage roots unchanged; 36 expected source hashes backfilled; 67 stable table counts unchanged after restart |
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
-| Active work | Post-deployment ordinary-user audit; later documentation-only commits do not change the deployed application identity above |
+| Active work | [Post-deployment recovery audit](docs/execution/ux-audit-post-release-recovery-2026-10-08.md): six source-backed findings, scoped fixes and nine new isolated browser cases; follow-up CI/visual acceptance pending, not deployed |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -27,7 +27,9 @@ screenshots across six cases and four import-completion/retry screenshots were
 reviewed; the other two new selection cases have assertion-only evidence.
 The release is accepted, including authenticated read-only smoke, exact runtime
 image/source checks and backup finalization. Production configuration and
-PostgreSQL were preserved. The follow-on product audit is now in progress.
+PostgreSQL were preserved. The follow-on audit is delivered before its scoped
+repairs. The new Undo owner, identity-based search selection and read-state fixes
+are not yet release-accepted.
 The [search filter audit](docs/execution/ux-audit-search-filter-race-2026-10-08.md)
 records the separately reproduced and CI-verified rapid-input/history repair.
 
@@ -139,6 +141,6 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: finish the evidence-based follow-on audit of ordinary-user recovery and
-navigation, then implement and verify the worthwhile in-scope findings. The
-accepted release must remain distinct from any not-yet-released follow-up.
+Next: run exact-source CI for the scoped recovery/navigation follow-up, inspect
+its synthetic browser evidence and fix real failures. Keep the accepted 30a0d32
+production release distinct from the follow-up until separately released.

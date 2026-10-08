@@ -18,7 +18,8 @@ import {
 } from "../../lib/api";
 import type { BackgroundTaskRead, ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
-import { ConversationActionMenu, type UndoAction } from "./conversation-action-menu";
+import { ConversationActionMenu } from "./conversation-action-menu";
+import { ConversationUndoNotice, createConversationUndo, type UndoAction } from "./conversation-undo";
 import { MergeConversationsDialog } from "./merge-conversations-dialog";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
@@ -166,12 +167,20 @@ export function ConversationList({
     ]);
   }
 
+  function withUndo(content: ReactNode) {
+    return <div className="space-y-3">
+      {undo ? <ConversationUndoNotice key={undo.id} undo={undo} disabled={bulkBusy !== null || isMerging}
+        onDone={() => setUndo((current) => current === undo ? null : current)} /> : null}
+      {content}
+    </div>;
+  }
+
   if (conversationsQuery.isLoading) {
-    return <StateBlock title={resolvedLocale === "zh-CN" ? "正在加载对话" : "Loading conversations"} detail={resolvedLocale === "zh-CN" ? "正在读取对话列表…" : "Fetching conversation list…"} loading />;
+    return withUndo(<StateBlock title={resolvedLocale === "zh-CN" ? "正在加载对话" : "Loading conversations"} detail={resolvedLocale === "zh-CN" ? "正在读取对话列表…" : "Fetching conversation list…"} loading />);
   }
 
   if (conversationsQuery.isError) {
-    return (
+    return withUndo(
       <StateBlock
         title={resolvedLocale === "zh-CN" ? "对话加载失败" : "Failed to load conversations"}
         detail={conversationsQuery.error.message}
@@ -210,7 +219,7 @@ export function ConversationList({
   }
   if (conversations.length === 0) {
     if (!isArchivedMode && globalExistenceQuery.isLoading) {
-      return (
+      return withUndo(
         <StateBlock
           title={resolvedLocale === "zh-CN" ? "正在加载对话" : "Loading conversations"}
           detail={resolvedLocale === "zh-CN" ? "正在确认对话归属…" : "Checking conversation locations…"}
@@ -222,7 +231,7 @@ export function ConversationList({
       !isArchivedMode
       && globalExistenceQuery.isSuccess
       && (globalExistenceQuery.data?.length ?? 0) === 0;
-    return (
+    return withUndo(
       <StateBlock
         title={
           isArchivedMode
@@ -254,16 +263,8 @@ export function ConversationList({
     );
   }
 
-  return (
+  return withUndo(
     <section className="space-y-3" aria-busy={conversationsQuery.isFetching}>
-      {undo ? (
-        <UndoToast
-          undo={undo}
-          onDone={() => {
-            setUndo(null);
-          }}
-        />
-      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-primary">
@@ -340,13 +341,8 @@ export function ConversationList({
               try {
                 const result = await runBatchSelection(ids, archiveConversation);
                 applyBatchResult(result);
-                setUndo({
-                  label: `已归档 ${result.succeededIds.length} 个会话`,
-                  action: async () => {
-                    await runBatchSelection(result.succeededIds, unarchiveConversation);
-                    await refreshLists();
-                  },
-                });
+                if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "active",
+                  resolvedLocale === "zh-CN" ? `已归档 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} conversations archived`, refreshLists));
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
@@ -357,13 +353,8 @@ export function ConversationList({
               try {
                 const result = await runBatchSelection(ids, unarchiveConversation);
                 applyBatchResult(result);
-                setUndo({
-                  label: `已恢复 ${result.succeededIds.length} 个会话`,
-                  action: async () => {
-                    await runBatchSelection(result.succeededIds, archiveConversation);
-                    await refreshLists();
-                  },
-                });
+                if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "archived",
+                  resolvedLocale === "zh-CN" ? `已恢复 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} conversations restored`, refreshLists));
                 await refreshLists();
               } finally {
                 setBulkBusy(null);
@@ -554,25 +545,6 @@ function BulkActions({
       </div>
       <MergeConversationsDialog open={mergeOpen} conversations={selectedConversations} title={title} busy={isMerging} onTitleChange={onTitleChange} onReorder={onReorder} onMerge={() => onMerge(selectedIds, title)} onClose={() => { if (!isMerging) setMergeOpen(false); }} />
     </>
-  );
-}
-
-function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {
-  const { resolvedLocale } = usePreferences();
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--callout-warning-border)] bg-[var(--callout-warning-bg)] px-4 py-3 text-sm text-[var(--callout-warning-text)]">
-      <span>{undo.label}</span>
-      <button
-        type="button"
-        onClick={async () => {
-          await undo.action();
-          onDone();
-        }}
-        className="min-h-9 rounded-lg bg-[var(--callout-warning-text)] px-3 text-sm font-medium text-[var(--surface)]"
-      >
-        {resolvedLocale === "zh-CN" ? "撤销" : "Undo"}
-      </button>
-    </div>
   );
 }
 

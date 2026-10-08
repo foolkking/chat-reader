@@ -15,11 +15,11 @@ import {
   queueConversationBatchDelete,
   removeConversationFromProject,
   recordRecentProject,
-  unarchiveConversation,
   updateProjectConversationOrder,
 } from "../../lib/api";
 import type { BackgroundTaskRead, ProjectConversationRead, ProjectRead } from "../../lib/types";
-import { ConversationActionMenu, type UndoAction } from "../conversations/conversation-action-menu";
+import { ConversationActionMenu } from "../conversations/conversation-action-menu";
+import { ConversationUndoNotice, createConversationUndo, type UndoAction } from "../conversations/conversation-undo";
 import { MergeConversationsDialog } from "../conversations/merge-conversations-dialog";
 import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
 import { ProjectSymbol } from "./project-symbol";
@@ -209,11 +209,11 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               </div>
             </header>
             {undo ? (
-              <UndoToast
+              <ConversationUndoNotice
+                key={undo.id}
                 undo={undo}
-                onDone={() => {
-                  setUndo(null);
-                }}
+                disabled={bulkBusy !== null}
+                onDone={() => setUndo((current) => current === undo ? null : current)}
               />
             ) : null}
             {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
@@ -289,13 +289,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                   try {
                     const result = await runBatchSelection(ids, archiveConversation);
                     applyBatchResult(result);
-                    setUndo({
-                      label: `已归档 ${result.succeededIds.length} 个会话`,
-                      action: async () => {
-                        await runBatchSelection(result.succeededIds, unarchiveConversation);
-                        await refreshProject();
-                      },
-                    });
+                    if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "active",
+                      zh ? `已归档 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} conversations archived`, refreshProject));
                     await refreshProject();
                   } finally {
                     setBulkBusy(null);
@@ -478,25 +473,6 @@ function ProjectBulkActions({
       </div>
       <MergeConversationsDialog open={mergeOpen} conversations={selectedConversations} title={title} busy={busy === "merge"} onTitleChange={onTitleChange} onReorder={onReorder} onMerge={() => onMerge(selectedIds, title)} onClose={() => { if (busy !== "merge") setMergeOpen(false); }} />
     </>
-  );
-}
-
-function UndoToast({ undo, onDone }: { undo: UndoAction; onDone: () => void }) {
-  const { resolvedLocale } = usePreferences();
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--callout-warning-border)] bg-[var(--callout-warning-bg)] px-4 py-3 text-sm text-[var(--callout-warning-text)]">
-      <span>{undo.label}</span>
-      <button
-        type="button"
-        onClick={async () => {
-          await undo.action();
-          onDone();
-        }}
-        className="min-h-9 rounded-lg bg-[var(--callout-warning-text)] px-3 text-sm font-medium text-[var(--surface)]"
-      >
-        {resolvedLocale === "zh-CN" ? "撤销" : "Undo"}
-      </button>
-    </div>
   );
 }
 
