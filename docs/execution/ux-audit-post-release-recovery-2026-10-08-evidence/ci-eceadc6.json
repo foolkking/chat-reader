@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "source": "eceadc622fb880ffaaa0ad4ceab69db4cd48b757",
+  "run_id": 37805638620,
+  "conclusion": "failure",
+  "deployed": false,
+  "web": {
+    "job_id": 113409059140,
+    "artifact_id": 11562784677,
+    "gates": { "pass": 12, "fail": 1, "not_verified": 0, "skipped": 0 },
+    "mutation": { "passed": 26, "failed": 0, "skipped": 0, "new_followup_cases_passed": 9 },
+    "default_pwa": { "passed": 135, "conditional_skips": 597 },
+    "adaptive_import": { "passed": 8, "conditional_skips": 1 },
+    "negative_pwa": {
+      "passed": 17,
+      "failed": 1,
+      "skipped": 0,
+      "original_mixed_critical_optional_recovery": "passed",
+      "failed_case": "PWA-NEG-026 optional-only shell misses repair on online reload of the same revision",
+      "location": "apps/web/e2e/pwa-negative.spec.ts:178",
+      "failure": "Repaired shell revision differs despite identical canonical resource arrays."
+    }
+  },
+  "api": {
+    "job_id": 113409059155,
+    "conclusion": "success",
+    "passed": 1181,
+    "skipped": 3,
+    "warnings": 16,
+    "seconds": 730.26
+  },
+  "settings": {
+    "job_id": 113409058674,
+    "conclusion": "success",
+    "artifact_id": 11564908071,
+    "matrix_log": { "passed": 439, "failed": 0, "skipped": 0, "minutes": 39.6 },
+    "fresh_instance_restore_log": { "passed": 1, "seconds": 37.1 }
+  },
+  "image_jobs": { "build": "skipped", "independent_inspection": "skipped" },
+  "synthetic_trace": {
+    "trace_sha256": "4d327ce0dfa64f148e8bdc80ea0c3c73c3c7b629c4509ededa1a66a164591fe2",
+    "network_sha256": "da501b38e957242df952fb2cb14b76405e298c891f7fd8056cbbb84c6b5bf83c",
+    "initial_revision": "ad7556814a5b60cb81c0619d",
+    "repaired_revision": "914a2b920abb95fcc7f3538e",
+    "initial_assets": 101,
+    "repaired_assets": 101,
+    "initial_critical_assets": 98,
+    "repaired_critical_assets": 98,
+    "ordered_asset_arrays_identical": true,
+    "added_resources": 0,
+    "removed_resources": 0,
+    "qualification": "The optional asset was repaired. Client raw-URL deduplication before normalization included canonical duplicates in its revision hash; the worker stored a deduplicated inventory."
+  },
+  "local_shell_regressions": {
+    "command": "node --test scripts/pwa/offline-shell.test.mjs",
+    "expanded_before_fix": { "passed": 6, "failed": 3 },
+    "after_fix": { "passed": 9, "failed": 0, "skipped": 0 },
+    "web_lint": "passed",
+    "nonincremental_typecheck": "passed",
+    "one_worker_next_build": "passed",
+    "negative_browser_case_discovery": 18,
+    "browser_tests": false,
+    "browser_assertions_changed": false,
+    "workflow_changed_for_canonical_fix": false
+  },
+  "reviewed_synthetic_screenshots_at_this_source": [],
+  "verification_boundaries": {
+    "production_source": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+    "production_browser_tested": false,
+    "specified_windows_chromium_application_tested": false,
+    "followup_deployment_authorized": false,
+    "separate_project_audit_included": false,
+    "further_ci_after_this_cycle_requires_explicit_user_request": true
+  }
+}

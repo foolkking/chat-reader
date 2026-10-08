@@ -131,6 +131,7 @@ function clientFixture() {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const sent = [];
+  const resourceEntries = [];
   const pdfWorker = "/_next/static/media/synthetic-pdf-worker.mjs";
   class ScriptElement { src = `${origin}${script}`; }
   class Channel {
@@ -142,7 +143,7 @@ function clientFixture() {
     exports, URL, TextEncoder, crypto: webcrypto, MessageChannel: Channel, HTMLScriptElement: ScriptElement,
     window: { location: { origin, pathname: "/library" }, setTimeout, clearTimeout },
     document: { querySelectorAll: () => [new ScriptElement(), { href: `${origin}${stylesheet}` }], styleSheets: [] },
-    performance: { getEntriesByType: () => [] },
+    performance: { getEntriesByType: () => resourceEntries.map((name) => ({ name })) },
     require: (name) => {
       if (name === "./offline-search") return { getOfflineSearchRuntime: async () => ({ workerUrl: searchWorker, assets: [searchWorker] }) };
       if (name === "../features/attachments/pdfjs-runtime") return { loadPdfJs: async () => {}, getPdfJsWorkerUrl: () => pdfWorker };
@@ -153,6 +154,11 @@ function clientFixture() {
   vm.runInContext(`${source}\nexports.probe = { collectLibraryShellAssets, createRevision, reconcileOfflineShell };`, context);
   return {
     sent,
+    resourceEntries,
+    inventory: async (extra = []) => {
+      const assets = exports.probe.collectLibraryShellAssets([pdfWorker, searchWorker, ...extra]);
+      return { assets: Array.from(assets), revision: await exports.probe.createRevision(assets) };
+    },
     reconcile: async (missing) => {
       const revision = await exports.probe.createRevision(exports.probe.collectLibraryShellAssets([pdfWorker, searchWorker]));
       const status = { ready: true, revision, resourceCount: 10, missing };
@@ -167,15 +173,43 @@ function clientFixture() {
 
 test("client reconciliation requests same-revision optional repair while keeping reading available", async () => {
   const fixture = clientFixture();
+  const expected = await fixture.inventory();
+  fixture.resourceEntries.push(`${origin}${script}`, `${origin}${stylesheet}`);
   const result = await fixture.reconcile([optional]);
   assert.equal(result.availability, "ready");
   assert.equal(fixture.sent.length, 1);
   assert.equal(fixture.sent[0].type, "PREPARE_LIBRARY_SHELL");
+  assert.equal(fixture.sent[0].revision, expected.revision);
   assert.deepEqual(Array.from(result.missing), []);
 });
 
 test("client reconciliation retains the no-request fast path for a complete same revision", async () => {
   const fixture = clientFixture();
+  assert.equal((await fixture.reconcile([])).availability, "ready");
+  assert.deepEqual(fixture.sent, []);
+});
+
+test("equivalent absolute, relative and fragment URLs produce one stable shell revision", async () => {
+  const fixture = clientFixture();
+  const original = await fixture.inventory();
+  const rediscovered = await fixture.inventory([script, `${origin}${script}`, `${script}#ignored`, stylesheet]);
+  assert.deepEqual(rediscovered.assets, original.assets);
+  assert.equal(rediscovered.revision, original.revision);
+  assert.equal(new Set(rediscovered.assets).size, rediscovered.assets.length);
+});
+
+test("shell canonicalization preserves distinct queries and excludes disallowed origins and paths", async () => {
+  const fixture = clientFixture();
+  const inventory = await fixture.inventory([`${script}?variant=2`, `https://other.example${script}`, "/api/private"]);
+  assert.ok(inventory.assets.includes(script));
+  assert.ok(inventory.assets.includes(`${script}?variant=2`));
+  assert.equal(inventory.assets.filter((asset) => asset.includes("variant=2")).length, 1);
+  assert.equal(inventory.assets.some((asset) => asset.includes("other.example") || asset.startsWith("/api/")), false);
+});
+
+test("runtime rediscovery of DOM resources does not rebuild a complete shell", async () => {
+  const fixture = clientFixture();
+  fixture.resourceEntries.push(`${origin}${script}`, `${origin}${stylesheet}`);
   assert.equal((await fixture.reconcile([])).availability, "ready");
   assert.deepEqual(fixture.sent, []);
 });

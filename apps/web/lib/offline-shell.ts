@@ -476,9 +476,11 @@ function collectLibraryShellAssets(runtimeAssets: string[] = []): string[] {
   });
   collectBundledKatexAssets().forEach((asset) => urls.add(asset));
   runtimeAssets.forEach((asset) => urls.add(asset));
-  return Array.from(urls)
+  // DOM URLs are absolute while discovered runtime paths may be relative.
+  // Deduplicate their canonical form so rediscovery cannot change the revision.
+  return Array.from(new Set(Array.from(urls)
     .map(normalizeShellAsset)
-    .filter((value): value is string => Boolean(value))
+    .filter((value): value is string => Boolean(value))))
     .sort();
 }
 

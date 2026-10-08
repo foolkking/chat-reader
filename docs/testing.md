@@ -40,6 +40,19 @@ job limit cancelled its final step. Individual case timeouts/requirements remain
 unchanged. The user's latest instruction permits finishing this CI cycle only;
 later CI submissions and all follow-up deployment require a new explicit request.
 
+At eceadc6 / CI 37805638620, the original negative recovery passes, but the
+new optional-only case fails its same-revision assertion: **17 passed / 1 failed**.
+The trace contains identical 101-asset manifests with different revisions.
+The client hashed duplicates introduced after raw-URL deduplication. Nine
+expanded Node checks reproduce that defect (**6 passed / 3 failed** before
+repair); canonical-URL-first deduplication makes all **9 pass** locally. The
+existing negative browser assertions are unchanged. That run's settings job
+finishes successfully: **439 passed / 0 failed / 0 skipped** and **1 passed**
+fresh-instance restore. API passes **1,181 / 3 skipped / 16 warnings**; both
+image jobs are skipped because Web failed. Full CI acceptance of the revision
+repair is still pending; this fix must not include the separate local-only
+project audit/tests. See the [failed-source evidence](execution/ux-audit-post-release-recovery-2026-10-08-evidence/ci-eceadc6.json).
+
 For Windows paths in `PYTEST_ADDOPTS`, use forward slashes, for example
 `C:/Users/86182/Desktop/wkkk/<batch>/pytest`. Its shell-like parser consumes
 unquoted backslashes. TEMP/TMP alone cannot correct malformed `--basetemp` or

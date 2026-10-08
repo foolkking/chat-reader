@@ -313,3 +313,75 @@ this CI repair/verification cycle, **do not deploy it**, then continue local
 evidence-backed optimization. After this cycle passes, additional commit/push/CI
 submissions and deployment wait for the user's explicit request. Production
 remains at accepted source 30a0d32; the persistent optimization goal stays active.
+
+At 2026-10-09 00:02 China time, repair source
+`eceadc622fb880ffaaa0ad4ceab69db4cd48b757` was pushed and exact-source
+[CI 37805638620](https://github.com/foolkking/chat-reader/actions/runs/37805638620)
+was dispatched. Local validation checks 169 file links across 13 scoped documents,
+with none missing. Eighteen negative PWA cases are discovered; discovery is not
+execution. Subsequent audit/status notes stay local and are not another CI
+submission. No follow-up deployment is authorized.
+
+## Further CI finding, 2026-10-09, before the next source repair
+
+Run 37805638620's Web job **113409059140** fails one of thirteen gates. The
+original mixed critical/optional recovery now passes. The new optional-only case
+`PWA-NEG-026` repairs the cache but fails the unchanged-revision assertion;
+negative results are **17 passed / 1 failed / 0 skipped**. Artifact **11562784677**
+also confirms all 26 mutation cases and the other twelve gates pass. Settings is
+still running at this checkpoint; API is successful. No image/deployment
+acceptance follows from these partial results.
+
+### ERR-04 — equivalent resource inventories produce different shell revisions
+
+**Dimension:** offline recovery / perceived performance. **Severity:** Medium.
+**Confidence:** Observed (CI trace + code + synthetic execution). **Effort:** S.
+**Location:** `apps/web/lib/offline-shell.ts:479` at source eceadc6.
+
+**Evidence:** the trace's initial and reloaded active records each have exactly
+101 assets and 98 critical assets, with identical ordered asset arrays. Their
+revisions nevertheless change from `ad7556814a5b60cb81c0619d` to
+`914a2b920abb95fcc7f3538e`. Before reload the worker correctly reports ready with
+only the optional ZIP missing. The collector deduplicates raw URLs, then
+normalizes them; absolute DOM URLs and relative runtime URLs can therefore
+become duplicates after that deduplication. Revision hashing includes those
+duplicates, while the worker's recorded manifest removes them.
+
+Nine expanded synthetic shell checks yield **6 passed / 3 failed** before this
+repair. They reproduce duplicate canonical URLs, changed same-manifest revisions
+and an unnecessary PREPARE request after runtime rediscovery. All existing worker
+repair/preservation checks still pass. This is not a test timeout or a reason to
+remove the same-revision assertion.
+
+**User cost:** an unchanged runtime can be treated as a new shell, replacing
+its cache and fetching intact resources instead of doing a missing-only repair.
+This adds avoidable work and quota exposure; no conversation data loss is observed.
+
+**Recommendation:** normalize allowed same-origin URLs before deduplication and
+sorting. Preserve distinct query strings, rejected origins/paths, the worker's
+existing staging and account boundaries, and all original browser assertions.
+Keep the unrelated project audit and its new tests outside this CI repair commit.
+
+## Canonical-inventory repair checkpoint
+
+Run 37805638620 is complete and **failed**, with exactly one failing Web gate.
+Settings job 113409058674 is **successful**: **439 passed (39.6m)**, followed by
+**1 passed (37.1s)** in the fresh-instance restore, and finalized artifact
+**11564908071**. API job 113409059155 is **successful**, with **1,181 passed /
+3 skipped / 16 warnings** in 730.26 seconds. Both image jobs are **skipped**.
+These final states supersede the running-settings checkpoint above; see
+[sanitized evidence](ux-audit-post-release-recovery-2026-10-08-evidence/ci-eceadc6.json).
+
+The client now deduplicates normalized URLs before sorting and hashing. All
+**9 synthetic shell checks pass**, including equivalent URL/fragment discovery,
+distinct queries, rejected paths/origins, no-work fast paths and missing-only
+repair. Full Web lint, nonincremental TypeScript and a one-worker Next build
+pass. Eighteen negative browser cases are discovered, **not locally executed**.
+No browser assertion or workflow configuration changed for this repair.
+
+Only the canonical-inventory fix, its synthetic regressions and this cycle's
+documentation/evidence belong in the repair commit. The separate project
+settings/read-recovery audit and its intentionally failing baseline tests stay
+local. Full exact-source CI for the next candidate remains pending. Once that
+cycle passes, retain further optimization and verification notes locally;
+do not dispatch another CI or deploy without a new explicit user request.

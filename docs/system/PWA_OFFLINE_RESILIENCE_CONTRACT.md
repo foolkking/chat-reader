@@ -611,6 +611,12 @@ critical-resource readiness. Same-revision preparation fetches only missing
 allowlisted entries in the existing active cache; it does not replace intact
 bytes, metadata or other accounts' caches. Failed repair preserves the usable
 shell. A different revision still uses the existing staged replacement path.
+The client normalizes same-origin allowlisted resource URLs before deduplicating
+and sorting its revision inventory. Discovering an absolute DOM URL again as a
+relative runtime path or with a fragment does not change the shell revision.
+Distinct query strings remain distinct resources; origin/path restrictions are
+unchanged. This keeps same-version repair from becoming an unnecessary staged
+replacement when only resource-discovery timing changes.
 The scoped implementation has synthetic checks and awaits its negative browser
 gate; see the [follow-on audit](../execution/ux-audit-post-release-recovery-2026-10-08.md).
 

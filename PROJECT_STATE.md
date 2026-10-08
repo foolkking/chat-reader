@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-08. This is the current snapshot, not a release history.
+Last updated: 2026-10-09. This is the current snapshot, not a release history.
 
 ## Release and active work
 
@@ -10,7 +10,7 @@ Last updated: 2026-10-08. This is the current snapshot, not a release history.
 | Production database | Single head/current `20261008_0050`, migrated through 0049; API/Web/PostgreSQL healthy and worker `alive_idle` at acceptance |
 | Data acceptance | 84 stopped-writer table fingerprints and four storage roots unchanged; 36 expected source hashes backfilled; 67 stable table counts unchanged after restart |
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
-| Active work | [Post-deployment recovery audit](docs/execution/ux-audit-post-release-recovery-2026-10-08.md): all nine new browser cases pass; 56930fe full CI fails PWA optional-resource recovery, settings cancelled; local repair awaits full CI, not deployed |
+| Active work | [Post-deployment recovery audit](docs/execution/ux-audit-post-release-recovery-2026-10-08.md): [CI 37805638620](https://github.com/foolkking/chat-reader/actions/runs/37805638620) has API/settings success and one failing Web gate; canonical-URL revision repair passes nine local synthetic checks and awaits full exact-source CI |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -36,9 +36,11 @@ image/source checks and backup finalization. Production configuration and
 PostgreSQL were preserved. The follow-on audit is delivered before its scoped
 repairs. The new Undo owner, identity-based search selection and read-state fixes
 pass their 26-case mutation gate, including nine new cases, with eight reviewed
-synthetic screenshots. Full follow-up acceptance still needs the same-revision
-optional-shell repair, locally verified by six synthetic regressions, and a
-complete settings job. No follow-up deployment is authorized.
+synthetic screenshots. The latest settings job passes all 439 matrix cases and
+one fresh-instance restore. Full follow-up acceptance still needs exact-source
+CI for the canonical-URL revision repair; all nine expanded synthetic shell
+regressions, lint, nonincremental typecheck and the bounded Web build pass locally.
+No follow-up deployment is authorized.
 The [search filter audit](docs/execution/ux-audit-search-filter-race-2026-10-08.md)
 records the separately reproduced and CI-verified rapid-input/history repair.
 
