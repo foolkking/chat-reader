@@ -72,4 +72,4 @@ corepack pnpm run dev:web
 - [生产部署](docs/deployment.md)
 - [故障排查](docs/troubleshooting.md)
 
-当前没有多用户产品功能、在线 AI 生成、完整消息/轮次虚拟列表、HTML/PDF 导出、标签系统或语义搜索。极长消息仅在 blocks 层动态虚拟化；公网部署必须由反向代理提供 HTTPS。
+当前支持相互隔离的用户账户，不提供协作式多用户工作区、在线 AI 生成、完整消息/轮次虚拟列表、HTML/PDF 导出、标签系统或语义搜索。极长消息仅在 blocks 层动态虚拟化；公网部署必须由反向代理提供 HTTPS。

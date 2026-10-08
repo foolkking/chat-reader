@@ -36,7 +36,8 @@ async function fixture(browser: Browser, request: APIRequest, baseURL: string, w
   return { admin, context, page, dialog: page.getByTestId("content-cleanup-dialog"), scan, url, scanId, conversations };
 }
 async function shot(page: Page, name: string) {
-  if (process.env.SETTINGS_SCREENSHOT_DIR) await page.getByTestId("content-cleanup-dialog").screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/${name}.png` });
+  const path = process.env.SETTINGS_SCREENSHOT_DIR ? `${process.env.SETTINGS_SCREENSHOT_DIR}/${name}.png` : test.info().outputPath(`${name}.png`);
+  await page.getByTestId("content-cleanup-dialog").screenshot({ path });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
@@ -204,19 +205,38 @@ for (const width of [375, 768, 1440]) {
       await page.getByTestId("preview-import-button").click();
       await expect(page.getByTestId("commit-import-button")).toBeEnabled();
       const readPattern = "**/api/content-cleanup/scans/pending?import_id=*";
-      if (width === 768) await page.route(readPattern, route => route.fulfill({ status: 503, json: { detail: "Synthetic import scan read failure" } }));
+      let recoveredReads = 0;
+      if (width === 768) await page.route(readPattern, async route => {
+        const retryClicked = await page.evaluate(() => Boolean((window as Window & { __syntheticImportRetryClicked?: boolean }).__syntheticImportRetryClicked));
+        if (retryClicked) { recoveredReads += 1; await route.continue(); }
+        else await route.fulfill({ status: 503, json: { detail: "Synthetic import scan read failure" } });
+      });
       await page.getByTestId("commit-import-button").click();
       const completed = page.getByTestId("import-completion-summary");
       await expect(completed).toBeVisible();
       if (width === 768) {
         await expect(completed.getByRole("alert")).toContainText("Import complete");
-        if (process.env.SETTINGS_SCREENSHOT_DIR) await completed.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/import-retry-${width}.png` });
-        await page.unroute(readPattern);
+        await completed.screenshot({ path: process.env.SETTINGS_SCREENSHOT_DIR ? `${process.env.SETTINGS_SCREENSHOT_DIR}/import-retry-${width}.png` : test.info().outputPath(`import-retry-${width}.png`) });
+        // Keep the injected outage until the real user click. Task completion
+        // can invalidate this query too, so unroute-before-click races recovery.
+        // This listener changes only the test transport gate, not app/query state.
+        await page.evaluate(() => {
+          const clicked = (event: MouseEvent) => {
+            const button = event.target instanceof Element ? event.target.closest("button") : null;
+            if (!button?.closest('[data-testid="import-completion-summary"]') || button.textContent !== "Retry loading") return;
+            (window as Window & { __syntheticImportRetryClicked?: boolean }).__syntheticImportRetryClicked = true;
+            document.removeEventListener("click", clicked, true);
+          };
+          document.addEventListener("click", clicked, true);
+        });
         await completed.getByRole("button", { name: "Retry loading", exact: true }).click();
+        await expect.poll(() => recoveredReads).toBeGreaterThan(0);
       }
       const review = completed.getByRole("button", { name: /审查噪声|Review noise/ });
       await expect(review).toBeVisible({ timeout: 5_000 });
-      if (process.env.SETTINGS_SCREENSHOT_DIR) await completed.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/import-complete-${width}.png` });
+      await expect(completed.getByRole("alert")).toHaveCount(0);
+      await page.unrouteAll({ behavior: "wait" });
+      await completed.screenshot({ path: process.env.SETTINGS_SCREENSHOT_DIR ? `${process.env.SETTINGS_SCREENSHOT_DIR}/import-complete-${width}.png` : test.info().outputPath(`import-complete-${width}.png`) });
       await review.click();
       const dialog = page.getByTestId("content-cleanup-dialog");
       if (width === 1440) {

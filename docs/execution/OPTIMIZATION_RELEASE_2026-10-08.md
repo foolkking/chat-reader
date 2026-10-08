@@ -134,6 +134,50 @@ skipped, and no deployable artifact or production change resulted.
 Changed-file ESLint, nonincremental TypeScript and three-case discovery pass for
 the locator-only follow-up; none is counted as browser execution.
 
+Source `7825e60a7a3fce670c7c2a2b224fe3fc25ce2305` ran full CI
+[37767854364](https://github.com/foolkking/chat-reader/actions/runs/37767854364).
+API passes **1,181 / 3 skipped**, and all 13 Web gates pass again. Settings now
+finishes **438 passed / 1 failed / 0 skipped**. All three offline-center cases,
+including actual Cache Storage zeroing and subsequent cancellation/download,
+pass. Image build/inspection remain skipped; production is unchanged.
+
+The single new failure is the 768px real-import recovery case: Playwright found
+`Retry loading`, then it detached before a stable click. The fixture had removed
+its 503 interception first. `ImportTaskMonitor` invalidates the import's query
+when the real background scan completes, so restored transport can remove that
+button before the intended explicit retry. The follow-up leaves the outage active
+until a delegated capture listener observes the real Playwright click; the listener
+changes only the test transport gate, not application/query state. At least one
+post-click real read and disappearance of the alert are required. Real import,
+selection, source protection and unrelated-conversation assertions remain intact.
+Noise-selection and navigation screenshots now default to the test output directory
+when no custom directory is supplied. No application code changes in this follow-up.
+Changed-file ESLint, nonincremental TypeScript and 30-case discovery across the
+two touched test files pass; browser execution still depends on the full rerun.
+
+The eight formerly pending offline scenarios have ten synthetic screenshots in
+the `7987132` artifact; all ten were inspected at their actual three widths and
+two locales/themes. First/unrelated-copy failures do not claim a retained copy;
+retained-copy guidance, focus and the real completed-download entry are visible.
+The eight selection scenarios have CI assertion evidence but no saved screenshots
+in those earlier artifacts; the new fallback addresses future evidence only.
+
+Release-helper preparation is still separate from deployment. Three shell helpers
+pass syntax checks; host guards target Python 3.6. **25 local synthetic helper
+tests pass, zero skipped**, covering framed/file digests, path/pointer safety,
+complete helper checksum inventory, migration/backfill/admitted-work mismatch,
+and authenticated read-only smoke rejection/logout. HTTP document checks are not
+browser interaction acceptance. Snapshot SQL/file hashes run only after API/worker
+writers stop; post-start checks use bounded counts and attachment sizes/bindings,
+not another full live hash sweep. One-off checks have a 0.5 CPU/384 MiB memory bound.
+The prepared artifact verifier checksums all seven transferred task helpers and
+exact-source support files. No helper has performed a production release yet.
+
+Current documentation entry points were compressed while preserving all original
+647 Project State lines in a dated archive with rebased links. Eight touched docs
+have 142 valid local links. Old local-only checkpoints remain historical; no failed
+run is reclassified as passed and no future production result is pre-written.
+
 The read-only production attachment audit found **310 verified object hashes**,
 304 active attachments and no issues; the production application remains intact.
 

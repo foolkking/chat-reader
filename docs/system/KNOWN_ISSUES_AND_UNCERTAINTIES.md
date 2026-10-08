@@ -1,6 +1,24 @@
 # 已知风险与不确定性
 
-## Current status (2026-09-02)
+## Current verification boundaries — 2026-10-08
+
+Read [Project State](../../PROJECT_STATE.md) and the
+[accumulated release record](../execution/OPTIMIZATION_RELEASE_2026-10-08.md) for
+current source, production and CI status. The older snapshots below do not define
+the current debt count or deployment state.
+
+| Current limitation | Control / next step |
+| --- | --- |
+| Local Web start is rejected before process creation; cause unknown | Preserve the original rejection and fixture; no alternate launcher. Isolated CI is separate from specified-Chromium local acceptance. |
+| Exact-source accumulated release is not accepted yet | Require all five CI gates, original artifact verification, backup, bounded data checks, migration and runtime acceptance. |
+| King has about 2 GiB RAM | Never build images there; keep PostgreSQL running and bound one-off release checks. |
+| Dependency policy retains an approved braces exception | Keep its existing mitigation, scope and expiry; a passing policy is not zero advisories. |
+| SMTP is unconfigured in the verified production snapshot | Email delivery is unavailable; administrator reset links remain. |
+| Backups are server-local; identical components may share hardlinks | Two verified logical points are not independent physical copies; no off-site/scheduled backup is configured. |
+| Device quota/eviction and malware risk vary | Retain offline-copy recovery; integrity checks do not replace the deliberately disabled malware scanner. |
+| Broader production interaction/external-model behavior is unverified | Do not infer it from health checks, isolated CI or static Skill ZIP checks. |
+
+## Historical status (2026-09-02)
 
 Release K production verification, Release L worker liveness and protected
 diagnostics, Release M disaster recovery, Release N single-owner

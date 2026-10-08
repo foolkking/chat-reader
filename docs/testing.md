@@ -1,11 +1,23 @@
-# Testing Addendum 2026-08-24
+# Testing
+
+## Current release verification — 2026-10-08
+
+The [release record](execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact-source
+CI and every failed attempt. The latest completed run, `7825e60` / 37767854364,
+passed API and all 13 Web gates; settings finished **438 passed / 1 failed /
+0 skipped**. The three cache-count cases now pass. The remaining import-retry
+transport correction requires a new full CI; no success is inferred in advance.
+The 16 formerly pending selection/offline cases did execute in isolated CI.
+Default PWA retains 588 conditional skips; adaptive-import recovery retains one.
+No local specified-Chromium application acceptance or production deployment is
+inferred. Other dated sections below retain their original checkpoint meaning.
 
 For Windows paths in `PYTEST_ADDOPTS`, use forward slashes, for example
 `C:/Users/86182/Desktop/wkkk/<batch>/pytest`. Its shell-like parser consumes
 unquoted backslashes. TEMP/TMP alone cannot correct malformed `--basetemp` or
 `--junitxml` arguments; verify the intended task directory after launch.
 
-## Pending selection and attachment-failure browser acceptance (2026-10-08)
+## Historical local selection and attachment-failure checkpoint (2026-10-08)
 
 The new [release continuation](execution/OPTIMIZATION_RELEASE_2026-10-08.md) is
 explicitly authorized to commit, run CI and deploy verified images. Its single

@@ -40,7 +40,8 @@ async function fixture(browser: Browser, playwright: { request: APIRequest }, ba
 }
 
 async function shot(page: Page, name: string) {
-  if (process.env.SETTINGS_SCREENSHOT_DIR) await page.getByTestId("content-cleanup-dialog").screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/${name}.png` });
+  const path = process.env.SETTINGS_SCREENSHOT_DIR ? `${process.env.SETTINGS_SCREENSHOT_DIR}/${name}.png` : test.info().outputPath(`${name}.png`);
+  await page.getByTestId("content-cleanup-dialog").screenshot({ path });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 

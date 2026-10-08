@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+## Entry reconciliation — 2026-10-08
+
+| Path | Action / responsibility |
+| --- | --- |
+| `PROJECT_STATE.md` | Compressed to current source/production state, contracts, evidence limits and next action; no dated batch narration. |
+| `docs/index.md` | Compact navigation to current references and release evidence; historical per-batch status is no longer repeated here. |
+| `docs/archive/PROJECT_STATE-before-release-2026-10-08.md` | Preserves all 647 earlier entry lines as dated checkpoints, with rebased links; never a current instruction source. |
+| `README.md` | Clarifies isolated user accounts versus an unimplemented collaborative workspace. |
+| `docs/testing.md` / `docs/deployment.md` | Exact-source CI status and local/CI distinction; production instructions forbid King image builds and reflect built-in authentication. |
+| `docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` | Current limitations above explicitly historical risk snapshots; old zero-debt claims do not substitute for current verification. |
+
+The chronology below describes the ownership of dated records. Statements about
+uncommitted work, pending tests or no release apply to their original checkpoint;
+current acceptance belongs to Project State and the accumulated release record.
+
+## Record ownership chronology
+
 `execution/ux-audit-search-filter-race-2026-10-08.md` records the CI-observed
 rapid-filter input-loss defect before repair, with the minimal synthetic page
 snapshot in its adjacent evidence directory. It owns the scoped finding and
@@ -1334,7 +1351,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 
 | 路径 | 分类 | 处理规则 |
 | --- | --- | --- |
-| `apps/api/storage/imports/576e75cc-577a-46ef-a7d1-3e94eb66f7b8/ChatGPT-typescript_01.md` | 数据资产 | 已跟踪的导入正文；可能包含用户内容，不整理、不引用、不自动删除 |
+| `apps/api/storage/imports/**/*.md` | 数据资产 | 已跟踪的导入正文；可能包含用户内容，不整理、不引用、不自动删除 |
 | `examples/example1/ChatGPT-社交训练.md` | 数据资产 | 解析/展示示例；由相关测试或产品样例维护，不按文档风格改写 |
 
 新增 import 目录中的 Markdown 自动继承“数据资产”分类，即使尚未写入本表。若未来需要删除或匿名化，必须先确认测试依赖和用户数据保留要求。
