@@ -75,6 +75,18 @@ background trigger; the regression additionally asserts both dialog states befor
 reopening. Application code and product behavior are unchanged by this follow-up.
 A fresh full run is required to establish whether any product defects remain.
 
+The fixture correction is source `1badec1`, full CI
+[37753088570](https://github.com/foolkking/chat-reader/actions/runs/37753088570).
+The preceding `c779517` Web job passed the dependency policy, Context (35), focused
+online/security (45) and Share-focus (2) checks before its mutation gate reported
+**15 passed / 1 failed**. That older whole-site regression still expected immediate
+retry after an unconfirmed dismissal, contrary to the accumulated explicit
+read-before-retry design. Its follow-up now checks the disabled repeat-write
+control, the actual read-only dismissal result, unchanged write count during that
+check, one explicit retry and the final server dismissal receipt. The original
+seven-remaining-scans assertion is retained. This corrects the regression contract,
+not the application, and does not turn the failed run into a pass.
+
 The read-only production attachment audit found **310 verified object hashes**,
 304 active attachments and no issues; the production application remains intact.
 

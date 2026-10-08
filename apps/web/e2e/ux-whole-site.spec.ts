@@ -387,16 +387,28 @@ test("many actual noise scans use one bounded mobile shortcut and dismissal can 
     const ownScans = center.locator(scans.map((scan) => `[data-cleanup-scan-id="${scan}"]`).join(","));
     await expect(ownScans.getByRole("button", { name: "Open review", exact: true })).toHaveCount(8);
     await expect(center.getByText("0 noise candidates ready for review", { exact: true })).toHaveCount(0);
+    let dismissalWrites = 0;
     await page.route("**/api/content-cleanup/scans/*", async (route) => {
-      if (route.request().method() === "DELETE") await route.fulfill({ status: 503, json: { detail: "Synthetic dismiss failure" } });
-      else await route.continue();
+      if (route.request().method() === "DELETE") {
+        dismissalWrites++;
+        if (dismissalWrites === 1) return route.fulfill({ status: 503, json: { detail: "Synthetic dismiss failure" } });
+      }
+      await route.continue();
     });
-    await ownScans.getByRole("button", { name: "Ignore this result", exact: true }).first().click();
-    await expect(center.getByRole("alert")).toContainText("Could not dismiss");
+    const targetRow = center.locator(`[data-cleanup-scan-id="${scans[0]}"]`);
+    const dismiss = targetRow.getByRole("button", { name: "Ignore this result", exact: true });
+    await dismiss.click();
+    await expect(targetRow.getByRole("alert")).toContainText("Dismissal is unconfirmed");
+    await expect(dismiss).toBeDisabled();
     await expect(ownScans.getByRole("button", { name: "Open review", exact: true })).toHaveCount(8);
-    await page.unroute("**/api/content-cleanup/scans/*");
-    await ownScans.getByRole("button", { name: "Ignore this result", exact: true }).first().click();
+    await targetRow.getByRole("button", { name: "Check dismissal result", exact: true }).click();
+    await expect(targetRow.getByRole("status")).toContainText("This review is still available");
+    await expect(dismiss).toBeEnabled();
+    expect(dismissalWrites).toBe(1);
+    await dismiss.click();
     await expect(ownScans.getByRole("button", { name: "Open review", exact: true })).toHaveCount(7);
+    expect(dismissalWrites).toBe(2);
+    expect((await (await page.request.get(`/api/content-cleanup/scans/${scans[0]}/dismissal`)).json()).status).toBe("DISMISSED");
     const pending = await (await page.request.get("/api/content-cleanup/scans/pending")).json();
     expect(pending.filter((row: { id: string }) => scans.includes(row.id))).toHaveLength(7);
   } finally {
