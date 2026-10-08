@@ -1,0 +1,635 @@
+{
+  "command": "corepack pnpm run test:api",
+  "exit_code": 0,
+  "tests": 1173,
+  "passed": 1020,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 153,
+  "duration_seconds": 2473.28,
+  "warnings": 4,
+  "skip_reasons": {
+    "requires disposable PostgreSQL": 102,
+    "requires disposable PostgreSQL and matching pg_dump/pg_restore": 4,
+    "requires explicitly selected disposable PostgreSQL": 41,
+    "symlink creation is unavailable in this environment": 1,
+    "requires the Release B PostgreSQL integration matrix": 1,
+    "CHAT_READER_E2E_FIXTURE_DIR is not configured": 2,
+    "CHAT_READER_IMPORT_PAIR_JSON and CHAT_READER_IMPORT_PAIR_MARKDOWN are not configured": 1,
+    "database is not migrated to repository head 20261008_0050": 1
+  },
+  "skipped_cases": [
+    {
+      "case": "tests.test_admin_runtime::test_postgres_timeout_recovery_and_read_only_snapshot",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_annotation_sync_postgres::test_concurrent_retry_applies_once_and_preserves_receipt",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_annotation_sync_postgres::test_concurrent_distinct_edits_retain_the_losing_draft_once",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_annotation_sync_postgres::test_online_bootstrap_cannot_overwrite_concurrent_edit_with_zero_revision",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_annotation_sync_postgres::test_conflict_resolution_concurrent_retry_and_owner_isolation[local]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_annotation_sync_postgres::test_conflict_resolution_concurrent_retry_and_owner_isolation[server]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_annotation_sync_postgres::test_conflict_resolution_concurrent_retry_and_owner_isolation[merge]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_concurrent_messages_attachments_and_notes_use_one_snapshot[append-canjson_bundle]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_concurrent_messages_attachments_and_notes_use_one_snapshot[append-markdown_bundle]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_concurrent_messages_attachments_and_notes_use_one_snapshot[edit_delete_reorder-canjson_bundle]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_concurrent_messages_attachments_and_notes_use_one_snapshot[edit_delete_reorder-markdown_bundle]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_authorization_and_asset_revocation_before_publication[disabled]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_authorization_and_asset_revocation_before_publication[source_deleted]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_authorization_and_asset_revocation_before_publication[owner_changed]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_authorization_and_asset_revocation_before_publication[asset_blocked]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_attachment_bundle_postgres::test_authorization_and_asset_revocation_before_publication[asset_deleted]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_backup_housekeeping::test_two_logical_snapshots_restore_after_dedup_and_old_removal",
+      "reason": "requires disposable PostgreSQL and matching pg_dump/pg_restore"
+    },
+    {
+      "case": "tests.test_backup_housekeeping::test_corrupt_new_snapshot_does_not_displace_old_recovery_points",
+      "reason": "requires disposable PostgreSQL and matching pg_dump/pg_restore"
+    },
+    {
+      "case": "tests.test_backup_housekeeping::test_unknown_members_and_active_backup_lock_block_removal",
+      "reason": "requires disposable PostgreSQL and matching pg_dump/pg_restore"
+    },
+    {
+      "case": "tests.test_backup_housekeeping::test_one_valid_backup_never_allows_apply",
+      "reason": "requires disposable PostgreSQL and matching pg_dump/pg_restore"
+    },
+    {
+      "case": "tests.test_cleanup_dismissal_postgres::test_concurrent_dismissal_creates_one_receipt_without_message_changes",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_dismissal_postgres::test_dismissal_refreshes_cached_scan_before_checking_active_apply",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_dismissal_postgres::test_receipt_failure_preserves_review_and_task",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_edit_postgres::test_concurrent_name_only_edits_refresh_preloaded_preference",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_edit_postgres::test_shared_identity_keeps_personal_bases_independent",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_execution::test_outside_symlink_is_never_eligible",
+      "reason": "symlink creation is unavailable in this environment"
+    },
+    {
+      "case": "tests.test_cleanup_outcomes_postgres::test_concurrent_completed_http_replay_and_owner_isolation",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_outcomes_postgres::test_final_receipt_failure_preserves_only_earlier_conversations",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_postgres::test_concurrent_apply_creates_one_version",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_postgres::test_migration_resets_legacy_automatic_selection_without_changing_content",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_postgres::test_exception_migration_foreign_keys_and_concurrent_confirmation",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_postgres::test_concurrent_rule_edits_keep_one_new_revision_and_reject_stale_base",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_publication_postgres::test_competing_publications_refresh_preloaded_rows[publish-True]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_publication_postgres::test_competing_publications_refresh_preloaded_rows[withdraw-True]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_publication_postgres::test_competing_publications_refresh_preloaded_rows[publish-False]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_rescan_postgres::test_concurrent_rescan_and_apply_keep_one_durable_receipt",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_rescan_postgres::test_request_index_upgrade_downgrade_preserves_data_and_matches_model",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_rule_postgres::test_equivalent_learning_serializes_and_author_deletion_preserves_others",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_rule_postgres::test_migration_aliases_keep_old_revisions_exceptions_and_distinct_scopes",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_scan_lifecycle_postgres::test_cancellation_wins_chunk_requeue_or_final_publication[False]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_scan_lifecycle_postgres::test_cancellation_wins_chunk_requeue_or_final_publication[True]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_scan_lifecycle_postgres::test_completed_scan_wins_before_cancellation",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_scan_lifecycle_postgres::test_stopped_worker_finishes_cancellation_without_restart",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_scan_requests_postgres::test_concurrent_request_creates_one_job_and_snapshot",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_source_postgres::test_source_hash_migration_only_backfills_provably_unchanged_targets[False]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_source_postgres::test_source_hash_migration_only_backfills_provably_unchanged_targets[True]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_source_postgres::test_concurrent_edit_and_cleanup_cannot_overwrite_one_another",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_source_postgres::test_cached_same_id_source_cannot_overwrite_whitespace_replacement",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cleanup_source_postgres::test_edit_during_preview_cannot_issue_a_token_for_different_source",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_archives_postgres::test_personal_context_postgres",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_archives_postgres::test_system_context_postgres[False]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_archives_postgres::test_system_context_postgres[True]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_cleanup_postgres::test_context_cleanup_postgres[test_retention_preserves_shared_members_and_rollback]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_cleanup_postgres::test_context_cleanup_postgres[test_conversation_deletion_reclaims_only_unshared_context]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_cleanup_postgres::test_context_cleanup_postgres[test_account_deletion_preserves_shared_context_and_cleanup_receipts]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[body-serializing]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[body-after_publish]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[annotation-serializing]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[annotation-after_publish]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[disabled-serializing]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[disabled-after_publish]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[owner_changed-serializing]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[owner_changed-after_publish]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[asset_deleted-serializing]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[asset_deleted-after_publish]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[asset_blocked-serializing]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_concurrent_change_rejects_output_and_leaves_no_artifact[asset_blocked-after_publish]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_export_postgres::test_postgres_worker_commits_consistent_context_and_retains_published_file",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_return_postgres::test_return_interrupted_after_file_write_preserves_saved_pair_and_can_resume[cancel]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_context_return_postgres::test_return_interrupted_after_file_write_preserves_saved_pair_and_can_resume[failure]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_continuation_candidates_postgres::test_same_direct_update_concurrently_creates_one_snapshot",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_continuation_candidates_postgres::test_disabled_account_rejects_previously_authenticated_context_writes[direct]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_continuation_candidates_postgres::test_disabled_account_rejects_previously_authenticated_context_writes[return_upload]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_continuation_candidates_postgres::test_disabled_account_rejects_previously_authenticated_context_writes[return_apply]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_conversation_batch_export_postgres::test_concurrent_identical_submissions_create_one_job",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_conversation_batch_export_postgres::test_one_snapshot_across_all_conversations_with_concurrent_writer",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_conversation_batch_export_postgres::test_cancel_and_authorization_change_never_publish_partial_zip[writing]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_conversation_batch_export_postgres::test_cancel_and_authorization_change_never_publish_partial_zip[renamed]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_conversation_batch_export_postgres::test_cancel_and_authorization_change_never_publish_partial_zip[commit]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_conversation_batch_export_postgres::test_cancel_and_authorization_change_never_publish_partial_zip[disabled]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_conversation_batch_export_postgres::test_cancel_and_authorization_change_never_publish_partial_zip[source_deleted]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_cr_archive_postgres::test_cr_attachment_lookup_does_not_distinct_json_entities_on_postgresql",
+      "reason": "requires the Release B PostgreSQL integration matrix"
+    },
+    {
+      "case": "tests.test_default_project_postgres::test_concurrent_first_default_project_keeps_both_callers_transactions",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_direct_export_snapshot_postgres::test_concurrent_edit_delete_insert_and_notes_keep_one_snapshot[markdown_v2-none]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_direct_export_snapshot_postgres::test_concurrent_edit_delete_insert_and_notes_keep_one_snapshot[canjson_v2-none]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_direct_export_snapshot_postgres::test_concurrent_edit_delete_insert_and_notes_keep_one_snapshot[canjson_v2-gzip]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_direct_export_snapshot_postgres::test_concurrent_edit_delete_insert_and_notes_keep_one_snapshot[canonical_json-none]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_email_change_postgres::test_concurrent_email_confirmations_are_single_use",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_email_change_postgres::test_two_accounts_cannot_confirm_the_same_address",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_email_change_postgres::test_email_change_and_password_reset_serialize",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_export_retention_postgres::test_claim_lock_then_live_download_prevents_concurrent_unlink",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_export_retention_postgres::test_two_reapers_commit_one_actual_removal",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_export_retention_postgres::test_legacy_upload_and_deadlines_survive_upgrade_and_downgrade",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_exporter_markdown_parser::test_real_paired_fixture_uses_bounded_fast_path",
+      "reason": "CHAT_READER_E2E_FIXTURE_DIR is not configured"
+    },
+    {
+      "case": "tests.test_feature_policy_postgres::test_cached_concurrent_writers_refresh_after_lock[True]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_feature_policy_postgres::test_cached_concurrent_writers_refresh_after_lock[False]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_feature_policy_postgres::test_first_policy_read_and_write_share_single_creation_lock",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_import_preview_exporter_combo::test_real_exporter_pair_preview_commit_and_retry",
+      "reason": "CHAT_READER_E2E_FIXTURE_DIR is not configured"
+    },
+    {
+      "case": "tests.test_import_preview_exporter_combo::test_response_only_real_pair_preview",
+      "reason": "CHAT_READER_IMPORT_PAIR_JSON and CHAT_READER_IMPORT_PAIR_MARKDOWN are not configured"
+    },
+    {
+      "case": "tests.test_import_profile_postgres::test_concurrent_equivalent_learning_and_shared_author_deletion",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_import_profile_postgres::test_migration_retains_old_ids_grants_and_distinct_mappings",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_invitation_postgres::test_one_invitation_can_only_create_one_account_concurrently",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_migration_integrity::test_alembic_current_matches_repository_head",
+      "reason": "database is not migrated to repository head 20261008_0050"
+    },
+    {
+      "case": "tests.test_my_shares_postgres::test_concurrent_share_revocation_and_owner_query",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_my_shares_postgres::test_concurrent_settings_edits_compare_after_row_lock_and_refresh_cached_share",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_download_postgres::test_download_admission_serializes_replay_and_rejects_changed_request",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_revision_postgres::test_different_message_edits_from_stale_sessions_advance_revision",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_revision_postgres::test_pending_increments_flush_as_integers_and_rollback_together[False]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_revision_postgres::test_pending_increments_flush_as_integers_and_rollback_together[True]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_revision_postgres::test_annotation_touch_cannot_overwrite_another_sessions_edit",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_revision_postgres::test_simultaneous_independent_edits_have_distinct_offline_revisions",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_snapshot_postgres::test_offline_package_uses_one_source_snapshot[False-create_version]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_snapshot_postgres::test_offline_package_uses_one_source_snapshot[False-replace_current]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_snapshot_postgres::test_offline_package_uses_one_source_snapshot[True-create_version]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_offline_snapshot_postgres::test_offline_package_uses_one_source_snapshot[True-replace_current]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_personal_archive_jobs_postgres::test_postgres_preview_and_concurrent_confirmation_create_one_restore_job",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_personal_archive_jobs_postgres::test_postgres_cancellation_after_nested_restore_rolls_back_everything",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_personal_archive_jobs_postgres::test_postgres_disabled_owner_cannot_execute_already_queued_restore",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_personal_restore_postgres::test_personal_restore_new_instance_has_real_foreign_keys_and_usable_formats",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_personal_restore_postgres::test_concurrent_personal_restore_is_one_atomic_import",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_personal_restore_postgres::test_outer_commit_failure_rolls_back_personal_restore_and_new_files",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_personal_restore_postgres::test_restore_receipt_migration_round_trip",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_preference_sync_postgres::test_migration_preserves_values_and_receipts_follow_owner",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_preference_sync_postgres::test_concurrent_fields_and_replays_are_serialized",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_reading_position_postgres::test_reading_migration_preserves_old_anchor_and_cascades_receipts",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_reading_position_postgres::test_concurrent_position_updates_and_replay_are_serialized",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_registration_policy_postgres::test_cached_concurrent_registration_edits_are_checked_after_lock[True]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_registration_policy_postgres::test_cached_concurrent_registration_edits_are_checked_after_lock[False]",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_registration_policy_postgres::test_initial_flag_only_writers_preserve_deployment_registration_mode",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_registration_verification_postgres::test_concurrent_confirmation_consumes_once_under_real_row_locks",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_registration_verification_postgres::test_concurrent_approval_and_verification_do_not_lose_eligibility",
+      "reason": "requires explicitly selected disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_skill_bundle_archives_postgres::test_personal_bundle_archive_postgres",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_skill_bundle_archives_postgres::test_system_bundle_archive_postgres[False]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_skill_bundle_archives_postgres::test_system_bundle_archive_postgres[True]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_skill_bundle_archives_postgres::test_zip_default_reset_preserves_personal_selection_postgres",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_skill_bundle_archives_postgres::test_concurrent_unified_preferences_remain_one_choice[False]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_skill_bundle_archives_postgres::test_concurrent_unified_preferences_remain_one_choice[True]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_skill_cleanup_postgres::test_shared_skill_cleanup_postgres",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_support_postgres::test_concurrent_create_and_approval_are_one_atomic_change",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_support_postgres::test_personal_history_postgres",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_support_postgres::test_system_history_postgres",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_postgres::test_system_v5_restores_new_account_ownership_and_requires_password_reset",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_postgres::test_personal_export_executes_scoped_subqueries_on_postgresql",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_postgres::test_system_configuration_restores_on_postgresql_with_real_foreign_keys",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_postgres::test_system_configuration_and_assets_rollback_together[rollback]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_postgres::test_system_configuration_and_assets_rollback_together[commit_failure]",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_tasks_postgres::test_system_restore_concurrent_confirmation_and_real_worker",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_tasks_postgres::test_late_system_restore_cancellation_rolls_back_identity_configuration_and_files",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_tasks_postgres::test_system_archive_choice_migration_round_trip",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_tasks_postgres::test_system_export_concurrent_request_is_idempotent",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_system_archive_tasks_postgres::test_restore_waits_for_preferences_without_inverting_table_lock_order",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_user_deletion_postgres::test_concurrent_confirmations_and_atomic_shared_account_deletion",
+      "reason": "requires disposable PostgreSQL"
+    },
+    {
+      "case": "tests.test_user_deletion_postgres::test_late_authenticated_subject_writes_cannot_resurrect_deleted_account",
+      "reason": "requires disposable PostgreSQL"
+    }
+  ]
+}

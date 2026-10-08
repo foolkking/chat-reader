@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-08",
+  "status": "local_web_start_rejected",
+  "user_authorization": "explicit_local_web_start_and_named_chromium",
+  "local_only": true,
+  "chromium": {
+    "requested_executable": "wkkk/playwright-browsers/chromium-1234/chrome-win64/chrome.exe",
+    "file_version": "151.0.7922.34",
+    "runtime_version": "151.0.7922.34",
+    "actual_launch": "passed",
+    "page": "about:blank",
+    "context_and_browser_closed": true,
+    "application_cases_executed": 0
+  },
+  "test_configuration": {
+    "inherits_repository_config": true,
+    "exact_executable_pinned": true,
+    "channel_override_removed": true,
+    "automatic_web_start_disabled": true,
+    "discovered_cases": 16,
+    "files": 2,
+    "executed_cases": 0
+  },
+  "supervisor_reuse": {
+    "original_helper_preserved": true,
+    "original_synthetic_storage_preserved": true,
+    "expected_database_head": "20261008_0050",
+    "syntax_check": "passed",
+    "runtime_check": "not_executed"
+  },
+  "web_start": {
+    "attempts_after_renewed_authorization": 1,
+    "process_created": false,
+    "tool_policy_reason": "blocked by policy",
+    "rejecting_policy_source": "not_identified",
+    "automatic_review_attribution": "not_established",
+    "alternate_startup_attempted": false
+  },
+  "api_worker_postgres_started_this_follow_up": false,
+  "commit": false,
+  "ci": false,
+  "deployment": false,
+  "production_access": false,
+  "local_image_build": false
+}

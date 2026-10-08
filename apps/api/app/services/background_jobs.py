@@ -46,7 +46,7 @@ from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_o
 logger = logging.getLogger(__name__)
 
 ACTIVE_JOB_STATUSES = ("queued", "processing", "cancelling")
-CANCELLABLE_JOB_TYPES = {"context_return", "context_validation", "conversation_merge", "conversation_batch_delete", "conversation_batch_export", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
+CANCELLABLE_JOB_TYPES = {"content_noise_scan", "context_return", "context_validation", "conversation_merge", "conversation_batch_delete", "conversation_batch_export", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
 ProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -1076,17 +1076,18 @@ def process_background_job(
                     scan_payload = dict(payload)
                     scan = db.get(ContentCleanupScan, scan_id)
                     scan_payload["cursor_message_id"] = str(scan.cursor_message_id) if scan and scan.cursor_message_id else None
-                    job.payload = scan_payload
-                    job.status = "queued"
-                    job.phase = "scanning"
-                    job.progress = int(result.get("processed", 0) * 100 / max(int(result.get("total", 1)), 1))
-                    job.processed_items = int(result.get("processed", 0))
-                    job.total_items = int(result.get("total", 0))
-                    job.queued_at = datetime.now(timezone.utc)
-                    job.started_at = None
-                    job.heartbeat_at = datetime.now(timezone.utc)
-                    job.attempt_count = 0
-                    job.error_message = None
+                    # Cancellation may arrive while this chunk is inspecting text.
+                    # Publish its cursor and requeue only if this worker still owns
+                    # processing. A lost race rolls the whole chunk back.
+                    now = datetime.now(timezone.utc)
+                    updated = db.query(BackgroundJob).filter(BackgroundJob.id == job_id, BackgroundJob.status == "processing").update({
+                        "payload": scan_payload, "status": "queued", "phase": "scanning",
+                        "progress": min(99, int(result.get("processed", 0) * 100 / max(int(result.get("total", 1)), 1))),
+                        "processed_items": int(result.get("processed", 0)), "total_items": int(result.get("total", 0)),
+                        "queued_at": now, "started_at": None, "heartbeat_at": now, "attempt_count": 0, "error_message": None,
+                    }, synchronize_session=False)
+                    if updated != 1:
+                        raise BackgroundJobCancelled("Noise scan cancellation won the requeue race.")
                     db.commit()
                     return
                 job_result = {
@@ -1258,7 +1259,7 @@ def process_background_job(
                 cleanup_paths = list(getattr(package, "_cleanup_paths", []))
                 if cleanup_paths:
                     post_commit_cleanup.append(("offline", cleanup_paths, Path(get_settings().offline_storage_dir)))
-            if is_sqlite:
+            if is_sqlite and job.job_type != "content_noise_scan":
                 for key, value in committed_values.items():
                     setattr(job, key, value)
             else:

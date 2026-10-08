@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "cleanup-layout-before",
+  "status": "failed",
+  "started_at": "2026-10-06T23:08:01.548Z",
+  "test_count": 3,
+  "completed_at": "2026-10-06T23:10:44.043Z",
+  "duration_ms": 172511,
+  "result_counts": {
+    "passed": 0,
+    "failed": 3,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

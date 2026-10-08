@@ -1,6 +1,6 @@
 # Task And Offline Retention Contract
 
-Last verified: 2026-10-06
+Last updated locally: 2026-10-08; production release remains 2026-10-06.
 
 ## Scope
 
@@ -22,6 +22,37 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 | Downloaded browser Offline Library | Browser-managed, no server TTL | Imported data lives in the Library Dexie/Cache Storage boundary until the user updates/removes it or the browser evicts storage. Server package replacement or Task Center expiry does not delete an already imported local library. Persistent-storage approval reduces eviction risk but is not an infinite-retention guarantee. |
 
 ## Re-entry contract
+
+- Local offline task recovery (2026-10-08) opens Offline & sync and finds this
+  device's matching download; missing local records require an explicit download.
+  It does not equate server completion with local import or automatically retry.
+  A fresh recovery does not rewrite the earlier failed server job or extend its
+  visibility window. See the [offline recovery contract](PWA_OFFLINE_RESILIENCE_CONTRACT.md#task-center-recovery--2026-10-08-worktree-not-deployed).
+
+- Cancelled noise scans appear under Cancelled only while the bound task is in
+  the terminal-result window. General pending scan reads omit expired cancelled
+  jobs; explicit owned scan/latest-import reads remain available. Cancellation
+  does not delete partial scanner records or committed imported conversations,
+  and does not make incomplete candidates applicable. Explicit dismissal uses
+  the same review receipt as other ended results. See
+  [scan execution](CONTENT_CLEANUP_CONTRACT.md#scan-execution-and-cancellation-local-2026-10-08).
+
+- A READY noise scan with zero candidates appears in Completed only while its
+  committed job is returned by `/tasks/active`. It creates no Needs attention or
+  sidebar reminder. Retained import completion can also open the result. Explicit
+  Done/ignore removes the review and commits a small dismissal receipt on the
+  existing job; the dismissed task has no result row. The receipt can support
+  owner-scoped repeat DELETE/read-only recovery after the active-result window,
+  while the underlying job exists. No permanent history UI, new purge schedule,
+  or canonical-message deletion is introduced. See the
+  [cleanup contract](CONTENT_CLEANUP_CONTRACT.md#empty-results-and-dismissal-local-2026-10-08).
+
+- Local cleanup completion (2026-10-07) reuses its noise-scan BackgroundJob. The
+  terminal-result window starts again at apply completion, permitting **View
+  cleanup result** after reload. Only counts, bindings and time are retained, not
+  removed text. Expiry hides the row from the active-result list; an owner-scoped
+  outcome/replay can still use the underlying receipt. This adds no permanent task
+  history UI. Details: [Content Cleanup Contract](CONTENT_CLEANUP_CONTRACT.md#completion-recovery-local-2026-10-07).
 
 - Task rows separate the localized operation from optional `source_label` and
   allowlisted `export_format`. Source titles are captured at submission; batch

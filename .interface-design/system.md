@@ -1,6 +1,6 @@
 # Chat Reader Interface System
 
-Last synchronized: 2026-10-05.
+Last synchronized: 2026-10-07.
 
 ## Direction
 
@@ -14,7 +14,7 @@ The color world is paper, raised paper, graphite, muted ink, sea-green action,
 amber review and restrained red danger. All implementation colors must use the
 existing application variables (`bg-page`, `bg-surface`, `bg-raised`,
 `bg-subtle`, `text-primary`, `text-secondary`, `border-ui`, `--accent`,
-`--warning`, `--danger`, `--focus`) so light and dark modes remain one system.
+`--color-semantic-warning`, `--mark-bg`, `--mark-text`, `--danger`, `--focus`) so light and dark modes remain one system.
 
 The product signature is a source-to-canonical progression: compact source
 identity at left, deliberate Mapping in the center and validated canonical
@@ -52,6 +52,32 @@ Import Format revision ledger.
 
 ## Reusable Patterns
 
+- Noise rescans: one request owner serves selection, conflict and failed-scan
+  views. Keep the primary preview command in its row and show recovery feedback
+  below. Explain fresh KEEP only when old choices exist; provide previous/newer
+  navigation with fresh reads and heading focus. Missing earlier reviews retain
+  the return path. Never guess or copy decisions onto changed source offsets.
+
+- System rule publication: show the public version on the ledger row. Acknowledge
+  saved state before refreshing lists; lost responses get a read-only check beside
+  the affected row. Compare current and intended name/version in two columns;
+  refresh history to show new match text. Retaining a draft changes only its base
+  and requires confirmation again. Use readable role/mode/boundary labels and
+  disable cached choices after a failed read.
+
+- Global noise scanning: show admission/check/retry beside the start command.
+  Preserve one unconfirmed request per account/tab; reopening offers a read,
+  never an automatic resubmission. Acknowledged tasks link to the shared task
+  center after closing the current overlay. Empty scope and disabled-rule errors
+  explain recovery and must agree with the current rule rows.
+
+- Exception scopes: highlight exact matched text with mark tokens, localize
+  message roles and keep scope rules in an expandable disclosure. Preserve the
+  selection subtree during learning/exception edits. A confirmed write returns
+  immediately; slow reads must not delay acknowledgement or later steal focus.
+  Unknown saves get a read-only state check; uncertain revocations use an explicit
+  idempotent retry. Read errors never leave cached scope confirmation enabled.
+
 - Primary command: existing `btn-primary`; secondary command:
   `btn-secondary`. Disable while requests are pending and preserve the label's
   action meaning in the loading text.
@@ -70,6 +96,9 @@ Import Format revision ledger.
 - Settings: keep the shell entry lightweight; consequential categories use a
   focused state-owning dialog with explicit dirty dismissal and return-to-opener
   focus restoration.
+- When one modal opens another, its delayed close must not return focus to the
+  page underneath. Restore nested actions within the remaining top modal; normal
+  dismissal still returns to the logical opener.
 - Background tasks: one global Tasks owner may have sidebar/mobile summaries,
   but those are representations of the same monitor rather than separate task
   products.
@@ -112,10 +141,57 @@ Import Format revision ledger.
   destination. Repeated candidates and rules use divided ledger rows. Deletion
   of a user rule requires inline confirmation; built-in rules are never
   deletable.
-- A completed or explicitly ignored review disappears. Do not add cleanup-only
-  undo UI; existing MessageVersion history is the recovery authority.
+- Personal rule actions show progress and confirmed state beside the row; a slow
+  list refresh does not extend the saving state. Uncertain writes offer read-only
+  checking before another choice. Confirmed removal announces the result above
+  the list and moves focus in visible row order. Version history translates
+  configuration labels and keeps long text keyboard-scrollable; failed refreshes
+  keep the old text readable but disable version selection.
+- Candidates lead with the exact highlighted match and a short context excerpt.
+  Multi-conversation rows retain visible source identity. Full context and
+  deliberate exception/learning actions expand per row; collapsing never changes
+  a choice. Complete changes remain in the required apply preview.
+- Confirmed completion is a compact, focused result; source-read failures retry
+  only reads. Remove old source selection and scan/rule commands from this state.
+  A lost response can be checked, and the result can reopen within the existing
+  Task Center terminal window. Normal successful source refresh may close the
+  review; explicit ignore removes it. Do not add cleanup-only undo UI; existing
+  MessageVersion history remains the recovery authority.
+- Multi-conversation review names the current conversation/rule scope above bulk
+  actions. Group search finds titles across pages without changing selection scope.
+  Preview keeps the hidden selection view mounted, preserving expanded contexts
+  and returning to its previous scroll/focus. Import completion links its own
+  existing scan with a stable trigger; it never queues a duplicate on a read retry.
+- A filtered review discloses selections in other groups beside the preview
+  command. Offer a direct all-selected view without changing decisions. Use
+  server counts across pages; failed/pending reads show scope meaning rather than
+  old exact numbers. Protected/conflict group counts appear only when nonzero.
+- Full-message differences mark exact server-selected removals with the shared
+  highlight colors and strikethrough. Verify Unicode ranges against the complete
+  after text before drawing markers; otherwise show complete plain text. Previous/
+  next moves only the two text panes to the corresponding removal. Keep mobile
+  panes short enough to compare them, and never add marker text to copied content.
+- Rule editing compares localized server/draft values by field, side by side on
+  mobile as well as desktop. A failed fresh read removes the prior actionable
+  comparison. Selecting a base returns focus to trial; saving or cancelling in
+  the library returns to the edited rule or new-rule action. Confirmed saves
+  are acknowledged before metadata refresh; unknown results keep a read-only
+  check beside the retained draft instead of enabling another blind write.
 
 ## Usability recovery surfaces
+
+Background noise scanning distinguishes waiting, scanning, stopping, failed and
+cancelled. Keep live work in In progress, never Needs attention. Progress/detail
+uses compact paper surfaces, existing text-sm/text-xs, real counts and 44px
+controls. Cancellation preserves source and imported content; unknown responses
+get a local read-only check. Restore only lost focus when an action disappears or
+a row moves between sections; do not pull it back from another chosen control.
+
+Noise scans with no candidates use a compact result with Rules and Done, and
+appear under recent Completed tasks without an attention badge. Dismissal errors
+belong beside the owning action. Saved choices need a conditional discard
+confirmation; closing still preserves them. Capture the visible row before
+removal, restoring an adjacent action or result notice only when focus is lost.
 
 Dirty composition uses the shared confirmation; short dialogs keep title/actions fixed and scroll only their fields. Touch project menus remain visible; nested menu keys must not start drag sorting. Search filters disclose on demand without remounting focused inputs. Retry states preserve the query, failed draft or selected items. One bounded task launcher opens the existing Task Center; detailed phases remain bilingual. Keep these changes in the paper/graphite/sea-green token system.
 

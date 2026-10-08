@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "admin-account-refresh-probe",
+  "status": "passed",
+  "started_at": "2026-10-06T20:38:00.687Z",
+  "test_count": 1,
+  "completed_at": "2026-10-06T20:38:06.337Z",
+  "duration_ms": 8087,
+  "result_counts": {
+    "passed": 1,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

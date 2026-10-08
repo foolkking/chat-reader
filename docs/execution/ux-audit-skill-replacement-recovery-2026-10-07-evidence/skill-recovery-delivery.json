@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "skill-recovery-delivery",
+  "status": "passed",
+  "started_at": "2026-10-07T01:48:35.113Z",
+  "test_count": 22,
+  "completed_at": "2026-10-07T01:49:22.847Z",
+  "duration_ms": 50346,
+  "result_counts": {
+    "passed": 22,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

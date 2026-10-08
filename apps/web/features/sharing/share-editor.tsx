@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type ReactNode, useLayoutEffect } from "react";
 import { ArrowLeft, ChevronDown, FileText, Link2, LockKeyhole, Palette, ShieldCheck } from "lucide-react";
-import { getConversationDialogueIndex, updateShare } from "../../lib/api";
+import { ApiRequestError, getConversationDialogueIndex, getOwnedShare, updateShare } from "../../lib/api";
 import { readAccountCapabilities } from "../../lib/auth-client";
 import type { ShareRead, ShareUpdateInput } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
@@ -35,11 +35,13 @@ function Choice({ name, title, description, checked, disabled, onChange }: { nam
   </label>;
 }
 
-export function ShareEditor({ share, onSaved, onClose, onDirtyChange }: {
+export function ShareEditor({ share: initialShare, onSaved, onClose, onDirtyChange }: {
   share: ShareRead; onSaved: (share: ShareRead) => void; onClose: () => void; onDirtyChange: (dirty: boolean) => void;
 }) {
   const { resolvedLocale } = usePreferences(), zh = resolvedLocale === "zh-CN";
   const { confirm } = useInteractionDialog(), client = useQueryClient();
+  const [share, setShare] = useState(initialShare);
+  const [needsReview, setNeedsReview] = useState(false), [latest, setLatest] = useState<ShareRead | null>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLElement>(null), errorFocus = useRef<string | null>(null);
   const [section, setSection] = useState<string | null>("content");
@@ -60,6 +62,59 @@ export function ShareEditor({ share, onSaved, onClose, onDirtyChange }: {
     || flags.some((flag) => options[flag] !== share[flag]) || passwordMode !== "keep" || !!password || !!confirmation || theme !== share.theme || locale !== share.locale;
   useLayoutEffect(() => { onDirtyChange(dirty || busy); }, [dirty, busy, onDirtyChange]);
   useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
+  useEffect(() => { if (latest) rootRef.current?.querySelector<HTMLElement>('[data-share-conflict]')?.focus(); }, [latest]);
+
+  function changes(): ShareUpdateInput {
+    const input: ShareUpdateInput = { base_revision: share.settings_revision ?? undefined };
+    if (title !== (share.title ?? "")) input.title = title.trim() || null;
+    if (description !== (share.description ?? "")) input.description = description.trim() || null;
+    if (theme !== share.theme) input.theme = theme;
+    if (locale !== share.locale) input.locale = locale;
+    for (const flag of flags) if (options[flag] !== share[flag]) input[flag] = options[flag];
+    if (expires !== localDate(share.expires_at)) {
+      if (!expires) input.expires_at = null;
+      else if (Number.isFinite(new Date(expires).getTime())) input.expires_at = new Date(expires).toISOString();
+    }
+    if (scope !== share.scope || JSON.stringify(selected) !== JSON.stringify(share.selected_message_ids ?? [])) {
+      input.scope = scope === "selected_messages" ? "selected_messages" : "conversation";
+      input.selected_message_ids = scope === "selected_messages" ? selected : [];
+    }
+    if (passwordMode !== "keep") input.share_password = passwordMode === "set" ? password : null;
+    return input;
+  }
+
+  async function readLatest() {
+    setBusy(true); setError(null);
+    try { setLatest(await getOwnedShare(share.id, AbortSignal.timeout(15_000))); }
+    catch (failure) { setError(requestError(failure, true)); }
+    finally { setBusy(false); }
+  }
+
+  function requestError(failure: unknown, reading = false): string {
+    if (failure instanceof ApiRequestError) {
+      if (failure.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
+      if (failure.status === 403) return zh ? "当前权限不允许此操作。你的修改仍保留，可返回列表查看或撤销分享。" : "Your current permissions do not allow this action. Your changes are retained; return to the list to view or revoke shares.";
+      if (failure.status === 404) return zh ? "此分享已不存在或你已无权访问。你的修改仍保留，请返回列表确认。" : "This share no longer exists or is no longer accessible. Your changes are retained; return to the list to check.";
+      if (failure.status === 400 || failure.status === 422) return zh ? "设置未保存，请检查所选消息、有效期和密码。你的修改仍保留。" : "Settings were not saved. Check the selected messages, expiry and password. Your changes are retained.";
+      if (failure.status === 429) return zh ? "操作过于频繁，请稍后重试。你的修改仍保留。" : "Too many requests. Retry shortly; your changes are retained.";
+    }
+    if (reading) return zh ? "无法读取最新分享设置，你的修改仍保留。请重试。" : "Unable to read the latest settings. Your changes are retained. Retry.";
+    return zh ? "保存未确认，你的修改仍保留。请检查连接后重试。" : "Saving was not confirmed. Your changes are retained. Check the connection and retry.";
+  }
+
+  async function resolveConflict(keepChanges: boolean) {
+    if (!latest || busy) return;
+    if (!keepChanges && dirty && !await confirm({ title: zh ? "放弃本次修改，载入最新设置？" : "Discard your changes and load the latest settings?", confirmLabel: zh ? "载入最新设置" : "Load latest settings", danger: true })) return;
+    const patch = keepChanges ? changes() : {};
+    const next = { ...latest, ...patch };
+    setShare(latest); setTitle(next.title ?? ""); setDescription(next.description ?? "");
+    setTheme(next.theme ?? latest.theme); setLocale(next.locale ?? latest.locale);
+    setScope(next.scope ?? latest.scope); setSelected(next.selected_message_ids ?? []);
+    setExpires(localDate(next.expires_at)); setExpiryPreset(next.expires_at ? "custom" : "never");
+    setOptions(Object.fromEntries(flags.map(flag => [flag, next[flag]])) as typeof options);
+    if (!keepChanges) { setPasswordMode("keep"); setPassword(""); setConfirmation(""); }
+    setLatest(null); setNeedsReview(false); setError(null);
+  }
 
   async function close() {
     if (busy) return;
@@ -68,10 +123,11 @@ export function ShareEditor({ share, onSaved, onClose, onDirtyChange }: {
   }
 
   async function save() {
+    if (busy || needsReview || share.revoked_at) return;
     setError(null);
     if (scope === "selected_messages" && !selected.length) { errorFocus.current = '[data-message-picker] input'; setSection("content"); setError(zh ? "请至少选择一条消息。" : "Select at least one message."); return; }
     if (passwordMode === "set" && (password.length < 12 || password !== confirmation)) { errorFocus.current = '[data-share-password]'; setSection("access"); setError(zh ? "密码至少 12 个字符，两次输入须一致。" : "Use at least 12 characters and matching passwords."); return; }
-    const input: ShareUpdateInput = { title: title.trim() || null, description: description.trim() || null, theme, locale, ...options };
+    const input = changes();
     // Retain exact expiry precision and old selected-message grants when untouched.
     if (expires !== localDate(share.expires_at)) {
       const date = expires ? new Date(expires) : null;
@@ -86,10 +142,17 @@ export function ShareEditor({ share, onSaved, onClose, onDirtyChange }: {
     if (!await confirm({ title: zh ? "应用分享设置？" : "Apply share settings?", description: zh ? "原链接将立即使用这些访问权限和内容范围。" : "The existing link will immediately use these permissions and content limits.", confirmLabel: zh ? "应用设置" : "Apply settings" })) return;
     setBusy(true);
     try {
-      const result = await updateShare(share.id, input);
+      const result = await updateShare(share.id, input, AbortSignal.timeout(15_000));
       await Promise.all([client.invalidateQueries({ queryKey: ["shares"] }), client.invalidateQueries({ queryKey: ["my-shares"] })]);
       onDirtyChange(false); onSaved(result);
-    } catch (failure) { setError(failure instanceof Error ? failure.message : (zh ? "保存失败，请重试。" : "Save failed. Retry.")); }
+    } catch (failure) {
+      if (failure instanceof ApiRequestError && (failure.code === "SHARE_SETTINGS_CHANGED" || failure.status === 410)) {
+        setNeedsReview(true); await readLatest();
+      } else {
+        setError(requestError(failure));
+        if (failure instanceof ApiRequestError && failure.status === 403) void client.invalidateQueries({ queryKey: ["account-capabilities"] });
+      }
+    }
     finally { setBusy(false); }
   }
 
@@ -100,6 +163,17 @@ export function ShareEditor({ share, onSaved, onClose, onDirtyChange }: {
   const accessSummary = protectedLink ? (zh ? "密码保护" : "Password protected") : (zh ? "持有链接即可访问" : "Anyone with the link");
   const expirySummary = expires ? (zh ? "到期 " : "Expires ") + new Date(expires).toLocaleString(resolvedLocale) : (zh ? "永久有效" : "No expiry");
   const extras = flags.slice(0, 5).filter((flag) => options[flag]);
+  const reviewFields = ["title", "description", "scope", "selected_message_ids", ...flags, "theme", "locale", "expires_at", "password_required", "revoked_at"] as const;
+  const reviewLabels = zh ? ["分享标题", "分享说明", "内容范围", "所选消息", ...flagLabels, "主题", "语言", "到期时间", "密码保护", "撤销时间"] : ["Share title", "Share description", "Content scope", "Selected messages", ...flagLabels, "Theme", "Language", "Expiry", "Password protection", "Revoked at"];
+  function reviewValue(field: typeof reviewFields[number], value: unknown): string {
+    if (value == null || value === "") return zh ? "未设置" : "Not set";
+    if (typeof value === "boolean") return value ? (zh ? "开启" : "On") : (zh ? "关闭" : "Off");
+    if (Array.isArray(value)) return zh ? `${value.length} 条消息` : `${value.length} messages`;
+    if (field === "scope") return value === "conversation" ? (zh ? "整个对话" : "Entire conversation") : (zh ? "仅所选消息" : "Selected messages only");
+    if (field === "expires_at" || field === "revoked_at") return new Date(String(value)).toLocaleString(resolvedLocale);
+    if (field === "theme") return value === "dark" ? (zh ? "深色" : "Dark") : (zh ? "浅色" : "Light");
+    return String(value);
+  }
   function toggleSection(value: string) { setSection((current) => current === value ? null : value); }
   function chooseAccess(protect: boolean) {
     setPasswordMode(protect ? (share.password_required ? "keep" : "set") : (share.password_required ? "remove" : "keep"));
@@ -171,9 +245,19 @@ export function ShareEditor({ share, onSaved, onClose, onDirtyChange }: {
     {capabilities.isError ? <p role="alert" className="text-sm text-secondary">{zh ? "无法读取分享策略。" : "Sharing policy unavailable."} <button className="btn-secondary min-h-11 px-3" onClick={() => void capabilities.refetch()}>{zh ? "重试" : "Retry"}</button></p> : null}
     {capabilities.data && !capabilities.data.allow_share_links ? <p role="status" className="text-sm text-secondary">{zh ? "管理员已关闭分享编辑，仍可返回列表查看或撤销。" : "Sharing edits are disabled. Return to the list to view or revoke links."}</p> : null}
     <div className="sticky -bottom-5 grid gap-2 border-t border-ui bg-raised py-3">
+      {needsReview ? <section data-share-conflict tabIndex={-1} aria-label={zh ? "分享设置冲突" : "Share settings conflict"} className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-ui bg-subtle p-3 text-sm">
+        <p role="status">{zh ? "此链接已在另一处更新。你的修改尚未保存，请比较后选择如何继续。" : "This link was updated elsewhere. Your changes have not been saved. Review before continuing."}</p>
+        {latest ? <>
+          <dl className="divide-y divide-[var(--border)]">{reviewFields.map((field, index) => JSON.stringify(share[field]) !== JSON.stringify(latest[field]) ? <div key={field} className="space-y-1 py-2"><dt className="font-medium">{reviewLabels[index]}</dt><dd className="break-words text-xs text-secondary">{zh ? "服务器当前：" : "Server now: "}{reviewValue(field, latest[field])}</dd><dd className="break-words text-xs text-secondary">{field in changes() ? <>{zh ? "本次选择：" : "Your change: "}{reviewValue(field, changes()[field as keyof ShareUpdateInput])}</> : (zh ? "合并时保留服务器当前设置" : "Keep the server setting when merging")}</dd></div> : null)}</dl>
+          {!reviewFields.some(field => JSON.stringify(share[field]) !== JSON.stringify(latest[field])) ? <p className="text-xs text-secondary">{zh ? "密码验证信息已更新，密码内容不会显示。" : "Password verification changed; password contents are never displayed."}</p> : null}
+          <div className="flex flex-wrap gap-2"><button type="button" className="btn-secondary min-h-11 px-3 text-xs" disabled={busy} onClick={() => void resolveConflict(false)}>{zh ? "载入最新设置" : "Load latest settings"}</button>{!latest.revoked_at ? <button type="button" className="btn-primary min-h-11 px-3 text-xs" disabled={busy} onClick={() => void resolveConflict(true)}>{zh ? "合并我的更改" : "Merge my changes"}</button> : null}</div>
+          {!latest.revoked_at ? <p className="text-xs text-secondary">{zh ? "合并保留你改过的项目，其余使用服务器当前设置。之后仍需确认保存。" : "Merging keeps the fields you changed and uses current server settings for the rest. Confirm saving afterwards."}</p> : null}
+        </> : <button type="button" className="btn-secondary min-h-11 px-3" disabled={busy} onClick={() => void readLatest()}>{zh ? "读取最新设置" : "Read latest settings"}</button>}
+      </section> : null}
+      {share.revoked_at ? <p role="status" className="text-sm text-secondary">{zh ? "此分享已撤销，不能继续修改。" : "This share has been revoked and cannot be edited."}</p> : null}
       {error ? <p role="alert" className="break-words text-sm text-[var(--danger)]">{error}</p> : null}
       <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-secondary">{dirty ? (zh ? "有未保存的更改" : "Unsaved changes") : (zh ? "已与当前链接一致" : "Up to date with this link")}</p>
-      <button type="button" className="btn-primary min-h-11 px-4 text-sm disabled:opacity-60" disabled={busy || !dirty || !capabilities.data?.allow_share_links} onClick={() => void save()}>{busy ? (zh ? "正在保存…" : "Saving…") : (zh ? "保存分享设置" : "Save share settings")}</button></div>
+      <button type="button" className="btn-primary min-h-11 px-4 text-sm disabled:opacity-60" disabled={busy || needsReview || !!share.revoked_at || !dirty || !capabilities.data?.allow_share_links} onClick={() => void save()}>{busy ? (zh ? "正在保存…" : "Saving…") : (zh ? "保存分享设置" : "Save share settings")}</button></div>
     </div>
   </section>;
 }

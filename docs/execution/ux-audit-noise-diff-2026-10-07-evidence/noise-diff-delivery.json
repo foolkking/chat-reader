@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "noise-diff-delivery",
+  "status": "passed",
+  "started_at": "2026-10-07T06:24:12.548Z",
+  "test_count": 42,
+  "completed_at": "2026-10-07T06:27:19.379Z",
+  "duration_ms": 190116,
+  "result_counts": {
+    "passed": 42,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

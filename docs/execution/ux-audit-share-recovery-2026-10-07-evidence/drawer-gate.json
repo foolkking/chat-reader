@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "share-drawer-recovery",
+  "status": "passed",
+  "started_at": "2026-10-06T18:07:55.145Z",
+  "test_count": 2,
+  "completed_at": "2026-10-06T18:08:03.960Z",
+  "duration_ms": 10763,
+  "result_counts": {
+    "passed": 2,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

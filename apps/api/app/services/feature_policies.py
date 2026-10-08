@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -25,8 +28,29 @@ POLICY_FIELDS = (
 )
 
 
+class FeaturePolicyConflict(ValueError):
+    """The caller's displayed configuration is no longer current."""
+
+
+def feature_policy_revision(row: InstanceFeaturePolicy) -> str:
+    # Read-only default rows can be rolled back. Timestamps must not make an
+    # unchanged default policy look like a concurrent edit.
+    content = json.dumps({field: getattr(row, field) for field in POLICY_FIELDS}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def _lock_policy(db: Session) -> None:
+    if db.get_bind().dialect.name == "postgresql":
+        key = int.from_bytes(hashlib.sha256(b"instance-feature-policy:1").digest()[:8], "big", signed=True)
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+
+
 def get_feature_policy(db: Session) -> InstanceFeaturePolicy:
     row = db.get(InstanceFeaturePolicy, 1)
+    if row is None:
+        # Serialize initial creation too, including readers of a new instance.
+        _lock_policy(db)
+        row = db.get(InstanceFeaturePolicy, 1, populate_existing=True)
     if row is None:
         row = InstanceFeaturePolicy(
             id=1,
@@ -42,8 +66,15 @@ def update_feature_policy(
     *,
     actor_user_id: uuid.UUID,
     values: dict,
+    base_revision: str | None = None,
 ) -> tuple[InstanceFeaturePolicy, dict[str, dict[str, object]]]:
-    row = get_feature_policy(db)
+    _lock_policy(db)
+    row = db.scalar(select(InstanceFeaturePolicy).where(InstanceFeaturePolicy.id == 1)
+                    .with_for_update().execution_options(populate_existing=True))
+    if row is None:
+        row = get_feature_policy(db)
+    if base_revision is not None and feature_policy_revision(row) != base_revision:
+        raise FeaturePolicyConflict("FEATURE_POLICY_CHANGED")
     changes: dict[str, dict[str, object]] = {}
     for field in POLICY_FIELDS:
         if field not in values or values[field] is None:

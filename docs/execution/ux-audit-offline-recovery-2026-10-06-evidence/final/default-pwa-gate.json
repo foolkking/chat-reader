@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "default-pwa",
+  "status": "passed",
+  "started_at": "2026-10-06T17:14:11.952Z",
+  "test_count": 464,
+  "completed_at": "2026-10-06T17:15:50.053Z",
+  "duration_ms": 105758,
+  "result_counts": {
+    "passed": 135,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 329,
+    "interrupted": 0
+  }
+}

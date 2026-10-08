@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-08",
+  "status": "browser_acceptance_pending",
+  "finding_evidence": "source_path_review_not_browser_reproduction",
+  "api": {
+    "passed": 33,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 60.138,
+    "files": {
+      "test_offline_task_recovery.py": 11,
+      "test_tasks_api.py": 17,
+      "test_offline_asset_integrity.py": 5
+    },
+    "new_recovery_cases": {
+      "target_projection": 4,
+      "invalid_legacy_unrelated_targets": 6,
+      "real_http_worker_zip_and_owner_isolation": 1
+    },
+    "database": "isolated_sqlite_with_foreign_keys_for_recovery",
+    "identity_fixture": "synthetic_server_middleware_not_real_login",
+    "verified_effects": [
+      "persisted_attachment_integrity_failure",
+      "fresh_recovery_admission",
+      "same_key_reuses_new_job",
+      "real_worker_and_downloaded_asset_bytes",
+      "canonical_message_versions_unchanged",
+      "other_owner_task_admission_and_download_denied",
+      "target_reads_do_not_mutate_job_payload"
+    ]
+  },
+  "checks": {
+    "web_lint": "passed",
+    "web_typecheck_nonincremental": "passed",
+    "final_changed_file_eslint": "passed",
+    "web_build_one_worker_2048_mib": "passed",
+    "diff_check": "passed",
+    "evidence_json_and_junit_counts": "passed",
+    "source_artifact_hashes": "passed",
+    "new_record_links": "passed",
+    "playwright_discovery": "passed",
+    "alembic_heads": ["20261008_0050"]
+  },
+  "source_artifacts_sha256": {
+    "api.xml": "40fb274cb138f2614946e2b2fd68b8c664001dfbf8ce416c761b31bfcc54fbb9",
+    "build-final.log": "5be2212d7d34d6a6d0c04ab6dc5c956b8871c50a48d16efdba2c8c1042c10013",
+    "discovery.log": "5378a0f2477fdabfc959a98e14e1d9060d2282696fa6406fc42525fae5d654f3"
+  },
+  "browser": {
+    "discovered": 16,
+    "selection_recovery": 8,
+    "offline_recovery": 8,
+    "executed": 0,
+    "screenshots_reviewed": 0,
+    "failure_presentation_is_injected": true,
+    "successful_downloads_require_real_pipeline": true,
+    "block": "Prior automatic review rejected the authorized loopback Web start with blocked by policy; no alternate launcher or renewed attempt."
+  },
+  "prior_full_gates_rerun": false,
+  "isolated_services_stopped": true,
+  "staging_empty": true,
+  "new_migration": false,
+  "new_dexie_or_package_version": false,
+  "commit": false,
+  "ci": false,
+  "deployment": false,
+  "production_access": false,
+  "local_image_build": false
+}

@@ -11,6 +11,7 @@ from app.models.conversation import Conversation
 from app.models.attachment import Attachment, AssetObject, MessageVersionAttachment
 from app.models.conversation_event import ConversationEvent
 from app.models.heading import Heading
+from app.services.conversation_revision import bump_offline_revision
 from app.models.import_record import utc_now
 from app.models.message import Message
 from app.models.message_version import MessageVersion
@@ -750,6 +751,7 @@ def list_message_versions(db: Session, message_id: uuid.UUID) -> list[MessageVer
 
 def select_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.UUID) -> MessageEditResult:
     message = _get_editable_message(db, message_id)
+    _lock_unchanged_message(db, message)
     current = _get_current_version(db, message)
     selected = db.get(MessageVersion, version_id)
     if selected is None or selected.message_id != message.id:
@@ -779,6 +781,7 @@ def select_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.
 
 def delete_message_version(db: Session, message_id: uuid.UUID, version_id: uuid.UUID) -> MessageVersionDeleteResult:
     message = _get_editable_message(db, message_id)
+    _lock_unchanged_message(db, message)
     target = db.get(MessageVersion, version_id)
     if target is None or target.message_id != message.id:
         raise MessageEditError("Message version not found.", HTTPStatus.NOT_FOUND)
@@ -950,7 +953,7 @@ def _sync_message_from_version(
     message.is_heavy = len(version.display_text) > 12000 or message.block_count > 80
     conversation = db.get(Conversation, message.conversation_id)
     if conversation is not None:
-        conversation.offline_revision += 1
+        bump_offline_revision(conversation)
 
 
 def _replace_version_content(
@@ -964,6 +967,7 @@ def _replace_version_content(
     attachment_occurrences=None,
 ) -> None:
     import time
+    _lock_unchanged_message(db, message)
     _ensure_no_transient_upload_references(text)
     parse_started = time.perf_counter()
     block_drafts = build_basic_render_blocks(text)
@@ -1028,6 +1032,7 @@ def _create_version(
     attachment_occurrences=None,
 ) -> MessageVersion:
     import time
+    _lock_unchanged_message(db, message)
     _ensure_no_transient_upload_references(text)
     parse_started = time.perf_counter()
     next_version_number = _next_version_number(db, message.id)
@@ -1097,9 +1102,25 @@ def _create_version(
     message.is_heavy = len(text) > 12000 or len(block_drafts) > 80
     conversation = db.get(Conversation, message.conversation_id)
     if conversation is not None:
-        conversation.offline_revision += 1
+        bump_offline_revision(conversation)
     db.flush()
     return version
+
+
+def _lock_unchanged_message(db: Session, message: Message) -> None:
+    """Serialize source writes without mistaking lineage for the current base."""
+    source = db.get(MessageVersion, message.current_version_id) if message.current_version_id else None
+    expected = (message.current_version_id, message.content_hash, message.is_deleted, source.display_text if source else None)
+    with db.no_autoflush:
+        current = db.query(Message.current_version_id, Message.content_hash, Message.is_deleted, MessageVersion.display_text).outerjoin(
+            MessageVersion, MessageVersion.id == Message.current_version_id
+        ).filter(
+            Message.id == message.id
+        # NO KEY UPDATE still serializes source writers, while allowing the
+        # search rebuild's FK KEY SHARE checks on other messages to proceed.
+        ).with_for_update(of=Message, key_share=True).one_or_none()
+    if current is None or tuple(current) != expected or current.is_deleted:
+        raise MessageEditError("Source changed while saving. Reload before trying again.", HTTPStatus.CONFLICT)
 
 
 def _sync_version_attachment_links(
@@ -1370,7 +1391,7 @@ def _refresh_conversation_stats(
     conversation.updated_at = utc_now()
     conversation.sort_time = conversation.updated_at
     if bump_revision:
-        conversation.offline_revision += 1
+        bump_offline_revision(conversation)
     db.flush()
 
 
@@ -1387,7 +1408,7 @@ def _touch_conversation_after_version_mutation(
     conversation.updated_at = utc_now()
     conversation.sort_time = conversation.updated_at
     if bump_revision:
-        conversation.offline_revision += 1
+        bump_offline_revision(conversation)
 
 
 def refresh_conversation_stats(

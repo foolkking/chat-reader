@@ -1,5 +1,45 @@
 # Administration contract
 
+## System noise publication recovery (local, 2026-10-07)
+
+The Root rule ledger uses an explicit publication base for publishing and
+withdrawal. It acknowledges committed state before background refresh, preserves
+drafts on conflict/response loss, and reads current state before allowing another
+submission. Public name/version comparisons and refreshed matcher history support
+an explicit choice. Read failures never enable cached publication actions.
+Personal grants and already admitted scans remain independent. API compatibility,
+locking, audit atomicity and the 20-second request bound are defined in the
+[cleanup contract](CONTENT_CLEANUP_CONTRACT.md#administrator-publication-recovery).
+
+## Feature policy recovery (local, 2026-10-07)
+
+Root `GET/PUT /api/admin/features` adds an opaque `revision`, derived from the
+canonical policy field values, independently of timestamps. PUT optionally accepts
+`base_revision`. PostgreSQL serializes writers and initial singleton creation;
+writers refresh ORM state under a row lock before comparing. A stale base returns
+409 `FEATURE_POLICY_CHANGED` without updating fields or recording a success audit.
+The committed response is captured inside the transaction. No migration is needed.
+
+Legacy requests that omit the revision keep partial-field behavior; they do not
+gain optimistic conflict protection. New UI writes send only edited fields and
+the displayed base revision. No-op or rolled-back default reads preserve the
+content revision. Success audits include changed field names only.
+
+The feature panel preserves its draft after conflict or an unconfirmed response.
+**Read latest policy** merges only locally edited fields into current server values,
+shows a comparison, and requires another explicit Save. A second remote change
+conflicts again. **Use server policy** explicitly discards the draft. When the
+submitted values already match the current policy, the UI reports that fact and
+does not write again; it does not infer which request produced those values.
+**Check save result** also only reads. Failed checks retain the input and retry.
+
+Reads and writes have a 20-second bound, unmount cancellation and authentication
+generation guards. Fields pause during recovery; read failure never enables a
+blind repeat write. Known denied/unavailable access removes the form. Comparison
+and result feedback receive keyboard focus, and Save follows the comparison.
+Locale changes do not reload/reset the draft. Existing capabilities refresh after
+acknowledgement; this does not change their scope or deployment safety ceilings.
+
 ## Account directory and access
 
 Root-only APIs hide administration from ordinary authenticated accounts with
@@ -17,6 +57,37 @@ search/filter/page/scroll. Approval, enable/disable, session revocation and pass
 assistance have explicit results. Password-reset links are temporary UI state,
 never stored in the browser or logs. Account deletion has a separate impact
 preview. Root cannot be deleted; all account-deletion confirmations are explicit.
+
+### Account action recovery (local, 2026-10-07)
+
+Status PATCH and approval/rejection POST retain their original `id`/`status`
+response and add `user`, the complete directory/detail representation captured
+within the write transaction before commit. It is returned only after commit
+succeeds. This preserves old callers and lets new clients acknowledge server
+state without reproducing approval/verification rules or waiting for another GET.
+No extra credential fields, permission changes or migration are introduced.
+
+The account panel cancels older detail/task reads before an action, accepts its
+response into the corresponding cache, and refreshes metadata independently of
+the action's busy state. Account metadata/actions and deletion task reads have a
+20-second request bound. Failed writes are not automatically resubmitted. Temporary
+read errors retain identifiable details but pause new account mutations until a
+successful read; 401/403/404 remove old detail, reset links and content panels.
+Authentication-generation and mounted guards fence action responses.
+
+A deletion confirmed by the administrator can be reattached with its original
+idempotency key after an unknown response, even when the account is already gone.
+The UI exposes **Check deletion result**, without showing the stale account or
+creating a new key. A failed check keeps the same recovery action and explicit
+error. Canonical completion still comes from the durable task result, never from
+the account's disappearance alone.
+
+Directory refresh keeps the selected query/filter. When the server total shrinks
+below the current offset, it loads the last valid page before restoring focus.
+Returning to a still-present account restores its row/scroll; a removed or newly
+filtered-out account falls back to an actual visible row. Directory and detail
+have explicit refresh actions. This is in-memory navigation, not a new persistent
+account cache. Dated evidence: [account recovery audit](../execution/ux-audit-admin-account-recovery-2026-10-07.md).
 
 ## Account deletion
 
@@ -69,6 +140,12 @@ development retains its legacy subject namespace. This adds no Skill editing or
 version feature (stage five remains paused).
 
 ## Invitations and audit inspection
+
+Registration policy above the invitation list uses changed-field writes, optional
+base revisions and local read/compare/check-result recovery. It does not reset the
+invitation form while reading policy. The
+[authentication contract](AUTHENTICATION_CONTRACT.md#registration-policy-recovery-local-2026-10-07)
+defines the compatibility, SMTP, transaction and account-admission boundaries.
 
 `GET /api/admin/access/invitations/page` accepts state
 `ALL|PENDING|USED|EXPIRED|REVOKED`, offset and limit (default 20, maximum 100).
@@ -124,8 +201,8 @@ target account; owner, Share and Offline branches retain their prior paths.
 
 ## Delivery boundary
 
-This account/content slice adds no migration; the current head remains
-`20261002_0042`. No production deployment is included. Help diagnostics and
-operational status remain subsequent stage-seven work. Stage five remains paused.
-Dated test results and remaining
-acceptance belong to the settings execution record, not this contract.
+The current migration and deployed baseline are recorded in `PROJECT_STATE.md`;
+the account recovery extension above is local and introduces no migration or
+deployment. Help/operational status and replacement-only Skill Bundles are covered
+by their current contracts; earlier stage scheduling is historical. Dated tests
+and remaining acceptance belong to execution records, not this contract.

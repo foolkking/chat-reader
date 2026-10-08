@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-08",
+  "status": "browser_acceptance_pending",
+  "checks": {
+    "web_lint": "passed",
+    "web_typecheck_nonincremental": "passed",
+    "web_build_one_worker_2048_mib": "passed",
+    "diff_check": "passed",
+    "playwright_discovery": "passed"
+  },
+  "browser": {
+    "discovered": 16,
+    "selection_recovery": 8,
+    "offline_failure_guidance": 8,
+    "executed": 0,
+    "screenshots_reviewed": 0,
+    "limitation": "Loopback Web start was rejected again after the user continued; tool reason: blocked by policy. No alternative launch attempted."
+  },
+  "isolated_fixture": {
+    "database": "fresh_disposable_browser_database",
+    "migration_head": "20261008_0050",
+    "api_mailbox_worker": "started_then_stopped",
+    "services_stopped": true
+  },
+  "prior_backend_evidence": {
+    "attachment_cases_passed": 5,
+    "rerun_in_this_follow_up": false
+  },
+  "new_schema_change": false,
+  "commit": false,
+  "ci": false,
+  "deployment": false,
+  "production_access": false,
+  "local_image_build": false
+}

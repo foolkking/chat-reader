@@ -65,6 +65,7 @@ def is_ignored(digests: set[str], revision_id, role: str, source: str, start: in
 
 
 def _exception_candidate(db: Session, scope: OwnershipScope, scan_id: uuid.UUID, occurrence_id: uuid.UUID):
+    from app.services.content_cleanup import source_fingerprint
     scan = db.query(Scan).filter(Scan.id == scan_id, scope.predicate(Scan)).with_for_update().first()
     if scan is None:
         raise LookupError("Noise scan not found.")
@@ -78,6 +79,7 @@ def _exception_candidate(db: Session, scope: OwnershipScope, scan_id: uuid.UUID,
     if conversation is None:
         raise LookupError("Conversation not found.")
     if (row.decision in {"APPLIED", "CONFLICT"} or not message or not version or message.is_deleted
+        or row.source_content_hash != source_fingerprint(version.display_text)
         or message.current_version_id != row.message_version_id or conversation.deleted_at or conversation.status != "active"):
         raise ValueError("Source changed. Rescan before saving an exception.")
     revision = db.get(Revision, row.rule_revision_id)
@@ -93,8 +95,9 @@ def preview_exception(db: Session, scope: OwnershipScope, scan_id: uuid.UUID, oc
     from app.services.cleanup_rule_access import personal_name
     row, rule, revision, config = _exception_candidate(db, scope, scan_id, occurrence_id)
     authority = {"purpose": "cleanup-exception", "owner": scope.owner_user_id, "occurrence": row.id, "version": row.message_version_id, **config}
+    saved = db.query(ExceptionRule.id).filter_by(owner_user_id=scope.owner_user_id, scope_digest=_digest(config)).first() is not None
     return {**config, "rule_name": personal_name(db, scope.owner_user_id, rule), "detector_id": rule.detector_id, "revision": revision.revision,
-        "preview_token": issue_preview(authority)}
+        "preview_token": issue_preview(authority), "exception_saved": saved, "decision": row.decision}
 
 
 def save_exception(db: Session, scope: OwnershipScope, scan_id: uuid.UUID, occurrence_id: uuid.UUID, token: str) -> ExceptionRule:
@@ -131,22 +134,27 @@ def rule_config(payload: dict) -> dict:
     return {**{key: payload[key] for key in CONFIG_FIELDS}, "name": payload["name"].strip(), "match_value": payload["match_value"].strip()}
 
 
-def rule_authority(scope: OwnershipScope, config: dict, rule_id=None, base_revision=None, base_revision_id=None) -> dict:
-    return {"purpose": "cleanup-rule-learning", "owner": scope.owner_user_id, "rule_id": rule_id, "base_revision": base_revision, "base_revision_id": base_revision_id, **config}
+def rule_authority(scope: OwnershipScope, config: dict, rule_id=None, base_revision=None, base_revision_id=None, base_edit_token=None) -> dict:
+    return {"purpose": "cleanup-rule-learning", "owner": scope.owner_user_id, "rule_id": rule_id, "base_revision": base_revision, "base_revision_id": base_revision_id,
+        **({"base_edit_token": base_edit_token} if base_edit_token is not None else {}), **config}
 
 
-def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None, base_revision=None, base_revision_id=None, conversation_id=None) -> dict:
+def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None, base_revision=None, base_revision_id=None, base_edit_token=None, conversation_id=None) -> dict:
     from app.services.content_cleanup import detect_occurrences, validate_literal_rule
     validate_literal_rule(config["match_value"], config["matcher_mode"])
     if not config["name"]:
         raise ValueError("A rule name is required.")
     if rule_id is not None:
-        from app.services.cleanup_rule_access import current_rule
+        from app.services.cleanup_rule_access import current_rule, personal_edit_token
         rule, latest, _ = current_rule(db, scope, rule_id)
         if rule.kind != "USER_LITERAL":
             raise LookupError("Noise rule not found.")
         if base_revision != latest.revision or (base_revision_id is not None and base_revision_id != latest.id):
             raise ValueError("Rule changed on another device. Reload the saved version; your draft can be kept.")
+        current_token = personal_edit_token(db, scope, rule, latest)
+        if base_edit_token is not None and base_edit_token != current_token:
+            raise ValueError("Rule changed on another device. Reload the saved version; your draft can be kept.")
+        base_edit_token = current_token
     if conversation_id and db.query(Conversation.id).filter(Conversation.id == conversation_id, scope.predicate(Conversation)).first() is None:
         raise LookupError("Conversation not found.")
     query = db.query(Message.id, Message.role, Message.current_version_id, func.length(MessageVersion.display_text)).join(
@@ -176,4 +184,5 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
     return {"configuration": config, "scanned_messages": scanned, "matches": matches, "protected_matches": protected,
         "skipped_messages": skipped, "limited": len(rows) > TRIAL_MESSAGES or skipped > 0,
         "message_limit": TRIAL_MESSAGES, "character_limit": TRIAL_CHARACTERS, "message_character_limit": TRIAL_MESSAGE_CHARACTERS,
-        "samples": samples, "preview_token": issue_preview(rule_authority(scope, config, rule_id, base_revision, base_revision_id))}
+        "samples": samples, "base_edit_token": base_edit_token,
+        "preview_token": issue_preview(rule_authority(scope, config, rule_id, base_revision, base_revision_id, base_edit_token))}

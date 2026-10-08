@@ -1,6 +1,8 @@
 "use client";
 import { ExportArtifactDelivery } from "../features/exporting/export-artifact-delivery";
 import { releaseExportScope } from "../lib/export-usage";
+import { archiveRequestSignal, latestArchiveTask } from "../lib/archive-task-state";
+import { archiveUploadRecovery, archiveUploadRecoveryLabel } from "../lib/archive-recovery";
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Download, FileArchive, RefreshCw, Upload } from "lucide-react";
@@ -27,32 +29,39 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
   const [notice, setNotice] = useState("");
   const [mappingBusy, setMappingBusy] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null), uploadHandle = useRef<{ cancel: () => void } | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null), focusFile = useRef(false);
   const requestKeys = useRef({ upload: "", backup: "" }), mounted = useRef(true), handled = useRef(new Set<string>());
   const capabilities = useQuery({ queryKey: ["system-archive-capabilities"], queryFn: getSystemArchiveCapabilities, enabled: online, retry: false });
   const history = useInfiniteQuery({ queryKey: ["system-archive-tasks"], initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => getSystemArchiveTasks(pageParam), getNextPageParam: (last) => last.length === 30 ? last[last.length - 1].job_id : undefined,
     enabled: online, retry: false, refetchInterval: (query) => query.state.data?.pages.flat().some(active) ? 1500 : 30_000, refetchIntervalInBackground: false });
-  const selectedQuery = useQuery({ queryKey: ["task", selectedId], queryFn: () => getTask(selectedId!), enabled: online && !!selectedId, retry: false, refetchInterval: (query) => active(query.state.data) ? 1500 : false });
+  const selectedQuery = useQuery({ queryKey: ["task", selectedId], queryFn: ({ signal }) => getTask(selectedId!, archiveRequestSignal(signal)), enabled: online && !!selectedId, retry: false, refetchInterval: (query) => active(query.state.data) ? 1500 : false });
   const tasks = history.data?.pages.flat() ?? [];
   const fromHistory = tasks.find((task) => task.job_id === selectedId);
-  const selected = selectedQuery.data?.status === "committed" && fromHistory?.status !== "committed" ? selectedQuery.data : fromHistory ?? selectedQuery.data;
+  const selected = latestArchiveTask(fromHistory, selectedQuery.data, history.dataUpdatedAt, selectedQuery.dataUpdatedAt);
   const preview = selected?.job_type === "system_archive_preflight" && selected.status === "committed" ? selected : null;
   const confirmed = preview ? tasks.find((task) => task.job_type === "system_archive_restore" && task.result.parent_task_id === preview.job_id && task.status !== "cancelled") : undefined;
   const available = (task: BackgroundTaskRead) => task.result.artifact_available !== false && Date.parse(String(task.result.expires_at)) > Date.now();
   const limit = capabilities.data?.maximum_upload_bytes;
+  const recovery = archiveUploadRecovery(selected);
 
   useEffect(() => { const update = () => setOnline(navigator.onLine); update(); window.addEventListener("online", update); window.addEventListener("offline", update); return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); }; }, []);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; uploadHandle.current?.cancel(); }; }, []);
   useLayoutEffect(() => { onDirtyChange?.(busy || mappingBusy || !!file); }, [busy, mappingBusy, file, onDirtyChange]);
+  useLayoutEffect(() => {
+    if (!selectedId && mode === "restore" && focusFile.current) {
+      focusFile.current = false; fileInput.current?.focus(); fileInput.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedId, mode]);
   useEffect(() => {
-    for (const task of history.data?.pages.flat() ?? []) {
+    for (const task of [...(selected ? [selected] : []), ...(history.data?.pages.flat() ?? [])]) {
       if (task.job_type !== "system_archive_restore" || task.status !== "committed" || handled.current.has(task.job_id)) continue;
       handled.current.add(task.job_id);
       for (const key of ["projects", "conversations", "sidebar-conversations", "project-conversations", "offline-catalog", "admin-users", "account-capabilities"]) void client.invalidateQueries({ queryKey: [key] });
       if (task.result.preferences_imported) void retryPreferenceSync();
       void client.invalidateQueries({ queryKey: ["system-archive-capabilities"] });
     }
-  }, [client, history.data, retryPreferenceSync]);
+  }, [client, history.data, selected, retryPreferenceSync]);
 
   async function refresh() { await Promise.all([client.invalidateQueries({ queryKey: ["system-archive-accounts"] }), client.invalidateQueries({ queryKey: ["system-archive-capabilities"] }), client.invalidateQueries({ queryKey: ["system-archive-tasks"] }), client.invalidateQueries({ queryKey: ["active-tasks"] }), client.invalidateQueries({ queryKey: ["task"] })]); }
   function openTask(task: BackgroundTaskRead) {
@@ -63,7 +72,7 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
   }
   async function perform(work: () => Promise<void>) {
     if (busy || mappingBusy) return; setBusy(true); setError(""); setNotice("");
-    try { await work(); await refresh(); }
+    try { await work(); void refresh(); }
     catch (failure) {
       if (mounted.current) {
         if (failure instanceof DOMException && failure.name === "AbortError") setNotice(zh ? "上传已停止，文件选择已保留。已登记的任务可从下方记录查看。" : "Upload stopped; your file selection is retained. Any accepted task appears in the records below.");
@@ -100,6 +109,11 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
     releaseExportScope("backup:system");
     setMode(next); setSelectedId(null); setFile(null); setError("");
   }
+  function replaceUpload() {
+    if (busy || mappingBusy || !online) return;
+    focusFile.current = true; requestKeys.current.upload = "";
+    setFile(null); setError(""); setNotice(""); setMode("restore"); setSelectedId(null);
+  }
 
   return <div className="grid min-w-0 gap-5">
 
@@ -117,15 +131,16 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
       </> : null}
       {!selectedId && mode === "restore" ? <>
         <p className="text-sm leading-6 text-secondary">{zh ? "先上传并校验归档，再核对内容与账户归属。确认后仅在空实例中恢复；现有管理员身份和凭据保留。" : "Upload and validate the archive, then review its contents and account ownership. Restoration requires an empty instance and retains the current administrator identity and credentials."}</p>
-        <div className="grid gap-3 rounded-lg border border-dashed border-ui bg-surface p-4"><label htmlFor="system-archive-file" className="text-sm font-medium text-primary">{zh ? "系统归档文件 (.cr)" : "System archive file (.cr)"}</label><input id="system-archive-file" type="file" accept=".cr" disabled={busy || !online} className="min-h-11 max-w-full text-sm text-secondary file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:px-3" onChange={(event) => { setFile(event.target.files?.[0] ?? null); requestKeys.current.upload = ""; setError(""); }} /><p className="text-xs leading-5 text-secondary">{limit ? (zh ? `上传上限 ${bytes(limit)}。预检结果保留 24 小时。` : `Upload limit ${bytes(limit)}. The preview remains available for 24 hours.`) : (zh ? "正在读取上传限制…" : "Loading upload limits…")}</p></div>
+        <div className="grid gap-3 rounded-lg border border-dashed border-ui bg-surface p-4"><label htmlFor="system-archive-file" className="text-sm font-medium text-primary">{zh ? "系统归档文件 (.cr)" : "System archive file (.cr)"}</label><input ref={fileInput} id="system-archive-file" type="file" accept=".cr" disabled={busy || !online} className="min-h-11 max-w-full text-sm text-secondary file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:px-3" onChange={(event) => { setFile(event.target.files?.[0] ?? null); requestKeys.current.upload = ""; setError(""); }} /><p className="text-xs leading-5 text-secondary">{limit ? (zh ? `上传上限 ${bytes(limit)}。预检结果保留 24 小时。` : `Upload limit ${bytes(limit)}. The preview remains available for 24 hours.`) : (zh ? "正在读取上传限制…" : "Loading upload limits…")}</p></div>
         {uploadProgress !== null ? <div role="status" className="grid gap-2 text-sm text-secondary"><p>{uploadProgress === 100 ? (zh ? "上传完成，正在登记预检任务…" : "Upload complete. Registering preview task…") : (zh ? `正在上传 ${uploadProgress}%` : `Uploading ${uploadProgress}%`)}</p><progress max={100} value={uploadProgress} className="h-2 w-full accent-[var(--accent)]" /><button type="button" className={button} onClick={() => uploadHandle.current?.cancel()}>{zh ? "取消上传" : "Cancel upload"}</button></div> : <button type="button" disabled={busy || !online || !file || !limit} onClick={() => void upload()} className="btn-primary flex min-h-11 items-center justify-center gap-2 px-4 text-sm"><Upload aria-hidden="true" className="h-4 w-4" />{zh ? "上传并预检" : "Upload & preview"}</button>}
       </> : null}
       {selectedId && !selected ? <><p role={selectedQuery.isError ? "alert" : "status"} className="text-sm text-secondary">{selectedQuery.isError ? (zh ? "无法读取任务，请刷新重试。" : "Unable to load this task. Refresh to retry.") : (zh ? "正在读取任务…" : "Loading task…")}</p><button type="button" className={button} onClick={() => void refresh()}>{zh ? "刷新任务" : "Refresh task"}</button></> : null}
       {selected ? <>
         <ArchiveProgress task={selected} zh={zh} />
         {active(selected) ? <p className="text-xs leading-5 text-secondary">{zh ? "可以关闭此窗口，稍后从任务中心或下方记录继续。" : "You can close this panel and return through Tasks or the records below."}</p> : null}
-        {selected.cancellable ? <button type="button" disabled={busy || !online || selected.status === "cancelling"} className={button} onClick={() => void perform(async () => { await cancelTask(selected.job_id); })}>{selected.status === "cancelling" ? (zh ? "正在取消…" : "Cancelling…") : (zh ? "取消任务" : "Cancel task")}</button> : null}
-        {selected.status === "failed" ? <><p role="alert" className="break-words text-sm text-[var(--danger)]">{archiveError(selected.error_message ?? "", zh)}</p><button type="button" disabled={busy || !online} className={button} onClick={() => void perform(async () => { await retryTask(selected.job_id); })}>{zh ? "重试任务" : "Retry task"}</button></> : null}
+        {selectedQuery.isError ? <div role="alert" className="grid gap-2 text-sm text-secondary"><p>{zh ? "暂时无法刷新任务详情。" : "Task details could not be refreshed."}</p><button type="button" className={button} disabled={busy || !online || selectedQuery.isFetching} onClick={() => void selectedQuery.refetch()}>{zh ? "重新读取任务状态" : "Reload task status"}</button></div> : null}
+        {selected.cancellable ? <button type="button" disabled={busy || !online || selected.status === "cancelling"} className={button} onClick={() => void perform(async () => { const task = await cancelTask(selected.job_id, archiveRequestSignal()); client.setQueryData(["task", task.job_id], task); })}>{selected.status === "cancelling" ? (zh ? "正在取消…" : "Cancelling…") : (zh ? "取消任务" : "Cancel task")}</button> : null}
+        {selected.status === "failed" ? <><p role="alert" className="break-words text-sm text-[var(--danger)]">{archiveError(selected.error_message ?? "", zh)}</p>{recovery ? <button type="button" disabled={busy || !online || mappingBusy} className="btn-primary min-h-11 px-4 text-sm" onClick={replaceUpload}>{archiveUploadRecoveryLabel(recovery, zh)}</button> : <button type="button" disabled={busy || !online} className={button} onClick={() => void perform(async () => { const task = await retryTask(selected.job_id, archiveRequestSignal()); client.setQueryData(["task", task.job_id], task); })}>{zh ? "重试任务" : "Retry task"}</button>}</> : null}
         {selected.status === "failed" && selected.job_type === "system_archive_restore" && typeof selected.result.parent_task_id === "string" ? <button type="button" disabled={busy || !online} className={button} onClick={() => setSelectedId(String(selected.result.parent_task_id))}>{zh ? "返回预检，调整账户归属" : "Review preview and account ownership"}</button> : null}
         {selected.status === "committed" && selected.job_type === "system_archive_export" ? <>
           {Number(selected.result.missing_attachments) > 0 ? <p role="status" className="text-sm text-[var(--warning)]">{zh ? `有 ${selected.result.missing_attachments} 个附件缺少文件，这份归档不完整。` : `${selected.result.missing_attachments} attachments have no file. This archive is incomplete.`}</p> : null}
@@ -134,7 +149,7 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
         </> : null}
         {preview ? <>
           <ArchivePreview task={preview} zh={zh} />
-          {confirmed ? <button type="button" className={button} onClick={() => openTask(confirmed)}>{zh ? "查看已确认的恢复任务" : "View the confirmed restore task"}</button> : null}{(!confirmed || confirmed.status === "failed") && available(preview) ? <SystemArchiveOwnership key={preview.job_id} preview={preview} online={online} busy={busy} canRestore={capabilities.data?.empty_instance === true} onRestore={restore} onBusyChange={setMappingBusy} /> : !available(preview) ? <p role="status" className="text-sm text-secondary">{zh ? "预检已过期或上传文件已移除，请重新上传。" : "The preview expired or its upload was removed. Upload the file again."}</p> : null}
+          {confirmed ? <button type="button" className={button} onClick={() => openTask(confirmed)}>{zh ? "查看已确认的恢复任务" : "View the confirmed restore task"}</button> : null}{(!confirmed || confirmed.status === "failed") && available(preview) ? <SystemArchiveOwnership key={preview.job_id} preview={preview} online={online} busy={busy} canRestore={capabilities.data?.empty_instance === true} onRestore={restore} onBusyChange={setMappingBusy} /> : !available(preview) ? <><p role="status" className="text-sm text-secondary">{zh ? "预检已过期或上传文件已移除，请重新上传。" : "The preview expired or its upload was removed. Upload the file again."}</p><button type="button" disabled={busy || !online || mappingBusy} className="btn-primary min-h-11 px-4 text-sm" onClick={replaceUpload}>{archiveUploadRecoveryLabel("upload", zh)}</button></> : null}
 
         </> : null}
         {selected.status === "committed" && selected.job_type === "system_archive_restore" ? <>
@@ -152,8 +167,8 @@ export function AdminSystemPanel({ onDirtyChange, initialTaskId }: { onDirtyChan
     <section className="grid gap-2 border-t border-ui pt-4" aria-label={zh ? "备份与恢复记录" : "Backup and restore records"}>
       <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold text-primary">{zh ? "备份与恢复记录" : "Backup and restore records"}</h3><button type="button" aria-label={zh ? "刷新归档记录" : "Refresh archive records"} disabled={busy || !online || history.isFetching} className="btn-ghost flex h-11 w-11 items-center justify-center" onClick={() => void refresh()}><RefreshCw aria-hidden="true" className="h-4 w-4" /></button></div>
       {history.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{zh ? "读取记录失败，请刷新重试。" : "Records could not be loaded. Refresh to retry."}</p> : null}
-      {history.isPending && online ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取记录…" : "Loading records…"}</p> : !tasks.length ? <p className="py-3 text-sm leading-6 text-secondary">{zh ? "还没有归档任务。生成一份备份，或上传系统归档开始恢复。" : "No archive tasks yet. Create a backup or upload a system archive to get started."}</p> : null}
-      <div className="divide-y divide-[var(--border)]">{tasks.map((task) => <button type="button" key={task.job_id} disabled={busy || mappingBusy || !!file} onClick={() => openTask(task)} className="flex min-h-16 w-full items-center gap-3 px-1 py-3 text-left hover:bg-subtle"><FileArchive aria-hidden="true" className="h-4 w-4 shrink-0 text-secondary" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium text-primary">{archiveTaskLabel(task, zh)}</span><span className="mt-1 block text-xs text-secondary">{task.queued_at ? new Date(task.queued_at).toLocaleString(resolvedLocale) : ""}</span></span><span className="shrink-0 text-xs text-secondary">{archiveStatus(task, zh)}{active(task) ? ` ${task.progress}%` : ""}</span></button>)}</div>
+      {history.isPending && online ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取记录…" : "Loading records…"}</p> : history.isSuccess && online && !tasks.length ? <p className="py-3 text-sm leading-6 text-secondary">{zh ? "还没有归档任务。生成一份备份，或上传系统归档开始恢复。" : "No archive tasks yet. Create a backup or upload a system archive to get started."}</p> : null}
+      <div className="divide-y divide-[var(--border)]">{tasks.map(item => item.job_id === selected?.job_id ? selected : item).map((task) => <button type="button" key={task.job_id} disabled={busy || mappingBusy || !!file} onClick={() => openTask(task)} className="flex min-h-16 w-full items-center gap-3 px-1 py-3 text-left hover:bg-subtle"><FileArchive aria-hidden="true" className="h-4 w-4 shrink-0 text-secondary" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium text-primary">{archiveTaskLabel(task, zh)}</span><span className="mt-1 block text-xs text-secondary">{task.queued_at ? new Date(task.queued_at).toLocaleString(resolvedLocale) : ""}</span></span><span className="shrink-0 text-xs text-secondary">{archiveStatus(task, zh)}{active(task) ? ` ${task.progress}%` : ""}</span></button>)}</div>
       {history.hasNextPage ? <button type="button" disabled={busy || history.isFetchingNextPage || !online} onClick={() => void history.fetchNextPage()} className={button}>{zh ? "加载更早记录" : "Load earlier records"}</button> : null}
     </section>
   </div>;

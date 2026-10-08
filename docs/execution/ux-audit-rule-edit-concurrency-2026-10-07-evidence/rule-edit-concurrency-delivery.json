@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "rule-edit-concurrency-delivery",
+  "status": "passed",
+  "started_at": "2026-10-07T12:40:42.257Z",
+  "test_count": 51,
+  "completed_at": "2026-10-07T12:44:53.441Z",
+  "duration_ms": 254103,
+  "result_counts": {
+    "passed": 51,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

@@ -8,6 +8,7 @@ from app.models.annotation import ConversationAnnotation
 from app.models.attachment import Attachment, MessageVersionAttachment
 from app.models.conversation import Conversation
 from app.models.heading import Heading
+from app.services.conversation_revision import bump_offline_revision
 from app.models.import_record import utc_now
 from app.models.message import Message
 from app.models.message_version import MessageVersion
@@ -951,7 +952,7 @@ def _update_target_stats(
     target.content_hash = content_hash("\n".join(text_parts)) if text_parts else None
     target.updated_at = now
     target.sort_time = now
-    target.offline_revision += 1
+    bump_offline_revision(target)
 
 
 def _batches(items: Sequence, size: int):

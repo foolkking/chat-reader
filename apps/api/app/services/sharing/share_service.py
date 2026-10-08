@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 import secrets
 import uuid
 from dataclasses import dataclass
@@ -32,9 +33,10 @@ from app.services.feature_policies import get_feature_policy
 
 
 class ShareError(ValueError):
-    def __init__(self, message: str, status_code: int = HTTPStatus.BAD_REQUEST) -> None:
+    def __init__(self, message: str, status_code: int = HTTPStatus.BAD_REQUEST, *, code: str | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.code = code
 
 
 SHARE_UNLOCK_COOKIE_NAME = "chat_reader_share_unlock"
@@ -433,6 +435,29 @@ def revoke_share(
     return share
 
 
+def get_owned_share(db: Session, share_id: uuid.UUID, ownership_scope: OwnershipScope) -> Share:
+    share = db.query(Share).join(Conversation, Conversation.id == Share.conversation_id).filter(
+        Share.id == share_id, ownership_scope.predicate(Conversation)
+    ).populate_existing().first()
+    if share is None:
+        raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    return share
+
+
+def share_settings_revision(share: Share) -> str:
+    # Visitor counters/timestamps are deliberately excluded. Passwords and
+    # password hashes never leave the server; its version fences password edits.
+    values = {name: getattr(share, name) for name in (
+        "title", "description", "scope", "selected_message_ids", "include_toc",
+        "include_metadata", "include_description", "include_annotations", "include_notebook",
+        "allow_export", "theme", "locale", "password_version",
+    )}
+    values.update(id=str(share.id), password_required=share.password_hash is not None,
+                  expires_at=_as_utc(share.expires_at).isoformat() if share.expires_at else None,
+                  revoked_at=_as_utc(share.revoked_at).isoformat() if share.revoked_at else None)
+    return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
 def update_share(
     db: Session,
     share_id: uuid.UUID,
@@ -446,6 +471,7 @@ def update_share(
         db.query(Share)
         .join(Conversation, Conversation.id == Share.conversation_id)
         .filter(Share.id == share_id, ownership_scope.predicate(Conversation))
+        .populate_existing()
         .with_for_update(of=Share)
         .first()
     )
@@ -454,6 +480,8 @@ def update_share(
     provided_fields = payload.model_fields_set
     if share.revoked_at is not None:
         raise ShareError("Share has been revoked.", HTTPStatus.GONE)
+    if payload.base_revision is not None and not hmac.compare_digest(payload.base_revision, share_settings_revision(share)):
+        raise ShareError("Share settings changed. Review the latest settings before saving.", HTTPStatus.CONFLICT, code="SHARE_SETTINGS_CHANGED")
     if "expires_at" in provided_fields and payload.expires_at is not None and _as_utc(payload.expires_at) <= _utc_now():
         raise ShareError("Share expiry must be in the future.")
     if "title" in provided_fields:
@@ -535,6 +563,7 @@ def share_read(share: Share) -> ShareRead:
         updated_at=share.updated_at,
         share_url=metadata.get("share_url") if isinstance(metadata.get("share_url"), str) else None,
         password_required=share.password_hash is not None,
+        settings_revision=share_settings_revision(share),
     )
 
 

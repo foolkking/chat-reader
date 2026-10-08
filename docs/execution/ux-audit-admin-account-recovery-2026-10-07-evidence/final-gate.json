@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "admin-account-delivery",
+  "status": "passed",
+  "started_at": "2026-10-06T20:50:43.258Z",
+  "test_count": 14,
+  "completed_at": "2026-10-06T20:52:42.441Z",
+  "duration_ms": 121802,
+  "result_counts": {
+    "passed": 14,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

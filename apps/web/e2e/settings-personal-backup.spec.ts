@@ -71,7 +71,7 @@ test("personal archive recovers lost upload response, keyboard navigation and ta
   } finally { await context.close(); await admin.dispose(); }
 });
 
-test("personal archive rejects corrupt file and retry creates no restore", async ({ browser, playwright, baseURL }) => {
+test("personal archive rejects corrupt file and replacement creates no restore", async ({ browser, playwright, baseURL }) => {
   const base = baseURL!, headers = { Origin: base }, admin = await settingsAdmin(playwright.request, base);
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "en-US" });
   try {
@@ -85,8 +85,10 @@ test("personal archive rejects corrupt file and retry creates no restore", async
     await panel.getByRole("button", { name: "Upload & preview" }).click();
     await expect(panel.getByRole("alert")).toContainText("malformed");
     await expect(panel.getByRole("button", { name: "Restore these materials" })).toHaveCount(0);
-    await panel.getByRole("button", { name: "Retry task" }).click();
-    await expect(panel.getByRole("alert")).toContainText("malformed");
+    await expect(panel.getByRole("button", { name: "Retry task", exact: true })).toHaveCount(0);
+    await panel.getByRole("button", { name: "Choose another archive", exact: true }).click();
+    await expect(panel.getByLabel("Personal archive file (.cr)")).toBeFocused();
+    await expect(panel.getByLabel("Personal archive file (.cr)")).toHaveValue("");
     const tasks = await (await context.request.get(`${base}/api/me/archive/tasks`)).json();
     expect(tasks.filter((item: { job_type: string }) => item.job_type === "personal_archive_restore")).toHaveLength(0);
     expect(tasks).toHaveLength(1);

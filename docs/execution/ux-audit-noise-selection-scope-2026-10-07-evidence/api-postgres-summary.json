@@ -1,0 +1,36 @@
+{
+  "api-scope": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_access",
+      "tests.test_cleanup_group_search",
+      "tests.test_cleanup_selection_summary"
+    ]
+  },
+  "api-final": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_access",
+      "tests.test_cleanup_group_search",
+      "tests.test_cleanup_preview_ranges",
+      "tests.test_cleanup_safety",
+      "tests.test_cleanup_selection_summary"
+    ]
+  },
+  "postgres": {
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_postgres",
+      "tests.test_cleanup_rule_postgres"
+    ]
+  }
+}

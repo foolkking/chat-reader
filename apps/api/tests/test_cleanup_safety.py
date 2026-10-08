@@ -153,6 +153,9 @@ def test_filtered_selection_covers_all_pages_and_preview_guards_changes(client):
     selected = client.patch(f"/api/content-cleanup/scans/{scan_id}/decisions/filter", json={"decision": "DELETE", "all_matching": True, "conversation_id": str(conversation_id)})
     assert selected.status_code == 200, selected.text
     assert selected.json()["matched"] == 125
+    snapshot = selected.json()["scan"]
+    assert snapshot == client.get(f"/api/content-cleanup/scans/{scan_id}").json()
+    assert snapshot["delete_count"] == 125 and snapshot["keep_count"] == 1
     second_page = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences?offset=100&selected_only=true&{filtered}").json()
     assert len(second_page) == 25 and all(item["decision"] == "DELETE" for item in second_page)
     preview = client.get(f"/api/content-cleanup/scans/{scan_id}/preview").json()
@@ -160,7 +163,10 @@ def test_filtered_selection_covers_all_pages_and_preview_guards_changes(client):
     assert preview["items"][0]["before"] == text
     assert preview["items"][0]["after"] == text.replace(MARKER, "")
     assert preview["items"][0]["conflict"] is False
-    assert client.patch(f"/api/content-cleanup/scans/{scan_id}/decisions", json={"decisions": [{"occurrence_id": first_page[0]["id"], "decision": "KEEP"}]}).status_code == 200
+    saved = client.patch(f"/api/content-cleanup/scans/{scan_id}/decisions", json={"decisions": [{"occurrence_id": first_page[0]["id"], "decision": "KEEP"}]})
+    assert saved.status_code == 200
+    assert saved.json() == client.get(f"/api/content-cleanup/scans/{scan_id}").json()
+    assert saved.json()["delete_count"] == 124
     stale = client.post(f"/api/content-cleanup/scans/{scan_id}/apply", json={"preview_token": preview["preview_token"]})
     assert stale.status_code == 409
     current = client.get(f"/api/content-cleanup/scans/{scan_id}/preview").json()

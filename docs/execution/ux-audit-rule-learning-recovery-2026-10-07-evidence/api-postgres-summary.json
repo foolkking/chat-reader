@@ -1,0 +1,138 @@
+{
+  "api_initial": {
+    "count": 11,
+    "passed": 5,
+    "failed": 6,
+    "skipped": 0,
+    "cases": [
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_exception_is_explicit_scoped_persistent_and_reversible"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_exception_revision_role_and_boundary_are_not_generalized"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_exception_rejects_source_changed_since_preview"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_legacy_protected_rows_do_not_break_cross_page_selection"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_rule_trial_never_writes_and_requires_bound_confirmation"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_rule_edit_keeps_old_revision_clears_role_and_checks_base"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_trial_limits_are_reported_and_skip_oversized_messages"
+      },
+      {
+        "suite": "tests.test_cleanup_rule_grants",
+        "name": "test_rule_learning_publication_withdrawal_and_personal_isolation"
+      },
+      {
+        "suite": "tests.test_cleanup_rule_grants",
+        "name": "test_same_text_with_different_boundary_role_or_case_is_not_merged"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_learning_and_personal_exceptions_cannot_cross_accounts"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_review_groups_previews_and_bulk_decisions_are_owner_scoped"
+      }
+    ]
+  },
+  "api_final": {
+    "count": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_exception_is_explicit_scoped_persistent_and_reversible"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_exception_revision_role_and_boundary_are_not_generalized"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_exception_rejects_source_changed_since_preview"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_legacy_protected_rows_do_not_break_cross_page_selection"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_rule_trial_never_writes_and_requires_bound_confirmation"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_rule_edit_keeps_old_revision_clears_role_and_checks_base"
+      },
+      {
+        "suite": "tests.test_cleanup_learning",
+        "name": "test_trial_limits_are_reported_and_skip_oversized_messages"
+      },
+      {
+        "suite": "tests.test_cleanup_rule_grants",
+        "name": "test_rule_learning_publication_withdrawal_and_personal_isolation"
+      },
+      {
+        "suite": "tests.test_cleanup_rule_grants",
+        "name": "test_same_text_with_different_boundary_role_or_case_is_not_merged"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_learning_and_personal_exceptions_cannot_cross_accounts"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_review_groups_previews_and_bulk_decisions_are_owner_scoped"
+      }
+    ]
+  },
+  "postgres": {
+    "count": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "suite": "tests.test_cleanup_rule_postgres",
+        "name": "test_equivalent_learning_serializes_and_author_deletion_preserves_others"
+      },
+      {
+        "suite": "tests.test_cleanup_rule_postgres",
+        "name": "test_migration_aliases_keep_old_revisions_exceptions_and_distinct_scopes"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_concurrent_apply_creates_one_version"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_migration_resets_legacy_automatic_selection_without_changing_content"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_exception_migration_foreign_keys_and_concurrent_confirmation"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_concurrent_rule_edits_keep_one_new_revision_and_reject_stale_base"
+      }
+    ]
+  }
+}

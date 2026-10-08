@@ -145,6 +145,23 @@ test("format conversion respects the selected Bundle and exposes loading failure
     await expect(dialog).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toBeFocused();
     await expect(page.getByRole("dialog", { name: "Import data", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    const skills = await openSkills(page, 375);
+    await skills.getByRole("button", { name: "Format conversion", exact: true }).click();
+    const personal = skills.locator("article").filter({ hasText: "My selected normalizer" });
+    await personal.getByLabel("Replace Skill ZIP / Markdown").setInputFiles({ name: "updated-normalizer.md", mimeType: "text/markdown", buffer: Buffer.from("# Updated synthetic normalizer\nKeep this new instruction.") });
+    await personal.getByRole("button", { name: "Replace", exact: true }).click();
+    await expect(personal.getByRole("status")).toHaveText("Replaced");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Import data", exact: true }).click();
+    // Reopening resumes the existing failed import; it does not need another upload.
+    await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Use format conversion Skill", exact: true }).click();
+    const updatedDialog = page.getByRole("dialog", { name: "Use format conversion Skill", exact: true });
+    const updatedLink = updatedDialog.getByRole("link", { name: /Download skill/ });
+    await expect(updatedLink).toHaveAttribute("href", `/api/skills/${skill.id}/bundle?revision=2`);
+    const updatedBytes = unzipSync(await (await page.request.get((await updatedLink.getAttribute("href"))!)).body());
+    expect(new TextDecoder().decode(updatedBytes["personal-skill/references/legacy-instructions.md"])).toBe("# Updated synthetic normalizer\nKeep this new instruction.");
   } finally {
     await page.unroute("**/api/skills/resolve?**");
     await page.request.delete(`/api/skills/${skill.id}`, { headers: { Origin: baseURL! } });

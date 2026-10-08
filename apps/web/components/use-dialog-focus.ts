@@ -102,8 +102,18 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
       document.removeEventListener("keydown", onKeyDown);
       window.setTimeout(() => {
         const logicalTarget = restoreFocusRef.current?.();
-        if (logicalTarget?.isConnected) logicalTarget.focus({ preventScroll: true });
-        else if (previous?.isConnected) previous.focus({ preventScroll: true });
+        const target = logicalTarget?.isConnected ? logicalTarget : previous?.isConnected ? previous : null;
+        const topDialog = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
+          .filter((item) => item.getClientRects().length > 0)
+          .sort(compareModalLayers).at(-1);
+        // A newly opened modal owns focus. A closing sibling's delayed restore
+        // must not send it back to the page underneath. Nested confirmations may
+        // still restore their opener inside the remaining top modal.
+        if (topDialog && (!target || !topDialog.contains(target))) {
+          if (!topDialog.contains(document.activeElement)) initialFocusable(topDialog)?.focus({ preventScroll: true });
+          return;
+        }
+        if (target) target.focus({ preventScroll: true });
         else focusFallback();
       }, 0);
     };

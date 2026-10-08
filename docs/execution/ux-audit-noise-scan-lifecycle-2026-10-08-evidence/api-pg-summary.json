@@ -1,0 +1,53 @@
+{
+  "runs": [
+    {
+      "run": "api-baseline",
+      "tests": 2,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 0
+    },
+    {
+      "run": "api-first",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 11
+    },
+    {
+      "run": "api",
+      "tests": 37,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 37
+    },
+    {
+      "run": "worker",
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 49
+    },
+    {
+      "run": "api-import-retention",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 9
+    },
+    {
+      "run": "pg",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 9
+    }
+  ],
+  "distinct_final_api_cases": 79
+}

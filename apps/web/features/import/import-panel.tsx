@@ -13,6 +13,7 @@ import { SupportLimitAction } from "../../components/support-limit-action";
 import { ImportPreviewCard } from "./import-preview-card";
 import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
 import { FormatConversionGuide } from "./format-conversion-guide";
+import { ImportNoiseReview } from "./import-noise-review";
 
 type ImportMode = "adaptive" | "archive";
 const ACTIVE_SESSION_KEY = "chat-reader:adaptive-import-session";
@@ -246,6 +247,7 @@ function ImportCompletionSummary({
         <p className="mt-1 text-secondary">{tr("已提交 {0} 个对话，共 {1} 条消息。", result.conversation_count, result.message_count)}</p>
       </div>
       {result.warnings.length ? <div className="border-l-2 border-[var(--warning)] pl-3 text-xs text-secondary"><p className="font-medium text-primary">{tr("导入提示")}</p><ul className="mt-1 list-disc space-y-1 pl-4">{result.warnings.slice(0, 4).map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul></div> : null}
+      <ImportNoiseReview importId={result.import_id} />
       {visibleIds.length ? <div className="space-y-1"><p className="text-xs font-medium text-secondary">{multiple ? tr("已导入的对话") : tr("已导入对话")}</p><div className="flex flex-wrap gap-x-3 gap-y-1">{visibleIds.map((conversationId, index) => <button key={conversationId} type="button" onClick={() => onOpenFirst(conversationId)} className="text-xs text-accent underline underline-offset-2 hover:text-primary">{tr("打开第 {0} 条", index + 1)}</button>)}</div>{result.conversation_ids.length > visibleIds.length ? <p className="text-xs text-secondary">{tr("另有")}{result.conversation_ids.length - visibleIds.length} {tr("个对话可在资料库中查看。")}</p> : null}</div> : null}
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {multiple ? <Link href="/" onClick={onClose} className="btn-primary min-h-9 px-3 text-sm font-medium">{tr("查看导入的对话")}</Link> : firstConversationId ? <button type="button" onClick={() => onOpenFirst(firstConversationId)} className="btn-primary min-h-9 px-3 text-sm font-medium">{tr("打开对话")}</button> : null}

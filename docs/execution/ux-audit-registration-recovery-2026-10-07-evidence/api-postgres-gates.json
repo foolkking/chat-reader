@@ -1,0 +1,41 @@
+{
+  "gates": [
+    {
+      "gate": "api-first",
+      "tests": 20,
+      "passed": 18,
+      "failed": 2,
+      "skipped": 0
+    },
+    {
+      "gate": "api-final",
+      "tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "collection_failure": "Missing requested test_admin_access.py; no tests executed. Correct suite ran separately."
+    },
+    {
+      "gate": "api-regressions",
+      "tests": 62,
+      "passed": 61,
+      "failed": 1,
+      "skipped": 0
+    },
+    {
+      "gate": "api-corrected",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "gate": "pg-first",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "distinct_passing_api_cases": 62
+}

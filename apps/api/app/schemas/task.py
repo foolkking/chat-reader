@@ -1,7 +1,15 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+
+class OfflineDownloadTarget(BaseModel):
+    scope: Literal["conversation", "project", "all"]
+    conversation_id: UUID | None = None
+    project_id: UUID | None = None
+    include_assets: Literal["none", "small", "all"] = "all"
 
 
 class BackgroundTaskRead(BaseModel):
@@ -15,6 +23,7 @@ class BackgroundTaskRead(BaseModel):
     label: str | None = None
     source_label: str | None = None
     export_format: str | None = None
+    offline_target: OfflineDownloadTarget | None = None
     result: dict = Field(default_factory=dict)
     error_message: str | None = None
     queued_at: datetime | None = None

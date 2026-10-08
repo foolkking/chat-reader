@@ -197,6 +197,7 @@ class ContentCleanupOccurrence(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
     message_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), nullable=False)
     message_version_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("message_versions.id", ondelete="CASCADE"), nullable=False)
+    source_content_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     start_offset: Mapped[int] = mapped_column(Integer, nullable=False)
     end_offset: Mapped[int] = mapped_column(Integer, nullable=False)
     line_start: Mapped[int] = mapped_column(Integer, nullable=False)

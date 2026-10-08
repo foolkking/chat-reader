@@ -8,22 +8,28 @@ import {
   LoaderCircle,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ContentCleanupRuleSettings } from "../../components/content-cleanup-rule-settings";
 import { usePreferences } from "../../components/preferences-provider";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import {
   createCleanupScan,
-  dismissCleanupScan,
   getCleanupScan,
   getConversations,
-  rescanCleanup,
+  ApiRequestError,
+  getCleanupOutcome,
+  getCleanupDismissal,
 } from "../../lib/api";
 import { CleanupReviewWorkspace } from "./cleanup-review-workspace";
+import { CleanupCompletion } from "./cleanup-completion";
+import { CleanupDismissAction } from "./cleanup-dismiss-action";
+import { CleanupScanProgress } from "./cleanup-scan-progress";
+import { CleanupRescanControls, useCleanupRescan } from "./use-cleanup-rescan";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import type {
   CleanupOccurrenceRead,
   ConversationListItem,
+  CleanupScanRead,
 } from "../../lib/types";
 
 type ScopeType =
@@ -44,8 +50,9 @@ type ContentCleanupPanelProps = {
   selection?: CleanupSourceSelection | null;
   onClose?: () => void;
   onLocate?: (occurrence: CleanupOccurrenceRead) => Promise<void> | void;
-  onApplied?: () => Promise<void> | void;
+  onApplied?: (signal?: AbortSignal) => Promise<void> | void;
   onDirtyChange?: (dirty: boolean) => void;
+  onResultViewChange?: (visible: boolean) => void;
 };
 
 export function ContentCleanupDialog(
@@ -53,6 +60,8 @@ export function ContentCleanupDialog(
 ) {
   const { open, onClose, ...panelProps } = props;
   const [dirty, setDirty] = useState(false);
+  const [resultView, setResultView] = useState(false);
+  useEffect(() => { if (!open) setResultView(false); }, [open]);
   const { confirm } = useInteractionDialog();
   const zh = usePreferences().resolvedLocale === "zh-CN";
   const close = async () => {
@@ -89,9 +98,10 @@ export function ContentCleanupDialog(
       <div
         ref={rootRef}
         tabIndex={-1}
-        className="relative h-[min(88dvh,800px)] max-h-[88dvh] min-h-0 w-full overflow-hidden rounded-t-2xl border border-ui bg-page shadow-2xl sm:max-w-6xl sm:rounded-xl"
+        data-testid="content-cleanup-surface"
+        className={`relative max-h-[88dvh] min-h-0 w-full overflow-hidden rounded-t-2xl border border-ui bg-page shadow-2xl sm:rounded-xl ${resultView ? "sm:max-w-xl" : "h-[min(88dvh,800px)] sm:max-w-6xl"}`}
       >
-        <ContentCleanupPanel {...panelProps} onClose={() => void close()} onDirtyChange={setDirty} />
+        <ContentCleanupPanel {...panelProps} onClose={() => void close()} onDirtyChange={setDirty} onResultViewChange={setResultView} />
       </div>
     </div>
   );
@@ -105,6 +115,7 @@ export function ContentCleanupPanel({
   onLocate,
   onApplied,
   onDirtyChange,
+  onResultViewChange,
 }: ContentCleanupPanelProps) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -113,6 +124,21 @@ export function ContentCleanupPanel({
   const [draftDirty, setDraftDirty] = useState(false);
   useEffect(() => { onDirtyChange?.(draftDirty); }, [draftDirty, onDirtyChange]);
   const [scanId, setScanId] = useState<string | null>(initialScanId ?? null);
+  const [returnToScans, setReturnToScans] = useState<string[]>([]);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const lastScan = useRef(scanId);
+  useEffect(() => {
+    if (lastScan.current === scanId) return;
+    lastScan.current = scanId;
+    headingRef.current?.focus({ preventScroll: true });
+    headingRef.current?.closest("section")?.querySelector('[data-testid="content-cleanup-scroll"]')?.scrollTo({ top: 0 });
+  }, [scanId]);
+  const showRescan = useCallback((scan: CleanupScanRead) => {
+    setReturnToScans([]); setScanWholeConversation(true); setScanId(scan.id);
+  }, []);
+  const rescan = useCleanupRescan(scanId, showRescan);
+  const [resultScanId, setResultScanId] = useState<string | null>(null);
+  const acknowledgeResult = useCallback((value: boolean) => setResultScanId(value ? scanId : null), [scanId]);
   const [scopeType, setScopeType] = useState<ScopeType>("CURRENT_CONVERSATION");
   const [scanWholeConversation, setScanWholeConversation] = useState(false);
   const [selectedConversationIds, setSelectedConversationIds] = useState<
@@ -173,23 +199,28 @@ export function ContentCleanupPanel({
 
   const scanQuery = useQuery({
     queryKey: ["content-cleanup-scan", scanId],
-    queryFn: () => getCleanupScan(scanId!),
+    queryFn: ({ signal }) => getCleanupScan(scanId!, signal),
+    staleTime: 0,
     enabled: Boolean(scanId),
+    retry: false,
     refetchInterval: (query) =>
-      ["READY", "FAILED", "STALE"].includes(query.state.data?.status ?? "")
+      query.state.error || ["READY", "FAILED", "STALE", "CANCELLED"].includes(query.state.data?.status ?? "")
         ? false
         : 1000,
   });
-  const dismissMutation = useMutation({
-    mutationFn: () => dismissCleanupScan(scanId!),
-    onSuccess: () => onClose?.(),
-  });
-  const retryScan = useMutation({ mutationFn: () => rescanCleanup(scanId!), onSuccess: (scan) => setScanId(scan.id) });
+  const missingScan = scanQuery.error instanceof ApiRequestError && scanQuery.error.status === 404;
+  const outcome = useQuery({ queryKey: ["cleanup-outcome", scanId], queryFn: ({ signal }) => getCleanupOutcome(scanId!, signal), enabled: Boolean(scanId) && missingScan, retry: false });
+  const dismissal = useQuery({ queryKey: ["cleanup-dismissal", scanId], queryFn: ({ signal }) => getCleanupDismissal(scanId!, signal), enabled: Boolean(scanId) && missingScan && outcome.isError, retry: false });
+  const dismissed = dismissal.data?.status === "DISMISSED";
   const status = scanQuery.data?.status;
+  const emptyReview = !scanQuery.isError && status === "READY" && scanQuery.data?.occurrence_count === 0;
+  const compactScan = ["QUEUED", "SCANNING", "FAILED", "CANCELLED"].includes(status ?? "");
+  const resultView = view === "review" && Boolean(scanId && (compactScan || emptyReview || dismissed || resultScanId === scanId || (missingScan && outcome.data?.status === "COMPLETED")));
+  useEffect(() => { onResultViewChange?.(resultView); }, [onResultViewChange, resultView]);
 
   return (
     <section
-      className="flex h-full min-h-0 w-full flex-col bg-page"
+      className={`flex min-h-0 w-full flex-col bg-page ${resultView ? "max-h-[88dvh]" : "h-full"}`}
       aria-label={zh ? "清理噪声" : "Clean noise"}
     >
       <header className="flex shrink-0 items-start gap-3 border-b border-ui bg-raised px-4 py-4 sm:px-5">
@@ -198,6 +229,8 @@ export function ContentCleanupPanel({
         </span>
         <div className="min-w-0 flex-1">
           <h2
+            ref={headingRef}
+            tabIndex={-1}
             id="content-cleanup-title"
             className="text-base font-semibold text-primary"
           >
@@ -209,7 +242,7 @@ export function ContentCleanupPanel({
                 ? "清理噪声"
                 : "Clean noise"}
           </h2>
-          {view === "review" ? (
+          {view === "review" && !resultView ? (
             <p className="mt-1 text-xs leading-5 text-secondary">
               {activeSelection
                 ? zh
@@ -225,7 +258,7 @@ export function ContentCleanupPanel({
             </p>
           ) : null}
         </div>
-        {view === "review" ? (
+        {view === "review" && (!resultView || emptyReview) ? (
           <button
             type="button"
             onClick={() => setView("rules")}
@@ -252,14 +285,20 @@ export function ContentCleanupPanel({
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5"
         data-testid="content-cleanup-scroll"
       >
+        {view === "review" && (returnToScans.length > 0 || scanQuery.data?.previous_scan_id) ? <nav aria-label={zh ? "审查切换" : "Review navigation"} className="mb-3 flex flex-wrap items-center gap-2 border-b border-ui pb-3 text-xs">
+          <span className="text-secondary">{returnToScans.length ? (zh ? "正在查看先前审查" : "Viewing a previous review") : (zh ? "这是重新扫描的审查" : "This is a fresh review")}</span>
+          {returnToScans.length ? <button type="button" disabled={rescan.blocking || draftDirty} className="btn-secondary min-h-11 px-3" onClick={() => { setScanId(returnToScans[returnToScans.length - 1]); setReturnToScans(items => items.slice(0, -1)); }}>{zh ? "返回较新审查" : "Return to newer review"}</button> : null}
+          {scanQuery.data?.previous_scan_id ? <button type="button" disabled={rescan.blocking || draftDirty} className="min-h-11 px-2 text-accent underline" onClick={() => { setReturnToScans(items => [...items, scanId!]); setScanId(scanQuery.data!.previous_scan_id!); }}>{zh ? "查看上次审查与选择" : "View previous review and selections"}</button> : null}
+        </nav> : null}
         {view === "rules" ? (
           <ContentCleanupRuleSettings
             embedded
             onBack={() => setView("review")}
             onDirtyChange={setDraftDirty}
+            onOpenTasks={() => { onClose?.(); window.dispatchEvent(new Event("chat-reader:open-task-center")); }}
           />
         ) : null}
-        {view === "review" && activeSelection ? (
+        {view === "review" && activeSelection && !resultView ? (
           <div className="mb-4 border-y border-ui bg-surface px-3 py-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-semibold text-primary">
@@ -329,10 +368,12 @@ export function ContentCleanupPanel({
                 : "Preparing noise review…"}
           </div>
         ) : null}
-        {scanQuery.isError ? <div role="alert" className="space-y-2 text-sm text-[var(--danger)]"><p>{scanQuery.error.message}</p><button type="button" className="btn-secondary min-h-11 px-3" onClick={() => void scanQuery.refetch()}>{zh ? "重试读取" : "Retry loading"}</button></div> : null}
+        {view === "review" && missingScan && (outcome.isLoading || (outcome.isError && dismissal.isLoading)) ? <p role="status">{zh ? "正在核对清理结果…" : "Checking cleanup result…"}</p> : null}
+        {view === "review" ? (dismissed ? <div className="space-y-3 py-3"><p role="status" className="text-sm font-medium">{zh ? "本次审查已结束。" : "This review has ended."}</p>{onClose ? <button type="button" className="btn-primary min-h-11 px-4 text-sm" onClick={onClose}>{zh ? "完成" : "Done"}</button> : null}</div> : missingScan && outcome.data?.status === "COMPLETED" ? <CleanupCompletion result={outcome.data} onContinue={onClose} /> : scanQuery.isError && !outcome.isLoading && !(outcome.isError && dismissal.isLoading) ? <div role="alert" className="space-y-2 text-sm text-[var(--danger)]"><p>{zh ? "暂时无法读取此审查或确认完成结果。" : "This review or its completion could not be read."}</p><button type="button" className="btn-secondary min-h-11 px-3" onClick={() => { void scanQuery.refetch(); if (missingScan) { void outcome.refetch(); void dismissal.refetch(); } }}>{zh ? "重试读取" : "Retry loading"}</button></div> : null) : null}
+        {view === "review" && !scanQuery.isError && scanQuery.data && ["QUEUED", "SCANNING"].includes(status ?? "") ? <CleanupScanProgress key={scanId} scan={scanQuery.data} /> : null}
         {view === "review" &&
         status &&
-        !["READY", "FAILED", "STALE"].includes(status) ? (
+        !["READY", "FAILED", "STALE", "QUEUED", "SCANNING", "CANCELLED"].includes(status) ? (
           <div className="space-y-2 py-6">
             <p className="text-sm text-secondary">
               {activeSelection
@@ -355,6 +396,11 @@ export function ContentCleanupPanel({
             </p>
           </div>
         ) : null}
+        {view === "review" && status === "CANCELLED" ? <div className="space-y-3 py-2" data-testid="cleanup-scan-cancelled">
+          <p role="status" className="text-sm font-medium">{zh ? "扫描已取消，正文保持不变。" : "Scan cancelled. Content is unchanged."}</p>
+          <CleanupRescanControls rescan={rescan} selectedCount={0} />
+          {onClose ? <button type="button" onClick={onClose} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "关闭" : "Close"}</button> : null}
+        </div> : null}
         {view === "review" && (status === "FAILED" || status === "STALE") ? (
           <div className="space-y-2">
           <p
@@ -364,21 +410,20 @@ export function ContentCleanupPanel({
             {scanQuery.data?.error_message ??
               (zh ? "扫描失败。" : "Scan failed.")}
           </p>
-          <button type="button" disabled={retryScan.isPending} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => retryScan.mutate()}>{zh ? "重新扫描原对话" : "Rescan conversations"}</button>
-          {retryScan.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{retryScan.error.message}</p> : null}
+          <CleanupRescanControls rescan={rescan} selectedCount={scanQuery.data?.delete_count ?? 0} />
           </div>
         ) : null}
         {view === "review" &&
-        status === "READY" &&
+        !scanQuery.isError && status === "READY" &&
         (scanQuery.data?.occurrence_count ?? 0) === 0 ? (
           <EmptyReview
             zh={zh}
-            dismissing={dismissMutation.isPending}
-            onDone={() => dismissMutation.mutate()}
+            scan={scanQuery.data!}
+            onDone={onClose}
           />
         ) : null}
         {view === "review" &&
-        status === "READY" &&
+        !scanQuery.isError && status === "READY" &&
         (scanQuery.data?.occurrence_count ?? 0) > 0 ? (
           <CleanupReviewWorkspace
             key={scanId}
@@ -387,8 +432,9 @@ export function ContentCleanupPanel({
             onLocate={onLocate}
             onApplied={onApplied}
             onClose={onClose}
-            onRescan={(id) => { setScanWholeConversation(true); setScanId(id); }}
+            rescan={rescan}
             onDirtyChange={setDraftDirty}
+            onResultChange={acknowledgeResult}
           />
         ) : null}
       </div>
@@ -503,32 +549,25 @@ function ScopePicker({
 
 function EmptyReview({
   zh,
-  dismissing,
+  scan,
   onDone,
 }: {
   zh: boolean;
-  dismissing: boolean;
-  onDone: () => void;
+  scan: CleanupScanRead;
+  onDone?: () => void;
 }) {
   return (
-    <div className="py-12 text-center">
-      <Check className="mx-auto h-8 w-8 text-accent" />
+    <div className="space-y-3 py-3" aria-label={zh ? "扫描结果" : "Scan result"}>
+      <Check className="h-6 w-6 text-accent" aria-hidden="true" />
       <p className="mt-3 text-sm font-medium text-primary">
-        {zh ? "没有发现可安全处理的内容" : "No safe cleanup candidates found"}
+        {zh ? "当前规则未发现噪声候选" : "No noise candidates found with the current rules"}
       </p>
       <p className="mt-1 text-xs text-secondary">
         {zh
-          ? "正文保持不变；完成后本次扫描记录会被删除。"
-          : "Content is unchanged. Finishing deletes this scan record."}
+          ? "正文保持不变。"
+          : "Content is unchanged."}
       </p>
-      <button
-        type="button"
-        disabled={dismissing}
-        onClick={onDone}
-        className="mt-4 min-h-9 rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle"
-      >
-        {zh ? "完成" : "Done"}
-      </button>
+      <CleanupDismissAction key={scan.id} scan={scan} finish onDismissed={onDone} />
     </div>
   );
 }

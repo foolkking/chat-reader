@@ -1,8 +1,8 @@
 import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
-import type { ImportFormatRevision, ReaderTurnResponse } from "./types";
+import type { BackgroundTaskRead, ImportFormatRevision, ReaderTurnResponse } from "./types";
 
 export type AdminImportFormat = { id: string; name: string; source_mode: string; source_account_available: boolean; published_revision_id: string | null; revisions: ImportFormatRevision[] };
-export type AdminNoiseRule = { id: string; name: string; source_account_available: boolean; published_revision_id: string | null; revision_count: number };
+export type AdminNoiseRule = { id: string; name: string; source_account_available: boolean; published_revision_id: string | null; published_revision: number | null; publication_token: string; revision_count: number };
 export type AdminNoiseRevision = { id: string; revision: number; configuration: { match_value: string; role_filter: string | null; case_sensitive: boolean; matcher_mode: string; boundary_mode: string; matcher_version: string }; validated: boolean; created_at: string };
 
 export type AdminUserStatus = "ACTIVE" | "DISABLED" | "PENDING";
@@ -13,13 +13,25 @@ export type AdminUser = {
   can_login: boolean; deletion: { job_id: string; status: string; phase: string; progress: number; impact: Record<string, number> } | null;
   stats: { projects: number; conversations: number; attachments: number; attachment_bytes: number };
 };
-export type RegistrationPolicy = { registration_mode: "CLOSED" | "INVITE_ONLY" | "OPEN"; require_admin_approval: boolean; email_verification_enabled: boolean; password_reset_enabled: boolean; smtp_configured: boolean };
+export type RegistrationPolicy = { registration_mode: "CLOSED" | "INVITE_ONLY" | "OPEN"; require_admin_approval: boolean; email_verification_enabled: boolean; password_reset_enabled: boolean; smtp_configured: boolean; revision: string };
+export type RegistrationPolicyPatch = Partial<Omit<RegistrationPolicy, "smtp_configured" | "revision">>;
+export type AdminUserUpdate = { id: string; status: AdminUserStatus; user: AdminUser };
+
+export class AdminRequestError extends Error {
+  constructor(message: string, public readonly status: number) { super(message); this.name = "AdminRequestError"; }
+}
+
+export function adminAccountSignal(signal?: AbortSignal) {
+  const timeout = AbortSignal.timeout(20_000);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
 export type AdminInvitation = { id: string; status: "PENDING" | "USED" | "EXPIRED" | "REVOKED"; created_at: string; expires_at: string; used_at: string | null };
 export type UserConversation = { id: string; title: string; status: string; message_count: number; turn_count: number; summary: string; created_at: string; updated_at: string };
 export type UserAttachment = { id: string; display_name: string; detected_mime_type: string | null; asset_object: { byte_size: number } | null; content_url: string | null; download_url: string | null };
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 export type SystemSkill = { bundle_revision?: number; bundle_url?: string | null; id: string; skill_key: string; category: "EXPORT_CONTEXT" | "CONVERSATION_RESCUE" | "CONTEXT_MAINTENANCE"; locale: "zh-CN" | "en"; name: string; source_kind: "BUNDLED" | "ADMIN_CREATED"; status: "ACTIVE" | "DISABLED"; default_enabled: boolean; is_customized: boolean; byte_size: number; builtin_content_url: string | null; updated_at: string };
-export type FeaturePolicy = { allow_share_links: boolean; allow_public_share: boolean; allow_share_password: boolean; allow_user_skills: boolean; allow_skill_import: boolean; allow_user_import: boolean; maximum_import_size_mb: number; maximum_merge_message_count: number; export_retention_minutes: number; export_release_on_close: boolean; updated_at: string };
+export type FeaturePolicy = { allow_share_links: boolean; allow_public_share: boolean; allow_share_password: boolean; allow_user_skills: boolean; allow_skill_import: boolean; allow_user_import: boolean; maximum_import_size_mb: number; maximum_merge_message_count: number; export_retention_minutes: number; export_release_on_close: boolean; updated_at: string; revision: string };
+export type FeaturePolicyPatch = Partial<Omit<FeaturePolicy, "updated_at" | "revision">>;
 export type BackgroundTask = { job_id: string; job_type: string; status: string; phase: string; progress: number };
 export type BackupRecord = { id: string; operation: "BACKUP" | "RESTORE"; status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED"; artifact_name: string | null; byte_size: number | null; summary: Record<string, unknown>; created_at: string; completed_at: string | null };
 export type AuditEntry = { id: string; actor_user_id: string; action: string; target_user_id: string | null; resource_type: string | null; resource_id: string | null; result: string; metadata: Record<string, unknown>; request_id: string | null; created_at: string };
@@ -41,30 +53,31 @@ export type AdminRuntimeStatus = {
 
 export const adminApi = {
   runtimeStatus: (signal?: AbortSignal) => request<AdminRuntimeStatus>("/api/admin/runtime-status", { signal }),
-  noiseRules: (offset = 0) => request<Page<AdminNoiseRule>>(`/api/admin/noise-rules?limit=20&offset=${offset}`),
-  noiseRuleRevisions: (id: string, offset = 0) => request<Page<AdminNoiseRevision>>(`/api/admin/noise-rules/${id}/revisions?limit=20&offset=${offset}`),
-  publishNoiseRule: (id: string, revision_id: string, name: string) => request<{ published: boolean }>(`/api/admin/noise-rules/${id}/publication`, json("PUT", { revision_id, name })),
-  withdrawNoiseRule: (id: string) => request<void>(`/api/admin/noise-rules/${id}/publication`, { method: "DELETE" }),
+  noiseRules: (offset = 0, signal?: AbortSignal) => request<Page<AdminNoiseRule>>(`/api/admin/noise-rules?limit=20&offset=${offset}`, { signal: adminAccountSignal(signal) }),
+  noiseRule: (id: string, signal?: AbortSignal) => request<AdminNoiseRule>(`/api/admin/noise-rules/${id}`, { signal: adminAccountSignal(signal) }),
+  noiseRuleRevisions: (id: string, offset = 0, signal?: AbortSignal) => request<Page<AdminNoiseRevision>>(`/api/admin/noise-rules/${id}/revisions?limit=20&offset=${offset}`, { signal: adminAccountSignal(signal) }),
+  publishNoiseRule: (id: string, revision_id: string, name: string, base_publication_token: string, signal?: AbortSignal) => request<{ published: boolean; rule: AdminNoiseRule }>(`/api/admin/noise-rules/${id}/publication`, { ...json("PUT", { revision_id, name, base_publication_token }), signal: adminAccountSignal(signal) }),
+  withdrawNoiseRule: (id: string, base_publication_token: string, signal?: AbortSignal) => request<AdminNoiseRule>(`/api/admin/noise-rules/${id}/publication?return_state=true`, { ...json("DELETE", { base_publication_token }), signal: adminAccountSignal(signal) }),
   importFormats: (offset = 0) => request<Page<AdminImportFormat>>(`/api/admin/import-formats?limit=20&offset=${offset}`),
   publishImportFormat: (id: string, revision_id: string, name: string) => request<{ published: boolean }>(`/api/admin/import-formats/${id}/publication`, json("PUT", { revision_id, name })),
   withdrawImportFormat: (id: string) => request<void>(`/api/admin/import-formats/${id}/publication`, { method: "DELETE" }),
-  userPage: (q = "", state = "ALL", offset = 0) => request<Page<AdminUser>>(`/api/admin/access/users/page?limit=20&offset=${offset}&q=${encodeURIComponent(q)}&state=${encodeURIComponent(state)}`),
-  user: (id: string) => request<AdminUser>(`/api/admin/access/users/${id}`),
+  userPage: (q = "", state = "ALL", offset = 0, signal?: AbortSignal) => request<Page<AdminUser>>(`/api/admin/access/users/page?limit=20&offset=${offset}&q=${encodeURIComponent(q)}&state=${encodeURIComponent(state)}`, { signal: adminAccountSignal(signal) }),
+  user: (id: string, signal?: AbortSignal) => request<AdminUser>(`/api/admin/access/users/${id}`, { signal: adminAccountSignal(signal) }),
   users: () => request<AdminUser[]>("/api/admin/access/users"),
-  setUserStatus: (id: string, status: "ACTIVE" | "DISABLED") => request<{ id: string; status: AdminUserStatus }>(`/api/admin/access/users/${id}/status`, json("PATCH", { status })),
-  approveUser: (id: string) => request<{ id: string; status: AdminUserStatus }>(`/api/admin/access/users/${id}/approve`, { method: "POST" }),
-  rejectUser: (id: string) => request<{ id: string; status: AdminUserStatus }>(`/api/admin/access/users/${id}/reject`, { method: "POST" }),
-  revokeSessions: (id: string) => request<{ id: string; revoked_sessions: number }>(`/api/admin/access/users/${id}/sessions/revoke`, { method: "POST" }),
-  resetUser: (id: string) => request<{ reset_url: string; expires_at: string }>(`/api/admin/access/users/${id}/password-reset`, json("POST", { expires_in_minutes: 30 })),
-  deleteImpact: (id: string) => request<Record<string, number | string>>(`/api/admin/access/users/${id}/deletion-impact`),
-  deleteUser: (id: string, key: string) => request<BackgroundTask>(`/api/admin/access/users/${id}/delete`, json("POST", { confirm_user_id: id }, { "Idempotency-Key": key })),
+  setUserStatus: (id: string, status: "ACTIVE" | "DISABLED") => request<AdminUserUpdate>(`/api/admin/access/users/${id}/status`, { ...json("PATCH", { status }), signal: adminAccountSignal() }),
+  approveUser: (id: string) => request<AdminUserUpdate>(`/api/admin/access/users/${id}/approve`, { method: "POST", signal: adminAccountSignal() }),
+  rejectUser: (id: string) => request<AdminUserUpdate>(`/api/admin/access/users/${id}/reject`, { method: "POST", signal: adminAccountSignal() }),
+  revokeSessions: (id: string) => request<{ id: string; revoked_sessions: number }>(`/api/admin/access/users/${id}/sessions/revoke`, { method: "POST", signal: adminAccountSignal() }),
+  resetUser: (id: string) => request<{ reset_url: string; expires_at: string }>(`/api/admin/access/users/${id}/password-reset`, { ...json("POST", { expires_in_minutes: 30 }), signal: adminAccountSignal() }),
+  deleteImpact: (id: string) => request<Record<string, number | string>>(`/api/admin/access/users/${id}/deletion-impact`, { signal: adminAccountSignal() }),
+  deleteUser: (id: string, key: string) => request<BackgroundTaskRead>(`/api/admin/access/users/${id}/delete`, { ...json("POST", { confirm_user_id: id }, { "Idempotency-Key": key }), signal: adminAccountSignal() }),
   userConversations: (id: string, q = "", offset = 0) => request<Page<UserConversation>>(`/api/admin/content/users/${id}/conversations?limit=20&offset=${offset}&q=${encodeURIComponent(q)}`),
   readUserConversation: (userId: string, conversationId: string, anchor?: string) => request<ReaderTurnResponse>(`/api/admin/content/users/${userId}/conversations/${conversationId}/reader-turn${anchor ? `?anchor_message_id=${encodeURIComponent(anchor)}` : ""}`),
   userAttachments: (id: string, q = "", offset = 0) => request<Page<UserAttachment>>(`/api/admin/content/users/${id}/attachments?limit=20&offset=${offset}&q=${encodeURIComponent(q)}`),
   userConversation: (uid: string, cid: string) => request<{ id: string; title: string; message_count: number; turn_count: number; status: string }>(`/api/admin/content/users/${uid}/conversations/${cid}`),
   searchUserConversation: (uid: string, cid: string, q: string, offset = 0) => request<Page<{ message_id: string; role: string; snippet: string }>>(`/api/admin/content/users/${uid}/conversations/${cid}/search?q=${encodeURIComponent(q)}&offset=${offset}&limit=20`),
-  registration: () => request<RegistrationPolicy>("/api/admin/access"),
-  saveRegistration: (value: Omit<RegistrationPolicy, "smtp_configured">) => request<RegistrationPolicy>("/api/admin/access/registration", json("PUT", { mode: value.registration_mode, ...value })),
+  registration: (signal?: AbortSignal) => request<RegistrationPolicy>("/api/admin/access", { signal: adminAccountSignal(signal) }),
+  saveRegistration: ({ registration_mode, ...value }: RegistrationPolicyPatch & { base_revision: string }, signal?: AbortSignal) => request<RegistrationPolicy>("/api/admin/access/registration", { ...json("PUT", { ...value, ...(registration_mode === undefined ? {} : { mode: registration_mode }) }), signal: adminAccountSignal(signal) }),
   invitations: () => request<AdminInvitation[]>("/api/admin/access/invitations"),
   invitationPage: (state = "ALL", offset = 0) => request<Page<AdminInvitation>>(`/api/admin/access/invitations/page?state=${encodeURIComponent(state)}&offset=${offset}&limit=20`),
   createInvitation: (hours: number) => request<{ id: string; invite_url: string; expires_at: string }>("/api/admin/access/invitations", json("POST", { expires_in_hours: hours })),
@@ -75,14 +88,14 @@ export const adminApi = {
     body.append("name", value.name); body.append("file", value.file, value.file.name);
     return request<SystemSkill>("/api/admin/system-skills/bundle", { method: "POST", body });
   },
-  systemSkills: () => request<Array<SystemSkill & { legacy_default_conflict?: boolean }>>("/api/admin/system-skills?effective=true"),
-  systemSkill: (id: string) => request<SystemSkill & { content: string | null }>(`/api/admin/system-skills/${id}`),
+  systemSkills: (signal?: AbortSignal) => request<Array<SystemSkill & { legacy_default_conflict?: boolean }>>("/api/admin/system-skills?effective=true", { signal: adminAccountSignal(signal) }),
+  systemSkill: (id: string, signal?: AbortSignal) => request<SystemSkill & { content: string | null }>(`/api/admin/system-skills/${id}`, { signal: adminAccountSignal(signal) }),
   createSystemSkill: (value: { category: string; locale: string; name: string; content: string; default_enabled: boolean }) => request<SystemSkill>("/api/admin/system-skills", json("POST", value)),
   updateSystemSkill: (id: string, value: Record<string, unknown>) => request<SystemSkill>(`/api/admin/system-skills/${id}`, json("PATCH", value)),
   deleteSystemSkill: (id: string) => request<void>(`/api/admin/system-skills/${id}`, { method: "DELETE" }),
   restoreSystemSkill: (id: string) => request<SystemSkill>(`/api/admin/system-skills/${id}/restore`, { method: "POST" }),
-  features: () => request<FeaturePolicy>("/api/admin/features"),
-  saveFeatures: (value: Omit<FeaturePolicy, "updated_at">) => request<FeaturePolicy>("/api/admin/features", json("PUT", value)),
+  features: (signal?: AbortSignal) => request<FeaturePolicy>("/api/admin/features", { signal: adminAccountSignal(signal) }),
+  saveFeatures: (value: FeaturePolicyPatch & { base_revision: string }, signal?: AbortSignal) => request<FeaturePolicy>("/api/admin/features", { ...json("PUT", value), signal: adminAccountSignal(signal) }),
   backups: () => request<BackupRecord[]>("/api/admin/backups"),
   createBackup: () => request<BackgroundTask>("/api/admin/backups", json("POST", { include_archived: true }, { "Idempotency-Key": crypto.randomUUID() })),
   restoreBackup: (id: string) => request<BackupRecord>(`/api/admin/backups/${id}/restore`, { method: "POST" }),
@@ -103,7 +116,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     if (response.status === 401 && typeof window !== "undefined") notifyAuthenticationFailure(requestGeneration);
     let message = `Request returned ${response.status}`;
     try { const payload = await response.json() as { detail?: unknown }; if (typeof payload.detail === "string") message = payload.detail; } catch { /* bounded fallback */ }
-    throw new Error(message);
+    throw new AdminRequestError(message, response.status);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }

@@ -1,5 +1,200 @@
 # 前端架构
 
+## Noise scan lifecycle (local, 2026-10-08)
+
+`CleanupScanProgress` and `CleanupScanCancelAction` share compact progress,
+cancellation acknowledgement and bounded read-only recovery. Task Center groups
+live/failed/cancelled scans by real execution state; live scans are not attention
+items. Cancellation preserves imported content and exposes fresh rescan. Lost
+focus follows a removed live control or moved row; completed-review dismissal
+retains its own adjacent-row/result restoration. Deliberate navigation and
+account changes fence delayed responses. Details and retention belong to the
+[cleanup contract](CONTENT_CLEANUP_CONTRACT.md#scan-execution-and-cancellation-local-2026-10-08).
+
+## Empty noise results and dismissal (local, 2026-10-08)
+
+`CleanupDismissAction` serves compact empty results and Task Center ignore.
+It owns conditional selection confirmation, bounded/cancellable requests,
+read-only unknown-result recovery and account-generation guards. Confirmed
+removal cancels stale list reads and updates both caches before background
+invalidation. The parent captures the row before removal for focus restoration;
+intentional focus elsewhere is preserved. Reopening an ended scan uses its
+dismissal receipt rather than a stale workspace or generic missing-result error.
+
+Import completion exposes View result for zero matches. Task Center places only
+recent zero-result scans in Completed, respecting the existing job-result window;
+they create no sidebar reminder. Rules remain available in the compact result.
+See [cleanup](CONTENT_CLEANUP_CONTRACT.md#empty-results-and-dismissal-local-2026-10-08)
+and [retention](RETENTION_CONTRACT.md#re-entry-contract).
+
+## System noise publication (local, 2026-10-07)
+
+`AdminNoiseRuleSettings` owns the paginated ledger and dirty-dismissal boundary;
+`AdminNoisePublicationRow` owns one base-bound draft and its publication recovery.
+Committed responses update cached rows before background refresh. A failed/lost
+write keeps the intended action and reads current Root-only state. The comparison
+requires explicit base adoption and a new confirmation; it never resubmits itself.
+History refreshes on reopen and after state checks, while failed reads disable
+cached choices. Input/confirmation/read flows retain authentication-generation and
+unmount guards, with a 20-second client deadline. See the
+[cleanup contract](CONTENT_CLEANUP_CONTRACT.md#administrator-publication-recovery).
+
+## Noise selection scope (local, 2026-10-07)
+
+`CleanupReviewWorkspace` uses the optional server `selection_summary` for scope
+counts. Other-group selections are disclosed next to preview, with a direct
+selected-only view across the scan. Navigation clears only filters/search/pages,
+preserves decisions, opens mobile detail and transfers focus. Precise counts are
+hidden during failed/pending reads; legacy responses retain a general all-scan
+scope statement. The same component serves import and global scans; group rows
+show protected/conflict counts only when nonzero.
+
+`CleanupRuleEditor` also captures the personal `edit_token` with its matcher
+revision. Trial/save and explicit base adoption retain this token so name-only
+remote edits enter the same draft-preserving comparison flow. It is request
+metadata, not another user-visible version field or a new confirmation step.
+
+## Personal noise-rule actions (local, 2026-10-07)
+
+CleanupRuleRow owns enablement, version selection and removal recovery. Confirmed
+results update the rules cache before background invalidation; unknown results
+require a read-only state check. The settings parent owns removal acknowledgement
+and focus based on rendered order. Row writes are cancellable, time bounded and
+guarded against account changes. Failed rule-list reads keep existing rows readable
+but disable changes. History uses a fresh read on expansion, localized configuration
+labels and bounded text; stale/error history cannot be selected. See the
+[cleanup contract](CONTENT_CLEANUP_CONTRACT.md#personal-rule-actions-local-2026-10-07).
+
+## Rescan recovery (local, 2026-10-07)
+
+ContentCleanupPanel owns one `useCleanupRescan` for its displayed scan. Selection
+and conflict-preview controls share it even when the selection subtree is hidden;
+FAILED/STALE uses the same controller. Account/original-scan sessionStorage retains
+unconfirmed request IDs; checks are read-only and retry reuses that ID. Confirmed
+scan responses seed the cache before navigation and background list refresh.
+Saved old choices get a conditional explanation and previous/newer navigation.
+Revisits read fresh scan/group/page data; unavailable reads keep the return route
+but cannot leave a cached review actionable. Feedback is separate from the stable
+footer command row. See the [cleanup contract](CONTENT_CLEANUP_CONTRACT.md#rescan-recovery-local-2026-10-07).
+
+## Global scan recovery (local, 2026-10-07)
+
+GlobalCleanupScan owns admission acknowledgement, uncertain-result checks and
+same-request retry beside the rule-library command. Account-namespaced
+sessionStorage preserves only an unconfirmed UUID across reload; it never
+automatically resubmits or supplies authorization. Reads/writes are cancellable
+and bounded; authentication-generation guards protect callbacks. Successful
+admission is independent of task-list reads. Settings and review parents close
+their overlay before opening the shared task center. Empty scope and no-rule
+errors have actionable localized feedback; the latter refreshes stale rule rows.
+Shared modal focus restoration respects the top visible modal. A closing sibling
+cannot restore focus to an underlying settings trigger after Task Center opens;
+nested confirmations can still return to their opener inside the remaining modal.
+See the [cleanup contract](CONTENT_CLEANUP_CONTRACT.md#global-scan-admission-recovery).
+
+## Exception recovery (local, 2026-10-07)
+
+CleanupExceptionEditor distinguishes current scope, unknown save and failed
+result read. Confirmed responses update scan/candidate caches after cancelling
+older reads; refreshing a list does not delay acknowledgement. The review keeps
+its selection subtree mounted during exception/learning edits and restores
+context and focus. CleanupExceptionList preserves readable rows on refresh
+failure, immediately removes confirmed revocations, recovers shrinking pages,
+and offers idempotent retry for uncertain deletion. Exact scope is scrollable
+and keyboard accessible; extra instructions are expandable. The
+[cleanup contract](CONTENT_CLEANUP_CONTRACT.md#exception-recovery-local-2026-10-07)
+owns the response fields, state checks and authentication guards.
+
+## Registration settings recovery (local, 2026-10-07)
+
+AdminRegistrationSettings uses the existing bounded admin client and a four-field
+patch. Saved policy is independent of SMTP discovery and draft state. Recovery
+messages/comparison and their actions precede invitations; reading latest policy
+keeps the invitation subtree mounted. The local patch is reapplied only for review,
+with another explicit Save required. A latest read that already matches resolves
+without another mutation. Locale is presentation state and does not trigger policy
+reload. Draft-discard guards include existing invitation state; no persistent policy
+draft cache or automatic mutation retry is introduced. See the
+[authentication contract](AUTHENTICATION_CONTRACT.md#registration-policy-recovery-local-2026-10-07).
+
+## Feature settings recovery (local, 2026-10-07)
+
+AdminFeaturesPanel derives a whitelist patch from the displayed baseline, sends
+its opaque revision, and owns distinct conflict/unconfirmed/read-failure states.
+Bounded reads preserve input and compare only deliberate edits against current
+server settings. Reconciliation updates untouched fields without another write;
+an explicit Save or Use server policy completes the choice. Matching current
+values resolve without a redundant mutation. Focus moves to recovery feedback,
+and Save follows the comparison in document order. Existing UI tokens and settings
+dismissal guards remain; details live in the
+[administration contract](ADMINISTRATION_CONTRACT.md#feature-policy-recovery-local-2026-10-07).
+
+## Skill replacement recovery (local, 2026-10-07)
+
+SkillBundleFiles owns the retained file, base revision, latest-version read and
+explicit conflict replacement. It shares file-metadata acknowledgement across
+personal/system lists through skill-cache; resolved content is reset independently.
+Successful writes settle before background refresh. List failures remain separate
+from write results, and late reads are cancelled before applying acknowledgement.
+System metadata updates preserve account preferences. Read, compare/download and
+retry are inline actions with focus recovery; no file viewer/editor is introduced.
+The [Skill contract](CONTEXT_SKILL_MIGRATION.md#bundle-replacement-recovery-local-2026-10-07)
+defines revision-0 recovery, bounded reads and idempotent retries.
+
+## Account settings recovery (local, 2026-10-07)
+
+AccountSecurityPanel separates identity and session reads/loading/errors. A nullable
+username draft derives untouched input from the saved profile; saving updates that
+baseline without overwriting newer input. Device Refresh leaves identity/password
+forms mounted and preserves focus. Local errors provide the matching read/save
+retry. Both reads cancel obsolete requests and check the authentication generation;
+profile writes cancel prior reads and suppress identity refresh while pending.
+
+Logout-others acknowledgement updates the list before its independent refresh.
+A failed refresh preserves confirmed completion; a lost mutation response requires
+fresh reads before another revoke. Feedback sits beside its action and the saved
+form identifies any newer unsaved input. Existing settings sections, responsive
+identity columns and email/password/pending-signout flows are retained. See the
+[authentication contract](AUTHENTICATION_CONTRACT.md#account-form-and-device-recovery-local-2026-10-07).
+
+## Cleanup completion recovery (local, 2026-10-07)
+
+CleanupReviewWorkspace stores confirmed application separately from the source
+reload mutation; reload failure never offers another apply. The owner can check
+an unconfirmed result and retry a failed read. ContentCleanupPanel reopens saved
+completion from Task Center after the scan is gone. Mobile MessageItem closes
+its action sheet when handing focus to the source editor. Recovery, preview
+conflict limits and task lifetime are defined in the
+[cleanup contract](CONTENT_CLEANUP_CONTRACT.md#completion-recovery-local-2026-10-07).
+
+CleanupCandidate owns per-row disclosure, using exact match highlights and compact
+context before expanding full context and optional rule actions. Mixed scans keep
+the conversation title visible. CleanupCompletion focuses the confirmed result;
+the workspace/panel report result state to ContentCleanupDialog so only that state
+uses content height and a narrower desktop width. Source selection and scan/rule
+controls disappear on completion. The header remains fixed while the result body
+scrolls on short screens. Review/preview still use the full workspace, and rules
+view cannot display an unrelated scan-error/completion panel.
+
+## Share settings recovery (local, 2026-10-07)
+
+The shared ShareEditor submits only fields changed from its baseline, plus an
+opaque settings revision. Both My shares and the conversation Share drawer use
+this editor. A conflict retains the draft, reads the owner's latest settings and
+focuses the comparison. Loading server values requires explicit draft discard;
+merging keeps only locally changed fields and still requires a separate Save
+confirmation. Revoked links cannot be merged or saved. Exact untouched expiry
+and selected-message grants are retained; password values are never shown.
+
+Save/latest reads have a 15-second bound. Authentication, permission, missing
+target, invalid settings and rate-limit errors have distinct recovery copy;
+permission failures refresh capabilities. My shares merges per-item revoke
+results so retrying one failure does not hide the others. Successful list reloads
+clamp a now-invalid page offset and restore list focus/scroll. These changes do
+not alter public URL or capability semantics. The server concurrency/compatibility
+contract is in [API reference](../api-reference.md#shares); acceptance and known
+limits are in [the dated audit](../execution/ux-audit-share-recovery-2026-10-07.md).
+
 ## Mobile sheets and copy recovery (2026-10-05)
 
 MobileReaderSheet keeps its working area within the active 60%/92% viewport snap,
@@ -101,6 +296,26 @@ No worker, queue or task-history model was added.
 terminal summary. The response's existing conversation IDs are used for
 compact direct links and Library return; no ImportBatch entity or persistent
 results route is introduced.
+
+`ImportNoiseReview` links that completion to the latest existing scan of the
+same import, with bounded reads, independent progress/retry and nested-dialog
+focus restoration. `CleanupReviewWorkspace` adds server-paged group title search,
+explicit current scope and conversation-wide rule review; selection remains
+mounted but hidden during preview so expanded contexts and return position survive.
+See [cleanup navigation](CONTENT_CLEANUP_CONTRACT.md#import-entry-and-review-navigation).
+
+`CleanupRuleEditor` acknowledges a confirmed saved rule before list refresh,
+preserves unconfirmed drafts for an explicit read-only result check, and compares
+localized configuration fields. Comparison reads never reuse stale actionable
+data. Library return restores the edited-row/new-rule focus; see
+[rule editor recovery](CONTENT_CLEANUP_CONTRACT.md#rule-editor-recovery-local-2026-10-07).
+
+`CleanupChangePreview` verifies code-point removal metadata against complete
+before/after text, marks exact removals and offers keyboard-operable local-pane
+navigation. Missing/malformed/inconsistent ranges fall back to plain full text;
+conflicts never draw proposed removals. No Reader anchor or selection write is
+performed by difference navigation. See the
+[presentation contract](CONTENT_CLEANUP_CONTRACT.md#candidate-and-result-presentation).
 
 ## Skill registry (2026-08-29, local)
 

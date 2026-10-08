@@ -27,6 +27,189 @@ async function shareStatus(dialog: Locator, name: RegExp) {
   await dialog.getByRole("group", { name: /Share status|分享状态/ }).getByRole("button", { name, exact: true }).click();
 }
 
+for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] as const) {
+  test(`share conflict preserves draft and merges only edited fields at ${width}`, async ({ browser, playwright, baseURL }, info) => {
+    const base = baseURL!, admin = await settingsAdmin(playwright.request, base);
+    const context = await browser.newContext({ viewport: { width, height: 900 } });
+    try {
+      await register(context.request, base, `share-conflict-${width}`);
+      await settingsAppearance(context.request, base, locale);
+      const headers = { Origin: base };
+      const source = await context.request.post(`${base}/api/conversations`, { headers, data: { title: "Synthetic conflict source", messages: [{ role: "user", content_markdown: "Synthetic public question" }, { role: "assistant", content_markdown: "Synthetic public answer" }] } });
+      expect(source.status()).toBe(201);
+      const created = await context.request.post(`${base}/api/conversations/${(await source.json()).conversation.id}/shares`, { headers, data: { title: "Synthetic original link", include_annotations: true } });
+      expect(created.status()).toBe(200);
+      const share = await created.json();
+      const page = await context.newPage();
+      await page.goto(base);
+      const dialog = await openShares(page);
+      await dialog.getByRole("button", { name: /^(Edit share|编辑分享)$/ }).click();
+      await openSection(dialog, /Link appearance|链接外观/);
+      await dialog.getByLabel(/^(Share title|分享标题)$/).fill("Synthetic retained title");
+      const remote = await context.request.patch(`${base}/api/shares/${share.id}`, { headers, data: { base_revision: share.settings_revision, include_annotations: false, ...(width === 768 ? { title: "Synthetic remote title" } : {}) } });
+      expect(remote.status()).toBe(200);
+      let failLatest = width === 375;
+      await page.route(`**/api/shares/${share.id}`, async route => {
+        if (route.request().method() === "GET" && failLatest) { failLatest = false; await route.abort(); }
+        else await route.continue();
+      });
+      const save = dialog.getByRole("button", { name: /^(Save share settings|保存分享设置)$/ });
+      await save.click();
+      await page.getByRole("button", { name: /^(Apply settings|应用设置)$/ }).click();
+      await expect(save).toBeDisabled();
+      await expect(dialog.getByLabel(/^(Share title|分享标题)$/)).toHaveValue("Synthetic retained title");
+      if (width === 375) {
+        await expect(dialog.getByText(/无法读取最新分享设置/)).toBeVisible();
+        await dialog.getByRole("button", { name: "读取最新设置" }).click();
+      }
+      const conflict = dialog.getByRole("region", { name: /Share settings conflict|分享设置冲突/ });
+      await expect(conflict).toBeFocused();
+      await expect(conflict.getByText(/Server now: Off|服务器当前：关闭/)).toBeVisible();
+      if (width === 768) {
+        await expect(conflict.getByText("Server now: Synthetic remote title")).toBeVisible();
+        await expect(conflict.getByText("Your change: Synthetic retained title")).toBeVisible();
+      }
+      const persisted = await (await context.request.get(`${base}/api/shares/${share.id}`)).json();
+      expect(persisted.title).toBe(width === 768 ? "Synthetic remote title" : "Synthetic original link");
+      expect(persisted.include_annotations).toBe(false);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: info.outputPath(`share-conflict-${width}.png`) });
+      await conflict.getByRole("button", { name: /^(Merge my changes|合并我的更改)$/ }).click();
+      const patchRequest = page.waitForRequest(request => request.method() === "PATCH" && request.url().endsWith(`/api/shares/${share.id}`));
+      await save.click();
+      await page.getByRole("button", { name: /^(Apply settings|应用设置)$/ }).click();
+      const submitted = (await patchRequest).postDataJSON();
+      expect(Object.keys(submitted).sort()).toEqual(["base_revision", "title"]);
+      await expect(dialog.getByRole("article", { name: "Synthetic retained title" })).toBeVisible();
+      const result = await (await context.request.get(`${base}/api/shares/${share.id}`)).json();
+      expect(result.title).toBe("Synthetic retained title");
+      expect(result.include_annotations).toBe(false);
+      expect(result.share_url).toBe(share.share_url);
+      const publicResult = await context.request.get(`${base}/api/shared/${share.token}`);
+      expect(publicResult.status()).toBe(200);
+      expect((await publicResult.json()).capabilities.annotations).toBe(false);
+    } finally { await context.close(); await admin.dispose(); }
+  });
+}
+
+test("share conflict can discard a draft and cannot revive a remotely revoked link", async ({ browser, playwright, baseURL }) => {
+  const base = baseURL!, admin = await settingsAdmin(playwright.request, base);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  try {
+    await register(context.request, base, "share-discard-revoked");
+    await settingsAppearance(context.request, base, "en-US");
+    const headers = { Origin: base };
+    const source = await context.request.post(`${base}/api/conversations`, { headers, data: { title: "Synthetic discard source", messages: [{ role: "user", content_markdown: "Synthetic question" }, { role: "assistant", content_markdown: "Synthetic answer" }] } });
+    expect(source.status()).toBe(201);
+    const created = await context.request.post(`${base}/api/conversations/${(await source.json()).conversation.id}/shares`, { headers, data: { title: "Synthetic original link" } });
+    expect(created.status()).toBe(200);
+    const share = await created.json();
+    const page = await context.newPage();
+    await page.goto(base);
+    const dialog = await openShares(page);
+    await dialog.getByRole("button", { name: "Edit share", exact: true }).click();
+    await openSection(dialog, /Link appearance/);
+    const title = dialog.getByLabel("Share title", { exact: true });
+    await title.fill("Synthetic discard draft");
+    expect((await context.request.patch(`${base}/api/shares/${share.id}`, { headers, data: { title: "Synthetic latest title", base_revision: share.settings_revision } })).status()).toBe(200);
+    const save = dialog.getByRole("button", { name: "Save share settings", exact: true });
+    await save.click();
+    await page.getByRole("button", { name: "Apply settings", exact: true }).click();
+    const conflict = dialog.getByRole("region", { name: "Share settings conflict" });
+    await expect(conflict).toBeVisible();
+    await conflict.getByRole("button", { name: "Load latest settings", exact: true }).click();
+    const confirmation = page.getByRole("dialog", { name: "Discard your changes and load the latest settings?" });
+    await expect(title).toHaveValue("Synthetic discard draft");
+    await confirmation.getByRole("button", { name: "Load latest settings", exact: true }).click();
+    await expect(title).toHaveValue("Synthetic latest title");
+    await expect(save).toBeDisabled();
+    await expect(conflict).toBeHidden();
+    await title.fill("Synthetic must not revive");
+    expect((await context.request.post(`${base}/api/shares/${share.id}/revoke`, { headers })).status()).toBe(200);
+    await save.click();
+    await page.getByRole("button", { name: "Apply settings", exact: true }).click();
+    await expect(conflict).toBeVisible();
+    await expect(conflict.getByRole("button", { name: "Merge my changes" })).toHaveCount(0);
+    await expect(save).toBeDisabled();
+    await expect(title).toHaveValue("Synthetic must not revive");
+    const persisted = await (await context.request.get(`${base}/api/shares/${share.id}`)).json();
+    expect(persisted.title).toBe("Synthetic latest title");
+    expect(persisted.revoked_at).toBeTruthy();
+    expect((await context.request.get(`${base}/api/shared/${share.token}`)).status()).toBe(410);
+  } finally { await context.close(); await admin.dispose(); }
+});
+
+test("sharing policy changes retain the draft and offer list recovery", async ({ browser, playwright, baseURL }) => {
+  const base = baseURL!, admin = await settingsAdmin(playwright.request, base);
+  const policy = await (await admin.get("/api/admin/features")).json();
+  const context = await browser.newContext({ viewport: { width: 375, height: 900 } });
+  try {
+    await register(context.request, base, "share-policy-recovery");
+    await settingsAppearance(context.request, base, "zh-CN");
+    const headers = { Origin: base };
+    const source = await context.request.post(`${base}/api/conversations`, { headers, data: { title: "Synthetic policy source", messages: [{ role: "user", content_markdown: "Synthetic question" }, { role: "assistant", content_markdown: "Synthetic answer" }] } });
+    expect(source.status()).toBe(201);
+    const created = await context.request.post(`${base}/api/conversations/${(await source.json()).conversation.id}/shares`, { headers, data: { title: "Synthetic unchanged title" } });
+    expect(created.status()).toBe(200);
+    const share = await created.json();
+    const page = await context.newPage();
+    await page.goto(base);
+    const dialog = await openShares(page);
+    await dialog.getByRole("button", { name: "编辑分享", exact: true }).click();
+    await openSection(dialog, /链接外观/);
+    await dialog.getByLabel("分享标题", { exact: true }).fill("Synthetic blocked draft");
+    // Change real server policy after the stale editor opens, before PATCH.
+    expect((await admin.put("/api/admin/features", { data: { allow_share_links: false } })).status()).toBe(200);
+    const save = dialog.getByRole("button", { name: "保存分享设置", exact: true });
+    await save.click();
+    await page.getByRole("button", { name: "应用设置", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("当前权限不允许此操作");
+    await expect(dialog.getByLabel("分享标题", { exact: true })).toHaveValue("Synthetic blocked draft");
+    await expect(save).toBeDisabled();
+    expect((await (await context.request.get(`${base}/api/shares/${share.id}`)).json()).title).toBe("Synthetic unchanged title");
+    await dialog.getByRole("button", { name: "返回分享列表", exact: true }).click();
+    await page.getByRole("button", { name: "放弃更改", exact: true }).click();
+    await expect(dialog.getByRole("article", { name: "Synthetic unchanged title" })).toBeVisible();
+    await dialog.getByRole("article", { name: "Synthetic unchanged title" }).getByRole("button", { name: "更多", exact: true }).click();
+    await dialog.getByRole("menuitem", { name: "撤销", exact: true }).click();
+    await page.getByRole("dialog").last().getByRole("button", { name: "撤销分享", exact: true }).click();
+    await expect.poll(async () => (await (await context.request.get(`${base}/api/shares/${share.id}`)).json()).revoked_at).toBeTruthy();
+  } finally {
+    await admin.put("/api/admin/features", { data: { allow_share_links: policy.allow_share_links } });
+    await context.close(); await admin.dispose();
+  }
+});
+
+test("revoking the last filtered share page returns to the remaining active links", async ({ browser, playwright, baseURL }, info) => {
+  const base = baseURL!, admin = await settingsAdmin(playwright.request, base);
+  const context = await browser.newContext({ viewport: { width: 375, height: 900 } });
+  try {
+    await register(context.request, base, "share-shrinking-page");
+    await settingsAppearance(context.request, base, "zh-CN");
+    const headers = { Origin: base };
+    const source = await context.request.post(`${base}/api/conversations`, { headers, data: { title: "Synthetic share pagination", messages: [{ role: "user", content_markdown: "Synthetic pagination question" }, { role: "assistant", content_markdown: "Synthetic pagination answer" }] } });
+    expect(source.status()).toBe(201);
+    const sourceId = (await source.json()).conversation.id;
+    for (let index = 0; index < 21; index++) expect((await context.request.post(`${base}/api/conversations/${sourceId}/shares`, { headers, data: { title: `Synthetic page ${index}` } })).status()).toBe(200);
+    const page = await context.newPage();
+    await page.goto(base);
+    const dialog = await openShares(page);
+    await shareStatus(dialog, /有效/);
+    await dialog.getByRole("button", { name: "下一页" }).click();
+    await expect(dialog.getByRole("article")).toHaveCount(1);
+    await dialog.getByRole("button", { name: "批量管理" }).click();
+    await dialog.getByRole("button", { name: "选择本页可撤销项" }).click();
+    await dialog.getByRole("button", { name: "撤销所选 1 项" }).click();
+    await page.getByRole("button", { name: "撤销分享", exact: true }).click();
+    await expect(dialog.getByRole("article")).toHaveCount(20);
+    await expect(dialog.getByText("第 1 页 · 共 20 项", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "上一页" })).toBeDisabled();
+    expect((await (await context.request.get(`${base}/api/shares?status=revoked`)).json()).total).toBe(1);
+    expect((await (await context.request.get(`${base}/api/shares?status=active`)).json()).total).toBe(20);
+    await page.screenshot({ path: info.outputPath("share-page-recovery-375.png") });
+  } finally { await context.close(); await admin.dispose(); }
+});
+
 for (const width of [375, 1440]) {
   test(`share retry recovery with injected network and per-item failure ${width}`, async ({ browser, playwright, baseURL }) => {
     test.setTimeout(120_000);
@@ -39,7 +222,7 @@ for (const width of [375, 1440]) {
       const source = await context.request.post(`${base}/api/conversations`, { headers, data: { title: "Synthetic retry source", messages: [{ role: "user", content_markdown: "Synthetic retry question" }, { role: "assistant", content_markdown: "Synthetic retry answer" }] } });
       expect(source.status()).toBe(201);
       const conversationId = (await source.json()).conversation.id;
-      for (const title of ["Retry first", "Retry second"]) expect((await context.request.post(`${base}/api/conversations/${conversationId}/shares`, { headers, data: { title } })).status()).toBe(200);
+      for (const title of ["Retry first", "Retry second", "Retry third"]) expect((await context.request.post(`${base}/api/conversations/${conversationId}/shares`, { headers, data: { title } })).status()).toBe(200);
       const page = await context.newPage();
       let failList = true;
       await page.route("**/api/shares?*", async (route) => { if (failList) { failList = false; await route.abort(); } else await route.continue(); });
@@ -47,7 +230,7 @@ for (const width of [375, 1440]) {
       const dialog = await openShares(page);
       await expect(dialog.getByText("Unable to load shares. Refresh to retry.")).toBeVisible();
       await dialog.getByRole("button", { name: "Refresh", exact: true }).click();
-      await expect(dialog.getByRole("article")).toHaveCount(2);
+      await expect(dialog.getByRole("article")).toHaveCount(3);
       await dialog.getByRole("article", { name: "Retry first" }).getByRole("button", { name: "Edit share", exact: true }).click();
       await openSection(dialog, /Link appearance/);
       await dialog.getByLabel("Share title", { exact: true }).fill("Retained retry title");
@@ -73,25 +256,31 @@ for (const width of [375, 1440]) {
         // Acknowledge one actual server commit and inject failure for the untouched item.
         const response = await route.fetch({ postData: JSON.stringify({ share_ids: [ids[0]] }) });
         expect(response.status()).toBe(200);
-        await route.fulfill({ response, json: { results: [...(await response.json()).results, { share_id: ids[1], status: "failed" }] } });
+        await route.fulfill({ response, json: { results: [...(await response.json()).results, ...ids.slice(1).map(share_id => ({ share_id, status: "failed" }))] } });
       });
-      await dialog.getByRole("button", { name: "Revoke 2 selected" }).click();
+      await dialog.getByRole("button", { name: "Revoke 3 selected" }).click();
       await page.getByRole("button", { name: "Revoke shares", exact: true }).click();
-      await expect(dialog.getByText("1 items incomplete; other items were revoked.")).toBeVisible();
+      await expect(dialog.getByText("2 items incomplete; other items were revoked.")).toBeVisible();
       let rows = (await (await context.request.get(`${base}/api/shares`)).json()).items;
       expect(rows.filter((row: { status: string }) => row.status === "revoked")).toHaveLength(1);
+      expect(rows.filter((row: { status: string }) => row.status === "active")).toHaveLength(2);
+      await dialog.getByRole("button", { name: "Retry item" }).first().click();
+      await page.getByRole("button", { name: "Revoke shares", exact: true }).click();
+      await expect(dialog.getByRole("button", { name: "Retry item" })).toHaveCount(1);
+      rows = (await (await context.request.get(`${base}/api/shares`)).json()).items;
+      expect(rows.filter((row: { status: string }) => row.status === "revoked")).toHaveLength(2);
       expect(rows.filter((row: { status: string }) => row.status === "active")).toHaveLength(1);
       await dialog.getByRole("button", { name: "Retry item" }).click();
       await page.getByRole("button", { name: "Revoke shares", exact: true }).click();
       await expect(dialog.getByRole("button", { name: "Retry item" })).toHaveCount(0);
       rows = (await (await context.request.get(`${base}/api/shares`)).json()).items;
-      expect(rows.filter((row: { status: string }) => row.status === "revoked")).toHaveLength(2);
+      expect(rows.filter((row: { status: string }) => row.status === "revoked")).toHaveLength(3);
       await context.setOffline(true);
       await expect(dialog.getByText("Share management requires a connection. Reconnect and refresh.")).toBeVisible();
       await expect(dialog.getByRole("button", { name: "Refresh", exact: true })).toBeDisabled();
       await context.setOffline(false);
       await dialog.getByRole("button", { name: "Refresh", exact: true }).click();
-      await expect(dialog.getByRole("article")).toHaveCount(2);
+      await expect(dialog.getByRole("article")).toHaveCount(3);
       await page.keyboard.press("Escape");
       await expect(dialog).toHaveCount(0);
       await expect(page.getByRole("button", { name: /My shares/ })).toBeFocused();

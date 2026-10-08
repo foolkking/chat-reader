@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "noise-dismissal-final",
+  "status": "failed",
+  "started_at": "2026-10-07T16:42:17.983Z",
+  "test_count": 59,
+  "completed_at": "2026-10-07T16:48:33.478Z",
+  "duration_ms": 378421,
+  "result_counts": {
+    "passed": 57,
+    "failed": 2,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

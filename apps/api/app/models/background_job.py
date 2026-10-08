@@ -45,3 +45,4 @@ Index("idx_background_jobs_type_status", BackgroundJob.job_type, BackgroundJob.s
 Index("idx_background_jobs_idempotency_key", BackgroundJob.idempotency_key)
 Index("idx_background_jobs_owner_status_queued", BackgroundJob.owner_user_id, BackgroundJob.status, BackgroundJob.queued_at)
 Index("idx_background_jobs_owner_idempotency", BackgroundJob.owner_user_id, BackgroundJob.idempotency_key)
+Index("idx_background_jobs_cleanup_request", BackgroundJob.owner_user_id, BackgroundJob.job_type, BackgroundJob.payload["cleanup_request_key"].as_string())

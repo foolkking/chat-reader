@@ -12,7 +12,7 @@ export function AdminSkillSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
   const [dirtyMembers, setDirtyMembers] = useState<Record<string, boolean>>({});
   const [busyMembers, setBusyMembers] = useState<Record<string, boolean>>({});
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ["admin-system-skills"], queryFn: adminApi.systemSkills });
+  const query = useQuery({ queryKey: ["admin-system-skills"], queryFn: ({ signal }) => adminApi.systemSkills(signal), retry: false });
   const refresh = async () => {
     await Promise.all(["admin-system-skills", "skills", "resolved-skill"].map(queryKey => client.invalidateQueries({ queryKey: [queryKey] })));
   };
@@ -23,7 +23,7 @@ export function AdminSkillSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   return <section className="space-y-3">
     {query.isPending ? <p role="status">{zh ? "正在读取…" : "Loading…"}</p> : null}
-    {query.isError ? <button type="button" onClick={() => void query.refetch()}>{zh ? "读取失败，重试" : "Could not load; retry"}</button> : null}
+    {query.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{zh ? "系统 Skill 列表读取失败，已确认的操作仍然有效。" : "The system Skill list could not load. Confirmed changes still apply."}</p><button type="button" disabled={query.isFetching} className="btn-secondary mt-2 min-h-11 px-3 text-xs" onClick={() => void query.refetch()}>{zh ? "读取失败，重试" : "Could not load; retry"}</button></div> : null}
     {query.data?.map(item => <article key={item.id} className="border-b border-ui py-4 first:pt-0 last:border-b-0">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0 flex-1">
@@ -34,7 +34,6 @@ export function AdminSkillSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
       </div>
       {item.legacy_default_conflict ? <div className="mt-2 text-sm text-secondary"><p>{zh ? "这个用途曾保存不同的默认文件，请选择统一使用哪一份。" : "Different default files were previously saved for this purpose. Choose which one to use."}</p><button type="button" disabled={busy || dirty} className="min-h-11 text-accent" onClick={() => changeDefault.mutate(item)}>{zh ? "统一使用此文件" : "Use this file for everyone"}</button></div> : null}
       <SkillBundleFiles system skill={{ ...item, source: "SYSTEM", is_selected: item.default_enabled, content_url: item.builtin_content_url }}
-        onSaved={refresh}
         onBusyChange={value => setBusyMembers(previous => previous[item.id] === value ? previous : { ...previous, [item.id]: value })}
         onDirtyChange={value => setDirtyMembers(previous => previous[item.id] === value ? previous : { ...previous, [item.id]: value })} />
       {item.source_kind === "BUNDLED" && item.is_customized ? <button type="button" disabled={busy || dirty} className="min-h-11 text-xs text-secondary" onClick={async () => {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -223,6 +224,31 @@ def build_offline_package(
     subject_key: str = "local:default",
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> OfflinePackageArtifact:
+    from app.services.exporting.archive_transaction import archive_read_snapshot
+
+    with archive_read_snapshot(db) as snapshot:
+        return _build_offline_package(snapshot, publication_db=db, job_id=job_id,
+            package_id=package_id, scope=scope, conversation_id=conversation_id,
+            project_id=project_id, known_revisions=known_revisions,
+            include_assets=include_assets, progress_callback=progress_callback,
+            subject_key=subject_key, ownership_scope=ownership_scope)
+
+
+def _build_offline_package(
+    db: Session,
+    *,
+    publication_db: Session,
+    job_id: uuid.UUID,
+    package_id: uuid.UUID,
+    scope: str,
+    conversation_id: uuid.UUID | None,
+    project_id: uuid.UUID | None,
+    known_revisions: dict[uuid.UUID, int] | None = None,
+    include_assets: str = "all",
+    progress_callback: ProgressCallback | None = None,
+    subject_key: str = "local:default",
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+) -> OfflinePackageArtifact:
     if include_assets not in {"none", "small", "all"}:
         raise OfflinePackageError("Unsupported offline attachment mode.")
     selected_conversations = select_conversations(
@@ -270,8 +296,7 @@ def build_offline_package(
             assets = _offline_asset_objects(db, conversations, include_assets)
             _report(progress_callback, "packaging_assets", 92, 0, len(assets))
             for index, asset in enumerate(assets, start=1):
-                path = get_asset_store().resolve_key(asset.storage_key)
-                archive.write(path, f"assets/objects/{asset.id}")
+                _write_verified_asset(archive, asset, progress_callback, index, len(assets))
                 _report(
                     progress_callback,
                     "packaging_assets",
@@ -306,7 +331,7 @@ def build_offline_package(
         created_at=utc_now(),
     )
     previous_artifacts = (
-        db.query(OfflinePackageArtifact)
+        publication_db.query(OfflinePackageArtifact)
         .filter(
             OfflinePackageArtifact.subject_key == subject_key,
             OfflinePackageArtifact.scope_type == scope,
@@ -319,14 +344,37 @@ def build_offline_package(
         previous_path = Path(previous.storage_uri).resolve()
         if previous_path.is_relative_to(root) and previous_path.is_file():
             cleanup_paths.append(previous_path)
-        db.delete(previous)
-    db.add(artifact)
-    db.flush()
+        publication_db.delete(previous)
+    publication_db.add(artifact)
+    publication_db.flush()
     # The worker owns the outer transaction. Cleanup is deliberately deferred
     # until that transaction has committed successfully.
     setattr(artifact, "_cleanup_paths", cleanup_paths)
     _report(progress_callback, "publishing", 99, total, total)
     return artifact
+
+
+def _write_verified_asset(archive, asset, callback, index: int, total: int) -> None:
+    """Check the exact bytes copied, with bounded reads and cancellation points."""
+    digest = hashlib.sha256()
+    size = 0
+    last_report = time.monotonic()
+    try:
+        path = get_asset_store().resolve_key(asset.storage_key)
+        with path.open("rb") as source, archive.open(f"assets/objects/{asset.id}", "w", force_zip64=True) as output:
+            while chunk := source.read(1024 * 1024):
+                size += len(chunk)
+                if size > asset.byte_size:
+                    raise OfflinePackageError("OFFLINE_ASSET_INTEGRITY")
+                digest.update(chunk)
+                output.write(chunk)
+                if time.monotonic() - last_report >= 0.25:
+                    _report(callback, "packaging_assets", 92 + round((index - 1) * 6 / max(total, 1)), index - 1, total)
+                    last_report = time.monotonic()
+    except OSError as error:
+        raise OfflinePackageError("OFFLINE_ASSET_IO") from error
+    if size != asset.byte_size or digest.hexdigest() != asset.sha256:
+        raise OfflinePackageError("OFFLINE_ASSET_INTEGRITY")
 
 
 def _write_package_payload(

@@ -1,5 +1,5 @@
 import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
-import { type AuthSessionState, type RegistrationMode } from "./auth-client";
+import { AuthRequestError, type AuthSessionState, type RegistrationMode } from "./auth-client";
 
 export type DeviceSession = {
   id: string;
@@ -37,16 +37,16 @@ export type OneTimeLink = {
   reset_url?: string;
 };
 
-export async function getAccountProfile(): Promise<AuthSessionState> {
-  return request<AuthSessionState>("/api/auth/me");
+export async function getAccountProfile(signal?: AbortSignal): Promise<AuthSessionState> {
+  return request<AuthSessionState>("/api/auth/me", { signal });
 }
 
 export async function updateAccountProfile(displayName: string): Promise<AuthSessionState> {
   return request<AuthSessionState>("/api/auth/me", json("PATCH", { display_name: displayName.trim() || null }));
 }
 
-export async function getDeviceSessions(): Promise<DeviceSession[]> {
-  return request<DeviceSession[]>("/api/auth/sessions");
+export async function getDeviceSessions(signal?: AbortSignal): Promise<DeviceSession[]> {
+  return request<DeviceSession[]>("/api/auth/sessions", { signal });
 }
 
 export async function logoutOtherDeviceSessions(): Promise<void> {
@@ -95,7 +95,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     response = await fetch(path, {
       ...init,
-      signal: init.signal ?? AbortSignal.timeout(10_000),
+      signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000),
       cache: "no-store",
       credentials: "same-origin",
       headers: { Accept: "application/json", ...init.headers },
@@ -114,7 +114,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       // Keep the bounded fallback for non-JSON proxy failures.
     }
-    throw new Error(message);
+    throw new AuthRequestError(message, response.status);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }

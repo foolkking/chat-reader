@@ -156,7 +156,7 @@ function MessageItemComponent({
       {!readOnly ? (
         <>
           {onInsert ? <button type="button" onClick={() => onInsert(message)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "在此处插入消息" : "Insert message here"} title={zh ? "插入消息" : "Insert message"}><Plus className="h-4 w-4" /></button> : null}
-          <button type="button" disabled={!onEdit} onClick={() => onEdit?.(message, visibleBlockAnchor()?.id)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-subtle disabled:opacity-40 ${editing ? "bg-[var(--accent-soft)] text-accent" : "text-secondary"}`} aria-pressed={editing} aria-label={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}>
+          <button type="button" disabled={!onEdit} onClick={() => { setMobileActionsOpen(false); onEdit?.(message, visibleBlockAnchor()?.id); }} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-subtle disabled:opacity-40 ${editing ? "bg-[var(--accent-soft)] text-accent" : "text-secondary"}`} aria-pressed={editing} aria-label={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}>
             <Pencil className="h-4 w-4" />
           </button>
           <VersionHistoryPanel messageId={message.id} currentVersionId={message.current_version?.id} onChanged={replaceMessagePreservingAnchor} />

@@ -1,5 +1,571 @@
 # Testing Addendum 2026-08-24
 
+For Windows paths in `PYTEST_ADDOPTS`, use forward slashes, for example
+`C:/Users/86182/Desktop/wkkk/<batch>/pytest`. Its shell-like parser consumes
+unquoted backslashes. TEMP/TMP alone cannot correct malformed `--basetemp` or
+`--junitxml` arguments; verify the intended task directory after launch.
+
+## Pending selection and attachment-failure browser acceptance (2026-10-08)
+
+The new [release continuation](execution/OPTIMIZATION_RELEASE_2026-10-08.md) is
+explicitly authorized to commit, run CI and deploy verified images. Its single
+original-command local Web attempt was again rejected before process creation.
+The 16 cases remain locally unexecuted; they are included in the existing release
+CI's **439-case settings matrix**. Current local lint, nonincremental typecheck,
+bounded build, head 0050 and 33 offline/task API tests pass. Do not count discovery
+or eventual CI execution as a specified-Chromium local acceptance run.
+
+Latest direction: use the user's exact task-owned Chromium executable against
+local services only. Chromium 151.0.7922.34 launched and closed on `about:blank`;
+this is a runtime preflight with zero application cases. A task-local config
+inherits the repository test configuration, pins that executable, disables the
+channel override and sets `webServer: undefined` so it cannot launch a fallback.
+The 16-case list succeeds. Explicitly reauthorized loopback Web startup was still
+rejected before process creation. See the
+[preflight record](execution/specified-chromium-preflight-2026-10-08.md); the earlier
+[blocked checkpoint](execution/local-browser-acceptance-block-2026-10-08.md) is historical.
+
+The [policy diagnosis](execution/local-execution-policy-diagnosis-2026-10-08.md)
+confirms effective full access / Never and no matching local deny rule. The
+precise rejecting policy is unknown; previous automatic-review attribution is
+not established. No further authorization or successful application run is implied.
+After the user-reported Codex restart, one original-command retry returned the
+same pre-process rejection. All four fixture ports remain idle and the 16 cases
+remain unexecuted. Restarting the client is therefore not a verified resolution.
+
+`settings-cleanup-recovery.spec.ts` has eight pending acknowledgement-loss cases.
+`settings-offline-recovery.spec.ts` has eight attachment-guidance cases: two retain
+existing copies, four cover empty/unrelated-copy libraries, and two exercise Task
+Center entry to an actual download on this device. Retained-copy cases enter the
+matching failure page from Task Center; the wide case adds 20 synthetic failed
+metadata rows to exercise page two. Opening must not admit or retry a download.
+The new-device cases require explicit admission, worker ZIP, IndexedDB persistence,
+reopening the existing record and actual Library content, without generic task
+retry. Only failure transport/display and paging metadata are injected; successful
+downloads remain real. These are intended assertions, not passing browser evidence.
+
+The 16 cases pass discovery (`--list`), not execution. Current lint, nonincremental
+TypeScript and bounded build pass. After the user's continuation, the execution tool
+again rejected loopback `next start`; no substitute server was launched. The new
+isolated database reached 0050 and all owned fixture services stopped. Use the same
+`API_INTERNAL_URL` when building and serving: fallback rewrites are stored in the
+build manifest. Current prepared build points to the isolated API on port 8008.
+See [failure-guidance evidence](execution/offline-error-guidance-2026-10-08.md) and
+the [task recovery follow-up](execution/offline-task-recovery-2026-10-08.md).
+
+`test_offline_task_recovery.py` has 11 passing cases: four scope projections, six
+invalid/legacy/unrelated payloads, and one real HTTP/worker/ZIP failure-to-repair
+flow. The last case checks fresh/idempotent admission, bytes, unchanged message
+versions and another owner's denied task/admission/download access. Its server
+principal is supplied by synthetic middleware; this is not a login/browser test.
+The fixture uses SQLite with foreign keys, not PostgreSQL. With task API and
+attachment-integrity regressions, the focused gate is **33 passed, zero failures,
+errors or skips**. Earlier full API/PostgreSQL gates predate this response-field
+change and are not claimed as a new full gate. Local Alembic remains head 0050.
+
+## Cleanup validation work (2026-10-08, local)
+
+`test_cleanup_validation_work.py` checks real select/preview/apply output and
+version persistence while counting full-source work for 32/128 candidates.
+Each message/rule is detected once, protected content remains intact and different
+sources/revisions remain separate. Final union with cleanup, safety, access,
+selection, learning and outcome regressions: **85 API cases and 11 actual
+PostgreSQL cases passed, zero skipped**. Baseline failures and single-sample
+timings are retained in the [execution record](execution/cleanup-validation-work-2026-10-08.md).
+Browser/PWA acceptance remains pending; API timing is not browser or production
+performance evidence. No Web change, new migration or release in this batch.
+
+## Cleanup source identity (2026-10-08, local)
+
+`test_cleanup_source_replacement.py` uses real edit/replace/preview/apply APIs to
+verify exact source binding, including whitespace-only changes whose normalized
+hash and version ID remain unchanged. `test_cleanup_source_postgres.py` covers
+unchanged/unknown migration backfill, upgrade/downgrade, edit/cleanup blocking,
+cached same-ID source rejection and edits during preview using actual PostgreSQL.
+Source/version counts verify results. With related cleanup, message history,
+Reader/locator, attachment, split/merge and repair regressions, **84 API cases and
+11 PostgreSQL cases pass, zero skipped**. See the
+[source-safety record](execution/cleanup-source-safety-2026-10-08.md) for failures
+and evidence. Local head is 0050; production remains 0048. Browser/PWA acceptance
+is pending the recorded automatic loopback Web-start rejection, not counted as passed.
+
+## Noise scanning lifecycle (2026-10-08)
+
+`test_cleanup_scan_lifecycle.py` verifies actual worker failure projection,
+queued/repeated cancellation, source preservation, fresh rescan, incomplete-apply
+rejection, retention and account isolation. Shared task/merge/worker regressions
+cover the expanded cancellable-job set. `test_cleanup_scan_lifecycle_postgres.py`
+uses real threaded transactions for cancellation versus both chunk requeue and
+final publication, completion-first behavior and stale cancellation recovery.
+
+`settings-noise-scan-lifecycle.spec.ts` covers live/cancelling/cancelled/failed
+details, rescan, uncertain-response checks, explicit retry, focus and account
+changes, plus retained imported content. Claimed intervals use guarded synthetic
+jobs with current heartbeats; missing heartbeats let real stale recovery finish
+them and invalidate the intended setup. API writes/reads and worker completion
+are real; long wall-clock scans are represented by the separate threaded tests.
+The browser fixtures accept loopback PostgreSQL ports 65438 and 45438 only; use
+an available one without changing system port policy or unrelated processes.
+Run with dismissal, rescan, noise navigation and Task Center regressions. Record
+failed preparation and product failures separately in the
+[batch audit](execution/ux-audit-noise-scan-lifecycle-2026-10-08.md).
+
+## Noise dismissal and empty results (2026-10-08)
+
+`test_cleanup_dismissal.py` verifies persisted idempotent dismissal, read-only
+receipt lookup, source-version preservation, failed-task completion, running-state
+rejection, rollback and account isolation. Run with cleanup access, rescan/scan
+requests and outcomes. `test_cleanup_dismissal_postgres.py` uses an isolated real
+schema for concurrent deletion, cached-row refresh and transaction rollback;
+rescan/outcome PostgreSQL regressions preserve admission and completion behavior.
+
+`settings-noise-dismissal.spec.ts` covers 375/768/1440px and both locales/themes,
+zero-result retention/no reminder, real import, failed-task dismissal, conditional
+selection confirmation, lost/undelivered responses, read failures, held refresh
+and focus restoration without stealing focus. Failure/expiry fixtures update only
+guarded synthetic rows in the disposable PostgreSQL. Writes and checks use actual
+API/worker; transport failures are explicit fault injection. Run with rescan,
+noise-navigation, global-scan, cleanup-completion and Task Center regressions.
+
+Browser startup must set `AUTH_ENABLED=true` in addition to `APP_ENV=test` and
+`E2E_SETTINGS_MAILBOX=1`; API-only fixtures may require a different auth mode.
+Do not carry that API override into the Web process: it bypasses the private
+browser boundary and invalidates account-switch acceptance. Capture synthetic
+images with `SETTINGS_SCREENSHOT_DIR` under the AGENTS task TEMP/TMP directory.
+The [batch audit](execution/ux-audit-noise-dismissal-2026-10-07.md) separates initial
+product failures, environment mistakes and final evidence. No full PWA/API or
+production acceptance is implied; local Alembic remains single head 0049.
+
+## Rescan recovery (2026-10-07)
+
+`test_cleanup_rescan_requests.py` exercises real admission retries, read-only
+lookup, account/original-scan isolation, import parent/active scope, old selections,
+new exceptions, actual apply and ended reviews. Global apply includes pre-update
+pending jobs without a payload key. Run with scan-request/outcome/access/group
+tests. `test_cleanup_rescan_postgres.py` verifies concurrent admission, actual
+version counts after apply and 0048→0049→0048→0049 index/data/model equivalence;
+run with scan-request/outcome PostgreSQL suites in an isolated database.
+
+`settings-rescan-recovery.spec.ts` covers 375/768/1440px, both locales/themes,
+conditional/cancelled confirmation, old-choice return, reload, dropped/undelivered
+responses, deadlines, held task reads, ended/missing reviews and conflict/failed
+entry recovery. Failure status is explicitly injected in one UI case; writes and
+checks use actual API/PostgreSQL/worker. Run with noise-navigation and cleanup-
+recovery specs for real import, source-protection, selection and preview regressions.
+Use AGENTS C-drive TEMP/TMP/basetemp. This batch's source findings, failed checks,
+resource-limited builds and final evidence belong to the
+[rescan audit](execution/ux-audit-rescan-recovery-2026-10-07.md), not an inferred
+full API/PWA or production pass. Local head is 0049; production remains 0048.
+
+## System noise publication recovery (2026-10-07)
+
+`test_cleanup_publication_recovery.py` verifies stale publish/withdraw, name-only
+and withdrawal/republish bases, current-state reads, Root isolation, legacy DELETE,
+acknowledgement consistency and audit rollback. Run with rule-grants/access/learning
+and personal-edit suites; anonymous fixtures require AUTH_ENABLED=false, while
+the auth fixture provisions its own enabled environment. Use the task's C-drive
+TEMP/TMP and pytest basetemp as specified in AGENTS.
+
+`test_cleanup_publication_postgres.py` runs three competing writes with preloaded
+ORM state against disposable PostgreSQL. Run with `test_cleanup_rule_postgres.py`
+and `test_cleanup_edit_postgres.py`, SETTINGS_POSTGRES_INTEGRATION=1.
+
+`settings-publication-recovery.spec.ts` contains 18 real browser/API scenarios.
+Run with `settings-rule-publication.spec.ts` and `settings-noise-navigation.spec.ts`
+on the isolated settings API/worker/PostgreSQL fixture, E2E_SETTINGS_MAILBOX=1.
+Recovery checks assert persisted state and absence of repeat writes; conflict
+cases also assert freshly published match text. Route holds/lost responses are
+fault injection, not mock success. The
+[audit](execution/ux-audit-rule-publication-2026-10-07.md) preserves failed baseline,
+environment/test corrections, passing gates and visual evidence separately.
+
+## Personal rule-edit concurrency (2026-10-07)
+
+`test_cleanup_edit_concurrency.py` covers name-only changes before/after trial,
+explicit rebase, omitted-token signature safety, legacy unchanged submissions,
+concurrent disablement and preserving a disabled switch. With learning/grants/
+access regressions, 18 cases pass. `test_cleanup_edit_postgres.py` preloads stale
+ORM objects in two concurrent sessions and proves one save/one conflict without
+creating matcher revisions; a shared-identity test proves independent account
+bases. Alongside existing PostgreSQL cleanup/rule suites, eight cases pass.
+
+`settings-rule-edit-concurrency.spec.ts` uses two real browser pages at each of
+375/768/1440 widths. Six cases cover remote name edits before/after trial, disabled
+rules, draft comparison, keyboard focus and explicit save while retaining one
+matcher revision. Combined with rule recovery/actions/learning/publication and
+selection-scope tests, the final gate has 51 passes, zero skips. A learning-case
+rerun is additional verification, not a 52nd distinct case. Two transient Web
+proxy resets during unrelated list reads are documented in the
+[audit](execution/ux-audit-rule-edit-concurrency-2026-10-07.md); their origin was
+not proven. Full API/PWA and all offline negatives were not rerun.
+
+## Noise selection scope (2026-10-07)
+
+`settings-noise-selection-scope.spec.ts` adds five real API/PostgreSQL browser
+cases: cross-group/cross-page selection and canonical apply at 375/768/1440,
+failed scope reads and legacy responses without summary metadata. Keyboard
+navigation, close/reopen, selected-only empty groups and protected text are
+asserted. Run with noise-navigation (including real import), noise-diff,
+cleanup-recovery/completion/layout and content-cleanup suites; enable
+`E2E_SETTINGS_MAILBOX=1` and `E2E_CONTENT_CLEANUP=1` with the isolated fixture.
+The final combined gate has 45 passes and no skips. The initial three failures
+were a test wrongly reopening Task Center while it remained open; two cases did
+not run in that first gate. Both reports are retained in the
+[audit](execution/ux-audit-noise-selection-scope-2026-10-07.md).
+
+`test_cleanup_selection_summary.py` checks whole-scope totals across page offsets,
+empty scopes, rule filtering and independent clearing. It runs with cleanup
+group-search/access/safety/preview-ranges (40 passes), plus existing PostgreSQL
+cleanup/rule concurrency and migration suites (6 passes). The browser tests also
+exercise the new aggregate query in PostgreSQL. This does not certify full PWA,
+all offline negatives or the entire API suite.
+
+## Personal noise-rule action recovery (2026-10-07)
+
+`settings-rule-actions.spec.ts` uses the isolated authenticated
+PostgreSQL/API/worker fixture with `E2E_SETTINGS_MAILBOX=1`. Sixteen browser cases
+cover held post-save reads, lost status/version/delete responses, read failure,
+unsubmitted/timeout actions, stale history, removed rules, failed post-save list
+refresh and reopening. The real scan-cycle case verifies selected versions and
+enablement affect new scans while old occurrences/decisions and canonical message
+text remain unchanged. Three widths include Chinese/light and English/dark.
+
+Run alongside rule-learning, rule-recovery, rule-publication, global-scan-recovery,
+noise-navigation, exception-recovery and cleanup suites. Backend regression uses
+cleanup_rule_grants, cleanup_learning, cleanup_access and the real PostgreSQL
+cleanup_rule_postgres / cleanup_postgres suites. These remain scoped tests, not
+full PWA/API certification. Finish build and static checks sequentially before
+starting the resource-sensitive browser fixtures. Preserve failure evidence; see
+the [audit](execution/ux-audit-rule-actions-2026-10-07.md).
+
+## Global noise-scan admission recovery (2026-10-07)
+
+`settings-global-scan-recovery.spec.ts` uses the authenticated isolated
+PostgreSQL/API/worker fixture with `E2E_SETTINGS_MAILBOX=1`. Its ten cases cover
+confirmed admission with a held list read, lost response/read failure/reload,
+same-key retry, closed reviews, empty scope, disabled rules followed by enabling
+one, the actual 20-second deadline and scanning from an embedded rule library.
+Three widths exercise focus inside Task Center, Shift+Tab, opening a real review
+and Escape back to its trigger. Failures are injected around actual API writes;
+the tests check persisted task counts rather than a mocked success alone.
+
+Run with noise-navigation, exception-recovery, rule-learning, rule-recovery and
+cleanup suites. The shared focus repair additionally runs task-center and
+presentation suites. `test_cleanup_scan_requests.py` covers five API scenarios;
+`test_cleanup_scan_requests_postgres.py` runs concurrent same-key admission in
+real PostgreSQL alongside the existing cleanup concurrency suite. No new schema.
+Use process-local TEMP/TMP and pytest basetemp below the task's C-drive wkkk
+directory; finish build before running resource-sensitive browser fixtures.
+The [dated audit](execution/ux-audit-global-scan-recovery-2026-10-07.md) preserves
+baseline failures, the caught focus defect and the interrupted environment run.
+
+## Exception recovery (2026-10-07)
+
+`settings-exception-recovery.spec.ts` adds 11 isolated browser cases: stale
+scope refusal, held last-page refresh after a committed revoke, lost save
+responses/read retry at three widths, undelivered saves at two widths, uncertain
+revoke plus list failure/retry, expired confirmation, an actual 20-second read
+deadline, and selected-only save preserving other decisions. All mutations and
+final counts/body/version assertions use the real API/PostgreSQL fixture; only
+the named network failure/held response/invalid token is injected.
+
+With the rule recovery/learning/publication, navigation, differences and cleanup
+suites, 60 distinct cases have passing evidence. The first complete run was
+59 passed/1 rule-return focus failure; after restoring focus in the committed
+list's layout effect, the affected 35 cases passed/0 skipped. No unchanged
+navigation/diff/cleanup rerun is implied. Lint, nonincremental TypeScript and
+ordinary Web build passed after the last code edit. API learning/access/grants
+11 plus safety 28 passed; PostgreSQL cleanup/rule 6 passed under isolated schemas.
+Head remains `20261006_0048`. See the
+[audit](execution/ux-audit-exception-recovery-2026-10-07.md) for two genuine
+baseline failures, preparation failures and aggregate evidence. The 0-test
+missing-file command is retained separately. Full API/PWA, independent offline/
+Share matrices, external Skill and production checks were not rerun.
+
+## Rule learning recovery (2026-10-07)
+
+`settings-rule-recovery.spec.ts` adds twelve isolated authenticated cases: a
+confirmed save while list refresh is held; three-width lost-response checks with
+a failed GET/retry and no second write; three-width real revision conflict,
+readable field comparison and focus return; failed fresh comparison; new-rule
+result lookup; an unsent save; server rejection of a timestamp-modified trial
+token; and the actual 20-second trial deadline. Synthetic match text is unique
+per fixture so global configuration deduplication does not invalidate assumptions
+about new revision ordinals. Successful mutations and final reads use real API/
+PostgreSQL data. Fault injection affects only the specified request/response.
+
+Run with `settings-rule-learning`, `settings-rule-publication`,
+`settings-noise-navigation`, `settings-noise-diff` and `settings-cleanup` under
+`E2E_SETTINGS_MAILBOX=1`: **49 passed, zero skipped** on the final build. This
+also exercises shared editor use from a review, explicit exceptions, publication,
+retained grants, real import/global scans, protection, preview and actual cleanup.
+Use the existing process-local synthetic auth fixture and set `API_INTERNAL_URL`
+at build and start.
+
+API: `test_cleanup_learning`, `test_cleanup_rule_grants`, `test_cleanup_access`
+(11 passed). The anonymous fixture requires `AUTH_ENABLED=false` in the runner;
+the dedicated ownership tests enable auth themselves. PostgreSQL:
+`test_cleanup_rule_postgres`, `test_cleanup_postgres` (6 passed), with
+`SETTINGS_POSTGRES_INTEGRATION=1` and disposable schemas. The
+[audit](execution/ux-audit-rule-learning-recovery-2026-10-07.md) preserves initial
+environment/locator/shared-identity assertion failures and corrected runs. This
+is no new full API/PWA, independent Share/offline, external Skill or production
+gate. Only aggregate test evidence and synthetic screenshots belong in docs.
+
+## Noise difference preview (2026-10-07)
+
+`settings-noise-diff.spec.ts` adds eight authenticated-fixture cases: three-width
+long Unicode messages with exact text/markers, previous/next positioning in both
+panes and actual saved new versions; three missing/mismatched/malformed metadata
+fallbacks; a real source-version conflict; and eleven-message paged preview.
+The mobile case checks that the active after-boundary remains in the viewport.
+Only the three fallback cases alter GET metadata; scan/selection and remaining
+responses come from the real PostgreSQL/API/worker. Before confirmation, source
+text remains unchanged. After confirmation, exact expected text is read back.
+
+Run with `settings-noise-navigation`, `settings-cleanup-recovery`,
+`settings-cleanup-completion`, `settings-cleanup` and `content-cleanup`, using
+`E2E_SETTINGS_MAILBOX=1`, `E2E_CONTENT_CLEANUP=1` and the existing isolated fixture.
+Set `API_INTERNAL_URL` at both build and start. API coverage is
+`test_cleanup_preview_ranges`, `test_cleanup_safety`, `test_cleanup_access`,
+`test_cleanup_outcomes` (40 passed); PostgreSQL coverage is `test_cleanup_postgres`
+and `test_cleanup_outcomes_postgres` (6 passed).
+
+Browser evidence is 42 regression passes followed by eight final difference
+passes, comprising seven reruns and one new malformed-metadata case: **43 distinct
+cases**, zero skipped. The last pass follows shorter mobile panes and stronger
+metadata guards; unchanged navigation/recovery cases were not repeated again.
+The [dated audit](execution/ux-audit-noise-diff-2026-10-07.md) retains the expected
+baseline failure, all four browser summaries, API/PG summary and reviewed images.
+No full PWA/API, production, external Skill, performance benchmark or formal
+accessibility acceptance is inferred from this scoped batch.
+
+## Import/global noise navigation (2026-10-07)
+
+`settings-noise-navigation.spec.ts` has eleven isolated authenticated cases:
+real file import and scoped completion entry at three widths, conversation-wide
+rules/bulk application at three widths, preserved preview scroll/focus/expanded
+contexts at three widths, 102-conversation paged search, and actual rule-library
+global admission excluding archives. The import case checks failed metadata reads
+and rescan return focus. It asserts real final message text, protected source and
+unrelated-conversation preservation. Run with the six existing cleanup/layout/
+recovery/completion/learning suites, using `E2E_SETTINGS_MAILBOX=1` and
+`E2E_CONTENT_CLEANUP=1`. Set `API_INTERNAL_URL` for both build and Next start;
+the test fixture serves API8008, not the default8000.
+
+API: `test_cleanup_group_search`, `test_cleanup_access`, `test_cleanup_safety`,
+`test_cleanup_outcomes`, `test_content_cleanup`, `test_import_queue`: 70 passed.
+PostgreSQL: `test_cleanup_postgres`, `test_cleanup_outcomes_postgres`: 6 passed.
+Final browser coverage is 44 distinct passing cases, obtained as 43 in delivery
+and one corrected fresh-global-admission rerun. The first global fixture reused
+the existing scan and incorrectly expected its old exclusion count to update;
+the corrected fixture explicitly dismisses that seed before fresh admission.
+An earlier source-flow skip was subsequently run successfully, not counted as
+passed while skipped. Intermediate failures, 3 baseline/65 final screenshots
+and full limitations are in the [dated audit](execution/ux-audit-noise-navigation-2026-10-07.md).
+No new full API/PWA, production or external Skill pass is inferred.
+
+## Registration-policy recovery (2026-10-07)
+
+`settings-registration-recovery.spec.ts` adds twelve authenticated-fixture cases:
+three-width conflicts and lost real responses, actual pending-account/login refusal,
+failed reads, second mode conflict, invitation draft retention, unsent saves, real
+request deadlines, unavailable mail discovery and remote language changes. The mail
+browser case changes discovery only; API tests independently remove actual SMTP config.
+The existing `settings-registration.spec.ts` covers real SMTP confirmation/approval
+and settings dismissal/scroll. `account-access-settings.spec.ts` remains two UI mocks
+plus a source-contract check; its authenticated-gate setup now supplies the server
+session before mocking browser reads and follows changed-field request contracts.
+These mocks are not evidence of server permission enforcement.
+
+Use the existing `E2E_SETTINGS_MAILBOX=1` fixture, synthetic admin, isolated upstream
+and explicit disposable database, with task-local TEMP/TMP. Final browser gates total
+22 distinct checks: 19 integration flows, 2 UI mocks, 1 source-contract check; no skips.
+The audit retains failed baseline and wrong-fixture runs as failures.
+
+`test_registration_policy_recovery`, `test_registration_verification`, `test_auth`,
+`test_admin_users` and `test_admin_invitation_audit` have 62 distinct passing cases
+across the regression run and corrected seven-case suite. The original regression
+had 61 passes plus a wrong exception-vs-HTTP assertion; only affected tests were rerun.
+`test_registration_policy_postgres` has three actual disposable-PostgreSQL checks
+for cached ORM contention, legacy partial writers and initial mode preservation,
+enabled by `SETTINGS_POSTGRES_INTEGRATION=1`. All tests use actual persistence;
+application middleware's 500 handling and rollback are checked directly.
+
+## Feature-policy recovery (2026-10-07)
+
+`settings-feature-recovery.spec.ts` uses the real authenticated settings fixture
+with eleven cases: stale multi-window edits at three widths, lost real PUT
+responses, failed recheck, another same-field conflict, explicit server choice,
+an unsent save, matching remote values, and actual 20-second GET/PUT deadlines.
+Assertions inspect the partial request, persisted policy, effective capabilities,
+keyboard focus and absence of automatic repeat writes. Held/aborted requests
+simulate network faults without substituting successful mutations.
+
+Run with `E2E_SETTINGS_MAILBOX=1`, synthetic Root credentials, explicit disposable
+`DATABASE_URL`, the isolated `API_INTERNAL_URL`, and task-local TEMP/TMP. Related
+browser regressions are `settings-shares`, `settings-export-retention` and
+`settings-help-runtime`. The latter exercise actual downloads/reclamation and
+cached offline capability boundaries. Gate outcomes and reviewed screenshots are
+recorded in the [audit](execution/ux-audit-feature-policy-recovery-2026-10-07.md).
+
+API suites: `test_feature_policy_recovery`, `test_admin_system`,
+`test_registration_verification`, `test_export_retention`, `test_support_requests`.
+`test_feature_policy_postgres` requires `SETTINGS_POSTGRES_INTEGRATION=1` and an
+explicit disposable PostgreSQL URL; the shared fixture creates its own database,
+applies migrations, tests real row/advisory locks and drops only that database.
+It covers cached ORM races, legacy disjoint writes and initial read/write creation.
+SQLite timestamp metadata is normalized in comparisons, not treated as a product
+revision change. This does not constitute a new full API/PWA or release gate.
+
+Final evidence: 58 API and 3 PostgreSQL passes; 40 distinct browser-gate cases
+(39 real browser flows and one diagnostic serializer case), zero skips. The
+combined 40-case gate precedes only the final feature action-row placement;
+all eleven affected feature cases passed again with viewport assertions.
+Unchanged Share/export/help regressions were not needlessly repeated. All 46
+retained final screenshots were reviewed; initial failures remain in the audit.
+
+## Skill replacement recovery (2026-10-07)
+
+`settings-skill-recovery.spec.ts` adds 14 cases on the authenticated isolated
+PostgreSQL/API fixture. It tests personal/system acknowledgement during held and
+failed list reads at three widths, real lost-response retry without another revision,
+malformed ZIP replacement, retained files through conflict/read failure/another
+update, and system restore to revision 0. Actual downloaded member bytes, persisted
+revision counts and keyboard recovery are checked; writes are never mock successes.
+
+Run with `context-skill-bundles.spec.ts`, `E2E_SETTINGS_MAILBOX=1` and
+`E2E_CONTEXT_BUNDLES=1`, plus the documented synthetic admin/upstream/database and
+task-local TEMP/TMP. The consumer regression replaces a selected Normalizer then
+reopens the existing failed import in the same browser, proving the old resolved
+cache does not supply the download. Final browser result: **23 passed / 0 skipped**.
+
+The four API suites `test_skill_bundles`, `test_skill_zip_defaults`,
+`test_skill_unified_preferences` and `test_skills_api` have **34 passes / 0 skips**.
+Their SQLite/file fixtures are separate from the real PostgreSQL browser checks.
+The [dated audit](execution/ux-audit-skill-replacement-recovery-2026-10-07.md) retains
+all six browser gates, initial fixture errors, the reproduced revision-0 implementation
+gap and 30 reviewed final screenshots. It is not full API/PWA or production acceptance.
+
+## Account settings recovery (2026-10-07)
+
+`settings-account-recovery.spec.ts` runs 13 cases with actual registration and
+PostgreSQL-backed identity/session mutations. At 375/768/1440px it checks independent
+read failures, preserved username/password drafts and focus, newer input during
+save, failed-save retry, and late identity/session responses. Another real session
+must become unauthorized after logout-others while the current device stays signed
+in. A lost response is injected only after a real 204; Refresh verifies actual
+state without a second POST. English/dark and Chinese/light are covered.
+
+Use the existing isolated authenticated settings fixture with
+`E2E_SETTINGS_MAILBOX=1`, synthetic admin credentials, `API_INTERNAL_URL`, explicit
+disposable `DATABASE_URL`, and task-local TEMP/TMP. Run the account suite together
+with `settings-email-change.spec.ts`, `settings-pending-signout.spec.ts` and
+`settings-signout-cleanup.spec.ts`. The final gate has **25 passes / 0 skips**;
+the latter suites exercise SMTP, retained offline data and explicit signout recovery.
+Fault injection never substitutes a mock success for a mutation/persistence check.
+
+The [dated audit](execution/ux-audit-account-security-recovery-2026-10-07.md) retains
+four gate summaries, three valid baseline and 31 final synthetic screenshots. Its
+first run's device-label assumption is a fixture failure, not a product regression.
+Intermediate overlapping gates are not added to the final count. This frontend
+batch does not claim a new full API/PWA, migration or production acceptance.
+
+## Cleanup layout (2026-10-07)
+
+`settings-cleanup-layout.spec.ts` uses two real conversations and seven real
+occurrences at 375/768/1440px. It checks visible source identity, the exact match
+with a nontransparent highlight, initially collapsed rule actions, keyboard
+disclosure, complete server context, persisted selection and unchanged canonical
+text. Disclosure stays open after selection refresh and closing it keeps the
+saved decision. Short fixture rows have a bounded height; full match text is
+never truncated to satisfy that check.
+
+The completion suite additionally checks compact height, absence of obsolete
+full-scan actions, result focus and real Task Center reentry. At 375/768px width
+it shrinks height to 360px, then checks header visibility, focused action bounds
+and actual successful retry/close. This is a short-viewport check, not a complete
+browser-zoom or assistive-technology audit.
+
+Run with `settings-cleanup-completion`, `settings-cleanup-recovery`,
+`settings-cleanup`, `content-cleanup` and `settings-rule-learning` under the
+isolated settings fixture documented below. The final gate has **33 passes and
+zero skips**; learned exceptions/rule versions are persisted through real APIs.
+The [layout audit](execution/ux-audit-cleanup-layout-2026-10-07.md) keeps failed
+baseline and intermediate evidence, final three-width screenshots and scope
+limits. Backend/schema were unchanged, so no new full API/PostgreSQL/PWA pass is
+inferred from this presentation batch.
+
+## Cleanup completion (2026-10-07)
+
+`settings-cleanup-completion.spec.ts` uses real registration, source, scans,
+decisions and commits at 375/768/1440px. It aborts an apply response only after a
+real 200, fails/retries outcome reads, reloads into the completed Task Center
+result, and separately fails/retries source-editor reloads. Each path verifies
+the actual version/text and exactly one browser apply. Mobile editing checks
+action-sheet dismissal and focus on the first editor selection. Use
+`E2E_SETTINGS_MAILBOX=1`, `E2E_CONTENT_CLEANUP=1`, synthetic admin credentials,
+`API_INTERNAL_URL`, **explicit `DATABASE_URL` for the disposable fixture**, and
+process-local TEMP/TMP. Task Center's Python fixture refuses a missing database
+environment value so it cannot fall back to a developer's local configuration.
+
+Run with `settings-cleanup-recovery`, `settings-cleanup`, `content-cleanup`,
+`settings-rule-publication` and `settings-task-center`. The final six-suite gate
+has 35 passes / 0 skips. `test_cleanup_outcomes` checks real persistence,
+POST replay, missing receipts, partial failure/rollback, terminal window and
+Reader/Share/TOC/search/offline consistency; `test_cleanup_access` checks another
+account both before and after completion. `test_cleanup_outcomes_postgres`
+checks final-message/receipt atomicity, concurrent HTTP replay and actual FK
+account deletion alongside the existing cleanup PostgreSQL suites.
+
+The dated [audit](execution/ux-audit-cleanup-completion-2026-10-07.md) records
+101 API and 8 PostgreSQL passes, all failed gates, screenshot review and exact
+limits. These counts are scoped; no new whole-site API/PWA or production pass
+is inferred. The previous batch's PWA results remain historical evidence.
+
+## Noise-review recovery (2026-10-07)
+
+`settings-cleanup-recovery.spec.ts` requires the isolated authenticated PostgreSQL/
+API/worker fixture and `E2E_SETTINGS_MAILBOX=1`. It checks 51-selection page shrink,
+keyboard/group return, real single/bulk acknowledgement during delayed or failed
+reads, saved choices after reopening, cached preview failures, source conflicts,
+rescan and exact persisted text. Run with `settings-cleanup.spec.ts` and the source
+editor `content-cleanup.spec.ts` (`E2E_CONTENT_CLEANUP=1`). Route overrides inject
+only read failures/delays; saves, conflicts, scans and applies use the real backend.
+
+Corresponding API checks: `test_content_cleanup`, `test_cleanup_safety`,
+`test_cleanup_access`, `test_cleanup_learning`, `test_cleanup_rule_grants`.
+`test_cleanup_postgres` and `test_cleanup_rule_postgres` require
+`SETTINGS_POSTGRES_INTEGRATION=1` and the explicitly disposable database.
+Use nonempty synthetic endings instead of assuming creation preserves trailing
+blank lines. Repeated failed Playwright tests recreate workers and can exhaust the
+existing administrator login throttle; retain failed evidence and wait its window,
+never weaken production limits. The dated audit records exact gate outcomes.
+
+## Offline download recovery (2026-10-07)
+
+`settings-offline-recovery.spec.ts` uses an isolated authenticated PostgreSQL/API/
+single-worker fixture with `E2E_SETTINGS_MAILBOX=1`. It checks actual admission keys
+and task IDs, persisted IndexedDB messages, damaged-package rebuilding, offline
+cancellation/removal, terminal-query outages, lost receipts, cancellation backoff,
+desktop search focus and shrinking pagination. Route fault injection only creates
+failures/delays; success is supplied by the real API and worker. Gate evidence and
+synthetic screenshots belong to the dated offline recovery audit.
+
+Run alongside `settings-offline-center`, `settings-offline-lock`,
+`settings-offline-sync`, `settings-offline-conflicts` and `settings-reading-sync`.
+Run `auth-gate` separately: its password-change test deliberately rotates the
+fixture owner's password. Reusing the old credential for a following settings
+batch causes real 401 responses and login throttling. Reset/recreate the synthetic
+fixture between those gates, or explicitly use its rotated credential; do not
+disable production authentication/rate-limit behavior to make tests pass.
+
+The standard build/default PWA matrix uses an auth-disabled fixture. The negative
+matrix requires its separate `NEXT_PUBLIC_PWA_NEGATIVE_TESTS=1` build and covers
+real v1/v2/v3 ingestion, quota, interrupted writes, damaged resources and restarts.
+Preserve conditional skips separately from pass counts. On Windows, all task
+profiles and temporary fixture data follow AGENTS.md's process-local TEMP/TMP.
+
 ## Whole-site UX gate (2026-10-04)
 
 `e2e/ux-whole-site.spec.ts` runs under `E2E_MUTATION_FLOW=1` in the required
@@ -1210,6 +1776,116 @@ screenshots contain synthetic fixtures only. Current counts and unfinished
 acceptance are in the dated settings execution record.
 
 ## Local integration temp storage
+
+`settings-archive-recovery.spec.ts` captures an actual preflight admission response
+as a delayed history snapshot, then fails history reads while the real worker and
+task-detail API finish. It verifies failed-state recovery, same-task retry and a
+new queued run outranking stale failure while refresh is held. Three widths cover
+both personal and Root panels. The phone cases also reject false empty-history
+copy on initial read failure. Existing personal/system archive suites retain the
+real download, additive restore, duplicate receipt, ownership and reentry checks.
+The API job suites check current preflight availability after expiry/removal;
+their PostgreSQL counterparts remain the transaction/migration gate. All test
+content is synthetic; detailed local results and initial failures are in the
+[archive recovery audit](execution/ux-audit-archive-recovery-2026-10-07.md).
+
+### Administrator account recovery
+
+`settings-admin-recovery.spec.ts` uses the existing isolated authenticated
+PostgreSQL/API/worker fixture with `APP_ENV=test`, `AUTH_ENABLED=true`,
+`E2E_SETTINGS_MAILBOX=1`, explicit test `DATABASE_URL`/API upstream, and synthetic
+Root credentials. Run with `settings-admin-users.spec.ts` and
+`settings-admin-invitations-audit.spec.ts`. The test waits for the real navigation
+entry after hydration; viewport guesses do not substitute for observed visibility.
+
+Six new cases cover 375/768/1440px, Chinese/light and English/dark. Acknowledged
+disable/enable operations remain usable while subsequent GETs are held, and
+persisted status/session rejection is verified independently. A deliberately
+failed GET must return the expected 503 before testing its error state. Retrying
+restores real account data; deleting a synthetic account then refreshing must
+remove old detail and its generated reset link. Two 21-account fixtures verify
+filtered last-page shrink and actual row focus after return. Lost deletion
+responses are held until the real worker commits, then aborted; checks reuse the
+original key, tolerate a seeded check failure, and verify single queue/completion
+audit records. No successful write or task result is mocked.
+
+`test_admin_users.py` compares the action snapshot with a fresh detail read and
+persisted status, independent approval/verification and session revocation.
+SQLite timestamp comparisons normalize its missing timezone metadata to UTC;
+all remaining fields must match exactly. PostgreSQL deletion/verification tests
+also require an explicit synthetic `AUTH_SESSION_SECRET` in the test process.
+Intermediate failures and final gates belong to the
+[account recovery audit](execution/ux-audit-admin-account-recovery-2026-10-07.md).
+
+### Invalid archive replacement and expiry recovery
+
+`settings-archive-replacement.spec.ts` uses the authenticated settings fixture with
+the real API, single worker and independent PostgreSQL database. Run it with
+`settings-archive-recovery.spec.ts`, `settings-personal-backup.spec.ts`,
+`settings-system-backup.spec.ts` and `settings-task-center.spec.ts`. Explicitly set
+**APP_ENV=test**, **AUTH_ENABLED=true**, **E2E_SETTINGS_MAILBOX=1** and an isolated
+**DATABASE_URL**, in addition to the synthetic account and API upstream variables.
+The helper process must inherit that same database URL. APP_ENV=test alone does
+not enable Web authentication; API authentication does not substitute for it.
+
+The six replacement scenarios cover personal/system panels at 375/768/1440px,
+Chinese/light and English/dark. They create actual exports, upload invalid bytes,
+then choose valid files for real worker preflight. Personal restores assert the
+new conversations' persisted message contents. Keyboard focus, offline-disabled
+replacement, empty selection, original-upload retention and Task Center re-entry
+are checked. No mutation is expected merely from opening the replacement form.
+
+`archive-test-helper.ts` seeds only expiry or a retryable terminal failure. It
+requires test/mailbox flags and a synthetic test owner (or matching test Root),
+refuses active and non-preflight tasks, and never creates successful output.
+Delayed reads are held after the real retry response; the worker must validate
+the same valid upload before success. Existing recovery tests use a seeded unknown
+failure to retain generic-retry coverage; retrying their corrupt input still fails
+for the actual file. These are controlled negative seeds, not reproduced disk or
+scanner outages. A new empty-instance system restore is outside this batch.
+
+The [replacement audit](execution/ux-audit-archive-replacement-2026-10-07.md) records
+the final 26 passes, inspected screenshots, unsuccessful runs, runtime observation
+and unexecuted broader gates. Keep temporary profiles/logs under the task's C-drive
+`wkkk` directory. No new API, schema or package-format behavior is introduced.
+
+### Support inbox navigation recovery
+
+`settings-support-navigation.spec.ts` uses the same isolated authenticated
+PostgreSQL/API/worker fixture as `settings-support.spec.ts`, with
+`E2E_SETTINGS_MAILBOX=1` and the synthetic Root credentials supplied in the process
+environment. Run it together with `settings-support.spec.ts` and
+`settings-support-contextual.spec.ts`; production accounts are not fixtures.
+
+The new suite covers 375/768/1440px, Chinese/light and English/dark. It holds or
+fails GETs after real requests exist: refresh retains mounted rows/focus, its
+error remains in the viewport, and returning from detail restores the actual row.
+Two synthetic owners create eight active issues each; Root resolves the last
+filtered page through the UI, then reads the remaining fifteen persisted rows.
+Twenty real replies exercise failed next-page reads and successful retry without
+incorrect page labels. Delayed filters and a real cross-account 404 check that
+unrelated or inaccessible snapshots cannot reappear. The latter deliberately
+replays the 404 to the view and is not an account-disable end-to-end claim.
+
+Only this suite's synthetic accounts are removed by the existing fixture helper.
+Temporary profiles/logs remain in the task's C-drive `wkkk` directory; synthetic
+screenshots and sanitized gate summaries are retained in the
+[navigation audit](execution/ux-audit-support-navigation-2026-10-07.md). Failures,
+reruns and other gates not executed are recorded separately.
+
+`settings-shares.spec.ts` uses the authenticated PostgreSQL settings fixture to
+exercise real conflict/merge/discard, remote revocation, policy-change recovery,
+per-item retry retention and filtered-page shrink. It verifies persisted owner
+settings and public capabilities, including unchanged Share URLs. Network/partial
+failure injection does not replace successful mutations. Three-width conflict
+screenshots use synthetic content only. `test_my_shares_postgres.py` preloads two
+independent sessions before a concurrent-write barrier to catch stale ORM identity
+maps; exactly one settings write may succeed for the same base revision. Ordinary
+API cases cover visitor reads, password revision, ownership, legacy partial PATCH
+and revoked targets. These are scoped checks; full API/PWA and independent Skill
+coverage must not be inferred. Run `share-drawer-focus.spec.ts` separately with
+`E2E_SHARE_DRAWER_FOCUS=1` and its anonymous fixture; the authenticated settings
+fixture is not a substitute for those default unauthenticated browser contexts.
 
 `PLAYWRIGHT_USE_BUNDLED_CHROMIUM=1` selects Playwright's pinned full Chromium
 with the `chromium` channel (new headless mode), including the persistent-profile

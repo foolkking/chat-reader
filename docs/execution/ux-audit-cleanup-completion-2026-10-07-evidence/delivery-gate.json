@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "cleanup-completion-delivery",
+  "status": "failed",
+  "started_at": "2026-10-06T22:32:03.299Z",
+  "test_count": 35,
+  "completed_at": "2026-10-06T22:34:57.615Z",
+  "duration_ms": 177212,
+  "result_counts": {
+    "passed": 33,
+    "failed": 2,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

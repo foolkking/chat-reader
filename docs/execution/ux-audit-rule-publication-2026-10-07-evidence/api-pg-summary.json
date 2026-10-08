@@ -1,0 +1,57 @@
+{
+  "runs": [
+    {
+      "run": "api-baseline",
+      "tests": 2,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 0
+    },
+    {
+      "run": "api-first",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 4
+    },
+    {
+      "run": "api-final",
+      "tests": 27,
+      "failures": 15,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 12
+    },
+    {
+      "run": "api-corrected",
+      "tests": 27,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 25
+    },
+    {
+      "run": "api-passed",
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 27
+    },
+    {
+      "run": "pg-final",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 7
+    }
+  ],
+  "final_scope": {
+    "api": 27,
+    "postgres": 7
+  },
+  "note": "Intermediate runs repeat cases; the audit explains baseline and test/environment corrections."
+}

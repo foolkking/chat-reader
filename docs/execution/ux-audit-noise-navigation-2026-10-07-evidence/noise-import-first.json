@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "noise-import-first",
+  "status": "failed",
+  "started_at": "2026-10-07T05:25:12.393Z",
+  "test_count": 3,
+  "completed_at": "2026-10-07T05:25:43.761Z",
+  "duration_ms": 34612,
+  "result_counts": {
+    "passed": 2,
+    "failed": 1,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

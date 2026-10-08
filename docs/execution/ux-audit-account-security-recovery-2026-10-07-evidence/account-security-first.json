@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "account-security-first",
+  "status": "passed",
+  "started_at": "2026-10-07T00:29:35.523Z",
+  "test_count": 9,
+  "completed_at": "2026-10-07T00:29:49.645Z",
+  "duration_ms": 16396,
+  "result_counts": {
+    "passed": 9,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

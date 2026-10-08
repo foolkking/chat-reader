@@ -28,12 +28,22 @@ def test_exception_is_explicit_scoped_persistent_and_reversible(client):
     assert preview.status_code == 200, preview.text
     assert preview.json()["match_value"] == MARKER
     assert preview.json()["context_before"] == "Keep "
+    assert preview.json()["exception_saved"] is False
     assert client.post(prefix, json={"confirmed": True, "preview_token": "0" * 65}).status_code == 409
     saved = client.post(prefix, json={"confirmed": True, "preview_token": preview.json()["preview_token"]})
     assert saved.status_code == 201, saved.text
     duplicate = client.post(prefix, json={"confirmed": True, "preview_token": preview.json()["preview_token"]})
     assert saved.json() == duplicate.json()
     assert client.get("/api/content-cleanup/exceptions").json()["total"] == 1
+    assert saved.json()["scan"]["delete_count"] == 0
+    assert saved.json()["scan"]["keep_count"] == 1
+    checked = client.get(prefix).json()
+    assert checked["exception_saved"] is True and checked["decision"] == "KEEP"
+    # Read-only recovery reports current state; it cannot undo a later choice.
+    client.patch(f"/api/content-cleanup/scans/{scan_id}/decisions", json={"decisions": [{"occurrence_id": occurrence["id"], "decision": "DELETE"}]})
+    checked = client.get(prefix).json()
+    assert checked["exception_saved"] is True and checked["decision"] == "DELETE"
+    assert checked["scan"]["delete_count"] == 1
     with session() as db:
         message = db.get(Message, message_ids[0])
         assert db.get(MessageVersion, message.current_version_id).display_text == source
@@ -45,6 +55,8 @@ def test_exception_is_explicit_scoped_persistent_and_reversible(client):
     different, _ = create_review(client, ["Other " + MARKER + " in this context."])
     assert len(client.get(f"/api/content-cleanup/scans/{different}/occurrences").json()) == 1
     assert client.delete(f"/api/content-cleanup/exceptions/{saved.json()['id']}").status_code == 204
+    assert client.delete(f"/api/content-cleanup/exceptions/{saved.json()['id']}").status_code == 204
+    assert client.get(prefix).json()["exception_saved"] is False
     restored = client.post(f"/api/content-cleanup/scans/{scan_id}/rescan").json()["id"]
     complete_scan(restored)
     assert len(client.get(f"/api/content-cleanup/scans/{restored}/occurrences").json()) == 1

@@ -40,6 +40,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await openSettingsNoiseReview(page, scanId);
       const dialog = page.getByTestId("content-cleanup-dialog");
       if (width < 1024) await dialog.getByRole("button", { name: /全部候选|All candidates/, exact: true }).click();
+      await dialog.getByRole("button", { name: /上下文与规则|Context and rules/ }).click();
       await dialog.getByRole("button", { name: /以后忽略这种情况|Ignore this case in future/ }).click();
       await expect(dialog.getByRole("region", { name: /个人忽略例外|Personal exception/ })).toBeVisible();
       expect((await (await context.request.get(`${baseURL}/api/content-cleanup/exceptions`)).json()).total).toBe(0);
@@ -47,6 +48,8 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await expect.poll(async () => (await (await context.request.get(`${baseURL}/api/content-cleanup/exceptions`)).json()).total).toBe(1);
       const ignoredScan = await rescan();
       expect((await scan(ignoredScan)).occurrence_count).toBe(0);
+      const details = dialog.getByRole("button", { name: /上下文与规则|Context and rules/ });
+      if (await details.getAttribute("aria-expanded") !== "true") await details.click();
       await dialog.getByRole("button", { name: /记住此类噪声|Remember this noise/, exact: true }).click();
       const editor = dialog.getByRole("region", { name: /学习噪声规则|Learn noise rule/ });
       await editor.getByLabel(/规则名称|Rule name/).fill("Synthetic learned rule");

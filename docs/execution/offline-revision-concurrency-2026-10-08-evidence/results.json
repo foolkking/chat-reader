@@ -1,0 +1,146 @@
+{
+  "baseline": {
+    "tests": 1,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_different_message_edits_from_stale_sessions_advance_revision"
+    ]
+  },
+  "fix": {
+    "tests": 8,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_different_message_edits_from_stale_sessions_advance_revision",
+      "test_source_hash_migration_only_backfills_provably_unchanged_targets[False]",
+      "test_source_hash_migration_only_backfills_provably_unchanged_targets[True]",
+      "test_concurrent_edit_and_cleanup_cannot_overwrite_one_another",
+      "test_cached_same_id_source_cannot_overwrite_whitespace_replacement",
+      "test_edit_during_preview_cannot_issue_a_token_for_different_source",
+      "test_concurrent_name_only_edits_refresh_preloaded_preference",
+      "test_shared_identity_keeps_personal_bases_independent"
+    ]
+  },
+  "api": {
+    "tests": 25,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_patch_message_creates_new_version_and_current_blocks",
+      "test_patch_message_validation_and_conflict",
+      "test_edit_writes_conversation_event",
+      "test_task_checkbox_toggle_creates_v2_then_replaces_current_for_user_and_assistant",
+      "test_projects_default_inbox_and_create_update",
+      "test_new_projects_append_to_custom_order",
+      "test_default_project_cannot_be_archived",
+      "test_add_and_remove_conversation_to_project",
+      "test_archived_project_conversations_temporarily_return_to_history",
+      "test_delete_archived_project_keeps_conversations_in_unclassified",
+      "test_default_project_cannot_be_deleted",
+      "test_project_conversation_list_supports_bulk_management_limit",
+      "test_activity_sorting_and_custom_orders",
+      "test_atomic_conversation_placement_reorders_moves_and_detects_stale_revision",
+      "test_direct_context_update_refreshes_offline_package",
+      "test_annotations_revision_conflict_sync_idempotency_and_notebook",
+      "test_text_annotation_types_create_update_and_export",
+      "test_annotation_anchor_relocates_and_marks_stale_after_message_edits",
+      "test_cr_v2_optional_private_entries_round_trip",
+      "test_offline_catalog_and_package_are_downloadable",
+      "test_offline_package_reports_store_level_progress",
+      "test_direct_updates_keep_three_and_inherit_without_validation",
+      "test_direct_export_does_not_require_protocol_or_claim_validation",
+      "test_direct_corrupt_member_preserves_raw_export",
+      "test_partial_snapshot_absent_member_is_not_storage_failure"
+    ]
+  },
+  "regression": {
+    "tests": 24,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_split_message_creates_inserted_message_version_event_and_reindex",
+      "test_merge_adjacent_same_role_messages_soft_deletes_absorbed_message",
+      "test_message_merge_rejects_broken_attachment_graph_without_mutation[inactive_attachment]",
+      "test_message_merge_rejects_broken_attachment_graph_without_mutation[missing_occurrence]",
+      "test_message_merge_rejects_broken_attachment_graph_without_mutation[missing_block]",
+      "test_conversation_merge_and_split_create_new_conversations_without_modifying_sources",
+      "test_message_window_anchor_returns_page_containing_far_target",
+      "test_split_workspace_plans_and_executes_range_boundary_and_discrete_modes",
+      "test_merge_rejects_message_count_above_administrator_limit",
+      "test_merge_validation_batches_large_render_block_graph",
+      "test_merge_copies_all_versions_blocks_current_pointer_and_annotations",
+      "test_merge_rewrites_attachment_references_and_blocks_without_mutating_source",
+      "test_merge_fails_closed_for_broken_source_attachment_graph[inactive_attachment-missing, inactive, or belongs to another conversation]",
+      "test_merge_fails_closed_for_broken_source_attachment_graph[missing_occurrence-has no occurrence link]",
+      "test_merge_fails_closed_for_broken_source_attachment_graph[missing_block-points to a missing render block]",
+      "test_merge_fails_closed_for_broken_source_attachment_graph[cross_conversation-missing, inactive, or belongs to another conversation]",
+      "test_merge_worker_rolls_back_target_when_source_occurrence_is_missing",
+      "test_cancel_endpoint_and_stale_retry_limit",
+      "test_merge_cancellation_rolls_back_target_conversation",
+      "test_replacing_same_version_rejects_old_cleanup_preview[False]",
+      "test_replacing_same_version_rejects_old_cleanup_preview[True]",
+      "test_revalidation_work_is_per_message_rule[32]",
+      "test_revalidation_work_is_per_message_rule[128]",
+      "test_validation_keeps_multiple_sources_and_revisions_independent"
+    ]
+  },
+  "pg-final": {
+    "tests": 4,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_different_message_edits_from_stale_sessions_advance_revision",
+      "test_pending_increments_flush_as_integers_and_rollback_together[False]",
+      "test_pending_increments_flush_as_integers_and_rollback_together[True]",
+      "test_annotation_touch_cannot_overwrite_another_sessions_edit"
+    ]
+  },
+  "pg-complete": {
+    "tests": 5,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_different_message_edits_from_stale_sessions_advance_revision",
+      "test_pending_increments_flush_as_integers_and_rollback_together[False]",
+      "test_pending_increments_flush_as_integers_and_rollback_together[True]",
+      "test_annotation_touch_cannot_overwrite_another_sessions_edit",
+      "test_simultaneous_independent_edits_have_distinct_offline_revisions"
+    ]
+  },
+  "pg-locks": {
+    "tests": 12,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_different_message_edits_from_stale_sessions_advance_revision",
+      "test_pending_increments_flush_as_integers_and_rollback_together[False]",
+      "test_pending_increments_flush_as_integers_and_rollback_together[True]",
+      "test_annotation_touch_cannot_overwrite_another_sessions_edit",
+      "test_simultaneous_independent_edits_have_distinct_offline_revisions",
+      "test_source_hash_migration_only_backfills_provably_unchanged_targets[False]",
+      "test_source_hash_migration_only_backfills_provably_unchanged_targets[True]",
+      "test_concurrent_edit_and_cleanup_cannot_overwrite_one_another",
+      "test_cached_same_id_source_cannot_overwrite_whitespace_replacement",
+      "test_edit_during_preview_cannot_issue_a_token_for_different_source",
+      "test_concurrent_name_only_edits_refresh_preloaded_preference",
+      "test_shared_identity_keeps_personal_bases_independent"
+    ]
+  },
+  "search": {
+    "tests": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_simultaneous_independent_edits_have_distinct_offline_revisions"
+    ]
+  }
+}

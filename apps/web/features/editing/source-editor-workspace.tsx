@@ -256,11 +256,12 @@ export function SourceEditorWorkspace({
     await onLocate(sourceEditorNavigationTarget(message, text, cursorOffsetRef.current));
   }
 
-  async function loadLatestMessage(): Promise<MessageListItem> {
+  async function loadLatestMessage(signal?: AbortSignal): Promise<MessageListItem> {
     const [conversation, turn] = await Promise.all([
-      getConversation(message.conversation_id),
-      getConversationReaderTurn(message.conversation_id, message.id),
+      getConversation(message.conversation_id, signal),
+      getConversationReaderTurn(message.conversation_id, message.id, signal),
     ]);
+    signal?.throwIfAborted();
     const latestMessage = turn.items.find((item) => item.id === message.id);
     if (!latestMessage?.current_version?.id) {
       throw new Error(zh ? "无法加载最新消息状态。" : "Unable to load the latest message state.");
@@ -418,7 +419,7 @@ export function SourceEditorWorkspace({
       conversationId={message.conversation_id}
       selection={cleanupSelection}
       onClose={() => setCleanupOpen(false)}
-      onApplied={async () => { await loadLatestMessage(); setSourceSelection(null); }}
+      onApplied={async (signal) => { await loadLatestMessage(signal); setSourceSelection(null); }}
     />
     </>
   );

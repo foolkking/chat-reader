@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "exception-recovery-delivery",
+  "status": "failed",
+  "started_at": "2026-10-07T08:40:05.121Z",
+  "test_count": 60,
+  "completed_at": "2026-10-07T08:45:56.689Z",
+  "duration_ms": 354647,
+  "result_counts": {
+    "passed": 59,
+    "failed": 1,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

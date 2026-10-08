@@ -26,6 +26,7 @@ from app.services.sharing.share_service import (
     get_shared_toc,
     list_shares,
     list_owned_shares,
+    get_owned_share,
     revoke_share,
     share_create_response,
     share_read,
@@ -106,6 +107,15 @@ def list_conversation_shares(
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
+@router.get("/api/shares/{share_id}", response_model=ShareRead)
+def get_my_share(share_id: uuid.UUID, request: Request, response: Response, db: Session = Depends(get_db)) -> ShareRead:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return share_read(get_owned_share(db, share_id, ownership_scope_from_request(request)))
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
 @router.post("/api/shares/{share_id}/revoke", response_model=ShareRevokeResponse)
 def revoke_conversation_share(
     share_id: uuid.UUID,
@@ -134,7 +144,7 @@ def update_conversation_share(
         return share_read(share)
     except ShareError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)} if exc.code else str(exc)) from exc
 
 
 @router.get("/api/shared/{token}", response_model=SharedConversationBootstrap)

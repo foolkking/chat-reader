@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
+from app.services.conversation_revision import bump_offline_revision
 from app.models.import_record import utc_now
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
@@ -178,7 +179,7 @@ def update_project(db: Session, project: Project, updates: dict) -> Project:
     project.updated_at = utc_now()
     if "name" in updates or "description" in updates or "is_archived" in updates:
         for relation in project.conversations:
-            relation.conversation.offline_revision += 1
+            bump_offline_revision(relation.conversation)
     try:
         db.flush()
     except IntegrityError as exc:
@@ -221,7 +222,7 @@ def delete_archived_project(
         next_order += PLACEMENT_GAP
 
         conversation = relation.conversation
-        conversation.offline_revision += 1
+        bump_offline_revision(conversation)
         conversation.updated_at = now
         recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation.id).one_or_none()
         if recent is not None:
@@ -413,7 +414,7 @@ def place_conversation(
     recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation_id).one_or_none()
     if recent is not None:
         recent.project_id = None if project.is_default else project.id
-    conversation.offline_revision += 1
+    bump_offline_revision(conversation)
     conversation.updated_at = utc_now()
     db.add(
         ConversationEvent(

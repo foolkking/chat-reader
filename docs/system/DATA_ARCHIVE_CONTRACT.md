@@ -1,7 +1,50 @@
 # Data archive contract
 
-Current working tree: 2026-10-02. Stage-six functions are locally implemented;
-final integrated release acceptance remains. Not deployed.
+Archive baseline is included in the release referenced by `PROJECT_STATE.md`.
+The recovery changes below are local work dated 2026-10-07, not yet released.
+
+## Task status and interrupted refresh (local, 2026-10-07)
+
+Personal/system panels reconcile list and selected-task snapshots using server
+queue time first, then execution activity and phase. A retry's new queue time
+outranks the previous failed run. Current failure/cancellation cannot be hidden
+by an older active list entry. Equal execution snapshots use the newest received
+read for dynamic artifact fields; server admission remains authoritative.
+
+Preflight task detail reads, like archive history, report current temporary-file
+availability and expiry through the existing archive artifact service. Owner
+checks precede these reads; no physical storage paths are returned. Download
+lifetimes and restore-upload admission remain unchanged.
+
+Acknowledged cancel/retry responses update the selected task immediately.
+Subsequent query refreshes do not hold the action's busy state. Archive metadata
+and action requests have a 20-second bound, while file upload retains independent
+progress/cancellation. Unknown writes keep the existing task/key; no automatic
+resubmission is added. Detail refresh failures offer a read-only retry. Empty
+records are shown only after a successful online read. Restore completion can
+invalidate Reader/library state from task details even if history is unavailable.
+Evidence and unrun gates: [recovery audit](../execution/ux-audit-archive-recovery-2026-10-07.md).
+
+## Invalid upload and expired preview recovery (local, 2026-10-07)
+
+Personal/system preflight failures with known malformed, incompatible or invalid
+archive input offer **Choose another archive**. Missing, changed or expired uploads
+offer **Upload archive again**. Unknown or runtime failures retain **Retry task**;
+export-generation failures are not classified as bad restore inputs. The same
+frontend classifier drives panels and Task Center; backend retry admission is
+unchanged and remains authoritative.
+
+Replacement returns to the matching upload form, clears the old file selection
+and upload idempotency key, and focuses the file input. Personal preference import
+returns to unchecked. Opening that form does not create a task, delete the old
+upload or modify canonical data. New files still pass real worker preflight before
+restore; offline/busy states disable replacement.
+
+Task Center exposes archive details for failed/cancelled records and suppresses
+generic retry only for known input failures. Delivery links remain limited to
+committed results. Cancellation has a detail entry, not a new dedicated replacement
+flow. No archive format, ownership, empty-instance or API/schema change is introduced.
+Evidence: [replacement audit](../execution/ux-audit-archive-replacement-2026-10-07.md).
 
 ## Container and scope
 
@@ -156,8 +199,9 @@ stage-five version editing is not implemented. Missing attachment bytes cannot
 establish possession of another user's object.
 
 Settings and Task Center reopen the same durable task. Failed upload retries
-reuse the request key and preserve input. Task failures use the existing retry
-endpoint. Offline mode explains the connection requirement and existing Library
+reuse the request key and preserve input. Retryable task failures use the existing
+retry endpoint; known invalid input offers replacement as described above.
+Offline mode explains the connection requirement and existing Library
 snapshot capability. No reminders or automatic backup scheduling are added.
 
 ## System archive tasks and ownership review
@@ -196,8 +240,8 @@ The admin panel shows validated counts, an expandable content list, source to
 target ownership rows and a final confirmation. Selection saves only a draft.
 Cross-page review, search, stale-choice recovery, upload cancellation/lost-response
 retry, Task Center re-entry, retry, download expiry and regeneration are supported.
-Personal restore retains its additive behavior. The remaining full release matrix
-and GitHub CI are separate from these local checks. Not deployed;
+Personal restore retains its additive behavior. Original stage checks are separate
+from later release evidence; current deployment is recorded in `PROJECT_STATE.md`;
 prior stage-four GitHub CI does not cover this working tree.
 
 ## Verification ownership
@@ -223,6 +267,9 @@ prior stage-four GitHub CI does not cover this working tree.
 - `test_personal_archive_auth.py`: real session-based owner/user/Root isolation.
 - `settings-personal-backup.spec.ts`: three-size browser round trips, repeat
   submission, lost response, corrupt archive and Task Center re-entry.
+- `settings-archive-replacement.spec.ts`: real bad-input replacement, file-input
+  focus, expiry reupload, unknown-failure retry and additive restore. Its guarded
+  fixture helper seeds only negative preflight state on synthetic accounts.
 
 Run PostgreSQL cases with `SETTINGS_POSTGRES_INTEGRATION=1` and an explicitly
 disposable database URL. Dated counts and outstanding gates belong to
@@ -238,7 +285,7 @@ disposable database URL. Dated counts and outstanding gates belong to
   `tests/build_system_archive_browser_fixture.py` creates synthetic input.
 
 
-## Skill Bundle archive extension (local Context migration, not deployed)
+## Skill Bundle archive extension
 
 ### Context file extension (2026-10-02, local)
 

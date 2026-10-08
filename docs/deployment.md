@@ -1,5 +1,59 @@
 # 生产部署
 
+## Accumulated optimization release preparation — 2026-10-08
+
+The user has explicitly requested commit, full CI and deployment of the accumulated
+work, followed by another product audit. This supersedes the no-release direction
+of the historical local batches below. Current source/CI/production acceptance is
+tracked in [the release record](execution/OPTIMIZATION_RELEASE_2026-10-08.md).
+The local Web process still cannot start because of an unidentified tool policy;
+the existing isolated CI browser gate must pass before deployment. Local static,
+build, 33-test offline/task and single-head 0050 checks pass. Production remains
+b45f049/0048 until exact-source CI and release gates complete.
+
+## Unreleased offline task recovery — 2026-10-08
+
+Task responses add nullable `offline_target`; no new migration or worker payload
+format is required beyond the existing local head 0050 below. Older Web clients
+ignore the field. New Web with an older API still opens Offline & sync, matches
+an existing local job when possible, and offers the manual Library route when
+target metadata is absent. Deploy API before Web to enable targeted new-device
+downloads. Legacy task retry and package-download APIs remain available.
+
+Focused API/static/build checks passed, but browser entry/download/focus acceptance
+is blocked by the recorded automatic Web-start rejection. This is not a release
+approval; no commit, CI or deployment was performed. See the
+[execution record](execution/offline-task-recovery-2026-10-08.md).
+
+## Unreleased cleanup source fingerprint — 2026-10-08
+
+Local single head is now `20261008_0050`, parent `20261007_0049`. Apply migration
+before starting this API/worker code. It adds the nullable exact-source fingerprint
+to cleanup candidates and streams legacy source bodies one at a time to backfill
+only unchanged scan targets. Unknown old candidates need rescanning; canonical
+messages, saved decisions and attachments are not rewritten. No PostgreSQL
+extension is required. Verified upgrade/downgrade/upgrade keeps source and foreign
+keys intact; the source-safety execution record retains intermediate failures.
+
+Stop old workers/API while migrating; an older worker cannot populate the new
+fingerprint for scans it creates. Earlier UI clients remain compatible. Reverting
+the application does not require dropping the column, but loses this source-safety
+protection. Explicit downgrade to 0049 drops only the column. Production remains
+0048. No deployment is authorized by this local batch; browser acceptance remains
+pending and normal release gates still apply.
+
+## Unreleased rescan index — 2026-10-07
+
+The preceding local migration `20261007_0049`, parent `20261006_0048`, indexes
+the existing job payload's private admission key; no content/backfill is changed.
+Disposable PostgreSQL upgrade/downgrade/upgrade preserves data and matches model
+DDL. Deploy compatibility reading and this index before new Web recovery controls;
+old no-header clients remain supported. Reverting application code need not remove
+the index; explicit downgrade to 0048 only drops it. Account/type/key advisory
+locking is transaction-scoped. Receipt lifetime remains task retention.
+Production below still runs 0048. No release is authorized by this local work;
+normal backup, CI-artifact and release verification requirements still apply.
+
 ## Current release — 2026-10-06
 
 Production source `b45f04939a728c86bbff769c36ea7574d6a1856d`, CI `37470769275`,

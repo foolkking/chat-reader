@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "registration-recovery-baseline",
+  "status": "failed",
+  "started_at": "2026-10-07T03:36:18.100Z",
+  "test_count": 2,
+  "completed_at": "2026-10-07T03:36:39.914Z",
+  "duration_ms": 24177,
+  "result_counts": {
+    "passed": 0,
+    "failed": 2,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

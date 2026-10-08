@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "rule-recovery-baseline",
+  "status": "failed",
+  "started_at": "2026-10-07T06:58:45.367Z",
+  "test_count": 2,
+  "completed_at": "2026-10-07T06:59:09.982Z",
+  "duration_ms": 26980,
+  "result_counts": {
+    "passed": 0,
+    "failed": 2,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

@@ -1,5 +1,95 @@
 # 后端与 API
 
+Local offline task recovery (2026-10-08): owned task serialization projects a
+nullable `OfflineDownloadTarget` from allowlisted scope/ID/attachment-mode fields.
+Legacy malformed payloads and unrelated tasks yield null; no raw payload, device
+known revisions or private storage metadata is returned. The existing offline
+admission service rechecks source ownership and retains idempotent worker/ZIP
+publication. Web uses this metadata to enter its local download pipeline, not to
+treat a server retry as an imported device copy. No stored-model or migration
+change. See the [offline recovery contract](PWA_OFFLINE_RESILIENCE_CONTRACT.md#task-center-recovery--2026-10-08-worktree-not-deployed).
+
+Local source safety (2026-10-08): cleanup candidates now bind exact UTF-8 source
+fingerprints via migration 0050 (parent 0049), including same-ID version replacement.
+The shared version writer rejects stale current ID/hash/deletion/source under a
+message lock; version selection/deletion also guard the current base. Cleanup
+locks all affected messages in one conversation before publishing versions.
+Preview rejects source changes during preparation. See the current
+[source identity contract](CONTENT_CLEANUP_CONTRACT.md#source-identity-and-concurrent-editing-local-2026-10-08).
+
+Local noise execution (2026-10-08): `cleanup_scan_state` binds execution reads to
+the owner/type/payload-checked job. Task cancellation locks/refreshes that job;
+conditional requeue and final publication roll back a chunk that loses the cancel
+race. Existing stale recovery projects a terminal result without an extra scan
+status migration. Partial results cannot apply; fresh admission skips failed or
+cancelled cursors. See [scan execution](CONTENT_CLEANUP_CONTRACT.md#scan-execution-and-cancellation-local-2026-10-08).
+
+Local noise dismissal (2026-10-08): `cleanup_outcomes` stores a compact owner-scoped
+dismissal receipt on the existing scan job. Locked dismissal commits the receipt,
+job terminal state and review removal together; repeated DELETE is safe while the
+receipt exists. Fresh scan/job state blocks concurrent running work, and failed
+jobs no longer remain as orphan retry rows. The read-only dismissal lookup is
+separate from cleanup completion; canonical message versions stay unchanged.
+No new migration. See the [cleanup contract](CONTENT_CLEANUP_CONTRACT.md#empty-results-and-dismissal-local-2026-10-08).
+
+Local rescan recovery (2026-10-07): `cleanup_scan_requests` shares durable job
+admission between global scans and original-scan-scoped retries. `cleanup_outcomes`
+preserves admission identity before setting completion identity. Migration 0049
+indexes this owner/type/JSON lookup; no content migration. The new read-only
+rescan receipt endpoint and additive previous-scan metadata are described in the
+[cleanup contract](CONTENT_CLEANUP_CONTRACT.md#rescan-recovery-local-2026-10-07).
+
+Local cleanup differences (2026-10-07): preview returns additive code-point
+removal ranges from validated selected occurrences, suppressing them on conflict.
+Retained text is joined once instead of copied for each removal. Token validation,
+ownership, pagination and Apply remain unchanged; see
+[cleanup presentation](CONTENT_CLEANUP_CONTRACT.md#candidate-and-result-presentation).
+
+Local noise navigation (2026-10-07): scan groups support literal, bounded title
+search before paging. Import-filtered pending reads authorize the import and bind
+the latest existing job; rescan retains its parent-import relationship. Empty
+pending results never assert a clean source. See
+[cleanup navigation](CONTENT_CLEANUP_CONTRACT.md#import-entry-and-review-navigation).
+
+Local registration recovery (2026-10-07): Root registration PUT supports optional
+mode/base revision, fresh locked policy comparison and changed-field audit metadata.
+No-op/check reads do not add success audits. First creation retains deployment defaults;
+the same transaction commits policy/audit and snapshots the acknowledged response.
+See [registration policy recovery](AUTHENTICATION_CONTRACT.md#registration-policy-recovery-local-2026-10-07).
+
+Local feature-policy recovery (2026-10-07): Root policy reads/writes expose a
+content-derived revision. Optional base comparisons run after PostgreSQL
+serialization and a fresh row lock, including singleton creation. Stale requests
+return `FEATURE_POLICY_CHANGED`; partial legacy requests remain compatible.
+The response is captured before commit and only delivered after commit succeeds.
+No schema change. See the [administration contract](ADMINISTRATION_CONTRACT.md#feature-policy-recovery-local-2026-10-07).
+
+Local cleanup completion (2026-10-07): owner-scoped outcome reads and POST replay
+reuse the original BackgroundJob. The final conversation and completion receipt
+commit atomically; earlier conversation checkpoints remain resumable. No schema
+change. See [completion contract](CONTENT_CLEANUP_CONTRACT.md#completion-recovery-local-2026-10-07)
+for cumulative/per-attempt counts, ownership and terminal task visibility.
+
+Local noise-review recovery (2026-10-07): filtered bulk decision writes add a
+committed `scan` count snapshot without changing existing fields or authorization.
+Single decision writes retain their scan-shaped response. See
+[Content Cleanup Contract](CONTENT_CLEANUP_CONTRACT.md#review-recovery-local-2026-10-07)
+for transaction acknowledgement and preview/read recovery. Completion extends the
+final apply transaction as described above.
+
+Local account recovery (2026-10-07): status and approval/rejection writes return
+an additive full `user` snapshot after commit, preserving old `id`/`status` fields.
+The snapshot uses the existing directory serializer within the transaction;
+authorization and account/session transitions remain unchanged. Details:
+[Administration Contract](ADMINISTRATION_CONTRACT.md#account-action-recovery-local-2026-10-07).
+
+Share settings updates support an optional opaque base revision, checked after
+owner filtering and a fresh row-locked read. Visitor access counters do not change
+this revision. Stale updates return `SHARE_SETTINGS_CHANGED`; old partial PATCH
+clients remain compatible. Owner-only latest settings reads and details are
+defined in [API reference](../api-reference.md#shares). No schema migration or
+public Share URL change is involved (local work, 2026-10-07).
+
 Administrator invitation/audit pagination and durable account-deletion cleanup
 reuse the current models, task worker and API boundary. Authenticated personal
 subject-key writes acquire a shared account row lock after their existing

@@ -1,0 +1,33 @@
+{
+  "api": {
+    "tests": 11,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "postgres": {
+    "tests": 6,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "review": {
+    "tests": 0,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "note": "Preparation error: requested nonexistent test_cleanup_review.py; no tests executed. Corrected safety suite recorded separately."
+  },
+  "safety": {
+    "tests": 28,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "verification": {
+    "lint": "passed",
+    "typescript_nonincremental": "passed",
+    "web_build": "passed",
+    "migration_head": "20261006_0048"
+  }
+}

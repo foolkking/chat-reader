@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "account-security-baseline",
+  "status": "failed",
+  "started_at": "2026-10-07T00:13:00.432Z",
+  "test_count": 3,
+  "completed_at": "2026-10-07T00:13:23.412Z",
+  "duration_ms": 24847,
+  "result_counts": {
+    "passed": 0,
+    "failed": 3,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

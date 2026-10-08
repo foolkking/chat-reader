@@ -1,0 +1,125 @@
+{
+  "runs": [
+    {
+      "run": "baseline",
+      "final": false,
+      "tests": 1,
+      "passed": 0,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "api",
+      "final": false,
+      "tests": 46,
+      "passed": 46,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg-baseline",
+      "final": false,
+      "tests": 3,
+      "passed": 2,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg",
+      "final": false,
+      "tests": 9,
+      "passed": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg-exact",
+      "final": false,
+      "tests": 3,
+      "passed": 0,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg-final",
+      "final": false,
+      "tests": 9,
+      "passed": 0,
+      "failures": 9,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "api-final",
+      "final": false,
+      "tests": 62,
+      "passed": 40,
+      "failures": 22,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "source",
+      "final": false,
+      "tests": 10,
+      "passed": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "api-verified",
+      "final": true,
+      "tests": 62,
+      "passed": 62,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "related",
+      "final": true,
+      "tests": 22,
+      "passed": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg-verified",
+      "final": true,
+      "tests": 9,
+      "passed": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg-cached",
+      "final": true,
+      "tests": 1,
+      "passed": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg-preview",
+      "final": true,
+      "tests": 1,
+      "passed": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "final_api_cases": 84,
+  "final_postgresql_cases": 11,
+  "browser": "not_executed",
+  "migration_head": "20261008_0050"
+}

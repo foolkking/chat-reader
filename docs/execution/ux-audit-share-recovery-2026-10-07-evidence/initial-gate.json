@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "share-recovery-initial",
+  "status": "failed",
+  "started_at": "2026-10-06T17:54:00.438Z",
+  "test_count": 11,
+  "completed_at": "2026-10-06T17:54:33.988Z",
+  "duration_ms": 36116,
+  "result_counts": {
+    "passed": 5,
+    "failed": 4,
+    "timedOut": 0,
+    "skipped": 2,
+    "interrupted": 0
+  }
+}

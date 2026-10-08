@@ -163,8 +163,10 @@ test("admin directory retry, access actions and lost deletion response recovery"
       else await route.continue();
     });
     await panel.getByRole("button", { name: "Confirm account deletion", exact: true }).click();
-    await expect(panel.getByRole("alert")).toContainText("The action did not finish");
-    await panel.getByRole("button", { name: "Confirm account deletion", exact: true }).click();
+    const checkDeletion = panel.getByRole("button", { name: "Check deletion result", exact: true });
+    await expect(panel.getByRole("alert").filter({ hasText: "Could not confirm the action result" }).or(checkDeletion).first()).toBeVisible();
+    if (await checkDeletion.isVisible()) await checkDeletion.click();
+    else await panel.getByRole("button", { name: "Confirm account deletion", exact: true }).click();
     await expect(panel.getByText(/Account and private content deleted/)).toBeVisible();
     expect(keys).toHaveLength(2); expect(keys[0]).toBeTruthy(); expect(keys[0]).toBe(keys[1]);
     expect((await admin.get(`/api/admin/access/users/${uid}`)).status()).toBe(404);

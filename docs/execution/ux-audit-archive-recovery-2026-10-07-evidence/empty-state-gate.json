@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "archive-empty-state",
+  "status": "passed",
+  "started_at": "2026-10-06T18:38:53.116Z",
+  "test_count": 2,
+  "completed_at": "2026-10-06T18:39:04.861Z",
+  "duration_ms": 13648,
+  "result_counts": {
+    "passed": 2,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

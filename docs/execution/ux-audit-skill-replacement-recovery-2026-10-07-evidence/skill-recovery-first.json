@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "skill-recovery-first",
+  "status": "failed",
+  "started_at": "2026-10-07T01:38:56.640Z",
+  "test_count": 22,
+  "completed_at": "2026-10-07T01:40:03.698Z",
+  "duration_ms": 69618,
+  "result_counts": {
+    "passed": 21,
+    "failed": 1,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

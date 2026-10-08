@@ -1,0 +1,9 @@
+{
+  "status": "interrupted",
+  "discovered": 9,
+  "confirmed_failures_before_interrupt": 1,
+  "reason": "Seeded processing job had no heartbeat; real stale recovery completed it.",
+  "remaining_outcomes": "not established; not counted as passed",
+  "supervisor_start_failures": 2,
+  "supervisor_failure_reason": "test port bound by unrelated client connection"
+}

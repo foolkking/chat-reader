@@ -42,6 +42,7 @@ def preview(client, path):
     run_job(task["job_id"], "system_archive_preflight")
     task = client.get(f"/api/tasks/{task['job_id']}").json()
     assert task["status"] == "committed", task
+    assert task["result"]["artifact_available"] is True
     return task
 
 
@@ -88,6 +89,7 @@ def test_system_archive_preview_restore_and_duplicate_receipt(auth_client, archi
         assert db.query(Conversation).count() == 2
         assert db.query(ArchiveRestoreReceipt).count() == 1
     assert auth_client.delete(f"/api/system/archive/previews/{task['job_id']}").status_code == 204
+    assert auth_client.get(f"/api/tasks/{task['job_id']}").json()["result"]["artifact_available"] is False
 
 
 def test_legacy_system_ownership_is_explicit_paginated_and_persistent(auth_client, tmp_path):

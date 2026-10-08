@@ -45,7 +45,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await expect(row.getByText(value, { exact: true })).toHaveCount(2);
       await row.getByRole("button", { name: /发布所选版本|Publish selected version/, exact: true }).click();
       await root.getByRole("dialog", { name: /发布此噪声规则版本|Publish this noise rule version/ }).getByRole("button", { name: /确认发布|^Publish$/, exact: true }).click();
-      await expect(row.getByRole("status")).toHaveText(/系统提供状态已更新|Publication updated/);
+      await expect(row.getByRole("status").filter({ hasText: /系统提供状态已更新|Publication updated/ })).toBeVisible();
       await expect.poll(async () => (await readerRules()).find((item) => item.id === rule.id)?.system_provided).toBe(true);
       expect((await readerRules()).find((item) => item.id === rule.id)?.held).toBe(false);
       expect((await author.request.patch(`${baseURL}/api/content-cleanup/rules/${rule.id}`, { headers, data: { match_value: value + "_REPAIRED", base_revision_id: rule.revision_id } })).status()).toBe(200);
@@ -65,7 +65,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       if (width < 1024) await review.getByRole("button", { name: /全部候选|All candidates/, exact: true }).click();
       await review.getByRole("checkbox", { name: /处理|Process/ }).check();
       await review.getByRole("button", { name: /预览 1 项清理|Preview 1 removals/ }).click();
-      await review.getByRole("button", { name: /确认应用 1 项清理|Confirm 1 removals/ }).click();
+      await review.getByRole("button", { name: /确认处理 1 项选择|Confirm 1 selections/ }).click();
       await expect(review).not.toBeVisible();
       await expect.poll(async () => (await readerRules()).find((item) => item.id === rule.id)?.held).toBe(true);
       const message = await (await reader.request.get(`${baseURL}/api/messages/${conversation.messages[1].id}`)).json();

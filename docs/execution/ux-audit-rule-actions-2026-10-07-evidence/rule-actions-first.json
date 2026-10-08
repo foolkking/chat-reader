@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "rule-actions-first",
+  "status": "failed",
+  "started_at": "2026-10-07T11:00:07.647Z",
+  "test_count": 13,
+  "completed_at": "2026-10-07T11:01:51.361Z",
+  "duration_ms": 106272,
+  "result_counts": {
+    "passed": 12,
+    "failed": 1,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

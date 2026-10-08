@@ -52,6 +52,7 @@ from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
 from app.schemas.task import BackgroundTaskRead, ConversationBatchDeleteRequest, ConversationProjectMoveRequest
 from app.models.import_record import utc_now
+from app.services.conversation_revision import bump_offline_revision
 from app.services.editing.message_edit_service import (
     MessageEditError,
     create_manual_conversation,
@@ -283,7 +284,7 @@ def update_conversation(
         description = payload.description_markdown.strip() or None if payload.description_markdown else None
         if description != conversation.description_markdown:
             conversation.description_markdown = description
-            conversation.offline_revision += 1
+            bump_offline_revision(conversation)
             conversation.updated_at = utc_now()
             _add_conversation_event(
                 db,
@@ -301,7 +302,7 @@ def update_conversation(
         conversation.title = title or display_title
         conversation.display_title = display_title or title
         conversation.updated_at = utc_now()
-        conversation.offline_revision += 1
+        bump_offline_revision(conversation)
         event_payload.update(
             {
                 "previous_title": previous_title,
@@ -1003,7 +1004,7 @@ def _set_conversation_status(
     if next_status == "active":
         conversation.deleted_at = None
     conversation.updated_at = utc_now()
-    conversation.offline_revision += 1
+    bump_offline_revision(conversation)
     _add_conversation_event(
         db,
         conversation.id,

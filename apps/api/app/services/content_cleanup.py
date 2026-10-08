@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import unicodedata
+import hashlib
 import re
 import uuid
+from bisect import bisect_left
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -40,6 +42,13 @@ BUILTIN_RULES = (
     ("manual-selection-v1", "手动选择的内容", "manual_selection", "MANUAL_SELECTION"),
 )
 MANUAL_SELECTION_DETECTOR = "manual-selection-v1"
+
+
+def source_fingerprint(text: str) -> str:
+    """Exact source bytes: canonical content hashes normalize offset-sensitive whitespace."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE = 256
 PRIVATE_REFERENCE_TOKEN = r"turn\d+[A-Za-z][A-Za-z0-9_-]*\d+"
 
@@ -257,6 +266,9 @@ def create_scan(
         .limit(0 if force_new else 50)
         .all()
     ):
+        from app.services.cleanup_scan_state import scan_job, scan_status
+        if scan_status(existing, scan_job(db, existing)) in {"FAILED", "CANCELLED"}:
+            continue
         if existing.source != source or existing.scope_type != scope_type:
             continue
         existing_ids = {
@@ -389,6 +401,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
         return {"done": True, "processed": scan.processed_messages, "total": scan.total_messages, "occurrences": occurrence_count}
 
     for message, version, _conversation in rows:
+        source_hash = source_fingerprint(version.display_text)
         db.query(ContentCleanupScanTarget).filter(
             ContentCleanupScanTarget.scan_id == scan_id,
             ContentCleanupScanTarget.conversation_id == message.conversation_id,
@@ -468,6 +481,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                 conversation_id=message.conversation_id,
                 message_id=message.id,
                 message_version_id=version.id,
+                source_content_hash=source_hash,
                 start_offset=detected.start,
                 end_offset=detected.end,
                 line_start=version.display_text.count("\n", 0, detected.start) + 1,
@@ -934,8 +948,11 @@ def preview_occurrences(
         .all()
     )
     result: list[dict[str, object]] = []
+    fingerprints: dict[uuid.UUID, str] = {}
     for occurrence, version, message, conversation, rule, revision in rows:
         text = version.display_text
+        if version.id not in fingerprints:
+            fingerprints[version.id] = source_fingerprint(text)
         start = max(0, occurrence.start_offset - context)
         end = min(len(text), occurrence.end_offset + context)
         result.append({
@@ -960,7 +977,7 @@ def preview_occurrences(
             "match_text": text[occurrence.start_offset:occurrence.end_offset],
             "context_before": text[start:occurrence.start_offset],
             "context_after": text[occurrence.end_offset:end],
-            "stale": message.current_version_id != version.id,
+            "stale": message.current_version_id != version.id or occurrence.source_content_hash != fingerprints[version.id],
             "match_value": revision.match_value,
         })
     return result
@@ -973,6 +990,7 @@ def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID,
     rows = db.query(ContentCleanupOccurrence).filter(ContentCleanupOccurrence.scan_id == scan_id, ContentCleanupOccurrence.id.in_(list(decisions))).all()
     if len(rows) != len(decisions):
         raise ValueError("One or more cleanup candidates do not belong to this scan.")
+    sources: dict[uuid.UUID, _SourceAnalysis] = {}
     for row in rows:
         decision = decisions[row.id]
         if decision not in {"DELETE", "KEEP"}:
@@ -980,7 +998,16 @@ def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID,
         if row.decision in {"CONFLICT", "APPLIED"}:
             continue
         version = db.get(MessageVersion, row.message_version_id)
-        protected = version is not None and any(row.start_offset < end and row.end_offset > start for start, end in protected_ranges(version.display_text))
+        if version is None:
+            row.decision = "CONFLICT"
+            continue
+        if version.id not in sources:
+            sources[version.id] = _SourceAnalysis(version.display_text)
+        source = sources[version.id]
+        if row.source_content_hash != source.fingerprint:
+            row.decision = "CONFLICT"
+            continue
+        protected = source.protects(row.start_offset, row.end_offset)
         if row.decision == "PROTECTED" or protected:
             if decision == "DELETE":
                 raise ValueError("Protected source cannot be deleted by a cleanup rule. Edit the Markdown source instead.")
@@ -1046,7 +1073,7 @@ def _apply_scan(db: Session, scan_id: uuid.UUID) -> dict[str, object]:
         ContentCleanupOccurrence.scan_id == scan_id,
         ContentCleanupOccurrence.decision == "CONFLICT",
     ).count()
-    for conversation_id, occurrences in grouped.items():
+    for conversation_index, (conversation_id, occurrences) in enumerate(grouped.items()):
         scan = db.query(ContentCleanupScan).filter_by(id=scan_id).populate_existing().with_for_update().one()
         scan.apply_lease_until = utc_now() + timedelta(minutes=5)
         conversation = db.get(Conversation, conversation_id)
@@ -1060,15 +1087,21 @@ def _apply_scan(db: Session, scan_id: uuid.UUID) -> dict[str, object]:
         by_message: dict[uuid.UUID, list[ContentCleanupOccurrence]] = {}
         for occurrence in occurrences:
             by_message.setdefault(occurrence.message_id, []).append(occurrence)
+        # Acquire all affected message locks before any version write can lock
+        # the conversation row. This avoids inverted locks with another editor.
+        locked_messages = {message.id: message for message in db.query(Message).filter(
+            Message.id.in_(by_message)
+        ).order_by(Message.id).populate_existing().with_for_update(key_share=True).all()}
         for message_id, message_occurrences in by_message.items():
-            message = db.get(Message, message_id)
+            message = locked_messages.get(message_id)
             if message is None or message.is_deleted:
                 conflicts += len(message_occurrences)
                 for occurrence in message_occurrences:
                     occurrence.decision = "CONFLICT"
                 continue
             version = _get_current_version(db, message)
-            if version.id != message_occurrences[0].message_version_id:
+            source_hash = source_fingerprint(version.display_text)
+            if any(version.id != item.message_version_id or source_hash != item.source_content_hash for item in message_occurrences):
                 conflicts += len(message_occurrences)
                 for occurrence in message_occurrences:
                     occurrence.decision = "CONFLICT"
@@ -1085,13 +1118,18 @@ def _apply_scan(db: Session, scan_id: uuid.UUID) -> dict[str, object]:
                 for occurrence in message_occurrences:
                     occurrence.decision = "CONFLICT"
                 continue
-            if any(not _occurrence_still_matches(db, message.role, text, item) for item in message_occurrences):
+            validation = _MessageValidation(message.role, text)
+            if any(not _occurrence_still_matches(db, message.role, text, item, validation) for item in message_occurrences):
                 conflicts += len(message_occurrences)
                 for occurrence in message_occurrences:
                     occurrence.decision = "CONFLICT"
                 continue
-            for start, end in reversed(ranges):
-                text = text[:start] + text[end:]
+            parts, cursor = [], 0
+            for start, end in ranges:
+                parts.append(text[cursor:start])
+                cursor = end
+            parts.append(text[cursor:])
+            text = "".join(parts)
             if not text.strip():
                 conflicts += len(message_occurrences)
                 for occurrence in message_occurrences:
@@ -1122,9 +1160,11 @@ def _apply_scan(db: Session, scan_id: uuid.UUID) -> dict[str, object]:
             conversation_applied = True
         if conversation_applied:
             rebuild_search_and_toc_for_conversation(db, conversation_id)
-        # Each conversation is its own durable unit. A later conflict cannot
-        # roll back content already reviewed and applied to another target.
-        db.commit()
+        # Earlier conversations remain resumable. The final conversation and
+        # completion receipt share the caller's final commit, with no gap in
+        # which all content changed but the completed result disappeared.
+        if conversation_index + 1 < len(grouped):
+            db.commit()
         scan = db.get(ContentCleanupScan, scan_id)
         if scan is None:
             raise ValueError("Noise scan disappeared while applying decisions.")
@@ -1134,40 +1174,75 @@ def _apply_scan(db: Session, scan_id: uuid.UUID) -> dict[str, object]:
     if conflicts:
         scan.error_message = f"{conflicts} noise matches need review because their message version changed or the deletion was unsafe."
     else:
+        from app.services.cleanup_outcomes import save_completed_outcome
+        save_completed_outcome(db, scan, {"applied": applied, "conflicts": conflicts})
         db.query(ContentCleanupOccurrence).filter(ContentCleanupOccurrence.scan_id == scan_id).delete(synchronize_session=False)
         db.query(ContentCleanupScanTarget).filter(ContentCleanupScanTarget.scan_id == scan_id).delete(synchronize_session=False)
         db.delete(scan)
     return {"applied": applied, "conflicts": conflicts}
 
 
-def dismiss_scan(db: Session, scan_id: uuid.UUID) -> None:
-    scan = db.get(ContentCleanupScan, scan_id)
+def dismiss_scan(db: Session, scan_id: uuid.UUID, *, ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE) -> None:
+    from app.services.cleanup_outcomes import dismissed_job, save_dismissed_outcome
+    scan = db.query(ContentCleanupScan).filter(ContentCleanupScan.id == scan_id, ownership_scope.predicate(ContentCleanupScan)).populate_existing().with_for_update().one_or_none()
     if scan is None:
-        return
-    if scan.status in {"QUEUED", "SCANNING", "APPLYING"}:
+        if dismissed_job(db, scan_id, ownership_scope):
+            return
+        raise ValueError("Noise scan not found.")
+    from app.services.cleanup_scan_state import scan_job, scan_status
+    if scan_status(scan, scan_job(db, scan)) in {"QUEUED", "SCANNING", "APPLYING"}:
         raise ValueError("Wait for the cleanup scan to finish before dismissing it.")
+    save_dismissed_outcome(db, scan)
     db.delete(scan)
 
 
-def _occurrence_still_matches(db: Session, role: str, text: str, occurrence: ContentCleanupOccurrence) -> bool:
+class _SourceAnalysis:
+    """Transient exact fingerprint and protected-region index; never persisted."""
+    def __init__(self, text: str):
+        self.fingerprint = source_fingerprint(text)
+        self.protected = protected_ranges(text)
+        self.starts = [start for start, _end in self.protected]
+
+    def protects(self, start: int, end: int) -> bool:
+        index = bisect_left(self.starts, end) - 1
+        return index >= 0 and self.protected[index][1] > start
+
+
+class _MessageValidation:
+    """One request/message/role only; each admitted revision is evaluated once."""
+    def __init__(self, role: str, text: str):
+        self.role, self.text = role, text
+        self.source = _SourceAnalysis(text)
+        self.matches: dict[uuid.UUID, set[tuple[int, int]] | None] = {}
+
+    def matching_ranges(self, db: Session, revision_id: uuid.UUID) -> set[tuple[int, int]] | None:
+        if revision_id not in self.matches:
+            revision = db.get(ContentCleanupRuleRevision, revision_id)
+            rule = db.get(ContentCleanupRule, revision.rule_id) if revision is not None else None
+            if revision is None or rule is None or (rule.scope == "ASSISTANT_ONLY" and self.role != "assistant") or (revision.role_filter and revision.role_filter != self.role):
+                self.matches[revision_id] = set()
+            elif rule.detector_id == MANUAL_SELECTION_DETECTOR:
+                self.matches[revision_id] = None
+            else:
+                self.matches[revision_id] = {(item.start, item.end) for item in detect_occurrences(self.role, self.text, rule, revision) if item.decision != "PROTECTED"}
+        return self.matches[revision_id]
+
+
+def _occurrence_still_matches(db: Session, role: str, text: str, occurrence: ContentCleanupOccurrence, validation: _MessageValidation | None = None) -> bool:
     if occurrence.decision_updated_at is None:
         return False
-    if any(occurrence.start_offset < end and occurrence.end_offset > start for start, end in protected_ranges(text)):
+    validation = validation or _MessageValidation(role, text)
+    if validation.role != role or validation.text != text:
+        raise ValueError("Cleanup validation belongs to a different source.")
+    source = db.get(MessageVersion, occurrence.message_version_id)
+    if source is None or occurrence.source_content_hash != validation.source.fingerprint:
         return False
-    revision = db.get(ContentCleanupRuleRevision, occurrence.rule_revision_id)
-    rule = db.get(ContentCleanupRule, revision.rule_id) if revision is not None else None
-    if revision is None or rule is None:
+    if validation.source.protects(occurrence.start_offset, occurrence.end_offset):
         return False
-    if (rule.scope == "ASSISTANT_ONLY" and role != "assistant") or (revision.role_filter and revision.role_filter != role):
-        return False
-    if rule.detector_id == MANUAL_SELECTION_DETECTOR:
+    ranges = validation.matching_ranges(db, occurrence.rule_revision_id)
+    if ranges is None:
         return 0 <= occurrence.start_offset < occurrence.end_offset <= len(text)
-    return any(
-        item.start == occurrence.start_offset
-        and item.end == occurrence.end_offset
-        and item.decision != "PROTECTED"
-        for item in detect_occurrences(role, text, rule, revision)
-    )
+    return (occurrence.start_offset, occurrence.end_offset) in ranges
 
 
 def _manual_selection_revision(db: Session) -> ContentCleanupRuleRevision:

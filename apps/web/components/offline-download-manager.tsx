@@ -2,20 +2,29 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { OFFLINE_DOWNLOAD_CHANGED_EVENT, resumeOfflineDownloads } from "../lib/offline-downloads";
+import { OFFLINE_DOWNLOAD_CHANGED_EVENT, resumeOfflineDownloads, resumeOfflineServerCancellations } from "../lib/offline-downloads";
 
 export function OfflineDownloadManager() {
   const path = usePathname();
   const publicPage = /^\/(?:login|register|share|account-upgrade|password-reset|reset-password|verify-email)(?:\/|$)/.test(path ?? "");
   useEffect(() => {
     if (publicPage) return;
-    let active = true, running = false;
+    let active = true, running = false, cancelling = false;
     let controller = new AbortController();
     const run = () => {
-      if (!active || running || !navigator.onLine) return;
-      running = true;
+      // Offline still has local cancellation work. The coordinator decides
+      // which operations need a connection and owns the account writer lock.
+      if (!active) return;
       if (controller.signal.aborted) controller = new AbortController();
-      void Promise.resolve().then(() => resumeOfflineDownloads(controller.signal)).catch(() => undefined).finally(() => { running = false; });
+      const signal = controller.signal;
+      if (!running) {
+        running = true;
+        void Promise.resolve().then(() => resumeOfflineDownloads(signal)).catch(() => undefined).finally(() => { running = false; });
+      }
+      if (navigator.onLine && !cancelling) {
+        cancelling = true;
+        void Promise.resolve().then(() => resumeOfflineServerCancellations(signal)).catch(() => undefined).finally(() => { cancelling = false; });
+      }
     };
     const offline = () => controller.abort();
     run();

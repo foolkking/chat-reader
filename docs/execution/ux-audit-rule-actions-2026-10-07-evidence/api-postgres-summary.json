@@ -1,0 +1,28 @@
+{
+  "api": {
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "postgres": {
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "preparation": [
+    "Initial TypeScript union-return inference failure corrected.",
+    "One parallel TypeScript run terminated with V8 out-of-memory; subsequent sequential lint/nonincremental TypeScript passed."
+  ],
+  "verification": {
+    "lint": "passed",
+    "typescript_nonincremental": "passed",
+    "web_build": "passed",
+    "migration_head": "20261006_0048",
+    "browser_delivery": {
+      "passed": 78,
+      "skipped": 0
+    }
+  }
+}

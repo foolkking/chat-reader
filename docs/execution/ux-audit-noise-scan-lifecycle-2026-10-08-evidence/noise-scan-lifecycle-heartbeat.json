@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "noise-scan-lifecycle-heartbeat",
+  "status": "failed",
+  "started_at": "2026-10-07T18:01:08.544Z",
+  "test_count": 9,
+  "completed_at": "2026-10-07T18:03:17.418Z",
+  "duration_ms": 131358,
+  "result_counts": {
+    "passed": 8,
+    "failed": 1,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

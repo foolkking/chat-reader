@@ -1,0 +1,55 @@
+{
+  "baseline": {
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_edit_concurrency"
+    ]
+  },
+  "disabled-baseline": {
+    "tests": 7,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_edit_concurrency"
+    ]
+  },
+  "api-first": {
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_access",
+      "tests.test_cleanup_edit_concurrency",
+      "tests.test_cleanup_learning",
+      "tests.test_cleanup_rule_grants"
+    ]
+  },
+  "api-final": {
+    "tests": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_access",
+      "tests.test_cleanup_edit_concurrency",
+      "tests.test_cleanup_learning",
+      "tests.test_cleanup_rule_grants"
+    ]
+  },
+  "postgres": {
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "files": [
+      "tests.test_cleanup_edit_postgres",
+      "tests.test_cleanup_postgres",
+      "tests.test_cleanup_rule_postgres"
+    ]
+  }
+}

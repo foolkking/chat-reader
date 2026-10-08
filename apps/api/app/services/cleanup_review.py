@@ -24,7 +24,24 @@ def filter_occurrences(query, *, rule_id=None, conversation_id=None, selected_on
     return query
 
 
-def groups(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int) -> dict:
+def review_counts(db: Session, scan_id: uuid.UUID, **filters) -> dict:
+    """One aggregate statement; counts cover the full filter, never just its page."""
+    all_selected = db.query(func.count(Occurrence.id)).filter(
+        Occurrence.scan_id == scan_id, Occurrence.decision == "DELETE"
+    ).scalar_subquery()
+    selected = func.coalesce(func.sum(case((Occurrence.decision == "DELETE", 1), else_=0)), 0)
+    query = filter_occurrences(db.query(
+        func.count(Occurrence.id), selected,
+        all_selected - selected,
+        func.coalesce(func.sum(case((Occurrence.decision == "PROTECTED", 1), else_=0)), 0),
+    ).filter(Occurrence.scan_id == scan_id), **filters)
+    total, selected_count, elsewhere, protected = query.one()
+    return {"total": total, "selection_summary": {
+        "selected": selected_count, "selected_elsewhere": elsewhere, "protected": protected,
+    }}
+
+
+def groups(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int, q: str = "") -> dict:
     from app.services.cleanup_rule_access import personal_name
     scan = db.get(ContentCleanupScan, scan_id)
     query = db.query(Rule.id, Rule.name, Rule.detector_id, Conversation.id, Conversation.display_title,
@@ -35,6 +52,8 @@ def groups(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int) -> dict:
     ).select_from(Occurrence).join(Revision, Revision.id == Occurrence.rule_revision_id).outerjoin(Alias, Alias.old_rule_id == Revision.rule_id).join(Rule, Rule.id == func.coalesce(Alias.canonical_rule_id, Revision.rule_id)).join(
         Conversation, Conversation.id == Occurrence.conversation_id).filter(Occurrence.scan_id == scan_id, Occurrence.decision != "APPLIED").group_by(
         Rule.id, Rule.name, Rule.detector_id, Conversation.id, Conversation.display_title)
+    if q.strip():
+        query = query.filter(Conversation.display_title.icontains(q.strip(), autoescape=True))
     total = query.count()
     rows = query.order_by(Rule.name, Rule.id, Conversation.display_title, Conversation.id).offset(offset).limit(limit).all()
     return {"items": [{"rule_id": str(rule_id), "rule_name": personal_name(db, scan.owner_user_id, db.get(Rule, rule_id)), "detector_id": detector,
@@ -45,7 +64,7 @@ def groups(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int) -> dict:
 
 
 def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=None, conversation_id=None, selected_only=False) -> dict:
-    from app.services.content_cleanup import protected_ranges, update_decisions
+    from app.services.content_cleanup import _SourceAnalysis, update_decisions
     scan = db.query(ContentCleanupScan).filter_by(id=scan_id).populate_existing().with_for_update().one()
     if scan.status != "READY":
         raise ValueError("Wait for the scan to finish before changing decisions.")
@@ -60,10 +79,13 @@ def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=Non
         # Legacy scans may still label a protected range KEEP. Refresh that
         # classification without letting one old row reject the whole batch.
         eligible = []
+        sources: dict[uuid.UUID, _SourceAnalysis] = {}
         for row, version in db.query(Occurrence, MessageVersion).join(
             MessageVersion, MessageVersion.id == Occurrence.message_version_id
         ).filter(Occurrence.id.in_(ids)):
-            if any(row.start_offset < end and row.end_offset > start for start, end in protected_ranges(version.display_text)):
+            if version.id not in sources:
+                sources[version.id] = _SourceAnalysis(version.display_text)
+            if sources[version.id].protects(row.start_offset, row.end_offset):
                 row.decision = "PROTECTED"
                 row.decision_updated_at = None
                 skipped += 1
@@ -78,18 +100,26 @@ def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=Non
 
 
 def preview_token(db: Session, scan_id: uuid.UUID) -> str:
+    from app.services.content_cleanup import source_fingerprint
     digest = hashlib.sha256(str(scan_id).encode())
-    for row in db.query(Occurrence.id, Occurrence.message_version_id, Message.current_version_id, Occurrence.start_offset,
+    selected_versions = db.query(Occurrence.message_version_id).filter(Occurrence.scan_id == scan_id, Occurrence.decision == "DELETE")
+    for version_id, source in db.query(MessageVersion.id, MessageVersion.display_text).filter(
+        MessageVersion.id.in_(selected_versions)
+    ).order_by(MessageVersion.id).yield_per(1):
+        digest.update(f"{version_id}:{source_fingerprint(source)}\n".encode())
+    for row in db.query(Occurrence.id, Occurrence.message_version_id, Message.current_version_id, Message.content_hash, MessageVersion.content_hash, Occurrence.source_content_hash, Occurrence.start_offset,
         Occurrence.end_offset, Occurrence.decision_updated_at, Message.is_deleted, Conversation.status, Conversation.deleted_at).join(
-        Message, Message.id == Occurrence.message_id).join(Conversation, Conversation.id == Occurrence.conversation_id).filter(
+        Message, Message.id == Occurrence.message_id).join(MessageVersion, MessageVersion.id == Occurrence.message_version_id).join(Conversation, Conversation.id == Occurrence.conversation_id).filter(
         Occurrence.scan_id == scan_id, Occurrence.decision == "DELETE").order_by(Occurrence.id).yield_per(250):
         digest.update(("|".join(str(value) for value in row) + "\n").encode())
     return digest.hexdigest()
 
 
 def preview_changes(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int) -> dict:
-    from app.services.content_cleanup import _occurrence_still_matches
-    db.query(ContentCleanupScan).filter_by(id=scan_id).with_for_update().one()
+    from app.services.content_cleanup import _MessageValidation, _occurrence_still_matches
+    if db.query(ContentCleanupScan).filter_by(id=scan_id).with_for_update().one_or_none() is None:
+        raise ValueError("Noise scan is no longer available.")
+    source_token = preview_token(db, scan_id)
     selected = db.query(Occurrence).filter(Occurrence.scan_id == scan_id, Occurrence.decision == "DELETE")
     summary = {"conversations": selected.with_entities(func.count(func.distinct(Occurrence.conversation_id))).scalar(),
         "messages": selected.with_entities(func.count(func.distinct(Occurrence.message_id))).scalar(),
@@ -105,14 +135,22 @@ def preview_changes(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int)
         conflict = message.is_deleted or message.current_version_id != version.id or conversation.status != "active" or conversation.deleted_at is not None
         spans = [(row.start_offset, row.end_offset) for row in rows]
         conflict = conflict or any(spans[index][1] > spans[index + 1][0] for index in range(len(spans) - 1))
-        conflict = conflict or any(row.message_version_id != version.id or not _occurrence_still_matches(db, message.role, before, row) for row in rows)
+        validation = _MessageValidation(message.role, before)
+        conflict = conflict or any(row.message_version_id != version.id or not _occurrence_still_matches(db, message.role, before, row, validation) for row in rows)
         after = before
         if not conflict:
-            for start, end in reversed(spans):
-                after = after[:start] + after[end:]
+            parts, cursor = [], 0
+            for start, end in spans:
+                parts.append(before[cursor:start])
+                cursor = end
+            parts.append(before[cursor:])
+            after = "".join(parts)
             conflict = not after.strip()
         items.append({"conversation_id": str(conversation.id), "conversation_title": conversation.display_title,
             "message_id": str(message_id), "role": message.role, "before": before, "after": before if conflict else after,
-            "conflict": bool(conflict), "fragments": len(rows)})
+            "conflict": bool(conflict), "fragments": len(rows),
+            "removed_ranges": [] if conflict else [{"start_offset": start, "end_offset": end} for start, end in spans]})
+    if source_token != preview_token(db, scan_id):
+        raise ValueError("Source changed while preparing the preview. Preview the changes again.")
     return {"summary": summary, "items": items, "limit": limit, "offset": offset,
-        "preview_token": preview_token(db, scan_id)}
+        "preview_token": source_token}

@@ -16,6 +16,7 @@ function seedActionTask(conversationId: string, operation: "retry" | "cancel"): 
 import os,sys,uuid
 from datetime import datetime,timezone
 assert os.environ.get('APP_ENV')=='test' and os.environ.get('E2E_SETTINGS_MAILBOX')=='1'
+assert os.environ.get('DATABASE_URL'), 'Explicit disposable DATABASE_URL is required; do not fall back to local configuration'
 from app.core.database import SessionLocal
 from app.models.conversation import Conversation
 from app.models.background_job import BackgroundJob

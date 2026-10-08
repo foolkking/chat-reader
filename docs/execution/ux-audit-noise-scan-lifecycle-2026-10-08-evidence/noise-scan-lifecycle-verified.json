@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "noise-scan-lifecycle-verified",
+  "status": "failed",
+  "started_at": "2026-10-07T18:19:04.765Z",
+  "test_count": 55,
+  "completed_at": "2026-10-07T18:24:17.787Z",
+  "duration_ms": 315591,
+  "result_counts": {
+    "passed": 47,
+    "failed": 8,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

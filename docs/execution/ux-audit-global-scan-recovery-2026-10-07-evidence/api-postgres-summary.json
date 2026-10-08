@@ -1,0 +1,37 @@
+{
+  "baseline": {
+    "tests": 1,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0,
+    "note": "Expected original-source-revision retry failure; one unselected future case is not a pass."
+  },
+  "api-initial": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "api": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "postgres": {
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "verification": {
+    "lint": "passed",
+    "typescript_nonincremental": "passed",
+    "web_build": "passed",
+    "migration_head": "20261006_0048"
+  },
+  "interruption": {
+    "gate": "global-scan-focus-final",
+    "reason": "Isolated supervisor stopped on transient C volume reserve below 32 MiB; API refused connections. Run interrupted; original gate report remained running with no terminal counts. Not a functionality result."
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "exception-baseline",
+  "status": "failed",
+  "started_at": "2026-10-07T08:23:46.258Z",
+  "test_count": 2,
+  "completed_at": "2026-10-07T08:24:10.235Z",
+  "duration_ms": 26435,
+  "result_counts": {
+    "passed": 0,
+    "failed": 2,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

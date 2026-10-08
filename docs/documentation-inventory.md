@@ -1,5 +1,311 @@
 # Markdown 文档台账
 
+`execution/OPTIMIZATION_RELEASE_2026-10-08.md` owns the recovered goal's newly
+authorized commit/CI/deployment, exact-source release evidence and remaining
+verification. PROJECT_STATE, index, deployment and testing distinguish this
+authorization from historical local-only checkpoints, and the continuing local
+Web-start rejection from isolated CI browser acceptance.
+
+`execution/local-execution-policy-diagnosis-2026-10-08.md` records the read-only
+policy/configuration/log investigation and corrects the unproven auto-review
+attribution. Current state and testing link the verified scope: effective full
+access / Never, 40 allow rules, no matching local rule or detailed rejection cause.
+It records supported client troubleshooting without claiming a fix or test pass,
+and the third resumed-turn revalidation that marked the goal blocked, not complete.
+Its follow-up records the user's client restart, one unchanged-command rejection,
+unchanged effective permissions and absence of detailed denial evidence. Current
+state/testing reflect the newly resumed goal without claiming browser acceptance.
+
+`execution/specified-chromium-preflight-2026-10-08.md` records explicit renewed
+local-start authorization, the specified Chromium's actual launch/close, exact
+16-case discovery and the continuing pre-process Web rejection. Its evidence
+keeps executable preflight separate from zero executed application cases. Current
+state/testing entries follow the user's specified executable, superseding the
+earlier in-app-browser-only direction; all tests remain local only.
+
+`execution/local-browser-acceptance-block-2026-10-08.md` records the latest
+local-only direction, available in-app browser, renewed pre-process Web rejection
+and blocked goal without a completion claim. PROJECT_STATE and testing link the
+actual prerequisite; earlier missing-exact-confirmation descriptions are historical.
+
+`execution/offline-task-recovery-2026-10-08.md` and its aggregate evidence record
+the server-retry/device-download gap, existing-panel entry and 33 passing API
+checks. Browser cases now target real device persistence but remain unexecuted.
+PWA_OFFLINE_RESILIENCE_CONTRACT owns the flow; API reference/BACKEND_AND_API own
+nullable target projection and authorization; deployment records compatibility
+without a new migration or release. Testing and current-state entries distinguish
+these focused checks from earlier full gates.
+USER_FLOWS links the shared recovery entry; RETENTION_CONTRACT keeps historical
+server task visibility separate from a recovered browser copy.
+
+`execution/offline-error-guidance-2026-10-08.md` records the shared localized
+failure contract, scoped retained-copy correction, backend/static checks and
+explicitly pending browser scenarios. Its evidence JSON separates 16 discovered
+cases from zero executions, the renewed startup rejection and stopped fixtures.
+
+`execution/postgres-integration-2026-10-08.md` records 149 previously skipped cases
+covered on real PostgreSQL, the initial migration-test setup failure and its
+two-case rerun. Aggregate evidence separates runs and avoids double-counting.
+
+`execution/api-integration-2026-10-08.md` records the completed API gate (1,020
+passed, 153 skipped, zero failures/errors), skip boundaries, corrected task paths
+and interrupted first run. Its evidence JSON lists every skipped case without
+captured test bodies or host details; PostgreSQL/browser completion is not claimed.
+
+`execution/offline-asset-integrity-2026-10-08.md` owns batch 31's worker corruption
+baseline, 17 distinct passing tests, repaired-file recovery and chunk cancellation.
+The PWA contract describes the new actual-byte verification during package copying.
+
+`execution/offline-snapshot-consistency-2026-10-08.md` records batch 30's mixed
+source baseline and final 19 API / 5 PostgreSQL passes, with aggregate evidence.
+The PWA contract owns the current read-snapshot/publication-session distinction.
+
+`execution/offline-revision-concurrency-2026-10-08.md` records batch 29's failed
+lost-increment/deadlock reproductions and final 49 API / 12 PostgreSQL passes.
+Its evidence JSON contains only aggregate test counts and case names. Browser
+acceptance remains pending; the PWA contract describes the local repair.
+
+`execution/cleanup-validation-work-2026-10-08.md` owns batch 28's repeated-work
+baseline, local synthetic timings, final 85 distinct API / 11 PostgreSQL passes
+and outstanding browser acceptance. Its evidence JSON retains measurements and
+failed baselines separately. CONTENT_CLEANUP_CONTRACT defines operation-local
+source/rule reuse and unchanged safety checks; testing and entry docs link here.
+No migration or release claim; local head stays 0050 and production stays 0048.
+
+`execution/cleanup-source-safety-2026-10-08.md` owns batch 27's reproduced
+same-ID replacement and PostgreSQL overwrite defects, migration/initial-message
+corrections and scoped API/PG evidence. CONTENT_CLEANUP_CONTRACT defines exact
+source binding; backend/API references define 409 behavior. Deployment describes
+new local head 0050, one-body-at-a-time backfill and rollback, separately from
+production 0048. Browser acceptance remains pending; no release claim.
+
+`execution/ux-audit-noise-selection-recovery-2026-10-08.md` owns batch 26's
+source-backed selection-response findings, pending browser acceptance and the
+automatic approval rejection of local Web startup. CONTENT_CLEANUP_CONTRACT
+records the local unconfirmed-choice behavior with its pending-verification
+status. Eight browser cases are added, not counted as passes. No release claim.
+
+`execution/ux-audit-noise-scan-lifecycle-2026-10-08.md` owns batch 25's pre-edit
+findings, cancellation/worker-failure baseline, fixture corrections, actual focus
+race, disk interruptions and final 55 browser / 79 distinct API / 9 PostgreSQL
+passes. Seven browser aggregate reports, the preparation interruption record,
+API/PG summary and screenshot sets retain successful and failed evidence separately;
+the final 79 images were reviewed. CONTENT_CLEANUP_CONTRACT owns cancellation and
+execution-state projection; RETENTION_CONTRACT owns recent cancelled visibility.
+API/backend/frontend/testing/design-system/entry documents are synchronized.
+No new migration, commit, CI or deployment; all isolated test services stopped.
+
+`execution/ux-audit-noise-dismissal-2026-10-07.md` owns batch 24's pre-edit
+findings, two API baseline failures, first-run keyboard failures, browser auth/
+screenshot environment corrections, and final 59 authenticated browser / 31 API /
+7 PostgreSQL passes. Three browser aggregates, one API/PG summary and 15 initial /
+89 final synthetic images retain evidence. CONTENT_CLEANUP_CONTRACT owns dismissal
+and zero-result behavior; RETENTION_CONTRACT owns its recent-result visibility.
+API/backend/frontend/testing/design-system/entry docs are synchronized. Completed
+October 8 locally, no migration or release; production remains unchanged.
+
+`execution/ux-audit-rescan-recovery-2026-10-07.md` owns batch 23's pre-edit source
+findings, ENOSPC/rejected cleanup, mistaken API tests, OOM builds and the observed
+browser cache failure. Final 35 browser / 24 API / 5 PostgreSQL checks passed;
+two aggregate browser reports, an API/PG summary and 19 intermediate / 53 final
+synthetic images retain evidence. CONTENT_CLEANUP_CONTRACT owns durable admission,
+fresh revisit and old-choice navigation semantics. API/backend/frontend/testing/
+deployment references cover new single local head 0049 and compatible rollback;
+Project State distinguishes unchanged production 0048. No release claim.
+
+`execution/ux-audit-rule-publication-2026-10-07.md` owns batch 22's pre-edit
+audit, two API/two browser baseline failures, fixture/assertion corrections,
+35 distinct passing browser cases (final affected 24 rerun), 27 API and 7 real
+PostgreSQL passes. Four browser gate reports, one API/PG aggregate and 98 reviewed
+synthetic images retain the evidence. Current publication/base/legacy semantics
+belong to CONTENT_CLEANUP_CONTRACT; administration/API/frontend/testing references
+link to it. No migration or release claim.
+
+`execution/ux-audit-rule-edit-concurrency-2026-10-07.md` owns the twenty-first
+pre-edit audit, name-overwrite/disabled-edit failure reproductions, final
+51 browser / 18 API / 8 PostgreSQL passes, one targeted rerun and two reviewed
+but unattributed proxy resets. Its directory keeps two browser reports, an API/PG
+summary and 60 reviewed synthetic images. The cleanup contract owns personal
+base-token/signature/lock semantics and legacy boundaries; API/frontend/testing
+references follow it. No migration, release or full-suite completion claim.
+
+`execution/ux-audit-noise-selection-scope-2026-10-07.md` owns the twentieth
+pre-edit source audit, three first-run test-navigation failures/two unrun cases,
+and final 45 browser / 40 API / 6 PostgreSQL passes. Its evidence directory keeps
+two browser reports, one API/PG summary and 73 reviewed synthetic images. The
+cleanup contract owns the optional read-only selection summary; API/frontend/
+testing and the design system describe its use. No migration or release claim.
+
+`execution/ux-audit-rule-actions-2026-10-07.md` owns the nineteenth pre-edit
+audit, two confirmed-action baseline failures, history freshness failure,
+TypeScript/OOM preparation failures and final 78 browser / 11 API / 6 PostgreSQL
+passes. Its directory keeps three browser reports, one API/PG summary, two baseline
+and 96 reviewed final synthetic images. The cleanup contract owns current-state
+recovery and unchanged revision semantics; frontend/API/testing references and the
+design system cover presentation. No backend/schema/release changes are implied.
+
+`execution/ux-audit-global-scan-recovery-2026-10-07.md` owns the eighteenth
+pre-edit audit, admission baseline failures, caught modal-focus defect, interrupted
+environment run, stream-close diagnostic and final 67 browser / 9 API / 5 PostgreSQL
+passes. Two single-case reruns are not extra distinct cases. Its evidence directory
+keeps seven browser reports (the interrupted report retains its original running
+status with the termination explained in the audit/summary), one API/PG summary,
+one baseline and 74 reviewed final synthetic images. The cleanup contract owns
+admission/receipt semantics; frontend/API/testing references and the design system
+document UI recovery and modal focus. No new schema or release authority.
+
+`execution/ux-audit-exception-recovery-2026-10-07.md` owns the seventeenth
+pre-edit audit, scope/revocation baseline failures, disk/fixture/command preparation
+errors, caught rule-return focus failure and final verification: 60 distinct
+browser, 39 API and 6 PostgreSQL cases. Browser evidence is 59/60 followed by a
+green affected 35-case rerun, not a single 60-pass gate. Seven browser summaries,
+one API/PG summary, two baseline and 72 reviewed final synthetic images are kept
+beside it. The cleanup contract owns additive response fields and recovery
+semantics; frontend/API/testing references follow it. No schema or release change.
+
+`execution/ux-audit-rule-learning-recovery-2026-10-07.md` owns the sixteenth
+pre-edit audit, slow post-save read/stale comparison reproductions, fixture
+failures and final 49 browser / 11 API / 6 PostgreSQL passes. Its directory keeps
+four browser summaries, one API/PG summary, two baseline and 57 reviewed final
+synthetic images. `system/CONTENT_CLEANUP_CONTRACT.md` owns acknowledged saves,
+read-only result checks, comparison freshness and focus recovery; frontend/API/
+testing references describe the same behavior. No schema, full API/PWA or release
+claim. Owned services are stopped; all local changes remain uncommitted.
+
+`execution/ux-audit-noise-diff-2026-10-07.md` owns the fifteenth pre-edit audit,
+expected long-preview failure, 40 API / 6 PostgreSQL / 43 distinct browser passes,
+and explicit final-rerun limits. Its directory retains four browser gate summaries,
+one API/PG summary, one baseline and 64 reviewed final synthetic images.
+`system/CONTENT_CLEANUP_CONTRACT.md` owns exact removal metadata, safe plain-text
+fallback and local pane positioning; API/frontend/backend/testing references match.
+No schema, whole API/PWA, release or production verification is implied. Owned
+services are stopped; this and the earlier local changes remain uncommitted.
+
+`execution/ux-audit-noise-navigation-2026-10-07.md` owns the fourteenth pre-edit
+audit and import/global-navigation evidence: 70 API-suite, 6 PostgreSQL and 44
+distinct browser checks, with intermediate failures/skips kept separate. Its
+directory retains ten browser summaries, one API/PG summary, three baseline and
+65 reviewed final synthetic images. `system/CONTENT_CLEANUP_CONTRACT.md` owns
+import binding, group search, scope and preview-return behavior; API, frontend,
+backend and testing references point there. No migration, full API/PWA claim,
+commit, CI or release. Task-owned temporary logs remain on C; services are stopped.
+
+`execution/ux-audit-registration-recovery-2026-10-07.md` owns the thirteenth audit,
+actual approval overwrite and unknown-save reproductions, fixture/collection
+failures and final 62 distinct API / 3 PostgreSQL / 22 Playwright checks. The last
+group explicitly separates 19 integration flows, 2 UI mocks and 1 source check.
+Its directory retains four browser summaries, one API/PG summary, two baseline
+and 19 reviewed final synthetic images. `system/AUTHENTICATION_CONTRACT.md` owns
+policy concurrency, admission and SMTP rules; administration, API, frontend and
+testing references link that contract. No schema, full PWA/API gate, commit, CI
+or production release is claimed. Existing evidence and local residues remain.
+
+`execution/ux-audit-feature-policy-recovery-2026-10-07.md` owns the twelfth pre-edit
+audit, real stale-policy overwrite/lost-response reproductions, SQLite timestamp
+fixture errors, and final 58 API / 3 PostgreSQL / 40 browser-gate cases (one of
+the latter is a serializer check). Its evidence directory keeps four browser gate
+summaries, one API/PG summary, two baseline and 46 reviewed final synthetic images.
+`system/ADMINISTRATION_CONTRACT.md` owns optional revision checks and recovery;
+API/backend/frontend references and `testing.md` describe the same scoped behavior.
+No migration, new full API/PWA pass, commit, CI or production release is included.
+
+`execution/ux-audit-skill-replacement-recovery-2026-10-07.md` owns the eleventh
+pre-edit audit, acknowledged replacement and conflict reproductions, revision-0
+implementation gap, and final 23 browser / 34 API checks. Its evidence directory
+keeps six browser gate summaries, one API summary, four baseline and 30 final
+synthetic screenshots. `system/CONTEXT_SKILL_MIGRATION.md` owns replacement recovery;
+frontend reference and `testing.md` own cache/focus and fixture behavior. Default
+ZIPs, backend and schema remain unchanged; no commit, CI or release is included.
+
+`execution/ux-audit-account-security-recovery-2026-10-07.md` owns the tenth pre-edit
+audit, three valid browser reproductions, the initial device-label fixture failure
+and final 25-browser-case evidence. Its directory keeps four gate JSONs, three
+baseline and 31 final synthetic screenshots, all visually reviewed individually
+or in contact sheets. `system/AUTHENTICATION_CONTRACT.md` owns client read/write
+recovery boundaries; `system/FRONTEND_ARCHITECTURE.md` owns draft/feedback behavior,
+and `testing.md` owns the independent fixture and scoped regression instructions.
+No backend/schema change, new full API/PWA claim, commit, CI or release is included.
+
+`execution/ux-audit-cleanup-layout-2026-10-07.md` owns the ninth pre-edit audit,
+density/completion baseline, corrected highlight/source identity and final
+33-browser-case evidence. Its directory retains three gate summaries, four
+baseline and 45 final synthetic screenshots. The Cleanup contract and frontend
+reference own disclosure/result behavior; `testing.md` owns the mixed-source,
+keyboard and 360px-height checks. `.interface-design/system.md` now reflects
+recoverable completion and actual mark/warning tokens. No backend/schema change,
+new API/PWA acceptance, commit, CI or deployment is included.
+
+`execution/ux-audit-cleanup-completion-2026-10-07.md` owns the eighth pre-edit
+audit, completed-result and mobile-focus reproductions, intermediate fixture
+failures, 101 API / 8 PostgreSQL / 35 browser passes and visual-review limits.
+Its evidence directory keeps five gate summaries, two baseline and 35 final
+synthetic screenshots. `system/CONTENT_CLEANUP_CONTRACT.md` owns atomic completion,
+owner outcomes and replay; `system/RETENTION_CONTRACT.md` owns the terminal view
+boundary. API/backend/frontend references and `testing.md` describe the interface
+and fixture guard. No schema change, commit, CI or release is included.
+
+`execution/ux-audit-cleanup-recovery-2026-10-07.md` owns the pre-edit noise-review
+audit, three reproduced failures, fixture/throttle interruptions and final 69 API,
+6 PostgreSQL and 18 browser passes. Its evidence directory preserves five gate
+summaries, three baseline screenshots and 17 inspected final screenshots.
+`system/CONTENT_CLEANUP_CONTRACT.md` owns committed decision snapshots, list/focus
+and preview recovery; API/backend references and `testing.md` own response and
+fixture details. This is the seventh uncommitted batch; no production/migration
+change or new complete API/PWA claim. Apply-receipt and post-apply editor recovery
+are covered by the eighth batch above.
+
+`execution/ux-audit-admin-account-recovery-2026-10-07.md` owns the pre-edit account
+audit, reproduced acknowledgement delay, page/focus recovery, unavailable detail,
+and deletion-result reattachment evidence. `system/ADMINISTRATION_CONTRACT.md`
+owns the additive account snapshot response and frontend recovery boundary;
+`api-reference.md`/`system/BACKEND_AND_API.md` describe the compatible interface
+extension, and `testing.md` owns real fixtures and negative injection. No migration
+or production release is included. This is the sixth local improvement batch.
+
+`execution/ux-audit-archive-replacement-2026-10-07.md` records the invalid-upload
+reproduction, replacement/reupload recovery, intermediate failures and final 26
+browser passes. Its evidence directory retains four sanitized gate summaries and
+15 reviewed synthetic screenshots. `system/DATA_ARCHIVE_CONTRACT.md` owns recovery
+classification and unchanged restore boundaries; `testing.md` owns the negative
+fixture guard and authenticated PostgreSQL startup requirements. No API/schema or
+release change; this is the fifth uncommitted local improvement batch.
+
+`execution/ux-audit-support-navigation-2026-10-07.md` records the pre-edit support
+navigation audit, list/focus/page recovery, inaccessible snapshot invalidation,
+offscreen error reproduction, intermediate failures and final 21 browser passes.
+Its evidence directory contains five sanitized gate summaries and fifteen synthetic
+screenshots. `system/SUPPORT_REQUEST_CONTRACT.md` owns the current navigation and
+read-memory boundaries; `testing.md` owns fixtures, genuine persistence assertions
+and the limits of the replayed cross-account 404. No API/schema/release change.
+
+`execution/ux-audit-archive-recovery-2026-10-07.md` records the reproduced stale
+backup task state, bounded request/refresh fixes, initial build/lint corrections,
+29 API + 8 PostgreSQL passes and 15 independent browser cases. Its evidence
+directory contains the failing baseline, final gates and synthetic screenshots.
+`system/DATA_ARCHIVE_CONTRACT.md` owns local recovery behavior and distinguishes
+it from the deployed archive baseline. `api-reference.md` owns task preflight
+availability; `testing.md` owns the delayed-read fixture and required suites.
+
+`execution/ux-audit-share-recovery-2026-10-07.md` owns the pre-edit Share audit,
+revision/partial-PATCH fixes, failed fixture/locator runs, 19 API checks and 13
+distinct passing browser scenarios. Its evidence directory contains sanitized
+gate summaries and synthetic three-width screenshots. `api-reference.md` owns
+the owner GET and optional base-revision conflict contract;
+`system/FRONTEND_ARCHITECTURE.md` owns draft comparison, recovery and pagination,
+with a concise backend cross-reference in `system/BACKEND_AND_API.md`.
+`testing.md` distinguishes authenticated settings from anonymous drawer fixtures.
+These local changes are not deployed; public Share URL semantics are unchanged.
+
+`execution/ux-audit-offline-recovery-2026-10-06.md` records the pre-edit Offline
+Library recovery audit, code evidence, worktree fixes, initial failures and passing
+recovery/authentication/sync reruns. Its evidence directory preserves initial,
+intermediate and final gates plus synthetic screenshots; six recovery tests,
+authentication/sync, baseline PWA and all 17 negative PWA cases have passing evidence.
+It is not production acceptance. `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`
+distinguishes the new worktree behavior from deployed b45f049. Improvements are now
+batched; deployment waits for an explicit user request. `testing.md` records the
+recovery suite's fixture requirements and password-rotation isolation between gates.
+
 `execution/TASK_CENTER_CLARITY_2026-10-06.md` tracks deployed source 25c7f6a/0048,
 CI 37453812341, the failed initial CI and verified follow-up race fixes, format/time
 hierarchy, grouping/focus, production acceptance and cleanup.

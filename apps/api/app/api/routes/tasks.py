@@ -7,7 +7,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
-from app.schemas.task import BackgroundTaskRead
+from app.schemas.task import BackgroundTaskRead, OfflineDownloadTarget
 from app.services.background_jobs import (
     ACTIVE_JOB_STATUSES,
     CANCELLABLE_JOB_TYPES,
@@ -144,7 +144,7 @@ def cancel_task(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> BackgroundTaskRead:
-    job = get_owned(db, BackgroundJob, job_id, ownership_scope)
+    job = db.query(BackgroundJob).filter(BackgroundJob.id == job_id, ownership_scope.predicate(BackgroundJob)).with_for_update().populate_existing().one_or_none()
     if job is None:
         record = get_owned(db, ImportRecord, job_id, ownership_scope)
         if record is not None:
@@ -167,7 +167,12 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
     payload = job.payload or {}
     result = dict(job.result or {})
+    if job.job_type == "content_noise_scan" and isinstance(result.get("cleanup_apply"), dict):
+        result["cleanup_apply"] = {key: value for key, value in result["cleanup_apply"].items() if key != "response"}
     from sqlalchemy.orm import object_session
+    if job.job_type in {"personal_archive_preflight", "system_archive_preflight"} and (db := object_session(job)) is not None:
+        from app.services.exporting.archive_jobs import archive_task_result
+        result = archive_task_result(db, job)
     from app.models.export_artifact import ExportArtifact
     from app.services.export_retention import EXPORT_JOB_TYPES, artifact_status
     if job.job_type in EXPORT_JOB_TYPES and job.status == "committed" and (db := object_session(job)) is not None:
@@ -192,6 +197,7 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         label=payload.get("title") or _job_label(job.job_type),
         source_label=payload.get("source_label") or payload.get("title"),
         export_format=_task_export_format(job.job_type, payload),
+        offline_target=_offline_download_target(job.job_type, payload),
         result=result,
         error_message=job.error_message,
         queued_at=job.queued_at,
@@ -201,6 +207,23 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         cancellable=job.job_type in CANCELLABLE_JOB_TYPES and job.status in {"queued", "processing", "cancelling"},
         attempt_count=job.attempt_count,
     )
+
+
+def _offline_download_target(job_type: str, payload: dict) -> OfflineDownloadTarget | None:
+    """Navigation metadata only; a new admission rechecks source ownership."""
+    if job_type != "offline_package":
+        return None
+    scope, mode = payload.get("scope"), payload.get("include_assets", "all")
+    if scope not in ("conversation", "project", "all") or mode not in ("none", "small", "all"):
+        return None
+    try:
+        return OfflineDownloadTarget(
+            scope=scope, include_assets=mode,
+            conversation_id=uuid.UUID(str(payload.get("conversation_id"))) if scope == "conversation" else None,
+            project_id=uuid.UUID(str(payload.get("project_id"))) if scope == "project" else None,
+        )
+    except (ValueError, TypeError):
+        return None
 
 
 def _task_export_format(job_type: str, payload: dict) -> str | None:

@@ -1,5 +1,128 @@
 # PWA and Offline Resilience Contract
 
+## Task Center recovery — 2026-10-08 worktree, not deployed
+
+Offline Task Center rows open the existing Offline & sync panel. Opening it does
+not admit or retry a download. Server task status describes packaging, not whether
+this browser has imported the package. The generic server-only Retry/result ZIP
+actions are replaced by this entry; the legacy APIs and download URLs remain.
+Cancellation there is explicitly labelled Cancel server generation. Local download
+cancellation and retry remain in the sync panel with their existing semantics.
+
+Task responses add nullable `offline_target`: scope, corresponding conversation
+or project ID, and `include_assets`. Only allowed values are projected from owned
+offline-package jobs; malformed/legacy payloads return null. It is navigation
+metadata, not authorization. Admission rechecks source ownership and computes
+known revisions from this device, never from another device's historical job.
+
+The panel first finds the exact job, then a local retry with the same scope and
+attachment mode. It opens the matching state and 20-row failure page, focusing
+the actual row without overriding intervening keyboard/pointer navigation. A
+completed local record offers the Library route. Without a local record, valid
+target metadata offers an explicit Download to this device action through the
+existing enqueue pipeline. Missing metadata keeps a manual Library route. Catalog
+failure, offline state and empty/deleted/unavailable sources cannot silently start
+that targeted download. Users can choose the attachment mode before admission.
+
+Successful recovery does not rewrite the historical failed server job. Task
+visibility still follows existing retention; local-copy availability is separate.
+No Dexie/package version, persisted task model, canonical content or Share change.
+The [execution record](../execution/offline-task-recovery-2026-10-08.md) separates
+33 passing API checks from the unexecuted browser persistence/focus cases.
+
+## Attachment copying — 2026-10-08 worktree, not deployed
+
+Recognized server attachment failures use `OFFLINE_ASSET_INTEGRITY` and
+`OFFLINE_ASSET_IO`. The download record stores only admitted categories, with
+legacy exact-message support and GENERATION fallback. Both Offline Center and
+Task Center render localized recovery guidance; Task Center does not assert local
+copy retention. Manual retry obtains a new generation job for either category.
+
+Retention wording requires an explicit local-copy boolean. The sync center checks
+the displayed failure page against account-local conversation/project indexes;
+an unrelated copy does not establish retention for this download. The library
+uses the same scope distinction. Cancellation without a matching copy and generic
+operation failures do not claim that a readable copy exists. No new stored fields,
+Dexie version, message writes or attachment changes are involved. Browser acceptance
+of this follow-up remains pending; see the dated offline-error-guidance record.
+
+Offline package asset copying uses bounded 1 MiB reads and verifies the actual
+written byte count and SHA-256 against canonical asset metadata before publication.
+Missing/unreadable or mismatched files fail the task and discard staging without
+replacing the previous successful artifact. Large files offer throttled progress
+and cancellation checkpoints between chunks. Repairing the source allows a new
+download attempt. This is independent of browser cache validation and DB snapshots.
+
+## Package source snapshot — 2026-10-08 worktree, not deployed
+
+PostgreSQL offline packaging reads canonical metadata, messages, search, notes,
+anchors, Continuation and asset metadata in one read-only REPEATABLE READ snapshot,
+reusing `archive_read_snapshot`. Worker progress and artifact records use the
+original publication session. Progress commits cannot reset the read snapshot.
+Concurrent edits remain available for the next update rather than mixing into
+this package under an older revision. SQLite keeps its existing session behavior.
+Snapshot exit closes the extra read connection on success/error. Filesystem asset
+bytes remain governed by the existing asset storage lifecycle.
+
+## Source revision concurrency — 2026-10-08 worktree, not deployed
+
+All current offline revision increments use `bump_offline_revision`, a deferred
+database expression evaluated at the existing transaction flush boundary. Stale
+ORM instances cannot overwrite another transaction's increment. Multiple queued
+increments accumulate; after flush, reads return the persisted integer. Rollback
+reverts the source and its revision together. No package or Dexie version changes.
+
+Message source and cleanup locking uses PostgreSQL NO KEY UPDATE, serializing
+source mutations while permitting search-document FK KEY SHARE checks. Full FOR
+UPDATE locks here can deadlock independent edits rebuilding the same conversation's
+search index. Revision and existing source-version conflict checks remain separate.
+
+## Download recovery — 2026-10-07 worktree, not deployed
+
+Local download cancellation can run without a network connection. It settles under
+the existing account download lock only after the importer has stopped; an already
+committed package wins a late cancellation. Network loss without cancellation keeps
+the existing resumable state. Status text reports the offline pause.
+
+Server cancellation intents live in the existing account-scoped settings store
+(`offline-cancellation:`), independently of later retries of the same local row.
+Unknown admission receipts replay the original idempotency key. A separate browser
+lock coordinates acknowledgements without holding up local cancellation/cleanup.
+An HTTP 409 clears an intent only after a fresh owned task query proves a terminal
+state (the server may have completed generation before cancellation arrived).
+Requests have a 15-second bound; automatic attempts stop after five with backoff,
+retaining a manual retry in the sync center. Authentication generations and existing
+database fences still apply. No background retry is treated as a confirmed response.
+If a newer download has already completed while an earlier cancellation failed,
+its recovery row offers server-cancellation retry only, not an ineffective
+download retry. Clearing the acknowledged intent does not replace the saved copy.
+
+Malformed packages rebuild with a new admission key; network and local write/quota
+failures reuse their existing job/package. A transaction and per-attempt revision
+prevent concurrent retry clicks from replacing another active attempt. Existing
+records without the additive revision field read as attempt zero.
+
+Library reads persistent failures as well as active/completed states. The first-copy
+screen exposes the same specific error/retry without requiring a user to open its
+sidebar. Sync-center pagination clamps to a valid page after live counts decrease;
+outdated resource-check promises cannot overwrite a newer list.
+Desktop Open library expands the sidebar and focuses its search; it is hidden when
+that sidebar is already open. A failure displayed for the selected first-copy
+screen is suppressed only when the desktop sidebar would repeat the same message.
+Other sidebar errors and mobile drawer feedback remain visible.
+
+These changes do not alter Dexie version 2, offline package v1/v2/v3, canonical
+content, personal preferences or Share. All six real-browser recovery cases passed
+after fixing the terminal-cancellation boundary and restoring test disk capacity.
+They verify actual IndexedDB rows, original admission keys/server jobs, retained
+intent after a failed status query, and deleting a cancelled browser copy without
+deleting the server conversation, and bounded/manual retry after a later successful
+download. Related authentication and sync tests passed. Default PWA reported
+135 passed / 329 conditional skips, and the instrumented negative matrix 17 passed
+with no skips. The dated audit retains initial
+failures and identifies test-fixture corrections separately from application fixes.
+No deployment/CI has run for this worktree.
+
 ## Cleanup after completed downloads (2026-10-04)
 
 Copy/attachment cleanup checks durable active downloads before acquiring the

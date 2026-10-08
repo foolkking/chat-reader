@@ -52,6 +52,7 @@ class ShareRead(BaseModel):
     updated_at: datetime
     share_url: str | None = None
     password_required: bool = False
+    settings_revision: str | None = None
 
 
 class ShareCreateResponse(ShareRead):
@@ -60,6 +61,7 @@ class ShareCreateResponse(ShareRead):
 
 
 class ShareUpdate(BaseModel):
+    base_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     title: str | None = None
     description: str | None = None
     expires_at: datetime | None = None

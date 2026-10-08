@@ -68,6 +68,7 @@ def ready_preview(client, path, engine):
     task = client.get(f"/api/tasks/{job['job_id']}").json()
     assert task["status"] == "committed", task
     assert task["result"]["restore_mode"] == "additive"
+    assert task["result"]["artifact_available"] is True
     return task
 
 
@@ -112,6 +113,7 @@ def test_personal_archive_api_requires_preview_keeps_ownership_and_reenters_task
         artifact_path = Path(db.query(ExportArtifact).filter_by(job_id=uuid.UUID(job_id)).one().storage_uri)
     assert client.delete(f"/api/me/archive/previews/{job_id}").status_code == 204
     assert not artifact_path.exists()
+    assert client.get(f"/api/tasks/{job_id}").json()["result"]["artifact_available"] is False
     assert client.delete(f"/api/me/archive/previews/{job_id}").status_code == 204
     with Session(engine) as db:
         assert db.query(Conversation).filter_by(owner_user_id=owner).count() == 1
@@ -151,6 +153,7 @@ def test_expired_preview_requires_upload_but_already_admitted_restore_can_finish
         artifact = db.query(ExportArtifact).filter_by(job_id=uuid.UUID(preview["job_id"])).one()
         artifact.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1); db.commit()
     assert client.post("/api/me/archive/restores", json=payload).status_code == 410
+    assert client.get(f"/api/tasks/{preview['job_id']}").json()["result"]["artifact_available"] is False
     with Session(engine) as db:
         artifact = db.query(ExportArtifact).filter_by(job_id=uuid.UUID(preview["job_id"])).one()
         artifact.expires_at = datetime.now(timezone.utc) + timedelta(hours=1); db.commit()

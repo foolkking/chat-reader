@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "publication-recovery-20261007",
+  "status": "passed",
+  "started_at": "2026-10-07T13:25:44.888Z",
+  "test_count": 35,
+  "completed_at": "2026-10-07T13:28:24.083Z",
+  "duration_ms": 161949,
+  "result_counts": {
+    "passed": 35,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

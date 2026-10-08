@@ -15,6 +15,7 @@ class CleanupRuleCreate(BaseModel):
 
 
 class CleanupRuleUpdate(BaseModel):
+    base_edit_token: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     base_revision: int | None = Field(default=None, ge=1)
     base_revision_id: UUID | None = None
     current_revision_id: UUID | None = None
@@ -28,6 +29,7 @@ class CleanupRuleUpdate(BaseModel):
 
 
 class CleanupRuleTrial(CleanupRuleCreate):
+    base_edit_token: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     rule_id: UUID | None = None
     base_revision: int | None = Field(default=None, ge=1)
     base_revision_id: UUID | None = None
@@ -45,6 +47,7 @@ class CleanupExceptionConfirm(BaseModel):
 
 
 class CleanupRuleRead(BaseModel):
+    edit_token: str | None = None
     id: UUID
     name: str
     kind: str
@@ -82,6 +85,8 @@ class CleanupScanRead(BaseModel):
     status: str
     scope_type: str
     background_job_id: UUID | None
+    background_job_status: str | None = None
+    previous_scan_id: UUID | None = None
     progress: int
     processed_messages: int
     total_messages: int

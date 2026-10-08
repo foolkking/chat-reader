@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "noise-navigation-delivery",
+  "status": "failed",
+  "started_at": "2026-10-07T05:44:13.267Z",
+  "test_count": 44,
+  "completed_at": "2026-10-07T05:47:29.989Z",
+  "duration_ms": 199276,
+  "result_counts": {
+    "passed": 43,
+    "failed": 1,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

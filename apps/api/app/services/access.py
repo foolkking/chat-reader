@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import update
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.models.access import AccountInvitation, InstanceAccessSetting, PasswordResetGrant
 from app.models.auth import AuthPrincipal, AuthSession
 from app.models.user import User
@@ -29,41 +31,59 @@ def access_settings(db: Session, settings: Settings) -> dict:
     }
 
 
+ACCESS_FIELDS = ("registration_mode", "require_admin_approval", "email_verification_enabled", "password_reset_enabled")
+
+
+class RegistrationPolicyConflict(ValueError):
+    """The policy displayed by the caller is no longer current."""
+
+
+def registration_policy_revision(values: dict) -> str:
+    # Deployment SMTP availability and timestamps are not editable policy.
+    content = json.dumps({field: values[field] for field in ACCESS_FIELDS}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
 def set_registration_mode(db: Session, mode: str, actor_user_id: uuid.UUID) -> InstanceAccessSetting:
-    if mode not in {"CLOSED", "INVITE_ONLY", "OPEN"}:
-        raise ValueError("Invalid registration mode.")
-    row = db.get(InstanceAccessSetting, 1)
-    if row is None:
-        row = InstanceAccessSetting(id=1, registration_mode=mode, updated_by_user_id=actor_user_id)
-        db.add(row)
-    else:
-        row.registration_mode = mode
-        row.updated_by_user_id = actor_user_id
-        row.updated_at = utc_now()
-    db.flush()
+    row, _ = set_access_settings(db, mode=mode, actor_user_id=actor_user_id)
     return row
 
 
 def set_access_settings(
     db: Session,
     *,
-    mode: str,
+    mode: str | None = None,
     require_admin_approval: bool | None = None,
     email_verification_enabled: bool | None = None,
     password_reset_enabled: bool | None = None,
     actor_user_id: uuid.UUID,
-) -> InstanceAccessSetting:
-    row = set_registration_mode(db, mode, actor_user_id)
-    if require_admin_approval is not None:
-        row.require_admin_approval = require_admin_approval
-    if email_verification_enabled is not None:
-        row.email_verification_enabled = email_verification_enabled
-    if password_reset_enabled is not None:
-        row.password_reset_enabled = password_reset_enabled
-    row.updated_by_user_id = actor_user_id
-    row.updated_at = utc_now()
+    base_revision: str | None = None,
+) -> tuple[InstanceAccessSetting, dict]:
+    if mode is not None and mode not in {"CLOSED", "INVITE_ONLY", "OPEN"}:
+        raise ValueError("Invalid registration mode.")
+    if db.get_bind().dialect.name == "postgresql":
+        key = int.from_bytes(hashlib.sha256(b"instance-access-policy:1").digest()[:8], "big", signed=True)
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+    row = db.scalar(select(InstanceAccessSetting).where(InstanceAccessSetting.id == 1)
+                    .with_for_update().execution_options(populate_existing=True))
+    settings = get_settings()
+    if row is None:
+        row = InstanceAccessSetting(id=1, registration_mode=settings.auth_registration_mode)
+        db.add(row)
+        db.flush()
+    before = {field: getattr(row, field) for field in ACCESS_FIELDS}
+    if base_revision is not None and registration_policy_revision(before) != base_revision:
+        raise RegistrationPolicyConflict("REGISTRATION_POLICY_CHANGED")
+    values = {"registration_mode": mode, "require_admin_approval": require_admin_approval,
+              "email_verification_enabled": email_verification_enabled, "password_reset_enabled": password_reset_enabled}
+    changes = {field: value for field, value in values.items() if value is not None and value != before[field]}
+    for field, value in changes.items():
+        setattr(row, field, value)
+    if changes:
+        row.updated_by_user_id = actor_user_id
+        row.updated_at = utc_now()
     db.flush()
-    return row
+    return row, changes
 
 
 def create_invitation(

@@ -1,0 +1,147 @@
+{
+  "runs": [
+    {
+      "run": "baseline",
+      "tests": 2,
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0
+    },
+    {
+      "run": "api",
+      "tests": 44,
+      "passed": 44,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "run": "regression",
+      "tests": 43,
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "run": "pg",
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "distinct_final_api_cases": 85,
+  "final_postgresql_cases": 11,
+  "metrics": [
+    {
+      "run": "baseline",
+      "case": "test_revalidation_work_is_per_message_rule[32]",
+      "measurements": {
+        "select_detect": 0.0,
+        "select_protected": 64.0,
+        "select_hash": 32.0,
+        "select_milliseconds": 56.433,
+        "preview_detect": 32.0,
+        "preview_protected": 64.0,
+        "preview_hash": 34.0,
+        "preview_milliseconds": 103.349,
+        "apply_detect": 32.0,
+        "apply_protected": 64.0,
+        "apply_hash": 34.0,
+        "apply_milliseconds": 147.614
+      }
+    },
+    {
+      "run": "baseline",
+      "case": "test_revalidation_work_is_per_message_rule[128]",
+      "measurements": {
+        "select_detect": 0.0,
+        "select_protected": 256.0,
+        "select_hash": 128.0,
+        "select_milliseconds": 347.257,
+        "preview_detect": 128.0,
+        "preview_protected": 256.0,
+        "preview_hash": 130.0,
+        "preview_milliseconds": 975.123,
+        "apply_detect": 128.0,
+        "apply_protected": 256.0,
+        "apply_hash": 130.0,
+        "apply_milliseconds": 1052.397
+      }
+    },
+    {
+      "run": "api",
+      "case": "test_revalidation_work_is_per_message_rule[32]",
+      "measurements": {
+        "select_detect": 0.0,
+        "select_protected": 2.0,
+        "select_hash": 2.0,
+        "select_milliseconds": 38.344,
+        "preview_detect": 1.0,
+        "preview_protected": 2.0,
+        "preview_hash": 3.0,
+        "preview_milliseconds": 29.337,
+        "apply_detect": 1.0,
+        "apply_protected": 2.0,
+        "apply_hash": 3.0,
+        "apply_milliseconds": 68.344
+      }
+    },
+    {
+      "run": "api",
+      "case": "test_revalidation_work_is_per_message_rule[128]",
+      "measurements": {
+        "select_detect": 0.0,
+        "select_protected": 2.0,
+        "select_hash": 2.0,
+        "select_milliseconds": 212.995,
+        "preview_detect": 1.0,
+        "preview_protected": 2.0,
+        "preview_hash": 3.0,
+        "preview_milliseconds": 43.125,
+        "apply_detect": 1.0,
+        "apply_protected": 2.0,
+        "apply_hash": 3.0,
+        "apply_milliseconds": 133.436
+      }
+    },
+    {
+      "run": "regression",
+      "case": "test_revalidation_work_is_per_message_rule[32]",
+      "measurements": {
+        "select_detect": 0.0,
+        "select_protected": 2.0,
+        "select_hash": 2.0,
+        "select_milliseconds": 37.719,
+        "preview_detect": 1.0,
+        "preview_protected": 2.0,
+        "preview_hash": 3.0,
+        "preview_milliseconds": 31.578,
+        "apply_detect": 1.0,
+        "apply_protected": 2.0,
+        "apply_hash": 3.0,
+        "apply_milliseconds": 69.852
+      }
+    },
+    {
+      "run": "regression",
+      "case": "test_revalidation_work_is_per_message_rule[128]",
+      "measurements": {
+        "select_detect": 0.0,
+        "select_protected": 2.0,
+        "select_hash": 2.0,
+        "select_milliseconds": 220.221,
+        "preview_detect": 1.0,
+        "preview_protected": 2.0,
+        "preview_hash": 3.0,
+        "preview_milliseconds": 41.958,
+        "apply_detect": 1.0,
+        "apply_protected": 2.0,
+        "apply_hash": 3.0,
+        "apply_milliseconds": 153.53
+      }
+    }
+  ],
+  "browser": "not_executed",
+  "migration_head": "20261008_0050",
+  "timing_scope": "single local synthetic samples; not production latency guarantees"
+}

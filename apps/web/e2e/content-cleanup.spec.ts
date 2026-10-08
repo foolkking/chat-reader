@@ -97,7 +97,7 @@ test("reviews a deterministic noise occurrence without silently changing content
     await page
       .getByRole("button", { name: /Preview 1 removals|预览 1 项清理/ })
       .click();
-    await page.getByRole("button", { name: /Confirm 1 removals|确认应用 1 项清理/ }).click();
+    await page.getByRole("button", { name: /Confirm 1 selections|确认处理 1 项选择/ }).click();
     await expect(page.getByTestId("content-cleanup-dialog")).toHaveCount(0);
     await expect(page.getByTestId("source-editor-codemirror")).toContainText(
       "🙂 Answer before  and after.",

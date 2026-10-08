@@ -1,0 +1,70 @@
+{
+  "baseline": {
+    "tests": 1,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_offline_package_uses_one_source_snapshot"
+    ]
+  },
+  "baseline-source": {
+    "tests": 1,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_offline_package_uses_one_source_snapshot"
+    ]
+  },
+  "pg-fix": {
+    "tests": 2,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_offline_package_uses_one_source_snapshot",
+      "test_download_admission_serializes_replay_and_rejects_changed_request"
+    ]
+  },
+  "pg-complete": {
+    "tests": 5,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_offline_package_uses_one_source_snapshot[False-create_version]",
+      "test_offline_package_uses_one_source_snapshot[False-replace_current]",
+      "test_offline_package_uses_one_source_snapshot[True-create_version]",
+      "test_offline_package_uses_one_source_snapshot[True-replace_current]",
+      "test_download_admission_serializes_replay_and_rejects_changed_request"
+    ]
+  },
+  "api": {
+    "tests": 19,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_direct_context_update_refreshes_offline_package",
+      "test_annotations_revision_conflict_sync_idempotency_and_notebook",
+      "test_text_annotation_types_create_update_and_export",
+      "test_annotation_anchor_relocates_and_marks_stale_after_message_edits",
+      "test_cr_v2_optional_private_entries_round_trip",
+      "test_offline_catalog_and_package_are_downloadable",
+      "test_offline_package_reports_store_level_progress",
+      "test_offline_snapshot_preserves_owned_anchor_versions_only",
+      "test_project_description_invalidates_and_reaches_offline_snapshot",
+      "test_offline_outer_commit_failure_preserves_previous_committed_package",
+      "test_export_outer_commit_failure_never_exposes_uncommitted_artifact",
+      "test_offline_replacement_cleans_old_artifact_only_after_commit",
+      "test_offline_cleanup_failure_is_debt_not_publication_failure",
+      "test_download_rejects_artifacts_until_the_owning_job_commits",
+      "test_staging_validation_publish_and_download_integrity",
+      "test_validation_and_rename_failures_never_publish",
+      "test_outer_rollback_preserves_previous_offline_artifact",
+      "test_cleanup_failure_is_debt_and_classifier_protects_references",
+      "test_context_staging_name_is_a_safe_temp_candidate"
+    ]
+  }
+}

@@ -1,5 +1,56 @@
 # Authentication and account contract
 
+## Registration policy recovery (local, 2026-10-07)
+
+Root `GET /api/admin/access` and registration PUT add an opaque policy `revision`.
+`PUT /api/admin/access/registration` accepts optional `base_revision` and optional
+`mode`, so new callers submit only changed fields; legacy mode-only calls still
+preserve verification, approval and password-reset flags. Policy revisions cover
+the four editable fields, not SMTP discovery or timestamps. PostgreSQL serializes
+writers, including first creation, and refreshes ORM state under a row lock before
+the optional base comparison. A stale base returns 409 `REGISTRATION_POLICY_CHANGED`
+without updates or a success audit. Old callers without a base have no optimistic
+conflict guarantee. First flag-only updates retain the deployment registration mode.
+
+The response snapshot is captured inside the transaction and delivered after commit.
+`REGISTRATION_MODE_CHANGED` remains the audit action; metadata contains only changed
+policy fields, preserving the legacy `mode` name. No-op writes and checks do not add
+success events. Audit failure rolls back policy changes. Explicit attempts to enable
+email verification still require configured SMTP. Unchanged verification need not be
+resent and does not block unrelated edits when mail becomes unavailable. Approval,
+verification, ordinary session issuance and existing-account eligibility rules remain.
+
+The registration form keeps drafts after conflicts or unconfirmed responses. Latest
+reads update untouched fields, compare server values with the deliberate patch, and
+require Save again or explicit Use server policy. Result checks only read; matching
+values are reported without claiming which request saved them. Failed checks retain
+recovery; another edit conflicts again. Reads/writes have 20-second bounds, cancellation
+and mounted/authentication-generation guards. Messages and actions stay above the
+invitation section; invitation drafts survive policy recovery and remote language
+changes. See the [dated audit](../execution/ux-audit-registration-recovery-2026-10-07.md).
+
+## Account form and device recovery (local, 2026-10-07)
+
+Account identity and device sessions load independently. Failure in either read
+keeps the other section usable, with a local retry instead of a false empty state.
+Device Refresh preserves username/password drafts and focus. A username save
+updates its saved baseline but retains input entered after submission, explicitly
+marking it unsaved. An older identity read is cancelled before writing; refresh
+does not start during that write. Reads combine caller cancellation with the
+existing ten-second deadline and ignore results after unmount/account change.
+Inaccessible 401/403/404 snapshots are discarded rather than shown as current.
+
+An acknowledged logout-others POST immediately removes revoked rows and reports
+completion. A failed following GET is a separate refresh error, never another
+logout failure; cancelled older GETs cannot restore those rows. An unconfirmed
+POST response keeps the outcome unknown and requires a successful device read
+before another revoke. Neither path automatically repeats the mutation. These
+are client state rules; authentication, revocation, email/password and local
+signout-cleanup protocols remain unchanged. Scoped evidence is in the
+[account recovery audit](../execution/ux-audit-account-security-recovery-2026-10-07.md).
+
+## Access and session boundaries
+
 Invitation lookup/consumption and administrator revocation now serialize on the
 invitation row. Both INVITE_ONLY and OPEN registration consume an explicitly
 supplied invitation once; invalid, expired, used or revoked supplied tokens are

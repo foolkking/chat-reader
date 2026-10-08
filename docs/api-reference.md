@@ -1,5 +1,139 @@
 # API 参考
 
+Local offline task recovery (2026-10-08): `BackgroundTaskRead` responses, including
+GET `/api/tasks/active` and `/api/tasks/{job_id}`, add nullable `offline_target`.
+It contains `scope=conversation|project|all`, `include_assets=none|small|all` and
+only the corresponding `conversation_id` or `project_id` (other IDs are null).
+Missing legacy attachment mode defaults to all; invalid/missing scope data or
+unrelated task types return null. The field never exposes the full job payload,
+known revisions or storage paths. Existing task owner checks and fresh offline
+admission authorization still apply. Generic task retry remains a server-only
+compatibility API; new Web recovery enters the existing device download pipeline.
+No migration. See [offline task recovery](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md#task-center-recovery--2026-10-08-worktree-not-deployed).
+
+Local cleanup source safety (2026-10-08): preview/apply now bind exact source
+bytes, including `replace_current` and whitespace-only edits with unchanged
+canonical hashes. Preview returns 409 if source changes during preparation;
+existing candidate `stale` and conflict fields expose outdated scan sources.
+Concurrent version writes return 409 rather than overwriting a changed base.
+No new public request fields; internal source fingerprints use migration 0050.
+See [source identity](system/CONTENT_CLEANUP_CONTRACT.md#source-identity-and-concurrent-editing-local-2026-10-08).
+
+Local scan lifecycle (2026-10-08): POST `/api/tasks/{id}/cancel` now accepts
+owner-scoped `content_noise_scan` jobs. QUEUED stops immediately; processing
+acknowledges cancelling until the current chunk ends. Scan reads add optional
+`background_job_status` and project FAILED/CANCELLED from the bound job. Latest
+import scan reads retain cancelled results beyond general terminal visibility.
+No migration; see [scan execution](system/CONTENT_CLEANUP_CONTRACT.md#scan-execution-and-cancellation-local-2026-10-08).
+
+Local dismissal recovery (2026-10-08): DELETE `/api/content-cleanup/scans/{id}`
+is idempotent for retained owner-scoped dismissal receipts. It atomically ends
+the review and scan task without changing message versions. New GET
+`/api/content-cleanup/scans/{id}/dismissal` returns DISMISSED/server time,
+REVIEW/live scan, or 404; it never repeats the write. Missing/foreign DELETE
+remains 409, and cleanup `/outcome` never reports dismissal as applied content.
+No migration. See [dismissal contract](system/CONTENT_CLEANUP_CONTRACT.md#empty-results-and-dismissal-local-2026-10-08).
+
+Local rescan recovery (2026-10-07): POST `/api/content-cleanup/scans/{id}/rescan`
+accepts optional UUID `Idempotency-Key`. GET
+`/api/content-cleanup/scans/{id}/rescan-requests/{request_id}` performs an
+owner-scoped read-only check; found replies contain job/status and nullable scan.
+Ended retained requests return 409 on replay. Scan reads add `previous_scan_id`.
+Migration `20261007_0049` indexes the durable admission key independently from
+cleanup-completion lookup. Global requests also survive actual cleanup apply.
+Legacy calls remain supported. See [rescan recovery](system/CONTENT_CLEANUP_CONTRACT.md#rescan-recovery-local-2026-10-07).
+
+Local system noise publication (2026-10-07): Root-only list and new
+GET `/api/admin/noise-rules/{id}` return `publication_token` and
+`published_revision` (null when withdrawn). PUT `/{id}/publication` accepts an
+optional `base_publication_token` and adds `rule` to the existing response.
+DELETE accepts the same optional JSON base; `?return_state=true` returns the rule
+with 200, while legacy DELETE still returns 204. Stale bases return 409, including
+name-only changes and withdrawal/republish cycles. New Web always supplies the base.
+Checks are read-only; acknowledgements and audits correspond to the locked write.
+See [publication recovery](system/CONTENT_CLEANUP_CONTRACT.md#administrator-publication-recovery).
+
+Local personal rule editing (2026-10-07): rule reads return optional `edit_token`;
+PATCH, trial and learn accept `base_edit_token` (64 lowercase hexadecimal digits).
+Trial returns its effective base and signs it together with the existing edit
+fields. Stale supplied bases return 409; legacy trial/learn without the field
+remain usable only when the signed observed state still matches. Name-only edits
+reuse matcher revisions and preserve enablement. Direct legacy PATCH without a
+base remains supported. No migration; pre-update in-flight edit trials require
+another trial. See [explicit learning](system/CONTENT_CLEANUP_CONTRACT.md#exceptions-and-explicit-learning).
+
+Local noise selection scope (2026-10-07): GET
+`/api/content-cleanup/scans/{id}/review` adds
+`selection_summary: {selected, selected_elsewhere, protected}`. Counts cover all
+pages of the current filter and other selected groups in the same owned scan.
+This is read-only, backward-compatible metadata; no selection/apply contract or
+migration change. See [selection scope](system/CONTENT_CLEANUP_CONTRACT.md#selection-scope).
+
+Local personal noise-rule recovery (2026-10-07): existing PATCH/DELETE
+`/api/content-cleanup/rules/{id}` responses remain unchanged. The Web client adds
+cancellation/deadline handling and uses GET `/api/content-cleanup/rules` for a
+read-only current-state check after an unconfirmed action. It does not toggle,
+select or delete while checking. See the
+[personal rule contract](system/CONTENT_CLEANUP_CONTRACT.md#personal-rule-actions-local-2026-10-07).
+
+Local global-noise admission (2026-10-07): POST
+`/api/content-cleanup/rules/scan-existing` accepts optional UUID
+`Idempotency-Key`. Same-account retries return the original scan; a request whose
+review is gone returns 409 without admitting another task. New explicit keys
+recheck current data/rules/exceptions; no-header callers keep legacy reuse.
+GET `/api/content-cleanup/rules/scan-existing/requests/{request_id}` returns
+`{found:false}` or owner-scoped `{found:true, job_id, status, scan}` (nullable scan).
+It is read-only and recovers closed-review task records. See
+[global scan recovery](system/CONTENT_CLEANUP_CONTRACT.md#global-scan-admission-recovery).
+
+Local exception recovery (2026-10-07): GET
+`/api/content-cleanup/scans/{id}/occurrences/{occurrence}/exception` adds
+`exception_saved`, current `decision`, and `scan: CleanupScanRead`. It reports
+owner-scoped current state without writing an exception or decision. POST keeps
+`id` and adds `scan`, serialized within the save transaction before commit.
+Web reads/writes accept cancellation and a 20-second deadline; unknown responses
+can be checked without another POST. Existing DELETE remains owner-scoped and
+idempotent. See [exception recovery](system/CONTENT_CLEANUP_CONTRACT.md#exception-recovery-local-2026-10-07).
+
+Local rule learning recovery (2026-10-07): the Web uses existing GET
+`/api/content-cleanup/rules` to check an unconfirmed personal save against the
+current selected configuration. It does not repeat the learning POST during a
+check. Trial, learning, list and revision helpers accept cancellation and a
+20-second client deadline; no HTTP response shape or permission change.
+See [rule editor recovery](system/CONTENT_CLEANUP_CONTRACT.md#rule-editor-recovery-local-2026-10-07).
+
+Local cleanup differences (2026-10-07): GET `/api/content-cleanup/scans/{id}/preview`
+adds `items[].removed_ranges` (`start_offset`, `end_offset`, Unicode code points).
+These describe validated selected occurrences in source order; conflicted messages
+return `[]` and retain identical before/after source. No change to `preview_token`,
+full text, counts, paging or apply authorization. See
+[cleanup presentation](system/CONTENT_CLEANUP_CONTRACT.md#candidate-and-result-presentation).
+
+Local noise navigation (2026-10-07): GET `/api/content-cleanup/scans/{id}/groups`
+adds optional `q` (up to 200 characters), literal case-insensitive title search
+before pagination. GET `/api/content-cleanup/scans/pending?import_id=<UUID>`
+returns at most the latest associated job's pending scan after import/scan/job
+ownership checks; foreign or missing imports return 404. Import rescans retain
+the existing `parent_task_id`; no migration or new scan is created by either GET.
+See [cleanup navigation](system/CONTENT_CLEANUP_CONTRACT.md#import-entry-and-review-navigation).
+
+Local cleanup completion (2026-10-07): owner-scoped GET
+`/api/content-cleanup/scans/{id}/outcome` returns `status` (COMPLETED / REVIEW /
+APPLYING), cumulative `applied`, `conflicts`, `remaining`, and `completed_at`.
+Unknown/dismissed/foreign scans return 404. A repeated completed POST `/apply`
+replays its original per-attempt `{applied, conflicts}` without writing a version;
+the previous GET scan 404 behavior is retained. Task `result.cleanup_apply` exposes
+the safe completion summary, never its internal replay response. See
+[the cleanup contract](system/CONTENT_CLEANUP_CONTRACT.md#completion-recovery-local-2026-10-07).
+
+Local noise-review recovery (2026-10-07): PATCH
+`/api/content-cleanup/scans/{id}/decisions/filter` retains its existing result
+fields and adds `scan: CleanupScanRead`, with counts computed in the decision
+transaction and returned only after commit. PATCH `/decisions` keeps its existing
+scan response and now computes it before commit as well. Ownership, decisions,
+preview tokens and apply semantics are unchanged; no migration. See the
+[review recovery contract](system/CONTENT_CLEANUP_CONTRACT.md#review-recovery-local-2026-10-07).
+
 Task read responses add nullable `source_label` and `export_format`, keeping
 `label` compatible. Source metadata comes from the owner-scoped job payload;
 batch admission snapshots up to two owned titles in selection order. Recognized
@@ -419,6 +553,10 @@ reads a fresh snapshot. No partial-success artifact is published on corruption.
 | POST | `/api/tasks/{job_id}/retry` | 重试 failed 任务 |
 | POST | `/api/tasks/{job_id}/cancel` | 取消 queued/processing conversation merge；完成或不支持的任务返回 409 |
 
+个人／系统归档预检的任务详情同时返回临时输入当前的 `artifact_available` 和
+`expires_at`，与归档历史使用相同服务；文件移除或过期不改变任务已完成的事实，
+但不再显示为可用于新的恢复。读取仍受当前账户归属限制，不返回物理存储路径。
+
 Conversation merge 可携带 `Idempotency-Key` 请求头。相同 key 的 queued、processing 或 committed 请求返回已有任务，不会重复创建结果。
 
 ## Search And TOC
@@ -497,6 +635,7 @@ expiry and revocation, and cannot call private owner APIs.
 | POST | `/api/conversations/{id}/shares` | 创建 full/selected 分享；原 token 只在创建响应返回 |
 | GET | `/api/conversations/{id}/shares` | 列出该会话的分享记录，不返回原 token |
 | GET | `/api/shares` | 本人分享分页；`status=all/active/expired/revoked`、`conversation_id`、`q`（对话/分享标题）、`offset`、`limit`（1–100，默认 20）；返回 items/total/has_more，含来源标题和状态 |
+| GET | `/api/shares/{share_id}` | 本人分享的最新设置（含 `settings_revision`）；无权限和不存在均为 404，响应禁止缓存 |
 | PATCH | `/api/shares/{share_id}` | 更新标题、描述、过期时间或分享选项 |
 | POST | `/api/shares/{share_id}/revoke` | 撤销分享 |
 | POST | `/api/shares/revoke-batch` | `share_ids` 为 1–100 项；按账户逐项提交，返回 `revoked/not_found/failed`，重复 ID 去重，重试不重复撤销事件 |
@@ -511,6 +650,19 @@ PATCH 只处理明确提交的字段，支持清空标题/说明/有效期/密�
 和 `allow_export`。切换为整个对话时清空 selected IDs；所选消息必须是该对话
 未删除消息，按有界批次校验。已撤销分享不能编辑或恢复。更新不会生成新 URL。
 批量撤销逐项事务提交，失败项回滚；重复或并发撤销只记录一次事件。
+
+设置响应包含不透明的 `settings_revision`，新编辑器以 `base_revision` 随 PATCH
+提交。摘要只覆盖可编辑设置、密码版本、身份和撤销状态，不包含密码或其哈希，
+也不含访客访问计数／时间。读取公开分享不会制造编辑冲突。更新在归属检查后
+取得 Share 行锁并重新加载已缓存的 ORM 对象，再比较基础版本；过期版本返回
+409，`detail={code: "SHARE_SETTINGS_CHANGED", message: ...}`，不会写入或记录
+更新事件。已撤销目标返回 410，不能重新启用。旧客户端未提供基础版本时继续
+按明确字段更新；此兼容路径没有并发版本保护。Share URL 和 token 语义不变，
+不需要数据库迁移。
+
+Web 只提交用户实际更改的字段。冲突保留草稿，读取最新设置并展示差异，允许
+确认放弃草稿，或合并本人更改后再次确认保存；没有自动覆盖或自动重放。
+失败项重试按 ID 合并反馈，保留其他未完成项；筛选结果缩小时自动回到有效页。
 
 公开分享采用轻量 bootstrap、完整轮次正文和 token 约束兼容分页，不允许通过分享 token 调用内部 conversation/message API：
 
@@ -658,7 +810,13 @@ default to `KEEP` and require explicit review; confidence and similarity are
 not part of the cleanup API.
 ## 2026-09-27 instance merge capacity policy
 
-Root-only `GET /api/admin/features` and `PUT /api/admin/features` include
+Root-only `GET /api/admin/features` and `PUT /api/admin/features` add an opaque
+`revision`. PUT accepts optional `base_revision`; stale configuration returns
+409 `FEATURE_POLICY_CHANGED`, without applying changes. Only provided fields are
+updated. Legacy callers may omit the base, with no optimistic conflict guarantee.
+See the [administration contract](system/ADMINISTRATION_CONTRACT.md#feature-policy-recovery-local-2026-10-07).
+
+Both feature-policy responses include
 `maximum_merge_message_count` (`2..100000`, default `1000`).
 `POST /api/conversations/merge` counts active canonical Message rows across
 the selected conversations before queueing and returns HTTP 422 when that
@@ -673,8 +831,13 @@ idempotency contract are unchanged for admitted merges.
 - `POST /api/auth/email-verification/confirm`: token consumption; returns
   `{verified, approval_required}`. GET never consumes. Invalid/used/expired
   grants return 422. All mutations retain same-origin enforcement.
-- `PUT /api/admin/access/registration`: mode plus optional policy flags; omitted
-  flags are preserved. SMTP configuration is required to enable verification.
+- `GET /api/admin/access`: current registration flags, SMTP discovery and opaque
+  policy `revision`. `PUT /api/admin/access/registration`: optional `mode`, policy
+  flags and `base_revision`; omitted fields are preserved. A stale base returns
+  409 `REGISTRATION_POLICY_CHANGED`. Old mode-only clients remain compatible.
+  SMTP configuration is required for an explicit enable-verification request.
+  No-op/check operations do not record another success event. Details in the
+  [authentication contract](system/AUTHENTICATION_CONTRACT.md#registration-policy-recovery-local-2026-10-07).
 - Existing built-in noise-rule status PATCH now changes only personal
   enablement; other built-in configuration mutations return 403.
 
@@ -781,6 +944,10 @@ Preference sync additions (`20261001_0039`, working tree):
 
 Root-only additions: `GET /api/admin/access/users/page` (q, state, limit, offset)
 and `GET /api/admin/access/users/{id}`. Legacy array listing remains compatible.
+Local extension (2026-10-07): status PATCH and approve/reject POST add `user`, the
+complete account representation captured in the write transaction and returned
+after successful commit. Original `id` and `status` remain. The response does not
+relax approval, verification, Root-only access or deletion locks; no migration.
 Deletion impact/confirmation retain their URLs; repeat keys return the same task,
 including after deletion, and mismatched targets return 409. Pending deletion
 blocks re-enabling the account. Task results include the target for Root re-entry.

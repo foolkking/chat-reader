@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "suites": ["test_skill_bundles.py", "test_skill_zip_defaults.py", "test_skill_unified_preferences.py", "test_skills_api.py"],
+  "passed": 34,
+  "failed": 0,
+  "skipped": 0,
+  "duration_seconds": 68.15,
+  "fixture": "isolated SQLite and task-local files; not a PostgreSQL migration gate"
+}

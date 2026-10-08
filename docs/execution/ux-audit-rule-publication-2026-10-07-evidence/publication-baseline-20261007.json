@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "publication-baseline-20261007",
+  "status": "failed",
+  "started_at": "2026-10-07T13:12:58.228Z",
+  "test_count": 2,
+  "completed_at": "2026-10-07T13:13:11.651Z",
+  "duration_ms": 15772,
+  "result_counts": {
+    "passed": 0,
+    "failed": 2,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

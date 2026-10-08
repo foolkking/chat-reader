@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "archive-replacement-matrix",
+  "status": "failed",
+  "started_at": "2026-10-06T19:46:56.385Z",
+  "test_count": 26,
+  "completed_at": "2026-10-06T19:54:34.138Z",
+  "duration_ms": 460617,
+  "result_counts": {
+    "passed": 19,
+    "failed": 7,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

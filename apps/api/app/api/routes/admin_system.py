@@ -21,7 +21,7 @@ from app.schemas.task import BackgroundTaskRead
 from app.services.administration import record_admin_audit, request_id_from, require_root_admin
 from app.services.background_jobs import queue_system_archive_export
 from app.services.exporting.system_archive import SystemArchiveError, restore_system_archive
-from app.services.feature_policies import POLICY_FIELDS, get_feature_policy, update_feature_policy
+from app.services.feature_policies import POLICY_FIELDS, FeaturePolicyConflict, feature_policy_revision, get_feature_policy, update_feature_policy
 from app.services.ownership import ownership_scope_from_request
 from app.services.system_skills import (
     builtin_by_key,
@@ -45,6 +45,7 @@ def read_runtime_status(request: Request, response: Response, db: Session = Depe
 
 
 class FeaturePolicyUpdate(BaseModel):
+    base_revision: str | None = Field(default=None, min_length=1, max_length=128)
     allow_share_links: bool | None = None
     allow_public_share: bool | None = None
     allow_share_password: bool | None = None
@@ -86,11 +87,15 @@ def read_features(request: Request, db: Session = Depends(get_db)) -> dict:
 @router.put("/features")
 def write_features(payload: FeaturePolicyUpdate, request: Request, db: Session = Depends(get_db)) -> dict:
     actor = require_root_admin(request, db)
-    row, changes = update_feature_policy(
-        db,
-        actor_user_id=actor.id,
-        values=payload.model_dump(exclude_none=True),
-    )
+    try:
+        row, changes = update_feature_policy(
+            db,
+            actor_user_id=actor.id,
+            values=payload.model_dump(exclude_none=True, exclude={"base_revision"}),
+            base_revision=payload.base_revision,
+        )
+    except FeaturePolicyConflict as error:
+        raise HTTPException(status_code=409, detail="FEATURE_POLICY_CHANGED") from error
     if changes:
         record_admin_audit(
             db,
@@ -101,8 +106,9 @@ def write_features(payload: FeaturePolicyUpdate, request: Request, db: Session =
             metadata={"changed_fields": list(changes)},
             request_id=request_id_from(request),
         )
+    result = _policy_payload(row)
     db.commit()
-    return _policy_payload(row)
+    return result
 
 
 @router.get("/system-skills")
@@ -500,7 +506,7 @@ def list_audit_events(
 
 
 def _policy_payload(row) -> dict:
-    return {**{field: getattr(row, field) for field in POLICY_FIELDS}, "updated_at": row.updated_at}
+    return {**{field: getattr(row, field) for field in POLICY_FIELDS}, "updated_at": row.updated_at, "revision": feature_policy_revision(row)}
 
 
 def _system_skill(db: Session, skill_id: uuid.UUID) -> SystemSkill:

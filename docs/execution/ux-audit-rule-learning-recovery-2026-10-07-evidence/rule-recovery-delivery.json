@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "rule-recovery-delivery",
+  "status": "passed",
+  "started_at": "2026-10-07T07:46:38.437Z",
+  "test_count": 49,
+  "completed_at": "2026-10-07T07:50:32.878Z",
+  "duration_ms": 237463,
+  "result_counts": {
+    "passed": 49,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

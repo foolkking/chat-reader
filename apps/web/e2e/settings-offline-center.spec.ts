@@ -124,7 +124,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       release!();
       expect((await readLocal(page, userId)).conversations).toHaveLength(1);
       await dialog.getByRole("tab", { name: /Failures & conflicts|失败与冲突/ }).click();
-      await expect(dialog.getByText(/Cancelled|已取消/)).toBeVisible();
+      await expect(dialog.getByText(/^Synthetic download test · (Cancelled|已取消)$/)).toBeVisible();
       const projectResponse = await context.request.post(`${baseURL}/api/projects`, { headers, data: { name: "Synthetic offline project" } });
       expect(projectResponse.status()).toBe(201);
       const projectId = (await projectResponse.json()).id;
@@ -146,7 +146,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await openCenter();
       await expect(dialog.getByRole("link", { name: "Synthetic download test", exact: true })).toBeVisible();
       await dialog.getByRole("tab", { name: /Failures & conflicts|失败与冲突/ }).click();
-      await expect(dialog.getByText(/Cancelled|已取消/)).toBeVisible();
+      await expect(dialog.getByText(/^Synthetic download test · (Cancelled|已取消)$/)).toBeVisible();
     } finally { release?.(); await context.close(); await admin.dispose(); }
   });
 }

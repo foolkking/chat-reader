@@ -1,0 +1,48 @@
+[
+  {
+    "gate": "api-1",
+    "tests": 11,
+    "passed": 9,
+    "failed": 2,
+    "skipped": 0,
+    "suites": [
+      "tests.test_admin_system",
+      "tests.test_feature_policy_recovery"
+    ]
+  },
+  {
+    "gate": "api-2",
+    "tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "suites": [
+      "tests.test_admin_system",
+      "tests.test_feature_policy_recovery"
+    ]
+  },
+  {
+    "gate": "api-regressions",
+    "tests": 58,
+    "passed": 58,
+    "failed": 0,
+    "skipped": 0,
+    "suites": [
+      "tests.test_admin_system",
+      "tests.test_export_retention",
+      "tests.test_feature_policy_recovery",
+      "tests.test_registration_verification",
+      "tests.test_support_requests"
+    ]
+  },
+  {
+    "gate": "pg-1",
+    "tests": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "suites": [
+      "tests.test_feature_policy_postgres"
+    ]
+  }
+]

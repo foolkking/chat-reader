@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { settingsAdmin } from "./settings-test-helper";
 
 const webRoot = path.resolve(__dirname, "..");
 const userId = "00000000-0000-4000-8000-000000000111";
@@ -21,7 +22,13 @@ test("account and access clients keep the authenticated API contracts explicit",
   expect(source).toContain("notifyAuthenticationFailure(requestGeneration)");
 });
 
-test("regular users see their account and devices but not instance maintenance", async ({ page }) => {
+test("regular users see their account and devices but not instance maintenance", async ({ page, playwright, baseURL }) => {
+  // These are UI mocks. When run alongside the authenticated integration gate,
+  // satisfy the real server navigation boundary before mocking browser reads.
+  if (process.env.E2E_SETTINGS_MAILBOX === "1") {
+    const admin = await settingsAdmin(playwright.request, baseURL!);
+    await page.context().addCookies((await admin.storageState()).cookies); await admin.dispose();
+  }
   await mockSession(page, "USER");
   let profileUpdate: unknown = null;
   let loggedOutOthers = false;
@@ -60,13 +67,17 @@ test("regular users see their account and devices but not instance maintenance",
   expect(loggedOutOthers).toBe(true);
 });
 
-test("administrators manage users, registration and invitations in one focused surface", async ({ page }) => {
+test("administrators manage users, registration and invitations in one focused surface", async ({ page, playwright, baseURL }) => {
+  if (process.env.E2E_SETTINGS_MAILBOX === "1") {
+    const admin = await settingsAdmin(playwright.request, baseURL!);
+    await page.context().addCookies((await admin.storageState()).cookies); await admin.dispose();
+  }
   await mockSession(page, "ADMIN");
   let registrationMode = "";
   let userStatus = "ACTIVE";
   let invitationHours = 0;
   await page.route("**/api/auth/me", (route) => route.fulfill({ json: session("ADMIN", "Administrator") }));
-  const policy = { registration_mode: "CLOSED", smtp_configured: false, require_admin_approval: true, email_verification_enabled: false, password_reset_enabled: true };
+  const policy = { registration_mode: "CLOSED", smtp_configured: false, require_admin_approval: true, email_verification_enabled: false, password_reset_enabled: true, revision: "synthetic-policy-revision" };
   await page.route("**/api/admin/access", (route) => route.fulfill({ json: policy }));
   const reader = () => ({ id: otherUserId, email: "reader@example.test", display_name: "Reader", role: "USER", status: userStatus, approval_status: "APPROVED", email_verification_required: false, email_verified_at: null, last_login_at: null, can_login: userStatus === "ACTIVE", deletion: null, created_at: "2026-09-01T00:00:00Z", stats: { projects: 0, conversations: 0, attachments: 0, attachment_bytes: 0 } });
   await page.route(`**/api/admin/access/users/${otherUserId}`, (route) => route.fulfill({ json: reader() }));
@@ -85,13 +96,13 @@ test("administrators manage users, registration and invitations in one focused s
   });
   await page.route("**/api/admin/access/registration", async (route) => {
     registrationMode = (route.request().postDataJSON() as { mode: string }).mode;
-    expect(route.request().postDataJSON()).toMatchObject({ require_admin_approval: true, email_verification_enabled: false, password_reset_enabled: true });
+    expect(route.request().postDataJSON()).toEqual({ mode: "OPEN", base_revision: policy.revision });
     policy.registration_mode = registrationMode;
     await route.fulfill({ json: policy });
   });
   await page.route("**/api/admin/access/users/*/status", async (route) => {
     userStatus = (route.request().postDataJSON() as { status: string }).status;
-    await route.fulfill({ json: { id: otherUserId, status: userStatus } });
+    await route.fulfill({ json: { id: otherUserId, status: userStatus, user: reader() } });
   });
 
   await page.goto("/");

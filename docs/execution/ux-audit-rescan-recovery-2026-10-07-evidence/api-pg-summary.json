@@ -1,0 +1,56 @@
+{
+  "runs": [
+    {
+      "run": "api-resume",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2
+    },
+    {
+      "run": "api",
+      "tests": 23,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 21
+    },
+    {
+      "run": "api-corrected",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 9
+    },
+    {
+      "run": "api-final",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 24
+    },
+    {
+      "run": "pg",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 5
+    }
+  ],
+  "final_distinct_api": 24,
+  "final_postgres": 5,
+  "final_browser": 35,
+  "screenshots": {
+    "intermediate": 19,
+    "final": 53
+  },
+  "excluded": [
+    "Initial pytest attempt stopped on full C disk; not a product baseline or pass",
+    "Two unrestricted-memory Web builds stopped with V8 OOM",
+    "First browser run: ten passed, one stale-cache failure; fixed and rerun"
+  ]
+}

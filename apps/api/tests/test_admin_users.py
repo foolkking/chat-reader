@@ -1,4 +1,6 @@
 import uuid
+from datetime import datetime, timezone
+import pytest
 
 from app.core import auth_middleware
 from app.models.administration import AdminAuditLog, UserDeletionRequest
@@ -7,6 +9,61 @@ from app.models.user import User
 from app.services.background_jobs import claim_next_job, process_background_job
 from test_auth import auth_client, owner_login  # noqa: F401
 from test_admin_system import _normal_user_session
+
+
+@pytest.mark.parametrize("action,verification_required,expected_status,expected_approval,can_login", [
+    ("approve", False, "ACTIVE", "APPROVED", True),
+    ("approve", True, "PENDING", "APPROVED", False),
+    ("reject", False, "DISABLED", "REJECTED", False),
+])
+def test_review_acknowledges_the_persisted_account_without_bypassing_verification(
+    auth_client, action, verification_required, expected_status, expected_approval, can_login,
+):
+    target, token = _normal_user_session(auth_client)
+    with auth_middleware.SessionLocal() as db:
+        row = db.get(User, target)
+        row.status = "PENDING"
+        row.approval_status = "PENDING"
+        row.email_verification_required = verification_required
+        db.commit()
+    assert owner_login(auth_client).status_code == 200
+    response = auth_client.post(f"/api/admin/access/users/{target}/{action}")
+    assert response.status_code == 200
+    result = response.json()
+    assert result["id"] == str(target) and result["status"] == expected_status
+    persisted = auth_client.get(f"/api/admin/access/users/{target}").json()
+    acknowledged = dict(result["user"])
+    # SQLite strips timezone metadata on read; compare the actual UTC instant.
+    assert datetime.fromisoformat(acknowledged.pop("approval_reviewed_at")).replace(tzinfo=timezone.utc) == datetime.fromisoformat(persisted.pop("approval_reviewed_at")).replace(tzinfo=timezone.utc)
+    assert acknowledged == persisted
+    assert result["user"]["approval_status"] == expected_approval
+    assert result["user"]["can_login"] is can_login
+    with auth_middleware.SessionLocal() as db:
+        row = db.get(User, target)
+        assert (row.status, row.approval_status, row.can_login) == (expected_status, expected_approval, can_login)
+    assert not {"password", "password_hash", "token", "credential_version"}.intersection(result["user"])
+
+
+def test_status_acknowledges_real_revocation_and_pending_enable(auth_client):
+    target, token = _normal_user_session(auth_client)
+    assert owner_login(auth_client).status_code == 200
+    path = f"/api/admin/access/users/{target}"
+    disabled = auth_client.patch(path + "/status", json={"status": "DISABLED"})
+    assert disabled.status_code == 200
+    assert disabled.json()["user"] == auth_client.get(path).json()
+    assert disabled.json()["user"]["can_login"] is False
+    from app.services.auth import authenticate_session
+    from app.core.config import get_settings
+    with auth_middleware.SessionLocal() as db:
+        assert authenticate_session(db, token, get_settings(), touch=False) is None
+        row = db.get(User, target)
+        row.email_verification_required = True
+        db.commit()
+    enabled = auth_client.patch(path + "/status", json={"status": "ACTIVE"})
+    assert enabled.status_code == 200
+    assert enabled.json()["status"] == "PENDING"
+    assert enabled.json()["user"] == auth_client.get(path).json()
+    assert enabled.json()["user"]["can_login"] is False
 
 
 def test_directory_filters_are_literal_paginated_and_root_only(auth_client):

@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "rescan-recovery-first",
+  "status": "failed",
+  "started_at": "2026-10-07T14:42:12.126Z",
+  "test_count": 11,
+  "completed_at": "2026-10-07T14:43:52.792Z",
+  "duration_ms": 103108,
+  "result_counts": {
+    "passed": 10,
+    "failed": 1,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

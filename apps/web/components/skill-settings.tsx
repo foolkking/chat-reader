@@ -30,7 +30,7 @@ export function SkillSettings({ focused = false, onDirtyChange }: { focused?: bo
   const [bundleBusy, setBundleBusy] = useState<Record<string, boolean>>({});
   const [bundleDirty, setBundleDirty] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: ["skills", category, locale], queryFn: () => getSkills({ category, locale }) });
+  const query = useQuery({ queryKey: ["skills", category, locale], queryFn: ({ signal }) => getSkills({ category, locale }, signal), retry: false });
   const dirty = Boolean(name.trim() || file || Object.values(bundleDirty).some(Boolean));
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const refreshSkills = async () => {
@@ -64,7 +64,7 @@ export function SkillSettings({ focused = false, onDirtyChange }: { focused?: bo
     <button type="button" disabled={busy} aria-expanded={uploadOpen} onClick={() => setUploadOpen(value => !value)} className="btn-secondary inline-flex min-h-11 items-center gap-2 px-3 text-sm"><Upload className="h-4 w-4" />{zh ? "上传我的 Skill" : "Upload my Skill"}</button>
     {uploadOpen ? <div className="rounded-xl border border-dashed border-ui bg-subtle/50 p-3"><div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"><label className="text-xs text-secondary">{zh ? "Skill 名称" : "Skill name"}<input value={name} disabled={busy} onChange={(e) => { setName(e.target.value); if (e.target.value) onDirtyChange?.(true); }} className="mt-1 min-h-11 w-full rounded-md border border-ui bg-surface px-2 text-base sm:text-sm text-primary" placeholder={zh ? "默认使用文件名" : "Defaults to filename"} /></label><div className="min-w-0"><button type="button" disabled={busy} className="btn-secondary min-h-11 w-full px-3 text-sm" onClick={() => fileInput.current?.click()}>{zh ? "选择文件" : "Choose file"}</button><input ref={fileInput} disabled={busy} type="file" accept=".zip,.md" aria-label={zh ? "选择 Skill ZIP 或 Markdown 文件" : "Choose a Skill ZIP or Markdown file"} onChange={(e) => { setFile(e.target.files?.[0] ?? null); if (e.target.files?.length) onDirtyChange?.(true); }} hidden />{file ? <p className="mt-1 break-all text-xs text-secondary">{file.name}</p> : null}</div><button type="button" disabled={!file || busy} onClick={() => upload.mutate()} className="btn-primary min-h-11 px-3 text-sm disabled:opacity-50">{upload.isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : (zh ? "保存 Skill" : "Save Skill")}</button></div>{notice ? <p className="mt-2 text-xs text-accent" role="status">{notice}</p> : null}{upload.isError ? <p className="mt-2 text-xs text-[var(--danger)]" role="alert">{upload.error.message}</p> : null}</div> : null}
 
-    {error ? <div role="alert" className="text-xs text-[var(--danger)]"><p>{error.message}</p>{query.isError ? <button type="button" onClick={() => void query.refetch()} className="mt-2 underline">{zh ? "重新加载" : "Retry loading"}</button> : null}</div> : null}
+    {error ? <div role="alert" className="text-xs text-[var(--danger)]"><p>{query.isError ? (zh ? "Skill 列表读取失败，已确认的操作仍然有效。" : "The Skill list could not load. Confirmed changes still apply.") : error.message}</p>{query.isError ? <button type="button" disabled={query.isFetching} onClick={() => void query.refetch()} className="btn-secondary mt-2 min-h-11 px-3">{zh ? "重新加载" : "Retry loading"}</button> : null}</div> : null}
   </section>;
 }
 

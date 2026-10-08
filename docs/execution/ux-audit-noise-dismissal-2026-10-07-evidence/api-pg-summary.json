@@ -1,0 +1,38 @@
+[
+  {
+    "run": "api-baseline",
+    "purpose": "product-defect reproduction",
+    "tests": 2,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 0
+  },
+  {
+    "run": "api",
+    "purpose": "initial implementation",
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 22
+  },
+  {
+    "run": "api-final",
+    "purpose": "final API regression",
+    "tests": 31,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 31
+  },
+  {
+    "run": "pg",
+    "purpose": "actual PostgreSQL regression",
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 7
+  }
+]

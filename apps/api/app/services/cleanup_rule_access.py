@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
+from datetime import timezone
 
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session, selectinload
@@ -74,6 +76,28 @@ def personal_name(db: Session, user_id: uuid.UUID | None, rule: Rule) -> str:
     return (preference.display_name if preference else None) or (publication.name if publication else None) or "Learned text rule"
 
 
+def personal_edit_token(db: Session, scope: OwnershipScope, rule: Rule, revision: Revision) -> str:
+    canonical = canonical_rule_id(db, rule.id)
+    preference = db.get(Preference, (scope.owner_user_id, canonical)) if scope.owner_user_id else None
+    updated = preference.updated_at if preference else None
+    if updated:
+        updated = updated.replace(tzinfo=timezone.utc) if updated.tzinfo is None else updated.astimezone(timezone.utc)
+    state = {"owner": str(scope.owner_user_id), "rule": str(canonical), "revision": str(revision.id),
+        "name": personal_name(db, scope.owner_user_id, rule), "status": rule.status,
+        "enabled": preference.enabled if preference else True, "hidden": preference.hidden if preference else False,
+        "updated_at": updated.isoformat(timespec="microseconds") if updated else None}
+    return hashlib.sha256(json.dumps(state, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def _locked_current_rule(db: Session, scope: OwnershipScope, canonical: uuid.UUID):
+    # A session may have read this preference before waiting for the rule lock.
+    db.query(Rule).filter_by(id=canonical).populate_existing().with_for_update().first()
+    if scope.owner_user_id:
+        db.get(Preference, (scope.owner_user_id, canonical), populate_existing=True)
+    db.get(Publication, canonical, populate_existing=True)
+    return current_rule(db, scope, canonical)
+
+
 def rule_payload(db: Session, scope: OwnershipScope, rule: Rule, revision: Revision) -> dict:
     canonical = canonical_rule_id(db, rule.id)
     preference = db.get(Preference, (scope.owner_user_id, canonical)) if scope.owner_user_id else None
@@ -82,6 +106,7 @@ def rule_payload(db: Session, scope: OwnershipScope, rule: Rule, revision: Revis
     held = db.query(Grant.revision_id).join(Revision, Revision.id == Grant.revision_id).filter(
         Grant.user_id == scope.owner_user_id, Revision.rule_id.in_(related_rule_ids(db, canonical))).first() is not None
     return {"id": canonical, "name": personal_name(db, scope.owner_user_id, rule), "kind": rule.kind,
+        "edit_token": personal_edit_token(db, scope, rule, revision),
         "status": "DISABLED" if preference and not preference.enabled else rule.status,
         "scope": rule.scope, "detector_id": rule.detector_id, "revision": revision.revision, "revision_id": revision.id,
         **{key: getattr(revision, key) for key in ("match_value", "case_sensitive", "role_filter", "matcher_mode", "normalization_profile", "boundary_mode")},
@@ -101,6 +126,8 @@ def grant_revision(db: Session, scope: OwnershipScope, revision: Revision, *, re
     if scope.owner_user_id is None or revision.rule.kind == "BUILTIN":
         return
     canonical = canonical_rule_id(db, revision.rule_id)
+    if reason == "LEARNED":
+        db.query(Rule).filter_by(id=canonical).populate_existing().with_for_update().one()
     insert = _insert(db)
     db.execute(insert(Grant).values(user_id=scope.owner_user_id, revision_id=revision.id, reason=reason, acquired_at=utc_now()).on_conflict_do_nothing(index_elements=["user_id", "revision_id"]))
     publication = db.get(Publication, canonical)
@@ -150,10 +177,11 @@ def learn_literal(db: Session, scope: OwnershipScope, *, name: str, match_value:
 def update_personal_rule(db: Session, scope: OwnershipScope, rule_id: uuid.UUID, changes: dict) -> tuple[Rule, Revision]:
     from app.services.content_cleanup import validate_literal_rule
     canonical = canonical_rule_id(db, rule_id)
-    db.query(Rule).filter_by(id=canonical).with_for_update().first()
-    rule, revision, preference = current_rule(db, scope, canonical)
-    if rule.kind == "BUILTIN" and set(changes) - {"status"}:
+    rule, revision, preference = _locked_current_rule(db, scope, canonical)
+    if rule.kind == "BUILTIN" and set(changes) - {"status", "base_edit_token"}:
         raise PermissionError("Built-in rules can only be enabled or disabled for your account.")
+    if changes.get("base_edit_token") is not None and changes["base_edit_token"] != personal_edit_token(db, scope, rule, revision):
+        raise ValueError("Rule changed on another device. Reload the saved version; your draft can be kept.")
     if changes.get("base_revision_id") and changes["base_revision_id"] != revision.id:
         raise ValueError("Rule changed on another device. Reload the saved version; your draft can be kept.")
     if changes.get("base_revision") is not None and changes["base_revision"] != revision.revision:
@@ -186,10 +214,12 @@ def update_personal_rule(db: Session, scope: OwnershipScope, rule_id: uuid.UUID,
             db.flush()
         else:
             revision = equivalent
+        enabled = preference.enabled
         grant_revision(db, scope, base, reason="BASE")
         grant_revision(db, scope, revision, reason="LEARNED", name=preference.display_name)
-        if changes.get("status"):
-            preference.enabled = changes["status"] == "ACTIVE"
+        # Editing an existing rule is independent of its switch. Explicit status
+        # changes were already applied above; fresh/repeated learning still enables.
+        preference.enabled = enabled
     if changes.get("current_revision_id"):
         group = available_versions(db, scope, include_disabled=True).get(canonical)
         selected = next((item for item in group[1] if item.id == changes["current_revision_id"]), None) if group else None
@@ -203,7 +233,7 @@ def update_personal_rule(db: Session, scope: OwnershipScope, rule_id: uuid.UUID,
 
 def hide_personal_rule(db: Session, scope: OwnershipScope, rule_id: uuid.UUID) -> None:
     try:
-        rule, _revision, preference = current_rule(db, scope, rule_id)
+        rule, _revision, preference = _locked_current_rule(db, scope, canonical_rule_id(db, rule_id))
     except LookupError:
         return
     if rule.kind == "BUILTIN":
@@ -217,10 +247,47 @@ def hide_personal_rule(db: Session, scope: OwnershipScope, rule_id: uuid.UUID) -
     db.flush()
 
 
-def publish_rule(db: Session, rule_id: uuid.UUID, revision_id: uuid.UUID, actor_id: uuid.UUID, name: str) -> Publication:
-    from app.services.content_cleanup import validate_literal_rule
+class PublicationConflict(ValueError):
+    """A publication changed since the administrator read it."""
+
+
+def publication_token(rule_id: uuid.UUID, publication: Publication | None) -> str:
+    def timestamp(value):
+        if value is None:
+            return None
+        value = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+        return value.isoformat(timespec="microseconds")
+    state = {"rule_id": str(rule_id), "publication": None if publication is None else {
+        "revision_id": str(publication.revision_id), "name": publication.name,
+        "published_at": timestamp(publication.published_at), "withdrawn_at": timestamp(publication.withdrawn_at)}}
+    return hashlib.sha256(json.dumps(state, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
+
+def _locked_publication(db: Session, rule_id: uuid.UUID, base: str | None):
     canonical = canonical_rule_id(db, rule_id)
-    rule = db.query(Rule).filter_by(id=canonical).with_for_update().first()
+    rule = db.query(Rule).filter_by(id=canonical).populate_existing().with_for_update().first()
+    if rule is None or rule.kind != "USER_LITERAL":
+        raise LookupError("Noise rule not found.")
+    # A Session may have loaded this row before waiting for the rule lock.
+    publication = db.query(Publication).filter_by(rule_id=canonical).populate_existing().first()
+    if base is not None and base != publication_token(canonical, publication):
+        raise PublicationConflict("Publication changed. Read the current publication before retrying.")
+    return rule, publication
+
+
+def withdraw_rule(db: Session, rule_id: uuid.UUID, base_publication_token: str | None = None) -> bool:
+    _rule, publication = _locked_publication(db, rule_id, base_publication_token)
+    changed = publication is not None and publication.withdrawn_at is None
+    if changed:
+        publication.withdrawn_at = utc_now()
+        db.flush()
+    return changed
+
+
+def publish_rule(db: Session, rule_id: uuid.UUID, revision_id: uuid.UUID, actor_id: uuid.UUID, name: str, base_publication_token: str | None = None) -> Publication:
+    from app.services.content_cleanup import validate_literal_rule
+    rule, publication = _locked_publication(db, rule_id, base_publication_token)
+    canonical = rule.id
     revision = db.get(Revision, revision_id)
     if rule is None or rule.kind != "USER_LITERAL" or revision is None or canonical_rule_id(db, revision.rule_id) != canonical:
         raise LookupError("Noise rule version not found.")
@@ -229,7 +296,6 @@ def publish_rule(db: Session, rule_id: uuid.UUID, revision_id: uuid.UUID, actor_
     validate_literal_rule(revision.match_value or "", revision.matcher_mode)
     if revision.configuration_digest != configuration_digest_v1({key: getattr(revision, key) for key in MATCH_FIELDS}, scope=rule.scope):
         raise ValueError("Rule configuration has not passed validation.")
-    publication = db.get(Publication, canonical)
     if publication is None:
         publication = Publication(rule_id=canonical, revision_id=revision_id, name=name.strip())
         db.add(publication)

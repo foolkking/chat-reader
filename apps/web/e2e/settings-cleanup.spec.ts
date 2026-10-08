@@ -50,9 +50,9 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await expect(dialog.getByRole("checkbox", { name: /处理|Process/ }).last()).not.toBeChecked();
       if (process.env.SETTINGS_SCREENSHOT_DIR) await dialog.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/cleanup-${width}-${locale}.png` });
       await dialog.getByRole("button", { name: /预览 125 项清理|Preview 125 removals/ }).click();
-      await expect(dialog.getByText(/1 个对话 · 1 条消息 · 125 个删除片段|1 conversations · 1 messages · 125 fragments/, { exact: true })).toBeVisible();
+      await expect(dialog.getByText(/1 个对话 · 1 条消息 · 125 个已选片段|1 conversations · 1 messages · 125 selected fragments/, { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await dialog.getByRole("button", { name: /确认应用 125 项清理|Confirm 125 removals/ }).click();
+      await dialog.getByRole("button", { name: /确认处理 125 项选择|Confirm 125 selections/ }).click();
       await expect(dialog).not.toBeVisible();
       const message = await (await context.request.get(`${baseURL}/api/messages/${conversation.messages[1].id}`)).json();
       expect(message.current_version.display_text).toBe("Synthetic evidence " + " remains.\n\n".repeat(125) + "Code: `" + marker + "`");

@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "global-scan-delivery",
+  "status": "failed",
+  "started_at": "2026-10-07T10:00:09.193Z",
+  "test_count": 56,
+  "completed_at": "2026-10-07T10:07:42.794Z",
+  "duration_ms": 456527,
+  "result_counts": {
+    "passed": 53,
+    "failed": 3,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

@@ -28,8 +28,9 @@ import { AdminFeaturesPanel } from "./admin-feature-settings";
 import { AdminSkillsPanelEnhanced, AdminUsersPanelEnhanced } from "./admin-settings-enhanced";
 import { SupportRequestsPanel } from "./support-requests-panel";
 import type { SupportKind, SupportLimits } from "../lib/support-client";
+import type { OfflineDownloadTarget } from "../lib/types";
 
-export function SettingsFocusedDialog({ category: initialCategory, onClose, restoreFocus, initialConflictKey, initialArchiveTaskId, initialAdminUserId, initialSupportRequestId, initialSupportKind, initialSupportLimits, onNavigate }: { category: SettingsCategory; onClose: () => void; restoreFocus: () => HTMLElement | null; initialConflictKey?: string; initialArchiveTaskId?: string; initialAdminUserId?: string; initialSupportRequestId?: string; initialSupportKind?: SupportKind; initialSupportLimits?: SupportLimits; onNavigate?: () => void }) {
+export function SettingsFocusedDialog({ category: initialCategory, onClose, restoreFocus, initialConflictKey, initialOfflineJobId, initialOfflineTarget, initialArchiveTaskId, initialAdminUserId, initialSupportRequestId, initialSupportKind, initialSupportLimits, onNavigate }: { category: SettingsCategory; onClose: () => void; restoreFocus: () => HTMLElement | null; initialConflictKey?: string; initialOfflineJobId?: string; initialOfflineTarget?: OfflineDownloadTarget | null; initialArchiveTaskId?: string; initialAdminUserId?: string; initialSupportRequestId?: string; initialSupportKind?: SupportKind; initialSupportLimits?: SupportLimits; onNavigate?: () => void }) {
   const [category, setCategory] = useState(initialCategory);
   const [selectedAdminUser, setSelectedAdminUser] = useState(initialAdminUserId);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -68,11 +69,11 @@ export function SettingsFocusedDialog({ category: initialCategory, onClose, rest
           {category === "help" ? <HelpPanel onDirtyChange={setDirty} onOpenSettings={setCategory} onImport={() => { void requestClose().then(closed => { if (closed) openImportDialog(); }); }} /> : null}
           {category === "requests" ? <SupportRequestsPanel initialRequestId={initialSupportRequestId} initialKind={initialSupportKind} initialLimits={initialSupportLimits} onDirtyChange={setDirty} onOpenUser={id => { setSelectedAdminUser(id); setCategory("admin-users"); }} /> : null}
           {category === "admin-runtime" ? <AdminRuntimePanel /> : null}
-          {category === "offline" ? <OfflineSyncCenter onDirtyChange={setDirty} initialConflictKey={initialConflictKey} /> : null}
+          {category === "offline" ? <OfflineSyncCenter onDirtyChange={setDirty} initialConflictKey={initialConflictKey} initialJobId={initialOfflineJobId} initialTarget={initialOfflineTarget} /> : null}
           {category === "data" ? <DataBackupPanel focused onDirtyChange={setDirty} initialTaskId={initialArchiveTaskId} onRestoreConversation={() => { void requestClose().then((closed) => { if (closed) openImportDialog({ initialMode: "archive" }); }); }} /> : null}
           {category === "shares" ? <MySharesPanel onDirtyChange={setDirty} onOpenConversation={(id) => { void requestClose().then((closed) => { if (closed) { onNavigate?.(); router.push(`/conversations/${encodeURIComponent(id)}`); } }); }} /> : null}
           {category === "formats" ? <ImportFormatSettings focused onDirtyChange={setDirty} onOpenImport={(options) => { void requestClose().then((closed) => { if (closed) openImportDialog(options); }); }} /> : null}
-          {category === "cleanup" ? <ContentCleanupRuleSettings embedded onDirtyChange={setDirty} /> : null}
+          {category === "cleanup" ? <ContentCleanupRuleSettings embedded onDirtyChange={setDirty} onOpenTasks={() => { void requestClose().then(closed => { if (closed) window.dispatchEvent(new Event("chat-reader:open-task-center")); }); }} /> : null}
           {category === "security" ? <AccountSecurityPanel focused onDirtyChange={setDirty} /> : null}
           {category === "skills" ? <SkillSettings focused onDirtyChange={setDirty} /> : null}
           {category === "access" ? <AdminAccessSettings onDirtyChange={setDirty} /> : null}

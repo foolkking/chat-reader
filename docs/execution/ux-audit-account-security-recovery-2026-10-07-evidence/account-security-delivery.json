@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "account-security-delivery",
+  "status": "passed",
+  "started_at": "2026-10-07T00:43:30.100Z",
+  "test_count": 25,
+  "completed_at": "2026-10-07T00:44:57.537Z",
+  "duration_ms": 90681,
+  "result_counts": {
+    "passed": 25,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

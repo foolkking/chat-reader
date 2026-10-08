@@ -1,4 +1,5 @@
 import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
+import { archiveRequestSignal } from "./archive-task-state";
 import type {
   CommitImportResponse,
   CleanupApplyResult,
@@ -248,8 +249,8 @@ export async function restoreDeletedMessage(messageId: string, expectedOfflineRe
   return fetchJson<MessageDeleteResponse>(`/api/messages/${messageId}/restore${suffix}`, jsonRequest("POST", {}));
 }
 
-export async function getConversation(conversationId: string): Promise<ConversationDetail> {
-  return fetchJson<ConversationDetail>(`/api/conversations/${conversationId}`);
+export async function getConversation(conversationId: string, signal?: AbortSignal): Promise<ConversationDetail> {
+  return fetchJson<ConversationDetail>(`/api/conversations/${conversationId}`, { signal });
 }
 
 export async function updateConversation(
@@ -310,9 +311,10 @@ export async function queueOfflinePackage(
     include_assets?: "none" | "small" | "all";
   },
   idempotencyKey?: string,
+  signal?: AbortSignal,
 ): Promise<OfflinePackageQueued> {
   const request = jsonRequest("POST", input);
-  return fetchJson<OfflinePackageQueued>("/api/offline/packages", { ...request, headers: { ...request.headers, ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) } });
+  return fetchJson<OfflinePackageQueued>("/api/offline/packages", { ...request, signal, headers: { ...request.headers, ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) } });
 }
 
 export function getOfflinePackageDownloadUrl(packageId: string): string {
@@ -323,16 +325,16 @@ export async function deleteConversation(conversationId: string): Promise<void> 
   await fetchJson<void>(`/api/conversations/${conversationId}`, { method: "DELETE" });
 }
 
-export async function getSkills(input: { category?: SkillCategory; locale?: SkillLocale } = {}): Promise<SkillRead[]> {
+export async function getSkills(input: { category?: SkillCategory; locale?: SkillLocale } = {}, signal?: AbortSignal): Promise<SkillRead[]> {
   const params = new URLSearchParams();
   if (input.category) params.set("category", input.category);
   if (input.locale) params.set("locale", input.locale);
   const query = params.toString();
-  return fetchJson<SkillRead[]>(`/api/skills${query ? `?${query}` : ""}`);
+  return fetchJson<SkillRead[]>(`/api/skills${query ? `?${query}` : ""}`, { signal: skillRequestSignal(signal) });
 }
 
-export async function getSkill(skillId: string): Promise<SkillDetail> {
-  return fetchJson<SkillDetail>(`/api/skills/${skillId}`);
+export async function getSkill(skillId: string, signal?: AbortSignal): Promise<SkillDetail> {
+  return fetchJson<SkillDetail>(`/api/skills/${skillId}`, { signal: skillRequestSignal(signal) });
 }
 
 export async function getSkillContent(skillId: string): Promise<string> {
@@ -354,18 +356,22 @@ export async function updateSkill(skillId: string, input: { name?: string; statu
 export type SkillBundleRevision = { revision: number; digest: string; source_kind: string; byte_size: number; created_at: string; is_current: boolean };
 export type SkillBundleMember = { path: string; sha256: string; byte_size: number };
 
-export function getSkillRevisions(skillId: string, offset = 0, system = false): Promise<SkillBundleRevision[]> {
-  return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions?offset=${offset}&limit=50`);
+export function getSkillRevisions(skillId: string, offset = 0, system = false, signal?: AbortSignal): Promise<SkillBundleRevision[]> {
+  return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions?offset=${offset}&limit=50`, { signal: skillRequestSignal(signal) });
 }
 
 export function getSkillMembers(skillId: string, revision: number, system = false): Promise<SkillBundleMember[]> {
   return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions/${revision}/members`);
 }
 
-export async function replaceSkillBundle(skillId: string, baseRevision: number, file: File, system = false): Promise<SkillRead> {
+export async function replaceSkillBundle(skillId: string, baseRevision: number, file: File, system = false): Promise<SkillRead | import("./admin-client").SystemSkill> {
   const body = new FormData();
   body.append("base_revision", String(baseRevision)); body.append("file", file, file.name);
-  return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions`, { method: "POST", body });
+  return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions`, { method: "POST", body, signal: AbortSignal.timeout(60_000) });
+}
+
+function skillRequestSignal(signal?: AbortSignal): AbortSignal {
+  return signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000);
 }
 
 export async function deleteSkill(skillId: string): Promise<void> {
@@ -452,11 +458,12 @@ export async function getConversationMessageWindow(
 export async function getConversationReaderTurn(
   conversationId: string,
   anchorMessageId?: string,
+  signal?: AbortSignal,
 ): Promise<ReaderTurnResponse> {
   const params = new URLSearchParams();
   if (anchorMessageId) params.set("anchor_message_id", anchorMessageId);
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return fetchJson<ReaderTurnResponse>(`/api/conversations/${conversationId}/reader-turn${suffix}`);
+  return fetchJson<ReaderTurnResponse>(`/api/conversations/${conversationId}/reader-turn${suffix}`, { signal });
 }
 
 export async function resolveConversationLocator(
@@ -717,8 +724,8 @@ export async function getActiveTasks(): Promise<BackgroundTaskRead[]> {
   return fetchJson<BackgroundTaskRead[]>("/api/tasks/active");
 }
 
-export async function getTask(jobId: string): Promise<BackgroundTaskRead> {
-  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`);
+export async function getTask(jobId: string, signal?: AbortSignal): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`, { signal });
 }
 
 export async function queueConversationBatchExport(conversationIds: string[], idempotencyKey: string, signal: AbortSignal): Promise<BackgroundTaskRead> {
@@ -740,12 +747,12 @@ export const exportArtifactApi = {
   regenerate: (id: string, key: string) => fetchJson<BackgroundTaskRead>(`/api/exports/${id}/regenerate`, { method: "POST", headers: { "Idempotency-Key": key }, body: "{}" }),
 };
 
-export async function retryTask(jobId: string): Promise<BackgroundTaskRead> {
-  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST" });
+export async function retryTask(jobId: string, signal?: AbortSignal): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST", signal });
 }
 
-export async function cancelTask(jobId: string): Promise<BackgroundTaskRead> {
-  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/cancel`, { method: "POST" });
+export async function cancelTask(jobId: string, signal?: AbortSignal): Promise<BackgroundTaskRead> {
+  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/cancel`, { method: "POST", signal });
 }
 
 export async function getProjects(input: {
@@ -1028,6 +1035,7 @@ export async function queueConversationAttachmentBundleExport(
 
 export async function queueSystemArchiveExport(includeArchived: boolean, key?: string): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>("/api/system/archive/exports", {
+    signal: archiveRequestSignal(),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1066,33 +1074,38 @@ export async function revokeShare(shareId: string): Promise<ShareRead> {
   return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}/revoke`, { method: "POST" }));
 }
 
-export async function updateShare(shareId: string, input: ShareUpdateInput): Promise<ShareRead> {
-  return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}`, jsonRequest("PATCH", input)));
+export async function getOwnedShare(shareId: string, signal?: AbortSignal): Promise<ShareRead> {
+  return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}`, { signal }));
+}
+
+export async function updateShare(shareId: string, input: ShareUpdateInput, signal?: AbortSignal): Promise<ShareRead> {
+  return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}`, { ...jsonRequest("PATCH", input), signal }));
 }
 
 export function getPersonalArchiveCapabilities(): Promise<{ maximum_upload_bytes: number; upload_lifetime_hours: number }> {
-  return fetchJson("/api/me/archive/capabilities");
+  return fetchJson("/api/me/archive/capabilities", { signal: archiveRequestSignal() });
 }
 
 export function getPersonalArchiveTasks(before?: string): Promise<BackgroundTaskRead[]> {
-  return fetchJson(`/api/me/archive/tasks?limit=30${before ? `&before=${encodeURIComponent(before)}` : ""}`);
+  return fetchJson(`/api/me/archive/tasks?limit=30${before ? `&before=${encodeURIComponent(before)}` : ""}`, { signal: archiveRequestSignal() });
 }
 
 export function queuePersonalArchiveExport(includeArchived: boolean, key: string): Promise<BackgroundTaskRead> {
   return fetchJson("/api/me/archive/exports", {
+    signal: archiveRequestSignal(),
     ...jsonRequest("POST", { include_archived: includeArchived }),
     headers: { "Content-Type": "application/json", "Idempotency-Key": key },
   });
 }
 
 export function confirmPersonalArchiveRestore(previewId: string, digest: string, includePreferences: boolean): Promise<BackgroundTaskRead> {
-  return fetchJson("/api/me/archive/restores", jsonRequest("POST", {
+  return fetchJson("/api/me/archive/restores", { ...jsonRequest("POST", {
     preview_job_id: previewId, content_digest: digest, include_preferences: includePreferences,
-  }));
+  }), signal: archiveRequestSignal() });
 }
 
 export function discardPersonalArchiveUpload(previewId: string): Promise<void> {
-  return fetchJson(`/api/me/archive/previews/${encodeURIComponent(previewId)}`, { method: "DELETE" });
+  return fetchJson(`/api/me/archive/previews/${encodeURIComponent(previewId)}`, { method: "DELETE", signal: archiveRequestSignal() });
 }
 
 export function uploadPersonalArchive(file: File, key: string, onProgress: (percent: number) => void): { promise: Promise<BackgroundTaskRead>; cancel: () => void } {
@@ -1131,10 +1144,10 @@ export type ArchiveAccountPage = { total: number; matched: number; unresolved: n
   revision: string; items: ArchiveAccountChoice[] };
 export function getSystemArchiveCapabilities(): Promise<{ maximum_upload_bytes: number; upload_lifetime_hours: number;
   empty_instance: boolean; restore_blocked_reason: string | null; smtp_configured: boolean }> {
-  return fetchJson("/api/system/archive/capabilities");
+  return fetchJson("/api/system/archive/capabilities", { signal: archiveRequestSignal() });
 }
 export function getSystemArchiveTasks(before?: string): Promise<BackgroundTaskRead[]> {
-  return fetchJson(`/api/system/archive/tasks?limit=30${before ? `&before=${encodeURIComponent(before)}` : ""}`);
+  return fetchJson(`/api/system/archive/tasks?limit=30${before ? `&before=${encodeURIComponent(before)}` : ""}`, { signal: archiveRequestSignal() });
 }
 export function getArchiveAccountChoices(previewId: string, offset: number, unresolvedOnly: boolean): Promise<ArchiveAccountPage> {
   return fetchJson(`/api/system/archive/previews/${encodeURIComponent(previewId)}/accounts?offset=${offset}&limit=20&unresolved_only=${unresolvedOnly}`);
@@ -1148,10 +1161,10 @@ export function saveArchiveAccountChoice(previewId: string, sourceKey: string, r
   }));
 }
 export function confirmSystemArchiveRestore(previewId: string, digest: string, revision: string): Promise<BackgroundTaskRead> {
-  return fetchJson("/api/system/archive/restores", jsonRequest("POST", { preview_job_id: previewId, content_digest: digest, ownership_revision: revision }));
+  return fetchJson("/api/system/archive/restores", { ...jsonRequest("POST", { preview_job_id: previewId, content_digest: digest, ownership_revision: revision }), signal: archiveRequestSignal() });
 }
 export function discardSystemArchiveUpload(previewId: string): Promise<void> {
-  return fetchJson(`/api/system/archive/previews/${encodeURIComponent(previewId)}`, { method: "DELETE" });
+  return fetchJson(`/api/system/archive/previews/${encodeURIComponent(previewId)}`, { method: "DELETE", signal: archiveRequestSignal() });
 }
 
 export async function getMyShares(input: { status: string; q: string; conversationId?: string; offset: number }): Promise<OwnedSharePage> {
@@ -1170,60 +1183,75 @@ export async function getSharedConversation(token: string): Promise<SharedConver
   return { ...response, share: normalizeShareUrl(response.share) };
 }
 
-export async function getCleanupRules(): Promise<CleanupRuleRead[]> {
-  return fetchJson<CleanupRuleRead[]>("/api/content-cleanup/rules");
+export async function getCleanupRules({ signal }: { signal?: AbortSignal } = {}): Promise<CleanupRuleRead[]> {
+  return fetchJson<CleanupRuleRead[]>("/api/content-cleanup/rules", { signal: cleanupReadSignal(signal) });
 }
 
 export async function createCleanupRule(input: { name: string; match_value: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }): Promise<CleanupRuleRead> {
   return fetchJson<CleanupRuleRead>("/api/content-cleanup/rules", jsonRequest("POST", input));
 }
 
-export async function updateCleanupRule(ruleId: string, input: { current_revision_id?: string; name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }): Promise<CleanupRuleRead> {
-  return fetchJson<CleanupRuleRead>(`/api/content-cleanup/rules/${ruleId}`, jsonRequest("PATCH", input));
+export async function updateCleanupRule(ruleId: string, input: { current_revision_id?: string; name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }, signal?: AbortSignal): Promise<CleanupRuleRead> {
+  return fetchJson<CleanupRuleRead>(`/api/content-cleanup/rules/${ruleId}`, { ...jsonRequest("PATCH", input), signal: cleanupReadSignal(signal) });
 }
 
-export async function deleteCleanupRule(ruleId: string): Promise<void> {
-  await fetchJson<void>(`/api/content-cleanup/rules/${ruleId}`, { method: "DELETE" });
+export async function deleteCleanupRule(ruleId: string, signal?: AbortSignal): Promise<void> {
+  await fetchJson<void>(`/api/content-cleanup/rules/${ruleId}`, { method: "DELETE", signal: cleanupReadSignal(signal) });
 }
 
-export async function trialCleanupRule(input: import("./types").CleanupRuleTrialInput): Promise<import("./types").CleanupRuleTrial> {
-  return fetchJson("/api/content-cleanup/rules/trial", jsonRequest("POST", input));
+export async function trialCleanupRule(input: import("./types").CleanupRuleTrialInput, signal?: AbortSignal): Promise<import("./types").CleanupRuleTrial> {
+  return fetchJson("/api/content-cleanup/rules/trial", { ...jsonRequest("POST", input), signal: cleanupReadSignal(signal) });
 }
 
-export async function learnCleanupRule(input: import("./types").CleanupRuleTrialInput, token: string): Promise<CleanupRuleRead> {
-  return fetchJson("/api/content-cleanup/rules/learn", jsonRequest("POST", { ...input, confirmed: true, preview_token: token }));
+export async function learnCleanupRule(input: import("./types").CleanupRuleTrialInput, token: string, signal?: AbortSignal): Promise<CleanupRuleRead> {
+  return fetchJson("/api/content-cleanup/rules/learn", { ...jsonRequest("POST", { ...input, confirmed: true, preview_token: token }), signal: cleanupReadSignal(signal) });
 }
 
-export async function getCleanupRuleRevisions(id: string, offset = 0): Promise<CleanupRuleRead[]> {
-  return fetchJson(`/api/content-cleanup/rules/${id}/revisions?limit=20&offset=${offset}`);
+export async function getCleanupRuleRevisions(id: string, offset = 0, signal?: AbortSignal): Promise<CleanupRuleRead[]> {
+  return fetchJson(`/api/content-cleanup/rules/${id}/revisions?limit=20&offset=${offset}`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function getCleanupExceptions(offset = 0): Promise<import("./types").CleanupReviewPage<import("./types").CleanupException>> {
-  return fetchJson(`/api/content-cleanup/exceptions?limit=20&offset=${offset}`);
+export async function getCleanupExceptions(offset = 0, signal?: AbortSignal): Promise<import("./types").CleanupReviewPage<import("./types").CleanupException>> {
+  return fetchJson(`/api/content-cleanup/exceptions?limit=20&offset=${offset}`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function deleteCleanupException(id: string): Promise<void> {
-  await fetchJson(`/api/content-cleanup/exceptions/${id}`, { method: "DELETE" });
+export async function deleteCleanupException(id: string, signal?: AbortSignal): Promise<void> {
+  await fetchJson(`/api/content-cleanup/exceptions/${id}`, { method: "DELETE", signal: cleanupReadSignal(signal) });
 }
 
-export async function getCleanupExceptionPreview(scanId: string, occurrenceId: string): Promise<import("./types").CleanupExceptionPreview> {
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}/exception`);
+export async function getCleanupExceptionPreview(scanId: string, occurrenceId: string, signal?: AbortSignal): Promise<import("./types").CleanupExceptionPreview> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}/exception`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function saveCleanupException(scanId: string, occurrenceId: string, token: string): Promise<{ id: string }> {
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}/exception`, jsonRequest("POST", { confirmed: true, preview_token: token }));
+export async function saveCleanupException(scanId: string, occurrenceId: string, token: string, signal?: AbortSignal): Promise<{ id: string; scan?: CleanupScanRead }> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}/exception`, { ...jsonRequest("POST", { confirmed: true, preview_token: token }), signal: cleanupReadSignal(signal) });
 }
 
-export async function scanExistingConversations(): Promise<CleanupScanRead> {
-  return fetchJson<CleanupScanRead>("/api/content-cleanup/rules/scan-existing", jsonRequest("POST", {}));
+export async function scanExistingConversations(requestId?: string, signal?: AbortSignal): Promise<CleanupScanRead> {
+  const request = jsonRequest("POST", {});
+  return fetchJson<CleanupScanRead>("/api/content-cleanup/rules/scan-existing", {
+    ...request, signal: cleanupReadSignal(signal),
+    headers: { ...request.headers, ...(requestId ? { "Idempotency-Key": requestId } : {}) },
+  });
+}
+
+export async function getGlobalCleanupScanRequest(requestId: string, signal?: AbortSignal): Promise<
+  { found: false } | { found: true; job_id: string; status: string; scan: CleanupScanRead | null }
+> {
+  return fetchJson(`/api/content-cleanup/rules/scan-existing/requests/${encodeURIComponent(requestId)}`, { signal: cleanupReadSignal(signal) });
 }
 
 export async function createCleanupScan(input: { source?: "READER" | "BATCH"; scope_type: "CURRENT_CONVERSATION" | "SELECTED_CONVERSATIONS" | "ALL_ACTIVE"; conversation_ids: string[]; message_id?: string; selection_start_offset?: number; selection_end_offset?: number; selection_text?: string }): Promise<CleanupScanRead> {
   return fetchJson<CleanupScanRead>("/api/content-cleanup/scans", jsonRequest("POST", input));
 }
 
-export async function getCleanupScan(scanId: string): Promise<CleanupScanRead> {
-  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}`);
+function cleanupReadSignal(signal?: AbortSignal) {
+  const timeout = AbortSignal.timeout(20_000);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
+export async function getCleanupScan(scanId: string, signal?: AbortSignal): Promise<CleanupScanRead> {
+  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}`, { signal: cleanupReadSignal(signal) });
 }
 
 export async function getPendingCleanupScans(): Promise<CleanupScanRead[]> {
@@ -1238,38 +1266,60 @@ export async function getCleanupOccurrences(scanId: string, input: { limit?: num
   return fetchJson<CleanupOccurrenceRead[]>(`/api/content-cleanup/scans/${scanId}/occurrences${query}`);
 }
 
-export async function updateCleanupDecisions(scanId: string, decisions: Array<{ occurrence_id: string; decision: "DELETE" | "KEEP" }>): Promise<CleanupScanRead> {
-  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}/decisions`, jsonRequest("PATCH", { decisions }));
+export async function updateCleanupDecisions(scanId: string, decisions: Array<{ occurrence_id: string; decision: "DELETE" | "KEEP" }>, signal?: AbortSignal): Promise<CleanupScanRead> {
+  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}/decisions`, { ...jsonRequest("PATCH", { decisions }), signal: cleanupReadSignal(signal) });
 }
 
 export async function applyCleanupScan(scanId: string, previewToken?: string): Promise<CleanupApplyResult> {
   return fetchJson<CleanupApplyResult>(`/api/content-cleanup/scans/${scanId}/apply`, jsonRequest("POST", { preview_token: previewToken }));
 }
 
-export async function getCleanupReviewPage(scanId: string, filter: import("./types").CleanupReviewFilter, offset = 0): Promise<import("./types").CleanupReviewPage<CleanupOccurrenceRead>> {
+export async function getImportCleanupScans(importId: string, signal?: AbortSignal): Promise<CleanupScanRead[]> {
+  return fetchJson(`/api/content-cleanup/scans/pending?import_id=${encodeURIComponent(importId)}`, { signal: cleanupReadSignal(signal) });
+}
+
+export async function getCleanupOutcome(scanId: string, signal?: AbortSignal): Promise<import("./types").CleanupOutcome> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/outcome`, { signal: cleanupReadSignal(signal) });
+}
+
+export async function getCleanupReviewPage(scanId: string, filter: import("./types").CleanupReviewFilter, offset = 0, signal?: AbortSignal): Promise<import("./types").CleanupCandidatePage> {
   const params = new URLSearchParams({ limit: "50", offset: String(offset) });
   for (const [key, value] of Object.entries(filter)) if (value !== undefined) params.set(key, String(value));
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/review?${params}`);
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/review?${params}`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function getCleanupReviewGroups(scanId: string, offset = 0): Promise<import("./types").CleanupReviewPage<import("./types").CleanupReviewGroup>> {
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/groups?limit=100&offset=${offset}`);
+export async function getCleanupReviewGroups(scanId: string, offset = 0, signal?: AbortSignal, q = ""): Promise<import("./types").CleanupReviewPage<import("./types").CleanupReviewGroup>> {
+  const params = new URLSearchParams({ limit: "100", offset: String(offset) });
+  if (q) params.set("q", q);
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/groups?${params}`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function updateCleanupFilter(scanId: string, filter: import("./types").CleanupReviewFilter, decision: "DELETE" | "KEEP"): Promise<{ matched: number }> {
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/decisions/filter`, jsonRequest("PATCH", { ...filter, decision, all_matching: true }));
+export async function updateCleanupFilter(scanId: string, filter: import("./types").CleanupReviewFilter, decision: "DELETE" | "KEEP", signal?: AbortSignal): Promise<{ matched: number; scan: CleanupScanRead }> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/decisions/filter`, { ...jsonRequest("PATCH", { ...filter, decision, all_matching: true }), signal: cleanupReadSignal(signal) });
 }
 
-export async function getCleanupPreview(scanId: string, offset = 0): Promise<import("./types").CleanupPreview> {
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/preview?limit=10&offset=${offset}`);
+export async function getCleanupPreview(scanId: string, offset = 0, signal?: AbortSignal): Promise<import("./types").CleanupPreview> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/preview?limit=10&offset=${offset}`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function rescanCleanup(scanId: string): Promise<CleanupScanRead> {
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/rescan`, { method: "POST" });
+export async function rescanCleanup(scanId: string, requestId?: string, signal?: AbortSignal): Promise<CleanupScanRead> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/rescan`, { method: "POST", signal: cleanupReadSignal(signal), headers: requestId ? { "Idempotency-Key": requestId } : {} });
 }
 
-export async function dismissCleanupScan(scanId: string): Promise<void> {
-  await fetchJson<void>(`/api/content-cleanup/scans/${scanId}`, { method: "DELETE" });
+export async function getCleanupRescanRequest(scanId: string, requestId: string, signal?: AbortSignal): Promise<
+  { found: false } | { found: true; job_id: string; status: string; scan: CleanupScanRead | null }
+> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/rescan-requests/${encodeURIComponent(requestId)}`, { signal: cleanupReadSignal(signal) });
+}
+
+export async function dismissCleanupScan(scanId: string, signal?: AbortSignal): Promise<void> {
+  await fetchJson<void>(`/api/content-cleanup/scans/${scanId}`, { method: "DELETE", signal: cleanupReadSignal(signal) });
+}
+
+export async function getCleanupDismissal(scanId: string, signal?: AbortSignal): Promise<
+  { status: "DISMISSED"; dismissed_at: string } | { status: "REVIEW"; scan: CleanupScanRead }
+> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/dismissal`, { signal: cleanupReadSignal(signal) });
 }
 
 export async function createAdaptiveImportSession(files: File[], repairProfileId?: string | null): Promise<AdaptiveImportSession> {

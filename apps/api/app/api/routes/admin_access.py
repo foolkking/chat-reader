@@ -17,6 +17,8 @@ from app.services.access import (
     create_password_reset_grant,
     disable_user,
     access_settings,
+    RegistrationPolicyConflict,
+    registration_policy_revision,
     review_pending_user,
     revoke_user_sessions,
     set_access_settings,
@@ -31,7 +33,8 @@ router = APIRouter(prefix="/api/admin/access", tags=["admin-access"])
 
 
 class RegistrationUpdate(BaseModel):
-    mode: str = Field(pattern="^(CLOSED|INVITE_ONLY|OPEN)$")
+    mode: str | None = Field(default=None, pattern="^(CLOSED|INVITE_ONLY|OPEN)$")
+    base_revision: str | None = Field(default=None, min_length=1, max_length=128)
     require_admin_approval: bool | None = None
     email_verification_enabled: bool | None = None
     password_reset_enabled: bool | None = None
@@ -65,8 +68,10 @@ def _admin(request: Request, db: Session) -> User:
 def get_access_overview(request: Request, db: Session = Depends(get_db)) -> dict:
     _admin(request, db)
     settings = get_settings()
+    values = access_settings(db, settings)
     return {
-        **access_settings(db, settings),
+        **values,
+        "revision": registration_policy_revision(values),
         "smtp_configured": bool(settings.smtp_host and settings.smtp_from_address),
     }
 
@@ -77,18 +82,25 @@ def update_registration(payload: RegistrationUpdate, request: Request, db: Sessi
     settings = get_settings()
     if payload.email_verification_enabled is True and not (settings.smtp_host and settings.smtp_from_address):
         raise HTTPException(status_code=422, detail="Configure SMTP before requiring email verification.")
-    row = set_access_settings(
-        db,
-        mode=payload.mode,
-        require_admin_approval=payload.require_admin_approval,
-        email_verification_enabled=payload.email_verification_enabled,
-        password_reset_enabled=payload.password_reset_enabled,
-        actor_user_id=actor.id,
-    )
-    _record(db, request, actor.id, "REGISTRATION_MODE_CHANGED", resource_type="INSTANCE_ACCESS", resource_id="1",
-            metadata={key: value for key, value in payload.model_dump(exclude_unset=True).items() if value is not None})
+    try:
+        row, changes = set_access_settings(
+            db,
+            mode=payload.mode,
+            require_admin_approval=payload.require_admin_approval,
+            email_verification_enabled=payload.email_verification_enabled,
+            password_reset_enabled=payload.password_reset_enabled,
+            actor_user_id=actor.id,
+            base_revision=payload.base_revision,
+        )
+    except RegistrationPolicyConflict as error:
+        raise HTTPException(status_code=409, detail="REGISTRATION_POLICY_CHANGED") from error
+    if changes:
+        _record(db, request, actor.id, "REGISTRATION_MODE_CHANGED", resource_type="INSTANCE_ACCESS", resource_id="1",
+                metadata={"mode" if key == "registration_mode" else key: value for key, value in changes.items()})
+    values = access_settings(db, settings)
+    result = {**values, "revision": registration_policy_revision(values), "smtp_configured": bool(settings.smtp_host and settings.smtp_from_address), "updated_at": row.updated_at}
     db.commit()
-    return {**access_settings(db, settings), "smtp_configured": bool(settings.smtp_host and settings.smtp_from_address), "updated_at": row.updated_at}
+    return result
 
 
 @router.get("/users")
@@ -135,8 +147,9 @@ def update_user_status(
     disable_user(db, user, payload.status == "DISABLED")
     _record(db, request, actor.id, "USER_DISABLED" if payload.status == "DISABLED" else "USER_ENABLED", target_user_id=user.id,
             resource_type="USER", resource_id=str(user.id))
+    result = {"id": str(user.id), "status": user.status, "user": user_rows(db, [user])[0]}
     db.commit()
-    return {"id": str(user.id), "status": user.status}
+    return result
 
 
 @router.post("/invitations", status_code=status.HTTP_201_CREATED)
@@ -285,8 +298,9 @@ def _review_user(user_id: uuid.UUID, request: Request, db: Session, *, approved:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     _record(db, request, actor.id, "USER_APPROVED" if approved else "USER_REJECTED", target_user_id=user.id,
             resource_type="USER", resource_id=str(user.id))
+    result = {"id": str(user.id), "status": user.status, "user": user_rows(db, [user])[0]}
     db.commit()
-    return {"id": str(user.id), "status": user.status}
+    return result
 
 
 @router.get("/users/{user_id}/deletion-impact")

@@ -22,8 +22,19 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
   const [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null);
   const [results, setResults] = useState<Array<ShareBatchResult & { title: string }>>([]);
   const root = useRef<HTMLDivElement>(null), restore = useRef<{ id: string; scroll: number } | null>(null);
+  const pageRecovery = useRef(false);
   const shares = useQuery({ queryKey: ["my-shares", q, status, conversation?.id, offset], queryFn: () => getMyShares({ q, status, conversationId: conversation?.id, offset }), retry: false, enabled: online });
   useEffect(() => { const update = () => setOnline(navigator.onLine); update(); window.addEventListener("online", update); window.addEventListener("offline", update); return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); }; }, []);
+  useEffect(() => {
+    if (!shares.data || shares.isFetching || editing) return;
+    const lastOffset = Math.max(0, Math.ceil(shares.data.total / 20) - 1) * 20;
+    if (offset > lastOffset) { pageRecovery.current = true; setOffset(lastOffset); return; }
+    if (pageRecovery.current) {
+      root.current?.querySelector<HTMLElement>('[data-share-edit], article input, input')?.focus({ preventScroll: true });
+      root.current?.parentElement?.scrollTo({ top: 0 });
+      pageRecovery.current = false;
+    }
+  }, [shares.data, shares.isFetching, offset, editing]);
   useLayoutEffect(() => { if (!editing) onDirtyChange(busy); }, [busy, editing, onDirtyChange]);
   useEffect(() => {
     if (!editing && restore.current) {
@@ -44,7 +55,12 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
       const response = await revokeShares(ids);
       const completed = new Set(response.results.filter((item) => item.status === "revoked").map((item) => item.share_id));
       setSelected((value) => Object.fromEntries(Object.entries(value).filter(([id]) => !completed.has(id))));
-      setResults(response.results.map((item) => ({ ...item, title: names[item.share_id] || (zh ? "分享链接" : "Share link") })));
+      setResults(previous => {
+        const updated = new Map(response.results.map(item => [item.share_id, item]));
+        return [...previous.filter(item => !updated.has(item.share_id)), ...response.results.map(item => ({
+          ...item, title: names[item.share_id] || previous.find(old => old.share_id === item.share_id)?.title || (zh ? "分享链接" : "Share link"),
+        }))];
+      });
       setNotice(zh ? `已撤销 ${completed.size} 个分享。` : `${completed.size} shares revoked.`);
       await Promise.all([client.invalidateQueries({ queryKey: ["my-shares"] }), client.invalidateQueries({ queryKey: ["shares"] })]);
     } catch (failure) { setError(failure instanceof Error ? failure.message : (zh ? "撤销失败，选择已保留。" : "Revoke failed. Your selection is retained.")); }

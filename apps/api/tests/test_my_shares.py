@@ -145,3 +145,36 @@ def test_share_edit_preserves_url_validates_scope_and_clears_nullable_fields(aut
     assert auth_client.get(f"/api/shared/{created['token']}").json()['message_count'] == 2
     assert auth_client.post(path + '/revoke').status_code == 200
     assert auth_client.patch(path, json={'title': 'Cannot revive'}).status_code == 410
+
+
+def test_share_settings_revision_ignores_visitors_but_fences_stale_edits(auth_client: TestClient) -> None:
+    register(auth_client, 'share-revision')
+    source = conversation(auth_client, 'Revision source')
+    created = share(auth_client, source['id'])
+    path = f"/api/shares/{created['id']}"
+    baseline = auth_client.get(path).json()
+    assert len(baseline['settings_revision']) == 64
+    assert auth_client.get(f"/api/shared/{created['token']}").status_code == 200
+    visited = auth_client.get(path)
+    assert visited.headers['cache-control'] == 'no-store'
+    assert visited.json()['access_count'] == 1
+    assert visited.json()['settings_revision'] == baseline['settings_revision']
+    changed = auth_client.patch(path, json={'base_revision': baseline['settings_revision'], 'title': 'Saved elsewhere', 'include_annotations': True})
+    assert changed.status_code == 200
+    assert changed.json()['settings_revision'] != baseline['settings_revision']
+    stale = auth_client.patch(path, json={'base_revision': baseline['settings_revision'], 'title': 'Old window', 'include_annotations': False})
+    assert stale.status_code == 409 and stale.json()['detail']['code'] == 'SHARE_SETTINGS_CHANGED'
+    latest = auth_client.get(path).json()
+    assert latest['title'] == 'Saved elsewhere' and latest['include_annotations']
+    assert latest['share_url'] == created['share_url']
+    password = auth_client.patch(path, json={'base_revision': latest['settings_revision'], 'share_password': 'synthetic share password'})
+    assert password.status_code == 200 and password.json()['settings_revision'] != latest['settings_revision']
+    assert auth_client.patch(path, json={'base_revision': latest['settings_revision'], 'share_password': None}).status_code == 409
+    assert auth_client.get(path).json()['password_required']
+    # Legacy partial clients remain compatible.
+    assert auth_client.patch(path, json={'description': 'Legacy update'}).status_code == 200
+    assert auth_client.post(path + '/revoke').status_code == 200
+    assert auth_client.patch(path, json={'base_revision': password.json()['settings_revision'], 'title': 'No revival'}).status_code == 410
+    register(auth_client, 'share-revision-other')
+    assert auth_client.get(path).status_code == 404
+    assert auth_client.patch(path, json={'base_revision': baseline['settings_revision'], 'title': 'No access'}).status_code == 404

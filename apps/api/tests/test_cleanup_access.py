@@ -69,8 +69,36 @@ def test_review_groups_previews_and_bulk_decisions_are_owner_scoped(auth_client,
         auth_client.cookies.set("chat_reader_session", other_token)
         for suffix in ("", "/groups", "/review", "/preview", "/occurrences"):
             assert auth_client.get(prefix + suffix).status_code == 404
+        assert auth_client.get(prefix + "/groups", params={"q": "Synthetic"}).status_code == 404
+        auth_client.cookies.clear()
+        auth_client.cookies.set("chat_reader_session", author_token)
+        preview = auth_client.post("/api/imports/preview", files={"files": ("synthetic.json", b'{"metadata":{"powered_by":"ChatGPT Exporter"},"messages":[]}', "application/json")})
+        assert preview.status_code == 200
+        import_id = preview.json()["import_id"]
+        assert auth_client.get("/api/content-cleanup/scans/pending", params={"import_id": import_id}).status_code == 200
+        auth_client.cookies.clear()
+        auth_client.cookies.set("chat_reader_session", other_token)
+        assert auth_client.get("/api/content-cleanup/scans/pending", params={"import_id": import_id}).status_code == 404
+        assert auth_client.get(prefix + "/outcome").status_code == 404
         assert auth_client.patch(prefix + "/decisions/filter", json={"decision": "DELETE", "all_matching": True}).status_code == 404
         assert auth_client.post(prefix + "/rescan").status_code == 404
         assert auth_client.post(prefix + "/apply", json={"preview_token": "0" * 64}).status_code == 409
+        # The deleted scan must not remove the owner's receipt boundary.
+        import uuid
+        from app.core import auth_middleware
+        from app.services.content_cleanup import process_scan_chunk
+        auth_client.cookies.clear()
+        auth_client.cookies.set("chat_reader_session", author_token)
+        with auth_middleware.SessionLocal() as db:
+            while not process_scan_chunk(db, uuid.UUID(scan.json()["id"]))["done"]:
+                db.commit()
+            db.commit()
+        assert auth_client.patch(prefix + "/decisions/filter", json={"decision": "DELETE", "all_matching": True}).status_code == 200
+        assert auth_client.post(prefix + "/apply").json()["applied"] == 1
+        assert auth_client.get(prefix + "/outcome").json()["status"] == "COMPLETED"
+        auth_client.cookies.clear()
+        auth_client.cookies.set("chat_reader_session", other_token)
+        assert auth_client.get(prefix + "/outcome").status_code == 404
+        assert auth_client.post(prefix + "/apply").status_code == 409
     finally:
         get_settings.cache_clear()

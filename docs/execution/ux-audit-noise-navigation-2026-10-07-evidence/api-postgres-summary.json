@@ -1,0 +1,322 @@
+{
+  "api": {
+    "count": 70,
+    "passed": 70,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "suite": "tests.test_cleanup_group_search",
+        "name": "test_group_search_is_literal_bounded_and_does_not_change_decisions"
+      },
+      {
+        "suite": "tests.test_cleanup_group_search",
+        "name": "test_import_review_discovery_only_returns_its_existing_scan"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise[field_name: cite turn12search4]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise[\"citation\": \"cite turn12search4\"]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise[Example: cite turn12search4 is a protocol token.]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise[\\u4f8b\\u5982\\uff1acite turn12search4 \\u662f\\u4e00\\u79cd\\u793a\\u4f8b\\u6807\\u8bb0\\u3002]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise[| field | value |\\n| --- | --- |\\n| citation | cite turn12search4 |]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise[The ordinary fields citation, title, cite, content and turn12search4 are valid.]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise[\\u793a\\u4f8b\\uff1a\\ue200cite\\ue202turn12search4\\ue201]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[`NOISE`]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[``some `NOISE` code``]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[```md\\nNOISE\\n```]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[    NOISE\\n]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[$NOISE$]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[$$NOISE$$]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[\\\\(NOISE\\\\)]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[\\\\[NOISE\\\\]]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[[safe](https://example.test/NOISE)]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[<https://example.test/NOISE>]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[[safe](https://example.test/(section)/NOISE)]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[[safe](https://example.test/escaped\\\\)/NOISE)]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[[ref]: https://example.test/NOISE]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[[safe][NOISE]]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[[^NOISE]]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate[![NOISE](cr-asset://00000000-0000-0000-0000-000000000001)]"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_scan_apply_without_selection_preserves_all_text_and_versions"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_forged_protected_decision_is_revalidated_during_apply"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_partial_apply_retry_never_reapplies_completed_messages"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_filtered_selection_covers_all_pages_and_preview_guards_changes"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_live_apply_lease_blocks_duplicates_and_expired_lease_can_resume"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_learning_and_personal_exceptions_cannot_cross_accounts"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_review_groups_previews_and_bulk_decisions_are_owner_scoped"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_cleanup_reader_share_toc_search_and_offline_use_committed_version"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_completed_receipt_replays_without_versions_and_outlives_task_window"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_dismissed_and_unknown_scans_do_not_claim_completion"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_interruption_keeps_earlier_commit_and_rolls_back_final_receipt[second_message]"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_interruption_keeps_earlier_commit_and_rolls_back_final_receipt[receipt]"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_builtin_citation_detector_records_exact_offsets"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_selection_uses_builtin_detector_before_manual_fallback"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_private_citation_detector_covers_repeated_reference_separators"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_private_memcite_without_references_is_noise"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_private_citation_accepts_new_reference_kinds_inside_wrapper"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_unknown_private_marker_is_surfaced_for_user_review"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_damaged_private_citation_is_surfaced_without_auto_delete"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_generic_private_marker_is_reviewable_in_any_message_role"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_private_citation_variants_and_real_url_marker"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_visible_citation_tolerates_only_bounded_syntax_damage"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_normalized_and_approximate_rules_have_distinct_evidence"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_approximate_rules_have_a_bounded_candidate_budget"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_literal_detector_is_case_sensitive_by_default_and_can_ignore_code"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_protected_ranges_cover_fenced_code_math_and_asset_links"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_protected_ranges_cover_variable_code_spans_and_indented_code"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_separate_inline_code_spans_do_not_protect_text_between_them"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_reader_scan_requires_active_conversation_and_applies_reviewed_match"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_reader_scan_applies_all_multi_reference_private_markers"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_full_conversation_scan_finds_markers_across_all_messages"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_rule_library_scan_covers_project_and_unclassified_active_conversations"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_rule_library_scan_reuses_same_snapshot_but_new_revision_starts_new_scan"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_selection_scan_does_not_reuse_stale_full_scan"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_selection_offsets_recover_utf16_ranges_after_emoji"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_selection_text_recovers_a_valid_manual_selection_when_offsets_drift"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_literal_rule_updates_create_an_immutable_revision"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_zero_match_scan_retains_a_readable_completion_until_dismissed"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_source_selection_uses_code_point_offsets_and_deletes_scan_after_apply"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_source_selection_classifies_builtin_noise_instead_of_manual_fallback"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_partial_selection_expands_to_candidate_and_keeps_it"
+      },
+      {
+        "suite": "tests.test_content_cleanup",
+        "name": "test_source_selection_surfaces_protected_ranges_for_explicit_review"
+      },
+      {
+        "suite": "tests.test_import_queue",
+        "name": "test_commit_queues_and_is_idempotent"
+      },
+      {
+        "suite": "tests.test_import_queue",
+        "name": "test_claim_order_and_stale_recovery"
+      },
+      {
+        "suite": "tests.test_import_queue",
+        "name": "test_stale_import_recovery_is_bounded_and_manual_retry_starts_a_new_bounded_lifecycle"
+      }
+    ]
+  },
+  "postgres": {
+    "count": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_concurrent_apply_creates_one_version"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_migration_resets_legacy_automatic_selection_without_changing_content"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_exception_migration_foreign_keys_and_concurrent_confirmation"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_concurrent_rule_edits_keep_one_new_revision_and_reject_stale_base"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes_postgres",
+        "name": "test_concurrent_completed_http_replay_and_owner_isolation"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes_postgres",
+        "name": "test_final_receipt_failure_preserves_only_earlier_conversations"
+      }
+    ]
+  }
+}

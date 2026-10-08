@@ -87,6 +87,7 @@ export type ConversationDetail = ConversationListItem & {
 
 export type CleanupRuleRead = {
   id: string;
+  edit_token?: string | null;
   name: string;
   kind: "BUILTIN" | "USER_LITERAL" | string;
   status: "ACTIVE" | "DISABLED" | string;
@@ -113,7 +114,7 @@ export type CleanupRuleConfiguration = {
   boundary_mode: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END";
 };
 
-export type CleanupRuleTrialInput = CleanupRuleConfiguration & { rule_id?: string; base_revision?: number; base_revision_id?: string; conversation_id?: string };
+export type CleanupRuleTrialInput = CleanupRuleConfiguration & { rule_id?: string; base_revision?: number; base_revision_id?: string; base_edit_token?: string; conversation_id?: string };
 export type CleanupRuleTrial = {
   configuration: CleanupRuleConfiguration; scanned_messages: number; matches: number; protected_matches: number;
   skipped_messages: number; limited: boolean; message_limit: number; character_limit: number; message_character_limit: number;
@@ -124,7 +125,9 @@ export type CleanupException = {
   id: string; rule_name: string; detector_id: string | null; revision: number; role: string;
   match_value: string; context_before: string; context_after: string; at_start: boolean; at_end: boolean;
 };
-export type CleanupExceptionPreview = Omit<CleanupException, "id"> & { preview_token: string };
+export type CleanupExceptionPreview = Omit<CleanupException, "id"> & {
+  preview_token: string; exception_saved?: boolean; decision?: string; scan?: CleanupScanRead;
+};
 
 export type CleanupScanRead = {
   id: string;
@@ -132,6 +135,8 @@ export type CleanupScanRead = {
   status: string;
   scope_type: string;
   background_job_id: string | null;
+  background_job_status?: string | null;
+  previous_scan_id?: string | null;
   progress: number;
   processed_messages: number;
   total_messages: number;
@@ -180,8 +185,12 @@ export type CleanupOccurrenceRead = {
 
 export type CleanupReviewFilter = { rule_id?: string; conversation_id?: string; selected_only?: boolean };
 export type CleanupReviewPage<T> = { items: T[]; total: number; limit: number; offset: number };
+export type CleanupCandidatePage = CleanupReviewPage<CleanupOccurrenceRead> & {
+  selection_summary?: { selected: number; selected_elsewhere: number; protected: number };
+};
 export type CleanupReviewGroup = { rule_id: string; rule_name: string; detector_id: string | null; conversation_id: string; conversation_title: string; count: number; selected: number; protected: number; conflicts: number };
-export type CleanupPreview = { summary: { conversations: number; messages: number; fragments: number }; items: Array<{ conversation_id: string; conversation_title: string; message_id: string; role: string; before: string; after: string; conflict: boolean; fragments: number }>; offset: number; limit: number; preview_token: string };
+export type CleanupPreviewItem = { conversation_id: string; conversation_title: string; message_id: string; role: string; before: string; after: string; conflict: boolean; fragments: number; removed_ranges?: Array<{ start_offset: number; end_offset: number }> };
+export type CleanupPreview = { summary: { conversations: number; messages: number; fragments: number }; items: CleanupPreviewItem[]; offset: number; limit: number; preview_token: string };
 
 export type ConversationUpdateInput = {
   title?: string | null;
@@ -621,6 +630,13 @@ export type ImportFormatRevision = {
   current: boolean;
 };
 
+export type OfflineDownloadTarget = {
+  scope: "conversation" | "project" | "all";
+  conversation_id: string | null;
+  project_id: string | null;
+  include_assets: "none" | "small" | "all";
+};
+
 export type BackgroundTaskRead = {
   job_id: string;
   job_type: "import" | "conversation_merge" | "conversation_batch_delete" | string;
@@ -632,6 +648,7 @@ export type BackgroundTaskRead = {
   label: string | null;
   source_label?: string | null;
   export_format?: string | null;
+  offline_target?: OfflineDownloadTarget | null;
   result: {
     conversation_ids?: string[];
       conversation_id?: string;
@@ -645,7 +662,8 @@ export type BackgroundTaskRead = {
     byte_size?: number;
     download_url?: string;
       cleaned_messages?: number;
-      scan_id?: string;
+        scan_id?: string;
+        cleanup_apply?: CleanupOutcome;
       parent_task_id?: string;
     counts?: Record<string, number>;
     content_digest?: string;
@@ -1083,6 +1101,7 @@ export type ConversationEventListResponse = {
 };
 
 export type ShareRead = {
+  settings_revision?: string | null;
   id: string;
   conversation_id: string;
   token_prefix: string;
@@ -1131,6 +1150,7 @@ export type ShareCreateResponse = ShareRead & {
 };
 
 export type ShareUpdateInput = {
+  base_revision?: string | null;
   title?: string | null;
   description?: string | null;
   expires_at?: string | null;
@@ -1303,6 +1323,12 @@ export type SkillRead = {
   legacy_selection_conflict?: boolean;
   is_legacy_preferred?: boolean;
   is_customized?: boolean;
+};
+
+export type CleanupOutcome = CleanupApplyResult & {
+  status: "COMPLETED" | "APPLYING" | "REVIEW";
+  remaining: number;
+  completed_at: string | null;
 };
 export type SkillDetail = SkillRead & { content: string };
 export type SkillResolve = SkillDetail & { content_url: string | null };

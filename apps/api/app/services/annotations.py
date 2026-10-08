@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
 from app.models.conversation import Conversation
+from app.services.conversation_revision import bump_offline_revision
 from app.models.import_record import utc_now
 from app.models.message import Message
 from app.models.message_version import MessageVersion
@@ -711,7 +712,7 @@ def _annotation(
 
 
 def _touch_conversation(conversation: Conversation) -> None:
-    conversation.offline_revision += 1
+    bump_offline_revision(conversation)
 
 
 def _operation_hash(operation: SyncOperation) -> str:

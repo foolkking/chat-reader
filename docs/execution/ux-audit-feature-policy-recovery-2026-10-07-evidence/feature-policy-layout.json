@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "feature-policy-layout",
+  "status": "passed",
+  "started_at": "2026-10-07T03:07:05.315Z",
+  "test_count": 11,
+  "completed_at": "2026-10-07T03:08:02.351Z",
+  "duration_ms": 59590,
+  "result_counts": {
+    "passed": 11,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

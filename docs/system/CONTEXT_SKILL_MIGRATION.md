@@ -28,6 +28,24 @@ read-only manual-copy field shown only on failure. Download actions stay usable.
 Copy success belongs to the exact language/purpose text whose write completed;
 switching that text does not inherit the prior success indication.
 
+## Bundle replacement recovery (local, 2026-10-07)
+
+Confirmed replacement updates the list's file revision/download immediately after
+cancelling older reads. Background list errors keep that acknowledgement and offer
+reload. Resolved content is reset so old instructions cannot be paired with new
+download metadata. System file updates preserve account selection. Reads use a
+20-second deadline and cancellation; replacement has a 60-second deadline.
+
+A version conflict retains the chosen file. The user reads/downloads the current
+version and explicitly chooses replacement; a further concurrent update conflicts
+again. Restored built-ins may use revision 0 outside saved history, so absence of a
+current history row falls back to current detail metadata, not the largest revision.
+Unconfirmed transport failures retry the same file/base through existing digest
+idempotency. Invalid uploads, unavailable targets and permission errors have distinct
+recovery copy. Focus follows the next recovery action. This adds no viewer/editor,
+semantic checks, candidates or script execution. See the
+[replacement audit](../execution/ux-audit-skill-replacement-recovery-2026-10-07.md).
+
 ## Reviewed external runtime distribution
 
 Editable Acquisition/Maintainer sources are under `tools/context-skills/`. They

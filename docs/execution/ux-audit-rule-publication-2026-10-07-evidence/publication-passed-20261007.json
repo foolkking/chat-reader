@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "publication-passed-20261007",
+  "status": "passed",
+  "started_at": "2026-10-07T13:40:22.048Z",
+  "test_count": 24,
+  "completed_at": "2026-10-07T13:42:00.677Z",
+  "duration_ms": 100629,
+  "result_counts": {
+    "passed": 24,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

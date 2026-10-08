@@ -270,6 +270,12 @@ Owner Reader 右上角“更多”提供“更新目录”：
 
 ## 8. 离线资料库
 
+本地未发布更新（2026-10-08）：任务中心的离线任务进入同一个“离线与同步”面板，
+定位本机下载记录及所在失败页；没有记录时，用户明确点击“下载到此设备”。
+打开面板不会自动重试。服务器生成完成与本机下载完成分别表示，取消服务器生成
+不冒充本地取消。旧任务缺少范围时保留资料库手动选择入口。当前 33 项 API 专项
+通过，浏览器操作验收待完成；详见[离线恢复合同](PWA_OFFLINE_RESILIENCE_CONTRACT.md#task-center-recovery--2026-10-08-worktree-not-deployed)。
+
 ```text
 首次在线打开 /library -> staging/校验/激活 PWA 壳
 -> catalog 与本地 revisions 比对 -> 请求 v3 增量包（none/small/all attachments）

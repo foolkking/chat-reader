@@ -1,0 +1,202 @@
+{
+  "api": {
+    "count": 40,
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "suite": "tests.test_cleanup_preview_ranges",
+        "name": "test_exact_ranges_reproduce_after_without_creating_a_version"
+      },
+      {
+        "suite": "tests.test_cleanup_preview_ranges",
+        "name": "test_exact_ranges_reproduce_after_without_creating_a_version"
+      },
+      {
+        "suite": "tests.test_cleanup_preview_ranges",
+        "name": "test_exact_ranges_reproduce_after_without_creating_a_version"
+      },
+      {
+        "suite": "tests.test_cleanup_preview_ranges",
+        "name": "test_changed_source_has_no_proposed_removal_ranges"
+      },
+      {
+        "suite": "tests.test_cleanup_preview_ranges",
+        "name": "test_unsafe_legacy_protected_choice_is_not_drawn_as_a_deletion"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_normal_fields_tables_and_examples_are_not_noise"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_protected_syntax_is_never_an_actionable_candidate"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_scan_apply_without_selection_preserves_all_text_and_versions"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_forged_protected_decision_is_revalidated_during_apply"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_partial_apply_retry_never_reapplies_completed_messages"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_filtered_selection_covers_all_pages_and_preview_guards_changes"
+      },
+      {
+        "suite": "tests.test_cleanup_safety",
+        "name": "test_live_apply_lease_blocks_duplicates_and_expired_lease_can_resume"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_learning_and_personal_exceptions_cannot_cross_accounts"
+      },
+      {
+        "suite": "tests.test_cleanup_access",
+        "name": "test_review_groups_previews_and_bulk_decisions_are_owner_scoped"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_cleanup_reader_share_toc_search_and_offline_use_committed_version"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_completed_receipt_replays_without_versions_and_outlives_task_window"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_dismissed_and_unknown_scans_do_not_claim_completion"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_interruption_keeps_earlier_commit_and_rolls_back_final_receipt"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes",
+        "name": "test_interruption_keeps_earlier_commit_and_rolls_back_final_receipt"
+      }
+    ]
+  },
+  "postgres": {
+    "count": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_concurrent_apply_creates_one_version"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_migration_resets_legacy_automatic_selection_without_changing_content"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_exception_migration_foreign_keys_and_concurrent_confirmation"
+      },
+      {
+        "suite": "tests.test_cleanup_postgres",
+        "name": "test_concurrent_rule_edits_keep_one_new_revision_and_reject_stale_base"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes_postgres",
+        "name": "test_concurrent_completed_http_replay_and_owner_isolation"
+      },
+      {
+        "suite": "tests.test_cleanup_outcomes_postgres",
+        "name": "test_final_receipt_failure_preserves_only_earlier_conversations"
+      }
+    ]
+  }
+}

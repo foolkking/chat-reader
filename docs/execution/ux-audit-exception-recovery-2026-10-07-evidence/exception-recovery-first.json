@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "exception-recovery-first",
+  "status": "passed",
+  "started_at": "2026-10-07T08:34:02.565Z",
+  "test_count": 8,
+  "completed_at": "2026-10-07T08:34:31.616Z",
+  "duration_ms": 31592,
+  "result_counts": {
+    "passed": 8,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

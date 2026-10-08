@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "cleanup-recovery-delivery",
+  "status": "passed",
+  "started_at": "2026-10-06T21:33:02.066Z",
+  "test_count": 18,
+  "completed_at": "2026-10-06T21:34:26.186Z",
+  "duration_ms": 86691,
+  "result_counts": {
+    "passed": 18,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

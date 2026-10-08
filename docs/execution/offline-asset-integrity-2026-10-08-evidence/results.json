@@ -1,0 +1,68 @@
+{
+  "baseline": {
+    "tests": 3,
+    "failed": 3,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_damaged_asset_cannot_replace_working_offline_package[same_size]",
+      "test_damaged_asset_cannot_replace_working_offline_package[truncated]",
+      "test_damaged_asset_cannot_replace_working_offline_package[missing]"
+    ]
+  },
+  "baseline-valid": {
+    "tests": 3,
+    "failed": 2,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_damaged_asset_cannot_replace_working_offline_package[same_size]",
+      "test_damaged_asset_cannot_replace_working_offline_package[truncated]",
+      "test_damaged_asset_cannot_replace_working_offline_package[missing]"
+    ]
+  },
+  "fix": {
+    "tests": 15,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_damaged_asset_cannot_replace_working_offline_package[same_size]",
+      "test_damaged_asset_cannot_replace_working_offline_package[truncated]",
+      "test_damaged_asset_cannot_replace_working_offline_package[missing]",
+      "test_direct_context_update_refreshes_offline_package",
+      "test_annotations_revision_conflict_sync_idempotency_and_notebook",
+      "test_text_annotation_types_create_update_and_export",
+      "test_annotation_anchor_relocates_and_marks_stale_after_message_edits",
+      "test_cr_v2_optional_private_entries_round_trip",
+      "test_offline_catalog_and_package_are_downloadable",
+      "test_offline_package_reports_store_level_progress",
+      "test_offline_outer_commit_failure_preserves_previous_committed_package",
+      "test_export_outer_commit_failure_never_exposes_uncommitted_artifact",
+      "test_offline_replacement_cleans_old_artifact_only_after_commit",
+      "test_offline_cleanup_failure_is_debt_not_publication_failure",
+      "test_download_rejects_artifacts_until_the_owning_job_commits"
+    ]
+  },
+  "recovery": {
+    "tests": 4,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_damaged_asset_cannot_replace_working_offline_package[same_size]",
+      "test_damaged_asset_cannot_replace_working_offline_package[truncated]",
+      "test_damaged_asset_cannot_replace_working_offline_package[oversized]",
+      "test_damaged_asset_cannot_replace_working_offline_package[missing]"
+    ]
+  },
+  "cancel": {
+    "tests": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "cases": [
+      "test_large_asset_copy_checks_cancellation_between_bounded_chunks"
+    ]
+  }
+}

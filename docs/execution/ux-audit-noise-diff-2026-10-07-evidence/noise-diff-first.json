@@ -1,0 +1,16 @@
+{
+  "schema_version": 2,
+  "gate_id": "noise-diff-first",
+  "status": "passed",
+  "started_at": "2026-10-07T06:13:01.732Z",
+  "test_count": 6,
+  "completed_at": "2026-10-07T06:13:19.730Z",
+  "duration_ms": 20471,
+  "result_counts": {
+    "passed": 6,
+    "failed": 0,
+    "timedOut": 0,
+    "skipped": 0,
+    "interrupted": 0
+  }
+}

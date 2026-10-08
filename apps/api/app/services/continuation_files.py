@@ -3,6 +3,7 @@ import hashlib
 import json
 import uuid
 from app.models.context_continuation import ContinuationRevision, ContinuationState, ContinuationCandidate
+from app.services.conversation_revision import bump_offline_revision
 from app.models.import_record import utc_now
 from app.services.continuation_candidates import ContinuationError, owned_conversation, checked_members, _store_member
 
@@ -42,7 +43,7 @@ def update_files(db, conversation_id, scope, *, members, base_generation):
     state.adopted_revision_id = row.id
     state.generation += 1
     state.updated_at = utc_now()
-    conversation.offline_revision += 1
+    bump_offline_revision(conversation)
     db.flush()
     obsolete_rows = db.query(ContinuationRevision).filter_by(conversation_id=conversation_id).order_by(
         ContinuationRevision.created_at.desc(), ContinuationRevision.id.desc()).offset(3).all()

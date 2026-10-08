@@ -90,6 +90,21 @@ requests, browse their inbox, reply and withdraw. Root sees system-limit setting
 and an audited user inbox, with decisions and explicit account override reset.
 Status/type filters and request/message pagination use server results.
 
+The 2026-10-07 local navigation update retains list reads only for the same query
+and authentication epoch while refreshing; changing filters or pages never shows
+unrelated query results. Reads remain bounded to 30 seconds, with explicit retry.
+Inaccessible responses discard retained detail, including during a later retry.
+This is mounted UI memory, not another persistent cache or offline authorization.
+Returning from detail restores the actual request button and scroll after layout
+is ready. A successfully read total that shrinks past the selected page moves to
+the last valid page without resetting filters; a removed row falls back to the
+list heading. Refresh feedback is adjacent to the list's refresh action, so a
+failure is visible while reading the bottom of a retained long list.
+Reply pagination uses the displayed response's offset, so a failed
+next-page read keeps the old page accurately labelled and can be retried.
+These worktree changes are not yet deployed; see the
+[navigation audit](../execution/ux-audit-support-navigation-2026-10-07.md).
+
 The composer uses Markdown editing, undo/redo and preview. User-provided images
 are represented as text; preview does not fetch remote images or attachments.
 Redacted diagnostics are an unchecked optional attachment, previewed before
