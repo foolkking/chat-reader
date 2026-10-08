@@ -427,11 +427,13 @@ jobs:
           POSTGRES_USER: chat_reader
           POSTGRES_PASSWORD: chat_reader_ci
         ports:
-          - 5432:5432
+          # Keep the disposable fixture on a port allowed by the guarded seeders.
+          - 65438:5432
         options: >-
           --health-cmd "pg_isready -U chat_reader -d chat_reader"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
+      DATABASE_URL: postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:65438/chat_reader
       AUTH_ENABLED: "true"
       AUTH_SESSION_SECRET: synthetic-settings-ci-session-secret-0123456789
       AUTH_COOKIE_SECURE: "false"

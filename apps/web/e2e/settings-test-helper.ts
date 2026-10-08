@@ -5,8 +5,11 @@ import { expect, type APIRequest, type APIRequestContext, type Page } from "@pla
 let adminState: Awaited<ReturnType<APIRequestContext["storageState"]>> | undefined;
 
 export async function openSettingsNoiseReview(page: Page, scanId: string): Promise<void> {
-  await page.locator('[data-testid="task-summary-button"]:visible').click();
   const center = page.getByTestId("task-center-panel");
+  // Closing a nested review returns to its still-open Task Center.
+  if (!(await center.isVisible())) {
+    await page.locator('[data-testid="task-summary-button"]:visible').click();
+  }
   await expect(center).toBeVisible();
   await center.locator(`[data-cleanup-scan-id="${scanId}"]`)
     .getByRole("button", { name: /^(Open review|打开审查)$/ }).click();

@@ -131,6 +131,8 @@ test("768px: an unsent selection is not silently retried and survives reopening 
     await f.checks.first().check();
     await expect(f.dialog.getByRole("button", { name: "Reload saved choices", exact: true })).toBeVisible();
     await f.page.keyboard.press("Escape");
+    await expect(f.dialog).not.toBeVisible();
+    await expect(f.page.getByTestId("task-center-panel")).toBeVisible();
     await openSettingsNoiseReview(f.page, f.scanId);
     await f.dialog.getByRole("button", { name: "All candidates", exact: true }).click();
     await expect(f.checks.first()).toBeEnabled();

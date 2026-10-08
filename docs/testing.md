@@ -15,6 +15,13 @@ CI's **439-case settings matrix**. Current local lint, nonincremental typecheck,
 bounded build, head 0050 and 33 offline/task API tests pass. Do not count discovery
 or eventual CI execution as a specified-Chromium local acceptance run.
 
+The settings CI PostgreSQL service uses loopback **65438**, matching the guarded
+synthetic task seeders; the separate API/Web jobs retain 5432. The first accumulated
+run's 11 port-guard failures and 226 cascading login-limit failures are retained
+in the release record. Login limits and synthetic-owner guards are unchanged.
+The noise-review helper can reopen a review from the still-visible Task Center;
+its recovery case explicitly checks that Escape closed only the nested review.
+
 Latest direction: use the user's exact task-owned Chromium executable against
 local services only. Chromium 151.0.7922.34 launched and closed on `about:blank`;
 this is a runtime preflight with zero application cases. A task-local config

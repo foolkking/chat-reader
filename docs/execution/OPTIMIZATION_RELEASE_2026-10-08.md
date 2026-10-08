@@ -60,6 +60,21 @@ production build and all **9 dependency regression tests** pass locally. The
 official-registry audit policy passes with three advisories, one existing approved
 high-severity braces exception, and zero unapproved blockers/policy errors; this
 is not a zero-vulnerability claim. A new exact-source full CI is required.
+Source `c779517` includes those upstream patches; its full CI is
+[37750154439](https://github.com/foolkking/chat-reader/actions/runs/37750154439).
+The first run's settings gate then finished **201 passed / 238 failed / 0 skipped**.
+Inspection of all 238 failure reports identifies 11 fixture-port assertion
+failures, 226 subsequent login-429 failures (including one UI login), and one
+incorrect nested-dialog test action. These are failures, not unexecuted passes.
+
+The guarded seeders intentionally accept only isolated loopback ports. The CI
+settings service is aligned to **65438**; API/Web gates keep 5432. No seeder guard,
+production authentication limit or assertion is relaxed. The review helper now
+uses an already-open Task Center after Escape instead of clicking the obscured
+background trigger; the regression additionally asserts both dialog states before
+reopening. Application code and product behavior are unchanged by this follow-up.
+A fresh full run is required to establish whether any product defects remain.
+
 The read-only production attachment audit found **310 verified object hashes**,
 304 active attachments and no issues; the production application remains intact.
 

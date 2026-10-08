@@ -12,6 +12,11 @@ the current Next 16.3.8 / sharp 0.35.5 prerequisite; the existing audit exceptio
 policy is unchanged. Current state distinguishes local patch verification from
 the still-required exact-source release gates.
 
+The same record and `testing.md` document settings CI's isolated port 65438 and
+the corrected nested-review test navigation, preserving the failed-run counts,
+authentication limits and synthetic-owner seed guards. No application change is
+inferred from this test-infrastructure correction.
+
 `execution/local-execution-policy-diagnosis-2026-10-08.md` records the read-only
 policy/configuration/log investigation and corrects the unproven auto-review
 attribution. Current state and testing link the verified scope: effective full
