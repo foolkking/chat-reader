@@ -244,11 +244,15 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
     if (!op || !visible || !usable(op) || op.ticket !== visible.ticket) return;
     update(op.attempted ? { ...op, open: false } : null);
   }
+  function preventPendingBlur(event: { preventDefault: () => void }) {
+    if (!busy(stateRef.current)) return false;
+    event.preventDefault();
+    return true;
+  }
   function closeFromBackdrop(event: { preventDefault: () => void }) {
-    // The pending body may shrink under a second click. Do not turn that click
-    // into dismissal or let it blur the dialog's recovered keyboard focus.
-    if (busy(stateRef.current)) { event.preventDefault(); return; }
-    close();
+    // A second click can land on the scrim or the newly disabled submit.
+    // Neither should dismiss the dialog or blur its recovered keyboard focus.
+    if (!preventPendingBlur(event)) close();
   }
   function reopen() {
     const op = stateRef.current;
@@ -261,7 +265,7 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
     update(null);
   }
 
-  return { state: visible, projects, projectsReady, projectsQuery, choose, changeSearch, submit, check, close, closeFromBackdrop, reopen, dismiss,
+  return { state: visible, projects, projectsReady, projectsQuery, choose, changeSearch, submit, check, close, closeFromBackdrop, preventPendingBlur, reopen, dismiss,
     start, noticeRef, previousFocus, busy: busy(visible), blocked: unavailable || Boolean(visible && visible.phase !== "confirmed"),
     canSubmit: Boolean(visible && editable(visible) && destination(visible)),
     restoreFocus: () => {
@@ -378,7 +382,7 @@ export function ConversationPlacementSurface({ placement, floating = false }: {
         <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-ui px-5 py-3">
           {checkButton}
           <button type="button" onClick={placement.close} className="btn-secondary min-h-11 px-3">{zh ? "返回" : "Back"}</button>
-          {editable(state) || (state.phase === "moving" && state.pendingSubmit) ? <button ref={submitRef} type="submit" disabled={!placement.canSubmit} className="btn-primary min-h-11 px-4 disabled:opacity-50">
+          {editable(state) || (state.phase === "moving" && state.pendingSubmit) ? <button ref={submitRef} type="submit" disabled={!placement.canSubmit} onPointerDownCapture={placement.preventPendingBlur} className="btn-primary min-h-11 px-4 disabled:opacity-50">
             {state.phase === "review" || (state.phase === "moving" && state.pendingSubmit === "review") ? (zh ? "按当前状态再次移动" : "Move again using current state") : (zh ? "移动到所选项目" : "Move to selected project")}
           </button> : null}
         </footer>

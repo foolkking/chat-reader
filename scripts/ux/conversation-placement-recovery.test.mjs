@@ -619,6 +619,44 @@ test("a browser retaining focus on the newly disabled submit recovers to Close",
   } finally { await f.dispose(); }
 });
 
+for (const [locale, label] of [["en-US", "Move to selected project"], ["zh-CN", "移动到所选项目"]]) {
+  test(locale + ": another pointer-down on the pending disabled submit prevents a default blur", async () => {
+    const f = await fixture({ locale }); try {
+      await f.open(); await f.select("target"); f.hold("write"); await f.submit();
+      const retainedFocus = {}; f.document.activeElement = retainedFocus;
+      let prevented = false;
+      f.button(label).onPointerDownCapture?.({ preventDefault: () => { prevented = true; } });
+      // Explicit native-default double, not a browser event-dispatch claim.
+      if (!prevented) f.document.activeElement = f.document.body;
+      assert.equal(prevented, true); assert.equal(f.document.activeElement, retainedFocus);
+      assert.equal(f.writes.length, 1); assert.equal(f.controller().state.open, true);
+    } finally { await f.dispose(); }
+  });
+}
+
+test("a captured idle submit pointer handler uses live pending state", async () => {
+  const f = await fixture(); try {
+    await f.open(); await f.select("target"); const before = f.button("Move to selected project");
+    let prevented = 0;
+    before.onPointerDownCapture?.({ preventDefault: () => { prevented += 1; } });
+    assert.equal(prevented, 0);
+    f.hold("write"); f.submitHandler()({ preventDefault: noop });
+    before.onPointerDownCapture?.({ preventDefault: () => { prevented += 1; } });
+    assert.equal(prevented, 1); assert.equal(f.writes.length, 1);
+  } finally { await f.dispose(); }
+});
+
+test("pending pointer protection does not move chosen focus or block explicit Back", async () => {
+  const f = await fixture(); try {
+    await f.open(); await f.select("target"); const probe = focusProbe(f), chosen = {};
+    f.document.activeElement = chosen; f.hold("write"); await f.submit();
+    let prevented = false;
+    f.button("Move to selected project").onPointerDownCapture?.({ preventDefault: () => { prevented = true; } });
+    assert.equal(prevented, true); assert.equal(f.document.activeElement, chosen); assert.equal(probe.calls.length, 0);
+    await f.click("Back"); assert.equal(f.controller().state.open, false); assert.equal(f.writes.length, 1);
+  } finally { await f.dispose(); }
+});
+
 test("removing the check button recovers lost focus without a second write", async () => {
   const f = await fixture({ outcome: "lost" }); try { await f.open(); await f.select("target"); await f.submit();
     const probe = focusProbe(f), release = f.hold("check"); f.document.activeElement = f.document.body;

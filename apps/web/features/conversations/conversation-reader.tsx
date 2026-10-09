@@ -41,7 +41,7 @@ import {
 import { ReaderHeaderActionRail, type ReaderHeaderAction } from "../../components/reader-header-action-rail";
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
 import { ReaderPanelShell } from "../../components/reader-panel-shell";
-import { useMobileHeaderAutoHide } from "./use-mobile-header-auto-hide";
+import { reserveMobileReaderHeaderSpace, useMobileHeaderAutoHide } from "./use-mobile-header-auto-hide";
 import { ConversationSearchPanel, type ConversationSearchPanelState, type SearchNavigationContext, type SearchNavigationTarget } from "../search/conversation-search-panel";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { AnnotationWorkspace } from "../annotations/annotation-workspace";
@@ -2426,7 +2426,7 @@ export function ConversationReader({
         showMobileTrigger={false}
       /> : null}
       <section ref={readerMainSectionRef} data-reader-main-section="true" className="relative flex min-w-0 flex-1 flex-col">
-        <header data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
+        <header ref={reserveMobileReaderHeaderSpace} data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
           {mergedIntoConversationId ? <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-[3vw] py-2 text-sm text-amber-900" role="status"><span className="min-w-0 flex-1">{resolvedLocale === "zh-CN" ? "此对话已合并，当前内容可能正在更新。" : "This conversation was merged and may be updating."}</span><button type="button" className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-white" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{resolvedLocale === "zh-CN" ? "打开目标对话" : "Open target"}</button></div> : null}
           {loadingProgress < 100 ? (
             <div className="absolute inset-x-0 bottom-0 h-0.5 bg-subtle">
@@ -2531,7 +2531,7 @@ export function ConversationReader({
             source: "message-action" }, { restorePosition: true });
           if (!result.ok) throw new Error("Unable to locate the saved reading position.");
         }} />
-        <div ref={scrollContainerRef} role="region" tabIndex={-1} aria-label={resolvedLocale === "zh-CN" ? "对话正文" : "Conversation content"} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
+        <div ref={scrollContainerRef} role="region" tabIndex={-1} aria-label={resolvedLocale === "zh-CN" ? "对话正文" : "Conversation content"} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-[var(--reader-mobile-header-height,3.5rem)] scroll-pt-[var(--reader-mobile-header-height,3.5rem)] [overflow-anchor:none] md:pt-0 md:scroll-pt-0">
           <ResponsiveReaderFrame
             focusMode={focusMode}
             index={<ConversationIndex

@@ -139,3 +139,57 @@ will rerun it. The repair ledger inherits 106 source hashes (102 unchanged, four
 expected changes) and adds the settings-conflict file. Original ledgers and the
 unrelated buildinfo hash remain unchanged. The 20-minute mutation gate is not
 increased. The next submission is a repair within this same authorized cycle.
+
+## Repair 3e82323 — complete CI started
+
+Committed and pushed `3e82323668a7843a5bfbebc7ea1d03a5dca61c1e` using an explicit
+15-file allowlist. Every one of the 107 checkpoint source hashes was verified
+before staging; staged scope and whitespace checks passed. No unrelated buildinfo,
+auth-test residues or user imports were included. The command-local existing
+Git author identity was reused without changing global configuration.
+
+[CI 37897405546](https://github.com/foolkking/chat-reader/actions/runs/37897405546)
+was dispatched once; its `headSha` equals the full repair commit above. API, Web
+and settings jobs started. The repair ledger remains a pre-commit checkpoint,
+not a claim that this new browser run or deployment has passed. King has not
+been modified.
+
+## Second CI failed; mobile repair locally verified
+
+CI 37897405546, producer attempt 1, completed with API/settings successful and
+Web failed. The mutation gate finished **97 passed / 2 failed / 1 timed out /
+zero skipped or interrupted** in 857,735 ms, below its 20-minute gate limit.
+Earlier Web gates passed; later attachment/PDF/PWA gates and both image jobs did
+not execute. The original quality artifact is **11601831277**, name
+`release-a-quality-evidence-3e82323668a7843a5bfbebc7ea1d03a5dca61c1e`, 13,552,602 bytes.
+An initial timeout interpretation was explicitly corrected from the completed
+log. The first run's actual 20-minute timeout remains a separate failed record.
+
+The full API result is **1,239 passed / 3 skipped / 20 warnings**, 840.05 seconds,
+including both PostgreSQL merge-admission concurrency cases. Separate Bundle 64
+and cleanup 53 checks passed but overlap the full suite. Settings passed **439**
+cases in 38.4 minutes and the independent fresh-PostgreSQL restore **one** case
+in 34.7 seconds. Initial API/settings log downloads returned EOF; read-only
+retries succeeded. This was an evidence-download failure, not a product failure.
+
+The [pre-edit mobile report](ux-audit-mobile-release-2026-10-09.md) was delivered
+before the two product repairs. The Reader now reserves actual wrapped-header
+height with one owned size observer; the pending move submit prevents a subsequent
+pointer-down's default blur while preserving explicit exits and chosen focus.
+The obsolete archive test now performs read-only unknown-result checks before
+explicit retries. Manual-source cleanup has its own budget, and mobile first-action
+geometry is asserted with the offline guide present. Placement captures pending
+geometry/focus before retaining its original keyboard assertions.
+
+The 81-case local failure baseline (68 passed / 13 failed) now passes completely.
+Integrated Node is **622 passed / zero failed/skipped**, 9,482.2517 ms; lint,
+nonincremental typecheck and bounded build pass. Discovery is **144 tests in eight
+files, zero local browser executions**. The new ledger inherits 107 source hashes
+(102 unchanged / five expected changes), adds three sources and preserves older
+evidence and the unrelated buildinfo hash. No API source, dependency, migration
+or CI gate timeout changed. No local services, browser fixture, subagents or
+Docker builds were used; King was not accessed or changed in this repair.
+
+The third complete CI still requires all original gates and independent image
+inspection. This is a repair in the same authorized release cycle, not permission
+for a later unrelated release. No candidate image has been accepted or deployed.

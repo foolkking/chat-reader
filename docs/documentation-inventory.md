@@ -21,6 +21,16 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-mobile-release-2026-10-09.md` owns the second complete CI's
+observed mobile header obstruction and pending-focus failure, the inferred
+second-pointer cause, and the separately corrected archive test path. Its
+adjacent `second-ci.json` remains the pre-edit checkpoint; the new local ledger
+owns the 68-pass/13-fail baseline, 81-case repair, 622 integrated Node passes and
+144 discovered/zero locally executed browser cases, bound to 110 source hashes.
+`system/USER_FLOWS.md` owns the actual-header sizing and pending-pointer contract.
+The release owner records final second-run API/settings totals and the next
+same-cycle complete CI, without treating a local pass as image/deploy acceptance.
+
 `execution/ux-audit-release-interaction-2026-10-09.md` owns the first complete
 attachment-release CI's pending-placement dismissal finding and separately
 identified test-path/setup corrections. Its adjacent evidence summary preserves

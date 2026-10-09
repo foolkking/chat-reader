@@ -11,8 +11,8 @@ Last updated: 2026-10-09. This is the current snapshot, not a release history.
 | Data acceptance | 84 stopped-writer table fingerprints and four storage roots unchanged; 36 expected source hashes backfilled; 67 stable table counts unchanged after restart |
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
-| Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and earlier quiet-autosave/recovery batches; first complete CI failed, scoped [interaction repair](docs/execution/ux-audit-release-interaction-2026-10-09.md) passes local checks |
-| Authorized next release | Candidate `eca207ffe14dd117aa3a938878777ae45a385500` is committed/pushed. [CI 37889682904](https://github.com/foolkking/chat-reader/actions/runs/37889682904): API 1,239 passed / 3 skipped; Web mutation gate timed out; settings 438 passed / 1 failed, fresh-instance restore not run. No accepted image or deployment. [Attachment and recovery release](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns the same-cycle repair/retry |
+| Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
+| Authorized next release | Source `3e82323668a7843a5bfbebc7ea1d03a5dca61c1e` [CI 37897405546](https://github.com/foolkking/chat-reader/actions/runs/37897405546) failed: Web mutation 97 passed / 2 failed / 1 timed out, without reaching its gate limit; API 1,239 passed / 3 skipped; settings 439 plus fresh-instance restore passed. Local mobile repairs are ready for a third complete same-cycle run. No candidate image or deployment. [Attachment and recovery release](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns both failed runs and the next retry |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -123,6 +123,13 @@ Real storage/read/sync failures, conflicts and failed explicit locating retain
 their existing recovery. Explicit sync-center detail still shows normal status;
 current errors cannot also claim routine saved success. Exceptional notices can
 still affect layout; real browser geometry has not been accepted.
+The mobile Reader now reserves its mounted header's actual border-box height,
+including wrapped offline guidance, instead of assuming 56px. One size observer
+updates a parent CSS property only when height changes and disconnects on ref
+cleanup. Auto-hide transforms keep that reserve; desktop stays in normal flow.
+Native scroll padding shares the reserve. No scroll, intent or position-save
+call is added. First-message pointer access and pending-placement focus still
+require exact-source browser reacceptance; local doubles do not prove geometry.
 Manual create/insert/edit now validates nonblank input without trimming accepted
 Markdown. Whitespace-only edits count as real edits; canonical/edit/export source
 retains leading/trailing whitespace. The separate paragraph projection in the
@@ -140,24 +147,25 @@ limits. Unsupported/empty/missing states do not mount a false renderer. Blob URL
 retain identity on retry. Office/ZIP worker startup and late callbacks recover
 locally. Native audio/video remain metadata-only preload and no autoplay.
 
-Latest local integrated checks: **609 Node passed / 0 failed / 0 skipped** after
-the pending-placement repair; lint, nonincremental typecheck and bounded one-worker
+Latest local integrated checks: **622 Node passed / 0 failed / 0 skipped** after
+the mobile-header/focus repair; lint, nonincremental typecheck and bounded one-worker
 Web build pass. The preceding unchanged-API SQLite batch passed **103 / 0 failed /
 0 skipped**; it was not rerun for this UI/test-only repair. Source still has one
 Alembic head `20261008_0050`. Older checkpoint counts overlap and are not added.
-Discovery finds **129 tests in seven files**, including the previous 125 cases and
-four settings-conflict cases; **zero browser cases executed locally**. First CI's
-full API/PostgreSQL passed, but Web/settings did not; no CPU/RSS measurement,
+Discovery finds **144 tests in eight files**, adding the existing 15 whole-site
+cases to the previous 129; **zero browser cases executed locally**. Second CI's
+full API/PostgreSQL and settings passed, but Web did not; no CPU/RSS measurement,
 visual score or production acceptance is implied. The next complete CI retains
 all 13 Web gates, full API/PostgreSQL and 439-case settings matrix plus fresh-instance
-restore. The repair ledger inherits 106 hashes, changes four expected files and
-adds the settings-conflict test; the original attachment ledger remains unchanged.
+restore. The mobile repair ledger inherits 107 hashes, changes five expected files
+and binds three additional sources (110 total); earlier ledgers remain unchanged.
 
 ## Verification boundaries and release safety
 
 - Local lint, nonincremental typecheck, bounded Web build, 33 focused offline/task
-  API cases and single source head 0050 have passing evidence. Latest full API CI:
-  **1,181 passed / 3 skipped**. Suites overlap; do not add them as unique cases.
+  API cases and single source head 0050 have passing evidence. Accepted-production
+  full API CI was **1,181 passed / 3 skipped**; the latest failed-release run's API
+  job passed **1,239 / 3 skipped**. Suites overlap; do not add them as unique cases.
 - In the accepted release CI, all 13 Web gates pass, including the
   17-case mutation gate. Default PWA: **135 passed / 588 conditional skips**;
   adaptive-import recovery has one conditional skip. Skips are not passes.
@@ -261,7 +269,7 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: submit the locally verified first-CI interaction/test-path repairs to the
+Next: submit the locally verified second-CI mobile/header/focus and test-path repairs to the
 same authorized exact-source complete CI cycle. Repair real failures,
 review synthetic desktop/mobile screenshots, independently accept the resulting
 images, then perform fresh King capacity/backup/rollback/data checks before

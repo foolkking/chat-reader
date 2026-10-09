@@ -2,6 +2,36 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 
+/** React 19 ref lifecycle: reserve size, independently of the hide transform. */
+export function reserveMobileReaderHeaderSpace(header: HTMLElement | null) {
+  const parent = header?.parentElement;
+  if (!header || !parent) return;
+  const property = "--reader-mobile-header-height";
+  const previous = parent.style.getPropertyValue(property);
+  let applied: string | null = null;
+  let active = true;
+  const reserve = () => {
+    if (!active) return;
+    const height = header.offsetHeight;
+    if (!Number.isFinite(height) || height <= 0) return;
+    const value = `${height}px`;
+    if (value === applied) return;
+    applied = value;
+    parent.style.setProperty(property, value);
+  };
+  reserve();
+  const observer = new ResizeObserver(reserve);
+  observer.observe(header, { box: "border-box" });
+  return () => {
+    active = false;
+    observer.disconnect();
+    if (applied !== null && parent.style.getPropertyValue(property) === applied) {
+      if (previous) parent.style.setProperty(property, previous);
+      else parent.style.removeProperty(property);
+    }
+  };
+}
+
 export function useMobileHeaderAutoHide({
   scrollRootRef,
   forcedVisible,

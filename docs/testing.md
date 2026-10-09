@@ -1,5 +1,41 @@
 # Testing
 
+## Second attachment-release CI repair — 2026-10-09
+
+[CI 37897405546](https://github.com/foolkking/chat-reader/actions/runs/37897405546),
+source `3e82323668a7843a5bfbebc7ea1d03a5dca61c1e`, failed Web's mutation gate:
+**97 passed / 2 failed / 1 timed out / zero skipped or interrupted**, 857,735 ms.
+This did not reach the 20-minute gate timeout. Later attachment/PDF/PWA gates and
+both image jobs were skipped. API passed **1,239 / 3 skipped / 20 warnings** in
+840.05 seconds, including both PostgreSQL merge-admission cases. Settings passed
+**439** cases in 38.4 minutes, plus **one** fresh-instance restore in 34.7 seconds.
+Separate Bundle/cleanup checks overlap the API suite and are not added to it.
+
+The [pre-edit mobile audit](execution/ux-audit-mobile-release-2026-10-09.md)
+distinguishes an observed header/guide pointer obstruction, mobile pending-focus
+loss whose exact second-click target is inferred, and an obsolete archive test
+path. The unchanged 81-case local baseline had **68 passed / 13 failed**; the
+repair passes **81**, including nine measured-header callback probes and four
+new pending-pointer probes. One complete integrated run passes **622 / zero
+failed/skipped** in 9,482.2517 ms. Lint, independent nonincremental typecheck and
+the bounded one-worker/non-standalone build pass. No API source changed here.
+
+Discovery adds `ux-whole-site.spec.ts` to the seven-file command: **144 tests in
+eight files, zero local browser executions**. The actual manual first-message
+click keeps the wrapped offline guide and checks header/action geometry before
+clicking, in both mobile locales. A scoped teardown budget preserves the original
+UI failure while cleaning up synthetic data. Placement retains double-click,
+single PUT, disabled submit and keyboard-cycle assertions; its screenshot and
+focus/geometry attachment precede the focus assertion. Archive/restore now checks
+unknown outcomes read-only before explicit retries and asserts all four PATCHes.
+
+The [new local ledger](execution/ux-audit-mobile-release-2026-10-09-evidence/local-verification.json)
+inherits 107 hashes (102 unchanged / five expected changes), then binds three
+new files for 110 sources. Earlier evidence is not rewritten. All 13 Web gates,
+full API/PostgreSQL, settings and independent image acceptance remain required.
+No local service start, browser execution, CPU/RSS measurement or visual score
+is claimed; CI retries remain within the user's single authorized release cycle.
+
 ## First attachment-release CI repair — 2026-10-09
 
 [CI 37889682904](https://github.com/foolkking/chat-reader/actions/runs/37889682904)

@@ -1,5 +1,20 @@
 # 当前用户流程
 
+## Mobile Reader header reserve (local repair, 2026-10-09)
+
+The first message remains below the mobile header even when offline guidance
+wraps. A React ref owns one border-box size observer and a parent CSS property;
+the reading region uses that height for top and native scroll padding. It writes
+only on size changes, ignores callbacks after cleanup and restores the property's
+previous value without overwriting a newer owner. Header auto-hide only transforms
+the header and does not shrink the reserve; desktop uses normal header flow and
+zero extra padding. No scrolling, saving, user-intent or anchor logic is added.
+
+The [mobile release audit](../execution/ux-audit-mobile-release-2026-10-09.md)
+records the original synthetic 375px English obstruction and local callback
+checks separately from pending exact-source browser acceptance. This is a bounded
+layout repair, not a full visual/accessibility or measured resource-cost claim.
+
 ## Reader quiet autosave and navigation readiness (local-only, 2026-10-09)
 
 Passive Reader use does not display a row, toast, blinking indicator or repeated
@@ -151,13 +166,17 @@ guards fence old actions and late responses; unavailable access hides retained
 names. Recovery is local to this owner, not persisted across full navigation/reload
 or tabs. A pending write retains its disabled submit button's label and footprint
 so Back cannot replace that action. The compact pending body can still resize;
-live pending-state guards ignore backdrop clicks and prevent them from blurring
-the recovered focus. Explicit Close, Back and Escape remain usable and do not
+live pending-state guards ignore backdrop clicks and prevent their default blur.
+Pointer-down on the retained disabled submit also uses the live pending guard,
+without stealing focus from another intentionally selected control. Explicit
+Close, Back and Escape remain usable and do not
 cancel the server request. Lost/body focus, or focus retained on the newly disabled
 submit, returns to Close with `preventScroll`; another chosen control keeps focus.
 The [initial audit](../execution/ux-audit-conversation-placement-2026-10-09.md) and
 [CI repair](../execution/ux-audit-release-interaction-2026-10-09.md) distinguish
-synthetic checks, CI failures and pending browser reacceptance.
+synthetic checks, CI failures and pending browser reacceptance; the subsequent
+[mobile repair](../execution/ux-audit-mobile-release-2026-10-09.md) retains the
+real double-click, one-write and keyboard-cycle browser assertions.
 
 ## Conversation metadata recovery (local-only, 2026-10-09)
 

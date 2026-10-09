@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "checkpoint": "pre-edit second-CI mobile review",
+  "source_commit": "3e82323668a7843a5bfbebc7ea1d03a5dca61c1e",
+  "run_id": 37897405546,
+  "run_attempt": 1,
+  "quality_artifact_id": 11601831277,
+  "artifact_name": "release-a-quality-evidence-3e82323668a7843a5bfbebc7ea1d03a5dca61c1e",
+  "artifact_bytes": 13552602,
+  "api_job": "success; detailed totals not yet re-read",
+  "settings_job": "success; detailed totals not yet re-read",
+  "web_job": "failure",
+  "mutation_gate": {
+    "discovered": 100,
+    "passed": 97,
+    "failed": 2,
+    "timed_out": 1,
+    "skipped": 0,
+    "interrupted": 0,
+    "duration_ms": 857735,
+    "gate_timeout_reached": false
+  },
+  "remaining_web_gates": "not run",
+  "build_images": "skipped",
+  "independent_inspection": "skipped",
+  "deployed": false,
+  "manual_source_failure": "375px/en-US mobile-message-actions-trigger was intercepted by the absolute Reader header and wrapped offline guide; cleanup then inherited the test timeout",
+  "placement_failure": "375px retained its dialog, disabled submit and one held PUT; expected Close focus was inactive; exact second-click target not captured",
+  "archive_failure": "old test expected Could not archive alert; actual status offers explicit Check archive result",
+  "baseline_sha256": {
+    "apps/web/features/conversations/conversation-reader.tsx": "0be9a078d43b2b8f095f536b19eb88bfe5adfce44160ba5a63c2edebbad89b0b",
+    "apps/web/features/conversations/conversation-placement.tsx": "e8b4129b576545763a05789793c83607aa231a9f21627d6ad44c6a838404a3f7",
+    "apps/web/e2e/manual-markdown-fidelity.spec.ts": "01c77bf09a97bf2381ce539268357c394e8f295d338e3f3780842a4db3247ed7",
+    "apps/web/e2e/ux-whole-site.spec.ts": "44d4b6d067536b3bb1ff90947ba23e1a71b864613de031d4c49fd73f0af74a63",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "1dd8fce79a0fdfa2e37084508cc128a2ec280e362bb71a541e0d7e32b407aa6b"
+  },
+  "limits": [
+    "synthetic isolated CI only",
+    "no local browser or production UI verification",
+    "no runtime CPU/RSS measurement",
+    "no new candidate image accepted"
+  ]
+}

@@ -601,11 +601,26 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       await expect.poll(() => writes.length).toBe(1);
       await expect(submit).toBeDisabled();
       const close = picker.getByRole("button", { name: zh ? "关闭" : "Close", exact: true });
+      await info.attach("placement-pending-focus", {
+        contentType: "application/json",
+        body: Buffer.from(JSON.stringify(await picker.evaluate(dialog => {
+          const active = document.activeElement;
+          return {
+            activeTag: active?.tagName ?? null,
+            activeLabel: active?.getAttribute("aria-label") ?? null,
+            activeIsBody: active === document.body,
+            activeInDialog: Boolean(active && dialog.contains(active)),
+            activeDisabled: active instanceof HTMLButtonElement ? active.disabled : null,
+            dialog: dialog.getBoundingClientRect().toJSON(),
+            submit: dialog.querySelector('button[type="submit"]')?.getBoundingClientRect().toJSON(),
+          };
+        }), null, 2)),
+      });
+      await picker.screenshot({ path: info.outputPath("placement-pending-double-click-" + width + ".png") });
       await expect(close).toBeFocused();
       await close.press("Shift+Tab");
       await expect(picker.getByRole("button", { name: zh ? "返回" : "Back", exact: true })).toBeFocused();
       await page.keyboard.press("Tab"); await expect(close).toBeFocused();
-      await picker.screenshot({ path: info.outputPath("placement-pending-double-click-" + width + ".png") });
       releaseWrite();
       await expect.poll(() => heldReads).toBeGreaterThan(0);
       await expect(picker).toHaveCount(0);
