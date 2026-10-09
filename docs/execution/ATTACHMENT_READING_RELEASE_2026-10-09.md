@@ -342,3 +342,52 @@ The API is unchanged and not rerun locally. Next is one full exact-source workfl
 for this repair within the same authorization; no image/deployment is yet accepted.
 The separately delivered follow-up annotation/table report is evidence only,
 not additional product changes in this candidate or another release permission.
+
+## Repair 36b656a — sixth complete CI started
+
+Committed/pushed `36b656a5c1642989c9fc1796bfd4c21a6cbe7f9e` with an explicit
+20-file allowlist: the three reported runtime/test files and scoped evidence/docs.
+All 115 source bindings, historical ledgers, fifth-run evidence, unrelated
+buildinfo and 166 links in nine documents were checked before staging. Remote
+master matched the parent; no unrelated residue or user import was included.
+The existing command-local commit author identity was reused.
+
+[CI 37936101205](https://github.com/foolkking/chat-reader/actions/runs/37936101205)
+was dispatched exactly once at **13:20:09 UTC, 2026-10-09**. Its full head SHA
+matches the repair, with API, Web and settings started. This is a complete run,
+not a failed-job-only retry; all thirteen Web gates and both image jobs remain
+required. The local ledger stays an immutable pre-commit checkpoint. Production
+has not been accessed or deployed during this repair/dispatch segment.
+
+## Sixth CI failed at PDF; scoped repair locally verified — 2026-10-10
+
+CI 37936101205/attempt one, source 36b656a, completed with API **1,239 passed /
+three skipped / 20 warnings**, 844.17 seconds; settings **439** plus **one**
+independent fresh-instance restore. Web mutation passes **100** (544,082ms), and
+attachment now passes **21** (72,460ms), including the actual mobile return layer.
+PDF is **seven passed / six failed / zero timedOut / zero skipped / zero
+interrupted** (417,967ms). Default PWA/auth/negative-PWA and both image jobs are
+unverified. Diagnostic artifact 11621760314 is not a deployable image artifact.
+
+The [new pre-edit report](ux-audit-pdf-release-2026-10-10.md) and adjacent evidence
+were delivered before product/test edits. Four long-document cases show page 90
+with input 89 at a fractional scroll boundary. Two desktop retries inject only
+one failure, which need not survive the size-driven re-render. The actual-source
+probe reproduces both mechanisms, with explicit non-browser doubles and honest
+limits on inferred CI callback timing.
+
+The product delta is one-pixel sampling tolerance within the existing continuous
+PDF inset. E2E keeps its original assertions/budgets, adds wheel navigation, and
+holds page-one canvas failure until a trusted click on that page's Retry control;
+resize and failure/click counters prove the fault was not consumed prematurely.
+The 41-case baseline has **37 passes / four failures**, then all **41** pass.
+Complete local Node is **666 / zero failed / zero skipped**, 8,567.6464ms. Lint,
+nonincremental types and bounded one-worker build pass; discovery is still **149
+cases in ten files**, zero locally executed. API source remains unchanged and was
+not rerun locally; Alembic source has single head 0050.
+
+The [PDF checkpoint](ux-audit-pdf-release-2026-10-10-evidence/local-verification.json)
+inherits all 115 source bindings with only three expected deltas and preserves
+historical evidence and unrelated buildinfo. Next is precise commit/push and one
+seventh **complete** CI within this cycle. No candidate image, King mutation or
+deployment has occurred; later annotation/table optimization stays separate.

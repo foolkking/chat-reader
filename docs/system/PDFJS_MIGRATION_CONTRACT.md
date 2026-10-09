@@ -1,10 +1,15 @@
 # PDF.js Maintained Stable-Line Migration Contract
 
-## Current reading follow-up — 2026-10-09
+## Current reading follow-up — 2026-10-10
 
 The engine/worker version remains 6.2.108. The reading implementation now bounds
 continuous page and thumbnail rendering, adds direct page entry and page-local
 retry, preserves orientation through fit/zoom/resize and releases obsolete work.
+The continuous page indicator tolerates native subpixel scroll rounding using a
+one-CSS-pixel sampling inset, without extra rendering or scroll listeners. The
+[sixth-CI report](../execution/ux-audit-pdf-release-2026-10-10.md) records seven
+PDF passes/six assertion failures and the locally checked repair; a new complete
+exact-source run remains required. Retry fault controls exist only in E2E code.
 See the current [attachment contract](ATTACHMENT_RENDERER_CONTRACT.md) and
 [audit/evidence](../execution/ux-audit-attachment-reading-2026-10-09.md).
 This is not a second engine migration or a new worker/dependency. The earlier

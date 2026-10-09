@@ -33,12 +33,13 @@ API 和设置均通过；剩余手机用例在移动前的滚动准备阶段失�
 [本轮发布记录](execution/ATTACHMENT_READING_RELEASE_2026-10-09.md)负责接下来的
 完整 CI、截图与独立镜像验收、备份和部署；旧 CI 不代表这批改动已验收。
 
-最新第五轮完整 CI：变更专项 100 项通过，API 1,239 通过／3 跳过，设置
-439 项及独立恢复通过；附件专项 15 通过／6 超时，后续四个 Web gate
-未运行，无镜像、未部署。[附件发布阻塞审查](execution/ux-audit-attachment-release-2026-10-09.md)
-保留第四轮抽屉／Blob CSP／Office 问题，并记录第五轮返回后透明遮罩拦截的真实轨迹。
-三文件层级修复后 660 项 Node、lint／非增量类型／单 worker 构建通过；149 项浏览器
-用例仅发现、本地执行 0 项。下一步是同一授权周期的第六轮完整 CI。
+最新[第六轮完整 CI](https://github.com/foolkking/chat-reader/actions/runs/37936101205)：
+变更专项 100、附件专项 21 全通过；API 1,239 通过／3 跳过，设置 439 项及独立恢复通过。
+PDF 七通过／六断言失败／零用例超时，后续三个 Web gate 未运行，无镜像、未部署。
+[附件发布阻塞审查](execution/ux-audit-attachment-release-2026-10-09.md)保留第四／第五轮历史；
+[PDF 发布阻塞审查](execution/ux-audit-pdf-release-2026-10-10.md)记录小数滚动边界造成页码回退，
+并区分重绘消耗一次性故障的测试问题。窄修后 666 项 Node、lint／非增量类型／单 worker
+构建通过；149 项浏览器用例仅发现、本地执行 0 项，下一步是同一周期的第七轮完整 CI。
 
 [项目设置与读取恢复审查](execution/ux-audit-project-recovery-2026-10-09.md)
 是接续的本地批次，记录清空元数据、局部保存和刷新失败的源码证据与验证边界；

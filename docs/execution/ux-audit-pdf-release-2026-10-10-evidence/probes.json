@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "source_commit": "36b656a5c1642989c9fc1796bfd4c21a6cbe7f9e",
+  "evidence": "actual PdfPageList/PdfPage and actual E2E injection; installed Virtualizer; explicit hook/DOM/PDF doubles, no browser",
+  "source_sha256": {
+    "apps/web/features/attachments/attachment-viewer.tsx": "8ad89d509b2a267a2660ff13543d8b37f00f3efab67aaae4855c438354022838",
+    "apps/web/features/attachments/pdf-viewer-policy.ts": "870f48144996fae25f5c4837135f975c4da51f156d2cedcd446852554991aac1",
+    "apps/web/e2e/pdfjs-migration.spec.ts": "f4eeda3bbcf25528747fad7aa375031193ea5693c8eb0b85f7fcee7b490e7307",
+    "scripts/ux/attachment-reading.test.mjs": "f68b7dfd040096e5c6b9b28ff48824c0b414d91245f18649b8a4e2e69f185609"
+  },
+  "fractional_offsets": [
+    {
+      "width": 375,
+      "targetPage": 90,
+      "requestedOffset": 40929.52941176462,
+      "nativeIntegerOffset": 40929,
+      "targetStart": 40945.52941176462,
+      "currentSample": 40945,
+      "reportedPage": 89,
+      "onePixelInsetSamplePage": 90
+    },
+    {
+      "width": 1267,
+      "targetPage": 90,
+      "requestedOffset": 143666.9411764708,
+      "nativeIntegerOffset": 143666,
+      "targetStart": 143682.9411764708,
+      "currentSample": 143682,
+      "reportedPage": 89,
+      "onePixelInsetSamplePage": 90
+    }
+  ],
+  "one_shot_fault": {
+    "initialError": true,
+    "afterResizeError": false,
+    "renderAttempts": 2,
+    "explicitRetryClicks": 0
+  }
+}

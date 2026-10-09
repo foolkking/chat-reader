@@ -1,6 +1,6 @@
 # Attachment Renderer Contract
 
-## Current reading implementation — 2026-10-09
+## Current reading implementation — 2026-10-10
 
 This section supersedes conflicting baseline capability/limit descriptions below;
 their dated verification remains historical. Release status belongs to
@@ -31,6 +31,8 @@ their dated verification remains historical. Release status belongs to
   last page lease releases PDF.js page resources. This is a work/allocation bound,
   not a measured device memory or CPU guarantee.
 - PDF page entry validates on submission, current pages survive fit/zoom/resize,
+  the continuous visible-page lookup samples one CSS pixel inside its 16px inset
+  to tolerate fractional native scroll rounding without pinning user navigation,
   the short final page is reported at the scroll limit, and a failed page has its
   own retry. Fit-scale labels reflect the actual page; controls wrap in the
   existing toolbar with 44px targets. Closing fences late module/document work.
@@ -65,10 +67,13 @@ their dated verification remains historical. Release status belongs to
   [CSP contract](CSP_ENFORCEMENT_CONTRACT.md). URL identity, ownership and existing
   offline-package/cache consumption are unchanged.
 
-The latest return-layer local checkpoint passes 660 Node cases, lint,
+The latest PDF repair local checkpoint passes 666 Node cases, lint,
 nonincremental types and a bounded Web build; the preceding unchanged-API batch
 passed 103 SQLite cases and was not rerun for this UI-only repair. The 149
-discovered browser/contract cases are not locally executed. Actual layout, touch, focus, PDF rendering and
+discovered browser/contract cases are not locally executed. Sixth CI passes all
+21 attachment cases but fails six PDF assertions; the
+[PDF repair report](../execution/ux-audit-pdf-release-2026-10-10.md) owns that
+distinction and the still-pending complete reacceptance. Actual layout, touch, focus, PDF rendering and
 CPU/RSS require their own evidence; no new visual-conformance claim is made here.
 
 ## Offline cache-miss hardening addendum (2026-08-15)

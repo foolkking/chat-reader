@@ -1,0 +1,2027 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-10",
+  "run_id": 37936101205,
+  "attempt": 1,
+  "source_sha": "36b656a5c1642989c9fc1796bfd4c21a6cbe7f9e",
+  "status": "completed",
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "name": "api-quality",
+      "conclusion": "success"
+    },
+    {
+      "name": "settings-quality",
+      "conclusion": "success"
+    },
+    {
+      "name": "web-quality",
+      "conclusion": "failure"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "build-images",
+      "conclusion": "skipped"
+    }
+  ],
+  "api": {
+    "passed": 1239,
+    "skipped": 3,
+    "warnings": 20,
+    "duration_seconds": 844.17
+  },
+  "settings": {
+    "matrix_passed": 439,
+    "fresh_instance_passed": 1
+  },
+  "web": {
+    "schema_version": 1,
+    "source_sha": "36b656a5c1642989c9fc1796bfd4c21a6cbe7f9e",
+    "generated_at": "2026-10-09T13:48:43.446Z",
+    "overall_status": "FAIL",
+    "counts": {
+      "PASS": 9,
+      "FAIL": 1,
+      "NOT_VERIFIED": 3,
+      "SKIPPED": 0
+    },
+    "gates": [
+      {
+        "gate_id": "adaptive-import-recovery",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 9,
+        "result_counts": {
+          "passed": 8,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 1,
+          "interrupted": 0
+        },
+        "duration_ms": 29636
+      },
+      {
+        "gate_id": "csp-enforcement",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 4,
+        "result_counts": {
+          "passed": 4,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 5899
+      },
+      {
+        "gate_id": "context-files",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 35,
+        "result_counts": {
+          "passed": 35,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 226128
+      },
+      {
+        "gate_id": "focused-online-security",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 45,
+        "result_counts": {
+          "passed": 45,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 116326
+      },
+      {
+        "gate_id": "share-focus",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 2,
+        "result_counts": {
+          "passed": 2,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 9467
+      },
+      {
+        "gate_id": "source-editor-mutation",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 100,
+        "result_counts": {
+          "passed": 100,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 544082
+      },
+      {
+        "gate_id": "source-editor-cleanup",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 1,
+        "result_counts": {
+          "passed": 1,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 6249
+      },
+      {
+        "gate_id": "upload-token-atomicity",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 18,
+        "result_counts": {
+          "passed": 18,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 55523
+      },
+      {
+        "gate_id": "markdown-image-viewer",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 21,
+        "result_counts": {
+          "passed": 21,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 72460
+      },
+      {
+        "gate_id": "pdfjs-maintained-line",
+        "status": "FAIL",
+        "evidence_status": "failed",
+        "test_count": 13,
+        "result_counts": {
+          "passed": 7,
+          "failed": 6,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 417967
+      },
+      {
+        "gate_id": "default-pwa",
+        "status": "NOT_VERIFIED",
+        "reason": "evidence_missing"
+      },
+      {
+        "gate_id": "single-owner-auth",
+        "status": "NOT_VERIFIED",
+        "reason": "evidence_missing"
+      },
+      {
+        "gate_id": "pwa-negative",
+        "status": "NOT_VERIFIED",
+        "reason": "evidence_missing"
+      }
+    ]
+  },
+  "artifact": {
+    "id": 11621760314,
+    "bytes": 23846182,
+    "digest": "sha256:9ec37db981ab219c3a8af3ea5021b7e512aa516756f9840db247a45acc58228e",
+    "diagnostic_only": true
+  },
+  "trace_extract": {
+    "mobile_long": [
+      {
+        "name": "after@call@259",
+        "timestamp": 14780.978,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "1",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "1"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":16,\"top\":304.5625,\"right\":359,\"bottom\":748.4375}",
+              "__playwright_target__": "",
+              "width": "343",
+              "height": "443",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 1 页",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@261",
+        "timestamp": 14787.933,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":16,\"top\":304.5625,\"right\":359,\"bottom\":748.4375}",
+              "width": "343",
+              "height": "443",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 1 页",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "input@call@265",
+        "timestamp": 14824.457,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "1",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "1"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@265",
+        "timestamp": 14834.299,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@267",
+        "timestamp": 14840.075,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "input@call@267",
+        "timestamp": 14848.593,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@269",
+        "timestamp": 14860.027,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@269",
+        "timestamp": 14867.316,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_target__": "",
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@271",
+        "timestamp": 14872.927,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "input@call@271",
+        "timestamp": 14879.321,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@271",
+        "timestamp": 14887.642,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":16,\"top\":304.5625,\"right\":359,\"bottom\":748.4375}",
+              "width": "0",
+              "height": "0",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@273",
+        "timestamp": 14891.94,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@273",
+        "timestamp": 14897.521,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@275",
+        "timestamp": 14904.113,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}",
+              "width": "343",
+              "height": "265",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 343px; height: 265.045px;",
+              "hidden": ""
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@275",
+        "timestamp": 14938.953,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":16,\"top\":393.984375,\"right\":359,\"bottom\":659.015625}",
+              "__playwright_target__": "",
+              "width": "343",
+              "height": "265",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@277",
+        "timestamp": 14944.195,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":16,\"top\":393.984375,\"right\":359,\"bottom\":659.015625}",
+              "width": "343",
+              "height": "265",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@281",
+        "timestamp": 14997.303,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "1",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}",
+              "width": "343",
+              "height": "443",
+              "hidden": "",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 1 页",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@283",
+        "timestamp": 15010.866,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "89",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "89"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(40946.1px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}",
+              "width": "0",
+              "height": "0",
+              "hidden": "",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@283",
+        "timestamp": 15020.76,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "__playwright_target__": "",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(40946.1px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 443.882px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}",
+              "width": "343",
+              "height": "265",
+              "hidden": "",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@285",
+        "timestamp": 15026.556,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(40946.1px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@285",
+        "timestamp": 15060.897,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(40946.1px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":16,\"top\":169.1171875,\"right\":359,\"bottom\":434.1484375}",
+              "__playwright_target__": "",
+              "width": "343",
+              "height": "265",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@287",
+        "timestamp": 15071.65,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(40946.1px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":16,\"top\":169.1171875,\"right\":359,\"bottom\":434.1484375}",
+              "width": "343",
+              "height": "265",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@291",
+        "timestamp": 15098.276,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(40946.1px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_target__": "",
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@293",
+        "timestamp": 15102.032,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "40930",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(40946.1px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 343px; height: 265.045px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@293",
+        "timestamp": 75107.479,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "89",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "89"
+            },
+            "text": []
+          }
+        ]
+      }
+    ],
+    "desktop_long": [
+      {
+        "name": "after@call@128",
+        "timestamp": 84079.959,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "1",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "1"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":441.046875,\"top\":117,\"right\":998.953125,\"bottom\":839}",
+              "__playwright_target__": "",
+              "width": "557",
+              "height": "722",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 1 页",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@130",
+        "timestamp": 84085.148,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":441.046875,\"top\":117,\"right\":998.953125,\"bottom\":839}",
+              "width": "557",
+              "height": "722",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 1 页",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "input@call@134",
+        "timestamp": 84124.641,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "1",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "1"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@134",
+        "timestamp": 84135.668,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@136",
+        "timestamp": 84142.357,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "input@call@136",
+        "timestamp": 84149.47,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@138",
+        "timestamp": 84164.194,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@138",
+        "timestamp": 84171.69,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_target__": "",
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@140",
+        "timestamp": 84176.887,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "input@call@140",
+        "timestamp": 84183.865,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@140",
+        "timestamp": 84193.799,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":441.046875,\"top\":117,\"right\":998.953125,\"bottom\":839}",
+              "width": "0",
+              "height": "0",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@142",
+        "timestamp": 84201.348,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}",
+              "width": "934",
+              "height": "722",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 934.353px; height: 722px;",
+              "hidden": ""
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@142",
+        "timestamp": 84209.162,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 934.353px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@144",
+        "timestamp": 84215.872,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "90",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "90"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@144",
+        "timestamp": 84225.474,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 934.353px; height: 722px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":252.828125,\"top\":117,\"right\":1187.171875,\"bottom\":839}",
+              "__playwright_target__": "",
+              "width": "934",
+              "height": "722",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 934.353px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@146",
+        "timestamp": 84230.817,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 934.353px; height: 722px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":252.828125,\"top\":117,\"right\":1187.171875,\"bottom\":839}",
+              "width": "934",
+              "height": "722",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 934.353px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@150",
+        "timestamp": 84307.633,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "89",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "89"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "143666",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(143682px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 1235px; height: 1598.24px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}",
+              "width": "0",
+              "height": "0",
+              "hidden": "",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@152",
+        "timestamp": 84333.64,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "143666",
+              "__playwright_target__": "",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(143682px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "true",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":0,\"top\":0,\"right\":0,\"bottom\":0}",
+              "width": "1235",
+              "height": "954",
+              "hidden": "",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@154",
+        "timestamp": 84341.643,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "143666",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@154",
+        "timestamp": 84384.924,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "143666",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(143682px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":102.5,\"top\":117,\"right\":1337.5,\"bottom\":1071.3125}",
+              "__playwright_target__": "",
+              "width": "1235",
+              "height": "954",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@156",
+        "timestamp": 84390.449,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "143666",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(143682px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":102.5,\"top\":117,\"right\":1337.5,\"bottom\":1071.3125}",
+              "width": "1235",
+              "height": "954",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 90 页",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@160",
+        "timestamp": 84447.37,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "143666",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(143682px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_target__": "",
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "before@call@162",
+        "timestamp": 84451.568,
+        "nodes": [
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_scroll_top_": "143666",
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-auto",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "width"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-index": "89",
+              "class": "absolute left-0 top-0 flex w-full justify-center px-4",
+              "style": "transform: translateY(143682px);"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "data-pdf-page": "90",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 1235px; height: 954.318px;"
+            },
+            "text": []
+          }
+        ]
+      },
+      {
+        "name": "after@call@162",
+        "timestamp": 144458.28,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "89",
+              "__playwright_target__": "",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "89"
+            },
+            "text": []
+          }
+        ]
+      }
+    ],
+    "desktop_retry": [
+      {
+        "name": "after@call@55",
+        "timestamp": 208390.724,
+        "nodes": [
+          {
+            "tag": "INPUT",
+            "attrs": {
+              "__playwright_value_": "1",
+              "aria-label": "PDF 页码",
+              "aria-describedby": "pdf-page-total",
+              "aria-invalid": "false",
+              "inputmode": "numeric",
+              "enterkeyhint": "go",
+              "autocomplete": "off",
+              "class": "h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary",
+              "value": "1"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "tabindex": "0",
+              "aria-label": "PDF 阅读区域",
+              "class": "min-h-0 min-w-0 flex-1 overscroll-contain overflow-hidden",
+              "data-testid": "pdf-viewer-pages",
+              "data-pdf-fit": "page"
+            },
+            "text": []
+          },
+          {
+            "tag": "DIV",
+            "attrs": {
+              "__playwright_target__": "",
+              "data-pdf-page": "1",
+              "aria-busy": "false",
+              "class": "relative flex shrink-0 items-center justify-center",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          },
+          {
+            "tag": "CANVAS",
+            "attrs": {
+              "__playwright_bounding_rect__": "{\"left\":441.046875,\"top\":117,\"right\":998.953125,\"bottom\":839}",
+              "width": "557",
+              "height": "722",
+              "class": "bg-white shadow",
+              "aria-label": "PDF 第 1 页",
+              "style": "width: 557.909px; height: 722px;"
+            },
+            "text": []
+          }
+        ]
+      }
+    ]
+  },
+  "inspected_screenshots": {
+    "mobile-page90-reports89.jpg": "87aa7d96d3748969e502a32858237c0ca8ec211d8ed6fe9560fa8fe3c1c14b18",
+    "desktop-page90-reports89.jpg": "5c863538cbb6c77d4e2dd1b2a3819fb8c694aa49ea01bf877ddc9a8bf996a848",
+    "desktop-transient-page-error.jpg": "6cc5a02213bd4eddd999d82619b508ac50f73c9d982ec99eae74ee9a012c2363",
+    "mobile-page-error.png": "c8bab339234aea5ab632bcce01516a3ddc2475cc9dccd2c0cab68760e1e3c769"
+  },
+  "raw_log_sha256": {
+    "api-quality.log": "724ee3b529d886436e7fde960f464d65530a962b1bc116eff1ff61cdae615376",
+    "settings-quality.log": "cec739bebee6c78788d76007f9c27b357d98d1102fd522181894cd3664b68a6d",
+    "web-quality.log": "3abeefff3059b9a7604e97f38fa9d80a3c3c114868f42f960e3eaa5a2cc7ac84"
+  },
+  "boundaries": {
+    "candidate_images_built": false,
+    "deployed": false,
+    "local_browser_executions": 0,
+    "cpu_rss_measured": false,
+    "failure_status_is_assertion_not_case_timeout": true,
+    "raw_trace_in_task_temp_not_in_repo": true
+  }
+}

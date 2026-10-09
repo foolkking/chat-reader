@@ -260,6 +260,113 @@ test("continuous PDF keeps the final page selected when its top cannot reach the
   } finally { f.dispose(); }
 });
 
+for (const width of [375, 1267]) for (const round of [Math.floor, Math.round]) {
+  test(`continuous PDF keeps fractional page alignment at ${width}px with ${round.name} scrolling`, async () => {
+    const { Virtualizer } = appRequire("@tanstack/react-virtual");
+    let onScroll, visiblePage, virtualizer, nextFrame;
+    const root = { clientWidth: width, clientHeight: 730, scrollTop: 0, scrollHeight: 200000,
+      addEventListener: (name, callback) => { if (name === "scroll") onScroll = callback; }, removeEventListener: noop };
+    const props = { documentProxy: { numPages: 120 }, currentPage: 90, scrollRequest: { page: 90 },
+      onVisiblePageChange: page => { visiblePage = page; }, fitMode: "width", zoom: 1, containerWidth: width, containerHeight: 730,
+      viewportRef: { current: root }, pageSizesRef: { current: new Map([[90, { width: 792, height: 612 }]]) },
+      renderQueue: policy.createPdfRenderQueue(), onPageSize: noop };
+    const f = fixture("PdfPageList", props, {}, {
+      useVirtualizer: options => {
+        if (!virtualizer) {
+          virtualizer = new Virtualizer({ ...options, initialRect: { width, height: 730 }, observeElementRect: noop, observeElementOffset: noop,
+            scrollToFn: (offset, { adjustments = 0 }) => { root.scrollTop = round(offset + adjustments); virtualizer.scrollOffset = root.scrollTop; } });
+          virtualizer.scrollElement = root;
+          virtualizer.targetWindow = { requestAnimationFrame: callback => { nextFrame = callback; return 1; }, cancelAnimationFrame: noop };
+        } else virtualizer.setOptions({ ...virtualizer.options, ...options });
+        return virtualizer;
+      },
+    });
+    const settle = async () => {
+      // Pump actual Virtualizer reconciliation after the hook double's render;
+      // observing its intermediate old measurements would not model a browser.
+      for (let tick = 0; tick < 4; tick++) {
+        f.render(); await f.runEffects();
+        f.render(); await f.runEffects();
+        const callback = nextFrame; nextFrame = undefined; callback?.();
+      }
+      assert.equal(virtualizer.scrollState, null, "real virtualizer alignment has settled");
+    };
+    const assertPageAndRealScroll = () => {
+      onScroll(); assert.equal(visiblePage, 90, "fractional alignment must not select the preceding page");
+      const target = virtualizer.getMeasurements()[89], next = virtualizer.getMeasurements()[90];
+      assert.ok(root.scrollTop + 16 < target.start + 1 && root.scrollTop + 16 > target.start - 1);
+      root.scrollTop = Math.floor(target.start - 16) - 2;
+      onScroll(); assert.equal(visiblePage, 89, "genuine backward scrolling still updates the page");
+      root.scrollTop = Math.ceil(next.start - 16) + 2;
+      onScroll(); assert.equal(visiblePage, 91, "genuine forward scrolling still updates the page");
+      root.scrollTop = 0;
+      onScroll(); assert.equal(visiblePage, 1, "the first page is not pinned to the selected page");
+    };
+    try {
+      await settle(); assertPageAndRealScroll();
+      props.fitMode = "custom"; props.zoom = 1.1;
+      await settle(); assertPageAndRealScroll();
+      props.containerWidth = width + 55; props.containerHeight = 640;
+      await settle(); assertPageAndRealScroll();
+      props.scrollRequest = { page: 90 };
+      await settle(); assertPageAndRealScroll();
+    } finally { f.dispose(); }
+  });
+}
+
+// Exercise the actual browser test's injector with explicit DOM/canvas doubles.
+// This is not a browser click or a real PDF render.
+function pdfPageFailureInjector() {
+  const e2e = ts.createSourceFile("pdfjs-migration.spec.ts", readFileSync(new URL("../../apps/web/e2e/pdfjs-migration.spec.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let init;
+  const visit = node => {
+    if (ts.isCallExpression(node) && node.expression.getText(e2e) === "page.addInitScript" && node.arguments[0]?.getText(e2e).includes("Synthetic PDF canvas failure")) init = node.arguments[0].getText(e2e);
+    ts.forEachChild(node, visit);
+  };
+  visit(e2e); assert.ok(init);
+  const listeners = new Map(), window = {};
+  class Element {
+    constructor(pageNumber = 1, textContent = "重试") { this.pageNumber = pageNumber; this.textContent = textContent; }
+    closest(selector) { return selector === "button" || (selector === '[data-pdf-page="1"]' && this.pageNumber === 1) ? this : null; }
+  }
+  class Canvas extends Element { getContext() { return {}; } }
+  const document = { addEventListener: (name, callback) => listeners.set(name, callback), removeEventListener: name => listeners.delete(name) };
+  compile(`const install = ${init};`, { HTMLCanvasElement: Canvas, Element, window, document }, "install")();
+  return { Canvas, window, click: (pageNumber = 1, label = "重试", isTrusted = true) => listeners.get("click")?.({ target: new Element(pageNumber, label), isTrusted }) };
+}
+
+test("PDF browser fault stays page-local until a real Retry click on that page", () => {
+  const fault = pdfPageFailureInjector();
+  const first = new fault.Canvas(1), second = new fault.Canvas(2);
+  assert.throws(() => first.getContext("2d"), /Synthetic PDF canvas failure/);
+  assert.doesNotThrow(() => second.getContext("2d"));
+  for (const click of [() => fault.click(2), () => fault.click(1, "关闭"), () => fault.click(1, "重试", false)]) {
+    click(); assert.throws(() => first.getContext("2d"), /Synthetic PDF canvas failure/, "unrelated or synthetic clicks must not release the outage");
+  }
+  fault.click(); assert.doesNotThrow(() => first.getContext("2d"));
+  assert.equal(fault.window.__pdfPageFailureTest.retryClicks, 1);
+  assert.equal(fault.window.__pdfPageFailureTest.failedAttempts, 4);
+});
+
+test("PDF persistent canvas failure survives resize then actual component Retry recovers", async () => {
+  const fault = pdfPageFailureInjector();
+  let renders = 0, completed = 0;
+  const page = { getViewport: ({ scale }) => ({ width: 612 * scale, height: 792 * scale }), cleanup: noop,
+    render: ({ canvas }) => { renders++; canvas.getContext("2d"); completed++; return { promise: Promise.resolve(), cancel: noop }; } };
+  const props = { documentProxy: { getPage: async () => page }, pageNumber: 1, fitMode: "page", zoom: 1,
+    containerWidth: 1230, containerHeight: 720, renderQueue: policy.createPdfRenderQueue() };
+  const f = fixture("PdfPage", props);
+  Object.setPrototypeOf(f.canvas, fault.Canvas.prototype); f.canvas.pageNumber = 1;
+  try {
+    f.render(); await f.runEffects(); assert.equal(f.states.get("error"), true);
+    props.containerHeight = 722;
+    f.render(); await f.runEffects(); assert.equal(f.states.get("error"), true); assert.equal(completed, 0);
+    fault.click(); named(f.render(), "ViewerError")[0].props.onRetry();
+    f.render(); await f.runEffects(); assert.equal(f.states.get("error"), false); assert.equal(completed, 1); assert.equal(renders, 3);
+    assert.ok(f.canvas.width > 0); assert.equal(fault.window.__pdfPageFailureTest.retryClicks, 1);
+  } finally { f.dispose(); await flush(); }
+});
+
 test("direct PDF entry changes page only after submission and validates without jumping", () => {
   const f = fixture("PdfViewer", { attachment, toolbarHost: {}, onPageCountChange: noop }, { documentProxy: { numPages: 1000 }, currentPage: 12 });
   const input = () => named(f.render(), "input")[0];

@@ -634,7 +634,9 @@ function PdfPageList({ documentProxy, currentPage, scrollRequest, onVisiblePageC
         onVisiblePageChange(documentProxy.numPages);
         return;
       }
-      const item = virtualizer.getVirtualItemForOffset(root.scrollTop + 16);
+      // Native scrolling can round a fractional page start down. Sample one CSS
+      // pixel inside the 16px inset so alignment does not report the prior page.
+      const item = virtualizer.getVirtualItemForOffset(root.scrollTop + 17);
       if (item) onVisiblePageChange(item.index + 1);
     };
     root.addEventListener("scroll", update, { passive: true });

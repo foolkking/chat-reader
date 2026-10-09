@@ -1,5 +1,32 @@
 # Testing
 
+## Sixth-CI PDF orientation/retry repair — 2026-10-10
+
+[CI 37936101205](https://github.com/foolkking/chat-reader/actions/runs/37936101205)
+passes API **1,239 / three skipped**, settings **439** plus **one** independent
+restore, mutation **100** and attachment **21**. PDF is **seven passed / six
+failed / zero timedOut / zero skipped**, 417,967ms. Three later Web gates and both
+image jobs remain unverified. The [pre-edit PDF report](execution/ux-audit-pdf-release-2026-10-10.md)
+separates a real fractional-offset page-number defect from a one-shot fault that
+can recover on the desktop shell's size-driven redraw.
+
+The 41-case actual-component baseline is **37 passed / four failed**, repaired to
+**41 passed**. The complete suite passes **666 Node / zero failed / zero skipped**,
+8,567.6464ms; lint, nonincremental types and one-worker/non-standalone build pass.
+Discovery stays **149 in ten files**, no local browser execution. The installed
+virtualizer is exercised with controlled integer scrolling and its actual
+post-layout reconciliation; hook/DOM/PDF doubles do not prove native geometry.
+
+The visible-page lookup samples one pixel inside its existing 16px inset.
+Browser checks retain every old assertion and add real wheel navigation,
+persistent page-local fault evidence through resize, the actual Retry click and
+a recovered-page screenshot. No case/gate budget, dependency or migration changes.
+The [new ledger](execution/ux-audit-pdf-release-2026-10-10-evidence/local-verification.json)
+inherits all 115 bindings, with three expected source/test deltas, and preserves
+prior ledgers, synthetic screenshots and unrelated buildinfo. API code is
+unchanged/not rerun locally; complete exact-source CI and independent image
+acceptance remain mandatory before deployment.
+
 ## Fifth-CI mobile return-layer repair — 2026-10-09
 
 [CI 37924985537](https://github.com/foolkking/chat-reader/actions/runs/37924985537)

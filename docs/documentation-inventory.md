@@ -21,6 +21,19 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-pdf-release-2026-10-10.md` owns the sixth complete CI's
+pre-edit page-indicator/retry-evidence findings, four inspected synthetic
+screenshots, actual-source/Virtualizer probe and sanitized run/trace extract.
+It explicitly separates seven PDF passes/six assertion failures from timeouts,
+and the one-shot test-outage defect from a demonstrated product defect.
+Its adjacent `local-verification.json` inherits 115 bindings (112 unchanged /
+three expected source/test changes), preserving older ledgers and buildinfo.
+The 37-pass/four-fail baseline becomes 41 passing focused cases; complete local
+Node is 666 passing, lint/nonincremental types/one-worker build pass and 149
+browser cases are discovered but not locally run. `testing.md` and the attachment/
+PDF contracts document the numerical tolerance and evidence limits; the release
+owner tracks the seventh complete run within the same authorized cycle.
+
 `execution/ux-audit-followup-annotations-tables-2026-10-09.md` owns the next-batch,
 pre-edit audit of partial/overlapping annotation reads, filtered bulk scope and
 CSV fidelity/rendering budgets. Its adjacent exact-f4719c9 probe and JSON execute

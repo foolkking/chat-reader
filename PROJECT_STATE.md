@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-09. This is the current snapshot, not a release history.
+Last updated: 2026-10-10. This is the current snapshot, not a release history.
 
 ## Release and active work
 
@@ -12,7 +12,7 @@ Last updated: 2026-10-09. This is the current snapshot, not a release history.
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
 | Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
-| Authorized next release | Attachment repair `f4719c96d3b2da4bcf2629872ed330ee50510142` fails exact-source [CI 37924985537](https://github.com/foolkking/chat-reader/actions/runs/37924985537): API 1,239 passed / 3 skipped, settings 439 plus fresh restore passed, mutation 100 passed; attachment 15 passed / 6 timed out and later four gates unverified. The [reported mobile return-layer defect](docs/execution/ux-audit-attachment-release-2026-10-09.md) now has a locally passing three-file repair, awaiting the sixth complete CI within this cycle. No candidate image or deployment; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
+| Authorized next release | Sixth exact-source [CI 37936101205](https://github.com/foolkking/chat-reader/actions/runs/37936101205), `36b656a`, passes API/settings, mutation 100 and attachment 21, but PDF is seven passed / six assertion failures / zero timedOut. The [PDF pre-edit report](docs/execution/ux-audit-pdf-release-2026-10-10.md) records the subpixel page-number defect and unstable one-shot test outage. Their local repair passes 666 Node checks; seventh complete CI remains next within the same cycle. No candidate image or deployment accepted; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -147,21 +147,23 @@ limits. Unsupported/empty/missing states do not mount a false renderer. Blob URL
 retain identity on retry. Office/ZIP worker startup and late callbacks recover
 locally. Native audio/video remain metadata-only preload and no autoplay.
 
-Latest local integrated checks: **660 Node passed / 0 failed / 0 skipped** after
-the mobile return-layer repair; its 37-case baseline changed from
-36 passed / 1 failed to all passing. Content now stays above the remounted scrim;
-the added browser checks retain real clicks and verify both exposed-page blocking
-and Preview hit testing. Lint, nonincremental typecheck and bounded
-one-worker Web build pass. The preceding unchanged-API SQLite batch passed **103 / 0 failed /
+Latest local integrated checks: **666 Node passed / 0 failed / 0 skipped** after
+the PDF alignment/test-outage repair; its 41-case baseline changed from
+37 passed / four failed to all passing. The visible-page sample now tolerates
+subpixel native scroll rounding; real forward/backward page updates and the
+short-final-page clamp remain. The test-only canvas outage persists through
+resize until an actual page-one Retry click. Sixth CI verified all 21 attachment
+cases, including the preceding mobile returned-scrim fix. Lint, nonincremental
+typecheck and bounded one-worker Web build pass. The preceding unchanged-API SQLite batch passed **103 / 0 failed /
 0 skipped**; it was not rerun for this UI/test-only repair. Source still has one
 Alembic head `20261008_0050`. Older checkpoint counts overlap and are not added.
 Discovery finds **149 tests in ten files**, retaining the previous 144 and adding
 the CSP and rich-attachment cases; **zero browser cases executed locally**.
-Fifth CI's full API/PostgreSQL, settings and 100-case mutation passed, but Web
-attachment did not; no CPU/RSS measurement,
+Sixth CI's full API/PostgreSQL, settings, 100-case mutation and 21-case attachment
+passed, but PDF did not; no CPU/RSS measurement,
 visual score or production acceptance is implied. The next complete CI retains
 all 13 Web gates, full API/PostgreSQL and 439-case settings matrix plus fresh-instance
-restore. The new [return-layer checkpoint](docs/execution/ux-audit-attachment-release-2026-10-09-evidence/return-layer-verification.json)
+restore. The new [PDF checkpoint](docs/execution/ux-audit-pdf-release-2026-10-10-evidence/local-verification.json)
 inherits all 115 source bindings with only the three expected changes, verifies
 the preserved earlier ledgers and leaves unrelated buildinfo unchanged.
 Earlier ledgers remain unchanged.
@@ -282,8 +284,8 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: submit the locally verified return-layer repair to the sixth exact-source
-complete CI within the same authorized cycle and fix any genuine failures. Retain earlier passing mutation results
+Next: commit the verified PDF repair and submit the seventh complete exact-source
+CI within this authorization; fix any genuine failures. Retain earlier passing mutation results
 without treating them as acceptance of this new source;
 review synthetic desktop/mobile screenshots, independently accept the resulting
 images, then perform fresh King capacity/backup/rollback/data checks before

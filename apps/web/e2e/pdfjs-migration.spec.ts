@@ -150,6 +150,16 @@ for (const width of [375, 1440]) {
       await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
       await expect(pages.locator('[data-pdf-page="90"]')).toBeInViewport();
       await expect(pageInput).toHaveValue("90");
+      const page90Bounds = await pages.locator('[data-pdf-page="90"]').boundingBox();
+      expect(page90Bounds).not.toBeNull();
+      await pages.hover();
+      await page.mouse.wheel(0, Math.ceil(page90Bounds!.height + 16));
+      await expectCanvasRendered(pages.locator('[data-pdf-page="91"] canvas'));
+      await expect(pageInput).toHaveValue("91");
+      await pageInput.fill("90");
+      await pageInput.press("Enter");
+      await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
+      await expect(pageInput).toHaveValue("90");
       const scale = Number((await viewer.getByTestId("pdf-zoom").textContent())!.replace("%", ""));
       await viewer.getByRole("button", { name: "放大 PDF", exact: true }).click();
       await expect(pages).toHaveAttribute("data-pdf-fit", "custom");
@@ -209,10 +219,19 @@ for (const width of [375, 1440]) {
     try {
       await page.addInitScript(() => {
         const original = HTMLCanvasElement.prototype.getContext;
-        let failed = false;
+        const state = { failedAttempts: 0, retryClicks: 0 };
+        (window as Window & { __pdfPageFailureTest?: typeof state }).__pdfPageFailureTest = state;
+        const onRetry = (event: MouseEvent) => {
+          const button = event.target instanceof Element ? event.target.closest("button") : null;
+          if (!event.isTrusted || button?.textContent?.trim() !== "重试" || !button.closest('[data-pdf-page="1"]')) return;
+          state.retryClicks++;
+          HTMLCanvasElement.prototype.getContext = original;
+          document.removeEventListener("click", onRetry, true);
+        };
+        document.addEventListener("click", onRetry, true);
         HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof original>) {
-          if (!failed && this.closest('[data-pdf-page="1"]')) {
-            failed = true;
+          if (this.closest('[data-pdf-page="1"]')) {
+            state.failedAttempts++;
             throw new Error("Synthetic PDF canvas failure");
           }
           return original.apply(this, args);
@@ -225,9 +244,19 @@ for (const width of [375, 1440]) {
       await expect(firstPage).toContainText("第 1 页预览失败。");
       await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("1");
       await page.screenshot({ path: info.outputPath(`pdf-page-retry-${width}-${locale}.png`) });
+      const faultState = () => page.evaluate(() => (window as Window & { __pdfPageFailureTest?: { failedAttempts: number; retryClicks: number } }).__pdfPageFailureTest!);
+      const beforeResize = await faultState();
+      expect(beforeResize.failedAttempts).toBeGreaterThan(0);
+      expect(beforeResize.retryClicks).toBe(0);
+      await page.setViewportSize({ width: width === 375 ? 430 : 1180, height: 800 });
+      await expect.poll(async () => (await faultState()).failedAttempts).toBeGreaterThan(beforeResize.failedAttempts);
+      await expect(firstPage).toContainText("第 1 页预览失败。");
+      await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("1");
       await firstPage.getByRole("button", { name: "重试", exact: true }).click();
+      expect((await faultState()).retryClicks).toBe(1);
       await expectCanvasRendered(firstPage.locator("canvas"));
       await expect(firstPage.getByRole("button", { name: "重试", exact: true })).toHaveCount(0);
+      await page.screenshot({ path: info.outputPath(`pdf-page-recovered-${width}-${locale}.png`) });
       await viewer.getByTestId("pdf-next-page").click();
       await expectCanvasRendered(viewer.locator('[data-pdf-page="2"] canvas'));
       await page.keyboard.press("Escape");
