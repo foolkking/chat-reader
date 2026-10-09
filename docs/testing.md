@@ -1,5 +1,30 @@
 # Testing
 
+## Ninth-CI archived-project contract repair — 2026-10-10
+
+[CI 37986179840](https://github.com/foolkking/chat-reader/actions/runs/37986179840),
+source 87eae8d, passes API **1239 / three skipped**, mutation **100**, upload
+**18**, attachment **21** and PDF **13**. Default PWA has **134 passed / one
+failed / 699 conditional skips**; auth and negative-PWA are not reached. The
+settings matrix passes **439** (39.7m), and independent fresh-instance restore
+passes **one** (35.0s); both image jobs are skipped. The
+[pre-edit report](execution/ux-audit-archive-contract-2026-10-10.md) identifies
+an obsolete `await refreshProjects()` string assertion, not a PDF failure.
+
+Without starting Web or using browser fixtures, 18 source-only Playwright cases
+across six files reproduce **17 passes / one failure**, then all **18** pass.
+The five deletion/API/confirmation assertions remain, and guarded background
+refresh replaces the obsolete expectation. Four added compiled-callback/real
+QueryObserver cases cover single/bulk deletion under held/failed refreshes,
+including all affected query families. That suite grows from **40** to **44**
+passes. All 25 repository-script suites pass **730 / zero failed / zero skipped**,
+9097.6598ms; lint and nonincremental types pass. These are not local browser
+acceptance. Product/API, workflow, dependencies and budgets are unchanged;
+preceding build/API evidence is retained, not rerun or added to these counts.
+The [ledger](execution/ux-audit-archive-contract-2026-10-10-evidence/local-verification.json)
+preserves previous evidence and unrelated buildinfo. Another complete exact-source
+run, new-source screenshot review and independent image acceptance are required.
+
 ## Eighth-CI upload fixture cleanup repair — 2026-10-10
 
 [CI 37979802613](https://github.com/foolkking/chat-reader/actions/runs/37979802613),

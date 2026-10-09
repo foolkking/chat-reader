@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "source_sha": "87eae8ddd6ff50b3a606ec92d6f9fcbef8a10f4f",
+  "generated_at": "2026-10-09T20:43:58.210Z",
+  "overall_status": "FAIL",
+  "counts": {
+    "PASS": 10,
+    "FAIL": 1,
+    "NOT_VERIFIED": 2,
+    "SKIPPED": 0
+  },
+  "gates": [
+    {
+      "gate_id": "adaptive-import-recovery",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 9,
+      "result_counts": {
+        "passed": 8,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 1,
+        "interrupted": 0
+      },
+      "duration_ms": 31290
+    },
+    {
+      "gate_id": "csp-enforcement",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 4,
+      "result_counts": {
+        "passed": 4,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 6063
+    },
+    {
+      "gate_id": "context-files",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 35,
+      "result_counts": {
+        "passed": 35,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 227042
+    },
+    {
+      "gate_id": "focused-online-security",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 45,
+      "result_counts": {
+        "passed": 45,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 116366
+    },
+    {
+      "gate_id": "share-focus",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 2,
+      "result_counts": {
+        "passed": 2,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 9710
+    },
+    {
+      "gate_id": "source-editor-mutation",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 100,
+      "result_counts": {
+        "passed": 100,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 550125
+    },
+    {
+      "gate_id": "source-editor-cleanup",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 1,
+      "result_counts": {
+        "passed": 1,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 6399
+    },
+    {
+      "gate_id": "upload-token-atomicity",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 18,
+      "result_counts": {
+        "passed": 18,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 55578
+    },
+    {
+      "gate_id": "markdown-image-viewer",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 21,
+      "result_counts": {
+        "passed": 21,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 71885
+    },
+    {
+      "gate_id": "pdfjs-maintained-line",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 13,
+      "result_counts": {
+        "passed": 13,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 62577
+    },
+    {
+      "gate_id": "default-pwa",
+      "status": "FAIL",
+      "evidence_status": "failed",
+      "test_count": 834,
+      "result_counts": {
+        "passed": 134,
+        "failed": 1,
+        "timedOut": 0,
+        "skipped": 699,
+        "interrupted": 0
+      },
+      "duration_ms": 123457
+    },
+    {
+      "gate_id": "single-owner-auth",
+      "status": "NOT_VERIFIED",
+      "reason": "evidence_missing"
+    },
+    {
+      "gate_id": "pwa-negative",
+      "status": "NOT_VERIFIED",
+      "reason": "evidence_missing"
+    }
+  ]
+}

@@ -488,3 +488,53 @@ both image jobs skipped. The
 [final sanitized record](ux-audit-upload-cleanup-2026-10-10-evidence/ci-final.json)
 retains the exact source/run and job-log digest. The earlier in-progress wording
 above is the diagnosis checkpoint, not the final state.
+
+## Repair 87eae8d — ninth complete CI started
+
+Committed/pushed `87eae8ddd6ff50b3a606ec92d6f9fcbef8a10f4f` with an exact
+17-file allowlist: two test files and scoped reports/evidence. The 116 current
+source bindings inherit all 115 preceding bindings; original E2E statements
+outside its import/cleanup helper are identical. Twenty preceding ledgers,
+their selected evidence, unrelated buildinfo and 161 links in six documents were
+checked before commit. No product/API/dependency/workflow or unrelated residue
+was included. Remote master matched the parent before commit and this exact
+source after push; existing command-local author identity was reused.
+
+[CI 37986179840](https://github.com/foolkking/chat-reader/actions/runs/37986179840)
+was dispatched exactly once at **2026-10-09 20:19:15 UTC**. Its full head SHA
+matches the repair, with API/Web/settings started. This is the ninth complete
+run in the same authorized cycle, not a failed-job-only retry. The pre-commit
+ledger remains immutable; no image or production change is accepted at dispatch.
+
+## Ninth Web CI failed; archived-project contract repair locally verified
+
+Run 37986179840/source 87eae8d passes API **1239 / three skipped / 20 warnings**,
+853.08s. Web passes mutation **100**, upload **18**, attachment **21** and PDF
+**13**; default PWA is **134 passed / one failed / 699 conditional skips / zero
+timedOut / zero interrupted**, 123457ms. The sole failure expects an obsolete
+`await refreshProjects()` literal. Web has **10 PASS / one FAIL / two
+NOT_VERIFIED**, with auth and negative-PWA not reached. Settings is still running
+at the diagnostic checkpoint. No images or deployment are accepted.
+
+Original diagnostic ZIP 11643579700 is 16954833 bytes and matches its GitHub
+SHA256. The [pre-edit report](ux-audit-archive-contract-2026-10-10.md) records the
+source-only reproduction before edits. An explicit no-server/no-browser-fixture
+config runs 18 actual source contracts: **17 passed / one failed**, then **18
+passed** after only the obsolete refresh expectation is aligned. Five existing
+deletion/API/confirmation assertions remain; four added callback/QueryObserver
+cases prove immediate completion and all affected query invalidations under
+held/failed single/bulk deletion refreshes. Focused Node grows **40→44** passes;
+all 25 script suites pass **730 / zero failed / zero skipped**, 9097.6598ms.
+Lint/nonincremental types pass; product/API/workflow/dependencies and budgets
+stay unchanged, so preceding build/API evidence is retained without a new run.
+The [ledger](ux-audit-archive-contract-2026-10-10-evidence/local-verification.json)
+preserves previous evidence/buildinfo and binds the two test-file deltas.
+Next is one tenth complete CI in this same authorized cycle, with all original
+image/visual/data/backup acceptance requirements. No local service or browser
+was started and no King resource was accessed by this repair.
+
+The ninth run subsequently completed: settings **439 passed** (39.7m), fresh
+instance restore **one passed** (35.0s), overall failure and both image jobs
+skipped. The [final record](ux-audit-archive-contract-2026-10-10-evidence/ci-final.json)
+preserves its exact job identities and log digests; the in-progress wording
+above is the earlier diagnosis checkpoint.

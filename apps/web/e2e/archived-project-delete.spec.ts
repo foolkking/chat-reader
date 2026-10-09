@@ -11,5 +11,7 @@ test("archived projects expose guarded single and batch deletion", () => {
   expect(source).toContain("永久删除所选");
   expect(source).toContain("其中的对话和消息不会删除，会回到未分类");
   expect(source).toContain("runBatchSelection(ids, deleteProject)");
-  expect(source).toContain("await refreshProjects()");
+  // Confirmed deletion acknowledges immediately; refreshing affected lists is
+  // independent. Callback/query tests cover held and failed refreshes.
+  expect(source).toContain("if (result.succeededIds.length) void refreshProjects().catch(() => undefined);");
 });

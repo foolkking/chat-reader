@@ -21,6 +21,16 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-archive-contract-2026-10-10.md` owns the ninth complete CI's
+obsolete archived-project refresh assertion and its pre-edit source-only
+reproduction. Adjacent evidence retains original ZIP provenance, all Web gate
+counts and the additive local ledger. This test-only repair preserves five
+deletion safety assertions, checks non-blocking refresh with four added callback/
+QueryObserver cases and changes no product code. Source-only Playwright passes
+18 cases and repository Node checks pass 730; neither is browser acceptance.
+The attachment release record continues to own final CI, image and deployment
+acceptance; the prior production source remains distinct.
+
 `execution/ux-audit-upload-cleanup-2026-10-10.md` owns the eighth complete CI's
 lost fixture-DELETE response, sanitized trace, inspected synthetic frame and
 frozen helper probes. It distinguishes a successful intermediate poll/final

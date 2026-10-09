@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "run_id": 37986179840,
+  "source_sha": "87eae8ddd6ff50b3a606ec92d6f9fcbef8a10f4f",
+  "attempt": 1,
+  "status": "completed",
+  "conclusion": "failure",
+  "url": "https://github.com/foolkking/chat-reader/actions/runs/37986179840",
+  "jobs": [
+    { "id": 114008635040, "name": "api-quality", "conclusion": "success" },
+    { "id": 114008635340, "name": "settings-quality", "conclusion": "success" },
+    { "id": 114008635439, "name": "web-quality", "conclusion": "failure" },
+    { "id": 114024732412, "name": "build-images", "conclusion": "skipped" },
+    { "id": 114024733498, "name": "inspect-release-artifact", "conclusion": "skipped" }
+  ],
+  "api": { "passed": 1239, "skipped": 3, "warnings": 20, "duration_seconds": 853.08 },
+  "settings": { "passed": 439, "duration_display": "39.7m" },
+  "fresh_instance_restore": { "passed": 1, "duration_display": "35.0s" },
+  "web_summary": "web-gates.json",
+  "job_log_sha256": {
+    "api-quality": "5a6d30e99369296eac34340da0d839eed5ea08179b791ecb0bb613f4094dd182",
+    "settings-quality": "f91e1c7bb64f735e4a09236754b15ca3fe322f1106235ef5ef370fd5b44bcab3",
+    "web-quality": "053ee3803308c8b1958c5ea6d1e912fa7ff96e39dee64f62d5c0acef8f90dabe"
+  },
+  "images_accepted": false,
+  "deployed": false
+}

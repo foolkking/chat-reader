@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "source_sha": "87eae8ddd6ff50b3a606ec92d6f9fcbef8a10f4f",
+  "run_id": 37986179840,
+  "attempt": 1,
+  "artifact": {
+    "id": 11643579700,
+    "name": "release-a-quality-evidence-87eae8ddd6ff50b3a606ec92d6f9fcbef8a10f4f",
+    "bytes": 16954833,
+    "sha256": "af39875f74c2be3bdcfb840897de6c67c4c1394ca146b4ed22a47191b1446846",
+    "github_digest_and_size_verified": true,
+    "extracted_files": 258,
+    "deployable": false
+  },
+  "web_log_sha256": "053ee3803308c8b1958c5ea6d1e912fa7ff96e39dee64f62d5c0acef8f90dabe",
+  "source_sha256": {
+    "apps/web/e2e/archived-project-delete.spec.ts": "0aa7703761128c431126a039010527d49551416e3ae39cecbc4074cfbba37c7d",
+    "scripts/ux/archived-project-recovery.test.mjs": "6c0f149f6f1ef4f5c123cc6f6b56f888b70504bb60b61a8c7e1ac39ae3f59cf9",
+    "apps/web/features/projects/archived-project-list.tsx": "c97a937208e2a265e3d69d05c0054428e9f6e05f8654c4056c06821840d442a0"
+  },
+  "source_only_baseline": {
+    "test_files": 6,
+    "passed": 17,
+    "failed": 1,
+    "skipped": 0,
+    "duration_display": "2.1s",
+    "log_sha256": "8d64c821dc82dc3e3f5fb71837ce38c110c814ff5942266f315f33b8d170e38b",
+    "failed_test": "archived projects expose guarded single and batch deletion",
+    "failure_location": "apps/web/e2e/archived-project-delete.spec.ts:14:18",
+    "expected_literal": "await refreshProjects()",
+    "actual_statement": "if (result.succeededIds.length) void refreshProjects().catch(() => undefined);",
+    "browser_cases_executed": 0,
+    "web_service_started": false
+  },
+  "limits": [
+    "Static contract failure, not a rendered product failure",
+    "No production access or deployment",
+    "No CPU/RSS or WCAG conformance measurement"
+  ]
+}

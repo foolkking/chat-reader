@@ -331,6 +331,48 @@ test("confirmed final project-container deletion keeps its result and conversati
   } finally { f.dispose(); }
 });
 
+for (const mode of ["single", "bulk"]) {
+  for (const refresh of ["held", "failed"]) {
+    test(`${mode} deletion acknowledges and invalidates all affected lists without waiting for a ${refresh} refresh`, async () => {
+      const rows = mode === "bulk" ? [project(), project("synthetic-other")] : [project()];
+      const f = await fixture({ rows, selected: mode === "bulk" });
+      const affectedKeys = [["sidebar-conversations", "synthetic-scope"], ["conversations", "synthetic-scope"]];
+      let release = noop;
+      try {
+        for (const key of affectedKeys) f.client.setQueryData(key, { synthetic: true });
+        f.activate();
+        if (refresh === "held") release = f.holdRead();
+        else f.setReadError(new ApiRequestError(503));
+        const before = f.reads();
+        f.button(mode === "bulk" ? "Delete selected" : `Permanently delete project ${rows[0].name}`).onClick();
+        await setImmediate();
+        await setImmediate();
+
+        assert.equal(f.confirms(), 1);
+        assert.deepEqual(f.deletes, rows.map(row => row.id));
+        assert.equal(f.writes.length, 0);
+        assert.equal(f.reads(), before + 1);
+        assert.equal(f.states.get("bulkBusy"), false);
+        assert.equal(f.refs.get("actionBusy").current, false);
+        assert.deepEqual([...f.states.get("selectedProjectIds")], []);
+        for (const key of f.keys) assert.deepEqual(f.client.getQueryData(key), []);
+        for (const key of [...f.keys, ...affectedKeys]) assert.equal(f.client.getQueryState(key).isInvalidated, true);
+
+        const html = f.render();
+        assert.match(html, new RegExp(`${rows.length} projects? deleted, 0 failed`));
+        assert.match(html, /conversations remain in Unclassified/);
+        assert.doesNotMatch(html, /Synthetic project/);
+        assert.equal(f.observer.getCurrentResult().isFetching, refresh === "held");
+        assert.equal(f.observer.getCurrentResult().isError, refresh === "failed");
+        if (refresh === "failed") {
+          assert.ok(f.button("Retry"));
+          assert.match(html, /Could not load archived projects/);
+        }
+      } finally { release(); await setImmediate(); f.dispose(); }
+    });
+  }
+}
+
 test("old cancelled reads cannot replace a confirmed restored project", async () => {
   const f = await fixture(); let release = noop;
   try {

@@ -12,7 +12,7 @@ Last updated: 2026-10-10. This is the current snapshot, not a release history.
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
 | Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
-| Authorized next release | Eighth complete [CI 37979802613](https://github.com/foolkking/chat-reader/actions/runs/37979802613), source `96b31b011a7ad161f2b98f39f409ef39caf399b3`, fails in synthetic upload-fixture cleanup after the business assertions passed. API 1239/three skipped, settings 439 plus one fresh restore, and mutation 100 pass; upload is 17 passed/one failed, PDF and four other gates not reached. The [test-only repair](docs/execution/ux-audit-upload-cleanup-2026-10-10.md) passes 30 focused/726 repository-script Node cases and lint/types; product code stays frozen. Ninth complete CI is next within the same cycle. No image/deployment accepted; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
+| Authorized next release | Ninth complete [CI 37986179840](https://github.com/foolkking/chat-reader/actions/runs/37986179840), source `87eae8ddd6ff50b3a606ec92d6f9fcbef8a10f4f`, passes API/mutation/upload/attachment/PDF but fails an obsolete archived-project refresh string assertion in default PWA. The [test-only repair](docs/execution/ux-audit-archive-contract-2026-10-10.md) passes 18 source-only Playwright, 44 focused/730 repository-script Node cases and lint/types; product code stays frozen. Full same-cycle retry, screenshot and image acceptance remain required; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -155,8 +155,17 @@ native scroll after the new sizer commits; intermediate layout scrolls do not
 select another page and real input can interrupt immediately. There is no new
 polling, observer, dependency or render-budget increase.
 
-Latest local integrated checks: **726 Node passed / 0 failed / 0 skipped** across
-all 25 repository-script test files. Upload cleanup's 30-case baseline has
+Latest local integrated checks: **730 Node passed / 0 failed / 0 skipped** across
+all 25 repository-script test files. The archived-project source contract is
+repaired without changing product code: 18 source-only Playwright cases across
+six files go from 17 passes/one failure to all 18 passing, without Web or browser
+fixtures. The original 40 archive callbacks remain unchanged and four added
+single/bulk held/failed-refresh cases pass. Lint and nonincremental types pass;
+build/API were not rerun. The new
+[checkpoint](docs/execution/ux-audit-archive-contract-2026-10-10-evidence/local-verification.json)
+inherits 116 source bindings, changes one Node test and adds the static E2E file
+for 117; prior ledgers and unrelated buildinfo remain unchanged.
+Upload cleanup's preceding 30-case baseline has
 21 passes/nine failures, then all 30 pass after the test-only repair. Only an
 ECONNRESET from DELETE permits one same-fixture GET; only 404 confirms cleanup.
 Other errors remain failures and the existing HTTP-500 bound is unchanged.
@@ -296,10 +305,12 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: commit the verified upload-cleanup repair and run ninth complete exact-source
-CI within this authorization; eighth settings and fresh restore both passed.
-Retain earlier passing mutation results
-without treating them as acceptance of this new source;
+Next: finalize ninth CI 37986179840 evidence and submit the narrow static-contract
+repair for a tenth complete exact-source run within this authorization. Ninth
+PDF passes 13, attachment 21, upload 18 and mutation 100; default PWA passes 134,
+fails one obsolete source assertion and conditionally skips 699. Auth/negative
+PWA are not reached. Retain these results without treating them as acceptance
+of the repaired source;
 review synthetic desktop/mobile screenshots, independently accept the resulting
 images, then perform fresh King capacity/backup/rollback/data checks before
 `--no-build` deployment. Do not retry the denied local service start. Keep accepted
