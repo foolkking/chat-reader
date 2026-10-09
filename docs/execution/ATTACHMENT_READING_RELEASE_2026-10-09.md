@@ -242,3 +242,49 @@ probe's final shell line rejected a PowerShell-added CR after all checks; this
 is not a production failure or a complete capacity acceptance. Its disposable
 helper was corrected, not the operational checkout. Fresh release preflight,
 backup, rollback and data checks remain necessary after candidate acceptance.
+
+## Repair adaa8de — fourth complete CI started
+
+Source `adaa8decf2b4f78cc3d950b59f9751b718362ea2` was committed/pushed using a
+12-file allowlist containing one E2E file plus documentation and synthetic
+evidence. All 110 bound hashes, unchanged prior checkpoints, 153 scoped links
+and staged whitespace/scope passed before commit. Unrelated buildinfo/auth-test
+residues remain unstaged. No runtime source changed from 2ac23ce.
+
+[CI 37913851928](https://github.com/foolkking/chat-reader/actions/runs/37913851928)
+was dispatched exactly once on 2026-10-09 at 09:50 UTC; its full `headSha` matches
+the repair. It is a complete fourth run within the same authorized repair cycle.
+No passing CI, deployable image or deployment is claimed at this start checkpoint.
+
+## Fourth CI failed; attachment blockers recorded before repair
+
+The completed fourth run passes API **1,239 / 3 skipped / 20 warnings** in
+876.53 seconds, single head/current 0050, settings **439 / zero failed/skipped**
+and one independent fresh-instance restore. Web mutation now passes **100 / zero
+failed, skipped or timed out** in 501,616 ms. The attachment gate completes below
+its 20-minute limit with **9 passed / 6 failed / 6 timed out**, 944,130 ms. Four
+later gates (PDF, default PWA, auth, negative PWA) do not run; both image jobs are
+skipped. Original quality artifact 11610445727 is 27,740,608 bytes, attempt 1.
+
+The [pre-edit attachment blocker report](ux-audit-attachment-release-2026-10-09.md)
+and adjacent sanitized checkpoint distinguish actual drawer pointer interception,
+Blob-fetch CSP rejection and Office-as-ZIP routing from Worker injection and
+fixture-cleanup defects. Selected failed frames and two passing mobile
+Reader/placement screenshots were actually viewed and retained. This is not
+full visual acceptance. No runtime code was edited before this report.
+
+API/settings logs were downloaded with the existing scoped CLI helper. No local
+service/browser was launched, no new workflow was dispatched and King was not
+accessed or modified during this diagnosis. The next repair/retry remains inside
+the same authorized release cycle; deployment remains prohibited until complete
+exact-source acceptance.
+
+The scoped repair now passes its unchanged 71-case baseline (previously
+54 passed / 17 failed) and the complete **659-case Node suite**, zero failed or
+skipped. Lint, nonincremental TypeScript and bounded one-worker Web build pass.
+The emitted Worker retains the diagnostic name despite Webpack's `type: void 0`.
+Discovery is **149 cases in ten files, zero local browser executions**, retaining
+the earlier 144 plus CSP and rich-attachment coverage. API sources were not
+changed or rerun locally; complete CI will rerun the full PostgreSQL suite.
+The unrelated buildinfo hash is unchanged. No dependency, migration, original
+assertion removal or case/gate timeout increase is included.

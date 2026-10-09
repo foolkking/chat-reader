@@ -13,6 +13,7 @@ import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import { loadPdfJs } from "./pdfjs-runtime";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import type { AttachmentAccess } from "./attachment-access";
+import { AttachmentViewerOpenContext } from "./attachment-viewer-state";
 import {
   friendlyAttachmentType,
   resolveAttachmentCapability,
@@ -82,10 +83,12 @@ export function AttachmentViewerProvider({ children }: { children: ReactNode }) 
   }, []);
   const value = useMemo(() => ({ open, close }), [close, open]);
   return (
-    <AttachmentViewerContext.Provider value={value}>
-      {children}
-      {session ? <AttachmentViewerShell session={session} onClose={close} /> : null}
-    </AttachmentViewerContext.Provider>
+    <AttachmentViewerOpenContext.Provider value={Boolean(session)}>
+      <AttachmentViewerContext.Provider value={value}>
+        {children}
+        {session ? <AttachmentViewerShell session={session} onClose={close} /> : null}
+      </AttachmentViewerContext.Provider>
+    </AttachmentViewerOpenContext.Provider>
   );
 }
 
@@ -226,7 +229,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
       role="dialog"
       aria-modal="true"
       aria-label={attachment?.display_name ?? "Attachment viewer"}
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-0 outline-none sm:p-4"
+      className="pointer-events-auto fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-0 outline-none sm:p-4"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
       data-testid="attachment-viewer-shell"
     >

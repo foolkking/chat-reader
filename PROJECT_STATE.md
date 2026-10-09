@@ -12,7 +12,7 @@ Last updated: 2026-10-09. This is the current snapshot, not a release history.
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
 | Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
-| Authorized next release | Source `2ac23ceb638b7e8912b5c67f29ffdd2c7c0ab27b` [CI 37906779236](https://github.com/foolkking/chat-reader/actions/runs/37906779236) failed: Web mutation 99 passed / 1 failed, no timeout; API 1,239 passed / 3 skipped; settings 439 plus fresh-instance restore passed. The remaining test now waits for the actual scrollable body before its wheel gesture; only that E2E file changed. No candidate image or deployment. [Attachment and recovery release](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns the next same-cycle complete retry |
+| Authorized next release | `adaa8decf2b4f78cc3d950b59f9751b718362ea2` failed exact-source [CI 37913851928](https://github.com/foolkking/chat-reader/actions/runs/37913851928): mutation 100 passed, attachment 9 passed / 6 failed / 6 timed out; four later Web gates unverified. API 1,239 passed / 3 skipped; settings 439 plus fresh-instance restore passed. [Pre-edit attachment blockers](docs/execution/ux-audit-attachment-release-2026-10-09.md) records mobile modal ownership, Blob CSP and Office routing defects plus test-evidence corrections. No candidate image or deployment; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns the same-cycle repair |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -147,18 +147,21 @@ limits. Unsupported/empty/missing states do not mount a false renderer. Blob URL
 retain identity on retry. Office/ZIP worker startup and late callbacks recover
 locally. Native audio/video remain metadata-only preload and no autoplay.
 
-Latest local integrated checks: **622 Node passed / 0 failed / 0 skipped** after
-the mobile-header/focus repair; lint, nonincremental typecheck and bounded one-worker
-Web build pass. The preceding unchanged-API SQLite batch passed **103 / 0 failed /
+Latest local integrated checks: **659 Node passed / 0 failed / 0 skipped** after
+the attachment modal/Blob/Office repair; its 71-case baseline changed from
+54 passed / 17 failed to all passing. Lint, nonincremental typecheck and bounded
+one-worker Web build pass. The preceding unchanged-API SQLite batch passed **103 / 0 failed /
 0 skipped**; it was not rerun for this UI/test-only repair. Source still has one
 Alembic head `20261008_0050`. Older checkpoint counts overlap and are not added.
-Discovery finds **144 tests in eight files**, adding the existing 15 whole-site
-cases to the previous 129; **zero browser cases executed locally**. Second CI's
-full API/PostgreSQL and settings passed, but Web did not; no CPU/RSS measurement,
+Discovery finds **149 tests in ten files**, retaining the previous 144 and adding
+the CSP and rich-attachment cases; **zero browser cases executed locally**.
+Fourth CI's full API/PostgreSQL, settings and 100-case mutation passed, but Web
+attachment did not; no CPU/RSS measurement,
 visual score or production acceptance is implied. The next complete CI retains
 all 13 Web gates, full API/PostgreSQL and 439-case settings matrix plus fresh-instance
-restore. The mobile repair ledger inherits 107 hashes, changes five expected files
-and binds three additional sources (110 total); earlier ledgers remain unchanged.
+restore. The previous mobile/readiness ledger retains its 110 hashes; the new
+attachment checkpoint verifies that parent and binds the narrow repair separately.
+Earlier ledgers remain unchanged.
 
 ## Verification boundaries and release safety
 
@@ -269,8 +272,9 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: submit the locally verified third-CI Reader gesture-readiness test correction to the
-same authorized exact-source complete CI cycle. Repair real failures,
+Next: repair the fourth-CI attachment blockers after the delivered pre-edit report,
+then submit the locally verified repair to the same authorized complete CI cycle.
+Retain the passing mutation result without treating it as release acceptance;
 review synthetic desktop/mobile screenshots, independently accept the resulting
 images, then perform fresh King capacity/backup/rollback/data checks before
 `--no-build` deployment. Do not retry the denied local service start. Keep accepted

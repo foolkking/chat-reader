@@ -68,7 +68,7 @@ test("production response has one bounded enforcing policy", async ({ page }) =>
   expect(policy).toContain("script-src-attr 'none'");
   expect(policy).not.toContain("'unsafe-eval'");
   expect(policy).toContain("style-src 'self' 'unsafe-inline'");
-  expect(policy).toContain("connect-src 'self'");
+  expect(policy.split(";").map(value => value.trim()).filter(value => value.startsWith("connect-src "))).toEqual(["connect-src 'self' blob:"]);
   expect(policy).toContain("img-src 'self' data: blob:");
   expect(policy).toContain("font-src 'self'");
   expect(policy).toContain("media-src 'self' blob:");
@@ -198,18 +198,30 @@ test("same-origin, data, blob, inline style, manifest, and Service Worker resour
     const blobImage = await loadImage(blobUrl);
     URL.revokeObjectURL(blobUrl);
 
+    const localBytes = new Uint8Array([0, 65, 127, 128, 255]);
+    const localUrl = URL.createObjectURL(new Blob([localBytes], { type: "application/octet-stream" }));
+    let localBlobBytes: number[];
+    try {
+      const response = await fetch(localUrl);
+      if (!response.ok) throw new Error("Local Blob read failed");
+      localBlobBytes = Array.from(new Uint8Array(await response.arrayBuffer()));
+    } finally {
+      URL.revokeObjectURL(localUrl);
+    }
+
     const styled = document.createElement("div");
     styled.style.width = "7px";
     document.body.append(styled);
     const inlineStyle = getComputedStyle(styled).width === "7px";
     const serviceWorker = await navigator.serviceWorker.getRegistration("/library");
-    return { blobImage, dataImage, inlineStyle, localImage, serviceWorkerActive: serviceWorker?.active?.state === "activated" };
+    return { blobImage, dataImage, inlineStyle, localBlobBytes, localImage, serviceWorkerActive: serviceWorker?.active?.state === "activated" };
   });
 
   expect(result).toEqual({
     blobImage: true,
     dataImage: true,
     inlineStyle: true,
+    localBlobBytes: [0, 65, 127, 128, 255],
     localImage: true,
     serviceWorkerActive: true,
   });

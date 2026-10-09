@@ -78,6 +78,7 @@ const VIDEO_EXT = new Set(["mp4", "webm", "mov"]);
 const DOCUMENT_EXT = new Set(["doc", "docx", "odt"]);
 const SPREADSHEET_EXT = new Set(["xlsx", "ods"]);
 const PRESENTATION_EXT = new Set(["pptx", "odp"]);
+const ZIP_OFFICE_EXT = new Set(["docx", "odt", "xlsx", "ods", "pptx", "odp"]);
 const ARCHIVE_EXT = new Set(["zip"]);
 const DOWNLOAD_ONLY_EXT = new Set([
   "7z", "avi", "bz2", "drawio", "dxf", "epub", "gz", "mkv", "obj",
@@ -131,6 +132,14 @@ export function resolveAttachmentCapability(attachment: Pick<AttachmentRead, "de
   const detectedCapability = capabilityForMime(detectedMime);
   const declaredCapability = capabilityForMime(declaredMime);
   const extensionCapability = capabilityForExtension(compound) ?? capabilityForExtension(simple);
+
+  // The detector can recognize only the ZIP container for OOXML/ODF. Refine
+  // that generic result using supported ZIP-backed Office extensions only;
+  // the bounded read-only parser still owns member/content validation. Never
+  // override a stronger MIME, route legacy .doc here, or trust declared MIME alone.
+  if (detectedMime === "application/zip" && ZIP_OFFICE_EXT.has(simple) && extensionCapability) {
+    return extensionCapability;
+  }
 
   // libmagic commonly reports Markdown, source files and text-based engineering
   // formats as text/plain. Treat that value as a content fact, but let a more

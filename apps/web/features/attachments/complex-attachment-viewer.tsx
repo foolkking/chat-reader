@@ -41,7 +41,7 @@ export function ComplexAttachmentViewer({ attachment, kind, onPresentationMetric
     setError(null);
     let worker: Worker;
     try {
-      worker = new Worker(new URL("./complex-attachment-worker.ts", import.meta.url), { type: "module" });
+      worker = new Worker(new URL("./complex-attachment-worker.ts", import.meta.url), { type: "module", name: "chat-reader-attachment-preview" });
     } catch {
       setError("预览组件未能启动。请重试加载。");
       return () => controller.abort();

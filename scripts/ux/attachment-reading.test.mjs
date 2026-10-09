@@ -171,6 +171,17 @@ test("complex worker startup failure offers recovery without starting the byte r
   } finally { f.dispose(); }
 });
 
+test("complex preview worker has a stable diagnostic identity independent of module bundling", async () => {
+  let options;
+  const f = fixture("ComplexAttachmentViewer", { attachment, kind: "document", onPresentationMetrics: noop }, {}, {
+    Worker: class { constructor(_url, value) { options = value; } terminate() {} postMessage() {} },
+  });
+  try {
+    f.render(); await f.runEffects();
+    assert.equal(options.name, "chat-reader-attachment-preview");
+  } finally { f.dispose(); }
+});
+
 test("closing complex preview ignores late bytes and stale worker messages", async () => {
   let resolveBytes, worker, posts = 0;
   const pending = new Promise(resolve => { resolveBytes = resolve; });

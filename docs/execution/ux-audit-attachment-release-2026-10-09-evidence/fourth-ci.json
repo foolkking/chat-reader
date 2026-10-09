@@ -1,0 +1,31 @@
+{
+  "checkpoint": "pre-edit attachment release blockers",
+  "source_sha": "adaa8decf2b4f78cc3d950b59f9751b718362ea2",
+  "run_id": 37913851928,
+  "producer_attempt": 1,
+  "conclusion": "failure",
+  "artifact": {
+    "id": 11610445727,
+    "name": "release-a-quality-evidence-adaa8decf2b4f78cc3d950b59f9751b718362ea2",
+    "bytes": 27740608,
+    "deployable": false
+  },
+  "api": { "passed": 1239, "skipped": 3, "warnings": 20, "seconds": 876.53, "head_current": "20261008_0050" },
+  "settings": { "passed": 439, "failed": 0, "skipped": 0, "fresh_instance_restore_passed": 1 },
+  "web_gate_counts": { "PASS": 8, "FAIL": 1, "NOT_VERIFIED": 4, "SKIPPED": 0 },
+  "mutation": { "tests": 100, "passed": 100, "failed": 0, "timedOut": 0, "skipped": 0, "interrupted": 0, "duration_ms": 501616 },
+  "attachment": { "tests": 21, "passed": 9, "failed": 6, "timedOut": 6, "skipped": 0, "interrupted": 0, "duration_ms": 944130 },
+  "not_verified": ["pdfjs-maintained-line", "default-pwa", "single-owner-auth", "pwa-negative"],
+  "image_build": "skipped",
+  "independent_image_inspection": "skipped",
+  "deployment": "not performed",
+  "sanitized_observations": [
+    { "id": "FLOW-AR01", "viewport": 375, "locale": "zh-CN", "action": "normal click on visible Retry", "trace": "input placeholder=搜索文件 in data-vaul-drawer aria-label=当前对话文件 intercepts pointer events", "frame": "mobile-json-blocked.jpg" },
+    { "id": "STATE-AR02", "viewport": 1440, "action": "real Blob fetch after explicit retry", "console": "Fetch API cannot load blob:<redacted>. Violates connect-src 'self'." },
+    { "id": "DATA-AR03", "viewports": [375, 1440], "locales": ["zh-CN", "en-US"], "rendered": "ZIP 压缩包 · DOCX; [Content_Types].xml and word/document.xml", "frame": "docx-as-zip.jpg" },
+    { "id": "TEST-AR01", "source": "local production chunk, unchanged runtime sources from this candidate", "compiled_worker_options": { "type": "void 0" }, "test_predicate": "options?.type === module", "ci_outcome": "Worker starts; injected startup failure not observed" },
+    { "id": "TEST-AR02", "trace": "Retry pointer wait exhausts case budget; finally DELETE reports cleanup timeout" }
+  ],
+  "reviewed_passing_screenshots": ["mobile-placement-pending.png", "mobile-quiet-autosave.png"],
+  "limits": ["Synthetic CI only", "No production UI access", "No local service/browser launch", "No CPU/RSS measurements", "No full visual or accessibility acceptance"]
+}

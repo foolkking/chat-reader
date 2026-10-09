@@ -21,6 +21,25 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-attachment-release-2026-10-09.md` owns the fourth complete
+CI's pre-edit mobile modal, Blob-CSP and ZIP-backed Office findings, separately
+identified Worker-injection/teardown issues, and scoped repair acceptance plan.
+Its adjacent `fourth-ci.json` retains original run/artifact identity and exact
+failed/timed-out/unverified counts. Four actually reviewed synthetic screenshots
+are adjacent; no CPU/RSS, accessibility or full visual acceptance is implied.
+The attachment release record owns final API/settings totals and subsequent
+same-cycle repair, not a new independent release authorization.
+`system/CSP_ENFORCEMENT_CONTRACT.md` now separates current source policy from
+historical Release H acceptance, documenting local Blob fetch without external
+network/worker relaxation. `system/ATTACHMENT_RENDERER_CONTRACT.md` owns nested
+mobile input/scroll/focus suspension, ZIP-backed Office refinement and diagnostic
+Worker identity; their browser acceptance remains a separate release gate.
+The adjacent `local-verification.json` binds 115 source/test files, comparing
+105 unchanged / five expected changed files with the 110-file parent and adding
+five bindings. It retains the 54-pass/17-fail baseline, 71-case repair, 659 complete
+Node passes, lint/types/bounded build and 149 discovered/zero locally executed
+browser cases. Prior checkpoints and unrelated buildinfo remain unchanged.
+
 `execution/ux-audit-mobile-release-2026-10-09.md` owns the second complete CI's
 observed mobile header obstruction and pending-focus failure, the inferred
 second-pointer cause, and the separately corrected archive test path. Its

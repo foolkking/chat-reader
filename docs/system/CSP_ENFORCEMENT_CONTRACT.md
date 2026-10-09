@@ -1,22 +1,19 @@
 # CSP Enforcement Contract
 
-## Scope and current state
+## Scope and current state — 2026-10-09
 
-Release H promotes the application document policy from observation to
-browser enforcement without changing Next, React, Webpack, Reader, Viewer,
-Share, PWA, Offline package v2, Dexie v1, PDF.js, or database schemas.
+This contract describes the current checked-in document policy. Enforcement
+started in Release H; its acceptance at the bottom is historical, not the
+current production source or rollback authority. Those belong to
+[Project State](../../PROJECT_STATE.md) and [deployment](../deployment.md).
 
-The immutable Release H image is accepted in production:
-
-```text
-RELEASE_H = PASS
-CSP_LOCAL_CANDIDATE = PASS
-CSP_PRODUCTION = PASS
-```
-
-Production source `da160a9c9a34dfe670fc67262cf3c8c9eedba07a` now emits the
-enforcing policy below. The public response has exactly one enforcing header,
-no Report-Only shadow and no gateway-added conflicting policy.
+The attachment-release repair adds only `blob:` to `connect-src`: Chromium's
+enforcing policy otherwise rejects `fetch` of device-local cached attachment
+URLs. It adds no external origin, script/worker permission, dependency, storage
+schema or cache. The [pre-edit evidence](../execution/ux-audit-attachment-release-2026-10-09.md)
+records the real rejection. This source change still requires complete CI and
+release acceptance; the policy below is **not** a claim of deployment. Existing
+Dexie v2 and offline package v1/v2/v3 compatibility are unchanged.
 
 ## Policy authority
 
@@ -37,12 +34,12 @@ generators.
 
 ## Resource graph
 
-| Resource | Actual production source | Enforced allowance |
+| Resource | Current implementation source | Enforced allowance |
 | --- | --- | --- |
 | Next scripts | same-origin Webpack chunks plus two nonce-less Next/RSC inline bootstrap scripts | `script-src 'self' 'wasm-unsafe-eval'`; `script-src-elem 'self' 'unsafe-inline'` |
 | Inline handlers | no product requirement | `script-src-attr 'none'` |
 | Styles | same-origin CSS plus React layout/virtualization/drag/Viewer style attributes | `style-src 'self' 'unsafe-inline'` |
-| API/RSC/Range | same-origin only; browser API base is `/api` | `connect-src 'self'` |
+| API/RSC/Range and cached-file reads | network requests same-origin only (`/api`); local attachment `fetch(blob:...)` | `connect-src 'self' blob:` |
 | Images | same-origin icons/attachments, Mermaid data SVG, Offline/complex Viewer blob URLs | `img-src 'self' data: blob:` |
 | Fonts | same-origin emitted KaTeX fonts | `font-src 'self'` |
 | Media | same-origin attachments and Offline blob URLs | `media-src 'self' blob:` |
@@ -56,9 +53,15 @@ generators.
 There is no wildcard, broad `http:`/`https:`, external CDN, data script, blob
 worker, or data font allowance.
 
+The Blob scheme grants access to browser-managed object URLs, not an external
+HTTP endpoint. Normal origin/storage-partition checks still apply. Text, JSON,
+Office and PDF consumers need to read cached bytes without converting them to
+another URL or creating a second persistent store. Blob workers remain blocked
+by the independent `worker-src 'self'` directive.
+
 ## Enforced policy
 
-The production application policy is:
+The current source generates this production-mode application policy:
 
 ```text
 default-src 'self';
@@ -69,7 +72,7 @@ style-src 'self' 'unsafe-inline';
 img-src 'self' data: blob:;
 font-src 'self';
 media-src 'self' blob:;
-connect-src 'self';
+connect-src 'self' blob:;
 worker-src 'self';
 manifest-src 'self';
 frame-src 'none';
@@ -149,8 +152,10 @@ Evidence records only directive, disposition, and the bounded URI classes
 `same-origin`, `external-origin`, `blob`, `data`, or `inline`. It never stores a
 raw path, Share token, query, filename, content, Cookie, or Authorization value.
 
-The same suite proves legitimate same-origin, data-image, blob-image, inline
-style, manifest, and Service Worker resources remain available. Rich Markdown,
+The same suite proves legitimate same-origin, data-image, blob-image, original-byte
+Blob fetch, inline style, manifest, and Service Worker resources remain available.
+It asserts the exact connect directive while retaining the negative external
+connect and Blob-worker probes. Rich Markdown,
 PDF, Reader, Share, Source Editor, mutation, default PWA, and the Release E
 negative matrix remain separate functional gates under the enforced header.
 
@@ -171,7 +176,7 @@ policy and must retain the privacy boundary above.
 
 ## Release and rollback
 
-Release H follows the frozen immutable release contract:
+Current releases follow the immutable release contract:
 
 ```text
 quality and zero-skip CSP/PWA gates
@@ -186,12 +191,13 @@ quality and zero-skip CSP/PWA gates
 
 Production acceptance requires exactly one effective application enforcing
 policy, no unexplained legitimate-path violation, real Service Worker and PDF
-worker behavior, KaTeX/Shiki/Viewer/Reader/Share operation, and a harmless
-controlled blocked-resource probe. Release G immutable images and verified
-backup remain the direct rollback source. No Alembic, Dexie, Offline package,
-Next, React, PDF.js, or bundler migration is part of Release H.
+worker behavior, KaTeX/Shiki/Viewer/Reader/Share operation, and the harmless
+controlled blocked-resource CI probe. Resolve the fresh rollback images and
+verified backup from current deployment evidence, never from this historical
+Release H record. The Blob-read repair changes no Alembic, Dexie, offline-package,
+Next, React, PDF.js or bundler version.
 
-## Final release evidence
+## Historical Release H acceptance
 
 Actions run `31906595581` completed the quality-gated image pipeline. The
 release archive SHA-256 is

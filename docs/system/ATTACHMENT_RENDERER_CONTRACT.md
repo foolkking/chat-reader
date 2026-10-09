@@ -10,6 +10,14 @@ their dated verification remains historical. Release status belongs to
 - One shared owner/Share/offline Viewer and the existing permission/URL routing
   remain. Empty, missing, uploading and unsupported states are resolved before
   mounting a renderer; child recovery never grants a download the session denies.
+- The foreground Viewer explicitly accepts pointer events even when a mobile
+  modal drawer blocks body input. Open state uses a separate boolean context;
+  the command context stays stable. Mobile drawer Content remains mounted/modal
+  but inert and accessibility-hidden while the Viewer is open; its Overlay-owned
+  scroll lock is temporarily removed and outside/Escape/close-focus callbacks
+  are suspended. Closing restores the same file panel, not a fresh list. Actual
+  browser reacceptance is required by the
+  [attachment blocker repair](../execution/ux-audit-attachment-release-2026-10-09.md).
 - PDF.js remains 6.2.108 with a lazy same-package worker, HTTP 64 KiB ranges,
   disabled streaming/autofetch and no WASM. Fit Page mounts the active page;
   Fit Width/custom retain continuous scrolling. Pages and optional thumbnails use
@@ -39,9 +47,20 @@ their dated verification remains historical. Release status belongs to
   reading bytes; stale bytes/messages are fenced and failed workers terminated.
   Server complex-derivative capability is a separate feature, not this browser
   viewer. No additional format/parser dependency or server job is introduced.
+- A generic detected `application/zip` may be refined only by the six supported
+  ZIP-backed Office extensions above. Strong MIME remains authoritative; a
+  declared Office type alone cannot turn ordinary ZIP or legacy `.doc` into
+  this exception. Existing member parsing and archive-size limits remain; a
+  renamed ZIP missing `word/document.xml` fails DOCX parsing explicitly.
+  The complex Worker has the diagnostic name `chat-reader-attachment-preview`,
+  which also permits startup-failure tests independent of bundler worker type.
 - Retry queries are HTTP(S)-only; Blob/data URLs keep their exact identity. Audio
   and video keep native controls, metadata preload and no autoplay. Unknown or
   unsupported formats retain truthful close/download guidance without text decode.
+- Document CSP permits device-local `blob:` fetches in addition to same-origin
+  network reads. It still rejects external connects and Blob workers; see the
+  [CSP contract](CSP_ENFORCEMENT_CONTRACT.md). URL identity, ownership and existing
+  offline-package/cache consumption are unchanged.
 
 The local integrated checkpoint passes 601 Node and 103 SQLite API cases, lint,
 nonincremental types and a bounded Web build. The 125 discovered browser/contract
